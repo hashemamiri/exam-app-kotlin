@@ -862,6 +862,20 @@ private fun ExamSettingsCard(state: ExamBuilderState, viewModel: ExamBuilderView
                 label = { Text("فاصله تلاش‌ها (دقیقه)") },
                 modifier = Modifier.fillMaxWidth()
             )
+            // V255 — پیک تصادفی: از کل سؤال‌ها فقط N سؤال (برای هر دانش‌آموز متفاوت) نمایش داده می‌شود.
+            OutlinedTextField(
+                state.pickCount,
+                viewModel::setPickCount,
+                label = { Text("نمایش تصادفی چند سؤال از کل؟ (خالی = همه)") },
+                supportingText = {
+                    val n = state.pickCount.toIntOrNull() ?: 0
+                    Text(
+                        if (n in 1 until state.questions.size) "هر دانش‌آموز $n سؤال از ${state.questions.size} سؤال می‌بیند؛ نمره از جمع بارم همان $n سؤال."
+                        else "همهٔ ${state.questions.size} سؤال نمایش داده می‌شود."
+                    )
+                },
+                modifier = Modifier.fillMaxWidth()
+            )
         }
     }
 }

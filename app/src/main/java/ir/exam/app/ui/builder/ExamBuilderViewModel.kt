@@ -78,6 +78,7 @@ class ExamBuilderViewModel(
                         attemptOnTimeout = imported.attemptOnTimeout,
                         gradePolicy = imported.gradePolicy,
                         attemptCooldown = imported.attemptCooldown.takeUnless { it == 0 }?.toString().orEmpty(),
+                        pickCount = imported.pickCount.takeUnless { it == 0 }?.toString().orEmpty(),
                         questions = imported.questions,
                         importedBy = imported.exportedBy
                     )
@@ -135,6 +136,7 @@ class ExamBuilderViewModel(
                 attemptOnTimeout = draft.attemptOnTimeout,
                 gradePolicy = draft.gradePolicy,
                 attemptCooldown = draft.attemptCooldown,
+                pickCount = draft.pickCount,
                 audienceMode = draft.audienceMode,
                 audienceClasses = draft.audienceClasses,
                 audienceStudents = draft.audienceStudents,
@@ -174,6 +176,7 @@ class ExamBuilderViewModel(
     fun setAttempts(value: Int) { _state.update { it.copy(attemptsAllowed = value.coerceIn(1, 5)) } }
     fun setAttemptOnTimeout(value: Boolean) { _state.update { it.copy(attemptOnTimeout = value) } }
     fun setGradePolicy(value: String) { if (value in setOf("last", "best", "all")) _state.update { it.copy(gradePolicy = value) } }
+    fun setPickCount(value: String) { _state.update { it.copy(pickCount = value.filter(Char::isDigit).take(4)) } }
     fun setAttemptCooldown(value: String) { _state.update { it.copy(attemptCooldown = value.filter(Char::isDigit).take(4)) } }
     fun reportError(error: Throwable) {
         _state.update { it.copy(error = safeBuilderError(error)) }
@@ -228,6 +231,7 @@ class ExamBuilderViewModel(
                 attemptOnTimeout = imported.attemptOnTimeout,
                 gradePolicy = imported.gradePolicy,
                 attemptCooldown = imported.attemptCooldown.takeUnless { it == 0 }?.toString().orEmpty(),
+                        pickCount = imported.pickCount.takeUnless { it == 0 }?.toString().orEmpty(),
                 questions = imported.questions.map {
                     it.copy(id = UUID.randomUUID().toString()).ensureEditorIds()
                 },
@@ -788,6 +792,7 @@ private fun draftFingerprint(state: ExamBuilderState): Int = listOf(
     state.attemptOnTimeout,
     state.gradePolicy,
     state.attemptCooldown,
+    state.pickCount,
     state.audienceMode,
     state.audienceClasses,
     state.audienceStudents,

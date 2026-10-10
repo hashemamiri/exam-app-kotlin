@@ -124,7 +124,10 @@ class ReportsViewModel(
                 }
                 val percentages = selectedExams.mapNotNull { exam ->
                     val score = scores[exam.id] ?: return@mapNotNull null
-                    if (exam.totalScore > 0) score * 100.0 / exam.totalScore else null
+                    // V255 — پیک تصادفی: سقف نمره از meta.max_score همان پاسخ.
+                    val attempts = answerMap[exam.id]?.get(student.id).orEmpty()
+                    val max = attempts.maxByOrNull { it.totalGrade }?.maxScore ?: exam.totalScore
+                    if (max > 0) score * 100.0 / max else null
                 }
                 ClassGradeRow(
                     studentId = student.id,

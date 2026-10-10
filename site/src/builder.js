@@ -230,7 +230,7 @@
     S.loading(c);
     try {
       var draft = null; try { draft = JSON.parse(localStorage.getItem(LS_DRAFT) || 'null'); } catch (e) {}
-      if (arg.importPkg) { var pk = arg.importPkg; state = blankState('online'); state.title = pk.title; state.subject = pk.subject; state.duration = pk.duration ? String(pk.duration) : ''; state.negativeMarking = pk.negativeMarking ? String(pk.negativeMarking) : ''; state.attemptCooldown = pk.attemptCooldown ? String(pk.attemptCooldown) : ''; state.shuffleQuestions = pk.shuffleQuestions; state.shuffleOptions = pk.shuffleOptions; state.teacherMessage = pk.teacherMessage; state.attemptsAllowed = pk.attemptsAllowed; state.attemptOnTimeout = pk.attemptOnTimeout; state.gradePolicy = pk.gradePolicy; state.opensAt = isoToLocal(pk.opensAtIso); state.closesAt = isoToLocal(pk.closesAtIso); state.questions = pk.questions.map(function (q) { var d = decodeQuestion(q, q); d.id = uuid(); return d; }); state.selected = 0; state.dirty = true; }
+      if (arg.importPkg) { var pk = arg.importPkg; state = blankState('online'); state.title = pk.title; state.subject = pk.subject; state.duration = pk.duration ? String(pk.duration) : ''; state.negativeMarking = pk.negativeMarking ? String(pk.negativeMarking) : ''; state.attemptCooldown = pk.attemptCooldown ? String(pk.attemptCooldown) : ''; state.shuffleQuestions = pk.shuffleQuestions; state.shuffleOptions = pk.shuffleOptions; state.teacherMessage = pk.teacherMessage; state.attemptsAllowed = pk.attemptsAllowed; state.attemptOnTimeout = pk.attemptOnTimeout; state.gradePolicy = pk.gradePolicy; state.pickCount = pk.pickCount ? String(pk.pickCount) : ''; state.opensAt = isoToLocal(pk.opensAtIso); state.closesAt = isoToLocal(pk.closesAtIso); state.questions = pk.questions.map(function (q) { var d = decodeQuestion(q, q); d.id = uuid(); return d; }); state.selected = 0; state.dirty = true; }
       else if (arg.bankEdit) { state = blankState('online'); state.bankEdit = {id: arg.bankEdit.id, cats: arg.bankEdit.cats || []}; state.subject = arg.bankEdit.subject || ''; state.title = 'سؤال بانک'; if (arg.bankEdit.question) state.questions = [decodeQuestion(arg.bankEdit.question, arg.bankEdit.question)]; else state.questions = [newQuestion('multiple')]; state.selected = 0; }
       else if (arg.examId) state = await loadOnline(arg.examId);
       /* V223.1 — مثل اپ (V113.2 onOpenPrintExam): آزمون چاپی در سازندهٔ *آنلاین* به‌صورت پیش‌نویس تازه باز می‌شود؛ رکورد چاپی دست‌نخورده می‌ماند */
@@ -259,7 +259,7 @@
     st.examId = exam.id; st.code = exam.code; st.title = exam.title || ''; st.subject = exam.subject || ''; st.duration = exam.duration != null ? String(exam.duration) : ''; st.opensAt = isoToLocal(exam.opens_at); st.closesAt = isoToLocal(exam.closes_at);
     st.questions = (Array.isArray(exam.questions) ? exam.questions : []).map(function (q, i) { return decodeQuestion(q, keys[i]); });
     st.shuffleQuestions = !!exam.shuffle_q; st.shuffleOptions = !!exam.shuffle_opt; st.negativeMarking = exam.neg_marking ? String(exam.neg_marking) : ''; st.teacherMessage = exam.teacher_message || '';
-    st.attemptsAllowed = Math.max(1, Math.min(5, Number(exam.attempts_allowed) || 1)); st.attemptOnTimeout = !!exam.attempt_on_timeout; st.gradePolicy = exam.grade_policy || 'last'; st.attemptCooldown = exam.attempt_cooldown ? String(exam.attempt_cooldown) : '';
+    st.attemptsAllowed = Math.max(1, Math.min(5, Number(exam.attempts_allowed) || 1)); st.attemptOnTimeout = !!exam.attempt_on_timeout; st.gradePolicy = exam.grade_policy || 'last'; st.attemptCooldown = exam.attempt_cooldown ? String(exam.attempt_cooldown) : ''; st.pickCount = exam.pick_count ? String(exam.pick_count) : ''; /* V255 */
     await loadOptions(st);
     try { var a = await S.rpcObj('get_exam_audience', {p_exam: examId}); st.audienceMode = a.mode || 'all'; st.audienceClasses = a.classes || []; st.audienceStudents = a.students || []; } catch (e) {}
     try { var sc = await S.rpcObj('native_exam_audience_schools_v61', {p_exam: examId}); if (sc.schools && sc.schools.length) { st.audienceMode = 'schools'; st.audienceSchools = sc.schools; st.audienceStudents = []; } } catch (e) {}
@@ -734,6 +734,7 @@
     }
     /* --- مشخصات آزمون (آنلاین) --- */
     /* V166 — فرم «مشخصات آزمون» مشترک: پنجرهٔ بازشو (گوشی/تبلت) و ستون راست سازندهٔ دسکتاپ */
+    function pickHint(st) { var n = parseInt(st.pickCount, 10) || 0, t = st.questions.length; return (n > 0 && n < t) ? 'هر دانش‌آموز ' + fa(n) + ' سؤال از ' + fa(t) + ' سؤال می‌بیند؛ نمره از جمع بارم همان ' + fa(n) + ' سؤال.' : 'همهٔ ' + fa(t) + ' سؤال نمایش داده می‌شود.'; }
     function settingsForm(m_) {
       function redrawSettings() { var y = m_.scrollTop; m_.innerHTML = ''; settingsForm(m_); m_.scrollTop = y; }
       /* V228 — قالب‌های تنظیمات آزمون (مدت، نمرهٔ منفی، دفعات، سیاست نمره، فاصله، به‌هم‌ریختن، ثبت خودکار، پیام معلم) در همین مرورگر ذخیره می‌شوند */
@@ -772,7 +773,10 @@
         inp('نمرهٔ منفی (۰ تا ۱)', state.negativeMarking, function (v) { state.negativeMarking = en(v); mark(); }, 'number'),
         sel('تعداد دفعات مجاز', String(state.attemptsAllowed), [['1', '۱'], ['2', '۲'], ['3', '۳'], ['4', '۴'], ['5', '۵']], function (v) { state.attemptsAllowed = Number(v); mark(); }),
         sel('نمرهٔ نهایی', state.gradePolicy, [['last', 'آخرین تلاش'], ['best', 'بهترین تلاش'], ['all', 'همهٔ تلاش‌ها']], function (v) { state.gradePolicy = v; mark(); }),
-        inp('فاصلهٔ بین تلاش‌ها (دقیقه)', state.attemptCooldown, function (v) { state.attemptCooldown = en(v); mark(); }, 'number')
+        inp('فاصلهٔ بین تلاش‌ها (دقیقه)', state.attemptCooldown, function (v) { state.attemptCooldown = en(v); mark(); }, 'number'),
+        /* V255 — پیک تصادفی: هر دانش‌آموز N سؤال از کل می‌بیند؛ نمره از جمع بارم همان N سؤال. خالی/۰ = همه. */
+        inp('نمایش تصادفی چند سؤال از کل؟ (خالی = همه)', state.pickCount || '', function (v) { state.pickCount = en(v).replace(/[^0-9]/g, ''); mark(); }, 'number'),
+        el('div', {class: 'muted', style: 'font-size:12px', text: pickHint(state)})
       ]));
       m_.appendChild(el('div', {class: 'row', style: 'margin-bottom:12px'}, [chk('به‌هم‌ریختن سؤال‌ها', state.shuffleQuestions, function (v) { state.shuffleQuestions = v; mark(); }), chk('به‌هم‌ریختن گزینه‌ها', state.shuffleOptions, function (v) { state.shuffleOptions = v; mark(); }), chk('ثبت خودکار با پایان زمان', state.attemptOnTimeout, function (v) { state.attemptOnTimeout = v; mark(); })]));
       var tm = el('textarea', {rows: 2, style: 'width:100%;border:1px solid var(--line);border-radius:10px;padding:8px'}); tm.value = state.teacherMessage; tm.addEventListener('input', function () { state.teacherMessage = tm.value; mark(); });
@@ -908,7 +912,7 @@
         var code = state.code || genCode();
         var payload = {operation_id: uuid(), id: examId, code: code, title: state.title.trim(), subject: state.subject.trim(), duration: Math.max(0, Math.min(1440, parseInt(state.duration, 10) || 0)), opens_at: opens, closes_at: closes,
           total_score: state.questions.reduce(function (s, q) { return s + (Number(q.score) || 0); }, 0), shuffle_q: !!state.shuffleQuestions, shuffle_opt: !!state.shuffleOptions, neg_marking: parseFloat(state.negativeMarking) || 0,
-          teacher_message: state.teacherMessage.trim() || null, attempts_allowed: Math.max(1, Math.min(5, state.attemptsAllowed)), attempt_on_timeout: !!state.attemptOnTimeout, grade_policy: state.gradePolicy, attempt_cooldown: Math.max(0, Math.min(1440, parseInt(state.attemptCooldown, 10) || 0)),
+          teacher_message: state.teacherMessage.trim() || null, attempts_allowed: Math.max(1, Math.min(5, state.attemptsAllowed)), attempt_on_timeout: !!state.attemptOnTimeout, grade_policy: state.gradePolicy, attempt_cooldown: Math.max(0, Math.min(1440, parseInt(state.attemptCooldown, 10) || 0)), pick_count: Math.max(0, Math.min(9999, parseInt(state.pickCount, 10) || 0)),
           questions: enc.publicQuestions, answer_key: enc.answerKey, audience: state.audienceMode, classes: state.audienceClasses.slice().sort(), students: state.audienceStudents.slice().sort(), schools: state.audienceSchools.slice().sort()};
         var n = state.questions.length;
         if (!(await S.confirmDlg('ذخیرهٔ آزمون', 'آزمون «' + esc(state.title) + '» با ' + fa(n) + ' سؤال ذخیره می‌شود. هزینهٔ سؤال‌های جدید (' + fa('1,000') + ' تومان/سؤال) و رسانه‌ها از کیف پول کسر می‌شود.', 'ذخیره'))) return;

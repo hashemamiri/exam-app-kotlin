@@ -1408,6 +1408,16 @@
   }
   function emptyBox(icon, text) { return el('div', {class: 'empty'}, [el('div', {class: 'big', text: icon}), el('div', {text: text})]); }
   /* V186 — کارت آمار: هم‌اندازه (min-height در CSS) و در صورت داشتن مقصد، کلیک‌پذیر (button) */
+  /* V255 — پیک تصادفی: «از N» کارنامه از native_my_answers_v1 (meta.max_score) گرفته می‌شود؛ my_grades قدیمی بارم کل آزمون را می‌دهد. */
+  function mergeAnswerMax(grades, answers) {
+    var byId = {}, byKey = {};
+    (answers || []).forEach(function (a) { if (a.id) byId[String(a.id)] = a; byKey[String(a.exam_id) + '|' + String(Date.parse(a.submitted_at) || '')] = a; });
+    return (grades || []).map(function (g) {
+      var a = (g.id && byId[String(g.id)]) || (g.answer_id && byId[String(g.answer_id)]) || byKey[String(g.exam_id) + '|' + String(Date.parse(g.submitted_at) || '')];
+      if (a && Number(a.total_score) > 0 && Number(a.total_score) !== Number(g.total_score)) { var c = Object.assign({}, g); c.total_score = a.total_score; return c; }
+      return g;
+    });
+  }
   function statCard(v, l, target) {
     var kids = [el('div', {class: 'v num', text: v}), el('div', {class: 'l', text: l})];
     if (!target) return el('div', {class: 'card stat'}, kids);
@@ -1449,7 +1459,7 @@
         else card.appendChild(examTable(r[0].slice(0, 6), c));
         c.appendChild(card);
       } else if (user.role === 'student') {
-        var g = (await api.myGrades()) || []; /* V251 — خطا به catch پایین می‌رود و پیام می‌دهد؛ نه «۰ آزمون شرکت‌کرده» */
+        var g = mergeAnswerMax((await api.myGrades()) || [], await api.myAnswers().catch(function () { return []; })); /* V251 — خطا به catch پایین می‌رود و پیام می‌دهد؛ نه «۰ آزمون شرکت‌کرده» */
         c.innerHTML = '';
         var graded = g.filter(function (x) { return x.graded_at; });
         var avg = graded.length ? graded.reduce(function (s, x) { return s + (Number(x.total_score) ? Number(x.total_grade) / Number(x.total_score) * 100 : 0); }, 0) / graded.length : 0;
@@ -1804,7 +1814,7 @@
     try {
       /* V251 — خطای نمرات به کاربر گفته می‌شود (نه «هنوز نمره‌ای ثبت نشده»)؛ پاسخ‌ها اختیاری می‌مانند */
       var r = await Promise.all([api.myGrades(), api.myAnswers().catch(function () { return []; })]);
-      var grades = r[0] || [], answers = r[1] || [];
+      var grades = mergeAnswerMax(r[0] || [], r[1] || []), answers = r[1] || [];
       c.innerHTML = '';
       var card = el('div', {class: 'card'}, [el('div', {class: 'row'}, [el('h3', {class: 'grow', text: '📊 نمرات'}), window.SiteExtras && grades.length ? window.SiteExtras.gradesExcelButton(grades) : null])]);
       if (!grades.length) card.appendChild(emptyBox('📊', 'هنوز نمره‌ای ثبت نشده است.'));

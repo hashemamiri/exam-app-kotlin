@@ -6,6 +6,8 @@
    ReportsViewModel / SupabaseAuthRepository / SupabaseProfileRepository.
    =================================================================== */
 (function () {
+  /* V255 — پیک تصادفی: سقف نمرهٔ هر پاسخ از meta.max_score (وگرنه بارم کل آزمون). */
+  function answerMax(a, examTotal) { var m = a && a.meta && typeof a.meta === 'object' ? Number(a.meta.max_score) : NaN; return (isFinite(m) && m > 0) ? m : (Number(examTotal) || 0); }
   var S = window.ExamSite;
   if (!S) return;
   var el = S.el, esc = S.esc, fa = S.fa, toast = S.toast, errMsg = S.errMsg, uuid = S.uuid;
@@ -88,10 +90,10 @@
       var answersByExam = {};
       (async function () {
         try {
-          var all = await S.select('answers', 'select=id,exam_id,student_id,total_grade,graded&exam_id=in.(' + exams.map(function (e) { return e.id; }).join(',') + ')');
+          var all = await S.select('answers', 'select=id,exam_id,student_id,total_grade,graded,meta&exam_id=in.(' + exams.map(function (e) { return e.id; }).join(',') + ')');
           (all || []).forEach(function (a) { (answersByExam[a.exam_id] = answersByExam[a.exam_id] || []).push(a); });
           var graded = (all || []).filter(function (a) { return a.graded; }), max = {}; exams.forEach(function (e) { max[e.id] = Number(e.total_score) || 0; });
-          var pct = graded.map(function (a) { return max[a.exam_id] > 0 ? Number(a.total_grade) * 100 / max[a.exam_id] : null; }).filter(function (x) { return x != null; });
+          var pct = graded.map(function (a) { var m = answerMax(a, max[a.exam_id]); return m > 0 ? Number(a.total_grade) * 100 / m : null; }).filter(function (x) { return x != null; });
           var avg = pct.length ? pct.reduce(function (s, x) { return s + x; }, 0) / pct.length : null;
           summary.innerHTML = '';
           [[fa(exams.length), 'آزمون'], [fa((all || []).length), 'پاسخ'], [fa(graded.length), 'تصحیح‌شده'], [avg == null ? '—' : fa(avg.toFixed(1)) + '٪', 'میانگین درصد']].forEach(function (x) { summary.appendChild(el('div', {class: 'card stat'}, [el('div', {class: 'v', text: x[0]}), el('div', {class: 'l', text: x[1]})])); });
@@ -130,7 +132,7 @@
         var sel = exams.filter(function (e) { return st.selected[e.id]; });
         var rows = st.roster.map(function (s) {
           var scores = {}, pcts = [];
-          sel.forEach(function (e) { var mine = (answersByExam[e.id] || []).filter(function (a) { return a.graded && a.student_id === s.id; }); if (mine.length) { var best = Math.max.apply(null, mine.map(function (a) { return Number(a.total_grade) || 0; })); scores[e.id] = best; if (Number(e.total_score) > 0) pcts.push(best * 100 / Number(e.total_score)); } });
+          sel.forEach(function (e) { var mine = (answersByExam[e.id] || []).filter(function (a) { return a.graded && a.student_id === s.id; }); if (mine.length) { var bestA = mine.reduce(function (p, a) { return (Number(a.total_grade) || 0) > (Number(p.total_grade) || 0) ? a : p; }, mine[0]); var best = Number(bestA.total_grade) || 0; scores[e.id] = best; var mx = answerMax(bestA, Number(e.total_score)); if (mx > 0) pcts.push(best * 100 / mx); } });
           return {id: s.id, name: s.full_name, scores: scores, avg: pcts.length ? pcts.reduce(function (a, b) { return a + b; }, 0) / pcts.length : null};
         });
         st.rows = rows;
@@ -174,7 +176,7 @@
     var combined = enc.publicQuestions.map(function (p, i) { var o = Object.assign({}, p, includeKey ? (enc.answerKey[i] || {}) : {}); delete o.i; return o; });
     var prof = null; try { prof = await S.api.profile(); } catch (e) {}
     var root = {_app: 'exam-system', _kind: 'exam', _v: 2, exported_at: new Date().toISOString(), by: ((prof && (prof.displayName || prof.fullName)) || '').slice(0, 120),
-      exam: {title: String(full.title || '').slice(0, 250), subject: String(full.subject || '').slice(0, 250), duration: Math.max(0, Math.min(1440, Number(full.duration) || 0)), opens_at: full.opens_at || null, closes_at: full.closes_at || null, neg_marking: Math.max(0, Number(full.neg_marking) || 0), shuffle_q: !!full.shuffle_q, shuffle_opt: !!full.shuffle_opt, teacher_message: String(full.teacher_message || '').slice(0, 1000), attempts_allowed: Math.max(1, Math.min(5, Number(full.attempts_allowed) || 1)), attempt_on_timeout: !!full.attempt_on_timeout, grade_policy: full.grade_policy || 'last', answer_key: !!includeKey, attempt_cooldown: Math.max(0, Math.min(1440, Number(full.attempt_cooldown) || 0)), questions: combined}};
+      exam: {title: String(full.title || '').slice(0, 250), subject: String(full.subject || '').slice(0, 250), duration: Math.max(0, Math.min(1440, Number(full.duration) || 0)), opens_at: full.opens_at || null, closes_at: full.closes_at || null, neg_marking: Math.max(0, Number(full.neg_marking) || 0), shuffle_q: !!full.shuffle_q, shuffle_opt: !!full.shuffle_opt, teacher_message: String(full.teacher_message || '').slice(0, 1000), attempts_allowed: Math.max(1, Math.min(5, Number(full.attempts_allowed) || 1)), attempt_on_timeout: !!full.attempt_on_timeout, grade_policy: full.grade_policy || 'last', answer_key: !!includeKey, attempt_cooldown: Math.max(0, Math.min(1440, Number(full.attempt_cooldown) || 0)), pick_count: Math.max(0, Math.min(9999, Number(full.pick_count) || 0)), questions: combined}};
     var content = PKG_TAG + '\n' + utf8b64(JSON.stringify(root));
     download('آزمون-' + safeName(full.title) + (includeKey ? '' : '-بدون-پاسخنامه') + PKG_EXT, content, 'application/octet-stream');
   }
@@ -194,7 +196,7 @@
     var ex = root.exam; if (!ex) throw new Error('بدنه آزمون در فایل وجود ندارد.');
     var qs = Array.isArray(ex.questions) ? ex.questions : [];
     if (qs.length < 1 || qs.length > 500) throw new Error('تعداد سؤال‌های فایل باید بین ۱ و ۵۰۰ باشد.');
-    return {title: String(ex.title || '').slice(0, 250) || 'آزمون واردشده', subject: String(ex.subject || '').slice(0, 250), duration: Math.max(0, Math.min(1440, Number(ex.duration) || 0)), negativeMarking: Math.max(0, Number(ex.neg_marking) || 0), shuffleQuestions: !!ex.shuffle_q, shuffleOptions: !!ex.shuffle_opt, teacherMessage: String(ex.teacher_message || '').slice(0, 1000), attemptsAllowed: Math.max(1, Math.min(5, Number(ex.attempts_allowed) || 1)), attemptOnTimeout: !!ex.attempt_on_timeout, gradePolicy: ['last', 'best', 'all'].indexOf(ex.grade_policy) >= 0 ? ex.grade_policy : 'last', attemptCooldown: Math.max(0, Math.min(1440, Number(ex.attempt_cooldown) || 0)), questions: qs, hasKey: ex.answer_key !== false, by: root.by || ''};
+    return {title: String(ex.title || '').slice(0, 250) || 'آزمون واردشده', subject: String(ex.subject || '').slice(0, 250), duration: Math.max(0, Math.min(1440, Number(ex.duration) || 0)), negativeMarking: Math.max(0, Number(ex.neg_marking) || 0), shuffleQuestions: !!ex.shuffle_q, shuffleOptions: !!ex.shuffle_opt, teacherMessage: String(ex.teacher_message || '').slice(0, 1000), attemptsAllowed: Math.max(1, Math.min(5, Number(ex.attempts_allowed) || 1)), attemptOnTimeout: !!ex.attempt_on_timeout, gradePolicy: ['last', 'best', 'all'].indexOf(ex.grade_policy) >= 0 ? ex.grade_policy : 'last', attemptCooldown: Math.max(0, Math.min(1440, Number(ex.attempt_cooldown) || 0)), pickCount: Math.max(0, Math.min(9999, Number(ex.pick_count) || 0)), questions: qs, hasKey: ex.answer_key !== false, by: root.by || ''};
   }
   async function importExam() {
     var f = await pickFile('.azmoon,.json,.txt,application/octet-stream'); if (!f) return;

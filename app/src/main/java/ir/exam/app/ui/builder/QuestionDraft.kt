@@ -350,6 +350,8 @@ data class ExamBuilderState(
     val attemptOnTimeout: Boolean = false,
     val gradePolicy: String = "last",
     val attemptCooldown: String = "",
+    // V255 — «نمایش تصادفی N سؤال از کل» (خالی/۰ = همه).
+    val pickCount: String = "",
     val audienceMode: String = "all",
     val audienceClasses: Set<String> = emptySet(),
     val audienceStudents: Set<String> = emptySet(),
@@ -430,6 +432,7 @@ data class ExamImportDraft(
     val attemptCooldown: Int,
     val questions: List<QuestionDraft>,
     val opensAtIso: String? = null,
+    val pickCount: Int = 0,
     val closesAtIso: String? = null,
     val exportedBy: String? = null,
     // V101 — اگر این import یک «آزمون چاپیِ محلی» است، شناسهٔ رکوردش:

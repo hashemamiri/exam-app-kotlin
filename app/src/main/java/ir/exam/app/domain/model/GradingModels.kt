@@ -51,8 +51,13 @@ data class GradingSubmission(
     val graded: Boolean,
     val autoGraded: Boolean,
     val attemptNo: Int,
-    val submittedAt: String?
-)
+    val submittedAt: String?,
+    // V255 — پیک تصادفی: شاخص سؤال‌های نمایش‌داده‌شده و سقف نمرهٔ همین پاسخ (null = همهٔ سؤال‌ها/بارم کل آزمون).
+    val shownQuestions: Set<Int>? = null,
+    val maxScore: Double? = null
+) {
+    fun isShown(index: Int): Boolean = shownQuestions == null || index in shownQuestions
+}
 
 data class FeedbackPhrase(val id: Long, val text: String)
 

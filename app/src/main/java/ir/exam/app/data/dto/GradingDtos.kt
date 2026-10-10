@@ -20,7 +20,9 @@ data class AnswerDto(
     @SerialName("auto_graded") val autoGraded: Boolean = false,
     @SerialName("response_images") val responseImages: JsonElement = JsonObject(emptyMap()),
     @SerialName("attempt_no") val attemptNo: Int = 1,
-    @SerialName("submitted_at") val submittedAt: String? = null
+    @SerialName("submitted_at") val submittedAt: String? = null,
+    // V255 — meta.shown_q / meta.max_score برای آزمون‌های «پیک تصادفی».
+    val meta: JsonElement? = null
 )
 
 @Serializable

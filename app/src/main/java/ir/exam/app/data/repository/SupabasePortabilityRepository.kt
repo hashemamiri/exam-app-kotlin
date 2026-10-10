@@ -65,6 +65,7 @@ class SupabasePortabilityRepository {
                 attemptOnTimeout = exam.attemptOnTimeout,
                 gradePolicy = exam.gradePolicy,
                 attemptCooldown = exam.attemptCooldown,
+                pickCount = exam.pickCount,
                 questions = questions,
                 by = profile.displayName?.takeIf(String::isNotBlank) ?: profile.fullName.orEmpty(),
                 opensAtIso = exam.opensAt,

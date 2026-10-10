@@ -26,7 +26,8 @@ data class ExamDetailDto(
     @SerialName("attempts_allowed") val attemptsAllowed: Int = 1,
     @SerialName("attempt_on_timeout") val attemptOnTimeout: Boolean = false,
     @SerialName("grade_policy") val gradePolicy: String = "last",
-    @SerialName("attempt_cooldown") val attemptCooldown: Int = 0
+    @SerialName("attempt_cooldown") val attemptCooldown: Int = 0,
+    @SerialName("pick_count") val pickCount: Int = 0
 )
 
 @Serializable
@@ -43,7 +44,8 @@ data class ExamUpdateDto(
     @SerialName("attempts_allowed") val attemptsAllowed: Int,
     @SerialName("attempt_on_timeout") val attemptOnTimeout: Boolean,
     @SerialName("grade_policy") val gradePolicy: String,
-    @SerialName("attempt_cooldown") val attemptCooldown: Int
+    @SerialName("attempt_cooldown") val attemptCooldown: Int,
+    @SerialName("pick_count") val pickCount: Int = 0
 )
 
 @Serializable

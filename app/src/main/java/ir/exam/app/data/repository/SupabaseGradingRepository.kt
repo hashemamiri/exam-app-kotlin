@@ -317,9 +317,14 @@ private fun AnswerDto.toDomain(): GradingSubmission {
     val imageMap = (responseImages as? JsonObject)?.mapValues { (_, value) ->
         (value as? JsonArray)?.mapNotNull { it.jsonPrimitive.contentOrNull }.orEmpty()
     }.orEmpty()
+    val metaObject = meta as? JsonObject
+    val shown = (metaObject?.get("shown_q") as? JsonArray)
+        ?.mapNotNull { it.jsonPrimitive.intOrNull }?.toSet()?.takeIf { it.isNotEmpty() }
+    val maxScore = metaObject?.get("max_score")?.jsonPrimitive?.doubleOrNull?.takeIf { it > 0 }
     return GradingSubmission(
         id, examId, studentId, studentName, responseList, imageMap, gradeList,
-        totalGrade, feedback, graded, autoGraded, attemptNo, submittedAt
+        totalGrade, feedback, graded, autoGraded, attemptNo, submittedAt,
+        shownQuestions = shown, maxScore = maxScore
     )
 }
 

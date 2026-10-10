@@ -118,8 +118,12 @@
       var responses = Array.isArray(a.responses) ? a.responses : [], grades = Array.isArray(a.grades) ? a.grades.slice() : [], imgs = a.response_images || {};
       var inputs = [];
       detail.appendChild(el('div', {class: 'row', style: 'margin-bottom:8px'}, [el('h3', {class: 'grow', style: 'margin:0', text: a.student_name || 'دانش‌آموز'}), a.graded ? el('button', {class: 'btn light sm', text: 'برداشتن تأیید', onclick: async function () { try { chk(await S.rpcObj('unapprove_grade', {p_answer: a.id})); toast('تأیید برداشته شد.', 'ok'); ctx.refresh(); } catch (e) { toast(errMsg(e), 'err'); } }}) : null]));
+      var shownQ = a.meta && typeof a.meta === 'object' && Array.isArray(a.meta.shown_q) && a.meta.shown_q.length ? a.meta.shown_q : null; /* V255 — پیک تصادفی */
+      var maxScore = shownQ && isFinite(Number(a.meta.max_score)) && Number(a.meta.max_score) > 0 ? Number(a.meta.max_score) : Number(ctx.exam.total_score);
+      if (shownQ) detail.appendChild(el('div', {class: 'muted', style: 'font-size:12px;margin-bottom:6px', text: 'پیک تصادفی: این دانش‌آموز ' + fa(shownQ.length) + ' سؤال از ' + fa(questions.length) + ' سؤال را دیده است؛ فقط همان‌ها نمایش داده می‌شوند.'}));
       questions.forEach(function (q, i) {
         var r = responses[i], auto = autoScore(q, r), cur = grades[i] != null ? grades[i] : (auto != null ? auto : '');
+        if (shownQ && shownQ.indexOf(i) < 0) { var hid = el('input', {type: 'hidden', value: 0}); hid.value = '0'; inputs.push(hid); return; }
         var inp = el('input', {type: 'number', step: '0.25', min: 0, max: q.score, value: cur, style: 'width:90px;border:1px solid var(--line);border-radius:8px;padding:6px;direction:ltr'});
         inputs.push(inp);
         var rt = responseText(q, r), ct = correctText(q), qi = imgs[q.id] || imgs[String(i)] || [];
@@ -137,7 +141,7 @@
       var fbBank = el('div', {class: 'row', style: 'flex-wrap:wrap;gap:4px;margin:6px 0'});
       S.rpc('fb_list', {}).then(function (list) { (list || []).slice(0, 12).forEach(function (p) { fbBank.appendChild(el('button', {class: 'chip', style: 'cursor:pointer', text: p.text, onclick: function () { fb.value = (fb.value ? fb.value + ' ' : '') + p.text; }})); }); }).catch(function () {});
       var total = el('b');
-      function sum() { var s = 0; inputs.forEach(function (x) { s += num(x.value); }); total.textContent = 'جمع: ' + fa(S.fmtScore(s)) + ' از ' + fa(S.fmtScore(ctx.exam.total_score)); }
+      function sum() { var s = 0; inputs.forEach(function (x) { s += num(x.value); }); total.textContent = 'جمع: ' + fa(S.fmtScore(s)) + ' از ' + fa(S.fmtScore(maxScore)); }
       inputs.forEach(function (x) { x.addEventListener('input', sum); }); sum();
       detail.appendChild(el('div', {class: 'field', style: 'margin-top:12px'}, [el('label', {text: 'بازخورد'}), fb, fbBank]));
       detail.appendChild(el('div', {class: 'row'}, [total, el('span', {class: 'grow'}), el('button', {class: 'btn', text: '💾 ذخیرهٔ نمره', onclick: async function () {
@@ -161,7 +165,7 @@
       holder.innerHTML = ''; var q = questions[qi]; var inputs = {};
       holder.appendChild(el('div', {class: 'card', style: 'margin-bottom:10px'}, [richEl('div', 'g-qtext', q.text), correctText(q) ? el('div', {class: 'muted', style: 'font-size:13px'}, [el('span', {text: 'پاسخ درست: '}), richEl('span', '', correctText(q))]) : null]));
       var tbl = el('table', {class: 'tbl'}, [el('thead', {}, [el('tr', {}, ['دانش‌آموز', 'پاسخ', 'تصویر', 'نمره (از ' + fa(S.fmtScore(q.score)) + ')'].map(function (h) { return el('th', {text: h}); }))]),
-        el('tbody', {}, answers.map(function (a) { var r = (a.responses || [])[qi], auto = autoScore(q, r), cur = (a.grades || [])[qi]; var inp = el('input', {type: 'number', step: '0.25', min: 0, max: q.score, value: cur != null ? cur : (auto != null ? auto : ''), style: 'width:80px;border:1px solid var(--line);border-radius:8px;padding:5px;direction:ltr'}); inputs[a.id] = inp; var im = (a.response_images || {})[q.id] || (a.response_images || {})[String(qi)] || [];
+        el('tbody', {}, answers.map(function (a) { var r = (a.responses || [])[qi], auto = autoScore(q, r), cur = (a.grades || [])[qi]; var inp = el('input', {type: 'number', step: '0.25', min: 0, max: q.score, value: cur != null ? cur : (auto != null ? auto : ''), style: 'width:80px;border:1px solid var(--line);border-radius:8px;padding:5px;direction:ltr'}); inputs[a.id] = inp; if (a.meta && typeof a.meta === 'object' && Array.isArray(a.meta.shown_q) && a.meta.shown_q.length && a.meta.shown_q.indexOf(qi) < 0) { inp.value = '0'; inp.disabled = true; inp.title = 'این سؤال برای این دانش‌آموز نمایش داده نشده است (پیک تصادفی)'; } /* V255 */ var im = (a.response_images || {})[q.id] || (a.response_images || {})[String(qi)] || [];
           return el('tr', {}, [el('td', {text: a.student_name || '—'}), el('td', {}, [richEl('span', '', responseText(q, r) || '—')]), el('td', {}, im.map(function (u) { return el('img', {src: u, style: 'width:48px;height:40px;object-fit:cover;border-radius:6px;cursor:zoom-in;margin-inline-end:4px', onclick: function () { lightbox(u); }}); })), el('td', {}, [inp])]); }))]);
       holder.appendChild(el('div', {class: 'card'}, [tbl, el('div', {class: 'row', style: 'margin-top:10px'}, [el('span', {class: 'grow'}), el('button', {class: 'btn', text: '💾 ذخیرهٔ نمره‌های این سؤال', onclick: async function () { var items = []; Object.keys(inputs).forEach(function (id) { var v = inputs[id].value; if (v !== '') items.push({answer_id: id, score: num(v)}); }); if (!items.length) return toast('حداقل یک نمره وارد کنید.', 'err'); try { chk(await S.rpcObj('native_bulk_save_question_grades_v1', {p_exam: ctx.examId, p_question_index: qi, p_items: items})); toast('ذخیره شد.', 'ok'); } catch (e) { toast(errMsg(e), 'err'); } }})])]));
     }

@@ -41,7 +41,8 @@ object ExamPackageCodec {
         val questions: List<QuestionDraft>,
         val by: String,
         val opensAtIso: String? = null,
-        val closesAtIso: String? = null
+        val closesAtIso: String? = null,
+        val pickCount: Int = 0
     )
 
     fun encode(source: ExportedExam, includeAnswerKey: Boolean = true): String {
@@ -80,6 +81,7 @@ object ExamPackageCodec {
                 // V75.4 — نشانگر صریح: آیا این بسته پاسخنامه دارد یا نه.
                 put("answer_key", includeAnswerKey)
                 put("attempt_cooldown", source.attemptCooldown.coerceIn(0, 1440))
+                put("pick_count", source.pickCount.coerceIn(0, 9999))
                 put("questions", combined)
             })
         }
@@ -117,6 +119,7 @@ object ExamPackageCodec {
             attemptOnTimeout = exam["attempt_on_timeout"]?.jsonPrimitive?.booleanOrNull ?: false,
             gradePolicy = exam["grade_policy"]?.jsonPrimitive?.contentOrNull?.takeIf { it in setOf("last", "best", "all") } ?: "last",
             attemptCooldown = exam["attempt_cooldown"]?.jsonPrimitive?.intOrNull?.coerceIn(0, 1440) ?: 0,
+            pickCount = exam["pick_count"]?.jsonPrimitive?.intOrNull?.coerceIn(0, 9999) ?: 0,
             questions = questions,
             opensAtIso = exam["opens_at"]?.jsonPrimitive?.contentOrNull?.takeIf(String::isNotBlank),
             closesAtIso = exam["closes_at"]?.jsonPrimitive?.contentOrNull?.takeIf(String::isNotBlank),

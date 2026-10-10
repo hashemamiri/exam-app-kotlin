@@ -294,6 +294,11 @@ private fun QuestionCentricContent(state: GradingUiState, viewModel: GradingView
                 Card(Modifier.fillMaxWidth()) {
                     Column(Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
                         Text(submission.studentName, style = MaterialTheme.typography.titleMedium)
+                        // V255 — پیک تصادفی: این سؤال برای این دانش‌آموز نمایش داده نشده است.
+                        if (!submission.isShown(index)) {
+                            Text("این سؤال برای این دانش‌آموز نمایش داده نشده است (پیک تصادفی).")
+                            return@Column
+                        }
                         Text("پاسخ: ${submission.responses.getOrNull(index).displayText()}")
                         AnswerImagesRow(submission.answerImagesFor(question.id, index))
                         val scoreKey = "${submission.id}:$index"

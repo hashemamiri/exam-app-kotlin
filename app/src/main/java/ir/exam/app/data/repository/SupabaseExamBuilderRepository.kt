@@ -111,6 +111,7 @@ class SupabaseExamBuilderRepository(context: Context) {
                 attemptOnTimeout = exam.attemptOnTimeout,
                 gradePolicy = exam.gradePolicy,
                 attemptCooldown = exam.attemptCooldown.toString(),
+                pickCount = exam.pickCount.takeIf { it > 0 }?.toString().orEmpty(),
                 audienceMode = if (audienceSchools.isNotEmpty()) "schools" else audience.mode,
                 audienceClasses = audience.classes,
                 audienceStudents = if (audienceSchools.isNotEmpty()) emptySet() else audience.students,
@@ -171,6 +172,7 @@ class SupabaseExamBuilderRepository(context: Context) {
             put("attempt_on_timeout", state.attemptOnTimeout)
             put("grade_policy", state.gradePolicy)
             put("attempt_cooldown", state.attemptCooldown.toIntOrNull()?.coerceIn(0, 1440) ?: 0)
+            put("pick_count", state.pickCount.toIntOrNull()?.coerceIn(0, 9999) ?: 0)
             put("questions", encoded.publicQuestions)
             put("answer_key", encoded.answerKey)
             put("audience", state.audienceMode)
