@@ -1662,3 +1662,12 @@ input.topup-amt:focus{border-color:var(--brand,#39758a);box-shadow:0 0 0 3px var
 .modal .x.tariff-x{position:static;background:#fde8ec;color:#d6336c;font-weight:800}
 .modal .x.tariff-x:hover{background:#d6336c;color:#fff}
 :root.m-dark .modal .x.tariff-x{background:rgba(214,51,108,.18);color:#ff7a9c}
+
+/* V256 — آیکون‌های SVG دسکتاپ (جایگزین ایموجی) */
+.dk svg.ico{width:1.15em;height:1.15em;vertical-align:-.22em;margin-inline-end:.4em;flex:none}
+.dk svg.ico.lone{margin-inline-end:0}
+.dk .icon-btn svg.ico,.dk .x svg.ico{width:19px;height:19px}
+.dk .empty .big svg.ico{width:52px;height:52px;stroke-width:1.5;opacity:.75}
+.dk .stat .v svg.ico,.dk h3 svg.ico,.dk h2 svg.ico{width:1.2em;height:1.2em}
+.dk .m-radial-item .g svg.ico,.dk .m-qa-item .m-qa-ic svg.ico{width:30px;height:30px;stroke-width:1.7}
+.dk .chip svg.ico{width:1em;height:1em;margin-inline-end:.3em}
