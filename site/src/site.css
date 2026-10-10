@@ -1226,6 +1226,12 @@ button.stat:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
 .dk .cal-wrap{display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start}
 .dk .cal-side{display:block;min-height:320px}
 .dk .cal-col{display:flex;flex-direction:column}
+/* V253.5 — دسکتاپ: نام ماه سمت راست، سه دکمهٔ «ماه قبل / امروز / ماه بعد» کنار هم سمت چپ */
+.dk .cal-nav{gap:6px}
+.dk .cal-nav>h2{order:0;text-align:start !important;margin-inline-end:auto !important}
+.dk .cal-nav>button:nth-child(3){order:1}
+.dk .cal-nav>button:nth-child(4){order:2}
+.dk .cal-nav>button:nth-child(1){order:3}
 .dk .cal-newrow{min-height:38px}
 .dk .cal-d.sel{box-shadow:0 0 0 3px rgba(34,198,239,.25);border-color:#22c6ef}
 .dk .cal{max-width:none;margin:0;gap:5px}

@@ -19425,6 +19425,8 @@ CI: `compileDebugUnitTestKotlin` به‌خاطر `assertFalse` بدون import �
 - باگ V202.5: `var LANDING_TILES` داخل `paintAuth` بعد از خطی که `landing()` را صدا می‌زد تعریف شده بود → به‌خاطر hoisting مقدارش undefined و `.map` خطا می‌داد → صفحهٔ اول خالی. حالا کنار `authActive` در سطح ماژول است (تست ترتیب را پین می‌کند).
 - دروازهٔ صفحهٔ اول: mobile.js `entered()/enter()` با `sessionStorage['m-entered']`، `gateActive() = MQ && user && !entered`؛ app.js `render()` پیش از m-mode اگر gateActive → paintAuth (landing حتی با user). دکمه: user ⇒ `enter(); S.render()`؛ وگرنه `goA('login')`؛ پیوند ثبت‌نام فقط بدون user. `afterLogin()` → `SiteMobile.enter()`.
 
+### V253.5 — (فقط سایت) `.dk .cal-nav` با flex `order`: h2 راست (order 0, grow)، سپس ماه قبل (1)، امروز (2)، ماه بعد (3) کنار هم؛ بدون تغییر JS.
+
 ### V253.4 — (فقط سایت) تقویم دسکتاپ: `navRow` بالای ستون تقویم، `newBtn` وسطِ بالای ستون پیام‌ها (تاریخ پیش‌فرض = `selDay`)، «پیام برای این روز» حذف. گوشی: `newBtn` در همان ردیف ناوبری مثل قبل.
 
 ### V253.3 — (فقط سایت) تقویم دسکتاپ: `.cal-wrap` دو ستونه (`.dk`)، پنل `.cal-side` (در غیر دسکتاپ `display:none`) با `showDay(d)` — تعطیلات، پیام‌ها (عنوان + متن)، ویرایش (معلم) و «پیام برای این روز»؛ روز انتخاب‌شده `.cal-d.sel`؛ پس از ذخیره `S.go('calendar',{y,m,d})` همان روز را دوباره نشان می‌دهد. گوشی: همان `dayDlg`.

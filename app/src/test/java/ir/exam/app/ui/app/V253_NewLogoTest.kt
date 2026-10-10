@@ -48,6 +48,7 @@ class V253_NewLogoTest {
         assertTrue("if (isDk()) showDay(d); else dayDlg(iso, y, m, d, ns, hs, isTeacher" in a)
         assertTrue("showDay(arg.d || (today.jy === y && today.jm === m ? today.jd : 1));" in a)
         val css = source("site/src/site.css")
+        assertTrue(".dk .cal-nav>button:nth-child(3){order:1}" in css && ".dk .cal-nav>button:nth-child(1){order:3}" in css) // V253.5
         assertTrue(".cal-side{display:none}" in css && ".dk .cal-wrap{display:grid;grid-template-columns:1fr 1fr" in css && ".dk .cal-side{display:block" in css)
     }
 
