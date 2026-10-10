@@ -112,6 +112,8 @@
     return ERR_SERVER;
   }
   function errMsg(e) {
+    /* V255.1 — متن فنی فقط در Console مرورگر (برای عیب‌یابی)؛ به کاربر همچنان پیام فارسی نشان داده می‌شود. */
+    try { if (window.console && e && typeof e !== 'string') console.warn('[onlineexam] خطای فنی:', e && (e.stack || e.message || JSON.stringify(e))); else if (e) console.warn('[onlineexam] خطای فنی:', e); } catch (x) {}
     if (!e) return ERR_SERVER;
     if (typeof e === 'string') return errText(e) || ERR_SERVER;
     var raw = e.message || e.error_description || e.msg || e.error || e.hint || e.details || '';
@@ -1459,7 +1461,7 @@
         else card.appendChild(examTable(r[0].slice(0, 6), c));
         c.appendChild(card);
       } else if (user.role === 'student') {
-        var g = mergeAnswerMax((await api.myGrades()) || [], await api.myAnswers().catch(function () { return []; })); /* V251 — خطا به catch پایین می‌رود و پیام می‌دهد؛ نه «۰ آزمون شرکت‌کرده» */
+        var g = (await api.myGrades()) || []; g = mergeAnswerMax(g, await api.myAnswers().catch(function () { return []; })); /* V255 — سقف نمرهٔ پیک تصادفی */ /* V251 — خطا به catch پایین می‌رود و پیام می‌دهد؛ نه «۰ آزمون شرکت‌کرده» */
         c.innerHTML = '';
         var graded = g.filter(function (x) { return x.graded_at; });
         var avg = graded.length ? graded.reduce(function (s, x) { return s + (Number(x.total_score) ? Number(x.total_grade) / Number(x.total_score) * 100 : 0); }, 0) / graded.length : 0;
