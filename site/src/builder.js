@@ -535,21 +535,21 @@
       ]);
       bg.appendChild(box); document.body.appendChild(bg);
     }
+    /* V254 — آیکون‌های برداری سربرگ سؤال (هم‌خانوادهٔ ریل) */
+    var QI = {
+      up: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg>',
+      down: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12l7 7 7-7"/></svg>',
+      copy: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V6a2 2 0 0 1 2-2h9"/></svg>',
+      bank: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10l9-6 9 6"/><path d="M5 10v9M10 10v9M14 10v9M19 10v9"/><path d="M3 19h18"/><path d="M12 13v4M10 15h4"/></svg>',
+      trash: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3"/></svg>'
+    };
+    async function addToBank(q0) {
+      if (!q0) return;
+      if (!(await S.confirmDlg('افزودن به بانک سؤال', 'سؤال ' + fa(state.questions.indexOf(q0) + 1) + ' در بانک سؤال شما ذخیره شود؟', 'افزودن'))) return;
+      try { var enc = encodeQuestions([q0]); var comb = Object.assign({}, enc.publicQuestions[0], enc.answerKey[0]); delete comb.i; var r = await S.rpcObj('native_bank_add_v2', {p_question: comb, p_subject: (state.subject || '').trim(), p_cats: []}); if (r && r.error) throw new Error(r.error); toast('در بانک سؤال ذخیره شد.', 'ok'); } catch (e) { toast(errMsg(e), 'err'); }
+    }
     function drawRail() {
       rail.innerHTML = '';
-      /* V254 — آیکون‌های برداری سربرگ سؤال (هم‌خانوادهٔ ریل) */
-      var QI = {
-        up: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg>',
-        down: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12l7 7 7-7"/></svg>',
-        copy: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V6a2 2 0 0 1 2-2h9"/></svg>',
-        bank: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10l9-6 9 6"/><path d="M5 10v9M10 10v9M14 10v9M19 10v9"/><path d="M3 19h18"/><path d="M12 13v4M10 15h4"/></svg>',
-        trash: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3"/></svg>'
-      };
-      async function addToBank(q0) {
-        if (!q0) return;
-        if (!(await S.confirmDlg('افزودن به بانک سؤال', 'سؤال ' + fa(state.questions.indexOf(q0) + 1) + ' در بانک سؤال شما ذخیره شود؟', 'افزودن'))) return;
-        try { var enc = encodeQuestions([q0]); var comb = Object.assign({}, enc.publicQuestions[0], enc.answerKey[0]); delete comb.i; var r = await S.rpcObj('native_bank_add_v2', {p_question: comb, p_subject: (state.subject || '').trim(), p_cats: []}); if (r && r.error) throw new Error(r.error); toast('در بانک سؤال ذخیره شد.', 'ok'); } catch (e) { toast(errMsg(e), 'err'); }
-      }
       function rb(icon, label, on, cls) { return el('button', {class: 'b-rail-btn ' + (cls || ''), title: label, 'aria-label': label, html: icon, onclick: on}); }
       rail.appendChild(rb('<svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>', 'افزودن سؤال', function (e) { addMenu(e.currentTarget); }, 'add'));
       /* V173 — مثل FABهای ExamBuilderScreen: آنلاین = ذخیره + چشم (پیش‌نمایش دانش‌آموزی سؤال، V62.7)؛ چاپی = ذخیره + چشم (پیش‌نمایش برگه) + چاپ (منوی چاپ آزمون/چاپ با کلید) */
