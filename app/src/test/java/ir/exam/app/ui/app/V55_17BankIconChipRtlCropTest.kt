@@ -43,7 +43,8 @@ class V55_17BankIconChipRtlCropTest {
 
     @Test
     fun `fig tokens render as short chips in option fields`() {
-        assertTrue("visualTransformation = FigTokenVisuals.transformation" in builder)
+        // V259 — گزینه‌ها به InlineMathTextEditor (رندر واقعی داخل کادر) رفتند؛ جورکردنی هنوز تراشهٔ متنی دارد
+        assertTrue("InlineMathTextEditor(\n                                    source = option," in builder)
         val count = Regex("visualTransformation = FigTokenVisuals\\.transformation").findAll(matching).count()
         assertEquals(2, count)
     }

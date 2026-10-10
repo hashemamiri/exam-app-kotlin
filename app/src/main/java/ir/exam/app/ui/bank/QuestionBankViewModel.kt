@@ -101,7 +101,7 @@ class QuestionBankViewModel(
         subject: String,
         categoryIds: Set<Long>
     ) = action("سؤال بانک بروزرسانی شد.") {
-        repository.updateBankQuestion(item.id, question, subject, categoryIds).getOrThrow()
+        repository.updateBankQuestion(item.id, question, subject, categoryIds, examTitle = item.examTitle).getOrThrow()
     }
 
     fun deleteQuestion(id: Long) = action("سؤال از بانک حذف شد.") {

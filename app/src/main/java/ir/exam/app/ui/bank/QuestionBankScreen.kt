@@ -6,13 +6,20 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Visibility
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
@@ -371,6 +378,8 @@ private fun BankQuestionCard(
     onDelete: () -> Unit
 ) {
     val q = item.question
+    // V259 — کارت فشرده: نوع/بارم، عنوان آزمون و درس؛ محتوای سؤال فقط با آیکن چشم (پنجره) نمایش داده می‌شود.
+    var preview by remember(item.id) { mutableStateOf(false) }
     NeumorphicPanel(
         modifier = Modifier.fillMaxWidth(),
         radius = 22.dp,
@@ -385,28 +394,23 @@ private fun BankQuestionCard(
             ) {
                 BankChip(q.type.faLabel(), accent = true)
                 BankChip("بارم ${q.score}")
-                Text(
-                    item.subject.orEmpty().ifBlank { "بدون درس" },
-                    style = MaterialTheme.typography.bodySmall,
-                    modifier = Modifier.weight(1f),
-                    maxLines = 1
-                )
+                androidx.compose.foundation.layout.Spacer(Modifier.weight(1f))
+                IconButton(onClick = { preview = true }, modifier = Modifier.size(36.dp)) {
+                    Icon(
+                        Icons.Outlined.Visibility,
+                        contentDescription = "نمایش محتوای سؤال",
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                }
             }
-            NativeMathText(q.text.ifBlank { "بدون متن" })
-            if (q.type == QuestionType.MULTIPLE_CHOICE && q.options.isNotEmpty()) {
-                val letters = listOf("الف", "ب", "ج", "د", "هـ", "و", "ز", "ح")
-                Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                    q.options.take(6).forEachIndexed { index, option ->
-                        val correct = q.correctIndex == index
-                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.Top) {
-                            Text(
-                                (if (correct) "✓ " else "") + letters.getOrElse(index) { "${index + 1}" } + ")",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = if (correct) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                            NativeMathText(option.ifBlank { "—" }, modifier = Modifier.weight(1f))
-                        }
-                    }
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                Column(Modifier.weight(1f)) {
+                    Text("عنوان آزمون", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(item.examTitle.orEmpty().ifBlank { "—" }, style = MaterialTheme.typography.bodyMedium, maxLines = 1)
+                }
+                Column(Modifier.weight(1f)) {
+                    Text("درس", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(item.subject.orEmpty().ifBlank { "بدون درس" }, style = MaterialTheme.typography.bodyMedium, maxLines = 1)
                 }
             }
             if (item.categoryNames.isNotEmpty()) {
@@ -420,6 +424,56 @@ private fun BankQuestionCard(
                 OutlinedButton(onClick = onEdit) { Text("ویرایش") }
                 TextButton(onClick = onDelete) { Text("حذف", color = MaterialTheme.colorScheme.error) }
             }
+        }
+    }
+    if (preview) {
+        AlertDialog(
+            onDismissRequest = { preview = false },
+            title = { Text(q.type.faLabel() + " — بارم ${q.score}") },
+            confirmButton = { TextButton(onClick = { preview = false }) { Text("بستن") } },
+            text = { BankQuestionContent(q) }
+        )
+    }
+}
+
+/** V259 — محتوای کامل سؤال بانک (متن با فرمول/شکل، گزینه‌ها، جورکردنی، پاسخ) در پنجرهٔ چشم. */
+@Composable
+private fun BankQuestionContent(q: QuestionDraft) {
+    Column(
+        Modifier.verticalScroll(rememberScrollState()),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        NativeMathText(q.text.ifBlank { "بدون متن" })
+        val letters = listOf("الف", "ب", "ج", "د", "هـ", "و", "ز", "ح")
+        when (q.type) {
+            QuestionType.MULTIPLE_CHOICE -> q.options.forEachIndexed { index, option ->
+                val correct = q.correctIndex == index
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.Top) {
+                    Text(
+                        (if (correct) "✓ " else "") + letters.getOrElse(index) { "${index + 1}" } + ")",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = if (correct) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    NativeMathText(option.ifBlank { "—" }, modifier = Modifier.weight(1f))
+                }
+            }
+            QuestionType.MATCHING -> {
+                val n = maxOf(q.matchingLeft.size, q.matchingRight.size)
+                for (i in 0 until n) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.Top) {
+                        NativeMathText(q.matchingLeft.getOrNull(i).orEmpty().ifBlank { "—" }, modifier = Modifier.weight(1f))
+                        Text("↔", style = MaterialTheme.typography.bodySmall)
+                        NativeMathText(q.matchingRight.getOrNull(i).orEmpty().ifBlank { "—" }, modifier = Modifier.weight(1f))
+                    }
+                }
+            }
+            QuestionType.TRUE_FALSE -> Text(
+                "پاسخ: " + when (q.expectedText) { "true" -> "صحیح"; "false" -> "غلط"; else -> "—" },
+                style = MaterialTheme.typography.bodySmall
+            )
+            QuestionType.FILL_BLANK -> if (q.expectedText.isNotBlank()) Text("پاسخ‌های قابل قبول: ${q.expectedText}", style = MaterialTheme.typography.bodySmall)
+            QuestionType.NUMERIC -> if (q.expectedNumber.isNotBlank()) Text("پاسخ عددی: ${q.expectedNumber}", style = MaterialTheme.typography.bodySmall)
+            QuestionType.ESSAY -> Unit
         }
     }
 }

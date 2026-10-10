@@ -210,12 +210,14 @@ class SupabaseExamBuilderRepository(context: Context) {
     suspend fun saveToBank(
         question: QuestionDraft,
         subject: String,
-        categoryIds: Set<Long> = emptySet()
+        categoryIds: Set<Long> = emptySet(),
+        examTitle: String = ""
     ): Result<Unit> = runCatching {
         val encoded = ExamQuestionCodec.encode(listOf(question))
         val public = encoded.publicQuestions.first() as JsonObject
         val key = encoded.answerKey.first() as JsonObject
-        val combined = JsonObject(public + key - "i")
+        // V259 — عنوان آزمون مبدأ داخل JSON سؤال ذخیره می‌شود (بدون تغییر جدول/SQL).
+        val combined = JsonObject(public + key - "i" + ("examTitle" to kotlinx.serialization.json.JsonPrimitive(examTitle.trim())))
         rpcObject("native_bank_add_v2", buildJsonObject {
             put("p_question", combined)
             put("p_subject", subject.trim())
@@ -227,12 +229,14 @@ class SupabaseExamBuilderRepository(context: Context) {
         id: Long,
         question: QuestionDraft,
         subject: String,
-        categoryIds: Set<Long>
+        categoryIds: Set<Long>,
+        examTitle: String? = null
     ): Result<Unit> = runCatching {
         val encoded = ExamQuestionCodec.encode(listOf(question))
         val public = encoded.publicQuestions.first() as JsonObject
         val key = encoded.answerKey.first() as JsonObject
-        val combined = JsonObject(public + key - "i")
+        val base = public + key - "i"
+        val combined = JsonObject(if (examTitle != null) base + ("examTitle" to kotlinx.serialization.json.JsonPrimitive(examTitle)) else base)
         rpcObject("native_bank_update_question_v1", buildJsonObject {
             put("p_id", id)
             put("p_question", combined)
@@ -285,7 +289,10 @@ class SupabaseExamBuilderRepository(context: Context) {
                 ?: return@mapNotNull null
             val catIds = (row["cat_ids"] as? JsonArray).orEmpty().mapNotNull { it.jsonPrimitive.longOrNull }.toSet()
             val catNames = (row["cat_names"] as? JsonArray).orEmpty().mapNotNull { it.jsonPrimitive.contentOrNull }
-            BankQuestionOption(id, row["subject"]?.jsonPrimitive?.contentOrNull, question, catIds, catNames)
+            BankQuestionOption(
+                id, row["subject"]?.jsonPrimitive?.contentOrNull, question, catIds, catNames,
+                examTitle = combined["examTitle"]?.jsonPrimitive?.contentOrNull?.takeIf(String::isNotBlank)
+            )
         }
         return BankSnapshot(questions, categories)
     }

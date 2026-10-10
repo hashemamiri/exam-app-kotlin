@@ -559,17 +559,26 @@
         if (!f.length) { lst.appendChild(S.emptyBox('🏦', 'سؤالی در بانک نیست. از سازندهٔ آزمون با «ذخیرهٔ سؤال جاری در بانک» اضافه کنید.')); return; }
         f.forEach(function (it) {
           var qq = it.question || {};
-          /* V257 — کارت سؤال: سربرگ (نوع/بارم/درس)، متن با فرمول، گزینه‌ها، دسته‌ها، پابرگ اقدام‌ها */
-          var txt = el('div', {class: 'bk-text', text: String(qq.text || '').replace(/\$/g, '').slice(0, 400)});
-          if (window.SiteStudent && window.SiteStudent.richHtml && qq.text) { window.SiteStudent.richHtml(String(qq.text)).then(function (h) { txt.innerHTML = h; if (window.SiteStudent.fitMath) window.SiteStudent.fitMath(txt); }).catch(function () {}); }
-          var opts = null;
-          if (S.qType(qq.type) === 'multiple' && Array.isArray(qq.options) && qq.options.length) {
-            var L = ['الف', 'ب', 'ج', 'د', 'هـ', 'و'];
-            opts = el('div', {class: 'bk-opts'}, qq.options.slice(0, 6).map(function (o, k) { var ok = Number(qq.correctOption) === k; return el('div', {class: ok ? 'ok' : '', text: (ok ? '✓ ' : '') + (L[k] || String(k + 1)) + ') ' + String(o || '—').replace(/\$/g, '').slice(0, 80)}); }));
+          /* V259 — کارت فشرده: نوع/بارم + آیکن چشم؛ عنوان آزمون و درس؛ دسته‌ها؛ اقدام‌ها. محتوای سؤال با چشم در پنجره نمایش داده می‌شود (مثل اپ) */
+          function showQuestion() {
+            var bg = el('div', {class: 'modal-bg', onclick: function (e) { if (e.target === bg) bg.remove(); }});
+            var txt = el('div', {class: 'bk-full-text math-rich', text: String(qq.text || 'بدون متن').replace(/\$/g, '')});
+            if (window.SiteStudent && window.SiteStudent.mathCss) window.SiteStudent.mathCss();
+            function rich(node, raw, prefix) { if (raw && window.SiteStudent && window.SiteStudent.richHtml) window.SiteStudent.richHtml(String(raw)).then(function (h) { node.innerHTML = (prefix || '') + h; if (window.SiteStudent.fitMath) window.SiteStudent.fitMath(node); }).catch(function () {}); return node; }
+            rich(txt, qq.text);
+            var L = ['الف', 'ب', 'ج', 'د', 'هـ', 'و', 'ز', 'ح'], body = [txt];
+            var ty = S.qType(qq.type);
+            if (ty === 'multiple' && Array.isArray(qq.options)) body.push(el('div', {class: 'bk-full-opts'}, qq.options.map(function (o, k) { var ok = Number(qq.correctOption) === k; return rich(el('div', {class: 'math-rich' + (ok ? ' ok' : ''), text: String(o || '—').replace(/\$/g, '')}), o, '<b>' + (ok ? '✓ ' : '') + (L[k] || String(k + 1)) + ')</b> '); })));
+            else if (ty === 'matching') { var ml = qq.matchingLeft || qq.leftItems || [], mr = qq.matchingRight || qq.rightItems || []; body.push(el('div', {class: 'bk-full-opts'}, ml.map(function (l, k) { var row = el('div', {class: 'row'}); row.appendChild(rich(el('span', {class: 'grow math-rich', text: String(l || '—').replace(/\$/g, '')}), l)); row.appendChild(el('span', {text: '↔'})); row.appendChild(rich(el('span', {class: 'grow math-rich', text: String(mr[k] || '—').replace(/\$/g, '')}), mr[k])); return row; }))); }
+            else if (ty === 'truefalse') body.push(el('p', {class: 'muted', text: 'پاسخ: ' + (String(qq.expectedText) === 'true' ? 'صحیح' : String(qq.expectedText) === 'false' ? 'غلط' : '—')}));
+            else if (ty === 'fill' && qq.expectedText) body.push(el('p', {class: 'muted', text: 'پاسخ‌های قابل قبول: ' + qq.expectedText}));
+            else if (ty === 'numeric' && qq.expectedNumber != null && qq.expectedNumber !== '') body.push(el('p', {class: 'muted', text: 'پاسخ عددی: ' + fa(qq.expectedNumber)}));
+            bg.appendChild(el('div', {class: 'modal bk-full'}, [el('button', {class: 'x', text: '✕', 'aria-label': 'بستن', onclick: function () { bg.remove(); }}), el('h2', {text: (TYPE[ty] || 'سؤال') + ' — بارم ' + fa(S.fmtScore(Number(qq.score) || 1))}), el('div', {class: 'bk-full-body'}, body)]));
+            document.body.appendChild(bg);
           }
-          lst.appendChild(el('div', {class: 'bank-card'}, [
-            el('div', {class: 'bk-head'}, [el('span', {class: 'chip type', text: TYPE[S.qType(qq.type)] || 'سؤال'}), el('span', {class: 'chip', text: 'بارم ' + fa(S.fmtScore(Number(qq.score) || 1))}), el('span', {class: 'bk-sub', text: it.subject || 'بدون درس'})]),
-            txt, opts,
+          lst.appendChild(el('div', {class: 'bank-card compact'}, [
+            el('div', {class: 'bk-head'}, [el('span', {class: 'chip type', text: TYPE[S.qType(qq.type)] || 'سؤال'}), el('span', {class: 'chip', text: 'بارم ' + fa(S.fmtScore(Number(qq.score) || 1))}), el('button', {class: 'icon-btn bk-eye', title: 'نمایش محتوای سؤال', 'aria-label': 'نمایش محتوای سؤال', html: '👁', onclick: showQuestion})]),
+            el('div', {class: 'bk-meta'}, [el('div', [el('small', {text: 'عنوان آزمون'}), el('div', {class: 'v', text: qq.examTitle || '—'})]), el('div', [el('small', {text: 'درس'}), el('div', {class: 'v', text: it.subject || 'بدون درس'})])]),
             (it.cat_names || []).length ? el('div', {class: 'bk-cats'}, (it.cat_names || []).slice(0, 4).map(function (n) { return el('span', {class: 'chip', text: n}); })) : null,
             el('div', {class: 'bk-foot'}, [el('div', {class: 'acts'}, [
               /* V230 — اشتراک با همکاران مدرسه (فقط خواندن/کپی) */

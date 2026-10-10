@@ -103,6 +103,7 @@ class V58_0StudentExamUxTimerTest {
 
     @Test
     fun `teacher editor hides atlas naming boxes`() {
-        assertTrue("showAtlasBlanks = false" in builderScreen)
+        // V259 — کادر گزینه‌ها InlineMathTextEditor شد؛ جای خالی‌های اطلس در تراشهٔ شکل با showBlanks=false پنهان است
+        assertTrue("showBlanks = false,\n                    onImageTap = onEdit" in File(root(), "app/src/main/java/ir/exam/app/ui/math/InlineMathTextEditor.kt").readText())
     }
 }

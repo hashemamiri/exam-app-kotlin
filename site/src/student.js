@@ -198,7 +198,7 @@
     if (document.getElementById('stMathCss')) return;
     ensureMathFrame().then(function (w) {
       if (!w) return; var out = [];
-      var keep = /\.(mathx|mfrac|mnum|mden|msqrt|mroot|msup|msub|mrow|mtable|mtr|mtd|mover|munder|mo|mi|mn|msurd|surd-svg|root-line|mrad|mrad-empty|mrootidx|msym|mvar|mfun|mtext|mgrp|msfrac|mslash|mbrk|mbrk-[a-z]+|mbigop|mbigsym|mdelim|mdelim-glyph|mmatrix|mmatrix-[lr]|mmixed|mword|mparbox|mpar-body|moverset|moverset-t|mhspace|mubrace|mubrace-[a-z]+|mb-delim-svg|mbb|mcal|mm-w|math-[a-z-]+|qmf-fig|fig-[a-z-]+|interactive-figure|vt-[a-z-]+|tf-[a-z-]+|gf-svg|pt-[a-z-]+)\b/;
+      var keep = /\.(mathx|mfrac|mnum|mden|msqrt|mroot|msup|msub|mrow|mtable|mtr|mtd|mover|munder|mo|mi|mn|msurd|surd-svg|root-line|mrad|mrad-empty|mrootidx|msym|mvar|mfun|mtext|mgrp|msfrac|mslash|mbrk|mbrk-[a-z]+|mbigop|mbigsym|mdelim|mdelim-glyph|mmatrix|mmatrix-[lr]|mmixed|mword|mparbox|mpar-body|moverset|moverset-t|mhspace|mubrace|mubrace-[a-z]+|mb-delim-svg|mbb|mcal|mm-w|math-[a-z-]+|qmf-fig|fig-[a-z-]+|interactive-figure|vt-[a-z-]+|tf-[a-z-]+|gf-svg|pt-[a-z-]+|tbx|tbx-[a-z0-9-]+|qmf-tab|tb-[a-z-]+)\b/; /* V259 — جدول (tbx-*) هم منتقل می‌شود؛ پیش‌تر جدول‌ها در سایت بدون استایل بودند */
       Array.prototype.forEach.call(w.document.styleSheets, function (sh) {
         var rules; try { rules = sh.cssRules; } catch (e) { return; }
         Array.prototype.forEach.call(rules, function (r) {

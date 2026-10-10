@@ -329,7 +329,9 @@ data class BankQuestionOption(
     val subject: String?,
     val question: QuestionDraft,
     val categoryIds: Set<Long> = emptySet(),
-    val categoryNames: List<String> = emptyList()
+    val categoryNames: List<String> = emptyList(),
+    // V259 — عنوان آزمونی که سؤال از آن به بانک رفته (داخل JSON سؤال، کلید examTitle).
+    val examTitle: String? = null
 )
 
 data class ExamBuilderState(

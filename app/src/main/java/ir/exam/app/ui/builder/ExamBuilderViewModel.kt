@@ -388,6 +388,19 @@ class ExamBuilderViewModel(
     fun deleteFigure(id: String, occurrenceIndex: Int) {
         update(id) { it.copy(text = FigureCodec.delete(it.text, occurrenceIndex)) }
     }
+    // V259 — ویرایش/حذف شکل داخل فیلد گزینه/جورکردنی (occurrence نسبت به همان فیلد).
+    private fun mapField(question: QuestionDraft, field: String, index: Int, f: (String) -> String): QuestionDraft = when (field) {
+        "option" -> question.copy(options = question.options.mapIndexed { i, v -> if (i == index) f(v) else v })
+        "matching_left" -> question.copy(matchingLeft = question.matchingLeft.mapIndexed { i, v -> if (i == index) f(v) else v })
+        "matching_right" -> question.copy(matchingRight = question.matchingRight.mapIndexed { i, v -> if (i == index) f(v) else v })
+        else -> question
+    }
+    fun updateFieldFigure(id: String, field: String, index: Int, occurrenceIndex: Int, spec: FigureSpec) {
+        update(id) { mapField(it, field, index) { v -> FigureCodec.replace(v, occurrenceIndex, spec) } }
+    }
+    fun deleteFieldFigure(id: String, field: String, index: Int, occurrenceIndex: Int) {
+        update(id) { mapField(it, field, index) { v -> FigureCodec.delete(v, occurrenceIndex) } }
+    }
     fun updateScore(id: String, score: String) { update(id) { it.copy(score = score.toDoubleOrNull() ?: 0.0) } }
     // V64.4 — استایل مستقل گزینه (بولد/ایتالیک/اندازه)؛ null = ارث از سؤال.
     fun setOptionStyle(id: String, index: Int, change: (OptionStyle) -> OptionStyle) { update(id) { question ->
@@ -676,7 +689,7 @@ class ExamBuilderViewModel(
         val question = state.value.questions.firstOrNull { it.id == questionId } ?: return
         viewModelScope.launch {
             _state.update { it.copy(bankLoading = true, error = null) }
-            repository.saveToBank(question, state.value.subject, categoryIds)
+            repository.saveToBank(question, state.value.subject, categoryIds, examTitle = state.value.title)
                 .onSuccess {
                     // V58.0 — پیام گذرا روی صفحه: «به بانک سؤال اضافه شد».
                     _state.update { it.copy(notice = "به بانک سؤال اضافه شد") }

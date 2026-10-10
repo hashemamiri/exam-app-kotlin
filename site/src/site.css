@@ -1737,3 +1737,16 @@ body.rail-dragging .b-rail-row:not(.dragging):hover .b-rail-grip{background:tran
 .b-ins-grid .tool-btn svg{width:24px;height:24px}
 .b-ins-grid .tool-btn small{font-size:11px;font-weight:700;color:#3a4a63;line-height:1.3;white-space:nowrap}
 .m-dark .b-ins-title{color:#5FD3F5}.m-dark .b-ins-grid .tool-btn small{color:var(--ink)}
+/* V259 — کارت فشردهٔ بانک سؤال (اپ و سایت): نوع/بارم + چشم؛ عنوان آزمون و درس؛ پنجرهٔ محتوای سؤال */
+.bank-card.compact{min-height:0;gap:10px}
+.bank-card .bk-eye{margin-inline-start:auto;color:var(--brand);border-color:#c9dfe6;font-size:17px}
+.bank-card .bk-eye:hover{background:var(--brand-soft)}
+.bank-card .bk-meta{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.bank-card .bk-meta small{display:block;font-size:11px;color:var(--muted);margin-bottom:2px}
+.bank-card .bk-meta .v{font-size:13.5px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.modal.bk-full{max-width:720px;width:calc(100% - 32px)}
+.bk-full-body{max-height:70vh;overflow:auto;line-height:1.9;font-size:15px}
+.bk-full-text{margin-bottom:12px}
+.bk-full-opts{display:flex;flex-direction:column;gap:6px}
+.bk-full-opts>div{padding:8px 12px;border:1px solid var(--line);border-radius:12px}
+.bk-full-opts>div.ok{border-color:var(--brand);background:var(--brand-soft)}

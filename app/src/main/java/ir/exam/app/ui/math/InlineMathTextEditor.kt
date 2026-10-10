@@ -40,6 +40,7 @@ import androidx.compose.ui.unit.sp
 import ir.exam.app.core.figure.FigureSpec
 import ir.exam.app.core.text.RichSegment
 import ir.exam.app.core.text.RichTextSplitter
+import ir.exam.app.ui.figure.AtlasFigureView
 import ir.exam.app.ui.figure.InlineFigureView
 
 /**
@@ -64,7 +65,9 @@ fun InlineMathTextEditor(
     onDeleteFigure: (occurrenceIndex: Int) -> Unit = {},
     modifier: Modifier = Modifier,
     label: String = "متن سؤال",
-    placeholder: String = "متن سؤال را بنویسید…"
+    placeholder: String = "متن سؤال را بنویسید…",
+    // V259 — برای کادر گزینه‌ها: بدون نوار ابزار داخلی (دکمهٔ + گزینه ابزارها را باز می‌کند).
+    showToolbar: Boolean = true
 ) {
     val parts = RichTextSplitter.split(source)
     val showPlaceholder = source.isBlank()
@@ -141,7 +144,7 @@ fun InlineMathTextEditor(
             }
         }
         // آیکن‌های درج فقط زیر کادر متن سؤال هستند؛ داخل کادر چیزی نیست.
-        Row(
+        if (showToolbar) Row(
             modifier = Modifier.fillMaxWidth().padding(top = 2.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -225,7 +228,14 @@ private fun FigureChip(
                     .clickable(onClick = onEdit),
                 contentAlignment = Alignment.Center
             ) {
-                InlineFigureView(
+                // V259 — آناتومی/فیزیک/شیمی/تصویر با نمای اطلس (بدون جای خالی‌های نام‌گذاری؛ معلم است)، بقیه با رندر SVG.
+                if (spec.kind in setOf("a", "s")) AtlasFigureView(
+                    spec = spec,
+                    modifier = Modifier.fillMaxSize().padding(4.dp),
+                    contentDescription = "شکل؛ لمس برای ویرایش",
+                    showBlanks = false,
+                    onImageTap = onEdit
+                ) else InlineFigureView(
                     spec,
                     Modifier.fillMaxSize().padding(4.dp),
                     contentDescription = "شکل؛ لمس برای ویرایش"

@@ -298,7 +298,7 @@
     if (document.getElementById('bMathCss')) return;
     ensurePreviewFrame().then(function (w) {
       if (!w) return; var out = [];
-      var keep = /\.(mathx|mfrac|mnum|mden|msqrt|mroot|msup|msub|mrow|mtable|mtr|mtd|mover|munder|mo|mi|mn|msurd|surd-svg|root-line|mrad|mrad-empty|mrootidx|msym|mvar|mfun|mtext|mgrp|msfrac|mslash|mbrk|mbrk-[a-z]+|mbigop|mbigsym|mdelim|mdelim-glyph|mmatrix|mmatrix-[lr]|mmixed|mword|mparbox|mpar-body|moverset|moverset-t|mhspace|mubrace|mubrace-[a-z]+|mb-delim-svg|mbb|mcal|mm-w|math-[a-z-]+|qmf-fig|fig-[a-z-]+|interactive-figure|vt-[a-z-]+|tf-[a-z-]+|gf-svg|pt-[a-z-]+)\b/;
+      var keep = /\.(mathx|mfrac|mnum|mden|msqrt|mroot|msup|msub|mrow|mtable|mtr|mtd|mover|munder|mo|mi|mn|msurd|surd-svg|root-line|mrad|mrad-empty|mrootidx|msym|mvar|mfun|mtext|mgrp|msfrac|mslash|mbrk|mbrk-[a-z]+|mbigop|mbigsym|mdelim|mdelim-glyph|mmatrix|mmatrix-[lr]|mmixed|mword|mparbox|mpar-body|moverset|moverset-t|mhspace|mubrace|mubrace-[a-z]+|mb-delim-svg|mbb|mcal|mm-w|math-[a-z-]+|qmf-fig|fig-[a-z-]+|interactive-figure|vt-[a-z-]+|tf-[a-z-]+|gf-svg|pt-[a-z-]+|tbx|tbx-[a-z0-9-]+|qmf-tab|tb-[a-z-]+)\b/; /* V259 — جدول (tbx-*) هم منتقل می‌شود؛ پیش‌تر جدول‌ها در سایت بدون استایل بودند */
       Array.prototype.forEach.call(w.document.styleSheets, function (sh) {
         var rules; try { rules = sh.cssRules; } catch (e) { return; }
         Array.prototype.forEach.call(rules, function (r) {
@@ -552,7 +552,7 @@
     async function addToBank(q0) {
       if (!q0) return;
       if (!(await S.confirmDlg('افزودن به بانک سؤال', 'سؤال ' + fa(state.questions.indexOf(q0) + 1) + ' در بانک سؤال شما ذخیره شود؟', 'افزودن'))) return;
-      try { var enc = encodeQuestions([q0]); var comb = Object.assign({}, enc.publicQuestions[0], enc.answerKey[0]); delete comb.i; var r = await S.rpcObj('native_bank_add_v2', {p_question: comb, p_subject: (state.subject || '').trim(), p_cats: []}); if (r && r.error) throw new Error(r.error); toast('در بانک سؤال ذخیره شد.', 'ok'); } catch (e) { toast(errMsg(e), 'err'); }
+      try { var enc = encodeQuestions([q0]); var comb = Object.assign({}, enc.publicQuestions[0], enc.answerKey[0]); delete comb.i; comb.examTitle = (state.title || '').trim(); /* V259 — عنوان آزمون مبدأ روی کارت بانک */ var r = await S.rpcObj('native_bank_add_v2', {p_question: comb, p_subject: (state.subject || '').trim(), p_cats: []}); if (r && r.error) throw new Error(r.error); toast('در بانک سؤال ذخیره شد.', 'ok'); } catch (e) { toast(errMsg(e), 'err'); }
     }
     function drawRail() {
       rail.innerHTML = '';
@@ -992,7 +992,7 @@
         if (state.bankEdit) {
           var bq = state.questions[state.selected] || state.questions[0];
           if (!bq || !bq.text.trim()) throw new Error('متن سؤال را وارد کنید.');
-          var benc = encodeQuestions([bq]); var comb = Object.assign({}, benc.publicQuestions[0], benc.answerKey[0]); delete comb.i;
+          var benc = encodeQuestions([bq]); var comb = Object.assign({}, benc.publicQuestions[0], benc.answerKey[0]); if (state.bankEdit.question && state.bankEdit.question.examTitle) comb.examTitle = state.bankEdit.question.examTitle; /* V259 */ delete comb.i;
           var bcats = (state.bankEdit.cats || []).slice().sort(function (a, b) { return a - b; });
           var braw = state.bankEdit.id ? await S.rpcObj('native_bank_update_question_v1', {p_id: state.bankEdit.id, p_question: comb, p_subject: state.subject.trim(), p_cats: bcats}) : await S.rpcObj('native_bank_add_v2', {p_question: comb, p_subject: state.subject.trim(), p_cats: bcats});
           if (braw && braw.error) throw new Error(String(braw.error));

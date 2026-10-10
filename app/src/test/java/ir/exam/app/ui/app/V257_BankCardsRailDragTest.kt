@@ -31,13 +31,13 @@ class V257_BankCardsRailDragTest {
     fun `bank shows question cards on site and app`() {
         val s = source("site/src/school.js")
         assertTrue("var lst = el('div', {class: 'bank-grid'});" in s)
-        assertTrue("lst.appendChild(el('div', {class: 'bank-card'}, [" in s)
+        assertTrue("lst.appendChild(el('div', {class: 'bank-card compact'}, [" in s) // V259 — کارت فشرده
         assertTrue("el('span', {class: 'chip type', text: TYPE[S.qType(qq.type)] || 'سؤال'})" in s)
         val css = source("site/src/site.css")
         assertTrue(".bank-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px}" in css)
         val k = source("app/src/main/java/ir/exam/app/ui/bank/QuestionBankScreen.kt")
         assertTrue("private fun BankQuestionCard(" in k)
         assertTrue("BankChip(q.type.faLabel(), accent = true)" in k)
-        assertTrue("if (q.type == QuestionType.MULTIPLE_CHOICE && q.options.isNotEmpty()) {" in k)
+        assertTrue("QuestionType.MULTIPLE_CHOICE -> q.options.forEachIndexed { index, option ->" in k) // V259 — در پنجرهٔ چشم
     }
 }

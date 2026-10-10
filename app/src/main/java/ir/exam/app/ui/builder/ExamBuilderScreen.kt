@@ -111,7 +111,6 @@ import ir.exam.app.ui.figure.FigureKind
 import ir.exam.app.ui.figure.FigurePickerDialog
 import ir.exam.app.ui.figure.FigureTypePickerDialog
 import ir.exam.app.ui.image.QuestionMediaEditor
-import ir.exam.app.ui.math.ExistingFormulaEditor
 import ir.exam.app.core.figure.AtlasCatalog
 import ir.exam.app.ui.figure.AtlasEditorDialog
 import ir.exam.app.ui.figure.AtlasTypePickerDialog
@@ -122,6 +121,7 @@ import ir.exam.app.ui.figure.TableEditorDialog
 import ir.exam.app.ui.math.FormulaHostDialog
 import ir.exam.app.ui.math.QuestionEditorFieldController
 import ir.exam.app.ui.math.NativeMathText
+import ir.exam.app.ui.math.InlineMathTextEditor
 import ir.exam.app.core.math.FormulaTextCodec
 import ir.exam.app.core.text.RichTextSplitter
 import kotlinx.coroutines.launch
@@ -1091,6 +1091,24 @@ private fun QuestionEditor(
     var insertMenuFor by remember(question.id) { mutableStateOf<InsertMenuRef?>(null) }
     // V55.16 — خروجی ویرایشگر ابزار بعدی به‌جای متن سؤال، در این فیلد درج شود.
     var fieldInsertTarget by remember(question.id) { mutableStateOf<InsertMenuRef?>(null) }
+    // V259 — ویرایش شکلِ موجود داخل فیلد گزینه/جورکردنی: (فیلد، شمارهٔ occurrence در همان فیلد).
+    var fieldEditRef by remember(question.id) { mutableStateOf<Pair<InsertMenuRef, Int>?>(null) }
+    // V259 — لمس شکل داخل کادر گزینه: ویرایشگر Native همان نوع باز می‌شود و خروجی جایگزین همان توکن می‌شود.
+    fun openFieldFigureEditor(ref: InsertMenuRef, occurrence: Int, spec: FigureSpec) {
+        fieldEditRef = ref to occurrence
+        when (spec.kind) {
+            "t" -> tableTarget = TableTarget(initialSpec = spec)
+            "p" -> periodicTarget = TableTarget(initialSpec = spec)
+            "a" -> atlasTarget = AtlasTarget(kind = "a", initialSpec = spec)
+            "s" -> atlasTarget = AtlasTarget(kind = "s", domain = AtlasCatalog.scienceDomain(spec.type), initialSpec = spec)
+            else -> figureTarget = FigureTarget(
+                initialSpec = spec,
+                kind = if (ir.exam.app.core.figure.AXIS_FIGURES.any { it.id == spec.type }) FigureKind.AXIS
+                else if (GRAPH_FIGURES.any { it.id == spec.type }) FigureKind.GRAPH
+                else FigureKind.GEOMETRY
+            )
+        }
+    }
     // شناسهٔ گزینه‌ای که اکنون در حال درگ است تا کارت همان گزینه رنگی شود.
     var optionDragId by remember(question.id) { mutableStateOf<String?>(null) }
     // همان آستانهٔ مشترک گزینه/جورکردنی تا رفتار جابه‌جایی‌ها یکسان باشد.
@@ -1417,25 +1435,28 @@ private fun QuestionEditor(
                                 }
                                 // V55.16 — شبیه کادر متن سؤال: کادر گرد با پیش‌نمایش
                                 // زندهٔ فرمول و شکل/نمودار/جدول (توکن %%FIG%%) زیر آن.
-                                OutlinedTextField(
-                                    value = option,
-                                    onValueChange = { viewModel.updateOption(question.id, index, it) },
-                                    placeholder = { Text("متن $optionLabel") },
-                                    shape = RoundedCornerShape(14.dp),
-                                    // V55.17 — توکن‌های %%FIG%% داخل کادر به تراشهٔ کوتاه ⟦نوع⟧
-                                    // نمایش داده می‌شوند؛ مقدار واقعی دست نمی‌خورد.
-                                    visualTransformation = FigTokenVisuals.transformation(MaterialTheme.colorScheme.primary),
-                                    modifier = Modifier.fillMaxWidth()
-                                )
-                                if ('$' in option || "%%FIG:" in option) NativeMathText(option, showAtlasBlanks = false)
-                                ExistingFormulaEditor(
+                                // V259 — کادر گزینه مثل کادر متن سؤال: فرمول و شکل/نمودار/جدول داخل کادر
+                                // به‌صورت نماد/تصویر رندر می‌شوند؛ لمس = ویرایش همان شیء، ✕ = حذف؛ متن عادی درون‌متنی.
+                                InlineMathTextEditor(
                                     source = option,
-                                    onEdit = { occurrence, tex ->
+                                    onSourceChange = { viewModel.updateOption(question.id, index, it) },
+                                    onEditFormula = { occurrence, tex ->
                                         formulaTarget = FormulaTarget("option", index, occurrence, tex)
                                     },
-                                    onDelete = { occurrence ->
+                                    onInsertFormula = { formulaTarget = FormulaTarget("option", index) },
+                                    onDeleteFormula = { occurrence ->
                                         viewModel.deleteFormula(question.id, "option", index, occurrence)
-                                    }
+                                    },
+                                    onEditFigure = { occurrence, spec ->
+                                        openFieldFigureEditor(InsertMenuRef("option", index, optionLabel), occurrence, spec)
+                                    },
+                                    onDeleteFigure = { occurrence ->
+                                        viewModel.deleteFieldFigure(question.id, "option", index, occurrence)
+                                    },
+                                    label = "",
+                                    placeholder = "متن $optionLabel",
+                                    showToolbar = false,
+                                    modifier = Modifier.fillMaxWidth()
                                 )
                             }
                         }
@@ -1639,12 +1660,19 @@ private fun QuestionEditor(
                     }
                     // V55.16 — انصراف: هدف فیلد گزینه/جورکردنی هم پاک شود.
                     fieldInsertTarget = null
+                    fieldEditRef = null
                     figureTarget = null
                 },
                 onInsert = { spec ->
                     val occurrence = target.occurrenceIndex
                     val fieldRef = fieldInsertTarget
+                    val fieldEdit = fieldEditRef
                     when {
+                        // V259 — ویرایش شکل موجود داخل فیلد گزینه/جورکردنی.
+                        fieldEdit != null -> {
+                            viewModel.updateFieldFigure(question.id, fieldEdit.first.field, fieldEdit.first.index, fieldEdit.second, spec)
+                            fieldEditRef = null
+                        }
                         // V55.16 — درج از پنجرهٔ + گزینه/جورکردنی: توکن به همان فیلد.
                         fieldRef != null -> {
                             appendTokenToField(fieldRef, spec)
@@ -1672,7 +1700,13 @@ private fun QuestionEditor(
     // درج تازه در محل مکان‌نما یا جایگزینی توکن dblclick.
     fun deliverFigure(spec: FigureSpec, occurrenceIndex: Int?) {
         val fieldRef = fieldInsertTarget
+        val fieldEdit = fieldEditRef
         when {
+            // V259 — ویرایش شکل موجود داخل فیلد گزینه/جورکردنی.
+            fieldEdit != null -> {
+                viewModel.updateFieldFigure(question.id, fieldEdit.first.field, fieldEdit.first.index, fieldEdit.second, spec)
+                fieldEditRef = null
+            }
             // V55.16 — ابزار از پنجرهٔ + گزینه/جورکردنی باز شده بود.
             fieldRef != null -> {
                 appendTokenToField(fieldRef, spec)
@@ -1697,6 +1731,7 @@ private fun QuestionEditor(
         // V55.16 — انصراف از ابزارِ بازشده از پنجرهٔ +: هدف فیلد پاک شود تا درج
         // بعدیِ متن سؤال اشتباهی به گزینه نرود.
         fieldInsertTarget = null
+        fieldEditRef = null
     }
     tableTarget?.let { target ->
         TableEditorDialog(
