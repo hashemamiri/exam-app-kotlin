@@ -19425,6 +19425,12 @@ CI: `compileDebugUnitTestKotlin` به‌خاطر `assertFalse` بدون import �
 - باگ V202.5: `var LANDING_TILES` داخل `paintAuth` بعد از خطی که `landing()` را صدا می‌زد تعریف شده بود → به‌خاطر hoisting مقدارش undefined و `.map` خطا می‌داد → صفحهٔ اول خالی. حالا کنار `authActive` در سطح ماژول است (تست ترتیب را پین می‌کند).
 - دروازهٔ صفحهٔ اول: mobile.js `entered()/enter()` با `sessionStorage['m-entered']`، `gateActive() = MQ && user && !entered`؛ app.js `render()` پیش از m-mode اگر gateActive → paintAuth (landing حتی با user). دکمه: user ⇒ `enter(); S.render()`؛ وگرنه `goA('login')`؛ پیوند ثبت‌نام فقط بدون user. `afterLogin()` → `SiteMobile.enter()`.
 
+### V260.1 — سایت: پنل سریع روی کارت‌های منوی دسکتاپ
+- app.js pageMenu: `qa(name)` از `SiteMobile.quickAddItems({withPrint:true})` اکشن می‌گیرد؛ `qbtn(label, icon, on, cls)` با stopPropagation؛ `QUICK` به ازای کلید کارت؛ `themeBtns()` سه دکمهٔ آیکونی (on = حالت فعلی) با `SiteMobile.setAppearance`؛ `openSettings(tab)` با `setSettingsTab`؛ `goTab('account', tab)`. `mcard` و کارت پروفایل `span.dk-mquick` را بین سربرگ و توضیح می‌گذارند.
+- mobile.js export: `setSettingsTab`, `appearance`, `setAppearance`.
+- site.css انتها (فقط .dk): grid رديف ۱۷۶px+، کارت ۱۸px padding، آیکون ۴۶px، `.dk-qa` چیپ‌های ۳۰px، `.dk-qa-ic-only` ۳۴px، `.on` فیروزه‌ای، تاریک.
+- تست: V260_1_SiteMenuQuickPanelTest.kt (paths-ignore؛ بدون bump).
+
 ### V260 — پنجرهٔ بانک سؤال در سازنده: کارت‌ها + انتخاب چندتایی (اپ و سایت)
 - ExamBuilderScreen.kt: `BuilderQuestionBankDialog` بازنویسی → `Dialog(usePlatformDefaultWidth=false)` تمام‌صفحه؛ سربرگ انصراف/عنوان/افزودن(N)؛ جست‌وجو (متن/درس/عنوان آزمون)، چیپ دسته‌ها، «انتخاب همهٔ نتایج»؛ `BuilderBankPickCard` (Checkbox + BankChip + چشم → AlertDialog با `BankQuestionContent` + دکمهٔ افزودن). امضای `onAdd: (List<Long>) -> Unit`؛ فراخوان `ids.forEach { viewModel.addFromBank(it) }`. import NativeMathText حذف.
 - QuestionBankScreen.kt: `BankQuestionContent` و `BankChip` از private به internal.

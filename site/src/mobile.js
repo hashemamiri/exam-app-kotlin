@@ -1180,5 +1180,5 @@
   MQ.addEventListener ? MQ.addEventListener('change', rerender) : MQ.addListener(rerender);
   window.SiteMobile = {radialMenu: radialMenu, quickAddItems: quickAddItems, joinSchoolDialog: joinSchoolDialog, createSchoolDialog: createSchoolDialog, /* V227 */ paint: paint, active: active, ui: ui, authActive: authActive, gateActive: gateActive, enter: enter, paintAuth: paintAuth, teacherCards: teacherCards, icons: I,
     /* V170 — همان صفحه‌های اپ برای دسکتاپ: «حساب» = profileScreen با تب حساب، «تنظیمات» = settingsScreen */
-    profileScreen: profileScreen, settingsScreen: settingsScreen, setProfileTab: function (t) { profileTab = t; }, printOnlineSheet: printOnlineSheet /* V223 */, printExamsSheet: printExamsSheet /* V223.1 */, studentFilterDialog: studentFilterDialog, applyStudentFilter: applyFilter, filterActive: filterActive /* V224 */};
+    profileScreen: profileScreen, settingsScreen: settingsScreen, setProfileTab: function (t) { profileTab = t; }, setSettingsTab: function (t) { settingsTab = t; }, appearance: appearance, setAppearance: setAppearance, /* V260.1 */ printOnlineSheet: printOnlineSheet /* V223 */, printExamsSheet: printExamsSheet /* V223.1 */, studentFilterDialog: studentFilterDialog, applyStudentFilter: applyFilter, filterActive: filterActive /* V224 */};
 })();

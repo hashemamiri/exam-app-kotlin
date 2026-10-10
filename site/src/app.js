@@ -1518,9 +1518,51 @@
       el('span', {class: 'dk-mhead'}, [el('span', {class: 'avatar dk-av', text: (user.name || '?').trim().charAt(0)}), el('span', {class: 'dk-pinfo'}, [el('small', {text: 'پروفایل ' + ROLE_LABEL[user.role]}), el('strong', {text: user.name || ''})])]),
       el('small', {text: sub})
     ]);
-    function mcard(key, label, subLabel, danger, on) {
-      return el('button', {class: 'dk-mcard' + (danger ? ' danger' : '') + (view.arg === key ? ' selected' : ''), onclick: on}, [el('span', {class: 'dk-mhead'}, [dkIcon(key, 'dk-mini'), el('strong', {text: label})]), el('small', {text: subLabel})]);
+    /* V260.1 — پنل سریع کارت پروفایل بعد از تعریف QUICK درج می‌شود */
+    /* V260.1 — دسکتاپ: کارت‌های بزرگ‌تر با «پنل سریع» (میان‌برهای مهم هر بخش) زیر عنوان؛ کلیک میان‌بر، کلیک کارت را اجرا نمی‌کند */
+    var M0 = window.SiteMobile || {};
+    function qa(name) { try { var it = (M0.quickAddItems ? M0.quickAddItems({withPrint: true}) : []).filter(function (x) { return x[0] === name; })[0]; return it ? it[3] : null; } catch (e) { return null; } }
+    function qbtn(label, icon, on, cls) { return el('button', {type: 'button', class: 'dk-qa' + (cls ? ' ' + cls : ''), title: label, onclick: function (e) { e.stopPropagation(); on(); }}, [icon ? el('span', {class: 'dk-qa-ic', html: icon}) : null, el('span', {text: label})]); }
+    var QI = {
+      plus: '<svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>',
+      sun: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>',
+      moon: '<svg viewBox="0 0 24 24"><path d="M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5z"/></svg>',
+      auto: '<svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="13" rx="2"/><path d="M8 21h8M12 17v4"/></svg>',
+      user: '<svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-7 8-7s8 3 8 7"/></svg>',
+      lock: '<svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>',
+      head: '<svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M7 13h6"/></svg>',
+      list: '<svg viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>',
+      db: '<svg viewBox="0 0 24 24"><ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v14c0 1.7 3.6 3 8 3s8-1.3 8-3V5M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3"/></svg>',
+      info: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></svg>',
+      school: '<svg viewBox="0 0 24 24"><path d="M2 9l10-5 10 5-10 5z"/><path d="M6 11.5V16c0 1.5 3 3 6 3s6-1.5 6-3v-4.5"/></svg>',
+      key: '<svg viewBox="0 0 24 24"><circle cx="8" cy="12" r="4"/><path d="M12 12h9M18 12v3M15 12v2"/></svg>',
+      print: '<svg viewBox="0 0 24 24"><path d="M7 9V4h10v5"/><rect x="3" y="9" width="18" height="8" rx="2"/><path d="M7 14h10v6H7z"/></svg>',
+      cal: '<svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>'
+    };
+    function themeBtns() {
+      var mode = (M0.appearance ? M0.appearance().themeMode : 'SYSTEM');
+      function tb(v, label, ic) { return qbtn(label, ic, function () { if (M0.setAppearance) M0.setAppearance({themeMode: v}); pageMenu(c); }, 'dk-qa-ic-only' + (mode === v ? ' on' : '')); }
+      return [tb('LIGHT', 'روشن', QI.sun), tb('DARK', 'تیره', QI.moon), tb('SYSTEM', 'دستگاه', QI.auto)];
     }
+    function goTab(panel, tab) { view.panel = panel; view.arg = {tab: tab}; render(); }
+    function openSettings(tab) { if (M0.setSettingsTab) M0.setSettingsTab(tab); dkGo('settings'); }
+    var QUICK = {
+      profile: [qbtn('ویرایش پروفایل', QI.user, function () { goTab('account', 'profile'); })].concat(user.role === 'teacher' ? [qbtn('سربرگ', QI.head, function () { goTab('account', 'header'); })] : []),
+      account: [qbtn('پروفایل', QI.user, function () { goTab('account', 'profile'); }), qbtn('امنیت حساب', QI.lock, function () { goTab('account', 'account'); })].concat(user.role === 'teacher' ? [qbtn('سربرگ', QI.head, function () { goTab('account', 'header'); })] : []),
+      settings: themeBtns().concat([qbtn('داده‌ها', QI.db, function () { openSettings('data'); }), qbtn('درباره', QI.info, function () { openSettings('about'); })]),
+      print: [qbtn('آزمون چاپی جدید', QI.plus, function () { view.panel = 'builder'; view.arg = {mode: 'print', fresh: true}; render(); }), qbtn('از آزمون آنلاین', QI.print, function () { var M = window.SiteMobile; if (M && M.printOnlineSheet) M.printOnlineSheet(); else dkGo('exams'); })],
+      students: [qa('دانش‌آموز جدید') ? qbtn('دانش‌آموز جدید', QI.plus, qa('دانش‌آموز جدید')) : null, qbtn('فهرست', QI.list, function () { dkGo('students'); })],
+      classes: [qa('کلاس جدید') ? qbtn('کلاس جدید', QI.plus, qa('کلاس جدید')) : null, qa('مدرسه جدید') ? qbtn(user.role === 'manager' ? 'مدرسه جدید' : 'عضویت در مدرسه', QI.school, qa('مدرسه جدید')) : null],
+      calendar: [qbtn('امروز', QI.cal, function () { dkGo('calendar'); })],
+      join: [qbtn('ورود با کد', QI.key, function () { dkGo('join'); })],
+      grades: [qbtn('نتایج من', QI.list, function () { dkGo('grades'); })]
+    };
+    if (user.role === 'teacher' && qa('آزمون جدید')) QUICK.calendar = QUICK.calendar.concat([qbtn('آزمون جدید', QI.plus, qa('آزمون جدید'))]);
+    function quick(key) { var q = (QUICK[key] || []).filter(Boolean); return q.length ? el('span', {class: 'dk-mquick'}, q) : null; }
+    function mcard(key, label, subLabel, danger, on) {
+      return el('button', {class: 'dk-mcard' + (danger ? ' danger' : '') + (view.arg === key ? ' selected' : ''), onclick: on}, [el('span', {class: 'dk-mhead'}, [dkIcon(key, 'dk-mini'), el('strong', {text: label})]), quick(key), el('small', {text: subLabel})]);
+    }
+    var pq = quick('profile'); if (pq) profileCard.insertBefore(pq, profileCard.lastChild);
     c.appendChild(el('div', {class: 'dk-grid'}, [profileCard].concat(menu.map(function (it) { return mcard(it[0], it[2], it[3] || DK_SUBS[it[0]] || '', false, function () { if (it[0] === 'account') { view.panel = 'account'; view.arg = {tab: 'account'}; render(); } else if (it[0] === 'site') { toast('شما هم‌اکنون در سایت هستید.', 'ok'); } else if (it[4]) { view.panel = it[4]; view.arg = it[5] || null; render(); } else dkGo(it[0]); }); }))
       .concat([mcard('logout', 'خروج', 'خروج امن و تعویض حساب', true, async function () { if (await confirmDlg('خروج از حساب', 'از حساب خارج می‌شوید؟', 'خروج', true)) doLogout(); })])));
   }
