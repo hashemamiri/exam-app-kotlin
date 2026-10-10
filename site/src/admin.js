@@ -533,6 +533,7 @@
   var J = window.SiteJalali;
   async function calendarPage(c, arg) {
     arg = arg || {};
+    function isDk() { return document.body.classList.contains('dk'); }
     var today = J.fromGregorian(new Date());
     var y = arg.y || today.jy, m = arg.m || today.jm;
     S.loading(c);
@@ -544,7 +545,10 @@
       var hols = {}; (hol && hol.days || []).forEach(function (h) { var k = h.jy + '-' + h.jm + '-' + h.jd; (hols[k] = hols[k] || []).push(h); });
       c.innerHTML = '';
       var isTeacher = S.user().role === 'teacher';
-      c.appendChild(el('div', {class: 'row', style: 'margin-bottom:12px'}, [el('button', {class: 'btn light sm', text: '‹ ماه بعد', onclick: function () { var nm = m + 1, ny = y; if (nm > 12) { nm = 1; ny++; } S.go('calendar', {y: ny, m: nm}); }}), el('h2', {class: 'grow', style: 'margin:0;text-align:center;font-size:18px', text: J.MONTHS[m - 1] + ' ' + fa(y)}), el('button', {class: 'btn light sm', text: 'ماه قبل ›', onclick: function () { var nm = m - 1, ny = y; if (nm < 1) { nm = 12; ny--; } S.go('calendar', {y: ny, m: nm}); }}), el('button', {class: 'btn light sm', text: 'امروز', onclick: function () { S.go('calendar'); }}), isTeacher ? el('button', {class: 'btn sm', text: '➕ پیام جدید', onclick: function () { noteDlg({on_date: J.iso(today.jy, today.jm, today.jd)}, function () { S.go('calendar', {y: y, m: m}); }); }}) : null]));
+      var navRow = el('div', {class: 'row cal-nav', style: 'margin-bottom:12px'}, [el('button', {class: 'btn light sm', text: '‹ ماه بعد', onclick: function () { var nm = m + 1, ny = y; if (nm > 12) { nm = 1; ny++; } S.go('calendar', {y: ny, m: nm}); }}), el('h2', {class: 'grow', style: 'margin:0;text-align:center;font-size:18px', text: J.MONTHS[m - 1] + ' ' + fa(y)}), el('button', {class: 'btn light sm', text: 'ماه قبل ›', onclick: function () { var nm = m - 1, ny = y; if (nm < 1) { nm = 12; ny--; } S.go('calendar', {y: ny, m: nm}); }}), el('button', {class: 'btn light sm', text: 'امروز', onclick: function () { S.go('calendar'); }})]);
+      var selDay = 0;
+      var newBtn = isTeacher ? el('button', {class: 'btn sm', text: '➕ پیام جدید', onclick: function () { var dd = selDay || today.jd; noteDlg({on_date: selDay ? J.iso(y, m, selDay) : J.iso(today.jy, today.jm, today.jd)}, function () { S.go('calendar', {y: y, m: m, d: dd}); }); }}) : null;
+      if (!isDk()) { if (newBtn) navRow.appendChild(newBtn); c.appendChild(navRow); }
       var grid = el('div', {class: 'cal'});
       J.DAYS.forEach(function (d) { grid.appendChild(el('div', {class: 'cal-h', text: d})); });
       var first = J.toGregorian(y, m, 1); var off = (first.getUTCDay() + 1) % 7; /* شنبه=0 */
@@ -559,9 +563,8 @@
       })(d);
       /* V253.3 — دسکتاپ: تقویم در نیمهٔ راست، پیام‌های روزِ انتخاب‌شده در نیمهٔ چپ (در گوشی همان پنجرهٔ روز) */
       var side = el('div', {class: 'card cal-side'});
-      function isDk() { return document.body.classList.contains('dk'); }
       function showDay(d) {
-        var iso = J.iso(y, m, d), ns = byDate[iso] || [], hs = hols[y + '-' + m + '-' + d] || [];
+        selDay = d; var iso = J.iso(y, m, d), ns = byDate[iso] || [], hs = hols[y + '-' + m + '-' + d] || [];
         grid.querySelectorAll('.cal-d.sel').forEach(function (x) { x.classList.remove('sel'); });
         var cell = grid.querySelector('.cal-d[data-d="' + d + '"]'); if (cell) cell.classList.add('sel');
         side.innerHTML = '';
@@ -571,9 +574,10 @@
         ns.forEach(function (n) {
           side.appendChild(el('div', {class: 'g-q'}, [el('div', {class: 'row'}, [el('b', {class: 'grow', text: n.title}), isTeacher ? el('button', {class: 'icon-btn', html: '✎', title: 'ویرایش', onclick: async function () { try { var full = await S.rpcObj('cal_day', {p_id: n.id}); noteDlg(chk(full), function () { S.go('calendar', {y: y, m: m, d: d}); }); } catch (e) { S.toast(S.errMsg(e)); } }}) : null].filter(Boolean)), n.body ? el('div', {class: 'muted', style: 'white-space:pre-wrap;margin-top:4px', text: n.body}) : null].filter(Boolean)));
         });
-        if (isTeacher) side.appendChild(el('div', {class: 'row', style: 'margin-top:12px'}, [el('button', {class: 'btn sm', text: '➕ پیام برای این روز', onclick: function () { noteDlg({on_date: iso}, function () { S.go('calendar', {y: y, m: m, d: d}); }); }})]));
       }
-      c.appendChild(el('div', {class: 'cal-wrap'}, [el('div', {class: 'card'}, [grid]), side]));
+      /* V253.4 — دسکتاپ: دکمه‌های ماه بالای تقویم، «پیام جدید» (برای روز انتخاب‌شده) وسطِ بالای پیام‌ها */
+      if (isDk()) c.appendChild(el('div', {class: 'cal-wrap'}, [el('div', {class: 'cal-col'}, [navRow, el('div', {class: 'card'}, [grid])]), el('div', {class: 'cal-col'}, [el('div', {class: 'row cal-newrow', style: 'justify-content:center;margin-bottom:12px'}, [newBtn].filter(Boolean)), side])]));
+      else c.appendChild(el('div', {class: 'cal-wrap'}, [el('div', {class: 'card'}, [grid]), side]));
       showDay(arg.d || (today.jy === y && today.jm === m ? today.jd : 1));
       if (hol && hol.years && hol.years[String(y)] === false) c.appendChild(el('div', {class: 'alert warn', style: 'margin-top:10px', text: 'تعطیلات رسمی این سال تقریبی است.'}));
       if (!hol) c.appendChild(el('div', {class: 'muted', style: 'font-size:12px;margin-top:8px', text: 'اطلاعات تعطیلات رسمی در دسترس نیست.'}));

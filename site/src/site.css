@@ -1224,7 +1224,9 @@ button.stat:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
 .cal-side{display:none}
 /* V253.3 — دسکتاپ: تقویم نیمهٔ راست، پیام‌های روز نیمهٔ چپ */
 .dk .cal-wrap{display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start}
-.dk .cal-side{display:block;min-height:320px;position:sticky;top:24px}
+.dk .cal-side{display:block;min-height:320px}
+.dk .cal-col{display:flex;flex-direction:column}
+.dk .cal-newrow{min-height:38px}
 .dk .cal-d.sel{box-shadow:0 0 0 3px rgba(34,198,239,.25);border-color:#22c6ef}
 .dk .cal{max-width:none;margin:0;gap:5px}
 .dk .cal-d{min-height:64px;padding:5px 6px;border-radius:9px;font-size:11.5px}
