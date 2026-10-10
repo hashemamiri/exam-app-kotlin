@@ -1790,3 +1790,6 @@ html body.dk:not(.m-mode) .b-editor .b-sec-chips label:has(> input[type=checkbox
 .dk .b-rail-score .b-rail-lbl{color:#58717c;opacity:1}
 .m-dark .dk .b-rail-score{background:rgba(95,211,245,.1);border-color:rgba(95,211,245,.3);color:#5FD3F5}
 .m-dark .dk .b-rail-score .b-rail-lbl,.m-dark .dk .b-rail-lbl{color:#AEB9C8}
+/* V259.3 — دسکتاپ: چیپ‌های تیک‌دار یک‌خطی؛ ✓ پشت (کنار) جمله می‌ماند، نه بالای آن */
+html body.dk:not(.m-mode) label:has(> input[type=checkbox]){flex-wrap:nowrap;white-space:nowrap;flex-direction:row}
+html body.dk:not(.m-mode) label:has(> input[type=checkbox]:checked)::before{flex:0 0 auto}

@@ -490,14 +490,14 @@
         if (document.querySelector('.m-radial-bg')) { document.querySelector('.m-radial-bg').remove(); return; }
         window.SiteMobile.radialMenu(function (key) {
           if (key === 'import') { if (window.SiteExtras) window.SiteExtras.importExam(); return; }
-          if (key === 'bank') { if (state.mode === 'online') openBank(); else toast('بانک سؤال فقط در آزمون آنلاین در دسترس است.', 'err'); return; }
+          if (key === 'bank') { if (bankAllowed()) openBank(); else toast('بانک سؤال فقط در آزمون آنلاین در دسترس است.', 'err'); return; }
           state.questions.push(newQuestion(key)); state.selected = state.questions.length - 1; mark(); drawList(); drawEditor();
         }, null, {cls: 'dk-radial', emoji: true});
         return;
       }
       var old = document.getElementById('b-addmenu'); if (old) { old.remove(); return; }
       var menu = el('div', {class: 'b-addmenu card', id: 'b-addmenu'}, TYPES.map(function (t) { return el('button', {class: 'btn light sm', text: t[2] + ' ' + t[1], onclick: function () { menu.remove(); state.questions.push(newQuestion(t[0])); state.selected = state.questions.length - 1; mark(); drawList(); drawEditor(); }}); })
-        .concat(state.mode === 'online' ? [el('button', {class: 'btn soft sm', text: '🏦 از بانک سؤال', onclick: function () { menu.remove(); openBank(); }})] : []));
+        .concat(bankAllowed() ? [el('button', {class: 'btn soft sm', text: '🏦 از بانک سؤال', onclick: function () { menu.remove(); openBank(); }})] : []));
       var r = anchor.getBoundingClientRect(); menu.style.top = r.top + 'px'; menu.style.left = (r.right + 10) + 'px';
       document.body.appendChild(menu);
       setTimeout(function () { document.addEventListener('click', function h(e) { if (!menu.contains(e.target) && e.target !== anchor) { menu.remove(); document.removeEventListener('click', h); } }); }, 0);
@@ -591,7 +591,7 @@
       var addRow = el('div', {class: 'b-add'});
       TYPES.forEach(function (t) { addRow.appendChild(el('button', {class: 'btn light sm', title: t[1], text: t[2] + ' ' + t[1], onclick: function () { state.questions.push(newQuestion(t[0])); state.selected = state.questions.length - 1; mark(); drawList(); drawEditor(); }})); });
       list.appendChild(addRow);
-      if (state.mode === 'online') list.appendChild(el('button', {class: 'btn soft sm', style: 'width:100%;margin-top:8px', text: '🏦 از بانک سؤال', onclick: openBank}));
+      if (bankAllowed()) list.appendChild(el('button', {class: 'btn soft sm', style: 'width:100%;margin-top:8px', text: '🏦 از بانک سؤال', onclick: openBank}));
       var ul = el('div', {class: 'b-qs'});
       state.questions.forEach(function (q, i) {
         var row = el('div', {class: 'b-q' + (i === state.selected ? ' on' : ''), onclick: function () { state.selected = i; drawList(); drawEditor(); }}, [
@@ -932,6 +932,8 @@
     }
     function syncMeta() { var meta = top.querySelector('.b-meta'); if (meta) meta.textContent = [state.title, state.subject, state.duration ? fa(state.duration) + ' دقیقه' : ''].filter(Boolean).join(' · ') || 'عنوان، درس و مدت را در «مشخصات آزمون» وارد کنید.'; }
     /* --- بانک سؤال --- */
+    /* V259.3 — بانک سؤال در دسکتاپ برای آزمون چاپی هم در دسترس است (گوشی: فقط آنلاین، مثل قبل) */
+    function bankAllowed() { return state.mode === 'online' || document.body.classList.contains('dk'); }
     async function openBank() {
       var bg = el('div', {class: 'modal-bg'});
       var m = el('div', {class: 'modal wide'}, [el('button', {class: 'x', text: '✕', onclick: function () { bg.remove(); }}), el('h2', {text: '🏦 بانک سؤال'})]);

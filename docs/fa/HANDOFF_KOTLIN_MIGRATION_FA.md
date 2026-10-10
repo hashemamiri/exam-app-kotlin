@@ -19425,6 +19425,11 @@ CI: `compileDebugUnitTestKotlin` به‌خاطر `assertFalse` بدون import �
 - باگ V202.5: `var LANDING_TILES` داخل `paintAuth` بعد از خطی که `landing()` را صدا می‌زد تعریف شده بود → به‌خاطر hoisting مقدارش undefined و `.map` خطا می‌داد → صفحهٔ اول خالی. حالا کنار `authActive` در سطح ماژول است (تست ترتیب را پین می‌کند).
 - دروازهٔ صفحهٔ اول: mobile.js `entered()/enter()` با `sessionStorage['m-entered']`، `gateActive() = MQ && user && !entered`؛ app.js `render()` پیش از m-mode اگر gateActive → paintAuth (landing حتی با user). دکمه: user ⇒ `enter(); S.render()`؛ وگرنه `goA('login')`؛ پیوند ثبت‌نام فقط بدون user. `afterLogin()` → `SiteMobile.enter()`.
 
+### V259.3 — سایت: بانک سؤال در آزمون چاپی دسکتاپ + چیپ‌های یک‌خطی
+- builder.js: `bankAllowed()` = آنلاین یا body.dk؛ سه نقطهٔ گیت (کلید 'bank' سربرگ، منوی افزودن، دکمهٔ لیست) از آن استفاده می‌کنند. decodeQuestion از newQuestion می‌سازد، پس فیلدهای چاپی پیش‌فرض دارند.
+- site.css انتها: چیپ checkbox در دسکتاپ `flex-wrap:nowrap;white-space:nowrap` (علت تیک بالای متن: label کلاس row با flex-wrap:wrap بود).
+- تست: V259_3_SiteBankPrintChipsTest.kt (paths-ignore؛ بدون bump).
+
 ### V259.2 — سایت: پیش‌نمایش دانش‌آموز و ریل (دسکتاپ) + رفع ۲ تست CI
 - builder.js studentPreview: سربرگ `.b-sp-head` (h2 + `button.x.b-sp-x`)، بدنهٔ `.b-sp-body`، پاورقی `.b-sp-foot` (در دسکتاپ مخفی؛ گوشی مثل قبل).
 - builder.js drawRail: `rb(icon,label,on,cls,short)` → span `.b-rail-lbl` زیر آیکون؛ کارت `.b-rail-score` با `.b-rail-score-v` = `totalScore()`؛ ورودی بارم سؤال مقدار کارت را زنده به‌روز می‌کند.
