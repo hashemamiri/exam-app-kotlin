@@ -17,7 +17,7 @@ class V219_DesktopDarkAndFractionTest {
         val s = src("site/src/student.js")
         assertTrue(".b-rich .mathx .mfrac{align-items:stretch !important}" in b)
         assertTrue(".b-rich .mathx .mfrac>.mnum,.b-rich .mathx .mfrac>.mden{width:100%;box-sizing:border-box;text-align:center}" in b)
-        assertTrue(".st-exam .mathx .mfrac{align-items:stretch !important}" in s)
+        assertTrue(".st-exam .mathx .mfrac,.math-rich .mathx .mfrac{align-items:stretch !important}" in s) // V253.6 — دامنهٔ .math-rich هم
     }
 
     @Test

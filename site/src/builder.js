@@ -537,6 +537,19 @@
     }
     function drawRail() {
       rail.innerHTML = '';
+      /* V254 — آیکون‌های برداری سربرگ سؤال (هم‌خانوادهٔ ریل) */
+      var QI = {
+        up: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg>',
+        down: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12l7 7 7-7"/></svg>',
+        copy: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V6a2 2 0 0 1 2-2h9"/></svg>',
+        bank: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10l9-6 9 6"/><path d="M5 10v9M10 10v9M14 10v9M19 10v9"/><path d="M3 19h18"/><path d="M12 13v4M10 15h4"/></svg>',
+        trash: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3"/></svg>'
+      };
+      async function addToBank(q0) {
+        if (!q0) return;
+        if (!(await S.confirmDlg('افزودن به بانک سؤال', 'سؤال ' + fa(state.questions.indexOf(q0) + 1) + ' در بانک سؤال شما ذخیره شود؟', 'افزودن'))) return;
+        try { var enc = encodeQuestions([q0]); var comb = Object.assign({}, enc.publicQuestions[0], enc.answerKey[0]); delete comb.i; var r = await S.rpcObj('native_bank_add_v2', {p_question: comb, p_subject: (state.subject || '').trim(), p_cats: []}); if (r && r.error) throw new Error(r.error); toast('در بانک سؤال ذخیره شد.', 'ok'); } catch (e) { toast(errMsg(e), 'err'); }
+      }
       function rb(icon, label, on, cls) { return el('button', {class: 'b-rail-btn ' + (cls || ''), title: label, 'aria-label': label, html: icon, onclick: on}); }
       rail.appendChild(rb('<svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>', 'افزودن سؤال', function (e) { addMenu(e.currentTarget); }, 'add'));
       /* V173 — مثل FABهای ExamBuilderScreen: آنلاین = ذخیره + چشم (پیش‌نمایش دانش‌آموزی سؤال، V62.7)؛ چاپی = ذخیره + چشم (پیش‌نمایش برگه) + چاپ (منوی چاپ آزمون/چاپ با کلید) */
@@ -582,10 +595,11 @@
       var i = state.selected;
       editor.appendChild(el('div', {class: 'row b-qhead', style: 'margin-bottom:10px'}, [
         el('h3', {class: 'grow', text: 'سؤال ' + fa(i + 1) + ' — ' + TYPE_LABEL[q.type]}),
-        el('button', {class: 'icon-btn', title: 'بالا', html: '↑', onclick: function () { if (i > 0) { swap(i, i - 1); } }}),
-        el('button', {class: 'icon-btn', title: 'پایین', html: '↓', onclick: function () { if (i < state.questions.length - 1) swap(i, i + 1); }}),
-        el('button', {class: 'icon-btn', title: 'کپی', html: '⧉', onclick: function () { var cp = JSON.parse(JSON.stringify(q)); cp.id = uuid(); state.questions.splice(i + 1, 0, cp); state.selected = i + 1; mark(); drawList(); drawEditor(); }}),
-        el('button', {class: 'icon-btn danger', title: 'حذف', html: '🗑', onclick: async function () { if (!(await S.confirmDlg('حذف سؤال', 'سؤال ' + fa(i + 1) + ' حذف شود؟', 'حذف', true))) return; state.questions.splice(i, 1); state.selected = Math.max(0, Math.min(i, state.questions.length - 1)); mark(); drawList(); drawEditor(); }})
+        el('button', {class: 'icon-btn', title: 'بالا', html: QI.up, onclick: function () { if (i > 0) { swap(i, i - 1); } }}),
+        el('button', {class: 'icon-btn', title: 'پایین', html: QI.down, onclick: function () { if (i < state.questions.length - 1) swap(i, i + 1); }}),
+        el('button', {class: 'icon-btn', title: 'کپی', html: QI.copy, onclick: function () { var cp = JSON.parse(JSON.stringify(q)); cp.id = uuid(); state.questions.splice(i + 1, 0, cp); state.selected = i + 1; mark(); drawList(); drawEditor(); }}),
+        el('button', {class: 'icon-btn', title: 'افزودن به بانک سؤال', html: QI.bank, onclick: function () { addToBank(q); }}),
+        el('button', {class: 'icon-btn danger', title: 'حذف', html: QI.trash, onclick: async function () { if (!(await S.confirmDlg('حذف سؤال', 'سؤال ' + fa(i + 1) + ' حذف شود؟', 'حذف', true))) return; state.questions.splice(i, 1); state.selected = Math.max(0, Math.min(i, state.questions.length - 1)); mark(); drawList(); drawEditor(); }})
       ]));
       /* متن سؤال + ابزار درج */
       var ta = el('textarea', {rows: 4, style: 'width:100%;border:1px solid var(--line);border-radius:10px;padding:10px;font-size:15px', placeholder: 'متن سؤال را بنویسید؛ برای فرمول از دکمهٔ ∑ استفاده کنید'});
@@ -800,17 +814,27 @@
         var q = el('input', {type: 'search', placeholder: 'جست‌وجو…', style: 'border:1px solid var(--line);border-radius:10px;padding:8px 12px;flex:1'});
         var cs = el('select', {style: 'border:1px solid var(--line);border-radius:10px;padding:8px'}); cs.appendChild(el('option', {value: '', text: 'همهٔ دسته‌ها'})); cats.forEach(function (c) { cs.appendChild(el('option', {value: String(c.id), text: c.name + ' (' + fa(c.count || 0) + ')'})); });
         var lst = el('div', {class: 'b-bank'});
+        /* V254 — انتخاب چندتایی: تیک بزنید و «افزودن انتخاب‌شده‌ها»؛ یا دکمهٔ «افزودن» هر ردیف برای یکی */
+        var picked = [];
+        function addItems(arr) { if (!arr.length) return; arr.forEach(function (it) { var d = decodeQuestion(it.question || {}, it.question || {}); d.id = uuid(); state.questions.push(d); }); state.selected = state.questions.length - 1; mark(); drawList(); drawEditor(); toast(fa(arr.length) + ' سؤال به آزمون افزوده شد.', 'ok'); picked = []; syncAddBtn(); draw(); }
+        var addSel = el('button', {class: 'btn sm', text: 'افزودن انتخاب‌شده‌ها', onclick: function () { addItems(picked.slice()); }});
+        var selAll = el('button', {class: 'btn light sm', text: 'انتخاب همهٔ نتایج', onclick: function () { picked = lastFiltered.slice(); syncAddBtn(); draw(); }});
+        var lastFiltered = [];
+        function syncAddBtn() { addSel.disabled = !picked.length; addSel.textContent = picked.length ? 'افزودن ' + fa(picked.length) + ' سؤال انتخاب‌شده' : 'افزودن انتخاب‌شده‌ها'; }
         function draw() {
           var s = q.value.trim().toLowerCase(), cid = cs.value ? Number(cs.value) : null;
           lst.innerHTML = '';
           var f = items.filter(function (it) { var qq = it.question || {}; return (!s || String(qq.text || '').toLowerCase().indexOf(s) >= 0 || String(it.subject || '').toLowerCase().indexOf(s) >= 0) && (!cid || (it.cat_ids || []).indexOf(cid) >= 0); });
+          lastFiltered = f;
           if (!f.length) { lst.appendChild(S.emptyBox('🏦', 'سؤالی پیدا نشد.')); return; }
-          f.forEach(function (it) { var qq = it.question || {}; lst.appendChild(el('div', {class: 'b-bank-item'}, [el('div', {class: 'grow'}, [el('div', {text: String(qq.text || '').slice(0, 120)}), el('div', {class: 'muted', style: 'font-size:12px', text: [TYPE_LABEL[S.qType(qq.type) === 'long' ? 'essay' : S.qType(qq.type)], it.subject, (it.cat_names || []).join('، ')].filter(Boolean).join(' · ')})]), el('button', {class: 'btn soft sm', text: 'افزودن', onclick: function () { var d = decodeQuestion(qq, qq); d.id = uuid(); state.questions.push(d); state.selected = state.questions.length - 1; mark(); drawList(); drawEditor(); toast('به آزمون افزوده شد.', 'ok'); }})])); });
+          f.forEach(function (it) { var qq = it.question || {}; var cb = el('input', {type: 'checkbox', 'aria-label': 'انتخاب'}); cb.checked = picked.indexOf(it) >= 0; cb.addEventListener('change', function () { var k = picked.indexOf(it); if (cb.checked && k < 0) picked.push(it); if (!cb.checked && k >= 0) picked.splice(k, 1); syncAddBtn(); });
+            lst.appendChild(el('div', {class: 'b-bank-item'}, [cb, el('div', {class: 'grow', onclick: function () { cb.checked = !cb.checked; cb.dispatchEvent(new Event('change')); }}, [el('div', {text: String(qq.text || '').replace(/\$/g, '').slice(0, 120)}), el('div', {class: 'muted', style: 'font-size:12px', text: [TYPE_LABEL[S.qType(qq.type) === 'long' ? 'essay' : S.qType(qq.type)], it.subject, (it.cat_names || []).join('، ')].filter(Boolean).join(' · ')})]), el('button', {class: 'btn soft sm', text: 'افزودن', onclick: function () { addItems([it]); }})])); });
         }
         q.addEventListener('input', draw); cs.addEventListener('change', draw);
         body.innerHTML = ''; body.appendChild(el('div', {class: 'row', style: 'margin-bottom:10px'}, [q, cs])); body.appendChild(lst); draw();
         var cur = state.questions[state.selected];
-        if (cur) body.appendChild(el('div', {class: 'row', style: 'margin-top:12px'}, [el('button', {class: 'btn light sm', text: '⬆ ذخیرهٔ سؤال جاری در بانک', onclick: async function () { try { var enc = encodeQuestions([cur]); var comb = Object.assign({}, enc.publicQuestions[0], enc.answerKey[0]); delete comb.i; await S.rpcObj('native_bank_add_v2', {p_question: comb, p_subject: state.subject.trim(), p_cats: []}); toast('در بانک ذخیره شد.', 'ok'); } catch (e) { toast(errMsg(e), 'err'); } }})]));
+        body.appendChild(el('div', {class: 'row', style: 'margin-top:12px;gap:8px;flex-wrap:wrap'}, [addSel, selAll, el('span', {class: 'grow'}), cur ? el('button', {class: 'btn light sm', text: 'ذخیرهٔ سؤال جاری در بانک', onclick: function () { addToBank(cur); }}) : null].filter(Boolean)));
+        syncAddBtn();
       } catch (e) { S.showErr(body, e); }
     }
     /* --- پیش‌نمایش --- */

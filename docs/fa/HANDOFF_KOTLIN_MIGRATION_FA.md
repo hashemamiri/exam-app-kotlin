@@ -19425,6 +19425,10 @@ CI: `compileDebugUnitTestKotlin` به‌خاطر `assertFalse` بدون import �
 - باگ V202.5: `var LANDING_TILES` داخل `paintAuth` بعد از خطی که `landing()` را صدا می‌زد تعریف شده بود → به‌خاطر hoisting مقدارش undefined و `.map` خطا می‌داد → صفحهٔ اول خالی. حالا کنار `authActive` در سطح ماژول است (تست ترتیب را پین می‌کند).
 - دروازهٔ صفحهٔ اول: mobile.js `entered()/enter()` با `sessionStorage['m-entered']`، `gateActive() = MQ && user && !entered`؛ app.js `render()` پیش از m-mode اگر gateActive → paintAuth (landing حتی با user). دکمه: user ⇒ `enter(); S.render()`؛ وگرنه `goA('login')`؛ پیوند ثبت‌نام فقط بدون user. `afterLogin()` → `SiteMobile.enter()`.
 
+### V254.1 — CI قرمز (یک تست): V219 پین `.st-exam .mathx .mfrac{...}` که V253.6 به `.st-exam ...,.math-rich ...` تغییر داده بود. چک‌کنندهٔ پین محلی (با scope هر @Test) پیش از هر تحویل اجرا شود؛ false positiveها: قالب‌های `$var`، `\\n` در workflow.
+
+### V254 — (فقط سایت) builder.js: `QI` (svg stroke 1.9، هم‌خانوادهٔ ریل) برای سربرگ سؤال؛ `addToBank(q)` (تأیید → `native_bank_add_v2`؛ هم آیکون سربرگ هم دکمهٔ پایین پنجرهٔ بانک)؛ `openBank`: `picked[]`، چک‌باکس هر ردیف (کلیک روی متن هم تیک می‌زند)، `addItems(arr)`، «انتخاب همهٔ نتایج» = فیلتر جاری. درخواست باز: «۵۰ سؤال بساز، ۲۰ تا تصادفی نشان بده» — نیاز به تصمیم (نمره از ۲۰ یا ۵۰؟ ثبات زیرمجموعه در ورود مجدد؛ `submit_answer` سرور در مخزن نیست → تعریف آن لازم است).
+
 ### V253.8 — CI قرمز: «نسخهٔ 1.01.31 قبلاً منتشر شده». علت: تست‌های V253.1–V253.7 در `V253_NewLogoTest.kt` نوشته شده بود که با الگوی paths-ignore (`V*_Site*Test.kt`) نمی‌خواند → CI اپ برای تغییرات فقط-سایت اجرا شد بدون bump. اصلاح: تست‌های سایت به `V253_SiteCalendarReportTest.kt` منتقل شد؛ نسخه ← 1.01.32. **قاعده:** پین‌های سایت فقط در فایل‌های `V*_Site*Test.kt`؛ هر commit که فایلی خارج از paths-ignore را لمس کند باید bump شود.
 
 ### V253.7 — (فقط سایت) ‹ › در RTL آینه می‌شوند و جهتشان برعکس دیده می‌شد؛ در دسکتاپ از ← → (غیرآینه‌ای) استفاده شد: «← ماه بعد»، «ماه قبل →». گوشی بدون تغییر.
