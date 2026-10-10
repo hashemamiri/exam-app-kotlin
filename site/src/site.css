@@ -280,6 +280,8 @@ code.k{background:#f1f3f8;border-radius:6px;padding:1px 6px;font-size:13px;direc
 .g-item.on{border-color:var(--brand);background:var(--brand-soft)}
 .g-q{border:1px solid var(--line);border-radius:12px;padding:12px;margin-bottom:10px;background:var(--card)}
 .g-qtext{margin:8px 0;line-height:1.9;white-space:pre-wrap}
+.math-rich.rendered{white-space:normal} /* V253.6 — پس از رندر فرمول، موتور خودش خط‌ها را می‌سازد */
+.math-rich img{max-width:100%}
 .g-resp{margin-top:4px;font-size:14px}
 .ok-t{color:#155e35;font-weight:700}.warn-t{color:#7c4a03;font-weight:700}.err-t{color:#8a1f16;font-weight:700}
 .chip.ok{background:var(--ok-soft);color:#155e35}.chip.danger{background:var(--danger-soft);color:#8a1f16}

@@ -53,6 +53,18 @@ class V253_NewLogoTest {
     }
 
     @Test
+    fun `grading and report card render formulas with the exam engine`() {
+        val a = source("site/src/admin.js")
+        assertTrue("function richEl(tag, cls, text, style)" in a && a.split("richEl('div', 'g-qtext', q.text)").size == 4)
+        assertFalse("el('div', {class: 'g-qtext', text: (q.text || '')" in a)
+        assertTrue("rt != null ? richEl('span', '', rt) : el('i', {class: 'muted', text: 'بدون پاسخ'})" in a)
+        assertTrue("[el('span', {text: 'پاسخ درست: '}), richEl('span', '', ct)]" in a && "el('td', {}, [richEl('span', '', responseText(q, r) || '—')])" in a)
+        val st = source("site/src/student.js")
+        assertTrue("mathCss: mathCss," in st && "',.math-rich ' + x.trim()" in st)
+        assertTrue(".math-rich.rendered{white-space:normal}" in source("site/src/site.css"))
+    }
+
+    @Test
     fun `site brand favicon and pwa use v3 icons`() {
         for (f in listOf("icon-192", "icon-512", "maskable-192", "maskable-512", "apple-touch-icon", "favicon-48", "mark-256")) assertTrue(exists("site/pwa/v3/$f.png"))
         assertFalse("/pwa/v2/" in source("site/src/template.html") || "/pwa/v2/" in source("site/pwa/manifest.webmanifest") || "/pwa/v2/" in source("site/pwa/sw.js"))

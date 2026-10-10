@@ -57,6 +57,14 @@
       else tabFeedbackBank(body, ctx);
     } catch (e) { S.showErr(c, e); }
   }
+  /* V253.6 — متن سؤال/گزینه/پاسخ در تصحیح و کارنامه با همان موتور فرمول صفحهٔ آزمون رندر می‌شود (نه متن خام $...$) */
+  function richEl(tag, cls, text, style) {
+    var raw = String(text || '');
+    var node = el(tag, {class: (cls ? cls + ' ' : '') + 'math-rich', style: style || null, text: raw.replace(/%%FIG:[\s\S]*?%%/g, '[شکل]')});
+    var ST = window.SiteStudent;
+    if (ST && ST.richHtml && /[$%]|\\/.test(raw)) { if (ST.mathCss) ST.mathCss(); ST.richHtml(raw).then(function (h) { node.innerHTML = h; node.classList.add('rendered'); if (ST.fitMath) ST.fitMath(node); }).catch(function () {}); }
+    return node;
+  }
   function correctText(q) {
     var k = q.__key || {};
     switch (q.__type) {
@@ -118,9 +126,9 @@
         var box = el('div', {class: 'g-q'}, [
           el('div', {class: 'row'}, [el('b', {text: 'سؤال ' + fa(i + 1)}), el('span', {class: 'chip', text: TYPE_LABEL[q.__type]}), el('span', {class: 'grow'}), el('span', {class: 'muted', style: 'font-size:12px', text: 'از ' + fa(S.fmtScore(q.score))}), inp,
             auto != null ? el('button', {class: 'btn light sm', title: 'نمرهٔ پیشنهادی', text: '⚡ ' + fa(S.fmtScore(auto)), onclick: function () { inp.value = auto; }}) : null, el('button', {class: 'btn light sm', text: 'کامل', onclick: function () { inp.value = q.score; }}), el('button', {class: 'btn light sm', text: '۰', onclick: function () { inp.value = 0; }})]),
-          el('div', {class: 'g-qtext', text: (q.text || '').replace(/%%FIG:[\s\S]*?%%/g, '[شکل]')}),
-          el('div', {class: 'g-resp'}, [el('span', {class: 'muted', text: 'پاسخ دانش‌آموز: '}), rt != null ? el('span', {class: auto == null ? '' : (auto >= num(q.score) ? 'ok-t' : (auto > 0 ? 'warn-t' : 'err-t')), text: rt}) : el('i', {class: 'muted', text: 'بدون پاسخ'})]),
-          ct ? el('div', {class: 'g-resp muted', style: 'font-size:13px', text: 'پاسخ درست: ' + ct}) : null,
+          richEl('div', 'g-qtext', q.text),
+          el('div', {class: 'g-resp'}, [el('span', {class: 'muted', text: 'پاسخ دانش‌آموز: '}), rt != null ? richEl('span', auto == null ? '' : (auto >= num(q.score) ? 'ok-t' : (auto > 0 ? 'warn-t' : 'err-t')), rt) : el('i', {class: 'muted', text: 'بدون پاسخ'})]),
+          ct ? el('div', {class: 'g-resp muted', style: 'font-size:13px'}, [el('span', {text: 'پاسخ درست: '}), richEl('span', '', ct)]) : null,
           qi.length ? el('div', {class: 'st-imgs'}, qi.map(function (u) { return el('img', {src: u, onclick: function () { lightbox(u); }}); })) : null
         ]);
         detail.appendChild(box);
@@ -151,10 +159,10 @@
     body.appendChild(holder);
     function draw() {
       holder.innerHTML = ''; var q = questions[qi]; var inputs = {};
-      holder.appendChild(el('div', {class: 'card', style: 'margin-bottom:10px'}, [el('div', {class: 'g-qtext', text: (q.text || '').replace(/%%FIG:[\s\S]*?%%/g, '[شکل]')}), correctText(q) ? el('div', {class: 'muted', style: 'font-size:13px', text: 'پاسخ درست: ' + correctText(q)}) : null]));
+      holder.appendChild(el('div', {class: 'card', style: 'margin-bottom:10px'}, [richEl('div', 'g-qtext', q.text), correctText(q) ? el('div', {class: 'muted', style: 'font-size:13px'}, [el('span', {text: 'پاسخ درست: '}), richEl('span', '', correctText(q))]) : null]));
       var tbl = el('table', {class: 'tbl'}, [el('thead', {}, [el('tr', {}, ['دانش‌آموز', 'پاسخ', 'تصویر', 'نمره (از ' + fa(S.fmtScore(q.score)) + ')'].map(function (h) { return el('th', {text: h}); }))]),
         el('tbody', {}, answers.map(function (a) { var r = (a.responses || [])[qi], auto = autoScore(q, r), cur = (a.grades || [])[qi]; var inp = el('input', {type: 'number', step: '0.25', min: 0, max: q.score, value: cur != null ? cur : (auto != null ? auto : ''), style: 'width:80px;border:1px solid var(--line);border-radius:8px;padding:5px;direction:ltr'}); inputs[a.id] = inp; var im = (a.response_images || {})[q.id] || (a.response_images || {})[String(qi)] || [];
-          return el('tr', {}, [el('td', {text: a.student_name || '—'}), el('td', {text: responseText(q, r) || '—'}), el('td', {}, im.map(function (u) { return el('img', {src: u, style: 'width:48px;height:40px;object-fit:cover;border-radius:6px;cursor:zoom-in;margin-inline-end:4px', onclick: function () { lightbox(u); }}); })), el('td', {}, [inp])]); }))]);
+          return el('tr', {}, [el('td', {text: a.student_name || '—'}), el('td', {}, [richEl('span', '', responseText(q, r) || '—')]), el('td', {}, im.map(function (u) { return el('img', {src: u, style: 'width:48px;height:40px;object-fit:cover;border-radius:6px;cursor:zoom-in;margin-inline-end:4px', onclick: function () { lightbox(u); }}); })), el('td', {}, [inp])]); }))]);
       holder.appendChild(el('div', {class: 'card'}, [tbl, el('div', {class: 'row', style: 'margin-top:10px'}, [el('span', {class: 'grow'}), el('button', {class: 'btn', text: '💾 ذخیرهٔ نمره‌های این سؤال', onclick: async function () { var items = []; Object.keys(inputs).forEach(function (id) { var v = inputs[id].value; if (v !== '') items.push({answer_id: id, score: num(v)}); }); if (!items.length) return toast('حداقل یک نمره وارد کنید.', 'err'); try { chk(await S.rpcObj('native_bulk_save_question_grades_v1', {p_exam: ctx.examId, p_question_index: qi, p_items: items})); toast('ذخیره شد.', 'ok'); } catch (e) { toast(errMsg(e), 'err'); } }})])]));
     }
     draw();
@@ -239,9 +247,9 @@
         var qq = Object.assign({}, q, {__key: q, __type: qt(q.type)});
         var r = responses[i], rt = responseText(qq, r), ct = raw.graded ? correctText(qq) : null, g = raw.graded ? grades[i] : null;
         body.appendChild(el('div', {class: 'g-q'}, [el('div', {class: 'row'}, [el('b', {text: 'سؤال ' + fa(i + 1)}), el('span', {class: 'grow'}), g != null ? el('span', {class: 'chip ' + (num(g) >= num(q.score) ? 'ok' : num(g) > 0 ? 'warn' : 'danger'), text: fa(S.fmtScore(g)) + ' / ' + fa(S.fmtScore(q.score))}) : el('span', {class: 'chip', text: 'از ' + fa(S.fmtScore(q.score))})]),
-          el('div', {class: 'g-qtext', text: (q.text || '').replace(/%%FIG:[\s\S]*?%%/g, '[شکل]')}),
-          el('div', {class: 'g-resp'}, [el('span', {class: 'muted', text: 'پاسخ شما: '}), rt != null ? el('span', {text: rt}) : el('i', {class: 'muted', text: 'بدون پاسخ'})]),
-          ct ? el('div', {class: 'g-resp muted', style: 'font-size:13px', text: 'پاسخ درست: ' + ct}) : null,
+          richEl('div', 'g-qtext', q.text),
+          el('div', {class: 'g-resp'}, [el('span', {class: 'muted', text: 'پاسخ شما: '}), rt != null ? richEl('span', '', rt) : el('i', {class: 'muted', text: 'بدون پاسخ'})]),
+          ct ? el('div', {class: 'g-resp muted', style: 'font-size:13px'}, [el('span', {text: 'پاسخ درست: '}), richEl('span', '', ct)]) : null,
           raw.graded && q.explanation ? el('div', {class: 'alert info', style: 'font-size:13px', text: 'توضیح: ' + q.explanation}) : null,
           (imgs[q.id] || imgs[String(i)] || []).length ? el('div', {class: 'st-imgs'}, (imgs[q.id] || imgs[String(i)]).map(function (u) { return el('img', {src: u, onclick: function () { lightbox(u); }}); })) : null]));
       });

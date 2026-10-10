@@ -202,12 +202,12 @@
       Array.prototype.forEach.call(w.document.styleSheets, function (sh) {
         var rules; try { rules = sh.cssRules; } catch (e) { return; }
         Array.prototype.forEach.call(rules, function (r) {
-          if (r.type === 1 && r.selectorText && keep.test(r.selectorText) && !/^(html|body|\*)/.test(r.selectorText)) out.push(r.selectorText.split(',').map(function (x) { return '.st-exam ' + x.trim(); }).join(',') + '{' + r.style.cssText + '}');
+          if (r.type === 1 && r.selectorText && keep.test(r.selectorText) && !/^(html|body|\*)/.test(r.selectorText)) out.push(r.selectorText.split(',').map(function (x) { return '.st-exam ' + x.trim() + ',.math-rich ' + x.trim(); }).join(',') + '{' + r.style.cssText + '}');
           else if (r.type === 5 && /math|mfrac|frac/i.test(r.cssText)) out.push(r.cssText);
         });
       });
       /* V218.2 — همان قواعد .qmf-atom موتور چاپ (tools_styles.css): خط کسر به عرض کامل صورت/مخرج و رادیکال کشیده؛ بیرون از .qmf-atom اعمال نمی‌شدند */
-      out.push('.st-exam .mathx .mfrac{align-items:stretch !important}.st-exam .mathx .mfrac>.mnum,.st-exam .mathx .mfrac>.mden{width:100%;box-sizing:border-box;text-align:center}.st-exam .msqrt{overflow:visible;align-items:stretch}');
+      out.push('.st-exam .mathx .mfrac,.math-rich .mathx .mfrac{align-items:stretch !important}.st-exam .mathx .mfrac>.mnum,.st-exam .mathx .mfrac>.mden,.math-rich .mathx .mfrac>.mnum,.math-rich .mathx .mfrac>.mden{width:100%;box-sizing:border-box;text-align:center}.st-exam .msqrt,.math-rich .msqrt{overflow:visible;align-items:stretch}');
       var st = document.createElement('style'); st.id = 'stMathCss'; st.textContent = out.join('\n'); document.head.appendChild(st);
     });
   }
@@ -542,5 +542,5 @@
   /* هشدار خروج هنگام آزمون باز */
   window.addEventListener('beforeunload', function (e) { if (run && !run.finished) { e.preventDefault(); e.returnValue = ''; } });
 
-  window.SiteStudent = {page: page, richHtml: richHtml, fitMath: fitMath, openWhiteboard: openWhiteboard, simplifyFigs: simplifyFigs, decodeExam: decodeExam, stableShuffle: stableShuffle, sanitize: sanitize, hasActive: function () { return !!restoreActive(); }, inExam: function () { return !!(run && !run.finished); }};
+  window.SiteStudent = {page: page, richHtml: richHtml, fitMath: fitMath, mathCss: mathCss, openWhiteboard: openWhiteboard, simplifyFigs: simplifyFigs, decodeExam: decodeExam, stableShuffle: stableShuffle, sanitize: sanitize, hasActive: function () { return !!restoreActive(); }, inExam: function () { return !!(run && !run.finished); }};
 })();
