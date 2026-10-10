@@ -1720,3 +1720,6 @@ body.rail-dragging .b-rail-row,body.rail-dragging .b-rail-grip{cursor:grabbing}
 body.rail-dragging .b-rail-row:not(.dragging):hover .b-rail-grip{background:transparent}
 /* V257.3 — عنوان پنل‌ها: .card h3 در سایت display:flex است، پس text-align اثر نداشت؛ وسط‌چین با justify-content */
 .dk .b-settings.card>h3{display:flex;justify-content:center;text-align:center;width:100%}
+/* V257.4 — دسکتاپ: سایهٔ پهن کارت‌ها (blur 28px) در فاصلهٔ ۱۲px بین «مشخصات/سربرگ» و کادر سؤال روی هم می‌افتاد و هالهٔ خاکستری می‌ساخت؛ سایهٔ پنل‌های سازنده فقط رو به پایین و کوتاه */
+.dk .builder .b-settings.card,.dk .builder .b-editor.card{box-shadow:0 12px 22px -16px rgba(28,49,62,.16)}
+.m-dark .dk .builder .b-settings.card,.m-dark .dk .builder .b-editor.card{box-shadow:0 12px 22px -16px rgba(0,0,0,.45)}

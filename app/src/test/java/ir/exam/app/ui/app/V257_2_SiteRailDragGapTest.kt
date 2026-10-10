@@ -21,6 +21,7 @@ class V257_2_SiteRailDragGapTest {
         assertTrue(".dk .builder .b-body.has-settings{column-gap:12px}" in css)
         assertFalse("left:122px;right:116px" in css)
         assertTrue(".dk .b-settings.card>h3{display:flex;justify-content:center;text-align:center;width:100%}" in css) // V257.3
+        assertTrue(".dk .builder .b-settings.card,.dk .builder .b-editor.card{box-shadow:0 12px 22px -16px rgba(28,49,62,.16)}" in css) // V257.4
         assertTrue(".dk .b-rail-nums{position:relative}" in css && "body.rail-dragging{user-select:none;cursor:grabbing}" in css)
     }
 
