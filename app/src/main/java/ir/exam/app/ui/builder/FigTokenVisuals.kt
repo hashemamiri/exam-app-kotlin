@@ -8,6 +8,7 @@ import androidx.compose.ui.text.input.OffsetMapping
 import androidx.compose.ui.text.input.TransformedText
 import androidx.compose.ui.text.input.VisualTransformation
 import ir.exam.app.core.figure.FigureSpec
+import ir.exam.app.core.math.NativeMathFormatter
 
 /**
  * V55.17 — گزارش دستگاه: «با درج چیز در گزینه‌ها، کادر متن گزینه پر از کد
@@ -18,6 +19,24 @@ import ir.exam.app.core.figure.FigureSpec
 object FigTokenVisuals {
 
     internal val TOKEN = Regex("""%%FIG:(\{.*?\})%%""", RegexOption.DOT_MATCHES_ALL)
+
+    /** V258 — توکن شکل یا فرمول `$…$`: فرمول هم در «نما» به‌صورت نماد (نه کد LaTeX) دیده می‌شود. */
+    internal val ANY_TOKEN = Regex("""%%FIG:(\{.*?\})%%|\$([^$\n]+?)\$""", RegexOption.DOT_MATCHES_ALL)
+
+    /** نمایش نمادی فرمول در کادر متن (مثل `\left\{ \left[ \left( x \right) \right] \right\}` → `{[(x)]}`). */
+    fun mathLabel(tex: String): String {
+        // آکولادهای واقعی (\{ \}) و فاصله‌های LaTeX پیش از رندر محافظت/حذف می‌شوند؛ renderTex خودِ { } را حذف می‌کند.
+        val prepared = tex
+            .replace("\\{", "\u0001").replace("\\}", "\u0002")
+            .replace(Regex("""\\[,;:! ]"""), " ")
+        val rendered = runCatching { NativeMathFormatter.renderTex(prepared) }.getOrNull() ?: return "فرمول"
+        val out = rendered
+            .replace('\u0001', '{').replace('\u0002', '}')
+            .replace(Regex("""\s*([()\[\]{}])\s*"""), "$1")
+            .replace(Regex("""\s+"""), " ")
+            .trim()
+        return out.ifBlank { "فرمول" }
+    }
 
     /** برچسب کوتاه فارسی توکن بر اساس kind/type آن. */
     fun chipLabel(json: String): String {
@@ -37,7 +56,7 @@ object FigTokenVisuals {
      */
     fun transformation(accent: Color): VisualTransformation = VisualTransformation { text ->
         val source = text.text
-        val matches = TOKEN.findAll(source).toList()
+        val matches = ANY_TOKEN.findAll(source).toList()
         if (matches.isEmpty()) return@VisualTransformation TransformedText(text, OffsetMapping.Identity)
 
         // قطعه: [srcStart, srcEnd) → [outStart, outEnd)
@@ -49,7 +68,8 @@ object FigTokenVisuals {
                 if (m.range.first > cursor) append(source.substring(cursor, m.range.first))
                 val outStart = length
                 val style = pushStyle(SpanStyle(color = accent, fontWeight = FontWeight.Bold))
-                append("⟦${chipLabel(m.groupValues[1])}⟧")
+                if (m.groupValues[1].isNotEmpty()) append("⟦${chipLabel(m.groupValues[1])}⟧")
+                else append(mathLabel(m.groupValues[2]))
                 pop()
                 check(style >= 0)
                 segments += Seg(m.range.first, m.range.last + 1, outStart, length)

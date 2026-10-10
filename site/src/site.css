@@ -1723,3 +1723,17 @@ body.rail-dragging .b-rail-row:not(.dragging):hover .b-rail-grip{background:tran
 /* V257.4 — دسکتاپ: سایهٔ پهن کارت‌ها (blur 28px) در فاصلهٔ ۱۲px بین «مشخصات/سربرگ» و کادر سؤال روی هم می‌افتاد و هالهٔ خاکستری می‌ساخت؛ سایهٔ پنل‌های سازنده فقط رو به پایین و کوتاه */
 .dk .builder .b-settings.card,.dk .builder .b-editor.card{box-shadow:0 12px 22px -16px rgba(28,49,62,.16)}
 .m-dark .dk .builder .b-settings.card,.m-dark .dk .builder .b-editor.card{box-shadow:0 12px 22px -16px rgba(0,0,0,.45)}
+/* V258 — گزینه‌ها/جورکردنی: کادر تراشه‌ای تک‌خطی (فرمول/شکل به‌صورت نماد) + دکمهٔ + و منوی ابزارهای درج (دسکتاپ) */
+.b-ta-wrap.sm .b-rich{min-height:42px!important;height:auto!important;max-height:160px;padding:8px 10px;font-size:14px;line-height:1.7;border-radius:10px;resize:none!important;overflow-y:auto}
+.b-ta-wrap.sm .b-chip.live img,.b-ta-wrap.sm .b-chip.live svg{max-height:80px}
+.b-opt .b-ta-wrap{flex:1 1 auto;min-width:0}
+.dk .b-opt .b-opt-plus{color:var(--brand);border-color:#c9dfe6}
+.dk .b-opt .b-opt-plus:hover{background:var(--brand-soft)}
+.b-ins-menu{position:absolute;z-index:1200;background:var(--card);border:1px solid var(--line);border-radius:18px;box-shadow:0 14px 40px rgba(28,49,62,.18);padding:10px;direction:rtl;width:300px}
+.b-ins-title{font-size:12.5px;font-weight:700;color:#2f687c;text-align:center;margin-bottom:8px}
+.b-ins-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.b-ins-grid .tool-btn{width:auto!important;height:auto!important;min-height:62px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:8px 4px;font-size:22px!important;border-radius:14px!important;box-shadow:none!important;border:1px solid var(--line)}
+.b-ins-grid .tool-btn:hover{transform:none!important;border-color:var(--brand)}
+.b-ins-grid .tool-btn svg{width:24px;height:24px}
+.b-ins-grid .tool-btn small{font-size:11px;font-weight:700;color:#3a4a63;line-height:1.3;white-space:nowrap}
+.m-dark .b-ins-title{color:#5FD3F5}.m-dark .b-ins-grid .tool-btn small{color:var(--ink)}

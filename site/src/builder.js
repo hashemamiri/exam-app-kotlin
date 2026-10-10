@@ -325,8 +325,9 @@
   }
   /* ویرایشگر تراشه‌ای (همیشه، حتی حین تایپ، توکن‌ها تراشه‌اند — مثل VisualTransformation اپ).
      textarea مخفی منبع حقیقت و نقطهٔ اتصال ابزارها (selectionStart/End) می‌ماند؛ div contenteditable «نما» است. */
-  function tokenTextarea(ta) {
-    var wrap = el('div', {class: 'b-ta-wrap'});
+  function tokenTextarea(ta, opts) {
+    opts = opts || {};
+    var wrap = el('div', {class: 'b-ta-wrap' + (opts.small ? ' sm' : '')});
     var rich = el('div', {class: 'b-rich', contenteditable: 'true', dir: 'rtl', spellcheck: 'false', 'data-ph': ta.placeholder || ''});
     var live = el('div', {class: 'b-live', style: 'display:none'});
     previewCss();
@@ -395,7 +396,9 @@
     /* V181 — یک شنوندهٔ سراسری به‌جای یکی برای هر بار رندر ویرایشگر (نشت: با هر جابه‌جایی سؤال یکی اضافه می‌شد و تایپ کند می‌شد) */
     if (!window.__bRichSel) { window.__bRichSel = function () { var a = document.activeElement; if (a && a.__caretToRaw && a.classList.contains('b-rich')) a.__caretToRaw(); }; document.addEventListener('selectionchange', window.__bRichSel); }
     rich.__caretToRaw = caretToRaw;
-    rich.addEventListener('paste', function (e) { e.preventDefault(); var t = (e.clipboardData || window.clipboardData).getData('text/plain'); document.execCommand('insertText', false, t); });
+    rich.addEventListener('paste', function (e) { e.preventDefault(); var t = (e.clipboardData || window.clipboardData).getData('text/plain'); if (opts.small) t = t.replace(/\s*\n+\s*/g, ' '); document.execCommand('insertText', false, t); });
+    /* V258 — کادر تک‌خطی (گزینه/جورکردنی): Enter خط جدید نمی‌سازد */
+    if (opts.small) rich.addEventListener('keydown', function (e) { if (e.key === 'Enter') e.preventDefault(); });
     /* کلیک روی تراشهٔ فرمول → ویرایش همان فرمول */
     /* V191 — مثل اپ: کلیک اول = انتخاب شیء (با دستگیره‌نما)، کلیک دوم (یا دوبار کلیک) = ویرایشگر همان شیء (فرمول/شکل/جدول/…) */
     function openTokEditor(c) {
@@ -429,7 +432,7 @@
     render(ta.value); livePreview(live, ta.value);
     wrap.appendChild(ta); wrap.appendChild(rich);
     /* V194 — دستگیرهٔ کشیدن سفارشی (به‌جای resizer مرورگر که در RTL شکل خوبی ندارد): نوار باریک زیر کادر، کشیدن = تغییر ارتفاع */
-    if (WYSIWYG) {
+    if (WYSIWYG && !opts.small) {
       var grip = el('div', {class: 'b-grip', title: 'برای تغییر ارتفاع بکشید', html: '<i></i>'});
       grip.addEventListener('pointerdown', function (e) {
         e.preventDefault(); grip.setPointerCapture(e.pointerId);
@@ -537,6 +540,7 @@
     }
     /* V254 — آیکون‌های برداری سربرگ سؤال (هم‌خانوادهٔ ریل) */
     var QI = {
+      plus: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>',
       up: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg>',
       down: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12l7 7 7-7"/></svg>',
       copy: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V6a2 2 0 0 1 2-2h9"/></svg>',
@@ -788,12 +792,18 @@
         box.appendChild(el('h4', {text: 'گزینه‌ها (پاسخ درست را علامت بزنید)'}));
         q.options.forEach(function (o, k) {
           var r = el('input', {type: 'radio', name: 'correct_' + q.id}); r.checked = q.correctIndex === k; r.addEventListener('change', function () { q.correctIndex = k; mark(); });
-          var t = el('input', {type: 'text', value: o, placeholder: 'گزینهٔ ' + fa(k + 1), style: 'flex:1'}); t.addEventListener('input', function () { q.options[k] = t.value; mark(); });
+          /* V258 — متن گزینه در کادر تراشه‌ای: فرمول/شکل به‌صورت نماد (نه کد LaTeX)؛ textarea مخفی منبع حقیقت و نقطهٔ اتصال ابزارها */
+          var t = el('textarea', {rows: 1, placeholder: 'گزینهٔ ' + fa(k + 1)}); t.value = o; t.addEventListener('input', function () { q.options[k] = t.value; mark(); });
+          var tt = tokenTextarea(t, {small: true}); tt.wrap.style.flex = '1';
           var img = q.optionImages[k];
-          box.appendChild(el('div', {class: 'b-opt'}, [r, t,
-            img ? el('img', {src: img, class: 'thumb'}) : null,
-            el('button', {class: 'icon-btn', title: 'تصویر گزینه', html: img ? '🖼✕' : '🖼', onclick: function () { if (img) { q.optionImages[k] = null; mark(); redraw(); return; } window.SiteStudio.open({onInsert: function (u) { q.optionImages[k] = u; mark(); redraw(); }}); }}),
-            el('button', {class: 'icon-btn', title: 'فرمول', html: '∑', onclick: function () { S.openFormulaEditor(q.options[k], null, null).then(function (v) { if (v != null) { q.options[k] = v; mark(); redraw(); } }); }}),
+          var pickImg = function () { if (img) { q.optionImages[k] = null; mark(); redraw(); return; } window.SiteStudio.open({onInsert: function (u) { q.optionImages[k] = u; mark(); redraw(); }}); };
+          var DK = document.body.classList.contains('dk');
+          box.appendChild(el('div', {class: 'b-opt'}, [r, tt.wrap,
+            img ? el('img', {src: img, class: 'thumb', title: 'تصویر گزینه — برای حذف کلیک کنید', onclick: pickImg}) : null,
+            /* V258 — دسکتاپ مثل اپ (OptionInsertButton): یک دکمهٔ + که منوی ابزارهای درج همان گزینه را باز می‌کند */
+            DK ? el('button', {class: 'icon-btn b-opt-plus', title: 'درج در گزینهٔ ' + fa(k + 1), 'aria-label': 'درج در گزینهٔ ' + fa(k + 1), html: QI.plus, onclick: function (e) { insertMenu(e.currentTarget, t, q, {label: 'گزینهٔ ' + fa(k + 1), image: pickImg, hasImage: !!img}); }}) : null,
+            DK ? null : el('button', {class: 'icon-btn', title: 'تصویر گزینه', html: img ? '🖼✕' : '🖼', onclick: pickImg}),
+            DK ? null : el('button', {class: 'icon-btn', title: 'فرمول', html: '∑', onclick: function () { S.openFormulaEditor(t.value, t.selectionStart, t.selectionEnd).then(function (v) { if (v != null && v !== t.value) { t.value = v; t.dispatchEvent(new Event('input')); } }); }}),
             el('button', {class: 'icon-btn danger', html: '✕', title: 'حذف گزینه', onclick: function () { if (q.options.length <= 2) return toast('حداقل دو گزینه لازم است.', 'err'); q.options.splice(k, 1); q.optionImages.splice(k, 1); if (q.correctIndex === k) q.correctIndex = null; else if (q.correctIndex > k) q.correctIndex--; mark(); redraw(); }})
           ]));
         });
@@ -810,12 +820,17 @@
         box.appendChild(el('h4', {text: 'ستون راست ← ستون چپ (پاسخ درست را از فهرست انتخاب کنید)'}));
         var n = Math.max(q.matchingLeft.length, q.matchingRight.length);
         for (var k = 0; k < n; k++) (function (k) {
-          var l = el('input', {type: 'text', value: q.matchingLeft[k] || '', placeholder: 'راست ' + fa(k + 1)}); l.addEventListener('input', function () { q.matchingLeft[k] = l.value; mark(); });
-          var r = el('input', {type: 'text', value: q.matchingRight[k] || '', placeholder: 'چپ ' + fa(k + 1)}); r.addEventListener('input', function () { q.matchingRight[k] = r.value; mark(); });
+          /* V258 — جورکردنی هم مثل اپ: کادر تراشه‌ای (فرمول = نماد) + دکمهٔ + در دسکتاپ */
+          var l = el('textarea', {rows: 1, placeholder: 'راست ' + fa(k + 1)}); l.value = q.matchingLeft[k] || ''; l.addEventListener('input', function () { q.matchingLeft[k] = l.value; mark(); });
+          var r = el('textarea', {rows: 1, placeholder: 'چپ ' + fa(k + 1)}); r.value = q.matchingRight[k] || ''; r.addEventListener('input', function () { q.matchingRight[k] = r.value; mark(); });
+          var lt = tokenTextarea(l, {small: true}), rt = tokenTextarea(r, {small: true}); lt.wrap.style.flex = '1'; rt.wrap.style.flex = '1';
+          var MDK = document.body.classList.contains('dk');
+          var lp = MDK ? el('button', {class: 'icon-btn b-opt-plus', title: 'درج در مورد راست ' + fa(k + 1), html: QI.plus, onclick: function (e) { insertMenu(e.currentTarget, l, q, {label: 'مورد راست ' + fa(k + 1)}); }}) : null;
+          var rp = MDK ? el('button', {class: 'icon-btn b-opt-plus', title: 'درج در مورد چپ ' + fa(k + 1), html: QI.plus, onclick: function (e) { insertMenu(e.currentTarget, r, q, {label: 'مورد چپ ' + fa(k + 1)}); }}) : null;
           var s = el('select'); s.appendChild(el('option', {value: '', text: '— جفت —'}));
           q.matchingRight.forEach(function (_, j) { var o = el('option', {value: String(j), text: 'چپ ' + fa(j + 1)}); if (q.matchingPairs[k] === j) o.selected = true; s.appendChild(o); });
           s.addEventListener('change', function () { if (s.value === '') delete q.matchingPairs[k]; else q.matchingPairs[k] = Number(s.value); mark(); });
-          box.appendChild(el('div', {class: 'b-opt'}, [l, s, r, el('button', {class: 'icon-btn danger', html: '✕', title: 'حذف ردیف', onclick: function () { if (n <= 2) return; q.matchingLeft.splice(k, 1); q.matchingRight.splice(k, 1); q.matchingPairs = {}; mark(); redraw(); }})]));
+          box.appendChild(el('div', {class: 'b-opt'}, [lt.wrap, lp, s, rt.wrap, rp, el('button', {class: 'icon-btn danger', html: '✕', title: 'حذف ردیف', onclick: function () { if (n <= 2) return; q.matchingLeft.splice(k, 1); q.matchingRight.splice(k, 1); q.matchingPairs = {}; mark(); redraw(); }})]));
         })(k);
         box.appendChild(el('button', {class: 'btn light sm', text: '➕ ردیف', onclick: function () { q.matchingLeft.push(''); q.matchingRight.push(''); mark(); redraw(); }}));
       } else {
@@ -1025,6 +1040,30 @@
   /* ================================================================ درج شکل با ویرایشگرهای وب (داخل iframe موتور چاپ) */
   var figFrame = null;
   /* V194 — مثل اپ: یک دکمهٔ «اطلس» با سه گزینه؛ «تصویر خودم» = انتخاب فایل → data-URL فشرده → ویرایشگر آناتومی با t='photo' (فلش‌گذاری و جای نام) */
+  /* V258 — منوی ابزارهای درج برای گزینه/جورکردنی (مثل OptionInsertToolsDialog اپ): فرمول، شکل، نمودار، محور، جدول، جدول تناوبی، گالری (+ تصویر گزینه) */
+  function insertMenu(anchor, ta, q, o) {
+    o = o || {};
+    /* توجه: به insertFigure «q» داده نمی‌شود، چون آن تابع q.text (متن سؤال) را با مقدار کادر بازنویسی می‌کند؛ اینجا کادر = گزینه است */
+    var old = document.querySelector('.b-ins-menu'); if (old) old.remove(); var oldA = document.querySelector('.b-atlas-menu'); if (oldA) oldA.remove();
+    function item(kind, title, cls, fn) { return el('button', {type: 'button', class: 'tool-btn ' + cls, title: title, 'aria-label': title, html: toolSvg(kind) + '<small>' + S.esc(title) + '</small>', onclick: function () { m.remove(); fn(); }}); }
+    var items = [
+      item('fx', 'فرمول', 'is-fx', function () { var s0 = ta.selectionStart, e0 = ta.selectionEnd; S.openFormulaEditor(ta.value, s0, e0).then(function (t) { if (t != null && t !== ta.value) { ta.value = t; ta.dispatchEvent(new Event('input')); } }); }),
+      item('fig', 'شکل', 'is-fig', function () { insertFigure('geo', ta, null); }),
+      item('graph', 'نمودار', 'is-gra', function () { insertFigure('graph', ta, null); }),
+      item('axis', 'محور', 'is-axis', function () { insertFigure('axis', ta, null); }),
+      item('table', 'جدول', 'is-tab', function () { insertFigure('table', ta, null); }),
+      item('periodic', 'جدول تناوبی', 'is-pt', function () { insertFigure('periodic', ta, null); }),
+      item('gallery', 'گالری', 'is-ana', function () { atlasMenu(anchor, ta, null); }),
+      o.image ? item('img', o.hasImage ? 'حذف تصویر' : 'تصویر', 'is-img', o.image) : null
+    ];
+    var m = el('div', {class: 'b-ins-menu'}, [el('div', {class: 'b-ins-title', text: 'درج در ' + (o.label || 'این کادر')}), el('div', {class: 'b-ins-grid'}, items)]);
+    document.body.appendChild(m);
+    var r = anchor.getBoundingClientRect(), mw = m.offsetWidth, mh = m.offsetHeight;
+    var top = r.bottom + 6; if (top + mh > window.innerHeight - 8) top = Math.max(8, r.top - mh - 6);
+    var left = Math.min(Math.max(8, r.right - mw), window.innerWidth - mw - 8);
+    m.style.top = (top + window.scrollY) + 'px'; m.style.left = (left + window.scrollX) + 'px';
+    setTimeout(function () { document.addEventListener('pointerdown', function h(e) { if (!m.contains(e.target)) { m.remove(); document.removeEventListener('pointerdown', h); } }); }, 0);
+  }
   function atlasMenu(anchor, ta, q) {
     var old = document.querySelector('.b-atlas-menu'); if (old) old.remove();
     var m = el('div', {class: 'b-atlas-menu'}, [
