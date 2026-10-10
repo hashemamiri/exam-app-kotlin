@@ -525,11 +525,13 @@
       /* V188 — تصاویر سؤال شیء {uri,…} هستند (پیش‌تر [object Object] می‌شد) */
       (q.images || []).forEach(function (u) { var src = u && typeof u === 'object' ? u.uri : u; if (src) card.appendChild(el('img', {src: src, alt: 'تصویر سؤال', class: 'b-sp-img'})); });
       var AB = ['الف', 'ب', 'ج', 'د', 'ه', 'و', 'ز', 'ح'];
-      if (q.type === 'multiple') (q.options || []).forEach(function (o, i) { card.appendChild(el('label', {class: 'st-opt'}, [el('input', {type: 'radio', disabled: 'disabled'}), el('span', {class: 'st-optlabel', text: (AB[i] || fa(i + 1)) + ')'}), el('span', {class: 'grow', text: o || ('گزینه ' + fa(i + 1))}), q.optionImages && q.optionImages[i] ? el('img', {src: q.optionImages[i], class: 'thumb'}) : null])); });
+      /* V258.1 — گزینه‌ها و موارد جورکردنی هم مثل متن سؤال با موتور رندر (فرمول/شکل = نماد، نه کد) — همان مسیر صفحهٔ آزمون دانش‌آموز */
+      function rich(span, raw, prefix) { if (raw && window.SiteStudent && window.SiteStudent.richHtml) window.SiteStudent.richHtml(raw).then(function (h) { span.innerHTML = (prefix || '') + h; if (window.SiteStudent.fitMath) window.SiteStudent.fitMath(span); }); return span; }
+      if (q.type === 'multiple') (q.options || []).forEach(function (o, i) { card.appendChild(el('label', {class: 'st-opt'}, [el('input', {type: 'radio', disabled: 'disabled'}), el('span', {class: 'st-optlabel', text: (AB[i] || fa(i + 1)) + ')'}), rich(el('span', {class: 'grow', text: o || ('گزینه ' + fa(i + 1))}), o), q.optionImages && q.optionImages[i] ? el('img', {src: q.optionImages[i], class: 'thumb'}) : null])); });
       else if (q.type === 'truefalse') card.appendChild(el('div', {class: 'row'}, [el('button', {class: 'btn light', text: '✓ صحیح', disabled: 'disabled'}), el('button', {class: 'btn light', text: '✗ غلط', disabled: 'disabled'})]));
       else if (q.type === 'fill' || q.type === 'numeric') card.appendChild(el('input', {type: 'text', class: 'st-input', disabled: 'disabled', placeholder: q.type === 'numeric' ? 'پاسخ عددی' : 'پاسخ جای خالی'}));
       else if (q.type === 'matching') {
-        (q.matchingLeft || []).forEach(function (l, li) { card.appendChild(el('div', {class: 'st-ml'}, [el('span', {class: 'grow', text: fa(li + 1) + '. ' + (l || 'ستون راست')}), el('div', {class: 'st-chips'}, (q.matchingRight || []).map(function (_, ri) { return el('button', {class: 'chip', text: AB[ri] || fa(ri + 1), disabled: 'disabled'}); }))])); });
+        (q.matchingLeft || []).forEach(function (l, li) { card.appendChild(el('div', {class: 'st-ml'}, [rich(el('span', {class: 'grow', text: fa(li + 1) + '. ' + (l || 'ستون راست')}), l, '<b>' + fa(li + 1) + '.</b> '), el('div', {class: 'st-chips'}, (q.matchingRight || []).map(function (_, ri) { return el('button', {class: 'chip', text: AB[ri] || fa(ri + 1), disabled: 'disabled'}); }))])); });
       } else card.appendChild(el('textarea', {class: 'st-input', rows: 5, disabled: 'disabled', placeholder: 'پاسخ تشریحی'}));
       var box = el('div', {class: 'modal b-sp-modal'}, [
         el('div', {class: 'row', style: 'margin-bottom:8px'}, [el('h2', {class: 'grow', text: 'پیش‌نمایش دانش‌آموز', style: 'margin:0'}), el('button', {class: 'x', text: '✕', 'aria-label': 'بستن', onclick: function () { bg.remove(); }})]),
@@ -570,9 +572,9 @@
       /* V257 — هر شماره در یک ردیف با دستگیرهٔ جابه‌جایی (کلیک و نگه‌داشتن ≈۲۲۰ms، سپس کشیدن بالا/پایین) */
       var GRIP = '<svg viewBox="0 0 24 24"><circle cx="9" cy="6" r="1.4"/><circle cx="15" cy="6" r="1.4"/><circle cx="9" cy="12" r="1.4"/><circle cx="15" cy="12" r="1.4"/><circle cx="9" cy="18" r="1.4"/><circle cx="15" cy="18" r="1.4"/></svg>';
       state.questions.forEach(function (q, i) {
-        var grip = el('button', {class: 'b-rail-grip', type: 'button', title: 'برای جابه‌جایی نگه دارید و بکشید', 'aria-label': 'جابه‌جایی سؤال ' + fa(i + 1), html: GRIP});
+        var grip = el('button', {class: 'b-rail-grip', type: 'button', title: 'نگه دارید و بکشید: جابه‌جایی — Ctrl+کلیک: انتخاب چند سؤال برای جابه‌جایی با هم', 'aria-label': 'جابه‌جایی سؤال ' + fa(i + 1), html: GRIP});
         var row = el('div', {class: 'b-rail-row' + (i === state.selected ? ' active' : '') + (railPicked[i] ? ' picked' : ''), 'data-k': String(i)}, [grip,
-          el('button', {class: 'b-rail-num' + (i === state.selected ? ' active' : ''), title: 'سؤال ' + fa(i + 1) + ' — ' + TYPE_LABEL[q.type], text: fa(i + 1), onclick: function () { state.selected = i; drawList(); drawEditor(); }})]);
+          el('button', {class: 'b-rail-num' + (i === state.selected ? ' active' : ''), title: 'سؤال ' + fa(i + 1) + ' — ' + TYPE_LABEL[q.type], text: fa(i + 1), onclick: function (ev) { if (ev && (ev.ctrlKey || ev.metaKey || ev.shiftKey)) { railPick(i, ev.shiftKey); return; } railClearPicks(); state.selected = i; drawList(); drawEditor(); }})]);
         railDrag(grip, row, nums, i);
         nums.appendChild(row);
       });
@@ -707,8 +709,21 @@
        • یک «شبح» شناور دنبال نشانگر می‌رود و ردیف‌های دیگر با انیمیشن FLIP جابه‌جا می‌شوند. */
     var railPicked = {};
     var railLastPick = null;
+    function railPick(index, range) {
+      if (range && railLastPick != null) { var lo = Math.min(railLastPick, index), hi = Math.max(railLastPick, index); for (var k = lo; k <= hi; k++) railPicked[k] = true; }
+      else if (railPicked[index]) delete railPicked[index]; else railPicked[index] = true;
+      railLastPick = index; drawRail();
+    }
+    function railClearPicks(redraw) { if (!Object.keys(railPicked).length) return; railPicked = {}; railLastPick = null; if (redraw) drawRail(); }
+    /* V258.2 — Esc یا کلیک بیرون ریل = لغو انتخاب‌های گروهی (تا هیچ سؤالی «انتخاب‌شده» نماند) */
+    window.__railClearPicks = railClearPicks; /* سازندهٔ جاری؛ شنونده‌ها فقط یک بار ثبت می‌شوند (درس V181: نشت شنونده) */
+    if (!window.__railPickListeners) {
+      window.__railPickListeners = true;
+      document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && !document.body.classList.contains('rail-dragging') && window.__railClearPicks) window.__railClearPicks(true); });
+      document.addEventListener('pointerdown', function (e) { if (window.__railClearPicks && !(e.target.closest && e.target.closest('.b-rail'))) window.__railClearPicks(true); }, true);
+    }
     function railDrag(grip, row, nums, index) {
-      if (railPicked[index]) { row.classList.add('picked'); grip.title = 'انتخاب‌شده — کلیک: لغو؛ نگه‌دارید و بکشید: جابه‌جایی گروه'; }
+      if (railPicked[index]) { row.classList.add('picked'); grip.title = 'انتخاب‌شده برای جابه‌جایی گروهی — Ctrl+کلیک: لغو؛ Esc: لغو همه؛ نگه‌دارید و بکشید: جابه‌جایی گروه'; }
       grip.addEventListener('pointerdown', function (ev) {
         if (ev.button != null && ev.button !== 0) return;
         ev.preventDefault();
@@ -717,13 +732,14 @@
         function pre(e) { if (!started && (Math.abs(e.clientX - sx) > 4 || Math.abs(e.clientY - sy) > 4)) { if (timer) { clearTimeout(timer); timer = null; } start(e); } }
         function cancel() {
           grip.removeEventListener('pointermove', pre); grip.removeEventListener('pointerup', cancel); grip.removeEventListener('pointercancel', cancel);
-          if (timer) { clearTimeout(timer); timer = null; if (!started) togglePick(ev.shiftKey); }
+          if (timer) { clearTimeout(timer); timer = null; if (!started) togglePick(ev); }
         }
         grip.addEventListener('pointermove', pre); grip.addEventListener('pointerup', cancel); grip.addEventListener('pointercancel', cancel);
-        function togglePick(range) {
-          if (range && railLastPick != null) { var lo = Math.min(railLastPick, index), hi = Math.max(railLastPick, index); for (var k = lo; k <= hi; k++) railPicked[k] = true; }
-          else if (railPicked[index]) delete railPicked[index]; else railPicked[index] = true;
-          railLastPick = index; drawRail();
+        function togglePick(e) {
+          /* V258.2 — کلیک ساده روی دستگیره = فقط انتخاب همان سؤال برای ویرایش (و پاک‌شدن انتخاب‌های گروهی)؛
+             Ctrl/⌘+کلیک = افزودن/حذف از گروه؛ Shift+کلیک = بازه. پیش‌تر کلیک ساده سؤال را «انتخاب‌شده» می‌کرد و همان‌طور می‌ماند. */
+          if (e && (e.ctrlKey || e.metaKey || e.shiftKey)) { railPick(index, e.shiftKey); return; }
+          railClearPicks(); state.selected = index; drawList(); drawEditor();
         }
         function start(e0) {
           started = true;

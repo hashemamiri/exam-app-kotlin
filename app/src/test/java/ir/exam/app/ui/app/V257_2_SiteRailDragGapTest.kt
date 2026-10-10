@@ -36,5 +36,13 @@ class V257_2_SiteRailDragGapTest {
         assertTrue("ghost.style.transform = 'translate(' + Math.round(e.clientX - offX) + 'px,' + Math.round(e.clientY - offY) + 'px)';" in js)
         assertFalse("grip.addEventListener('pointermove', onMove)" in js)
         assertTrue("if (e.key === 'Escape') finish(true);" in js)
+        // V258.2 — کلیک ساده روی دستگیره/شماره = انتخاب برای ویرایش و پاک‌شدن گروه؛ Ctrl/Shift = گروه؛ Esc/کلیک بیرون ریل = لغو گروه؛ شنونده‌ها یک‌بار
+        assertTrue("if (e && (e.ctrlKey || e.metaKey || e.shiftKey)) { railPick(index, e.shiftKey); return; }" in js)
+        assertTrue("railClearPicks(); state.selected = index; drawList(); drawEditor();" in js)
+        assertTrue("if (ev && (ev.ctrlKey || ev.metaKey || ev.shiftKey)) { railPick(i, ev.shiftKey); return; } railClearPicks(); state.selected = i;" in js)
+        assertTrue("if (!window.__railPickListeners) {" in js)
+        // V258.1 — پیش‌نمایش دانش‌آموز: گزینه‌ها/جورکردنی با richHtml (نماد، نه کد)
+        assertTrue("function rich(span, raw, prefix) { if (raw && window.SiteStudent && window.SiteStudent.richHtml)" in js)
+        assertTrue("rich(el('span', {class: 'grow', text: o || ('گزینه ' + fa(i + 1))}), o)" in js)
     }
 }
