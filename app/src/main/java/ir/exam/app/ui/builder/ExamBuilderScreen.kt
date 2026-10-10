@@ -52,6 +52,10 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material3.AlertDialog
+import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.ui.window.DialogProperties
+import androidx.compose.ui.window.Dialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -120,7 +124,6 @@ import ir.exam.app.ui.figure.PeriodicEditorDialog
 import ir.exam.app.ui.figure.TableEditorDialog
 import ir.exam.app.ui.math.FormulaHostDialog
 import ir.exam.app.ui.math.QuestionEditorFieldController
-import ir.exam.app.ui.math.NativeMathText
 import ir.exam.app.ui.math.InlineMathTextEditor
 import ir.exam.app.core.math.FormulaTextCodec
 import ir.exam.app.core.text.RichTextSplitter
@@ -584,9 +587,9 @@ fun ExamBuilderScreen(
             state = state,
             viewModel = viewModel,
             onDismiss = { bankDialogOpen = false },
-            onAdd = { id ->
+            onAdd = { ids ->
                 val questionIndex = state.questions.size
-                viewModel.addFromBank(id)
+                ids.forEach { viewModel.addFromBank(it) }
                 expandedQuestionId = viewModel.state.value.questions.lastOrNull()?.id
                 bankDialogOpen = false
                 scope.launch { scrollQuestionToHeader(questionIndex) }
@@ -926,69 +929,166 @@ private fun AudienceCard(state: ExamBuilderState, viewModel: ExamBuilderViewMode
     }
 }
 
+/** V260 — پنجرهٔ بانک سؤال در سازنده: تمام‌صفحه (مثل «افزودن موجود»)، سربرگ انصراف/عنوان/افزودن (N)،
+ *  جست‌وجو و دسته‌ها، و کارت‌های فشرده مثل صفحهٔ بانک (نوع/بارم، عنوان آزمون، درس) با تیک انتخاب چندتایی،
+ *  آیکن چشم (محتوای کامل سؤال) و دکمهٔ «افزودن» تکی روی هر کارت. */
 @Composable
 private fun BuilderQuestionBankDialog(
     state: ExamBuilderState,
     viewModel: ExamBuilderViewModel,
     onDismiss: () -> Unit,
-    onAdd: (Long) -> Unit
+    onAdd: (List<Long>) -> Unit
 ) {
     val query = state.bankQuery.trim().lowercase()
     val visible = state.bankQuestions.filter { item ->
         (state.selectedBankCategory == null || state.selectedBankCategory in item.categoryIds) &&
             (query.isBlank() || item.question.text.lowercase().contains(query) ||
-                item.subject.orEmpty().lowercase().contains(query))
+                item.subject.orEmpty().lowercase().contains(query) ||
+                item.examTitle.orEmpty().lowercase().contains(query))
     }
-    AlertDialog(
+    val selected = remember { mutableStateListOf<Long>() }
+    var previewItem by remember { mutableStateOf<BankQuestionOption?>(null) }
+    Dialog(
         onDismissRequest = onDismiss,
-        title = { Text("بانک سؤال") },
-        text = {
-            LazyColumn(
-                Modifier.heightIn(max = 560.dp),
-                verticalArrangement = Arrangement.spacedBy(7.dp)
-            ) {
-                item {
-                    OutlinedTextField(
-                        state.bankQuery,
-                        viewModel::setBankQuery,
-                        label = { Text("جست‌وجوی سؤال یا درس") },
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                }
-                item {
-                    Row(horizontalArrangement = Arrangement.spacedBy(5.dp)) {
-                        FilterChip(
-                            selected = state.selectedBankCategory == null,
-                            onClick = { viewModel.selectBankCategory(null) },
-                            label = { Text("همه") }
-                        )
-                        state.bankCategories.take(4).forEach { category ->
-                            FilterChip(
-                                selected = state.selectedBankCategory == category.id,
-                                onClick = { viewModel.selectBankCategory(category.id) },
-                                label = { Text(category.name) }
-                            )
-                        }
+        properties = DialogProperties(usePlatformDefaultWidth = false)
+    ) {
+        Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.surface) {
+            Column(Modifier.fillMaxSize().padding(horizontal = 14.dp, vertical = 10.dp)) {
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    TextButton(onClick = onDismiss, modifier = Modifier.weight(1f)) {
+                        Text("انصراف", color = Color(0xFFD32F2F))
+                    }
+                    Box(Modifier.weight(1f), contentAlignment = Alignment.Center) {
+                        Text("بانک سؤال", style = MaterialTheme.typography.titleMedium)
+                    }
+                    Box(Modifier.weight(1f), contentAlignment = Alignment.Center) {
+                        Button(
+                            onClick = { onAdd(selected.toList()) },
+                            enabled = selected.isNotEmpty()
+                        ) { Text(if (selected.isEmpty()) "افزودن" else "افزودن (${selected.size})") }
                     }
                 }
-                if (visible.isEmpty()) item { Text("سؤالی یافت نشد.") }
-                items(visible, key = { it.id }) { item ->
-                    Card(Modifier.fillMaxWidth()) {
-                        Column(Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
-                            NativeMathText(item.question.text.ifBlank { "بدون متن" })
-                            Text(
-                                "${item.subject.orEmpty().ifBlank { "بدون درس" }} · ${item.question.type.faLabel()}",
-                                style = MaterialTheme.typography.bodySmall
-                            )
-                            Button(onClick = { onAdd(item.id) }) { Text("افزودن به آزمون") }
-                        }
+                HorizontalDivider(Modifier.padding(vertical = 6.dp))
+                OutlinedTextField(
+                    state.bankQuery,
+                    viewModel::setBankQuery,
+                    label = { Text("جست‌وجوی سؤال، درس یا عنوان آزمون") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Row(
+                    Modifier.fillMaxWidth().padding(vertical = 6.dp),
+                    horizontalArrangement = Arrangement.spacedBy(5.dp)
+                ) {
+                    FilterChip(
+                        selected = state.selectedBankCategory == null,
+                        onClick = { viewModel.selectBankCategory(null) },
+                        label = { Text("همه") }
+                    )
+                    state.bankCategories.take(4).forEach { category ->
+                        FilterChip(
+                            selected = state.selectedBankCategory == category.id,
+                            onClick = { viewModel.selectBankCategory(category.id) },
+                            label = { Text(category.name) }
+                        )
+                    }
+                }
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    Text("${visible.size} سؤال", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Spacer(Modifier.weight(1f))
+                    TextButton(
+                        onClick = {
+                            if (visible.all { it.id in selected }) selected.removeAll(visible.map { it.id }.toSet())
+                            else visible.forEach { if (it.id !in selected) selected.add(it.id) }
+                        },
+                        enabled = visible.isNotEmpty()
+                    ) { Text(if (visible.isNotEmpty() && visible.all { it.id in selected }) "برداشتن همه" else "انتخاب همهٔ نتایج") }
+                }
+                LazyColumn(
+                    Modifier.weight(1f).fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    if (visible.isEmpty()) item { Text("سؤالی یافت نشد.", Modifier.padding(16.dp)) }
+                    items(visible, key = { it.id }) { item ->
+                        BuilderBankPickCard(
+                            item = item,
+                            checked = item.id in selected,
+                            onCheckedChange = { c -> if (c) { if (item.id !in selected) selected.add(item.id) } else selected.remove(item.id) },
+                            onPreview = { previewItem = item },
+                            onAdd = { onAdd(listOf(item.id)) }
+                        )
                     }
                 }
             }
-        },
-        confirmButton = {},
-        dismissButton = { TextButton(onClick = onDismiss) { Text("بستن") } }
-    )
+        }
+    }
+    previewItem?.let { item ->
+        AlertDialog(
+            onDismissRequest = { previewItem = null },
+            title = { Text(item.question.type.faLabel() + " — بارم ${item.question.score}") },
+            confirmButton = { TextButton(onClick = { previewItem = null }) { Text("بستن") } },
+            dismissButton = { TextButton(onClick = { previewItem = null; onAdd(listOf(item.id)) }) { Text("افزودن به آزمون") } },
+            text = { ir.exam.app.ui.bank.BankQuestionContent(item.question) }
+        )
+    }
+}
+
+/** V260 — کارت فشردهٔ بانک در پنجرهٔ سازنده (هم‌طرح BankQuestionCard صفحهٔ بانک) + تیک انتخاب. */
+@Composable
+private fun BuilderBankPickCard(
+    item: BankQuestionOption,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+    onPreview: () -> Unit,
+    onAdd: () -> Unit
+) {
+    val q = item.question
+    Card(
+        Modifier.fillMaxWidth().clickable { onCheckedChange(!checked) },
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = if (checked) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.45f)
+            else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
+        )
+    ) {
+        Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(
+                Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Checkbox(checked = checked, onCheckedChange = onCheckedChange)
+                ir.exam.app.ui.bank.BankChip(q.type.faLabel(), accent = true)
+                ir.exam.app.ui.bank.BankChip("بارم ${q.score}")
+                Spacer(Modifier.weight(1f))
+                IconButton(onClick = onPreview, modifier = Modifier.size(36.dp)) {
+                    Icon(
+                        Icons.Outlined.Visibility,
+                        contentDescription = "نمایش محتوای سؤال",
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                }
+            }
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                Column(Modifier.weight(1f)) {
+                    Text("عنوان آزمون", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(item.examTitle.orEmpty().ifBlank { "—" }, style = MaterialTheme.typography.bodyMedium, maxLines = 1)
+                }
+                Column(Modifier.weight(1f)) {
+                    Text("درس", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(item.subject.orEmpty().ifBlank { "بدون درس" }, style = MaterialTheme.typography.bodyMedium, maxLines = 1)
+                }
+            }
+            if (item.categoryNames.isNotEmpty()) {
+                Row(horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+                    item.categoryNames.take(4).forEach { ir.exam.app.ui.bank.BankChip(it) }
+                }
+            }
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                OutlinedButton(onClick = onAdd) { Text("افزودن") }
+            }
+        }
+    }
 }
 
 private data class FormulaTarget(

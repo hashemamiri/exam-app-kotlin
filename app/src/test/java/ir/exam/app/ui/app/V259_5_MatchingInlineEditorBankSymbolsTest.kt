@@ -28,7 +28,8 @@ class V259_5_MatchingInlineEditorBankSymbolsTest {
     @Test
     fun `site bank list renders symbols and atlas menu stays in view`() {
         val js = source("site/src/builder.js")
-        assertTrue("function bankText(raw)" in js && "[bankText(qq.text), el('div', {class: 'muted'" in js)
+        // V260 — فهرست بانک به کارت‌های فشرده با چشم تبدیل شد (محتوا در پنجرهٔ bankQuestionModal)
+        assertTrue("window.SiteSchool.bankQuestionModal(it)" in js)
         assertTrue("var mh = m.offsetHeight, mw = m.offsetWidth, vh = window.innerHeight, vw = document.documentElement.clientWidth;" in js)
         val css = source("site/src/site.css")
         assertTrue(".b-atlas-menu{max-height:calc(100vh - 16px);overflow-y:auto;scrollbar-width:none}" in css)

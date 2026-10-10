@@ -438,7 +438,7 @@ private fun BankQuestionCard(
 
 /** V259 — محتوای کامل سؤال بانک (متن با فرمول/شکل، گزینه‌ها، جورکردنی، پاسخ) در پنجرهٔ چشم. */
 @Composable
-private fun BankQuestionContent(q: QuestionDraft) {
+internal fun BankQuestionContent(q: QuestionDraft) {
     Column(
         Modifier.verticalScroll(rememberScrollState()),
         verticalArrangement = Arrangement.spacedBy(8.dp)
@@ -479,7 +479,7 @@ private fun BankQuestionContent(q: QuestionDraft) {
 }
 
 @Composable
-private fun BankChip(text: String, accent: Boolean = false) {
+internal fun BankChip(text: String, accent: Boolean = false) {
     Surface(
         shape = RoundedCornerShape(999.dp),
         color = if (accent) MaterialTheme.colorScheme.primary.copy(alpha = 0.12f) else MaterialTheme.colorScheme.surfaceVariant,

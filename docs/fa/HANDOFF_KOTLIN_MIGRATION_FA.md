@@ -19425,6 +19425,14 @@ CI: `compileDebugUnitTestKotlin` به‌خاطر `assertFalse` بدون import �
 - باگ V202.5: `var LANDING_TILES` داخل `paintAuth` بعد از خطی که `landing()` را صدا می‌زد تعریف شده بود → به‌خاطر hoisting مقدارش undefined و `.map` خطا می‌داد → صفحهٔ اول خالی. حالا کنار `authActive` در سطح ماژول است (تست ترتیب را پین می‌کند).
 - دروازهٔ صفحهٔ اول: mobile.js `entered()/enter()` با `sessionStorage['m-entered']`، `gateActive() = MQ && user && !entered`؛ app.js `render()` پیش از m-mode اگر gateActive → paintAuth (landing حتی با user). دکمه: user ⇒ `enter(); S.render()`؛ وگرنه `goA('login')`؛ پیوند ثبت‌نام فقط بدون user. `afterLogin()` → `SiteMobile.enter()`.
 
+### V260 — پنجرهٔ بانک سؤال در سازنده: کارت‌ها + انتخاب چندتایی (اپ و سایت)
+- ExamBuilderScreen.kt: `BuilderQuestionBankDialog` بازنویسی → `Dialog(usePlatformDefaultWidth=false)` تمام‌صفحه؛ سربرگ انصراف/عنوان/افزودن(N)؛ جست‌وجو (متن/درس/عنوان آزمون)، چیپ دسته‌ها، «انتخاب همهٔ نتایج»؛ `BuilderBankPickCard` (Checkbox + BankChip + چشم → AlertDialog با `BankQuestionContent` + دکمهٔ افزودن). امضای `onAdd: (List<Long>) -> Unit`؛ فراخوان `ids.forEach { viewModel.addFromBank(it) }`. import NativeMathText حذف.
+- QuestionBankScreen.kt: `BankQuestionContent` و `BankChip` از private به internal.
+- school.js: `showQuestion` به تابع ماژول `bankQuestionModal(it)` (+ `TYPE_BK`) منتقل و در `window.SiteSchool` export شد.
+- builder.js openBank: فهرست `.b-bank.bank-grid.b-bank-grid`؛ هر آیتم `.bank-card.compact.b-bank-pick` با `label.bk-check` (checkbox واقعی)، چیپ نوع/بارم، چشم → `SiteSchool.bankQuestionModal(it)`، bk-meta، bk-cats، دکمهٔ افزودن؛ کلیک روی کارت = تیک. `bankText` V259.5 حذف شد. modal کلاس `b-bank-modal` (پهن‌تر).
+- site.css انتها: `.b-bank-grid`، `.b-bank-pick.on`، override چیپ checkbox برای `.bk-check`.
+- تست: V260_BuilderBankPickerCardsTest.kt؛ پین bankText در V259_5 به‌روز. bump 1.01.43.
+
 ### V259.5 — جورکردنی مثل گزینه‌ها (اپ) + بانک با نماد، منوی گالری، پیش‌نمایش جورکردنی (سایت)
 - QuestionOptionMedia.kt: دو OutlinedTextField/NativeMathText/ExistingFormulaEditor موارد جورکردنی → `InlineMathTextEditor(source = value, …, showToolbar = false)`؛ پارامتر جدید `onFigureEdit(side,index,occurrence,spec)`؛ حذف شکل با `viewModel.deleteFieldFigure(id, "matching_<side>", …)`. ExamBuilderScreen: `onFigureEdit` → `openFieldFigureEditor(InsertMenuRef("matching_$side", …))`. import OutlinedTextField/ExistingFormulaEditor/NativeMathText حذف، FigureSpec اضافه.
 - builder.js: `bankText(raw)` (richHtml + previewCss) در فهرست openBank؛ atlasMenu بعد از append اندازه‌گیری و در صفحه نگه داشته می‌شود (flip به بالا)؛ studentPreview جورکردنی = `.st-match-right` (حروف) + ردیف‌های چپ با چیپ حرفی + تصاویر.

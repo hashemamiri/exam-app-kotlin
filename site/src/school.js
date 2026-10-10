@@ -539,6 +539,25 @@
   }
 
   /* ---------------- بانک سؤال (صفحهٔ مستقل) ---------------- */
+  /* V259/V260 — پنجرهٔ محتوای کامل سؤال بانک (چشم)؛ در صفحهٔ بانک و پنجرهٔ بانکِ سازنده مشترک */
+  var TYPE_BK = {multiple: 'چندگزینه‌ای', truefalse: 'صحیح/غلط', fill: 'جای‌خالی', numeric: 'عددی', matching: 'جورکردنی', essay: 'تشریحی', long: 'تشریحی'};
+  function bankQuestionModal(it) {
+    var qq = (it && it.question) || {}, TYPE = TYPE_BK;
+    var bg = el('div', {class: 'modal-bg', onclick: function (e) { if (e.target === bg) bg.remove(); }});
+    var txt = el('div', {class: 'bk-full-text math-rich', text: String(qq.text || 'بدون متن').replace(/\$/g, '')});
+    if (window.SiteStudent && window.SiteStudent.mathCss) window.SiteStudent.mathCss();
+    function rich(node, raw, prefix) { if (raw && window.SiteStudent && window.SiteStudent.richHtml) window.SiteStudent.richHtml(String(raw)).then(function (h) { node.innerHTML = (prefix || '') + h; if (window.SiteStudent.fitMath) window.SiteStudent.fitMath(node); }).catch(function () {}); return node; }
+    rich(txt, qq.text);
+    var L = ['الف', 'ب', 'ج', 'د', 'هـ', 'و', 'ز', 'ح'], body = [txt];
+    var ty = S.qType(qq.type);
+    if (ty === 'multiple' && Array.isArray(qq.options)) body.push(el('div', {class: 'bk-full-opts'}, qq.options.map(function (o, k) { var ok = Number(qq.correctOption) === k; return rich(el('div', {class: 'math-rich' + (ok ? ' ok' : ''), text: String(o || '—').replace(/\$/g, '')}), o, '<b>' + (ok ? '✓ ' : '') + (L[k] || String(k + 1)) + ')</b> '); })));
+    else if (ty === 'matching') { var ml = qq.matchingLeft || qq.leftItems || [], mr = qq.matchingRight || qq.rightItems || []; body.push(el('div', {class: 'bk-full-opts'}, ml.map(function (l, k) { var row = el('div', {class: 'row'}); row.appendChild(rich(el('span', {class: 'grow math-rich', text: String(l || '—').replace(/\$/g, '')}), l)); row.appendChild(el('span', {text: '↔'})); row.appendChild(rich(el('span', {class: 'grow math-rich', text: String(mr[k] || '—').replace(/\$/g, '')}), mr[k])); return row; }))); }
+    else if (ty === 'truefalse') body.push(el('p', {class: 'muted', text: 'پاسخ: ' + (String(qq.expectedText) === 'true' ? 'صحیح' : String(qq.expectedText) === 'false' ? 'غلط' : '—')}));
+    else if (ty === 'fill' && qq.expectedText) body.push(el('p', {class: 'muted', text: 'پاسخ‌های قابل قبول: ' + qq.expectedText}));
+    else if (ty === 'numeric' && qq.expectedNumber != null && qq.expectedNumber !== '') body.push(el('p', {class: 'muted', text: 'پاسخ عددی: ' + fa(qq.expectedNumber)}));
+    bg.appendChild(el('div', {class: 'modal bk-full'}, [el('button', {class: 'x', text: '✕', 'aria-label': 'بستن', onclick: function () { bg.remove(); }}), el('h2', {text: (TYPE[ty] || 'سؤال') + ' — بارم ' + fa(S.fmtScore(Number(qq.score) || 1))}), el('div', {class: 'bk-full-body'}, body)]));
+    document.body.appendChild(bg);
+  }
   async function bankPage(c) {
     S.loading(c);
     var B = window.SiteBuilder;
@@ -560,22 +579,7 @@
         f.forEach(function (it) {
           var qq = it.question || {};
           /* V259 — کارت فشرده: نوع/بارم + آیکن چشم؛ عنوان آزمون و درس؛ دسته‌ها؛ اقدام‌ها. محتوای سؤال با چشم در پنجره نمایش داده می‌شود (مثل اپ) */
-          function showQuestion() {
-            var bg = el('div', {class: 'modal-bg', onclick: function (e) { if (e.target === bg) bg.remove(); }});
-            var txt = el('div', {class: 'bk-full-text math-rich', text: String(qq.text || 'بدون متن').replace(/\$/g, '')});
-            if (window.SiteStudent && window.SiteStudent.mathCss) window.SiteStudent.mathCss();
-            function rich(node, raw, prefix) { if (raw && window.SiteStudent && window.SiteStudent.richHtml) window.SiteStudent.richHtml(String(raw)).then(function (h) { node.innerHTML = (prefix || '') + h; if (window.SiteStudent.fitMath) window.SiteStudent.fitMath(node); }).catch(function () {}); return node; }
-            rich(txt, qq.text);
-            var L = ['الف', 'ب', 'ج', 'د', 'هـ', 'و', 'ز', 'ح'], body = [txt];
-            var ty = S.qType(qq.type);
-            if (ty === 'multiple' && Array.isArray(qq.options)) body.push(el('div', {class: 'bk-full-opts'}, qq.options.map(function (o, k) { var ok = Number(qq.correctOption) === k; return rich(el('div', {class: 'math-rich' + (ok ? ' ok' : ''), text: String(o || '—').replace(/\$/g, '')}), o, '<b>' + (ok ? '✓ ' : '') + (L[k] || String(k + 1)) + ')</b> '); })));
-            else if (ty === 'matching') { var ml = qq.matchingLeft || qq.leftItems || [], mr = qq.matchingRight || qq.rightItems || []; body.push(el('div', {class: 'bk-full-opts'}, ml.map(function (l, k) { var row = el('div', {class: 'row'}); row.appendChild(rich(el('span', {class: 'grow math-rich', text: String(l || '—').replace(/\$/g, '')}), l)); row.appendChild(el('span', {text: '↔'})); row.appendChild(rich(el('span', {class: 'grow math-rich', text: String(mr[k] || '—').replace(/\$/g, '')}), mr[k])); return row; }))); }
-            else if (ty === 'truefalse') body.push(el('p', {class: 'muted', text: 'پاسخ: ' + (String(qq.expectedText) === 'true' ? 'صحیح' : String(qq.expectedText) === 'false' ? 'غلط' : '—')}));
-            else if (ty === 'fill' && qq.expectedText) body.push(el('p', {class: 'muted', text: 'پاسخ‌های قابل قبول: ' + qq.expectedText}));
-            else if (ty === 'numeric' && qq.expectedNumber != null && qq.expectedNumber !== '') body.push(el('p', {class: 'muted', text: 'پاسخ عددی: ' + fa(qq.expectedNumber)}));
-            bg.appendChild(el('div', {class: 'modal bk-full'}, [el('button', {class: 'x', text: '✕', 'aria-label': 'بستن', onclick: function () { bg.remove(); }}), el('h2', {text: (TYPE[ty] || 'سؤال') + ' — بارم ' + fa(S.fmtScore(Number(qq.score) || 1))}), el('div', {class: 'bk-full-body'}, body)]));
-            document.body.appendChild(bg);
-          }
+          function showQuestion() { bankQuestionModal(it); }
           lst.appendChild(el('div', {class: 'bank-card compact'}, [
             el('div', {class: 'bk-head'}, [el('span', {class: 'chip type', text: TYPE[S.qType(qq.type)] || 'سؤال'}), el('span', {class: 'chip', text: 'بارم ' + fa(S.fmtScore(Number(qq.score) || 1))}), el('button', {class: 'icon-btn bk-eye', title: 'نمایش محتوای سؤال', 'aria-label': 'نمایش محتوای سؤال', html: '👁', onclick: showQuestion})]),
             el('div', {class: 'bk-meta'}, [el('div', [el('small', {text: 'عنوان آزمون'}), el('div', {class: 'v', text: qq.examTitle || '—'})]), el('div', [el('small', {text: 'درس'}), el('div', {class: 'v', text: it.subject || 'بدون درس'})])]),
@@ -638,5 +642,5 @@
     } catch (e) { S.showErr(c, e); }
   }
 
-  window.SiteSchool = {studentsPage: studentsPage, studentForm: studentForm, bulkForm: bulkForm, credentialDlg: credentialDlg, manageStudent: manageStudent, /* V203 — برای پنل مدیر دسکتاپ */ rosterDlg: rosterDlg, classShareChip: classShareChip, joinSchoolCard: joinSchoolCard, managerRequestsCard: managerRequestsCard, bankPage: bankPage, classPickDlg: classPickDlg};
+  window.SiteSchool = {bankQuestionModal: bankQuestionModal, studentsPage: studentsPage, studentForm: studentForm, bulkForm: bulkForm, credentialDlg: credentialDlg, manageStudent: manageStudent, /* V203 — برای پنل مدیر دسکتاپ */ rosterDlg: rosterDlg, classShareChip: classShareChip, joinSchoolCard: joinSchoolCard, managerRequestsCard: managerRequestsCard, bankPage: bankPage, classPickDlg: classPickDlg};
 })();
