@@ -11,12 +11,15 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Surface
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -124,30 +127,13 @@ fun QuestionBankScreen(
                 Text("سؤالی با این فیلتر یافت نشد.")
             }
             else -> items(state.visibleQuestions, key = { it.id }) { item ->
-                NeumorphicPanel(
-                    modifier = Modifier.fillMaxWidth(),
-                    radius = 22.dp,
-                    depth = 9.dp,
-                    contentPadding = androidx.compose.foundation.layout.PaddingValues(14.dp)
-                ) {
-                    Column(verticalArrangement = Arrangement.spacedBy(7.dp)) {
-                        NativeMathText(item.question.text.ifBlank { "بدون متن" })
-                        Text(
-                            "${item.subject.orEmpty().ifBlank { "بدون درس" }} · ${item.question.type.faLabel()} · بارم ${item.question.score}",
-                            style = MaterialTheme.typography.bodySmall
-                        )
-                        Text(
-                            if (item.categoryNames.isEmpty()) "بدون دسته"
-                            else item.categoryNames.joinToString("، "),
-                            style = MaterialTheme.typography.bodySmall
-                        )
-                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                            Button(onClick = { onUseInExam(item) }) { Text("افزودن به آزمون") }
-                            OutlinedButton(onClick = { editing = item }) { Text("ویرایش") }
-                            TextButton(onClick = { deleting = item }) { Text("حذف") }
-                        }
-                    }
-                }
+                // V257 — کارت سؤال بانک: سربرگ (نوع/بارم/درس)، متن، پیش‌نمایش گزینه‌ها، دسته‌ها، ردیف اقدام‌ها.
+                BankQuestionCard(
+                    item = item,
+                    onUse = { onUseInExam(item) },
+                    onEdit = { editing = item },
+                    onDelete = { deleting = item }
+                )
             }
         }
     }
@@ -374,4 +360,77 @@ private fun QuestionType.faLabel(): String = when (this) {
     QuestionType.FILL_BLANK -> "جای خالی"
     QuestionType.NUMERIC -> "عددی"
     QuestionType.MATCHING -> "جورکردنی"
+}
+
+/** V257 — کارت سؤال بانک (اپ) هم‌طرح کارت‌های سایت: سربرگ چیپ‌ها، متن با فرمول، گزینه‌ها، دسته‌ها، اقدام‌ها. */
+@Composable
+private fun BankQuestionCard(
+    item: BankQuestionOption,
+    onUse: () -> Unit,
+    onEdit: () -> Unit,
+    onDelete: () -> Unit
+) {
+    val q = item.question
+    NeumorphicPanel(
+        modifier = Modifier.fillMaxWidth(),
+        radius = 22.dp,
+        depth = 9.dp,
+        contentPadding = androidx.compose.foundation.layout.PaddingValues(14.dp)
+    ) {
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(
+                Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                BankChip(q.type.faLabel(), accent = true)
+                BankChip("بارم ${q.score}")
+                Text(
+                    item.subject.orEmpty().ifBlank { "بدون درس" },
+                    style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier.weight(1f),
+                    maxLines = 1
+                )
+            }
+            NativeMathText(q.text.ifBlank { "بدون متن" })
+            if (q.type == QuestionType.MULTIPLE_CHOICE && q.options.isNotEmpty()) {
+                val letters = listOf("الف", "ب", "ج", "د", "هـ", "و", "ز", "ح")
+                Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                    q.options.take(6).forEachIndexed { index, option ->
+                        val correct = q.correctIndex == index
+                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.Top) {
+                            Text(
+                                (if (correct) "✓ " else "") + letters.getOrElse(index) { "${index + 1}" } + ")",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = if (correct) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            NativeMathText(option.ifBlank { "—" }, modifier = Modifier.weight(1f))
+                        }
+                    }
+                }
+            }
+            if (item.categoryNames.isNotEmpty()) {
+                Row(horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+                    item.categoryNames.take(4).forEach { BankChip(it) }
+                }
+            }
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+                Button(onClick = onUse) { Text("افزودن به آزمون") }
+                OutlinedButton(onClick = onEdit) { Text("ویرایش") }
+                TextButton(onClick = onDelete) { Text("حذف", color = MaterialTheme.colorScheme.error) }
+            }
+        }
+    }
+}
+
+@Composable
+private fun BankChip(text: String, accent: Boolean = false) {
+    Surface(
+        shape = RoundedCornerShape(999.dp),
+        color = if (accent) MaterialTheme.colorScheme.primary.copy(alpha = 0.12f) else MaterialTheme.colorScheme.surfaceVariant,
+        contentColor = if (accent) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+    ) {
+        Text(text, style = MaterialTheme.typography.labelSmall, modifier = Modifier.padding(horizontal = 9.dp, vertical = 3.dp), maxLines = 1)
+    }
 }

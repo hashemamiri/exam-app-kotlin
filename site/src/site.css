@@ -1027,7 +1027,7 @@ body.dk{--bg:#eef2f5;--card:#fff;--ink:#1d2935;--muted:#6c7985;--line:#d9e1e6;--
   .dk .tool-btn:hover{transform:translateY(-2px)}
   .dk .b-qhead .icon-btn{width:40px;height:40px;border-radius:12px}
   /* ریل چپ */
-  .dk .b-rail{display:flex;flex-direction:column;align-items:center;gap:8px;position:fixed;left:14px;top:22px;bottom:22px;width:60px;padding:10px 6px;border-radius:20px;z-index:45;overflow:auto;
+  .dk .b-rail{display:flex;flex-direction:column;align-items:center;gap:8px;position:fixed;left:14px;top:22px;bottom:22px;width:84px;padding:10px 6px;border-radius:20px;z-index:45;overflow:auto;
     background:linear-gradient(180deg,rgba(239,249,252,.97),rgba(211,236,245,.97));border:1px solid rgba(144,190,207,.65);box-shadow:0 18px 45px rgba(38,92,111,.15),inset 0 1px 0 rgba(255,255,255,.8);backdrop-filter:blur(14px)}
   .dk .b-rail-btn{width:44px;height:44px;border:1.6px solid transparent;border-radius:14px;background:transparent;color:#58717c;display:grid;place-items:center;padding:0;transition:background .18s,color .18s}
   .dk .b-rail-btn svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
@@ -1047,7 +1047,7 @@ body.dk{--bg:#eef2f5;--card:#fff;--ink:#1d2935;--muted:#6c7985;--line:#d9e1e6;--
   .dk .st-head{top:12px}
   .dk .st-nav{position:relative;z-index:1;margin:14px 0}
   /* V175 — سازنده: هر ۴ بخش (ریل راست، مشخصات/سربرگ، ویرایشگر، ریل چپ) هم‌ارتفاع و ثابت؛ فقط داخل هر بخش اسکرول می‌شود */
-  .dk .builder{position:fixed;top:22px;bottom:22px;left:100px;right:100px;display:flex;flex-direction:column;overflow:hidden;z-index:20}
+  .dk .builder{position:fixed;top:22px;bottom:22px;left:124px;right:100px;display:flex;flex-direction:column;overflow:hidden;z-index:20}
   .dk .builder .b-top{flex:0 0 auto;margin-bottom:10px}
   .dk .builder .b-body{flex:1 1 auto;min-height:0;margin:0;align-items:stretch;grid-template-rows:minmax(0,1fr)}
   /* V177 — ارتفاع دقیقاً برابر ردیف شبکه (کشش)، نه درصد؛ ویرایشگر و ستون مشخصات هم‌ارتفاع ریل‌ها */
@@ -1672,3 +1672,30 @@ input.topup-amt:focus{border-color:var(--brand,#39758a);box-shadow:0 0 0 3px var
 .dk .m-radial-item .g svg.ico,.dk .m-qa-item .m-qa-ic svg.ico{width:30px;height:30px;stroke-width:1.7}
 .dk .chip svg.ico{width:1em;height:1em;margin-inline-end:.3em}
 .dk .cal-nav .btn svg.ico:last-child{margin-inline-end:0;margin-inline-start:.25em}
+
+/* V257 — ریل سازندهٔ دسکتاپ پهن‌تر (84px) + دستگیرهٔ جابه‌جایی کنار هر شماره */
+.dk .b-rail-row{display:flex;align-items:center;gap:2px;width:100%;justify-content:center;border-radius:14px;flex:0 0 auto}
+.dk .b-rail-row .b-rail-num{flex:0 0 42px;width:42px;height:42px}
+.dk .b-rail-grip{width:22px;height:42px;border:0;background:transparent;color:#9fb0b8;padding:0;display:grid;place-items:center;cursor:grab;border-radius:8px;touch-action:none;opacity:.55;transition:opacity .15s,color .15s}
+.dk .b-rail-grip svg{width:16px;height:16px;fill:currentColor;stroke:none}
+.dk .b-rail-row:hover .b-rail-grip,.dk .b-rail-row.active .b-rail-grip{opacity:1}
+.dk .b-rail-grip:hover{color:#2f687c;background:var(--card)}
+.dk .b-rail-row.dragging{background:var(--card);box-shadow:0 10px 24px rgba(24,54,68,.22);opacity:.92;transform:scale(1.04)}
+.dk .b-rail-row.dragging .b-rail-grip{cursor:grabbing;color:#0e93b8;opacity:1}
+.dk .b-rail-nums.reordering .b-rail-row{transition:none}
+.m-dark .dk .b-rail-grip{color:#7f8c9c}.m-dark .dk .b-rail-grip:hover,.m-dark .dk .b-rail-row.dragging .b-rail-grip{color:#5FD3F5;background:#2F3A49}
+.m-dark .dk .b-rail-row.dragging{background:#2F3A49}
+/* V257 — بانک سؤال به‌صورت کارت (اپ و سایت) */
+.bank-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px}
+.bank-card{display:flex;flex-direction:column;gap:8px;padding:14px;border:1px solid var(--line);border-radius:16px;background:var(--card);box-shadow:0 6px 18px rgba(24,54,68,.06);min-height:150px}
+.bank-card .bk-head{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.bank-card .bk-sub{font-size:12px;color:var(--muted);margin-inline-start:auto;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:45%}
+.bank-card .bk-text{flex:1 1 auto;font-size:14px;line-height:1.9;overflow:hidden;display:-webkit-box;-webkit-line-clamp:5;-webkit-box-orient:vertical}
+.bank-card .bk-opts{display:flex;flex-direction:column;gap:2px;font-size:13px;color:var(--muted)}
+.bank-card .bk-opts .ok{color:var(--brand);font-weight:700}
+.bank-card .bk-cats{display:flex;gap:5px;flex-wrap:wrap}
+.bank-card .bk-foot{display:flex;align-items:center;gap:6px;border-top:1px solid var(--line);padding-top:8px;margin-top:auto}
+.bank-card .bk-date{font-size:11px;color:var(--muted);margin-inline-start:auto}
+.chip.type{background:var(--brand-soft);color:var(--brand)}
+.m-dark .bank-card{box-shadow:0 6px 18px rgba(0,0,0,.3)}
+.bank-grid>.empty{grid-column:1/-1}

@@ -563,7 +563,15 @@
       }
       rail.appendChild(el('span', {class: 'b-rail-sep'}));
       var nums = el('div', {class: 'b-rail-nums'});
-      state.questions.forEach(function (q, i) { nums.appendChild(el('button', {class: 'b-rail-num' + (i === state.selected ? ' active' : ''), title: 'سؤال ' + fa(i + 1) + ' — ' + TYPE_LABEL[q.type], text: fa(i + 1), onclick: function () { state.selected = i; drawList(); drawEditor(); }})); });
+      /* V257 — هر شماره در یک ردیف با دستگیرهٔ جابه‌جایی (کلیک و نگه‌داشتن ≈۲۲۰ms، سپس کشیدن بالا/پایین) */
+      var GRIP = '<svg viewBox="0 0 24 24"><circle cx="9" cy="6" r="1.4"/><circle cx="15" cy="6" r="1.4"/><circle cx="9" cy="12" r="1.4"/><circle cx="15" cy="12" r="1.4"/><circle cx="9" cy="18" r="1.4"/><circle cx="15" cy="18" r="1.4"/></svg>';
+      state.questions.forEach(function (q, i) {
+        var grip = el('button', {class: 'b-rail-grip', type: 'button', title: 'برای جابه‌جایی نگه دارید و بکشید', 'aria-label': 'جابه‌جایی سؤال ' + fa(i + 1), html: GRIP});
+        var row = el('div', {class: 'b-rail-row' + (i === state.selected ? ' active' : '')}, [grip,
+          el('button', {class: 'b-rail-num' + (i === state.selected ? ' active' : ''), title: 'سؤال ' + fa(i + 1) + ' — ' + TYPE_LABEL[q.type], text: fa(i + 1), onclick: function () { state.selected = i; drawList(); drawEditor(); }})]);
+        railDrag(grip, row, nums, i);
+        nums.appendChild(row);
+      });
       rail.appendChild(nums);
     }
 
@@ -688,6 +696,37 @@
       q.type = t; q.options = fresh.options; q.optionImages = fresh.optionImages; q.correctIndex = null; q.expectedText = fresh.expectedText; q.expectedNumber = ''; q.matchingPairs = {};
       if (t === 'matching' && (!q.matchingLeft || q.matchingLeft.length < 2)) { q.matchingLeft = ['', '']; q.matchingRight = ['', '']; }
       if (t === 'essay' && !(q.answerLines > 2)) q.answerLines = 5;
+    }
+    /* V257 — جابه‌جایی با نگه‌داشتن دستگیرهٔ ریل: پس از ۲۲۰ms حالت کشیدن فعال می‌شود؛ ردیف دنبال نشانگر می‌رود،
+       با عبور از نیمهٔ ردیف‌های دیگر جایش عوض می‌شود و در رهاکردن ترتیب state.questions اعمال می‌شود. */
+    function railDrag(grip, row, nums, index) {
+      grip.addEventListener('pointerdown', function (ev) {
+        if (ev.button != null && ev.button !== 0) return;
+        ev.preventDefault();
+        var timer = setTimeout(function () { timer = null; start(ev); }, 220);
+        function cancel() { if (timer) { clearTimeout(timer); timer = null; } grip.removeEventListener('pointerup', cancel); grip.removeEventListener('pointercancel', cancel); grip.removeEventListener('pointerleave', cancel); }
+        grip.addEventListener('pointerup', cancel); grip.addEventListener('pointercancel', cancel); grip.addEventListener('pointerleave', cancel);
+        function start(e0) {
+          cancel();
+          try { grip.setPointerCapture(e0.pointerId); } catch (x) {}
+          var from = index, cur = index;
+          row.classList.add('dragging'); nums.classList.add('reordering');
+          function rows() { return Array.prototype.slice.call(nums.children); }
+          function onMove(e) {
+            var list = rows(), y = e.clientY, target = cur;
+            for (var j = 0; j < list.length; j++) { var r = list[j].getBoundingClientRect(); if (j < cur && y < r.top + r.height / 2) { target = j; break; } if (j > cur && y > r.top + r.height / 2) target = j; }
+            if (target !== cur) { if (target > cur) nums.insertBefore(row, list[target].nextSibling); else nums.insertBefore(row, list[target]); cur = target; }
+            var nr = nums.getBoundingClientRect(); if (y < nr.top + 28) nums.scrollTop -= 8; else if (y > nr.bottom - 28) nums.scrollTop += 8;
+          }
+          function onUp() {
+            grip.removeEventListener('pointermove', onMove); grip.removeEventListener('pointerup', onUp); grip.removeEventListener('pointercancel', onUp);
+            row.classList.remove('dragging'); nums.classList.remove('reordering');
+            if (cur !== from) { var q = state.questions.splice(from, 1)[0]; state.questions.splice(cur, 0, q); state.selected = cur; mark(); }
+            drawList(); drawEditor();
+          }
+          grip.addEventListener('pointermove', onMove); grip.addEventListener('pointerup', onUp); grip.addEventListener('pointercancel', onUp);
+        }
+      });
     }
     function swap(a, b) { var t = state.questions[a]; state.questions[a] = state.questions[b]; state.questions[b] = t; state.selected = b; mark(); drawList(); drawEditor(); }
     function typeSection(q) {

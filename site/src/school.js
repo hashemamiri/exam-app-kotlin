@@ -549,7 +549,7 @@
       var TYPE = {multiple: 'چندگزینه‌ای', truefalse: 'صحیح/غلط', fill: 'جای‌خالی', numeric: 'عددی', matching: 'جورکردنی', essay: 'تشریحی', long: 'تشریحی'};
       var q = el('input', {type: 'search', placeholder: 'جست‌وجو در متن یا درس…', style: 'min-width:240px'});
       var cs = el('select'); cs.appendChild(el('option', {value: '', text: 'همهٔ دسته‌ها'})); cats.forEach(function (k) { cs.appendChild(el('option', {value: String(k.id), text: k.name + ' (' + fa(k.count || 0) + ')'})); });
-      var cnt = el('span', {class: 'muted'}); var lst = el('div', {class: 'card'});
+      var cnt = el('span', {class: 'muted'}); var lst = el('div', {class: 'bank-grid'}); /* V257 — کارت‌ها */
       function refresh() { bankPage(c); }
       function draw() {
         var s = q.value.trim().toLowerCase(), cid = cs.value ? Number(cs.value) : null;
@@ -559,13 +559,25 @@
         if (!f.length) { lst.appendChild(S.emptyBox('🏦', 'سؤالی در بانک نیست. از سازندهٔ آزمون با «ذخیرهٔ سؤال جاری در بانک» اضافه کنید.')); return; }
         f.forEach(function (it) {
           var qq = it.question || {};
-          lst.appendChild(el('div', {class: 'b-bank-item'}, [el('div', {class: 'grow'}, [el('div', {text: String(qq.text || '').replace(/\$/g, '').slice(0, 160)}), el('div', {class: 'muted', style: 'font-size:12px', text: [TYPE[S.qType(qq.type)] || '', it.subject, (it.cat_names || []).join('، '), it.created_at ? S.fmtDate(it.created_at) : ''].filter(Boolean).join(' · ')})]),
-            el('div', {class: 'acts'}, [
+          /* V257 — کارت سؤال: سربرگ (نوع/بارم/درس)، متن با فرمول، گزینه‌ها، دسته‌ها، پابرگ اقدام‌ها */
+          var txt = el('div', {class: 'bk-text', text: String(qq.text || '').replace(/\$/g, '').slice(0, 400)});
+          if (window.SiteStudent && window.SiteStudent.richHtml && qq.text) { window.SiteStudent.richHtml(String(qq.text)).then(function (h) { txt.innerHTML = h; if (window.SiteStudent.fitMath) window.SiteStudent.fitMath(txt); }).catch(function () {}); }
+          var opts = null;
+          if (S.qType(qq.type) === 'multiple' && Array.isArray(qq.options) && qq.options.length) {
+            var L = ['الف', 'ب', 'ج', 'د', 'هـ', 'و'];
+            opts = el('div', {class: 'bk-opts'}, qq.options.slice(0, 6).map(function (o, k) { var ok = Number(qq.correctOption) === k; return el('div', {class: ok ? 'ok' : '', text: (ok ? '✓ ' : '') + (L[k] || String(k + 1)) + ') ' + String(o || '—').replace(/\$/g, '').slice(0, 80)}); }));
+          }
+          lst.appendChild(el('div', {class: 'bank-card'}, [
+            el('div', {class: 'bk-head'}, [el('span', {class: 'chip type', text: TYPE[S.qType(qq.type)] || 'سؤال'}), el('span', {class: 'chip', text: 'بارم ' + fa(S.fmtScore(Number(qq.score) || 1))}), el('span', {class: 'bk-sub', text: it.subject || 'بدون درس'})]),
+            txt, opts,
+            (it.cat_names || []).length ? el('div', {class: 'bk-cats'}, (it.cat_names || []).slice(0, 4).map(function (n) { return el('span', {class: 'chip', text: n}); })) : null,
+            el('div', {class: 'bk-foot'}, [el('div', {class: 'acts'}, [
               /* V230 — اشتراک با همکاران مدرسه (فقط خواندن/کپی) */
               el('button', {class: 'icon-btn' + (it.shared ? ' on' : ''), title: it.shared ? 'اشتراک با مدرسه فعال است — لغو اشتراک' : 'اشتراک با همکاران مدرسه', html: it.shared ? '🏫' : '🔒', onclick: async function () { try { chk(await S.rpcObj('native_bank_set_shared_v1', {p_id: it.id, p_shared: !it.shared})); it.shared = !it.shared; toast(it.shared ? 'با همکاران مدرسه به اشتراک گذاشته شد.' : 'اشتراک لغو شد.', 'ok'); draw(); } catch (e) { toast(/does not exist|PGRST202/i.test(String(e.message)) ? 'اشتراک بانک هنوز روی سرور فعال نشده است (SQL نسخهٔ V230).' : errMsg(e), 'err'); } }}),
               el('button', {class: 'icon-btn', title: 'دسته‌ها', html: '🏷', onclick: function () { catPick(it); }}),
               el('button', {class: 'icon-btn', title: 'ویرایش در سازنده', html: '✎', onclick: function () { if (!B) return toast('سازندهٔ آزمون در دسترس نیست.', 'err'); S.go('builder', {bankEdit: {id: it.id, subject: it.subject || '', cats: it.cat_ids || [], question: qq}}); }}),
-              el('button', {class: 'icon-btn danger', title: 'حذف', html: '🗑', onclick: async function () { if (!(await S.confirmDlg('حذف سؤال', 'این سؤال از بانک حذف شود؟', 'حذف', true))) return; try { chk(await S.rpcObj('native_bank_delete_question_v1', {p_id: it.id})); toast('حذف شد.', 'ok'); refresh(); } catch (e) { toast(errMsg(e), 'err'); } }})])]));
+              el('button', {class: 'icon-btn danger', title: 'حذف', html: '🗑', onclick: async function () { if (!(await S.confirmDlg('حذف سؤال', 'این سؤال از بانک حذف شود؟', 'حذف', true))) return; try { chk(await S.rpcObj('native_bank_delete_question_v1', {p_id: it.id})); toast('حذف شد.', 'ok'); refresh(); } catch (e) { toast(errMsg(e), 'err'); } }})]), el('span', {class: 'bk-date', text: it.created_at ? S.fmtDate(it.created_at) : ''})])
+          ]));
         });
       }
       function catPick(it) {
