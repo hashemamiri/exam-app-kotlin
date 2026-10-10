@@ -32,7 +32,6 @@ import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -62,8 +61,8 @@ import ir.exam.app.data.repository.LocalImageRepository
 import ir.exam.app.domain.model.ImageEditRequest
 import ir.exam.app.ui.image.FullScreenImageViewer
 import ir.exam.app.ui.image.InteractiveImageEditorDialog
-import ir.exam.app.ui.math.ExistingFormulaEditor
-import ir.exam.app.ui.math.NativeMathText
+import ir.exam.app.core.figure.FigureSpec
+import ir.exam.app.ui.math.InlineMathTextEditor
 import kotlin.math.abs
 import kotlinx.coroutines.launch
 
@@ -290,6 +289,7 @@ fun MatchingQuestionEditor(
     viewModel: ExamBuilderViewModel,
     onFormulaEdit: (side: String, index: Int, occurrence: Int?, tex: String) -> Unit = { _, _, _, _ -> },
     onFormulaDelete: (side: String, index: Int, occurrence: Int) -> Unit = { _, _, _ -> },
+    onFigureEdit: (side: String, index: Int, occurrence: Int, spec: FigureSpec) -> Unit = { _, _, _, _ -> },
     onItemDragStarted: () -> Unit = {},
     onItemDragEnded: () -> Unit = {},
     onItemDragScroll: (Float) -> Unit = {}
@@ -337,20 +337,20 @@ fun MatchingQuestionEditor(
                         deleteEnabled = question.matchingRight.size > 2
                     )
                     // V55.16 — شبیه کادر متن سؤال: کادر گرد + پیش‌نمایش زندهٔ فرمول/توکن.
-                    OutlinedTextField(
-                        value,
-                        { viewModel.updateMatchingText(question.id, "right", index, it) },
-                        placeholder = { Text("متن $label") },
-                        shape = RoundedCornerShape(14.dp),
-                        // V55.17 — توکن‌های %%FIG%% به تراشهٔ کوتاه ⟦نوع⟧ نمایش داده می‌شوند.
-                        visualTransformation = FigTokenVisuals.transformation(MaterialTheme.colorScheme.primary),
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                    if ('$' in value || "%%FIG:" in value) NativeMathText(value, showAtlasBlanks = false)
-                    ExistingFormulaEditor(
+                    // V259.5 — مثل کادر گزینهٔ چندگزینه‌ای (V259): فرمول/شکل/جدول داخل کادر به‌صورت نماد؛
+                    // لمس = ویرایش همان شیء، ✕ = حذف؛ دکمهٔ + بالای کادر همهٔ ابزارها را دارد.
+                    InlineMathTextEditor(
                         source = value,
-                        onEdit = { occurrence, tex -> onFormulaEdit("right", index, occurrence, tex) },
-                        onDelete = { occurrence -> onFormulaDelete("right", index, occurrence) }
+                        onSourceChange = { viewModel.updateMatchingText(question.id, "right", index, it) },
+                        onEditFormula = { occurrence, tex -> onFormulaEdit("right", index, occurrence, tex) },
+                        onInsertFormula = { onFormulaEdit("right", index, null, "") },
+                        onDeleteFormula = { occurrence -> onFormulaDelete("right", index, occurrence) },
+                        onEditFigure = { occurrence, spec -> onFigureEdit("right", index, occurrence, spec) },
+                        onDeleteFigure = { occurrence -> viewModel.deleteFieldFigure(question.id, "matching_right", index, occurrence) },
+                        label = "",
+                        placeholder = "متن $label",
+                        showToolbar = false,
+                        modifier = Modifier.fillMaxWidth()
                     )
                 }
             }
@@ -399,20 +399,20 @@ fun MatchingQuestionEditor(
                         deleteEnabled = question.matchingLeft.size > 2
                     )
                     // V55.16 — شبیه کادر متن سؤال: کادر گرد + پیش‌نمایش زندهٔ فرمول/توکن.
-                    OutlinedTextField(
-                        value,
-                        { viewModel.updateMatchingText(question.id, "left", index, it) },
-                        placeholder = { Text("متن مورد $label") },
-                        shape = RoundedCornerShape(14.dp),
-                        // V55.17 — توکن‌های %%FIG%% به تراشهٔ کوتاه ⟦نوع⟧ نمایش داده می‌شوند.
-                        visualTransformation = FigTokenVisuals.transformation(MaterialTheme.colorScheme.primary),
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                    if ('$' in value || "%%FIG:" in value) NativeMathText(value, showAtlasBlanks = false)
-                    ExistingFormulaEditor(
+                    // V259.5 — مثل کادر گزینهٔ چندگزینه‌ای (V259): فرمول/شکل/جدول داخل کادر به‌صورت نماد؛
+                    // لمس = ویرایش همان شیء، ✕ = حذف؛ دکمهٔ + بالای کادر همهٔ ابزارها را دارد.
+                    InlineMathTextEditor(
                         source = value,
-                        onEdit = { occurrence, tex -> onFormulaEdit("left", index, occurrence, tex) },
-                        onDelete = { occurrence -> onFormulaDelete("left", index, occurrence) }
+                        onSourceChange = { viewModel.updateMatchingText(question.id, "left", index, it) },
+                        onEditFormula = { occurrence, tex -> onFormulaEdit("left", index, occurrence, tex) },
+                        onInsertFormula = { onFormulaEdit("left", index, null, "") },
+                        onDeleteFormula = { occurrence -> onFormulaDelete("left", index, occurrence) },
+                        onEditFigure = { occurrence, spec -> onFigureEdit("left", index, occurrence, spec) },
+                        onDeleteFigure = { occurrence -> viewModel.deleteFieldFigure(question.id, "matching_left", index, occurrence) },
+                        label = "",
+                        placeholder = "متن مورد $label",
+                        showToolbar = false,
+                        modifier = Modifier.fillMaxWidth()
                     )
                     Text("پاسخ صحیح این مورد")
                     question.matchingRight.indices.chunked(6).forEach { choices ->

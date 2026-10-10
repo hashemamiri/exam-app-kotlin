@@ -1793,3 +1793,9 @@ html body.dk:not(.m-mode) .b-editor .b-sec-chips label:has(> input[type=checkbox
 /* V259.3 — دسکتاپ: چیپ‌های تیک‌دار یک‌خطی؛ ✓ پشت (کنار) جمله می‌ماند، نه بالای آن */
 html body.dk:not(.m-mode) label:has(> input[type=checkbox]){flex-wrap:nowrap;white-space:nowrap;flex-direction:row}
 html body.dk:not(.m-mode) label:has(> input[type=checkbox]:checked)::before{flex:0 0 auto}
+/* V259.5 — فهرست بانک سؤال: متن با نماد (فرمول/شکل/جدول کوچک)، حداکثر سه خط؛ منوی گالری همیشه در دید */
+.b-bank-text{max-height:5.4em;overflow:hidden;line-height:1.8;word-break:break-word}
+.b-bank-text .tbx-t,.b-bank-text table{font-size:11px;max-width:100%}
+.b-bank-text img,.b-bank-text svg{max-height:72px;max-width:100%;vertical-align:middle}
+.b-atlas-menu{max-height:calc(100vh - 16px);overflow-y:auto;scrollbar-width:none}
+.b-atlas-menu::-webkit-scrollbar{display:none}

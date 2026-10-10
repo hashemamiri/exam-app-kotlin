@@ -1501,6 +1501,10 @@ private fun QuestionEditor(
                     onFormulaDelete = { side, itemIndex, occurrence ->
                         viewModel.deleteFormula(question.id, "matching_$side", itemIndex, occurrence)
                     },
+                    onFigureEdit = { side, itemIndex, occurrence, spec ->
+                        val label = if (side == "right") "مورد راست ${itemIndex + 1}" else "مورد چپ ${itemIndex + 1}"
+                        openFieldFigureEditor(InsertMenuRef("matching_$side", itemIndex, label), occurrence, spec)
+                    },
                     onItemDragStarted = onItemDragStarted,
                     onItemDragEnded = onItemDragEnded,
                     onItemDragScroll = onDragScroll

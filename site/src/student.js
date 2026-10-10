@@ -343,10 +343,12 @@
         box.appendChild(i);
       } else if (q.type === 'matching') {
         var cur = (a && typeof a === 'object') ? a : {};
-        box.appendChild(el('div', {class: 'st-match-right'}, q.rightItems.map(function (r, di) { var d = el('div', {class: 'st-mr'}, [el('b', {text: fa(di + 1) + '. '}), el('span', {html: esc(r)}), q.rightImages[di] ? el('img', {src: q.rightImages[di], class: 'thumb'}) : null]); richHtml(r).then(function (h) { d.querySelector('span').innerHTML = h; }); return d; })));
+        /* V259.5 — موارد ستون راست با حرف (الف، ب…) تا با شمارهٔ موارد ستون چپ اشتباه نشود (مثل اپ) */
+        var ABm = ['الف', 'ب', 'ج', 'د', 'ه', 'و', 'ز', 'ح', 'ط', 'ی'];
+        box.appendChild(el('div', {class: 'st-match-right'}, q.rightItems.map(function (r, di) { var d = el('div', {class: 'st-mr'}, [el('b', {text: (ABm[di] || fa(di + 1)) + ') '}), el('span', {html: esc(r)}), q.rightImages[di] ? el('img', {src: q.rightImages[di], class: 'thumb'}) : null]); richHtml(r).then(function (h) { d.querySelector('span').innerHTML = h; }); return d; })));
         q.leftItems.forEach(function (l, li) {
           var row = el('div', {class: 'st-ml'}, [el('span', {class: 'grow', html: '<b>' + fa(li + 1) + '.</b> ' + esc(l)}), q.leftImages[li] ? el('img', {src: q.leftImages[li], class: 'thumb'}) : null,
-            el('div', {class: 'st-chips'}, q.rightItems.map(function (_, di) { var oi = q.rightOriginalIndices[di] != null ? q.rightOriginalIndices[di] : di; return el('button', {class: 'chip' + (cur[li] === oi ? ' brand' : ''), text: fa(di + 1), onclick: function () { cur = Object.assign({}, cur); cur[li] = oi; set(cur); box.replaceWith(answerArea(q)); }}); }))]);
+            el('div', {class: 'st-chips'}, q.rightItems.map(function (_, di) { var oi = q.rightOriginalIndices[di] != null ? q.rightOriginalIndices[di] : di; return el('button', {class: 'chip' + (cur[li] === oi ? ' brand' : ''), text: ABm[di] || fa(di + 1), onclick: function () { cur = Object.assign({}, cur); cur[li] = oi; set(cur); box.replaceWith(answerArea(q)); }}); }))]);
           richHtml(l).then(function (h) { var g = row.querySelector('.grow'); g.innerHTML = '<b>' + fa(li + 1) + '.</b> ' + h; fitMath(g); });
           box.appendChild(row);
         });

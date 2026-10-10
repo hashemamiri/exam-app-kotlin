@@ -37,8 +37,10 @@ class V55_16OptionInsertToolsTest {
         // V259 — فیلد گزینه خودِ ویرایشگر متن سؤال است (InlineMathTextEditor بدون نوار ابزار)، نه OutlinedTextField با پیش‌نمایش جدا
         assertTrue("InlineMathTextEditor(\n                                    source = option," in multiple)
         assertTrue("showToolbar = false" in multiple)
-        assertTrue("shape = RoundedCornerShape(14.dp)" in matching)
-        assertTrue("'\$' in value || \"%%FIG:\" in value" in matching)
+        // V259.5 — موارد جورکردنی هم InlineMathTextEditor بدون نوار ابزار
+        assertTrue("onSourceChange = { viewModel.updateMatchingText(question.id, \"right\", index, it) }" in matching)
+        assertTrue("onSourceChange = { viewModel.updateMatchingText(question.id, \"left\", index, it) }" in matching)
+        assertTrue("showToolbar = false" in matching)
     }
 
     @Test

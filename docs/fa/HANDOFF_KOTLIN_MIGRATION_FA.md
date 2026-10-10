@@ -19425,6 +19425,13 @@ CI: `compileDebugUnitTestKotlin` به‌خاطر `assertFalse` بدون import �
 - باگ V202.5: `var LANDING_TILES` داخل `paintAuth` بعد از خطی که `landing()` را صدا می‌زد تعریف شده بود → به‌خاطر hoisting مقدارش undefined و `.map` خطا می‌داد → صفحهٔ اول خالی. حالا کنار `authActive` در سطح ماژول است (تست ترتیب را پین می‌کند).
 - دروازهٔ صفحهٔ اول: mobile.js `entered()/enter()` با `sessionStorage['m-entered']`، `gateActive() = MQ && user && !entered`؛ app.js `render()` پیش از m-mode اگر gateActive → paintAuth (landing حتی با user). دکمه: user ⇒ `enter(); S.render()`؛ وگرنه `goA('login')`؛ پیوند ثبت‌نام فقط بدون user. `afterLogin()` → `SiteMobile.enter()`.
 
+### V259.5 — جورکردنی مثل گزینه‌ها (اپ) + بانک با نماد، منوی گالری، پیش‌نمایش جورکردنی (سایت)
+- QuestionOptionMedia.kt: دو OutlinedTextField/NativeMathText/ExistingFormulaEditor موارد جورکردنی → `InlineMathTextEditor(source = value, …, showToolbar = false)`؛ پارامتر جدید `onFigureEdit(side,index,occurrence,spec)`؛ حذف شکل با `viewModel.deleteFieldFigure(id, "matching_<side>", …)`. ExamBuilderScreen: `onFigureEdit` → `openFieldFigureEditor(InsertMenuRef("matching_$side", …))`. import OutlinedTextField/ExistingFormulaEditor/NativeMathText حذف، FigureSpec اضافه.
+- builder.js: `bankText(raw)` (richHtml + previewCss) در فهرست openBank؛ atlasMenu بعد از append اندازه‌گیری و در صفحه نگه داشته می‌شود (flip به بالا)؛ studentPreview جورکردنی = `.st-match-right` (حروف) + ردیف‌های چپ با چیپ حرفی + تصاویر.
+- student.js: ستون راست و چیپ‌ها با `ABm` (الف…ی)؛ مقدار ذخیره‌شده (oi) تغییر نکرد. admin.js: `ABL(i)` در نمایش کلید/پاسخ جورکردنی.
+- site.css انتها: `.b-bank-text` (۳ خط، جدول/تصویر کوچک)، `.b-atlas-menu` max-height + اسکرول بی‌نوار.
+- تست‌ها: V259_5_MatchingInlineEditorBankSymbolsTest.kt؛ پین‌های V55_16 (جورکردنی) و V55_17 (شمارش FigTokenVisuals → InlineMathTextEditor) به‌روز. bump 1.01.42.
+
 ### V259.4 — رفع پین تست V173 (ریل با برچسب)
 - V173_SiteDesktopBuilderRailTest: دو پین `rb(EYE, …)` با امضای جدید `rb(icon,label,on,cls,short)` و آرگومان `'پیش‌نمایش'` هماهنگ شد. فایل `_Site` است → بدون bump.
 

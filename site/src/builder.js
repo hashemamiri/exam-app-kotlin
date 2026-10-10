@@ -531,7 +531,9 @@
       else if (q.type === 'truefalse') card.appendChild(el('div', {class: 'row'}, [el('button', {class: 'btn light', text: '✓ صحیح', disabled: 'disabled'}), el('button', {class: 'btn light', text: '✗ غلط', disabled: 'disabled'})]));
       else if (q.type === 'fill' || q.type === 'numeric') card.appendChild(el('input', {type: 'text', class: 'st-input', disabled: 'disabled', placeholder: q.type === 'numeric' ? 'پاسخ عددی' : 'پاسخ جای خالی'}));
       else if (q.type === 'matching') {
-        (q.matchingLeft || []).forEach(function (l, li) { card.appendChild(el('div', {class: 'st-ml'}, [rich(el('span', {class: 'grow', text: fa(li + 1) + '. ' + (l || 'ستون راست')}), l, '<b>' + fa(li + 1) + '.</b> '), el('div', {class: 'st-chips'}, (q.matchingRight || []).map(function (_, ri) { return el('button', {class: 'chip', text: AB[ri] || fa(ri + 1), disabled: 'disabled'}); }))])); });
+        /* V259.5 — مثل صفحهٔ آزمون دانش‌آموز: ابتدا فهرست موارد ستون راست (الف، ب…) سپس هر مورد ستون چپ با چیپ‌های حرفی برای انتخاب جفت */
+        card.appendChild(el('div', {class: 'st-match-right'}, (q.matchingRight || []).map(function (r, ri) { return el('div', {class: 'st-mr'}, [el('b', {text: (AB[ri] || fa(ri + 1)) + ') '}), rich(el('span', {text: r || ('مورد ' + (AB[ri] || fa(ri + 1)))}), r), q.matchingRightImages && q.matchingRightImages[ri] ? el('img', {src: q.matchingRightImages[ri], class: 'thumb'}) : null]); })));
+        (q.matchingLeft || []).forEach(function (l, li) { card.appendChild(el('div', {class: 'st-ml'}, [rich(el('span', {class: 'grow', text: fa(li + 1) + '. ' + (l || 'مورد ' + fa(li + 1))}), l, '<b>' + fa(li + 1) + '.</b> '), q.matchingLeftImages && q.matchingLeftImages[li] ? el('img', {src: q.matchingLeftImages[li], class: 'thumb'}) : null, el('div', {class: 'st-chips'}, (q.matchingRight || []).map(function (_, ri) { return el('button', {class: 'chip', text: AB[ri] || fa(ri + 1), disabled: 'disabled'}); }))])); });
       } else card.appendChild(el('textarea', {class: 'st-input', rows: 5, disabled: 'disabled', placeholder: 'پاسخ تشریحی'}));
       var box = el('div', {class: 'modal b-sp-modal'}, [
         /* V259.2 — دسکتاپ: سربرگ ثابت (عنوان + ✗ قرمز هم‌ردیف)، بدنهٔ اسکرول‌شونده بدون نوار، بدون دکمهٔ «بستن» پایین */
@@ -934,6 +936,13 @@
     /* --- بانک سؤال --- */
     /* V259.3 — بانک سؤال در دسکتاپ برای آزمون چاپی هم در دسترس است (گوشی: فقط آنلاین، مثل قبل) */
     function bankAllowed() { return state.mode === 'online' || document.body.classList.contains('dk'); }
+    /* V259.5 — متن سؤال در فهرست بانک با موتور رندر (فرمول/شکل/جدول = نماد، نه کد) */
+    function bankText(raw) {
+      raw = String(raw || '');
+      var d = el('div', {class: 'b-bank-text', text: raw.replace(/%%FIG:[\s\S]*?%%/g, ' [شکل] ').replace(/\$[^$]*\$/g, ' [فرمول] ').slice(0, 160) || '— بدون متن —'});
+      if (raw && window.SiteStudent && window.SiteStudent.richHtml) { previewCss(); window.SiteStudent.richHtml(raw).then(function (h) { d.innerHTML = h; if (window.SiteStudent.fitMath) window.SiteStudent.fitMath(d); }).catch(function () {}); }
+      return d;
+    }
     async function openBank() {
       var bg = el('div', {class: 'modal-bg'});
       var m = el('div', {class: 'modal wide'}, [el('button', {class: 'x', text: '✕', onclick: function () { bg.remove(); }}), el('h2', {text: '🏦 بانک سؤال'})]);
@@ -958,7 +967,7 @@
           lastFiltered = f;
           if (!f.length) { lst.appendChild(S.emptyBox('🏦', 'سؤالی پیدا نشد.')); return; }
           f.forEach(function (it) { var qq = it.question || {}; var cb = el('input', {type: 'checkbox', 'aria-label': 'انتخاب'}); cb.checked = picked.indexOf(it) >= 0; cb.addEventListener('change', function () { var k = picked.indexOf(it); if (cb.checked && k < 0) picked.push(it); if (!cb.checked && k >= 0) picked.splice(k, 1); syncAddBtn(); });
-            lst.appendChild(el('div', {class: 'b-bank-item'}, [cb, el('div', {class: 'grow', onclick: function () { cb.checked = !cb.checked; cb.dispatchEvent(new Event('change')); }}, [el('div', {text: String(qq.text || '').replace(/\$/g, '').slice(0, 120)}), el('div', {class: 'muted', style: 'font-size:12px', text: [TYPE_LABEL[S.qType(qq.type) === 'long' ? 'essay' : S.qType(qq.type)], it.subject, (it.cat_names || []).join('، ')].filter(Boolean).join(' · ')})]), el('button', {class: 'btn soft sm', text: 'افزودن', onclick: function () { addItems([it]); }})])); });
+            lst.appendChild(el('div', {class: 'b-bank-item'}, [cb, el('div', {class: 'grow', onclick: function () { cb.checked = !cb.checked; cb.dispatchEvent(new Event('change')); }}, [bankText(qq.text), el('div', {class: 'muted', style: 'font-size:12px', text: [TYPE_LABEL[S.qType(qq.type) === 'long' ? 'essay' : S.qType(qq.type)], it.subject, (it.cat_names || []).join('، ')].filter(Boolean).join(' · ')})]), el('button', {class: 'btn soft sm', text: 'افزودن', onclick: function () { addItems([it]); }})])); });
         }
         q.addEventListener('input', draw); cs.addEventListener('change', draw);
         body.innerHTML = ''; body.appendChild(el('div', {class: 'row', style: 'margin-bottom:10px'}, [q, cs])); body.appendChild(lst); draw();
@@ -1092,8 +1101,12 @@
       el('button', {type: 'button', html: '<b>🧪</b><span>شیمی</span><small>آزمایشگاه، مولکول‌ها، واکنش‌ها</small>', onclick: function () { m.remove(); insertFigure('chemistry', ta, q); }}),
       el('button', {type: 'button', html: '<b>🖼</b><span>تصویر خودم + فلش‌گذاری</span><small>عکس دلخواه؛ روی آن شماره بگذارید تا دانش‌آموز نام‌گذاری کند</small>', onclick: function () { m.remove(); pickPhotoForAtlas(ta, q); }})
     ]);
-    var r = anchor.getBoundingClientRect(); m.style.top = (r.bottom + 6 + window.scrollY) + 'px'; m.style.right = (document.documentElement.clientWidth - r.right + window.scrollX) + 'px';
-    document.body.appendChild(m);
+    /* V259.5 — منو همیشه کامل در دید باشد: اگر پایین جا نشد بالای دکمه، و در هر حال داخل صفحه نگه داشته می‌شود */
+    var r = anchor.getBoundingClientRect(); document.body.appendChild(m);
+    var mh = m.offsetHeight, mw = m.offsetWidth, vh = window.innerHeight, vw = document.documentElement.clientWidth;
+    var top = r.bottom + 6; if (top + mh > vh - 8) top = Math.max(8, Math.min(r.top - mh - 6, vh - mh - 8));
+    var right = Math.max(8, Math.min(vw - r.right, vw - mw - 8));
+    m.style.top = (top + window.scrollY) + 'px'; m.style.right = (right + window.scrollX) + 'px';
     setTimeout(function () { document.addEventListener('pointerdown', function h(e) { if (!m.contains(e.target)) { m.remove(); document.removeEventListener('pointerdown', h); } }); }, 0);
   }
   function pickPhotoForAtlas(ta, q) {

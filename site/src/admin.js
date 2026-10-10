@@ -5,6 +5,8 @@
   'use strict';
   var S = window.ExamSite;
   var el = S.el, esc = S.esc, fa = S.fa, en = S.en, toast = S.toast, errMsg = S.errMsg, uuid = S.uuid;
+  /* V259.5 — مورد ستون راست جورکردنی با حرف (الف، ب…) مثل صفحهٔ دانش‌آموز و اپ */
+  function ABL(i) { return ['الف', 'ب', 'ج', 'د', 'ه', 'و', 'ز', 'ح', 'ط', 'ی'][i] || fa(i + 1); }
   var TYPE_LABEL = {multiple: 'چندگزینه‌ای', truefalse: 'صحیح/غلط', fill: 'جای‌خالی', numeric: 'عددی', matching: 'جورکردنی', essay: 'تشریحی', long: 'تشریحی'};
   function qt(t) { var x = S.qType(t); return x === 'long' ? 'essay' : x; }
   function num(v, d) { var n = Number(v); return isFinite(n) ? n : (d || 0); }
@@ -72,7 +74,7 @@
       case 'truefalse': return k.correctAnswer === true || k.correctAnswer === 'true' ? 'صحیح' : 'غلط';
       case 'fill': return (k.accept || []).join(' یا ') || '—';
       case 'numeric': return k.answer != null ? String(k.answer) + (k.tolerance && Number(k.tolerance) ? ' ± ' + k.tolerance : '') : '—';
-      case 'matching': var m = k.matchAnswer || {}; return Object.keys(m).sort(function (a, b) { return a - b; }).map(function (l) { return fa(Number(l) + 1) + ' ← ' + fa(Number(m[l]) + 1); }).join('، ') || '—';
+      case 'matching': var m = k.matchAnswer || {}; return Object.keys(m).sort(function (a, b) { return a - b; }).map(function (l) { return fa(Number(l) + 1) + ' ← ' + ABL(Number(m[l])); }).join('، ') || '—';
       default: return null;
     }
   }
@@ -81,7 +83,7 @@
     switch (q.__type) {
       case 'multiple': var i = Number(r); return (q.options || [])[i] != null ? (['الف', 'ب', 'ج', 'د', 'ه', 'و', 'ز', 'ح'][i] || fa(i + 1)) + ') ' + q.options[i] : String(r);
       case 'truefalse': return r === true || r === 'true' ? 'صحیح' : 'غلط';
-      case 'matching': if (typeof r !== 'object') return String(r); return Object.keys(r).sort(function (a, b) { return a - b; }).map(function (l) { return fa(Number(l) + 1) + ' ← ' + fa(Number(r[l]) + 1); }).join('، ');
+      case 'matching': if (typeof r !== 'object') return String(r); return Object.keys(r).sort(function (a, b) { return a - b; }).map(function (l) { return fa(Number(l) + 1) + ' ← ' + ABL(Number(r[l])); }).join('، ');
       default: return String(r);
     }
   }
