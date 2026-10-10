@@ -69,13 +69,13 @@ class V222_SiteLoginFieldsBrandTest {
     fun siteBrandMatchesAppIcon() {
         val a = src("site/src/app.js")
         assertTrue("var APP_MARK_SVG = '<svg viewBox=\"0 0 108 108\"" in a)
-        assertTrue("fill=\"#5B3FA3\"" in a && "fill=\"#2E7D32\"" in a)
+        assertTrue("href=\"/pwa/v3/mark-256.png\"" in a) // V253 — لوگوی جدید
         assertTrue("el('span', {class: 'mark', html: APP_MARK_SVG})" in a)
         assertFalse("el('span', {class: 'mark', text: '✎'})" in a)
         // V222.2 — نام صفحهٔ ورود دسکتاپ و PWA
         assertTrue("brandEl('آزمون آنلاین')" in a)
         val mf = src("site/pwa/manifest.webmanifest")
-        assertTrue("\"name\": \"سامانهٔ آزمون آنلاین\"" in mf && "/pwa/v2/icon-512.png" in mf)
-        assertTrue("/pwa/v2/icon-192.png" in src("site/pwa/sw.js"))
+        assertTrue("\"name\": \"سامانهٔ آزمون آنلاین\"" in mf && "/pwa/v3/icon-512.png" in mf)
+        assertTrue("/pwa/v3/icon-192.png" in src("site/pwa/sw.js"))
     }
 }

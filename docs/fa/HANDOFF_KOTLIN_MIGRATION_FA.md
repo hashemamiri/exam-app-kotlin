@@ -19425,6 +19425,14 @@ CI: `compileDebugUnitTestKotlin` به‌خاطر `assertFalse` بدون import �
 - باگ V202.5: `var LANDING_TILES` داخل `paintAuth` بعد از خطی که `landing()` را صدا می‌زد تعریف شده بود → به‌خاطر hoisting مقدارش undefined و `.map` خطا می‌داد → صفحهٔ اول خالی. حالا کنار `authActive` در سطح ماژول است (تست ترتیب را پین می‌کند).
 - دروازهٔ صفحهٔ اول: mobile.js `entered()/enter()` با `sessionStorage['m-entered']`، `gateActive() = MQ && user && !entered`؛ app.js `render()` پیش از m-mode اگر gateActive → paintAuth (landing حتی با user). دکمه: user ⇒ `enter(); S.render()`؛ وگرنه `goA('login')`؛ پیوند ثبت‌نام فقط بدون user. `afterLogin()` → `SiteMobile.enter()`.
 
+### V253 — لوگوی جدید (نسخه 1.01.31)
+- منبع: تصویر PNG کاربر (خوشنویسی «آزمون» سرمه‌ای + تیک فیروزه‌ای + پاسخ‌برگ). پس‌زمینهٔ سفید حذف و به آلفا تبدیل شد (مقیاس روشنایی).
+- اپ: `mipmap-*/ic_launcher_foreground.png` (طرح در ۶۱٪ قاب = داخل ناحیهٔ امن ۶۶dp)، `ic_launcher.png` (مربع گرد سفید) و `ic_launcher_round.png` برای اندروید < 8؛ `mipmap-anydpi-v26/ic_launcher(.|_round).xml` با پس‌زمینهٔ `@color/ic_launcher_background` (سفید) و `<monochrome>` = `drawable/ic_launcher_monochrome.xml` (برداری تک‌رنگ: تیک + ۳ دایره). همین برداری، آیکون کوچک اعلان (FCM + PushMessagingService) است. `drawable/ic_exam_app.xml` حذف شد.
+- `store/play-icon-512.png` برای Play Store.
+- سایت: `site/pwa/v3/*` (icon-192/512، maskable-192/512 با حاشیهٔ ۲۰٪، apple-touch-icon، favicon-48، mark-256 شفاف)، `site/favicon.ico` (۱۶/۳۲/۴۸)؛ template.html، manifest.webmanifest، sw.js (SHELL و اعلان) به v3؛ `APP_MARK_SVG` در app.js = مربع گرد سفید + `<image href="/pwa/v3/mark-256.png">` (نام متغیر و `viewBox 0 0 108 108` برای تست‌های V165 حفظ شد). پوشهٔ `pwa/v2` حذف نشد تا PWAهای نصب‌شدهٔ قدیمی تا به‌روزرسانی manifest آیکون شکسته نبینند؛ در نسخه‌ای بعد قابل حذف است.
+- رنگ تم (`#5B3FA3`) عمداً دست نخورد؛ اگر خواستید پالت را با لوگو (سرمه‌ای/فیروزه‌ای) هماهنگ کنیم نسخهٔ جدا.
+- تست: V253_NewLogoTest. ریسک کامپایل: منابع mipmap/adaptive icon استاندارد است؛ اگر lint روی `monochrome` در minSdk پایین هشدار داد، خطا نیست.
+
 ### V252.2 — (نسخه 1.01.30) CI سبز نشد چون ۵ تست واحد قرمز بودند: (۱) V250_SiteAuditTest واقعاً اشکال پیدا کرد: ابزار «متن» تختهٔ سایت (student.js) هنوز `prompt()` مرورگر را صدا می‌زد → `S.promptDlg` (کلیک روی تخته → پنجرهٔ «متن روی تخته» → نوشتن در همان نقطه). (۲–۵) پین‌های قدیمی: V186/V188 (`fa(r[0].length)` که V251 به `cnt(r[0])` تغییر داد)، V157 (ترتیب export در school.js)، V27 (`ExamPackageCodec.decode(raw)` که V252 به `mapCatching(ExamPackageCodec::decode)` تبدیل کرد). درس: پس از هر تغییر، همهٔ تست‌های `*_Site*Test.kt` و تست‌های اپ را با اسکریپت پین‌چک محلی اجرا کن، نه فقط تست نسخهٔ جاری.
 
 ### V252.1 — (نسخه 1.01.29) CI: `clearDraft` در PendingActionWorker به `database` ارجاع می‌داد که متغیر محلی `doWork` است نه property → DAO به‌عنوان پارامتر پاس داده شد. درس: در فایل‌هایی که نمی‌توان کامپایل کرد، پیش از افزودن متد به کلاس، scope متغیرها را grep کن (`val database =` داخل تابع بود).
