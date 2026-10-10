@@ -43,6 +43,7 @@ class V253_NewLogoTest {
         assertTrue("else c.appendChild(el('div', {class: 'cal-wrap'}, [el('div', {class: 'card'}, [grid]), side]));" in a)
         // V253.4 — دسکتاپ: ناوبری ماه بالای تقویم، «پیام جدید» وسطِ بالای پیام‌ها، بدون «پیام برای این روز»
         assertTrue("[el('div', {class: 'cal-col'}, [navRow, el('div', {class: 'card'}, [grid])]), el('div', {class: 'cal-col'}, [el('div', {class: 'row cal-newrow', style: 'justify-content:center;margin-bottom:12px'}, [newBtn].filter(Boolean)), side])]" in a)
+        assertTrue("text: isDk() ? '← ماه بعد' : '‹ ماه بعد'" in a && "text: isDk() ? 'ماه قبل →' : 'ماه قبل ›'" in a) // V253.7
         assertFalse("side.appendChild(el('div', {class: 'row', style: 'margin-top:12px'}, [el('button', {class: 'btn sm', text: '➕ پیام برای این روز'" in a)
         assertTrue("if (!isDk()) { if (newBtn) navRow.appendChild(newBtn); c.appendChild(navRow); }" in a)
         assertTrue("if (isDk()) showDay(d); else dayDlg(iso, y, m, d, ns, hs, isTeacher" in a)

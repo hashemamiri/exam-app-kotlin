@@ -19425,6 +19425,8 @@ CI: `compileDebugUnitTestKotlin` به‌خاطر `assertFalse` بدون import �
 - باگ V202.5: `var LANDING_TILES` داخل `paintAuth` بعد از خطی که `landing()` را صدا می‌زد تعریف شده بود → به‌خاطر hoisting مقدارش undefined و `.map` خطا می‌داد → صفحهٔ اول خالی. حالا کنار `authActive` در سطح ماژول است (تست ترتیب را پین می‌کند).
 - دروازهٔ صفحهٔ اول: mobile.js `entered()/enter()` با `sessionStorage['m-entered']`، `gateActive() = MQ && user && !entered`؛ app.js `render()` پیش از m-mode اگر gateActive → paintAuth (landing حتی با user). دکمه: user ⇒ `enter(); S.render()`؛ وگرنه `goA('login')`؛ پیوند ثبت‌نام فقط بدون user. `afterLogin()` → `SiteMobile.enter()`.
 
+### V253.7 — (فقط سایت) ‹ › در RTL آینه می‌شوند و جهتشان برعکس دیده می‌شد؛ در دسکتاپ از ← → (غیرآینه‌ای) استفاده شد: «← ماه بعد»، «ماه قبل →». گوشی بدون تغییر.
+
 ### V253.6 — (فقط سایت) فرمول خارج از صفحهٔ آزمون: `richEl(tag, cls, text)` در admin.js (متن خام فوری → سپس `SiteStudent.richHtml` + `fitMath`؛ کلاس `math-rich`، پس از رندر `rendered`). استفاده: کارنامه (`answerDetail`)، تصحیح هر دانش‌آموز، تصحیح هر سؤال (متن سؤال، پاسخ درست، جدول پاسخ‌ها). `mathCss()` در student.js حالا قواعد موتور را برای `.st-exam` **و** `.math-rich` تولید می‌کند و export شد. بررسی شد: جاهای دیگر (فهرست بانک سؤال، فهرست سؤال‌های سازنده) عمداً پیش‌نمایش کوتاه متنی هستند؛ پیش‌نمایش دانش‌آموز در سازنده از قبل richHtml داشت.
 
 ### V253.5 — (فقط سایت) `.dk .cal-nav` با flex `order`: h2 راست (order 0, grow)، سپس ماه قبل (1)، امروز (2)، ماه بعد (3) کنار هم؛ بدون تغییر JS.
