@@ -17,8 +17,9 @@ class V173_SiteDesktopBuilderRailTest {
     fun `builder rail and side column mirror the app`() {
         val b = source("site/src/builder.js")
         assertTrue("'سؤال بعدی'" !in b)
-        assertTrue("rail.appendChild(rb(EYE, 'پیش‌نمایش دانش‌آموز', function () { studentPreview(); }));" in b)
-        assertTrue("rail.appendChild(rb(EYE, 'پیش‌نمایش آزمون', function () { preview(); }));" in b)
+        // V259.2 — دکمه‌های ریل برچسب کوتاه زیر آیکون دارند
+        assertTrue("rail.appendChild(rb(EYE, 'پیش‌نمایش دانش‌آموز', function () { studentPreview(); }, '', 'پیش‌نمایش'));" in b)
+        assertTrue("rail.appendChild(rb(EYE, 'پیش‌نمایش آزمون', function () { preview(); }, '', 'پیش‌نمایش'));" in b)
         assertTrue("'چاپ آزمون', function (e) { printMenu(e.currentTarget); }" in b)
         assertTrue("text: '🖨 چاپ آزمون (دانش‌آموز)'" in b && "text: '✅ چاپ با کلید (پاسخ‌نامه)'" in b)
         assertTrue("function studentPreview()" in b && "text: 'پیش‌نمایش دانش‌آموز'" in b)

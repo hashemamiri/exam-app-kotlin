@@ -19425,6 +19425,9 @@ CI: `compileDebugUnitTestKotlin` به‌خاطر `assertFalse` بدون import �
 - باگ V202.5: `var LANDING_TILES` داخل `paintAuth` بعد از خطی که `landing()` را صدا می‌زد تعریف شده بود → به‌خاطر hoisting مقدارش undefined و `.map` خطا می‌داد → صفحهٔ اول خالی. حالا کنار `authActive` در سطح ماژول است (تست ترتیب را پین می‌کند).
 - دروازهٔ صفحهٔ اول: mobile.js `entered()/enter()` با `sessionStorage['m-entered']`، `gateActive() = MQ && user && !entered`؛ app.js `render()` پیش از m-mode اگر gateActive → paintAuth (landing حتی با user). دکمه: user ⇒ `enter(); S.render()`؛ وگرنه `goA('login')`؛ پیوند ثبت‌نام فقط بدون user. `afterLogin()` → `SiteMobile.enter()`.
 
+### V259.4 — رفع پین تست V173 (ریل با برچسب)
+- V173_SiteDesktopBuilderRailTest: دو پین `rb(EYE, …)` با امضای جدید `rb(icon,label,on,cls,short)` و آرگومان `'پیش‌نمایش'` هماهنگ شد. فایل `_Site` است → بدون bump.
+
 ### V259.3 — سایت: بانک سؤال در آزمون چاپی دسکتاپ + چیپ‌های یک‌خطی
 - builder.js: `bankAllowed()` = آنلاین یا body.dk؛ سه نقطهٔ گیت (کلید 'bank' سربرگ، منوی افزودن، دکمهٔ لیست) از آن استفاده می‌کنند. decodeQuestion از newQuestion می‌سازد، پس فیلدهای چاپی پیش‌فرض دارند.
 - site.css انتها: چیپ checkbox در دسکتاپ `flex-wrap:nowrap;white-space:nowrap` (علت تیک بالای متن: label کلاس row با flex-wrap:wrap بود).
