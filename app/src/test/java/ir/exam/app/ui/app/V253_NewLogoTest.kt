@@ -29,6 +29,14 @@ class V253_NewLogoTest {
     }
 
     @Test
+    fun `desktop student exam head does not cover question numbers and rail labels wrap`() {
+        val css = source("site/src/site.css")
+        assertTrue(".dk .st-head{top:12px}" in css && ".dk .st-nav{position:relative;z-index:1" in css)
+        assertTrue("white-space:normal;max-width:66px;text-align:center;overflow:visible" in css)
+        assertFalse("white-space:nowrap;max-width:66px;overflow:hidden;text-overflow:ellipsis" in css)
+    }
+
+    @Test
     fun `site brand favicon and pwa use v3 icons`() {
         for (f in listOf("icon-192", "icon-512", "maskable-192", "maskable-512", "apple-touch-icon", "favicon-48", "mark-256")) assertTrue(exists("site/pwa/v3/$f.png"))
         assertFalse("/pwa/v2/" in source("site/src/template.html") || "/pwa/v2/" in source("site/pwa/manifest.webmanifest") || "/pwa/v2/" in source("site/pwa/sw.js"))

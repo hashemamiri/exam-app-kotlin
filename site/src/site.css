@@ -1038,6 +1038,9 @@ body.dk{--bg:#eef2f5;--card:#fff;--ink:#1d2935;--muted:#6c7985;--line:#d9e1e6;--
   .dk .main .head.dk-top{display:none}
   .dk .main{padding-top:24px}
   .dk .b-settings{top:24px;max-height:calc(100vh - 48px)}
+  /* V253.1 — صفحهٔ آزمون دانش‌آموز: هدر چسبان با فاصلهٔ هدر قدیمی (64px) پایین می‌آمد و روی شماره‌های سؤال می‌افتاد */
+  .dk .st-head{top:12px}
+  .dk .st-nav{position:relative;z-index:1;margin:14px 0}
   /* V175 — سازنده: هر ۴ بخش (ریل راست، مشخصات/سربرگ، ویرایشگر، ریل چپ) هم‌ارتفاع و ثابت؛ فقط داخل هر بخش اسکرول می‌شود */
   .dk .builder{position:fixed;top:22px;bottom:22px;left:100px;right:100px;display:flex;flex-direction:column;overflow:hidden;z-index:20}
   .dk .builder .b-top{flex:0 0 auto;margin-bottom:10px}
@@ -1254,7 +1257,7 @@ button.stat:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
   .dk .dk-rail-item{width:68px;height:auto;min-height:var(--size);grid-template-rows:auto auto;row-gap:2px;padding:4px 2px 5px;border-radius:14px}
   .dk .dk-rail-item .dk-ic{width:34px;height:34px}
   .dk .dk-rail-item .dk-ic svg{width:19px;height:19px}
-  .dk .dk-rail-item .dk-rail-label{position:static;transform:none;opacity:1;pointer-events:none;padding:0;border-radius:0;background:transparent;box-shadow:none;color:inherit;font-size:10.5px;font-weight:800;letter-spacing:-.2px;line-height:1.15;white-space:nowrap;max-width:66px;overflow:hidden;text-overflow:ellipsis;transition:none}
+  .dk .dk-rail-item .dk-rail-label{position:static;transform:none;opacity:1;pointer-events:none;padding:0;border-radius:0;background:transparent;box-shadow:none;color:inherit;font-size:10.5px;font-weight:800;letter-spacing:-.2px;line-height:1.15;white-space:normal;max-width:66px;text-align:center;overflow:visible;transition:none} /* V253.1 — نام دوخطی مثل «شرکت در آزمون» کامل دیده شود */
   .dk .dk-rail-item:hover .dk-rail-label,.dk .dk-rail-item:focus-visible .dk-rail-label{transform:none}
   .dk .dk-rail-item.active .dk-rail-label{color:var(--dk-neon-ink)}
 }
