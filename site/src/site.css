@@ -1750,3 +1750,43 @@ body.rail-dragging .b-rail-row:not(.dragging):hover .b-rail-grip{background:tran
 .bk-full-opts{display:flex;flex-direction:column;gap:6px}
 .bk-full-opts>div{padding:8px 12px;border:1px solid var(--line);border-radius:12px}
 .bk-full-opts>div.ok{border-color:var(--brand);background:var(--brand-soft)}
+/* V259.1 — دسکتاپ: بخش‌های پایین ویرایشگر سؤال مرتب (کارت بخش با عنوان، کنترل‌های هم‌ارتفاع ۴۴px، شبکهٔ منظم) */
+.dk .b-editor .b-sec{border:1px solid var(--line);border-radius:16px;padding:14px 16px 6px;margin-top:14px;background:rgba(255,255,255,.55)}
+.m-dark .dk .b-editor .b-sec{background:rgba(255,255,255,.03)}
+.dk .b-editor .b-sec>h4.b-sec-t{margin:0 0 12px!important;font-size:13.5px;font-weight:800;color:#2f687c;display:flex;align-items:center;gap:8px}
+.dk .b-editor .b-sec>h4.b-sec-t:after{content:'';flex:1;height:1px;background:var(--line)}
+.m-dark .dk .b-editor .b-sec>h4.b-sec-t{color:#5FD3F5}
+.dk .b-editor .b-sec .grid2,.dk .b-editor .b-sec .grid3,.dk .b-editor .b-sec .grid4{gap:12px 14px;align-items:end}
+.dk .b-editor .b-sec .field{margin-bottom:10px;gap:5px}
+.dk .b-editor .b-sec .field input,.dk .b-editor .b-sec .field select,.dk .b-editor .b-sec .field .dd-btn{height:44px;min-height:44px;padding:0 14px;border-radius:12px;font-size:14px;box-sizing:border-box;box-shadow:none}
+.dk .b-editor .b-sec .field .dd-btn{padding-left:38px;line-height:42px}
+.dk .b-editor .b-sec .field input[type=number]{direction:ltr;text-align:right}
+.dk .b-editor .b-sec .b-sec-chips{margin:0 0 10px!important;gap:8px}
+.dk .b-editor .b-sec-fmt .grid4{grid-template-columns:repeat(4,1fr)}
+html body.dk:not(.m-mode) .b-editor .b-sec-chkfield label:has(> input[type=checkbox]){height:44px;box-sizing:border-box;width:100%;justify-content:center;border-radius:12px;padding:0 14px;font-size:13.5px;margin:0}
+html body.dk:not(.m-mode) .b-editor .b-sec-chips label:has(> input[type=checkbox]){height:36px;box-sizing:border-box;padding:0 16px;border-radius:12px}
+.dk .b-editor .b-type{border-top:0;margin-top:14px;padding:14px 16px 10px;border:1px solid var(--line);border-radius:16px;background:rgba(255,255,255,.55)}
+.m-dark .dk .b-editor .b-type{background:rgba(255,255,255,.03)}
+.dk .b-editor .b-type>h4{font-size:13.5px;font-weight:800;color:#2f687c;display:flex;align-items:center;gap:8px}
+.dk .b-editor .b-type>h4:after{content:'';flex:1;height:1px;background:var(--line)}
+.dk .b-editor .b-type>p.muted{margin:0;font-size:13px}
+.dk .b-editor .b-sec .grid3>.field:empty,.dk .b-editor .b-sec .grid3>div:empty{display:none}
+/* V259.2 — دسکتاپ: پیش‌نمایش دانش‌آموز بلندتر با سربرگ ثابت، ✗ قرمز هم‌ردیف عنوان، بدنهٔ اسکرول بدون نوار، بدون دکمهٔ بستن پایین */
+.dk .b-sp-modal{height:92vh;max-height:92vh;display:flex;flex-direction:column;overflow:hidden;padding:18px 24px 20px}
+.dk .b-sp-modal .b-sp-head{flex:0 0 auto;margin:0 0 12px!important;align-items:center}
+.dk .b-sp-modal .b-sp-head h2{font-size:18px}
+.dk .b-sp-modal .b-sp-x{position:static;width:36px;height:36px;border-radius:10px;background:#fde8ec;color:#d6336c;font-weight:800;font-size:15px;display:grid;place-items:center;cursor:pointer}
+.dk .b-sp-modal .b-sp-x:hover{background:#d6336c;color:#fff}
+.dk .b-sp-modal .b-sp-body{flex:1 1 auto;min-height:0;max-height:none;overflow-y:auto;overflow-x:hidden;scrollbar-width:none;padding:2px}
+.dk .b-sp-modal .b-sp-body::-webkit-scrollbar{display:none}
+.dk .b-sp-modal .b-sp-foot{display:none}
+.m-dark .dk .b-sp-modal .b-sp-x{background:rgba(214,51,108,.18);color:#ff7aa2}
+/* V259.2 — ریل: نام زیر هر دکمه + کارت «بارم» (جمع بارم آزمون) زیر چشم */
+.dk .b-rail-btn{width:68px;height:auto;min-height:56px;flex-direction:column;display:flex;align-items:center;justify-content:center;gap:3px;padding:6px 2px 5px}
+.dk .b-rail-btn svg{width:21px;height:21px}
+.dk .b-rail-lbl{font-size:10.5px;font-weight:700;line-height:1.2;color:inherit;opacity:.85;white-space:nowrap}
+.dk .b-rail-score{width:68px;display:flex;flex-direction:column;align-items:center;gap:2px;padding:7px 2px 6px;border-radius:14px;background:rgba(14,147,184,.08);border:1px solid rgba(14,147,184,.22);color:#0e93b8;flex:0 0 auto}
+.dk .b-rail-score-v{font-size:16px;font-weight:800;line-height:1.1;direction:ltr}
+.dk .b-rail-score .b-rail-lbl{color:#58717c;opacity:1}
+.m-dark .dk .b-rail-score{background:rgba(95,211,245,.1);border-color:rgba(95,211,245,.3);color:#5FD3F5}
+.m-dark .dk .b-rail-score .b-rail-lbl,.m-dark .dk .b-rail-lbl{color:#AEB9C8}

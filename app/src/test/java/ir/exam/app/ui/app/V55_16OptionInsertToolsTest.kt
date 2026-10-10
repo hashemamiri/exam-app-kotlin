@@ -34,8 +34,9 @@ class V55_16OptionInsertToolsTest {
     fun `option and matching text boxes look like the question box with live preview`() {
         val multiple = builder.substringAfter("QuestionType.MULTIPLE_CHOICE ->")
             .substringBefore("QuestionType.TRUE_FALSE ->")
-        assertTrue("shape = RoundedCornerShape(14.dp)" in multiple)
-        assertTrue("'\$' in option || \"%%FIG:\" in option" in multiple)
+        // V259 — فیلد گزینه خودِ ویرایشگر متن سؤال است (InlineMathTextEditor بدون نوار ابزار)، نه OutlinedTextField با پیش‌نمایش جدا
+        assertTrue("InlineMathTextEditor(\n                                    source = option," in multiple)
+        assertTrue("showToolbar = false" in multiple)
         assertTrue("shape = RoundedCornerShape(14.dp)" in matching)
         assertTrue("'\$' in value || \"%%FIG:\" in value" in matching)
     }

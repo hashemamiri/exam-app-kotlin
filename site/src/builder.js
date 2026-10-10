@@ -534,9 +534,10 @@
         (q.matchingLeft || []).forEach(function (l, li) { card.appendChild(el('div', {class: 'st-ml'}, [rich(el('span', {class: 'grow', text: fa(li + 1) + '. ' + (l || 'ستون راست')}), l, '<b>' + fa(li + 1) + '.</b> '), el('div', {class: 'st-chips'}, (q.matchingRight || []).map(function (_, ri) { return el('button', {class: 'chip', text: AB[ri] || fa(ri + 1), disabled: 'disabled'}); }))])); });
       } else card.appendChild(el('textarea', {class: 'st-input', rows: 5, disabled: 'disabled', placeholder: 'پاسخ تشریحی'}));
       var box = el('div', {class: 'modal b-sp-modal'}, [
-        el('div', {class: 'row', style: 'margin-bottom:8px'}, [el('h2', {class: 'grow', text: 'پیش‌نمایش دانش‌آموز', style: 'margin:0'}), el('button', {class: 'x', text: '✕', 'aria-label': 'بستن', onclick: function () { bg.remove(); }})]),
+        /* V259.2 — دسکتاپ: سربرگ ثابت (عنوان + ✗ قرمز هم‌ردیف)، بدنهٔ اسکرول‌شونده بدون نوار، بدون دکمهٔ «بستن» پایین */
+        el('div', {class: 'row b-sp-head', style: 'margin-bottom:8px'}, [el('h2', {class: 'grow', text: 'پیش‌نمایش دانش‌آموز', style: 'margin:0'}), el('button', {class: 'x b-sp-x', text: '✕', 'aria-label': 'بستن', onclick: function () { bg.remove(); }})]),
         el('div', {class: 'b-sp-body'}, [card]),
-        el('div', {class: 'row', style: 'margin-top:10px;justify-content:flex-start'}, [el('button', {class: 'btn light', text: 'بستن', onclick: function () { bg.remove(); }})])
+        el('div', {class: 'row b-sp-foot', style: 'margin-top:10px;justify-content:flex-start'}, [el('button', {class: 'btn light', text: 'بستن', onclick: function () { bg.remove(); }})])
       ]);
       bg.appendChild(box); document.body.appendChild(bg);
     }
@@ -554,19 +555,22 @@
       if (!(await S.confirmDlg('افزودن به بانک سؤال', 'سؤال ' + fa(state.questions.indexOf(q0) + 1) + ' در بانک سؤال شما ذخیره شود؟', 'افزودن'))) return;
       try { var enc = encodeQuestions([q0]); var comb = Object.assign({}, enc.publicQuestions[0], enc.answerKey[0]); delete comb.i; comb.examTitle = (state.title || '').trim(); /* V259 — عنوان آزمون مبدأ روی کارت بانک */ var r = await S.rpcObj('native_bank_add_v2', {p_question: comb, p_subject: (state.subject || '').trim(), p_cats: []}); if (r && r.error) throw new Error(r.error); toast('در بانک سؤال ذخیره شد.', 'ok'); } catch (e) { toast(errMsg(e), 'err'); }
     }
+    function totalScore() { return state.questions.reduce(function (s, q) { return s + (Number(q.score) || 0); }, 0); }
     function drawRail() {
       rail.innerHTML = '';
-      function rb(icon, label, on, cls) { return el('button', {class: 'b-rail-btn ' + (cls || ''), title: label, 'aria-label': label, html: icon, onclick: on}); }
-      rail.appendChild(rb('<svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>', 'افزودن سؤال', function (e) { addMenu(e.currentTarget); }, 'add'));
+      /* V259.2 — زیر هر دکمهٔ ریل نامش نوشته می‌شود (برچسب کوتاه)؛ زیر چشم، کارت «بارم» = جمع بارم آزمون */
+      function rb(icon, label, on, cls, short) { var b = el('button', {class: 'b-rail-btn ' + (cls || ''), title: label, 'aria-label': label, html: icon, onclick: on}); b.appendChild(el('span', {class: 'b-rail-lbl', text: short || label})); return b; }
+      rail.appendChild(rb('<svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>', 'افزودن سؤال', function (e) { addMenu(e.currentTarget); }, 'add', 'افزودن'));
       /* V173 — مثل FABهای ExamBuilderScreen: آنلاین = ذخیره + چشم (پیش‌نمایش دانش‌آموزی سؤال، V62.7)؛ چاپی = ذخیره + چشم (پیش‌نمایش برگه) + چاپ (منوی چاپ آزمون/چاپ با کلید) */
       var EYE = '<svg viewBox="0 0 24 24"><path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>';
-      rail.appendChild(rb('<svg viewBox="0 0 24 24"><path d="M5 12l5 5L20 7"/></svg>', state.bankEdit ? 'ذخیره در بانک' : 'ذخیره', save, 'ok'));
+      rail.appendChild(rb('<svg viewBox="0 0 24 24"><path d="M5 12l5 5L20 7"/></svg>', state.bankEdit ? 'ذخیره در بانک' : 'ذخیره', save, 'ok', 'ذخیره'));
       if (state.mode === 'print') {
-        rail.appendChild(rb(EYE, 'پیش‌نمایش آزمون', function () { preview(); }));
-        rail.appendChild(rb('<svg viewBox="0 0 24 24"><path d="M7 8V4h10v4M5 8h14a2 2 0 0 1 2 2v6h-4v4H7v-4H3v-6a2 2 0 0 1 2-2z"/></svg>', 'چاپ آزمون', function (e) { printMenu(e.currentTarget); }));
+        rail.appendChild(rb(EYE, 'پیش‌نمایش آزمون', function () { preview(); }, '', 'پیش‌نمایش'));
+        rail.appendChild(rb('<svg viewBox="0 0 24 24"><path d="M7 8V4h10v4M5 8h14a2 2 0 0 1 2 2v6h-4v4H7v-4H3v-6a2 2 0 0 1 2-2z"/></svg>', 'چاپ آزمون', function (e) { printMenu(e.currentTarget); }, '', 'چاپ'));
       } else {
-        rail.appendChild(rb(EYE, 'پیش‌نمایش دانش‌آموز', function () { studentPreview(); }));
+        rail.appendChild(rb(EYE, 'پیش‌نمایش دانش‌آموز', function () { studentPreview(); }, '', 'پیش‌نمایش'));
       }
+      rail.appendChild(el('div', {class: 'b-rail-score', title: 'جمع بارم آزمون'}, [el('b', {class: 'b-rail-score-v', text: fa(S.fmtScore(totalScore()))}), el('span', {class: 'b-rail-lbl', text: 'بارم'})]));
       rail.appendChild(el('span', {class: 'b-rail-sep'}));
       var nums = el('div', {class: 'b-rail-nums'});
       /* V257 — هر شماره در یک ردیف با دستگیرهٔ جابه‌جایی (کلیک و نگه‌داشتن ≈۲۲۰ms، سپس کشیدن بالا/پایین) */
@@ -660,39 +664,37 @@
       }
       /* بارم + قالب */
       var fmt = el('div', {class: 'grid4'}, [
-        inp('بارم', String(q.score), function (v) { q.score = parseFloat(en(v)) || 0; mark(); drawListSoft(); }, 'number'),
+        inp('بارم', String(q.score), function (v) { q.score = parseFloat(en(v)) || 0; mark(); drawListSoft(); var rs = rail.querySelector('.b-rail-score-v'); if (rs) rs.textContent = fa(S.fmtScore(totalScore())); }, 'number'),
         sel('تراز متن', q.textAlign, [['right', 'راست'], ['center', 'وسط'], ['left', 'چپ'], ['justify', 'دوطرفه']], function (v) { q.textAlign = v; mark(); }),
         sel('فونت', q.fontFamily, [['default', 'پیش‌فرض'], ['Vazirmatn', 'وزیرمتن'], ['Shabnam', 'شبنم'], ['Sahel', 'ساحل'], ['BNazanin', 'ب نازنین'], ['Tahoma', 'تاهوما']], function (v) { q.fontFamily = v; mark(); }),
         inp('اندازهٔ فونت', String(q.fontSizeSp), function (v) { q.fontSizeSp = Math.max(8, Math.min(40, parseFloat(en(v)) || 16)); mark(); }, 'number')
       ]);
-      editor.appendChild(fmt);
-      editor.appendChild(el('div', {class: 'row', style: 'margin:-6px 0 12px'}, [chk('ضخیم', q.bold, function (v) { q.bold = v; mark(); }), chk('مورب', q.italic, function (v) { q.italic = v; mark(); })]));
+      /* V259.1 — دسکتاپ: هر گروه تنظیمات در یک «بخش» مرتب (عنوان + شبکهٔ هم‌ارتفاع)؛ گوشی بدون تغییر ظاهری */
+      function sec(title, children, cls) { return el('div', {class: 'b-sec' + (cls ? ' ' + cls : '')}, [title ? el('h4', {class: 'b-sec-t', text: title, style: 'margin-top:14px'}) : null].concat(children)); }
+      editor.appendChild(sec(document.body.classList.contains('dk') ? 'قالب متن سؤال' : '', [fmt, el('div', {class: 'row b-sec-chips', style: 'margin:-6px 0 12px'}, [chk('ضخیم', q.bold, function (v) { q.bold = v; mark(); }), chk('مورب', q.italic, function (v) { q.italic = v; mark(); })])], 'b-sec-fmt'));
       /* بخش مخصوص نوع */
       editor.appendChild(typeSection(q));
       /* فضای پاسخ (چاپ) */
       if (q.type === 'essay' || q.type === 'fill' || q.type === 'numeric') {
-        editor.appendChild(el('h4', {text: 'فضای پاسخ در برگهٔ چاپی', style: 'margin-top:14px'}));
-        editor.appendChild(el('div', {class: 'grid3'}, [
+        editor.appendChild(sec('فضای پاسخ در برگهٔ چاپی', [el('div', {class: 'grid3'}, [
           inp('تعداد خط', String(q.answerLines), function (v) { q.answerLines = Math.max(0, Math.min(12, parseInt(en(v), 10) || 0)); mark(); }, 'number'),
           sel('نوع خط', q.answerLineStyle, [['lined', 'خط‌دار'], ['blank', 'ساده'], ['grid', 'شطرنجی']], function (v) { q.answerLineStyle = v; mark(); }),
           inp('فاصلهٔ خط (cm)', String(q.answerLineSpacingCm), function (v) { q.answerLineSpacingCm = Math.max(0.5, Math.min(2, parseFloat(en(v)) || 1)); mark(); }, 'number')
-        ]));
+        ])]));
       }
       /* V208 — چیدمان گزینه‌های چندگزینه‌ای در برگهٔ چاپی (پیش‌فرض آزمون در «تنظیمات صفحه»ی پیش‌نمایش) */
       if (state.mode === 'print' && q.type === 'multiple') {
-        editor.appendChild(el('h4', {text: 'چیدمان گزینه‌ها در برگهٔ چاپی', style: 'margin-top:14px'}));
-        editor.appendChild(el('div', {class: 'grid3'}, [
+        editor.appendChild(sec('چیدمان گزینه‌ها در برگهٔ چاپی', [el('div', {class: 'grid3'}, [
           sel('چیدمان', q.optionsLayout || '', [['', 'پیش‌فرض آزمون'], ['1row', 'همه در یک ردیف'], ['2rows', 'دو ردیف'], ['4rows', 'هر گزینه یک ردیف']], function (v) { q.optionsLayout = v; mark(); })
-        ]));
+        ])]));
       }
       /* پاسخ تصویری (آنلاین) */
       if (state.mode === 'online' && (q.type === 'essay' || q.type === 'numeric' || q.type === 'fill')) {
-        editor.appendChild(el('h4', {text: 'پاسخ تصویری / تختهٔ دانش‌آموز', style: 'margin-top:14px'}));
-        editor.appendChild(el('div', {class: 'grid3'}, [
+        editor.appendChild(sec('پاسخ تصویری / تختهٔ دانش‌آموز', [el('div', {class: 'grid3'}, [
           sel('ارسال تصویر پاسخ', q.answerImageMode, [['no', 'غیرفعال'], ['optional', 'اختیاری'], ['required', 'اجباری']], function (v) { q.answerImageMode = v; mark(); drawEditor(); }),
           q.answerImageMode !== 'no' ? inp('حداکثر تصویر', String(q.maxAnswerImages || 1), function (v) { q.maxAnswerImages = Math.max(1, Math.min(10, parseInt(en(v), 10) || 1)); mark(); }, 'number') : el('div'),
-          el('div', {class: 'field'}, [el('label', {text: ' '}), chk('اجازهٔ رسم نمودار/تخته', q.allowAnswerGraph, function (v) { q.allowAnswerGraph = v; mark(); })])
-        ]));
+          el('div', {class: 'field b-sec-chkfield'}, [el('label', {text: document.body.classList.contains('dk') ? 'رسم نمودار/تخته' : ' '}), chk('اجازهٔ رسم نمودار/تخته', q.allowAnswerGraph, function (v) { q.allowAnswerGraph = v; mark(); })])
+        ])]));
       }
       function drawListSoft() { var rows = list.querySelectorAll('.b-q'); var r = rows[state.selected]; if (r) { r.querySelector('.t').textContent = (q.text || '').replace(/%%FIG:[\s\S]*?%%/g, '[شکل]').replace(/\$[^$]*\$/g, '[فرمول]').slice(0, 60) || '— بدون متن —'; r.querySelector('.chip.brand').textContent = fa(S.fmtScore(q.score)); } }
     }

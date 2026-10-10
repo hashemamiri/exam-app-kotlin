@@ -34,7 +34,8 @@ class V53WebFieldNativeToolsTableTest {
     fun `question card uses webview text field instead of native inline editor`() {
         assertTrue("QuestionTextWebSection(" in builder)
         assertTrue("questionFieldController" in builder)
-        assertFalse("InlineMathTextEditor(" in builder.substringAfter("import"))
+        // V259 — InlineMathTextEditor فقط برای فیلدهای گزینه (بعد از MULTIPLE_CHOICE) استفاده می‌شود؛ متن سؤال همچنان QuestionTextWebSection
+        assertFalse("InlineMathTextEditor(" in builder.substringAfter("import").substringBefore("QuestionType.MULTIPLE_CHOICE -> {"))
         assertTrue("RichTextSplitter.split" in webSection)
         assertTrue("BasicTextField(" in webSection)
         assertFalse("QuestionTextFieldWebView(" in webSection)
