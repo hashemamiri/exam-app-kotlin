@@ -1047,7 +1047,7 @@ body.dk{--bg:#eef2f5;--card:#fff;--ink:#1d2935;--muted:#6c7985;--line:#d9e1e6;--
   .dk .st-head{top:12px}
   .dk .st-nav{position:relative;z-index:1;margin:14px 0}
   /* V175 — سازنده: هر ۴ بخش (ریل راست، مشخصات/سربرگ، ویرایشگر، ریل چپ) هم‌ارتفاع و ثابت؛ فقط داخل هر بخش اسکرول می‌شود */
-  .dk .builder{position:fixed;top:22px;bottom:22px;left:122px;right:116px;display:flex;flex-direction:column;overflow:hidden;z-index:20}
+  .dk .builder{position:fixed;top:22px;bottom:22px;left:110px;right:104px;display:flex;flex-direction:column;overflow:hidden;z-index:20}
   .dk .builder .b-top{flex:0 0 auto;margin-bottom:10px}
   .dk .builder .b-body{flex:1 1 auto;min-height:0;margin:0;align-items:stretch;grid-template-rows:minmax(0,1fr)}
   /* V177 — ارتفاع دقیقاً برابر ردیف شبکه (کشش)، نه درصد؛ ویرایشگر و ستون مشخصات هم‌ارتفاع ریل‌ها */
@@ -1701,14 +1701,22 @@ input.topup-amt:focus{border-color:var(--brand,#39758a);box-shadow:0 0 0 3px var
 .bank-grid>.empty{grid-column:1/-1}
 
 /* V257.1 — فاصلهٔ یکسان (۲۴px) بین ریل راست↔مشخصات، مشخصات↔ویرایشگر، ویرایشگر↔ریل چپ؛ عنوان پنل‌های کناری وسط‌چین */
-.dk .builder .b-body.has-settings{column-gap:24px}
+.dk .builder .b-body.has-settings{column-gap:12px}
 .dk .b-settings>h3{text-align:center}
 .dk .b-rail-row{transition:transform .16s ease}
 .dk .b-rail-row.picked .b-rail-grip{color:#0e93b8;opacity:1;background:rgba(34,198,239,.14)}
 .dk .b-rail-row.picked .b-rail-num{border-color:rgba(34,198,239,.5)}
 .dk .b-rail-row.dragging{opacity:.35;transform:none;box-shadow:none;background:rgba(34,198,239,.1)}
 .dk .b-rail-row.drag-hidden{display:none}
-.b-rail-ghost{position:fixed;z-index:9999;pointer-events:none;width:68px;height:42px;display:grid;place-items:center}
+.b-rail-ghost{position:fixed;left:0;top:0;z-index:9999;pointer-events:none;width:68px;height:42px;display:grid;place-items:center;will-change:transform}
 .b-rail-ghost-n{position:absolute;width:42px;height:42px;border-radius:14px;background:var(--card);color:#0e93b8;font-weight:800;font-size:14px;display:grid;place-items:center;box-shadow:0 12px 28px rgba(24,54,68,.28);border:2px solid #22c6ef}
 .b-rail-ghost-badge{position:absolute;top:-8px;left:-8px;min-width:20px;height:20px;border-radius:10px;background:#0e93b8;color:#fff;font-size:11px;font-weight:800;display:grid;place-items:center;padding:0 5px}
 .m-dark .b-rail-ghost-n{background:#2F3A49;color:#5FD3F5}
+
+/* V257.2 — فاصلهٔ پنل‌ها نصف شد (۱۲px) و به کادر سؤال داده شد؛ هنگام کشیدن در ریل، انتخاب متن و hover خاموش */
+.dk .b-rail-nums{position:relative}
+body.rail-dragging{user-select:none;cursor:grabbing}
+body.rail-dragging .b-rail-row,body.rail-dragging .b-rail-grip{cursor:grabbing}
+body.rail-dragging .b-rail-row:not(.dragging):hover .b-rail-grip{background:transparent}
+/* V257.3 — عنوان پنل‌ها: .card h3 در سایت display:flex است، پس text-align اثر نداشت؛ وسط‌چین با justify-content */
+.dk .b-settings.card>h3{display:flex;justify-content:center;text-align:center;width:100%}

@@ -724,6 +724,7 @@
         function start(e0) {
           started = true;
           grip.removeEventListener('pointermove', pre); grip.removeEventListener('pointerup', cancel); grip.removeEventListener('pointercancel', cancel);
+          /* V257.2 — رویدادها روی window شنیده می‌شوند تا خروج نشانگر از ریل (یا شکست pointer capture) کشیدن را خراب نکند */
           try { grip.setPointerCapture(e0.pointerId); } catch (x) {}
           var group = railPicked[index] ? Object.keys(railPicked).map(Number).filter(function (k) { return k < state.questions.length; }).sort(function (a, b) { return a - b; }) : [index];
           var rowsAll = Array.prototype.slice.call(nums.children);
@@ -732,41 +733,50 @@
           var ghost = el('div', {class: 'b-rail-ghost'}, group.slice(0, 5).map(function (k, j) { return el('span', {class: 'b-rail-ghost-n', style: 'transform:translate(' + (j * 3) + 'px,' + (j * 3) + 'px)', text: fa(k + 1)}); }).concat(group.length > 1 ? [el('span', {class: 'b-rail-ghost-badge', text: fa(group.length)})] : []));
           document.body.appendChild(ghost);
           var r0 = row.getBoundingClientRect(), offX = e0.clientX - r0.left, offY = e0.clientY - r0.top;
-          function placeGhost(e) { ghost.style.left = (e.clientX - offX) + 'px'; ghost.style.top = (e.clientY - offY) + 'px'; }
+          function placeGhost(e) { ghost.style.transform = 'translate(' + Math.round(e.clientX - offX) + 'px,' + Math.round(e.clientY - offY) + 'px)'; }
           placeGhost(e0);
-          row.classList.add('dragging'); nums.classList.add('reordering');
+          row.classList.add('dragging'); nums.classList.add('reordering'); document.body.classList.add('rail-dragging');
           hidden.forEach(function (h) { h.classList.add('drag-hidden'); });
           function visibleRows() { return Array.prototype.slice.call(nums.children).filter(function (r) { return !r.classList.contains('drag-hidden'); }); }
+          /* جای ردیف‌ها از offsetTop (چیدمان واقعی، مستقل از transform انیمیشن) خوانده می‌شود تا هنگام انیمیشن لرزش/جابه‌جایی اشتباه پیش نیاید */
           function flip(doMove) {
-            var list = visibleRows(), before = {}; list.forEach(function (r) { before[r.dataset.k] = r.getBoundingClientRect().top; });
+            var list = visibleRows(), before = {}; list.forEach(function (r) { before[r.dataset.k] = r.offsetTop; });
             doMove();
-            visibleRows().forEach(function (r) { if (r === row) return; var dy = (before[r.dataset.k] || 0) - r.getBoundingClientRect().top; if (!dy) return; r.style.transition = 'none'; r.style.transform = 'translateY(' + dy + 'px)'; r.getBoundingClientRect(); r.style.transition = 'transform .16s ease'; r.style.transform = ''; });
+            visibleRows().forEach(function (r) { if (r === row) return; var dy = (before[r.dataset.k] || 0) - r.offsetTop; if (!dy) return; r.style.transition = 'none'; r.style.transform = 'translateY(' + dy + 'px)'; r.getBoundingClientRect(); r.style.transition = 'transform .16s ease'; r.style.transform = ''; });
           }
-          var raf = null, last = e0;
+          var raf = null, last = e0, done = false;
           function onMove(e) {
+            if (done) return;
             last = e; placeGhost(e);
             if (raf) return;
             raf = requestAnimationFrame(function () {
-              raf = null;
-              var list = visibleRows(), cur = list.indexOf(row), y = last.clientY, target = cur;
-              for (var j = 0; j < list.length; j++) { var r = list[j].getBoundingClientRect(); if (j < cur && y < r.top + r.height / 2) { target = j; break; } if (j > cur && y > r.top + r.height / 2) target = j; }
+              raf = null; if (done) return;
+              var nr = nums.getBoundingClientRect();
+              var py = last.clientY - nr.top - nums.clientTop + nums.scrollTop; /* مختصات چیدمان درون ریل */
+              var list = visibleRows(), cur = list.indexOf(row), target = cur;
+              for (var j = 0; j < list.length; j++) { var mid = list[j].offsetTop + list[j].offsetHeight / 2; if (j < cur && py < mid) { target = j; break; } if (j > cur && py > mid) target = j; }
               if (target !== cur) flip(function () { if (target > cur) nums.insertBefore(row, list[target].nextSibling); else nums.insertBefore(row, list[target]); });
-              var nr = nums.getBoundingClientRect(); if (y < nr.top + 30) nums.scrollTop -= 10; else if (y > nr.bottom - 30) nums.scrollTop += 10;
+              if (last.clientY < nr.top + 30) nums.scrollTop -= 10; else if (last.clientY > nr.bottom - 30) nums.scrollTop += 10;
             });
           }
-          function onUp() {
-            grip.removeEventListener('pointermove', onMove); grip.removeEventListener('pointerup', onUp); grip.removeEventListener('pointercancel', onUp);
+          function onKey(e) { if (e.key === 'Escape') finish(true); }
+          function finish(abort) {
+            if (done) return; done = true;
+            window.removeEventListener('pointermove', onMove, true); window.removeEventListener('pointerup', finish, true); window.removeEventListener('pointercancel', finish, true);
+            window.removeEventListener('blur', finish); document.removeEventListener('keydown', onKey, true);
+            try { grip.releasePointerCapture(e0.pointerId); } catch (x) {}
             if (raf) { cancelAnimationFrame(raf); raf = null; }
-            ghost.remove();
+            ghost.remove(); document.body.classList.remove('rail-dragging');
             /* ترتیب تازه: ردیف‌های غیرگروهی به ترتیب DOM؛ گروه (با ترتیب اصلی) در جای ردیفِ کشیده‌شده */
             var order = [];
             Array.prototype.slice.call(nums.children).forEach(function (r) { var k = Number(r.dataset.k); if (r === row) order = order.concat(group); else if (group.indexOf(k) < 0) order.push(k); });
-            var changed = order.some(function (k, i) { return k !== i; });
+            var changed = abort === true ? false : order.some(function (k, i) { return k !== i; });
             if (changed) { var qs = order.map(function (k) { return state.questions[k]; }); state.questions = qs; state.selected = order.indexOf(state.selected) >= 0 ? order.indexOf(state.selected) : 0; mark(); }
             railPicked = {}; railLastPick = null;
             drawList(); drawEditor();
           }
-          grip.addEventListener('pointermove', onMove); grip.addEventListener('pointerup', onUp); grip.addEventListener('pointercancel', onUp);
+          window.addEventListener('pointermove', onMove, true); window.addEventListener('pointerup', finish, true); window.addEventListener('pointercancel', finish, true);
+          window.addEventListener('blur', finish); document.addEventListener('keydown', onKey, true);
         }
       });
     }
