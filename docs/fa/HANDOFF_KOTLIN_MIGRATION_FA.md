@@ -19425,6 +19425,12 @@ CI: `compileDebugUnitTestKotlin` به‌خاطر `assertFalse` بدون import �
 - باگ V202.5: `var LANDING_TILES` داخل `paintAuth` بعد از خطی که `landing()` را صدا می‌زد تعریف شده بود → به‌خاطر hoisting مقدارش undefined و `.map` خطا می‌داد → صفحهٔ اول خالی. حالا کنار `authActive` در سطح ماژول است (تست ترتیب را پین می‌کند).
 - دروازهٔ صفحهٔ اول: mobile.js `entered()/enter()` با `sessionStorage['m-entered']`، `gateActive() = MQ && user && !entered`؛ app.js `render()` پیش از m-mode اگر gateActive → paintAuth (landing حتی با user). دکمه: user ⇒ `enter(); S.render()`؛ وگرنه `goA('login')`؛ پیوند ثبت‌نام فقط بدون user. `afterLogin()` → `SiteMobile.enter()`.
 
+### V260.7 — سرور: تصحیح خودکار واقعی + دروازهٔ مخاطب آزمون (SQL دستی)
+- شبیه‌سازی `qa/take_exams.py`: ۳۰ دانش‌آموز آزمایشی با `native_submit_queued_answer_v1` در ۳ آزمون شرکت کردند (۲۳/۲۲/۲۷ پاسخ). دو باگ:
+- **باگ ۱**: `approve_auto_grades` (تابع قدیمی، متنش در مخزن نیست) با `ok,count` برمی‌گشت ولی `grades` همه ۰ و `auto_graded=true`؛ پیشنهاد سمت کلاینت (`admin.js autoScore`) درست بود. رفع: `supabase/migrations/20261012_native_approve_auto_grades_v260_7.sql` — همهٔ امضاهای قبلی drop (از pg_proc)، `approve_auto_grades(p_exam text, p_mode text)` جدید + `native_auto_grade_question_v1` (قواعد autoScore؛ نرمال‌سازی ارقام فارسی/ی/ک) + `native_normalize_text_v1`. حالت auto_only: آزمون بدون تشریحی → graded/auto_graded=true؛ با تشریحی → فقط پیش‌پر کردن grades. دوباره‌گیری فقط برای `graded=false or auto_graded=true`. `native_save_grade` اکنون `auto_graded=false` می‌گذارد.
+- **باگ ۲**: `get_exam_for_student` مخاطب (exam_audience_students/classes/schools) را چک نمی‌کرد → `20261012_native_exam_audience_gate_v260_7.sql` (بدنهٔ V255 + بلوک دروازه). مسیر submit جداگانه gate نشده (پیوستن فقط از همین تابع).
+- هر دو فایل با pglast (SQL + plpgsql) parse شدند؛ فایل یکجا برای SQL Editor: `sql_v260_7.sql` (تحویل در چت). فقط `supabase/**` و docs/text → بدون CI اپ، بدون bump.
+
 ### V260.6 — سایت: یافته‌های بررسی خودکارِ بعد از ورود (حساب معلم آزمایشی)
 - همهٔ صفحات معلم در دسکتاپ و گوشی (داشبورد، آزمون‌ها، سازنده، چاپ، کیف پول، کارت‌ها، منو، دانش‌آموزان، کلاس‌ها، تقویم، پروفایل/امنیت/سربرگ، تنظیمات، داده‌ها، درباره) بدون خطای JS و بدون سرریز.
 - باگ: `app.js` منوی دسکتاپ `qbtn('از آزمون آنلاین')` → `M.printOnlineSheet()` بدون آرگومان → `list.some` روی undefined. رفع در `mobile.js printOnlineSheet`: اگر `list` آرایه نیست، `SiteBuilder.printExamsList()` را خودش می‌گیرد.
