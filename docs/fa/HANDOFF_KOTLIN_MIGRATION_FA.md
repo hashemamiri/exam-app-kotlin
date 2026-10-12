@@ -19425,6 +19425,12 @@ CI: `compileDebugUnitTestKotlin` به‌خاطر `assertFalse` بدون import �
 - باگ V202.5: `var LANDING_TILES` داخل `paintAuth` بعد از خطی که `landing()` را صدا می‌زد تعریف شده بود → به‌خاطر hoisting مقدارش undefined و `.map` خطا می‌داد → صفحهٔ اول خالی. حالا کنار `authActive` در سطح ماژول است (تست ترتیب را پین می‌کند).
 - دروازهٔ صفحهٔ اول: mobile.js `entered()/enter()` با `sessionStorage['m-entered']`، `gateActive() = MQ && user && !entered`؛ app.js `render()` پیش از m-mode اگر gateActive → paintAuth (landing حتی با user). دکمه: user ⇒ `enter(); S.render()`؛ وگرنه `goA('login')`؛ پیوند ثبت‌نام فقط بدون user. `afterLogin()` → `SiteMobile.enter()`.
 
+### V260.9 — سایت/SQL: ویرایش و حذف مدرسه، چیپ «کلاس مدیر»، شمارش فعالیت معلم‌ها
+- گزارش کاربر: «مدرسهٔ جدید جایگزین قبلی می‌شود و مدرسهٔ فعلی قابل حذف/ویرایش نیست». ریشه: `school_name` در خلاصه با `string_agg` هر دو نام را با «،» می‌چسباند و هیچ RPC ویرایش/حذف وجود نداشت.
+- SQL `supabase/migrations/20261012_native_school_edit_delete_v260_9.sql`: `native_manager_update_school_v1(p_school,p_name,p_province,p_city)`؛ `native_manager_delete_school_v1(p_school)` (رد اگر کلاس/آزمون/school_students/معلم فعال دارد یا آخرین مدرسه است)؛ `native_my_classes_flags_v1()` → `{id, manager_created, school_name}` (بدون دست‌زدن به `native_my_classes_v28` که اپ با `returns table` می‌خواند)؛ `native_manager_school_summary_v36` بازنویسی: CTE `mine` شامل `schools.created_by` هم؛ `school_count`؛ students/teacher_activity.students = union school_students و class_members.
+- admin.js `managerSchoolPage`: ردیف هر مدرسه + `editSchoolDlg`؛ app.js `pageClasses`: چیپ `کلاس مدیر`.
+- اپ: `SchoolManagementScreen`/`ManagerFoundationScreens` هنوز ویرایش/حذف مدرسه ندارند → در نسخهٔ اپ بعدی (V262).
+
 ### V261 — اپ: پاریته با سایت V260.8 (کارنامهٔ کلاس مدیر، درخواست‌های من، درخواست‌های معلم، پیام تأیید خودکار)
 - `SupabaseManagerRepository`: `classReport(classId)` → `ManagerClassReport{exams, students{grades[examId]{grade,max,graded}}}`؛ `myRequests()` → `ManagerMyRequest`؛ `editTeacherClass/deleteTeacherClass` → `Result<ManagerChangeResult(requested,message)>` (قبلاً approval_required را `error()` می‌کرد).
 - `ManagerTeacherClassScreen`: داخل کلاس بخش «کارنامهٔ کلاس» (کارت هر دانش‌آموز با خط هر آزمون + میانگین؛ کارت میانگین کلاس)؛ در فهرست کلاس‌ها کارت «درخواست‌های من» (نمایش/بستن)؛ `info` آبی برای درخواست ثبت‌شده؛ `toPersianManagerStatus`, `fmtScore`.

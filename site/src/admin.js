@@ -365,8 +365,17 @@
       c.innerHTML = '';
       /* V203 — مثل اپ: مدرسه‌های مدیر، ساخت مدرسهٔ جدید، پشتیبان مدرسه، میان‌بر کلاس‌ها/دانش‌آموزان */
       var schools = await S.rpcObj('native_teacher_schools_v61', {}).then(function (x) { return (x && x.items) || []; }).catch(function () { return []; });
-      c.appendChild(el('div', {class: 'card'}, [el('div', {class: 'row'}, [el('h3', {class: 'grow', text: '🏫 ' + (s.school_name || 'مدرسه')}), el('button', {class: 'btn light sm', text: '🗄 پشتیبان مدرسه', onclick: managerBackup}), el('button', {class: 'btn sm', text: '➕ مدرسهٔ جدید', onclick: function () { createSchoolDlg(function () { managerSchoolPage(c, arg); }); }})]), el('div', {class: 'muted', text: [s.province, s.city].filter(Boolean).join('، ')}),
-        schools.length > 1 ? el('div', {class: 'muted', style: 'margin-top:6px;font-size:12px', text: 'مدرسه‌های شما: ' + schools.map(function (x) { return x.name; }).join('، ')}) : null]));
+      /* V260.9 — هر مدرسه یک ردیف با ویرایش/حذف؛ مدرسهٔ جدید «جایگزین» نمی‌شود، کنار قبلی‌ها می‌آید (آمار پایین، جمع همهٔ مدرسه‌هاست) */
+      var head = schools.length === 1 ? '🏫 ' + schools[0].name : schools.length > 1 ? '🏫 مدرسه‌های من (' + fa(schools.length) + ')' : '🏫 ' + (s.school_name || 'مدرسه');
+      c.appendChild(el('div', {class: 'card'}, [el('div', {class: 'row'}, [el('h3', {class: 'grow', text: head}), el('button', {class: 'btn light sm', text: '🗄 پشتیبان مدرسه', onclick: managerBackup}), el('button', {class: 'btn sm', text: '➕ مدرسهٔ جدید', onclick: function () { createSchoolDlg(function () { managerSchoolPage(c, arg); }); }})]),
+        schools.length ? el('div', {style: 'margin-top:8px;display:flex;flex-direction:column;gap:6px'}, schools.map(function (x) {
+          return el('div', {class: 'row', style: 'gap:8px;align-items:center'}, [el('b', {text: x.name}), el('span', {class: 'muted', text: [x.province, x.city].filter(Boolean).join('، ') || '—'}), el('span', {class: 'muted', text: fa(x.classes || 0) + ' کلاس'}), el('span', {class: 'grow'}),
+            el('button', {class: 'icon-btn', title: 'ویرایش مدرسه', 'aria-label': 'ویرایش مدرسه', html: '✎', onclick: function () { editSchoolDlg(x, function () { managerSchoolPage(c, arg); }); }}),
+            el('button', {class: 'icon-btn danger', title: 'حذف مدرسه', 'aria-label': 'حذف مدرسه', html: '🗑', onclick: async function () {
+              if (!(await S.confirmDlg('حذف مدرسه', 'مدرسهٔ «' + x.name + '» حذف می‌شود. فقط مدرسهٔ خالی (بدون کلاس، آزمون، دانش‌آموز و معلم) قابل حذف است و آخرین مدرسه حذف نمی‌شود.', 'حذف', true))) return;
+              try { chk(await S.rpcObj('native_manager_delete_school_v1', {p_school: x.id})); toast('مدرسه حذف شد.', 'ok'); managerSchoolPage(c, arg); } catch (e) { toast(errMsg(e), 'err'); }
+            }})]);
+        })) : el('div', {class: 'muted', text: [s.province, s.city].filter(Boolean).join('، ')})]));
       c.appendChild(el('div', {class: 'grid4', style: 'margin-top:16px'}, [stat(fa(teachers.length), 'معلم'), stat(fa(students.length || s.students || 0), 'دانش‌آموز'), stat(fa(s.classes || 0), 'کلاس'), stat(fa(s.exams || 0), 'آزمون')]));
       c.appendChild(el('div', {class: 'row', style: 'margin-top:12px'}, [el('button', {class: 'btn light', text: '🏫 همهٔ کلاس‌ها', onclick: function () { S.go('classes'); }}), el('button', {class: 'btn light', text: '🎓 دانش‌آموزان مدرسه', onclick: function () { S.go('students'); }})]));
       /* V230 — داشبورد مقایسه‌ای کلاس‌ها (RPC native_manager_class_stats_v1؛ اگر SQL اجرا نشده باشد، راهنما) */
@@ -583,6 +592,13 @@
     var bg = el('div', {class: 'modal-bg'}); var msg = el('div'); var name = el('input', {type: 'text'}), prov = el('input', {type: 'text'}), city = el('input', {type: 'text'});
     bg.appendChild(el('div', {class: 'modal'}, [el('button', {class: 'x', text: '✕', onclick: function () { bg.remove(); }}), el('h2', {text: '🏫 مدرسهٔ جدید'}), msg, el('div', {class: 'field'}, [el('label', {text: 'نام مدرسه'}), name]), el('div', {class: 'grid2'}, [el('div', {class: 'field'}, [el('label', {text: 'استان'}), prov]), el('div', {class: 'field'}, [el('label', {text: 'شهر'}), city])]),
       el('div', {class: 'row'}, [el('button', {class: 'btn', text: 'ساخت مدرسه', onclick: async function () { msg.innerHTML = ''; if (!name.value.trim()) return msg.appendChild(el('div', {class: 'alert error', text: 'نام مدرسه را وارد کنید.'})); try { chk(await S.rpcObj('native_manager_create_school_v61', {p_name: name.value.trim(), p_province: prov.value.trim(), p_city: city.value.trim()})); bg.remove(); toast('مدرسه ساخته شد.', 'ok'); refresh(); } catch (e) { msg.appendChild(el('div', {class: 'alert error', text: errMsg(e)})); } }}), el('button', {class: 'btn light', text: 'انصراف', onclick: function () { bg.remove(); }})])]));
+    document.body.appendChild(bg);
+  }
+  /* V260.9 — ویرایش نام/استان/شهر مدرسه */
+  function editSchoolDlg(sch, refresh) {
+    var bg = el('div', {class: 'modal-bg'}); var msg = el('div'); var name = el('input', {type: 'text', value: sch.name || ''}), prov = el('input', {type: 'text', value: sch.province || ''}), city = el('input', {type: 'text', value: sch.city || ''});
+    bg.appendChild(el('div', {class: 'modal'}, [el('button', {class: 'x', text: '✕', onclick: function () { bg.remove(); }}), el('h2', {text: '✎ ویرایش مدرسه'}), msg, el('div', {class: 'field'}, [el('label', {text: 'نام مدرسه'}), name]), el('div', {class: 'grid2'}, [el('div', {class: 'field'}, [el('label', {text: 'استان'}), prov]), el('div', {class: 'field'}, [el('label', {text: 'شهر'}), city])]),
+      el('div', {class: 'row'}, [el('button', {class: 'btn', text: 'ذخیره', onclick: async function () { msg.innerHTML = ''; if (name.value.trim().length < 2) return msg.appendChild(el('div', {class: 'alert error', text: 'نام مدرسه را وارد کنید.'})); try { chk(await S.rpcObj('native_manager_update_school_v1', {p_school: sch.id, p_name: name.value.trim(), p_province: prov.value.trim(), p_city: city.value.trim()})); bg.remove(); toast('مدرسه ویرایش شد.', 'ok'); refresh(); } catch (e) { msg.appendChild(el('div', {class: 'alert error', text: errMsg(e)})); } }}), el('button', {class: 'btn light', text: 'انصراف', onclick: function () { bg.remove(); }})])]));
     document.body.appendChild(bg);
   }
   async function managerBackup() {

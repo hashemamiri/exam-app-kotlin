@@ -1796,6 +1796,8 @@
     if (view.arg && view.arg.create) { view.arg = null; classForm(null, function () { pageClasses(c); }); }
     try {
       var list = await api.classes();
+      /* V260.9 — کلاس مدیرساخته: چیپ «کلاس مدیر» به‌جای «اشتراک با مدیر» (مدیر خودش آن را می‌بیند) */
+      var flags = {}; try { ((await rpcObj('native_my_classes_flags_v1', {})).items || []).forEach(function (f) { flags[f.id] = f; }); } catch (e) { flags = {}; }
       c.innerHTML = '';
       /* V227 — مثل ClassesContent اپ: «ساخت کلاس جدید» + «مدارس» کنار هم؛ «مدارس» نمای مدرسه → کلاس‌های مدرسه → دانش‌آموزان را باز می‌کند */
       c.appendChild(el('div', {class: 'row', style: 'margin-bottom:16px'}, [el('span', {class: 'muted', text: fa(list.length) + ' کلاس'}), el('span', {class: 'grow'}), el('button', {class: 'btn light', text: '🏫 مدارس', onclick: function () { pageSchools(c); }}), el('button', {class: 'btn', text: '➕ کلاس جدید', onclick: function () { classForm(null, function () { pageClasses(c); }); }})]));
@@ -1804,7 +1806,7 @@
         el('thead', {}, [el('tr', {}, ['نام کلاس', 'پایه', 'رشته', 'پسر', 'دختر', 'کل', 'اشتراک با مدیر', ''].map(function (h) { return el('th', {text: h}); }))]),
         el('tbody', {}, list.map(function (k) {
           return el('tr', {}, [el('td', {html: '<b>' + esc(k.name) + '</b>'}), el('td', {text: k.grade || '—'}), el('td', {text: k.field_of_study || '—'}), el('td', {text: fa(k.boys || 0)}), el('td', {text: fa(k.girls || 0)}), el('td', {text: fa(k.total || 0)}),
-            el('td', {}, [window.SiteSchool ? window.SiteSchool.classShareChip(k, function () { pageClasses(c); }) : el('span', {class: 'chip ' + (k.shared_with_manager ? 'ok' : 'off'), text: k.shared_with_manager ? 'بله' : 'خیر'})]),
+            el('td', {}, [(flags[k.id] && flags[k.id].manager_created) ? el('span', {class: 'chip brand', text: 'کلاس مدیر', title: 'این کلاس را مدیر مدرسه' + (flags[k.id].school_name ? ' «' + flags[k.id].school_name + '»' : '') + ' ساخته است و همیشه برای او قابل مشاهده است.'}) : window.SiteSchool ? window.SiteSchool.classShareChip(k, function () { pageClasses(c); }) : el('span', {class: 'chip ' + (k.shared_with_manager ? 'ok' : 'off'), text: k.shared_with_manager ? 'بله' : 'خیر'})]),
             el('td', {}, [el('div', {class: 'acts'}, [
               el('button', {class: 'icon-btn', title: 'فهرست دانش‌آموزان', html: '👥', onclick: function () { rosterDlg(k); }}),
               el('button', {class: 'icon-btn', title: 'ویرایش', html: '✎', onclick: function () { classForm(k, function () { pageClasses(c); }); }}),
