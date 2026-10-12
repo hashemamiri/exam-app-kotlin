@@ -19425,6 +19425,12 @@ CI: `compileDebugUnitTestKotlin` به‌خاطر `assertFalse` بدون import �
 - باگ V202.5: `var LANDING_TILES` داخل `paintAuth` بعد از خطی که `landing()` را صدا می‌زد تعریف شده بود → به‌خاطر hoisting مقدارش undefined و `.map` خطا می‌داد → صفحهٔ اول خالی. حالا کنار `authActive` در سطح ماژول است (تست ترتیب را پین می‌کند).
 - دروازهٔ صفحهٔ اول: mobile.js `entered()/enter()` با `sessionStorage['m-entered']`، `gateActive() = MQ && user && !entered`؛ app.js `render()` پیش از m-mode اگر gateActive → paintAuth (landing حتی با user). دکمه: user ⇒ `enter(); S.render()`؛ وگرنه `goA('login')`؛ پیوند ثبت‌نام فقط بدون user. `afterLogin()` → `SiteMobile.enter()`.
 
+### V260.4 — سایت: کش پروفایل و داشبورد (stale-while-revalidate)
+- یافتهٔ پروب V260.3 روی دستگاه کاربر (3g، rtt≈600ms): قبل از نمایش داشبورد ۳ رفت‌وبرگشت پشت‌سرهم (login-email → token → ensure_profile) و سپس ۵ درخواست موازی؛ خود صفحه سریع است.
+- `site/src/app.js`: `LS_PROFILE` / `LS_DASH` + `cacheGet/cacheSet` (با uid)؛ `currentProfile` نتیجه را کش می‌کند؛ `boot()` اگر پروفایل کش‌شدهٔ همین uid باشد فوراً رندر و در پس‌زمینه `currentProfile()` را تازه می‌کند (تغییر → رندر مجدد؛ 401/JWT → خروج). داشبورد معلم به `paintTeacherDash(c, r, failed, stale)` جدا شد؛ ابتدا دادهٔ کش (فهرست آزمون‌ها، شمار کلاس/دانش‌آموز، موجودی، درخواست‌ها — نه فهرست دانش‌آموزان) و بعد دادهٔ تازه. `saveSession(null)` کش‌ها را پاک می‌کند.
+- `site.css`: `.dash-stale .stat .v` کم‌رنگ تا رسیدن پاسخ.
+- تست: `V260_4_SiteProfileDashCacheTest.kt`. فقط سایت؛ بدون bump.
+
 ### V260.3 — سایت: پروب سرعت ?perf=1 + تعویق پیش‌بارگذاری موتورها
 - app.js: `PERF_ON`/`perfLog`/`perfRender` — http() زمان هر fetch سوپابیس را ثبت می‌کند؛ پنل `<pre id="perf-box">` با Navigation/Resource Timing و ۴۰ درخواست آخر. `prefetchEngines` با تأخیر ۸ ثانیه و پرش روی saveData/2g/3g.
 - اندازه‌های فعلی: index.html ۷۸۰KB (۲۰۵KB gzip)، engines.js ۵٫۴MB (۱٫۷MB gzip)، ۳ فونت woff2 ≈۱۵۰KB. علت واقعی کندی هنوز اندازه‌گیری نشده — منتظر خروجی ?perf=1 کاربر.

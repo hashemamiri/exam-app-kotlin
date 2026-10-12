@@ -1828,3 +1828,5 @@ html body:not(.m-mode) .bank-card label.bk-check:has(> input[type=checkbox]:chec
 .m-dark .dk .dk-qa{background:#243039;border-color:var(--line);color:#8FD0E3}
 .m-dark .dk .dk-qa:hover{background:#2E4654;border-color:#4E7A8A}
 .m-dark .dk .dk-qa.on{background:#5FD3F5;border-color:#5FD3F5;color:#13202A}
+/* V260.4 — داشبورد با دادهٔ کش‌شده تا رسیدن پاسخ سرور: کمی کم‌رنگ */
+.dash-stale .stat .v{opacity:.55;transition:opacity .25s}

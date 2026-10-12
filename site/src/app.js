@@ -303,7 +303,12 @@
   /* ================================================================ کلاینتِ سبکِ Supabase (بدون کتابخانه) */
   var session = null;
   function loadSession() { try { session = JSON.parse(localStorage.getItem(LS_SESSION) || 'null'); } catch (e) { session = null; } }
-  function saveSession(s) { session = s; try { if (s) localStorage.setItem(LS_SESSION, JSON.stringify(s)); else localStorage.removeItem(LS_SESSION); } catch (e) {} }
+  function saveSession(s) { session = s; try { if (s) localStorage.setItem(LS_SESSION, JSON.stringify(s)); else { localStorage.removeItem(LS_SESSION); localStorage.removeItem(LS_PROFILE); Object.keys(localStorage).filter(function (k) { return k.indexOf(LS_DASH) === 0; }).forEach(function (k) { localStorage.removeItem(k); }); } } catch (e) {} }
+  /* V260.4 — روی اتصال کند (rtt≈600ms) هر رفت‌وبرگشت گران است: پروفایل و دادهٔ داشبورد روی همین دستگاه کش می‌شوند؛
+     صفحه فوراً با دادهٔ قبلی نشان داده می‌شود و در پس‌زمینه تازه می‌شود (stale-while-revalidate). با خروج پاک می‌شود. */
+  var LS_PROFILE = 'examsite.profile.v1', LS_DASH = 'examsite.dash.v1.';
+  function cacheGet(key, uid) { try { var o = JSON.parse(localStorage.getItem(key) || 'null'); return o && o.uid === uid ? o.data : null; } catch (e) { return null; } }
+  function cacheSet(key, uid, data) { try { localStorage.setItem(key, JSON.stringify({uid: uid, data: data, at: Date.now()})); } catch (e) {} }
   function requireKey() { if (!KEY_READY) throw new Error('کلید SUPABASE_ANON_KEY در بالای فایل index.html وارد نشده است.'); }
 
   /* V260.3 — سنجش سرعت (بدون حدس): با ?perf=1 پنلی با زمان بارگذاری صفحه، منابع و هر درخواست سرور نمایش داده می‌شود */
@@ -452,7 +457,9 @@
       requiresSetup = st.requires_teacher_setup === true;
       if (requiresSetup) pendingRole = /^manager$/i.test(st.pending_role || '') ? 'manager' : 'teacher';
     }
-    return {id: p.id || su.id, name: (p.display_name || '').trim() || (p.full_name || '').trim() || fallback, email: su.email, role: role, username: p.username || '', requiresSetup: requiresSetup, pendingRole: pendingRole, avatarUrl: p.avatar_url || null};
+    var prof = {id: p.id || su.id, name: (p.display_name || '').trim() || (p.full_name || '').trim() || fallback, email: su.email, role: role, username: p.username || '', requiresSetup: requiresSetup, pendingRole: pendingRole, avatarUrl: p.avatar_url || null};
+    if (!requiresSetup) cacheSet(LS_PROFILE, su.id, prof); /* V260.4 */
+    return prof;
   }
   var api = {
     signInWithPassword: async function (identifier, password) {
@@ -1638,6 +1645,23 @@
     var card = await window.SiteSchool.managerRequestsCard(true); card.classList.add('mr-embed');
     box.appendChild(card); bg.appendChild(box); document.body.appendChild(bg);
   }
+  /* V260.4 — نقاشی داشبورد معلم از دادهٔ (کش یا تازه)؛ stale=true یعنی دادهٔ قبلی تا رسیدن پاسخ سرور */
+  function paintTeacherDash(c, r, failed, stale) {
+    c.innerHTML = ''; c.__dashFresh = !stale;
+    if (stale) c.classList.add('dash-stale'); else c.classList.remove('dash-stale');
+      if (failed.length) c.appendChild(dashRetryAlert(failed, c));
+      function cnt(x) { return Array.isArray(x) ? fa(x.length) : (x && typeof x.__n === 'number' ? fa(x.__n) : '—'); }
+      /* V198 — «درخواست‌های مدیر» کارت پنجم هم‌شکل بقیه (تعداد در انتظار)؛ کلیک → پنجرهٔ فهرست با تأیید/رد */
+      var reqs = (r[4] && r[4].items) || [], pendingN = reqs.filter(function (it) { return it.status === 'pending' || !it.status; }).length;
+      var reqCard = statCard(r[4] ? fa(pendingN) : '—', 'درخواست مدیر', {onclick: function () { openManagerRequests(); }});
+      if (pendingN) reqCard.classList.add('stat-attn');
+      c.appendChild(el('div', {class: 'grid5'}, [statCard(cnt(r[0]), 'آزمون', {panel: 'exams'}), statCard(cnt(r[1]), 'کلاس', {panel: 'classes'}), statCard(cnt(r[2]), 'دانش‌آموز', {panel: 'students'}), statCard(r[3] ? money(r[3].balance) : '—', 'موجودی کیف پول', {panel: 'wallet'}), reqCard]));
+      var card = el('div', {class: 'card', style: 'margin-top:16px'}, [el('h3', {text: '📝 آخرین آزمون‌ها'})]);
+      if (!Array.isArray(r[0])) card.appendChild(el('div', {class: 'alert error', text: failed.length ? errMsg(failed[0].e) : 'فهرست آزمون‌ها دریافت نشد.'}));
+      else if (!r[0].length) card.appendChild(emptyBox('📄', 'هنوز آزمونی نساخته‌اید.'));
+      else card.appendChild(examTable(r[0].slice(0, 6), c));
+      c.appendChild(card);
+  }
   async function pageDashboard(c) {
     loading(c);
     try {
@@ -1646,23 +1670,17 @@
            اگر بعضی شکست بخورند، همان کارت «—» می‌شود و هشدار «تلاش دوباره» بالای داشبورد می‌آید */
         var failed = [];
         function soft(pr, label) { return pr.catch(function (e) { failed.push({label: label, e: e}); return null; }); }
+        /* V260.4 — داشبورد: اول دادهٔ کش‌شدهٔ قبلی (فوری)، سپس دادهٔ تازه از سرور جایگزین می‌شود */
+        var dashKey = LS_DASH + 'teacher', cachedDash = cacheGet(dashKey, user.id);
+        if (cachedDash && !c.__dashFresh) { paintTeacherDash(c, cachedDash, [], true); }
         var r = await Promise.all([soft(api.exams(), 'آزمون‌ها'), soft(api.classes(), 'کلاس‌ها'), soft(api.students(), 'دانش‌آموزان'), soft(api.wallet(), 'کیف پول'),
           rpcObj('native_teacher_manager_requests_v41', {}).then(function (x) { return x && !x.error ? x : null; }).catch(function () { return null; })]);
-        if (failed.length === 4) throw failed[0].e;
-        c.innerHTML = '';
-        if (failed.length) c.appendChild(dashRetryAlert(failed, c));
-        function cnt(x) { return Array.isArray(x) ? fa(x.length) : '—'; }
-        /* V198 — «درخواست‌های مدیر» کارت پنجم هم‌شکل بقیه (تعداد در انتظار)؛ کلیک → پنجرهٔ فهرست با تأیید/رد */
-        var reqs = (r[4] && r[4].items) || [], pendingN = reqs.filter(function (it) { return it.status === 'pending' || !it.status; }).length;
-        var reqCard = statCard(r[4] ? fa(pendingN) : '—', 'درخواست مدیر', {onclick: function () { openManagerRequests(); }});
-        if (pendingN) reqCard.classList.add('stat-attn');
-        c.appendChild(el('div', {class: 'grid5'}, [statCard(cnt(r[0]), 'آزمون', {panel: 'exams'}), statCard(cnt(r[1]), 'کلاس', {panel: 'classes'}), statCard(cnt(r[2]), 'دانش‌آموز', {panel: 'students'}), statCard(r[3] ? money(r[3].balance) : '—', 'موجودی کیف پول', {panel: 'wallet'}), reqCard]));
-        var card = el('div', {class: 'card', style: 'margin-top:16px'}, [el('h3', {text: '📝 آخرین آزمون‌ها'})]);
-        if (!Array.isArray(r[0])) card.appendChild(el('div', {class: 'alert error', text: failed.length ? errMsg(failed[0].e) : 'فهرست آزمون‌ها دریافت نشد.'}));
-        else if (!r[0].length) card.appendChild(emptyBox('📄', 'هنوز آزمونی نساخته‌اید.'));
-        else card.appendChild(examTable(r[0].slice(0, 6), c));
-        c.appendChild(card);
+        if (failed.length === 4) { if (cachedDash) { c.insertBefore(dashRetryAlert(failed, c), c.firstChild); return; } throw failed[0].e; }
+        /* فقط آنچه داشبورد نشان می‌دهد کش می‌شود: فهرست سبک آزمون‌ها، شمار کلاس/دانش‌آموز (نه فهرست‌ها)، موجودی، درخواست‌ها */
+        if (!failed.length) cacheSet(dashKey, user.id, [r[0], Array.isArray(r[1]) ? {__n: r[1].length} : r[1], Array.isArray(r[2]) ? {__n: r[2].length} : r[2], r[3] ? {balance: r[3].balance, currency: r[3].currency, transactions: []} : null, r[4]]);
+        paintTeacherDash(c, r, failed, false);
       } else if (user.role === 'student') {
+
         var g = (await api.myGrades()) || []; g = mergeAnswerMax(g, await api.myAnswers().catch(function () { return []; })); /* V255 — سقف نمرهٔ پیک تصادفی */ /* V251 — خطا به catch پایین می‌رود و پیام می‌دهد؛ نه «۰ آزمون شرکت‌کرده» */
         c.innerHTML = '';
         var graded = g.filter(function (x) { return x.graded_at; });
@@ -2062,8 +2080,12 @@
     if (window.SiteExtras && KEY_READY) { try { await window.SiteExtras.handleOAuthReturn(); } catch (e) { console.warn(e); } }
     document.addEventListener('click', function (e) { var sb = $('sidebar'); if (sb && sb.classList.contains('open') && !sb.contains(e.target) && !e.target.closest('.hamb') && !e.target.closest('.bottom-nav')) closeSidebar(); });
     document.addEventListener('keydown', function (e) { if (e.key === 'Escape') { closeAuth(); if (formulaCtx) return; if (printCtx) closePrintOverlay(); } });
+    var profileStale = false;
     if (session && KEY_READY) {
-      try { user = await currentProfile(); } catch (e) { user = null; if (/نشست|JWT|401/.test(errMsg(e))) saveSession(null); else setTimeout(function () { toast(errMsg(e), 'err'); }, 300); }
+      /* V260.4 — پروفایل کش‌شدهٔ همین کاربر: رندر فوری، تأیید در پس‌زمینه (بدون یک رفت‌وبرگشت قبل از اولین نقاشی) */
+      var cachedProfile = session.user && !window.__googleReturn ? cacheGet(LS_PROFILE, session.user.id) : null;
+      if (cachedProfile && !cachedProfile.requiresSetup) { user = cachedProfile; profileStale = true; }
+      else { try { user = await currentProfile(); } catch (e) { user = null; if (/نشست|JWT|401/.test(errMsg(e))) saveSession(null); else setTimeout(function () { toast(errMsg(e), 'err'); }, 300); } }
     }
     /* V237 — بازگشت از گوگل با حساب کاملِ موجود: اگر نقش با پنل انتخابی فرق دارد یا در حال «ثبت‌نام» بود،
        پنجرهٔ «ورود به‌عنوان …» / «انصراف» (انصراف = خروج از نشست گوگل و ماندن در صفحهٔ ورود) */
@@ -2081,6 +2103,10 @@
     if (user && user.requiresSetup) { renderSetupGate(); return; }
     render();
     if (user) prefetchEngines();
+    if (profileStale) currentProfile().then(function (fresh) {
+      if (!user || !session) return;
+      if (JSON.stringify(fresh) !== JSON.stringify(user)) { user = fresh; if (user.requiresSetup) renderSetupGate(); else render(); }
+    }).catch(function (e) { if (/نشست|JWT|401/.test(errMsg(e))) { saveSession(null); user = null; render(); } });
   }
   /* V144 — بارگذاری رسانه: اول R2 (لینک موقت از Edge Function media-upload)، در نبود پیکربندی → Supabase Storage */
   var MEDIA_BUCKET = 'exam-images', r2Disabled = false;
