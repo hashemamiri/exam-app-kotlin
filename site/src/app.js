@@ -306,6 +306,27 @@
   function saveSession(s) { session = s; try { if (s) localStorage.setItem(LS_SESSION, JSON.stringify(s)); else localStorage.removeItem(LS_SESSION); } catch (e) {} }
   function requireKey() { if (!KEY_READY) throw new Error('کلید SUPABASE_ANON_KEY در بالای فایل index.html وارد نشده است.'); }
 
+  /* V260.3 — سنجش سرعت (بدون حدس): با ?perf=1 پنلی با زمان بارگذاری صفحه، منابع و هر درخواست سرور نمایش داده می‌شود */
+  var PERF_ON = /[?&]perf=1/.test(location.search), perfRows = [];
+  function perfLog(path, ms, info) { if (!PERF_ON) return; perfRows.push({t: Math.round(performance.now()), path: path.replace('/rest/v1/rpc/', 'rpc:').replace('/rest/v1/', 'rest:').replace('/auth/v1/', 'auth:').split('?')[0], ms: Math.round(ms), info: info}); perfRender(); }
+  var perfBox = null, perfTimer = null;
+  function perfRender() {
+    if (!PERF_ON) return;
+    clearTimeout(perfTimer);
+    perfTimer = setTimeout(function () {
+      if (!perfBox) { perfBox = document.createElement('pre'); perfBox.id = 'perf-box'; perfBox.style.cssText = 'position:fixed;left:8px;bottom:8px;z-index:99999;max-width:min(560px,92vw);max-height:60vh;overflow:auto;background:rgba(15,25,35,.94);color:#cfe;font:11px/1.5 Consolas,monospace;direction:ltr;text-align:left;padding:10px 12px;border-radius:10px;white-space:pre-wrap;user-select:text'; document.body.appendChild(perfBox); }
+      var nav = (performance.getEntriesByType('navigation') || [])[0] || {};
+      var lines = ['PERF onlineexam.ir  ' + new Date().toISOString(), 'conn: ' + (navigator.connection ? (navigator.connection.effectiveType + ' rtt=' + navigator.connection.rtt + 'ms down=' + navigator.connection.downlink + 'Mb' + (navigator.connection.saveData ? ' saveData' : '')) : '?') + '  sw:' + (navigator.serviceWorker && navigator.serviceWorker.controller ? 'yes' : 'no'),
+        'html: ttfb=' + Math.round(nav.responseStart || 0) + 'ms  download=' + Math.round((nav.responseEnd || 0) - (nav.responseStart || 0)) + 'ms  size=' + Math.round((nav.transferSize || 0) / 1024) + 'KB(' + Math.round((nav.decodedBodySize || 0) / 1024) + 'KB raw)  DCL=' + Math.round(nav.domContentLoadedEventEnd || 0) + 'ms  load=' + Math.round(nav.loadEventEnd || 0) + 'ms  type=' + (nav.type || '?')];
+      var res = (performance.getEntriesByType('resource') || []).filter(function (r) { return r.initiatorType !== 'fetch' && r.initiatorType !== 'xmlhttprequest'; }).sort(function (a, b) { return b.duration - a.duration; }).slice(0, 12);
+      lines.push('-- resources (slowest first) --');
+      res.forEach(function (r) { lines.push(Math.round(r.duration) + 'ms  ' + Math.round((r.transferSize || 0) / 1024) + 'KB  ' + r.name.replace(location.origin, '').slice(0, 70)); });
+      lines.push('-- server calls (' + perfRows.length + ') --');
+      perfRows.slice(-40).forEach(function (r) { lines.push('@' + r.t + '  ' + r.ms + 'ms  ' + r.path + '  ' + r.info); });
+      perfBox.textContent = lines.join('\n');
+    }, 200);
+  }
+  if (PERF_ON) { window.addEventListener('load', function () { setTimeout(perfRender, 500); setTimeout(perfRender, 4000); setTimeout(perfRender, 10000); }); }
   async function http(path, opts) {
     requireKey();
     opts = opts || {};
@@ -315,11 +336,12 @@
       headers['Authorization'] = 'Bearer ' + (session && session.access_token ? session.access_token : ANON);
     }
     if (opts.headers) Object.keys(opts.headers).forEach(function (k) { headers[k] = opts.headers[k]; });
-    var res;
+    var res, _t0 = performance.now();
     try {
       res = await fetch(SUPABASE_URL + path, {method: opts.method || 'GET', headers: headers, body: opts.body !== undefined ? JSON.stringify(opts.body) : undefined});
-    } catch (e) { throw new Error('اتصال به سرور برقرار نشد. اینترنت را بررسی کنید.'); }
+    } catch (e) { perfLog(path, performance.now() - _t0, 'ERR'); throw new Error('اتصال به سرور برقرار نشد. اینترنت را بررسی کنید.'); }
     var text = await res.text();
+    perfLog(path, performance.now() - _t0, res.status + ' ' + text.length + 'B');
     var data = null;
     try { data = text ? JSON.parse(text) : null; } catch (e) { data = text; }
     if (!res.ok) {
@@ -582,7 +604,13 @@
     }, function (e) { toast(errMsg(e), 'err'); return ''; });
   }
   /* پیش‌بارگذاری آرام بعد از ورود (پس از بیکار شدن صفحه) تا اولین چاپ/فرمول معطل نشود */
-  function prefetchEngines() { var idle = window.requestIdleCallback || function (f) { setTimeout(f, 2500); }; idle(function () { loadEngines().then(function () { prewarmFormula(); /* V216 */ }).catch(function () {}); }); }
+  /* V260.3 — پیش‌بارگذاری موتورها (۱٫۷MB فشرده) دیگر با دادهٔ داشبورد رقابت نمی‌کند: ۸ ثانیه پس از بیکار شدن صفحه؛ روی اتصال کند/صرفه‌جویی داده اصلاً پیش‌بارگذاری نمی‌شود (هنگام نیاز می‌آید) */
+  function prefetchEngines() {
+    var c = navigator.connection || {};
+    if (c.saveData || /(^|-)2g$|^3g$/.test(String(c.effectiveType || ''))) return;
+    var idle = window.requestIdleCallback || function (f) { setTimeout(f, 2500); };
+    setTimeout(function () { idle(function () { loadEngines().then(function () { prewarmFormula(); /* V216 */ }).catch(function () {}); }); }, 8000);
+  }
   /* V199 — اثر انگشت سربرگ: فیلدهای f_* پیش‌نمایش، مرتب، بدون خالی‌ها؛ عیناً مثل PrintPayFingerprint.kt اپ (سرور md5 می‌کند) */
   function headerFingerprint(fields) {
     fields = fields && typeof fields === 'object' ? fields : {};

@@ -19425,6 +19425,11 @@ CI: `compileDebugUnitTestKotlin` به‌خاطر `assertFalse` بدون import �
 - باگ V202.5: `var LANDING_TILES` داخل `paintAuth` بعد از خطی که `landing()` را صدا می‌زد تعریف شده بود → به‌خاطر hoisting مقدارش undefined و `.map` خطا می‌داد → صفحهٔ اول خالی. حالا کنار `authActive` در سطح ماژول است (تست ترتیب را پین می‌کند).
 - دروازهٔ صفحهٔ اول: mobile.js `entered()/enter()` با `sessionStorage['m-entered']`، `gateActive() = MQ && user && !entered`؛ app.js `render()` پیش از m-mode اگر gateActive → paintAuth (landing حتی با user). دکمه: user ⇒ `enter(); S.render()`؛ وگرنه `goA('login')`؛ پیوند ثبت‌نام فقط بدون user. `afterLogin()` → `SiteMobile.enter()`.
 
+### V260.3 — سایت: پروب سرعت ?perf=1 + تعویق پیش‌بارگذاری موتورها
+- app.js: `PERF_ON`/`perfLog`/`perfRender` — http() زمان هر fetch سوپابیس را ثبت می‌کند؛ پنل `<pre id="perf-box">` با Navigation/Resource Timing و ۴۰ درخواست آخر. `prefetchEngines` با تأخیر ۸ ثانیه و پرش روی saveData/2g/3g.
+- اندازه‌های فعلی: index.html ۷۸۰KB (۲۰۵KB gzip)، engines.js ۵٫۴MB (۱٫۷MB gzip)، ۳ فونت woff2 ≈۱۵۰KB. علت واقعی کندی هنوز اندازه‌گیری نشده — منتظر خروجی ?perf=1 کاربر.
+- تست: V260_3_SitePerfProbeTest.kt (paths-ignore؛ بدون bump).
+
 ### V260.2 — رفع پین تست V259 (BankQuestionContent internal)
 - V259_TableCssBankCardsOptionEditorTest: پین `private fun BankQuestionContent` → `fun BankQuestionContent`. لاگ CI کاربر ناقص بود (نام تست‌های FAILED در آن نبود)؛ کامپایل Kotlin V259.5/V260 موفق بود. bump 1.01.44.
 
