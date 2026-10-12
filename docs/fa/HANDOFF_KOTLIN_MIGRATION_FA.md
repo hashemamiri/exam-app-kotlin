@@ -19425,6 +19425,9 @@ CI: `compileDebugUnitTestKotlin` به‌خاطر `assertFalse` بدون import �
 - باگ V202.5: `var LANDING_TILES` داخل `paintAuth` بعد از خطی که `landing()` را صدا می‌زد تعریف شده بود → به‌خاطر hoisting مقدارش undefined و `.map` خطا می‌داد → صفحهٔ اول خالی. حالا کنار `authActive` در سطح ماژول است (تست ترتیب را پین می‌کند).
 - دروازهٔ صفحهٔ اول: mobile.js `entered()/enter()` با `sessionStorage['m-entered']`، `gateActive() = MQ && user && !entered`؛ app.js `render()` پیش از m-mode اگر gateActive → paintAuth (landing حتی با user). دکمه: user ⇒ `enter(); S.render()`؛ وگرنه `goA('login')`؛ پیوند ثبت‌نام فقط بدون user. `afterLogin()` → `SiteMobile.enter()`.
 
+### V261.3 — site.yml: تکرار خودکار deploy
+- لاگ خام کاربر: آپلود ۲۹ فایل موفق، سپس `✘ [ERROR] Deployment failed! Failed to publish your Function. Got error: Unknown internal error occurred.` — site_out هیچ functions/_worker ندارد؛ خطای داخلی Cloudflare Pages. سه مرحلهٔ wrangler-action با `continue-on-error` + `preCommands: sleep`. site-only → بدون bump.
+
 ### V261.2 — CI: bump همیشه CI اپ را اجرا می‌کند
 - android.yml `paths-ignore`: `text/**` → `text/CHANGELOG_FA.txt`, `text/*.md` تا `text/APP_VERSION.txt` تریگر باشد. V261.1 (f19edb34 در GitHub) فقط workflow سایت را اجرا کرد؛ APK 1.01.46 هرگز ساخته نشد.
 - وضعیت GitHub Actions (API عمومی): site برای V260.9 و V261.1 در مرحلهٔ «Deploy to Cloudflare Pages» (wrangler-action v3, `pages deploy`) FAILED؛ خروجی ساخت سایت موفق و تفاوت site_out با V260.8.1 (موفق) فقط ۸ خط index.html — خطا سمت Cloudflare/توکن است؛ لاگ خام لازم است (API لاگ بدون دسترسی admin ۴۰۳ می‌دهد).

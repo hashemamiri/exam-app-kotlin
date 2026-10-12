@@ -66,9 +66,30 @@ jobs:
           PY
           # هدرها: بدون کش برای index و SW تا به‌روزرسانی فوری دیده شود؛ آیکون‌ها کش طولانی
           printf '/*\n  Cache-Control: no-cache\n/pwa/sw.js\n  Cache-Control: no-cache\n  Service-Worker-Allowed: /\n/pwa/manifest.webmanifest\n  Content-Type: application/manifest+json; charset=utf-8\n/pwa/*.png\n  Cache-Control: public, max-age=604800\n/engines.*.js\n  Cache-Control: public, max-age=31536000, immutable\n/fonts/*\n  Cache-Control: public, max-age=31536000, immutable\n' > site_out/_headers
+      # V261.3 — Cloudflare گاهی «Failed to publish your Function. Got error: Unknown internal error occurred.» می‌دهد (خطای موقتی سمت Cloudflare)؛ تا ۳ بار با فاصله تلاش می‌کنیم
       - name: Deploy to Cloudflare Pages
+        id: deploy1
+        continue-on-error: true
         uses: cloudflare/wrangler-action@v3
         with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: pages deploy site_out --project-name=onlineexam --branch=main --commit-dirty=true
+      - name: Deploy to Cloudflare Pages (retry 1)
+        id: deploy2
+        if: steps.deploy1.outcome == 'failure'
+        continue-on-error: true
+        uses: cloudflare/wrangler-action@v3
+        with:
+          preCommands: sleep 45
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: pages deploy site_out --project-name=onlineexam --branch=main --commit-dirty=true
+      - name: Deploy to Cloudflare Pages (retry 2)
+        if: steps.deploy1.outcome == 'failure' && steps.deploy2.outcome == 'failure'
+        uses: cloudflare/wrangler-action@v3
+        with:
+          preCommands: sleep 90
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           command: pages deploy site_out --project-name=onlineexam --branch=main --commit-dirty=true
