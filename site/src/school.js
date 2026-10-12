@@ -518,7 +518,7 @@
   async function managerRequestsCard(alwaysShow) {
     var card = el('div', {class: 'card'}, [el('h3', {text: '📩 درخواست‌های مدیر'})]);
     var body = el('div'); card.appendChild(body);
-    var STATUS = {pending: 'در انتظار', approved: 'تأیید‌شده', rejected: 'رد‌شده', expired: 'منقضی', applied: 'اعمال‌شده'};
+    var STATUS = {pending: 'در انتظار', approved: 'تأیید شد', rejected: 'رد شد', expired: 'منقضی', applied: 'انجام شد', executed: 'انجام شد'}; /* V260.8.1 */
     async function load() {
       S.loading(body);
       try {
