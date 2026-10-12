@@ -39,11 +39,32 @@ Deno.serve(async (request) => {
     if (!body) return json({ error: 'داده درخواست معتبر نیست' }, 400);
     const action = clean(body.action, 32);
 
+    // V260.8 — مدیر ممکن است چند مدرسه داشته باشد (maybeSingle روی چند ردیف خطا می‌داد و دسترسی مدیر قطع می‌شد)
+    let managerSchoolsCache: string[] | null = null;
+    const managerSchools = async (): Promise<string[]> => {
+      if (teacher?.role !== 'manager') return [];
+      if (managerSchoolsCache) return managerSchoolsCache;
+      const { data } = await service.from('school_memberships').select('school_id')
+        .eq('user_id', teacherId).eq('staff_role', 'manager').eq('status', 'active');
+      managerSchoolsCache = (data || []).map((r: { school_id: string }) => r.school_id).filter(Boolean);
+      return managerSchoolsCache;
+    };
+    // مدرسه‌ای از مدیر که این دانش‌آموز عضو آن است (برای ثبت درخواست تأیید معلم)
+    const managerSchoolFor = async (studentId: string): Promise<string | null> => {
+      const schools = await managerSchools();
+      if (!schools.length) return null;
+      const { data } = await service.from('school_students').select('school_id')
+        .in('school_id', schools).eq('student_id', studentId).limit(1).maybeSingle();
+      return data?.school_id || schools[0];
+    };
     const ensureOwnedClass = async (classId: string) => {
       if (!classId) return true;
-      const { data } = await service.from('classes').select('id').eq('id', classId)
-        .eq('teacher_id', teacherId).maybeSingle();
-      return !!data;
+      const { data } = await service.from('classes').select('id, teacher_id, school_id').eq('id', classId).maybeSingle();
+      if (!data) return false;
+      if (data.teacher_id === teacherId) return true;
+      // V260.8 — مدیر می‌تواند دانش‌آموز جدید را مستقیم در کلاسِ معلمِ مدرسهٔ خودش ثبت کند (مثل «افزودن به کلاس»)
+      if (teacher?.role === 'manager' && data.school_id) return (await managerSchools()).includes(data.school_id);
+      return false;
     };
     const ownedStudent = async (id: string) => {
       const { data } = await service.from('profiles')
@@ -51,11 +72,10 @@ Deno.serve(async (request) => {
         .eq('id', id).eq('role', 'student').maybeSingle();
       if (data?.teacher_id === teacherId) return data;
       if (teacher?.role === 'manager' && data?.id) {
-        const { data: membership } = await service.from('school_memberships')
-          .select('school_id').eq('user_id', teacherId).eq('staff_role', 'manager').eq('status', 'active').maybeSingle();
-        if (membership?.school_id) {
+        const schools = await managerSchools();
+        if (schools.length) {
           const { data: linked } = await service.from('school_students').select('student_id')
-            .eq('school_id', membership.school_id).eq('student_id', data.id).maybeSingle();
+            .in('school_id', schools).eq('student_id', data.id).limit(1).maybeSingle();
           if (linked) return data;
         }
       }
@@ -147,9 +167,9 @@ Deno.serve(async (request) => {
       if (teacher?.role === 'manager' && current.teacher_id !== teacherId) {
         const { data: approved } = await service.from('manager_approval_requests').select('id').eq('manager_id', teacherId).eq('teacher_id', current.teacher_id).eq('target_type', 'student').eq('target_id', id).eq('action', 'edit').contains('payload', approvalPayload).eq('status', 'approved').gt('expires_at', new Date().toISOString()).is('executed_at', null).order('created_at', { ascending: false }).limit(1).maybeSingle();
         if (!approved) {
-          const { data: membership } = await service.from('school_memberships').select('school_id').eq('user_id', teacherId).eq('staff_role', 'manager').eq('status', 'active').maybeSingle();
-          if (!membership?.school_id) return json({ error: 'دسترسی مدیر معتبر نیست' }, 403);
-          await service.from('manager_approval_requests').insert({ school_id: membership.school_id, manager_id: teacherId, teacher_id: current.teacher_id, target_type: 'student', target_id: id, action: 'edit', payload: approvalPayload });
+          const schoolId = await managerSchoolFor(id);
+          if (!schoolId) return json({ error: 'دسترسی مدیر معتبر نیست' }, 403);
+          await service.from('manager_approval_requests').insert({ school_id: schoolId, manager_id: teacherId, teacher_id: current.teacher_id, target_type: 'student', target_id: id, action: 'edit', payload: approvalPayload });
           return json({ error: 'درخواست ویرایش برای تأیید معلم ارسال شد' });
         }
         approvalId = approved.id;
@@ -212,9 +232,9 @@ Deno.serve(async (request) => {
       if (teacher?.role === 'manager' && current.teacher_id !== teacherId) {
         const { data: approved } = await service.from('manager_approval_requests').select('id').eq('manager_id', teacherId).eq('teacher_id', current.teacher_id).eq('target_type', 'student').eq('target_id', id).eq('action', 'edit').contains('payload', approvalPayload).eq('status', 'approved').gt('expires_at', new Date().toISOString()).is('executed_at', null).order('created_at', { ascending: false }).limit(1).maybeSingle();
         if (!approved) {
-          const { data: membership } = await service.from('school_memberships').select('school_id').eq('user_id', teacherId).eq('staff_role', 'manager').eq('status', 'active').maybeSingle();
-          if (!membership?.school_id) return json({ error: 'دسترسی مدیر معتبر نیست' }, 403);
-          await service.from('manager_approval_requests').insert({ school_id: membership.school_id, manager_id: teacherId, teacher_id: current.teacher_id, target_type: 'student', target_id: id, action: 'edit', payload: approvalPayload });
+          const schoolId = await managerSchoolFor(id);
+          if (!schoolId) return json({ error: 'دسترسی مدیر معتبر نیست' }, 403);
+          await service.from('manager_approval_requests').insert({ school_id: schoolId, manager_id: teacherId, teacher_id: current.teacher_id, target_type: 'student', target_id: id, action: 'edit', payload: approvalPayload });
           return json({ error: 'درخواست تغییر رمز برای تأیید معلم ارسال شد' });
         }
         approvalId = approved.id;
@@ -234,9 +254,9 @@ Deno.serve(async (request) => {
       if (teacher?.role === 'manager' && current.teacher_id !== teacherId) {
         const { data: approved } = await service.from('manager_approval_requests').select('id').eq('manager_id', teacherId).eq('teacher_id', current.teacher_id).eq('target_type', 'student').eq('target_id', id).eq('action', 'delete').eq('status', 'approved').gt('expires_at', new Date().toISOString()).is('executed_at', null).order('created_at', { ascending: false }).limit(1).maybeSingle();
         if (!approved) {
-          const { data: membership } = await service.from('school_memberships').select('school_id').eq('user_id', teacherId).eq('staff_role', 'manager').eq('status', 'active').maybeSingle();
-          if (!membership?.school_id) return json({ error: 'دسترسی مدیر معتبر نیست' }, 403);
-          await service.from('manager_approval_requests').insert({ school_id: membership.school_id, manager_id: teacherId, teacher_id: current.teacher_id, target_type: 'student', target_id: id, action: 'delete' });
+          const schoolId = await managerSchoolFor(id);
+          if (!schoolId) return json({ error: 'دسترسی مدیر معتبر نیست' }, 403);
+          await service.from('manager_approval_requests').insert({ school_id: schoolId, manager_id: teacherId, teacher_id: current.teacher_id, target_type: 'student', target_id: id, action: 'delete' });
           return json({ error: 'درخواست حذف برای تأیید معلم ارسال شد' });
         }
         approvalId = approved.id;

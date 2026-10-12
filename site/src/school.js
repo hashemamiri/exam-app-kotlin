@@ -23,6 +23,8 @@
   /* ---------------- Edge Function manage-student ---------------- */
   async function manageStudent(body) {
     var r = await S.http('/functions/v1/manage-student', {method: 'POST', body: body});
+    /* V260.8 — «درخواست … برای تأیید معلم ارسال شد» خطا نیست؛ پیام سبز و پایان کار */
+    if (r && r.error && /برای تأیید معلم ارسال شد/.test(String(r.error))) { toast(String(r.error) + '؛ نتیجه در «کلاس‌ها ← درخواست‌های من» دیده می‌شود.', 'ok'); var e = new Error(''); e.requested = true; throw e; }
     return chk(r);
   }
   async function saveExtra(id, username, father, grade, field) {
@@ -268,7 +270,7 @@
         bg.remove(); toast('ذخیره شد.', 'ok');
         if (st.newPw) { var cr = [{id: s.id, name: (st.first + ' ' + st.last).trim(), username: u, password: st.newPw}]; rememberPw(cr); credentialDlg('رمز جدید دانش‌آموز', cr); }
         done();
-      } catch (e) { busy = false; error = errMsg(e); draw(); }
+      } catch (e) { if (e && e.requested) { bg.remove(); done(); return; } busy = false; error = errMsg(e); draw(); }
     }
     function field(label, value, oninput, extra) { var i = el('input', Object.assign({type: 'text', value: value}, extra || {})); i.addEventListener('input', function () { oninput(i.value); }); return el('div', {class: 'field'}, [el('label', {text: label}), i]); }
     function draw() {
@@ -405,13 +407,13 @@
         acts.appendChild(el('button', {class: 'btn light sm', text: 'افزودن به کلاس', onclick: function () { classPickDlg(s, classes, ctx.refresh); }}));
         if (canManage) acts.appendChild(el('button', {class: 'btn light sm', text: 'رمز جدید', onclick: async function () {
           var np = genPassword(); if (!(await S.confirmDlg('رمز جدید', 'رمز جدید برای «' + esc(s.full_name || '') + '» ساخته شود؟ رمز قبلی از کار می‌افتد.', 'بساز'))) return;
-          try { await manageStudent({action: 'reset_password', id: s.id, password: np}); rememberPw([{id: s.id, username: s.username, password: np}]); credentialDlg('رمز جدید دانش‌آموز', [{name: s.full_name, username: s.username, password: np}]); } catch (e) { toast(errMsg(e), 'err'); }
+          try { await manageStudent({action: 'reset_password', id: s.id, password: np}); rememberPw([{id: s.id, username: s.username, password: np}]); credentialDlg('رمز جدید دانش‌آموز', [{name: s.full_name, username: s.username, password: np}]); } catch (e) { if (!(e && e.requested)) toast(errMsg(e), 'err'); }
         }}));
-        acts.appendChild(el('button', {class: 'btn light sm', text: s.is_active !== false ? 'غیرفعال کردن' : 'فعال کردن', onclick: async function () { try { chk(await S.rpcObj('set_student_active', {p_student: s.id, p_active: s.is_active === false})); ctx.refresh(); } catch (e) { toast(errMsg(e), 'err'); } }}));
-        if (ctx.classId) acts.appendChild(el('button', {class: 'btn light sm danger-text', text: 'خروج از کلاس', onclick: async function () { if (!(await S.confirmDlg('حذف از کلاس', '«' + esc(s.full_name || '') + '» از این کلاس خارج شود؟ حساب حفظ می‌ماند.', 'خروج', true))) return; try { chk(await S.rpcObj('remove_student_from_class', {p_class: ctx.classId, p_student: s.id})); ctx.refresh(); } catch (e) { toast(errMsg(e), 'err'); } }}));
-        if (ctx.classId && s.in_my_list === false) acts.appendChild(el('button', {class: 'btn light sm', text: 'افزودن به فهرست من', onclick: async function () { try { chk(await S.rpcObj('native_teacher_add_class_student_to_list_v43', {p_class: ctx.classId, p_student: s.id})); toast('به فهرست شما افزوده شد.', 'ok'); ctx.refresh(); } catch (e) { toast(errMsg(e), 'err'); } }}));
-        if (canManage) acts.appendChild(el('button', {class: 'btn light sm danger-text', text: 'حذف حساب', onclick: async function () { if (!(await S.confirmDlg('حذف حساب دانش‌آموز', 'حساب «' + esc(s.full_name || '') + '» و پاسخ‌هایش برای همیشه حذف می‌شود.', 'حذف کامل', true))) return; try { await manageStudent({action: 'delete', id: s.id}); toast('حذف شد.', 'ok'); ctx.refresh(); } catch (e) { toast(errMsg(e), 'err'); } }}));
-        var shareBtn = el('button', {class: 'chip ' + (s.shared_with_manager ? 'ok' : 'off'), text: s.shared_with_manager ? 'بله' : 'خیر', title: 'تغییر اشتراک با مدیر', onclick: async function () { try { var r = chk(await S.rpcObj('native_teacher_share_student_v136', {p_student: s.id, p_share: !s.shared_with_manager})); var eff = r.shared != null ? String(r.shared) === 'true' : !s.shared_with_manager; toast(eff ? 'با مدیر به اشتراک گذاشته شد.' : 'اشتراک برداشته شد.', 'ok'); if (r.message) toast(String(r.message), 'info'); ctx.refresh(); } catch (e) { toast(errMsg(e), 'err'); } }});
+        acts.appendChild(el('button', {class: 'btn light sm', text: s.is_active !== false ? 'غیرفعال کردن' : 'فعال کردن', onclick: async function () { try { chk(await S.rpcObj('set_student_active', {p_student: s.id, p_active: s.is_active === false})); ctx.refresh(); } catch (e) { if (!(e && e.requested)) toast(errMsg(e), 'err'); } }}));
+        if (ctx.classId) acts.appendChild(el('button', {class: 'btn light sm danger-text', text: 'خروج از کلاس', onclick: async function () { if (!(await S.confirmDlg('حذف از کلاس', '«' + esc(s.full_name || '') + '» از این کلاس خارج شود؟ حساب حفظ می‌ماند.', 'خروج', true))) return; try { chk(await S.rpcObj('remove_student_from_class', {p_class: ctx.classId, p_student: s.id})); ctx.refresh(); } catch (e) { if (!(e && e.requested)) toast(errMsg(e), 'err'); } }}));
+        if (ctx.classId && s.in_my_list === false) acts.appendChild(el('button', {class: 'btn light sm', text: 'افزودن به فهرست من', onclick: async function () { try { chk(await S.rpcObj('native_teacher_add_class_student_to_list_v43', {p_class: ctx.classId, p_student: s.id})); toast('به فهرست شما افزوده شد.', 'ok'); ctx.refresh(); } catch (e) { if (!(e && e.requested)) toast(errMsg(e), 'err'); } }}));
+        if (canManage) acts.appendChild(el('button', {class: 'btn light sm danger-text', text: 'حذف حساب', onclick: async function () { if (!(await S.confirmDlg('حذف حساب دانش‌آموز', 'حساب «' + esc(s.full_name || '') + '» و پاسخ‌هایش برای همیشه حذف می‌شود.', 'حذف کامل', true))) return; try { await manageStudent({action: 'delete', id: s.id}); toast('حذف شد.', 'ok'); ctx.refresh(); } catch (e) { if (!(e && e.requested)) toast(errMsg(e), 'err'); } }}));
+        var shareBtn = el('button', {class: 'chip ' + (s.shared_with_manager ? 'ok' : 'off'), text: s.shared_with_manager ? 'بله' : 'خیر', title: 'تغییر اشتراک با مدیر', onclick: async function () { try { var r = chk(await S.rpcObj('native_teacher_share_student_v136', {p_student: s.id, p_share: !s.shared_with_manager})); var eff = r.shared != null ? String(r.shared) === 'true' : !s.shared_with_manager; toast(eff ? 'با مدیر به اشتراک گذاشته شد.' : 'اشتراک برداشته شد.', 'ok'); if (r.message) toast(String(r.message), 'info'); ctx.refresh(); } catch (e) { if (!(e && e.requested)) toast(errMsg(e), 'err'); } }});
         return el('tr', {}, [el('td', {html: '<b>' + esc(s.full_name || ((s.first_name || '') + ' ' + (s.last_name || ''))) + '</b>' + (s.father_name ? '<div class="muted" style="font-size:11px">فرزند ' + esc(s.father_name) + '</div>' : '')}), el('td', {}, [el('span', {class: 'code', text: s.username || '—'})]),
           el('td', {text: s.gender === 'male' ? 'پسر' : (s.gender === 'female' ? 'دختر' : '—')}), el('td', {text: s.grade || '—'}), el('td', {text: s.field_of_study || '—'}), el('td', {class: 'muted', text: s.class_names || '—'}),
           el('td', {}, [el('span', {class: 'chip ' + (s.is_active !== false ? 'ok' : 'off'), text: s.is_active !== false ? 'فعال' : 'غیرفعال'})]), el('td', {}, [shareBtn]), el('td', {}, [acts])]);
@@ -483,7 +485,7 @@
   /* دکمهٔ اشتراک کلاس با مدیر (در جدول کلاس‌ها) */
   function classShareChip(k, refresh) {
     return el('button', {class: 'chip ' + (k.shared_with_manager ? 'ok' : 'off'), text: k.shared_with_manager ? 'بله' : 'خیر', title: 'تغییر اشتراک با مدیر', onclick: async function () {
-      try { var r = chk(await S.rpcObj('native_teacher_share_class_v137', {p_class: k.id, p_share: !k.shared_with_manager})); var eff = r.shared != null ? String(r.shared) === 'true' : !k.shared_with_manager; toast(eff ? 'کلاس با مدیر به اشتراک گذاشته شد.' : 'اشتراک برداشته شد.', 'ok'); if (r.message) toast(String(r.message), 'info'); refresh(); } catch (e) { toast(errMsg(e), 'err'); }
+      try { var r = chk(await S.rpcObj('native_teacher_share_class_v137', {p_class: k.id, p_share: !k.shared_with_manager})); var eff = r.shared != null ? String(r.shared) === 'true' : !k.shared_with_manager; toast(eff ? 'کلاس با مدیر به اشتراک گذاشته شد.' : 'اشتراک برداشته شد.', 'ok'); if (r.message) toast(String(r.message), 'info'); refresh(); } catch (e) { if (!(e && e.requested)) toast(errMsg(e), 'err'); }
     }});
   }
 
@@ -527,13 +529,17 @@
         card.style.display = '';
         items.forEach(function (it) {
           var pending = it.status === 'pending' || !it.status;
-          body.appendChild(el('div', {class: 'g-q'}, [el('div', {class: 'row'}, [el('b', {class: 'grow', text: (it.target_type === 'class' ? 'کلاس' : 'حساب دانش‌آموز') + ' · ' + (it.action === 'delete' ? 'حذف' : 'ویرایش') + (it.manager_name ? ' · از طرف ' + it.manager_name : '')}), el('span', {class: 'chip ' + (pending ? 'warn' : 'off'), text: STATUS[it.status] || it.status || 'در انتظار'})]),
+          /* V260.8 — نام کلاس/دانش‌آموز و خلاصهٔ تغییر درخواستی نشان داده می‌شود */
+          var pl = it.payload || {}, what = it.action === 'delete' ? 'حذف' : (pl.kind === 'reset_password' ? 'رمز جدید' : 'ویرایش');
+          var detail = it.action === 'edit' && it.target_type === 'class' && (pl.name || pl.grade || pl.field) ? 'تغییر به: ' + [pl.name ? 'نام «' + pl.name + '»' : '', pl.grade ? 'پایه ' + pl.grade : '', pl.field ? 'رشته ' + pl.field : ''].filter(Boolean).join('، ') : (pl.kind === 'profile_update' ? 'تغییر به: ' + [pl.first_name, pl.last_name].filter(Boolean).join(' ') + (pl.username ? ' (' + pl.username + ')' : '') : '');
+          body.appendChild(el('div', {class: 'g-q'}, [el('div', {class: 'row'}, [el('b', {class: 'grow', text: (it.target_type === 'class' ? 'کلاس' : 'حساب دانش‌آموز') + (it.target_name ? ' «' + it.target_name + '»' : '') + ' · ' + what + (it.manager_name ? ' · از طرف ' + it.manager_name : '')}), el('span', {class: 'chip ' + (pending ? 'warn' : 'off'), text: STATUS[it.status] || it.status || 'در انتظار'})]),
+            detail ? el('div', {class: 'muted', style: 'font-size:12px', text: detail}) : null,
             it.expires_at ? el('div', {class: 'muted', style: 'font-size:12px', text: 'مهلت: ' + S.fmtDate(it.expires_at)}) : null,
             pending ? el('div', {class: 'row', style: 'margin-top:6px'}, [el('button', {class: 'btn sm', text: 'تأیید', onclick: function () { decide(it.id, true); }}), el('button', {class: 'btn light sm', text: 'رد', onclick: function () { decide(it.id, false); }})]) : null]));
         });
       } catch (e) { body.innerHTML = ''; body.appendChild(el('p', {class: 'muted', style: 'font-size:12px', text: 'درخواست‌های مدیر در دسترس نیست.'})); if (!alwaysShow) card.style.display = 'none'; }
     }
-    async function decide(id, ok) { try { chk(await S.rpcObj('native_teacher_decide_manager_request_v41', {p_request: id, p_approve: ok})); toast(ok ? 'تأیید شد.' : 'رد شد.', 'ok'); load(); } catch (e) { toast(errMsg(e), 'err'); } }
+    async function decide(id, ok) { try { chk(await S.rpcObj('native_teacher_decide_manager_request_v41', {p_request: id, p_approve: ok})); toast(ok ? 'تأیید شد.' : 'رد شد.', 'ok'); load(); } catch (e) { if (!(e && e.requested)) toast(errMsg(e), 'err'); } }
     load();
     return card;
   }
@@ -589,14 +595,14 @@
               el('button', {class: 'icon-btn' + (it.shared ? ' on' : ''), title: it.shared ? 'اشتراک با مدرسه فعال است — لغو اشتراک' : 'اشتراک با همکاران مدرسه', html: it.shared ? '🏫' : '🔒', onclick: async function () { try { chk(await S.rpcObj('native_bank_set_shared_v1', {p_id: it.id, p_shared: !it.shared})); it.shared = !it.shared; toast(it.shared ? 'با همکاران مدرسه به اشتراک گذاشته شد.' : 'اشتراک لغو شد.', 'ok'); draw(); } catch (e) { toast(/does not exist|PGRST202/i.test(String(e.message)) ? 'اشتراک بانک هنوز روی سرور فعال نشده است (SQL نسخهٔ V230).' : errMsg(e), 'err'); } }}),
               el('button', {class: 'icon-btn', title: 'دسته‌ها', html: '🏷', onclick: function () { catPick(it); }}),
               el('button', {class: 'icon-btn', title: 'ویرایش در سازنده', html: '✎', onclick: function () { if (!B) return toast('سازندهٔ آزمون در دسترس نیست.', 'err'); S.go('builder', {bankEdit: {id: it.id, subject: it.subject || '', cats: it.cat_ids || [], question: qq}}); }}),
-              el('button', {class: 'icon-btn danger', title: 'حذف', html: '🗑', onclick: async function () { if (!(await S.confirmDlg('حذف سؤال', 'این سؤال از بانک حذف شود؟', 'حذف', true))) return; try { chk(await S.rpcObj('native_bank_delete_question_v1', {p_id: it.id})); toast('حذف شد.', 'ok'); refresh(); } catch (e) { toast(errMsg(e), 'err'); } }})]), el('span', {class: 'bk-date', text: it.created_at ? S.fmtDate(it.created_at) : ''})])
+              el('button', {class: 'icon-btn danger', title: 'حذف', html: '🗑', onclick: async function () { if (!(await S.confirmDlg('حذف سؤال', 'این سؤال از بانک حذف شود؟', 'حذف', true))) return; try { chk(await S.rpcObj('native_bank_delete_question_v1', {p_id: it.id})); toast('حذف شد.', 'ok'); refresh(); } catch (e) { if (!(e && e.requested)) toast(errMsg(e), 'err'); } }})]), el('span', {class: 'bk-date', text: it.created_at ? S.fmtDate(it.created_at) : ''})])
           ]));
         });
       }
       function catPick(it) {
         var bg = el('div', {class: 'modal-bg'}); var checks = cats.map(function (k) { var c = el('input', {type: 'checkbox'}); c.checked = (it.cat_ids || []).indexOf(k.id) >= 0; return {k: k, c: c}; });
         bg.appendChild(el('div', {class: 'modal'}, [el('button', {class: 'x', text: '✕', onclick: function () { bg.remove(); }}), el('h2', {text: 'دسته‌های سؤال'}), checks.length ? el('div', {class: 'g-list', style: 'max-height:50vh'}, checks.map(function (x) { return el('label', {class: 'g-item'}, [x.c, el('span', {text: x.k.name})]); })) : el('p', {class: 'muted', text: 'دسته‌ای ندارید.'}),
-          el('div', {class: 'row', style: 'margin-top:8px'}, [el('button', {class: 'btn', text: 'ذخیره', onclick: async function () { try { chk(await S.rpcObj('native_bank_set_categories_v1', {p_id: it.id, p_cats: checks.filter(function (x) { return x.c.checked; }).map(function (x) { return x.k.id; }).sort(function (a, b) { return a - b; })})); bg.remove(); toast('ذخیره شد.', 'ok'); refresh(); } catch (e) { toast(errMsg(e), 'err'); } }}), el('button', {class: 'btn light', text: 'انصراف', onclick: function () { bg.remove(); }})])]));
+          el('div', {class: 'row', style: 'margin-top:8px'}, [el('button', {class: 'btn', text: 'ذخیره', onclick: async function () { try { chk(await S.rpcObj('native_bank_set_categories_v1', {p_id: it.id, p_cats: checks.filter(function (x) { return x.c.checked; }).map(function (x) { return x.k.id; }).sort(function (a, b) { return a - b; })})); bg.remove(); toast('ذخیره شد.', 'ok'); refresh(); } catch (e) { if (!(e && e.requested)) toast(errMsg(e), 'err'); } }}), el('button', {class: 'btn light', text: 'انصراف', onclick: function () { bg.remove(); }})])]));
         document.body.appendChild(bg);
       }
       function manageCats() {
@@ -608,13 +614,13 @@
             var delQ = false;
             if ((k.count || 0) > 0) { var r = await S.confirmDlg('حذف دسته', 'دستهٔ «' + esc(k.name) + '» ' + fa(k.count) + ' سؤال دارد. سؤال‌ها هم حذف شوند؟ (با «فقط دسته» سؤال‌ها بدون دسته می‌مانند)', 'حذف با سؤال‌ها', true); if (r) delQ = true; else if (!(await S.confirmDlg('حذف دسته', 'فقط خودِ دسته حذف شود؟', 'فقط دسته'))) return; }
             else if (!(await S.confirmDlg('حذف دسته', 'دستهٔ «' + esc(k.name) + '» حذف شود؟', 'حذف', true))) return;
-            try { chk(await S.rpcObj('native_bank_category_delete_v1', {p_id: k.id, p_delete_questions: delQ})); bg.remove(); toast('حذف شد.', 'ok'); refresh(); } catch (e) { toast(errMsg(e), 'err'); }
+            try { chk(await S.rpcObj('native_bank_category_delete_v1', {p_id: k.id, p_delete_questions: delQ})); bg.remove(); toast('حذف شد.', 'ok'); refresh(); } catch (e) { if (!(e && e.requested)) toast(errMsg(e), 'err'); }
           }})])); });
         }
         drawCats();
         var nm = inp({placeholder: 'نام دستهٔ جدید'});
         bg.appendChild(el('div', {class: 'modal'}, [el('button', {class: 'x', text: '✕', onclick: function () { bg.remove(); }}), el('h2', {text: '🏷 دسته‌های بانک'}), body,
-          el('div', {class: 'row', style: 'margin-top:10px'}, [nm, el('button', {class: 'btn sm', text: 'افزودن', onclick: async function () { if (!nm.value.trim()) return; try { chk(await S.rpcObj('native_bank_category_add_v1', {p_name: nm.value.trim()})); bg.remove(); toast('دسته افزوده شد.', 'ok'); refresh(); } catch (e) { toast(errMsg(e), 'err'); } }})])]));
+          el('div', {class: 'row', style: 'margin-top:10px'}, [nm, el('button', {class: 'btn sm', text: 'افزودن', onclick: async function () { if (!nm.value.trim()) return; try { chk(await S.rpcObj('native_bank_category_add_v1', {p_name: nm.value.trim()})); bg.remove(); toast('دسته افزوده شد.', 'ok'); refresh(); } catch (e) { if (!(e && e.requested)) toast(errMsg(e), 'err'); } }})])]));
         document.body.appendChild(bg);
       }
       /* V230 — بانک مدرسه: سؤال‌های به‌اشتراک‌گذاشتهٔ همکاران همان مدرسه؛ «افزودن به بانک من» کپی می‌کند */
@@ -630,7 +636,7 @@
             var f = its.filter(function (it) { var qq = it.question || {}; return !s || String(qq.text || '').toLowerCase().indexOf(s) >= 0 || String(it.subject || '').toLowerCase().indexOf(s) >= 0 || String(it.teacher || '').indexOf(s) >= 0; });
             if (!f.length) { lst2.appendChild(S.emptyBox('🏫', its.length ? 'موردی پیدا نشد.' : 'هنوز همکاری سؤالی به اشتراک نگذاشته است. شما هم می‌توانید با آیکن 🔒 کنار سؤال‌هایتان اشتراک را روشن کنید.')); return; }
             f.forEach(function (it) { var qq = it.question || {}; lst2.appendChild(el('div', {class: 'b-bank-item'}, [el('div', {class: 'grow'}, [el('div', {text: String(qq.text || '').replace(/\$/g, '').slice(0, 160)}), el('div', {class: 'muted', style: 'font-size:12px', text: [TYPE[S.qType(qq.type)] || '', it.subject, it.teacher ? 'از ' + it.teacher : ''].filter(Boolean).join(' · ')})]),
-              el('div', {class: 'acts'}, [it.already ? el('span', {class: 'muted', style: 'font-size:12px', text: 'در بانک شماست'}) : el('button', {class: 'btn sm', text: '➕ افزودن به بانک من', onclick: async function () { try { chk(await S.rpcObj('native_bank_copy_from_school_v1', {p_id: it.id})); it.already = true; toast('به بانک شما افزوده شد.', 'ok'); draw2(); } catch (e) { toast(errMsg(e), 'err'); } }})])])); });
+              el('div', {class: 'acts'}, [it.already ? el('span', {class: 'muted', style: 'font-size:12px', text: 'در بانک شماست'}) : el('button', {class: 'btn sm', text: '➕ افزودن به بانک من', onclick: async function () { try { chk(await S.rpcObj('native_bank_copy_from_school_v1', {p_id: it.id})); it.already = true; toast('به بانک شما افزوده شد.', 'ok'); draw2(); } catch (e) { if (!(e && e.requested)) toast(errMsg(e), 'err'); } }})])])); });
           }
           sq.addEventListener('input', draw2); body.innerHTML = ''; body.appendChild(sq); body.appendChild(lst2); draw2();
           bg.addEventListener('click', function (ev) { if (ev.target === bg) { bg.remove(); if (its.some(function (x) { return x.already; })) refresh(); } });
