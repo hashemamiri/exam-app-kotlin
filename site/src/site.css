@@ -681,7 +681,7 @@ img,video,canvas,iframe{max-width:100%}
 .ice-landing{display:flex;flex-direction:column;align-items:center;text-align:center;gap:0}
 .ice-hero{width:84px;height:84px;border-radius:22px;background:linear-gradient(135deg,var(--acc),var(--accl));display:flex;align-items:center;justify-content:center;color:#fff;margin-bottom:12px}
 .ice-hero .mi{width:38px;height:38px}.ice-hero svg{stroke-width:1.8}
-.ice-hero img{width:60px;height:60px;border-radius:14px;background:#fff;padding:4px;box-sizing:border-box} /* V260.5 */
+.ice-hero img{width:60px;height:60px;border-radius:14px;background:#FFFFFF;padding:4px;box-sizing:border-box} /* V260.5؛ V261.1: قاب لوگو تنها سفید ثابت مجاز (مثل قاب شکل) */
 .ice-title{font-size:24px;font-weight:800;color:var(--ink)}
 .ice-sub{font-size:13px;color:var(--sec);line-height:1.7;text-align:center;margin:0}
 .ice-sub.right{text-align:right}

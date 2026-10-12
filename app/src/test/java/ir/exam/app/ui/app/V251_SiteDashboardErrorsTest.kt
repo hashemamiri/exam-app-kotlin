@@ -17,9 +17,9 @@ class V251_SiteDashboardErrorsTest {
     fun `teacher dashboard reports failures instead of fake zeros`() {
         val a = source("site/src/app.js")
         assertTrue("function soft(pr, label) { return pr.catch(function (e) { failed.push({label: label, e: e}); return null; }); }" in a)
-        assertTrue("if (failed.length === 4) throw failed[0].e;" in a)
+        assertTrue("if (failed.length === 4) { if (cachedDash) { c.insertBefore(dashRetryAlert(failed, c), c.firstChild); return; } throw failed[0].e; }" in a) // V260.6: با کش، به‌جای خطا هشدار بالای داشبورد
         assertTrue("if (failed.length) c.appendChild(dashRetryAlert(failed, c));" in a)
-        assertTrue("function cnt(x) { return Array.isArray(x) ? fa(x.length) : '—'; }" in a)
+        assertTrue("function cnt(x) { return Array.isArray(x) ? fa(x.length) : (x && typeof x.__n === 'number' ? fa(x.__n) : '—'); }" in a) // V260.6: شمارندهٔ کش‌شده
         assertTrue("statCard(r[3] ? money(r[3].balance) : '—', 'موجودی کیف پول', {panel: 'wallet'})" in a)
         assertTrue("function dashRetryAlert(failed, c) {" in a && "text: 'تلاش دوباره', onclick: function () { pageDashboard(c); }" in a)
         assertFalse("api.exams().catch(function () { return []; }), api.classes().catch(function () { return []; })" in a)

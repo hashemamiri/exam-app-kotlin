@@ -19425,6 +19425,11 @@ CI: `compileDebugUnitTestKotlin` به‌خاطر `assertFalse` بدون import �
 - باگ V202.5: `var LANDING_TILES` داخل `paintAuth` بعد از خطی که `landing()` را صدا می‌زد تعریف شده بود → به‌خاطر hoisting مقدارش undefined و `.map` خطا می‌داد → صفحهٔ اول خالی. حالا کنار `authActive` در سطح ماژول است (تست ترتیب را پین می‌کند).
 - دروازهٔ صفحهٔ اول: mobile.js `entered()/enter()` با `sessionStorage['m-entered']`، `gateActive() = MQ && user && !entered`؛ app.js `render()` پیش از m-mode اگر gateActive → paintAuth (landing حتی با user). دکمه: user ⇒ `enter(); S.render()`؛ وگرنه `goA('login')`؛ پیوند ثبت‌نام فقط بدون user. `afterLogin()` → `SiteMobile.enter()`.
 
+### V261.1 — رفع CI (پین‌های تست سایت)
+- لاگ CI: compileDebugKotlin ✓؛ `V218_MathRenderDarkTest.siteDesktopDarkPalette` (regex `background:#fff\b` روی site.css — خط `.ice-hero img` از V260.5) و `V251_SiteDashboardErrorsTest` (دو رشتهٔ app.js که در V260.6 تغییر کرده بودند) FAILED.
+- رفع: site.css `.ice-hero img{...background:#FFFFFF...}`؛ V251 پین‌های جدید. درس: بعد از هر تغییر سایت، `grep -F` رشته‌های تست‌های `V*Test.kt` که site/ را می‌خوانند بررسی شود (فهرست: `grep -ln 'site/src' app/src/test -r`).
+- bump 1.01.45 → 1.01.46.
+
 ### V260.9 — سایت/SQL: ویرایش و حذف مدرسه، چیپ «کلاس مدیر»، شمارش فعالیت معلم‌ها
 - گزارش کاربر: «مدرسهٔ جدید جایگزین قبلی می‌شود و مدرسهٔ فعلی قابل حذف/ویرایش نیست». ریشه: `school_name` در خلاصه با `string_agg` هر دو نام را با «،» می‌چسباند و هیچ RPC ویرایش/حذف وجود نداشت.
 - SQL `supabase/migrations/20261012_native_school_edit_delete_v260_9.sql`: `native_manager_update_school_v1(p_school,p_name,p_province,p_city)`؛ `native_manager_delete_school_v1(p_school)` (رد اگر کلاس/آزمون/school_students/معلم فعال دارد یا آخرین مدرسه است)؛ `native_my_classes_flags_v1()` → `{id, manager_created, school_name}` (بدون دست‌زدن به `native_my_classes_v28` که اپ با `returns table` می‌خواند)؛ `native_manager_school_summary_v36` بازنویسی: CTE `mine` شامل `schools.created_by` هم؛ `school_count`؛ students/teacher_activity.students = union school_students و class_members.
