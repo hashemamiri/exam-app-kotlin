@@ -464,10 +464,22 @@
   var api = {
     signInWithPassword: async function (identifier, password) {
       if (!String(password || '').trim()) throw new Error('رمز عبور را وارد کنید.');
-      var clean = String(identifier || '').trim().toLowerCase(), email;
-      if (clean.indexOf('@') < 0 && USERNAME_RE.test(clean)) email = (await staffLoginEmail(clean)) || passwordLoginEmail(clean);
-      else email = passwordLoginEmail(identifier);
-      await authApi.signInPassword(email, password);
+      var clean = String(identifier || '').trim().toLowerCase(), email, fromCache = false;
+      /* V260.6 — نام کاربری→ایمیل روی همین دستگاه به‌خاطر سپرده می‌شود (فقط بعد از ورود موفق): هم یک رفت‌وبرگشت کمتر،
+         هم سهمیهٔ ۵ بار در ۱۰ دقیقهٔ native_staff_login_email_v1 با ورودهای عادی مصرف نمی‌شود. اگر رمز رد شد، از سرور دوباره پرسیده می‌شود. */
+      var LS_UL = 'examsite.ulogin.v1', ul = {}; try { ul = JSON.parse(localStorage.getItem(LS_UL) || '{}') || {}; } catch (e) {}
+      if (clean.indexOf('@') < 0 && USERNAME_RE.test(clean)) {
+        if (ul[clean]) { email = ul[clean]; fromCache = true; }
+        else email = (await staffLoginEmail(clean)) || passwordLoginEmail(clean);
+      } else email = passwordLoginEmail(identifier);
+      try { await authApi.signInPassword(email, password); }
+      catch (e) {
+        if (!fromCache) throw e;
+        delete ul[clean]; try { localStorage.setItem(LS_UL, JSON.stringify(ul)); } catch (e2) {}
+        email = (await staffLoginEmail(clean)) || passwordLoginEmail(clean);
+        await authApi.signInPassword(email, password);
+      }
+      if (clean.indexOf('@') < 0 && USERNAME_RE.test(clean) && /@/.test(email)) { ul[clean] = email; try { localStorage.setItem(LS_UL, JSON.stringify(ul)); } catch (e3) {} }
       return currentProfile();
     },
     sendLoginOtp: function (email) { return authApi.sendOtp(requireEmail(email), false); },

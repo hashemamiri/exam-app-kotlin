@@ -405,6 +405,8 @@
   /* V163 — پنجرهٔ آزمون‌های آنلاین بدون پرش: ارتفاع ثابت از ابتدا، بارگذاری داخل همان جعبه، فهرست یک‌باره ساخته می‌شود */
   /* V223 — مشترک گوشی و دسکتاپ: list = آزمون‌های چاپی فعلی، status = عنصر پیام (اختیاری) */
   async function printOnlineSheet(list, status) {
+    /* V260.6 — فراخوانی بدون فهرست (منوی دسکتاپ «از آزمون آنلاین»): فهرست آزمون‌های چاپی خودش گرفته می‌شود؛ قبلاً list.some روی undefined خطا می‌داد */
+    if (!Array.isArray(list)) { try { list = await window.SiteBuilder.printExamsList(); } catch (e) { list = []; } }
     var dkc = document.body.classList.contains('dk') ? ' dkc' : ''; /* V223.2 */
     var bg = el('div', {class: 'm-sheet-bg' + dkc, onclick: function (e) { if (e.target === e.currentTarget) bg.remove(); }});
     var box = el('div', {class: 'm-sheet-box'}); S.loading(box);
@@ -955,7 +957,7 @@
     if (window.SitePush && window.SitePush.available()) c.appendChild(card('اعلان‌ها', [
       switchRow('اعلان‌ها', 'نمرهٔ جدید، باز شدن آزمون، پیام تقویم و درخواست‌های مدیر', window.SitePush.isEnabled(), function (v) { (v ? window.SitePush.enable() : window.SitePush.disable()).then(function () { rerun(); }); })
     ]));
-    c.appendChild(card('چیدمان دستگاه', [el('p', {class: 'muted', text: 'در وب، چیدمان گوشی/دسکتاپ از روی پهنای صفحه تشخیص داده می‌شود؛ روی تبلت مرورگر را عریض‌تر کنید تا نمای دسکتاپ نمایش داده شود.'}), el('p', {class: 'muted', style: 'color:var(--m-acc)', text: 'چیدمان فعلی: گوشی'})]));
+    c.appendChild(card('چیدمان دستگاه', [el('p', {class: 'muted', text: 'در وب، چیدمان گوشی/دسکتاپ از روی پهنای صفحه تشخیص داده می‌شود؛ روی تبلت مرورگر را عریض‌تر کنید تا نمای دسکتاپ نمایش داده شود.'}), el('p', {class: 'muted', style: 'color:var(--m-acc)', text: 'چیدمان فعلی: ' + (MQ.matches ? 'گوشی' : 'دسکتاپ') /* V260.6 — قبلاً روی دسکتاپ هم «گوشی» نوشته می‌شد */})]));
     var palRow = el('div', {class: 'm-pal-row'}, Object.keys(PALETTES).map(function (k) { var p = PALETTES[k]; return el('button', {class: 'm-pal' + (a.palette === k ? ' on' : ''), 'aria-label': 'پالت ' + p[2], style: 'background:linear-gradient(135deg,' + p[0] + ',' + p[1] + ')', onclick: function () { setAppearance({palette: k}); rerun(); }}, [a.palette === k ? ic('check') : null]); }));
     var dv = el('b', {style: 'color:var(--m-acc)', text: fa(Math.round(a.depth))});
     var dr = el('input', {type: 'range', min: '8', max: '22', step: '1', value: String(a.depth), class: 'm-range'});

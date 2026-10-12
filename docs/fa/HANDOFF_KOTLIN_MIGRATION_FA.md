@@ -19425,6 +19425,13 @@ CI: `compileDebugUnitTestKotlin` به‌خاطر `assertFalse` بدون import �
 - باگ V202.5: `var LANDING_TILES` داخل `paintAuth` بعد از خطی که `landing()` را صدا می‌زد تعریف شده بود → به‌خاطر hoisting مقدارش undefined و `.map` خطا می‌داد → صفحهٔ اول خالی. حالا کنار `authActive` در سطح ماژول است (تست ترتیب را پین می‌کند).
 - دروازهٔ صفحهٔ اول: mobile.js `entered()/enter()` با `sessionStorage['m-entered']`، `gateActive() = MQ && user && !entered`؛ app.js `render()` پیش از m-mode اگر gateActive → paintAuth (landing حتی با user). دکمه: user ⇒ `enter(); S.render()`؛ وگرنه `goA('login')`؛ پیوند ثبت‌نام فقط بدون user. `afterLogin()` → `SiteMobile.enter()`.
 
+### V260.6 — سایت: یافته‌های بررسی خودکارِ بعد از ورود (حساب معلم آزمایشی)
+- همهٔ صفحات معلم در دسکتاپ و گوشی (داشبورد، آزمون‌ها، سازنده، چاپ، کیف پول، کارت‌ها، منو، دانش‌آموزان، کلاس‌ها، تقویم، پروفایل/امنیت/سربرگ، تنظیمات، داده‌ها، درباره) بدون خطای JS و بدون سرریز.
+- باگ: `app.js` منوی دسکتاپ `qbtn('از آزمون آنلاین')` → `M.printOnlineSheet()` بدون آرگومان → `list.some` روی undefined. رفع در `mobile.js printOnlineSheet`: اگر `list` آرایه نیست، `SiteBuilder.printExamsList()` را خودش می‌گیرد.
+- باگ: قفل ورود بعد از چند ورودِ درست — `native_staff_login_email_v1` (V75.2) هر lookup را می‌شمارد: ۵/۱۰دقیقه هر نام کاربری و ۲۰/دقیقه سراسری. رفع دو‌لایه: (۱) `api.signInWithPassword` کش `examsite.ulogin.v1` نام کاربری→ایمیل فقط بعد از ورود موفق؛ اگر رمز با ایمیل کش‌شده رد شد، کش حذف و از سرور دوباره پرسیده می‌شود. (۲) مهاجرت `20261012_native_staff_login_throttle_v260_6.sql` (۱۲/۱۰دقیقه، ۳۰۰/دقیقه) — **کاربر خودش در SQL Editor اجرا کند**.
+- `mobile.js` تنظیمات: «چیدمان فعلی» از `MQ.matches`.
+- تست: `V260_6_SiteLoggedInQaTest.kt`. فقط سایت + supabase/ (paths-ignore)؛ بدون bump.
+
 ### V260.5 — سایت: رفع یافته‌های بررسی خودکار (Playwright)
 - سایت زنده با Chromium بدون‌سر در ۱۴۴۰/۱۰۲۴/۸۲۰/۷۶۸/۳۹۰ بررسی شد (بدون خطای JS، بدون سرریز افقی، ورود اشتباه و سقف تلاش و /status درست).
 - `mobile.js`: `.ice-hero` با `<img src=/pwa/v3/mark-256.png>`؛ `msg` خطا داخل `card` (در صورت وجود). `site.css`: `.ice-hero img`، `.ice-card .ice-err` (کادر قرمز کم‌رنگ + تاریک)؛ مدیای `.lp` از ۱۰۲۴ به ۸۶۰ و بازهٔ ۸۶۱–۱۰۲۴ دوستونه `1fr 400px`.
