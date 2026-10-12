@@ -10,6 +10,7 @@ import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.longOrNull
+import kotlinx.serialization.json.doubleOrNull
 import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.put
 
@@ -38,6 +39,14 @@ internal data class ManagerStudentItem(val id: String, val fullName: String, val
 internal data class ManagerSchoolOption(val id: String, val name: String)
 internal data class ManagerTeacherClasses(val teacherName: String, val items: List<ManagerTeacherClass>)
 internal data class ManagerClassRoster(val className: String, val items: List<ManagerStudentItem>)
+// V261 — کارنامهٔ کلاس (native_manager_class_report_v1) و درخواست‌های خود مدیر (native_manager_my_requests_v1)
+internal data class ManagerReportExam(val id: String, val title: String, val totalScore: Double)
+internal data class ManagerReportGrade(val grade: Double, val max: Double, val graded: Boolean)
+internal data class ManagerReportStudent(val id: String, val fullName: String, val username: String, val grades: Map<String, ManagerReportGrade>)
+internal data class ManagerClassReport(val className: String, val exams: List<ManagerReportExam>, val students: List<ManagerReportStudent>)
+internal data class ManagerMyRequest(val id: String, val targetType: String, val targetName: String, val action: String, val status: String, val teacherName: String, val changeSummary: String, val createdAt: String)
+/** V261 — نتیجهٔ تغییر کلاس معلم: اجرا شد یا به‌صورت درخواست برای معلم ثبت شد (خطا نیست). */
+internal data class ManagerChangeResult(val requested: Boolean, val message: String)
 internal data class WalletTransferResult(
     val amountToman: Long,
     val managerBalanceToman: Long,
@@ -148,13 +157,52 @@ internal class SupabaseManagerRepository {
     suspend fun createTeacherClass(teacherId:String,name:String,grade:String,field:String):Result<Unit> = runCatching {
         SupabaseProvider.client.postgrest.rpc("native_manager_save_teacher_class_v40c",buildJsonObject{put("p_teacher",teacherId);put("p_name",name);put("p_grade",grade);put("p_field",field)}).decodeAs<JsonObject>().checked();Unit
     }
-    suspend fun editTeacherClass(classId:String,name:String,grade:String,field:String):Result<Unit> = runCatching {
+    suspend fun editTeacherClass(classId:String,name:String,grade:String,field:String):Result<ManagerChangeResult> = runCatching {
         val raw=SupabaseProvider.client.postgrest.rpc("native_manager_change_teacher_class_v41",buildJsonObject{put("p_class",classId);put("p_action","edit");put("p_payload",buildJsonObject{put("name",name);put("grade",grade);put("field",field)})}).decodeAs<JsonObject>().checked()
-        if(raw["approval_required"]?.jsonPrimitive?.booleanOrNull==true) error(raw.text("message")); Unit
+        raw.changeResult()
     }
-    suspend fun deleteTeacherClass(classId:String):Result<Unit> = runCatching {
+    suspend fun deleteTeacherClass(classId:String):Result<ManagerChangeResult> = runCatching {
         val raw=SupabaseProvider.client.postgrest.rpc("native_manager_change_teacher_class_v41",buildJsonObject{put("p_class",classId);put("p_action","delete")}).decodeAs<JsonObject>().checked()
-        if(raw["approval_required"]?.jsonPrimitive?.booleanOrNull==true) error(raw.text("message")); Unit
+        raw.changeResult()
+    }
+    // V261 — approval_required خطا نیست؛ پیام اطلاع‌رسانی (قبلاً به‌صورت خطا نشان داده می‌شد)
+    private fun JsonObject.changeResult(): ManagerChangeResult =
+        if (this["approval_required"]?.jsonPrimitive?.booleanOrNull == true) ManagerChangeResult(true, "درخواست برای تأیید معلم ارسال شد؛ نتیجه در «درخواست‌های من» دیده می‌شود.")
+        else ManagerChangeResult(false, "انجام شد.")
+
+    /** V261 — کارنامهٔ کلاس: نمرهٔ هر دانش‌آموز در هر آزمونِ کلاس (فقط کلاس اشتراکی/ساختهٔ مدیر). */
+    suspend fun classReport(classId: String): Result<ManagerClassReport> = runCatching {
+        val raw = SupabaseProvider.client.postgrest.rpc("native_manager_class_report_v1", buildJsonObject { put("p_class", classId) }).decodeAs<JsonObject>().checked()
+        val exams = (raw["exams"] as? JsonArray).orEmpty().mapNotNull { e ->
+            val i = e as? JsonObject ?: return@mapNotNull null
+            ManagerReportExam(i.text("id"), i.text("title"), i["total_score"]?.jsonPrimitive?.doubleOrNull ?: 0.0)
+        }
+        val students = (raw["students"] as? JsonArray).orEmpty().mapNotNull { e ->
+            val i = e as? JsonObject ?: return@mapNotNull null
+            val grades = (i["grades"] as? JsonObject).orEmpty().mapNotNull { (examId, g) ->
+                val go = g as? JsonObject ?: return@mapNotNull null
+                examId to ManagerReportGrade(go["grade"]?.jsonPrimitive?.doubleOrNull ?: 0.0, go["max"]?.jsonPrimitive?.doubleOrNull ?: 0.0, go["graded"]?.jsonPrimitive?.booleanOrNull ?: false)
+            }.toMap()
+            ManagerReportStudent(i.text("id"), i.text("full_name"), i.text("username"), grades)
+        }
+        ManagerClassReport(raw.text("class_name"), exams, students)
+    }
+
+    /** V261 — درخواست‌های خود مدیر (در انتظار / انجام شد / رد شد). */
+    suspend fun myRequests(): Result<List<ManagerMyRequest>> = runCatching {
+        val raw = SupabaseProvider.client.postgrest.rpc("native_manager_my_requests_v1").decodeAs<JsonObject>().checked()
+        (raw["items"] as? JsonArray).orEmpty().mapNotNull { e ->
+            val i = e as? JsonObject ?: return@mapNotNull null
+            val pl = i["payload"] as? JsonObject
+            fun p(k: String) = pl?.get(k)?.jsonPrimitive?.contentOrNull.orEmpty()
+            val summary = when {
+                i.text("action") == "delete" -> "حذف"
+                p("kind") == "reset_password" -> "رمز جدید"
+                p("name").isNotBlank() -> "ویرایش → «${p("name")}»"
+                else -> "ویرایش"
+            }
+            ManagerMyRequest(i.text("id"), i.text("target_type"), i.text("target_name"), i.text("action"), i.text("status"), i.text("teacher_name"), summary, i.text("decided_at").ifBlank { i.text("created_at") })
+        }
     }
     suspend fun classRoster(classId:String):Result<ManagerClassRoster> = runCatching {
         val raw=SupabaseProvider.client.postgrest.rpc("native_manager_class_roster_v40c",buildJsonObject{put("p_class",classId)}).decodeAs<JsonObject>().checked()

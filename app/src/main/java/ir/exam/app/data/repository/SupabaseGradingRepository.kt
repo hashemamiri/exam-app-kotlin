@@ -118,11 +118,17 @@ class SupabaseGradingRepository {
         rpcObject("exam_autograde_info", buildJsonObject { put("p_exam", examId) }).throwRpcError()
     }
 
-    suspend fun approveAutoGrades(examId: String): Result<Unit> = runCatching {
-        rpcObject("approve_auto_grades", buildJsonObject {
+    /** V261 — نتیجهٔ واقعی سرور: چند پاسخ تأیید شد / چند پاسخ فقط پیش‌پر شد (آزمون تشریحی دارد). */
+    suspend fun approveAutoGrades(examId: String): Result<AutoApproveResult> = runCatching {
+        val raw = rpcObject("approve_auto_grades", buildJsonObject {
             put("p_exam", examId)
             put("p_mode", "auto_only")
         }).throwRpcError()
+        AutoApproveResult(
+            approved = raw["count"]?.jsonPrimitive?.intOrNull ?: 0,
+            prefilled = raw["prefilled"]?.jsonPrimitive?.intOrNull ?: 0,
+            hasEssay = raw["has_essay"]?.jsonPrimitive?.booleanOrNull ?: false
+        )
     }
 
     suspend fun unapprove(answerId: String): Result<Unit> = runCatching {
@@ -366,3 +372,6 @@ private fun JsonObject.throwRpcError(): JsonObject {
     this["error"]?.jsonPrimitive?.contentOrNull?.takeIf(String::isNotBlank)?.let(::error)
     return this
 }
+
+/** V261 */
+data class AutoApproveResult(val approved: Int, val prefilled: Int, val hasEssay: Boolean)

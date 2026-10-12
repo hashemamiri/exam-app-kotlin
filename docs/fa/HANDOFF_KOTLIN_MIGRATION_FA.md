@@ -19425,6 +19425,13 @@ CI: `compileDebugUnitTestKotlin` به‌خاطر `assertFalse` بدون import �
 - باگ V202.5: `var LANDING_TILES` داخل `paintAuth` بعد از خطی که `landing()` را صدا می‌زد تعریف شده بود → به‌خاطر hoisting مقدارش undefined و `.map` خطا می‌داد → صفحهٔ اول خالی. حالا کنار `authActive` در سطح ماژول است (تست ترتیب را پین می‌کند).
 - دروازهٔ صفحهٔ اول: mobile.js `entered()/enter()` با `sessionStorage['m-entered']`، `gateActive() = MQ && user && !entered`؛ app.js `render()` پیش از m-mode اگر gateActive → paintAuth (landing حتی با user). دکمه: user ⇒ `enter(); S.render()`؛ وگرنه `goA('login')`؛ پیوند ثبت‌نام فقط بدون user. `afterLogin()` → `SiteMobile.enter()`.
 
+### V261 — اپ: پاریته با سایت V260.8 (کارنامهٔ کلاس مدیر، درخواست‌های من، درخواست‌های معلم، پیام تأیید خودکار)
+- `SupabaseManagerRepository`: `classReport(classId)` → `ManagerClassReport{exams, students{grades[examId]{grade,max,graded}}}`؛ `myRequests()` → `ManagerMyRequest`؛ `editTeacherClass/deleteTeacherClass` → `Result<ManagerChangeResult(requested,message)>` (قبلاً approval_required را `error()` می‌کرد).
+- `ManagerTeacherClassScreen`: داخل کلاس بخش «کارنامهٔ کلاس» (کارت هر دانش‌آموز با خط هر آزمون + میانگین؛ کارت میانگین کلاس)؛ در فهرست کلاس‌ها کارت «درخواست‌های من» (نمایش/بستن)؛ `info` آبی برای درخواست ثبت‌شده؛ `toPersianManagerStatus`, `fmtScore`.
+- `SupabaseTeacherDashboardRepository.ManagerApprovalItem` + `targetName`, `changeSummary` (از `target_name`/`payload` سرور V260.8)؛ `TeacherManagerRequestsScreen` نمایش.
+- `SupabaseGradingRepository.approveAutoGrades` → `AutoApproveResult(approved,prefilled,hasEssay)`؛ `GradingViewModel.approveAutoGrades` پیام سه‌حالته.
+- تست: `V261_ManagerReportRequestsTest`. bump 1.01.44 → 1.01.45. بدون kotlinc در sandbox — CI کامپایل می‌کند.
+
 ### V260.8.1 — سایت: برچسب وضعیت executed در کارت درخواست‌های معلم
 - بررسی زنده بعد از اجرای SQL V260.8 و deploy: فهرست دانش‌آموزان مدرسه ۶ یکتا ✓، کارنامهٔ کلاس ✓ (اسکرین `qa/shots/m_roster2.png`)، ثبت مستقیم دانش‌آموز در کلاس معلم توسط مدیر ✓ (`mg7_nima`)، پیام درخواست فارسی ✓، exam_autograde_info desc_q=2 ✓، اشتراک مجدد کلاس نهم الف → پارسا و ۳۰ نفر برای مدیر دیده شدند ✓. مشاهده: قبل از V260.8 با تأیید درخواستِ ویرایش، shared_with_manager کلاس false شده بود (نسخهٔ سرورِ تابع decide با مخزن فرق داشت)؛ بعد از بازسازی V41 تکرار نشد.
 - school.js STATUS: executed/applied → «انجام شد»، «تأیید شد»، «رد شد».

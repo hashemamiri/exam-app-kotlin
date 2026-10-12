@@ -13,7 +13,11 @@ import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.longOrNull
 import kotlinx.serialization.json.put
 
-data class ManagerApprovalItem(val id: String, val targetType: String, val action: String, val status: String, val expiresAt: String, val managerName: String)
+data class ManagerApprovalItem(
+    val id: String, val targetType: String, val action: String, val status: String, val expiresAt: String, val managerName: String,
+    val targetName: String = "", // V261 — نام کلاس/دانش‌آموز هدف (سرور V260.8)
+    val changeSummary: String = "" // V261 — «تغییر به: …» از payload
+)
 
 class SupabaseTeacherDashboardRepository {
     suspend fun getMyExams(): Result<List<ExamDashboardDto>> = runCatching {
@@ -64,7 +68,16 @@ class SupabaseTeacherDashboardRepository {
         (raw["items"] as? kotlinx.serialization.json.JsonArray).orEmpty().mapNotNull { element ->
             val item = element as? JsonObject ?: return@mapNotNull null
             fun text(key: String) = item[key]?.jsonPrimitive?.contentOrNull.orEmpty()
-            ManagerApprovalItem(text("id"), text("target_type"), text("action"), text("status"), text("expires_at"), text("manager_name"))
+            val payload = item["payload"] as? JsonObject
+            fun p(key: String) = payload?.get(key)?.jsonPrimitive?.contentOrNull.orEmpty()
+            val summary = when {
+                text("action") == "delete" -> ""
+                p("kind") == "reset_password" -> "رمز جدید"
+                p("kind") == "profile_update" -> listOf(p("first_name"), p("last_name")).filter { it.isNotBlank() }.joinToString(" ").let { n -> if (p("username").isNotBlank()) "$n (${p("username")})" else n }.let { if (it.isNotBlank()) "تغییر به: $it" else "" }
+                text("target_type") == "class" -> listOf(p("name").takeIf { it.isNotBlank() }?.let { "نام «$it»" }, p("grade").takeIf { it.isNotBlank() }?.let { "پایه $it" }, p("field").takeIf { it.isNotBlank() }?.let { "رشته $it" }).filterNotNull().joinToString("، ").let { if (it.isNotBlank()) "تغییر به: $it" else "" }
+                else -> ""
+            }
+            ManagerApprovalItem(text("id"), text("target_type"), text("action"), text("status"), text("expires_at"), text("manager_name"), text("target_name"), summary)
         }
     }
 

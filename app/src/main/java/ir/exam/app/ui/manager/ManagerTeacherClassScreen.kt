@@ -38,7 +38,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import ir.exam.app.data.repository.ManagerClassReport
 import ir.exam.app.data.repository.ManagerClassRoster
+import ir.exam.app.data.repository.ManagerMyRequest
 import ir.exam.app.data.repository.ManagerStudentItem
 import ir.exam.app.data.repository.ManagerTeacherClass
 import ir.exam.app.data.repository.SupabaseManagerRepository
@@ -75,9 +77,15 @@ fun ManagerTeacherClassScreen(
  var pickQuery by remember{mutableStateOf("")}
  // V62.8 — فرم دانش‌آموز جدید (همان فرم پنل معلم) داخل کلاس مدیر.
  var createStudentOpen by remember{mutableStateOf(false)}
+ // V261 — پیام اطلاع‌رسانی (درخواست ثبت شد)، کارنامهٔ کلاس و درخواست‌های من
+ var info by remember{mutableStateOf<String?>(null)}
+ var report by remember{mutableStateOf<ManagerClassReport?>(null)};var reportError by remember{mutableStateOf<String?>(null)}
+ var myRequests by remember{mutableStateOf<List<ManagerMyRequest>>(emptyList())};var myRequestsOpen by remember{mutableStateOf(false)}
+ fun loadMyRequests(){scope.launch{repo.myRequests().onSuccess{myRequests=it}.onFailure{}}}
  fun loadClasses(){scope.launch{loading=true;repo.teacherClasses(teacherId).onSuccess{teacherName=it.teacherName;classes=it.items;error=null}.onFailure{error=safeManagerError(it)};loading=false}}
- fun loadRoster(item:ManagerTeacherClass){scope.launch{loading=true;repo.classRoster(item.id).onSuccess{roster=it;selected=item}.onFailure{error=safeManagerError(it)};repo.schoolStudents().onSuccess{schoolStudents=it}.onFailure{error=safeManagerError(it)};loading=false}}
- LaunchedEffect(teacherId){loadClasses()}
+ fun loadRoster(item:ManagerTeacherClass){scope.launch{loading=true;repo.classRoster(item.id).onSuccess{roster=it;selected=item}.onFailure{error=safeManagerError(it)};repo.schoolStudents().onSuccess{schoolStudents=it}.onFailure{error=safeManagerError(it)};loading=false
+  report=null;reportError=null;repo.classReport(item.id).onSuccess{report=it}.onFailure{reportError=safeManagerError(it)}}}
+ LaunchedEffect(teacherId){loadClasses();loadMyRequests()}
  // V62.6 — هدر بالا: «کلاس‌های معلم» یا نام کلاس باز.
  LaunchedEffect(teacherName,selected){
   onTitleChanged(if(selected==null)"کلاس‌های ${teacherName.ifBlank{"معلم"}}" else roster?.className.orEmpty().ifBlank{"کلاس"})
@@ -85,16 +93,43 @@ fun ManagerTeacherClassScreen(
  androidx.compose.foundation.layout.Box(Modifier.fillMaxSize()){
  Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),verticalArrangement=Arrangement.spacedBy(10.dp)){
   Row(verticalAlignment=Alignment.CenterVertically){IconButton(onClick={if(selected!=null){selected=null;roster=null;onTitleChanged("کلاس‌های ${teacherName.ifBlank{"معلم"}}")}else{onTitleChanged(null);onBack()}}){Icon(Icons.Outlined.ArrowBack,"بازگشت")}}
-  error?.let{Text(it,color=MaterialTheme.colorScheme.error)};if(loading)CircularProgressIndicator()
+  error?.let{Text(it,color=MaterialTheme.colorScheme.error)};info?.let{Text(it,color=MaterialTheme.colorScheme.primary)};if(loading)CircularProgressIndicator()
   if(selected==null){
    Button(onClick={editClassId=null;name="";grade="";field="";createOpen=!createOpen},modifier=Modifier.fillMaxWidth()){Icon(Icons.Outlined.Add,null);Text("کلاس جدید برای معلم")}
-   if(createOpen){Card(Modifier.fillMaxWidth()){Column(Modifier.padding(12.dp),verticalArrangement=Arrangement.spacedBy(7.dp)){OutlinedTextField(name,{name=it.take(120)},label={Text("نام کلاس")});OutlinedTextField(grade,{grade=it.take(120)},label={Text("پایه")});OutlinedTextField(field,{field=it.take(120)},label={Text("رشته")});Button(enabled=name.isNotBlank(),onClick={scope.launch{(editClassId?.let{repo.editTeacherClass(it,name,grade,field)}?:repo.createTeacherClass(teacherId,name,grade,field)).onSuccess{name="";grade="";field="";editClassId=null;createOpen=false;loadClasses()}.onFailure{error=safeManagerError(it)}}}){Text(if(editClassId==null)"ایجاد" else "ارسال درخواست ویرایش")}}}}
+   if(createOpen){Card(Modifier.fillMaxWidth()){Column(Modifier.padding(12.dp),verticalArrangement=Arrangement.spacedBy(7.dp)){OutlinedTextField(name,{name=it.take(120)},label={Text("نام کلاس")});OutlinedTextField(grade,{grade=it.take(120)},label={Text("پایه")});OutlinedTextField(field,{field=it.take(120)},label={Text("رشته")});Button(enabled=name.isNotBlank(),onClick={scope.launch{val eid=editClassId;val r=if(eid!=null)repo.editTeacherClass(eid,name,grade,field).map{it.requested to it.message}else repo.createTeacherClass(teacherId,name,grade,field).map{false to "کلاس ساخته شد."};r.onSuccess{(req,msg)->name="";grade="";field="";editClassId=null;createOpen=false;error=null;info=if(req)msg else null;loadClasses();if(req)loadMyRequests()}.onFailure{error=safeManagerError(it)}}}){Text(if(editClassId==null)"ایجاد" else "ذخیره / درخواست ویرایش")}}}}
    if(!loading&&classes.isEmpty())Text("کلاسی برای نمایش نیست؛ کلاس‌های خصوصی معلم فقط با تأیید خودش دیده می‌شوند.")
-   classes.forEach{c->Card(Modifier.fillMaxWidth()){Row(Modifier.fillMaxWidth().padding(12.dp),verticalAlignment=Alignment.CenterVertically){Column(Modifier.weight(1f)){Text(c.name,style=MaterialTheme.typography.titleMedium);Text("${c.grade} ${c.field} · ${c.total} دانش‌آموز")};Button(onClick={loadRoster(c)}){Text("ورود")};IconButton(onClick={editClassId=c.id;name=c.name;grade=c.grade;field=c.field;createOpen=true}){Icon(Icons.Outlined.Edit,"ویرایش کلاس")};IconButton(onClick={scope.launch{repo.deleteTeacherClass(c.id).onSuccess{loadClasses()}.onFailure{error=safeManagerError(it)}}}){Icon(Icons.Outlined.Delete,"حذف کلاس",tint=MaterialTheme.colorScheme.error)}}}}
+   classes.forEach{c->Card(Modifier.fillMaxWidth()){Row(Modifier.fillMaxWidth().padding(12.dp),verticalAlignment=Alignment.CenterVertically){Column(Modifier.weight(1f)){Text(c.name,style=MaterialTheme.typography.titleMedium);Text("${c.grade} ${c.field} · ${c.total} دانش‌آموز")};Button(onClick={loadRoster(c)}){Text("ورود")};IconButton(onClick={editClassId=c.id;name=c.name;grade=c.grade;field=c.field;createOpen=true}){Icon(Icons.Outlined.Edit,"ویرایش کلاس")};IconButton(onClick={scope.launch{repo.deleteTeacherClass(c.id).onSuccess{r->error=null;info=if(r.requested)r.message else null;loadClasses();if(r.requested)loadMyRequests()}.onFailure{error=safeManagerError(it)}}}){Icon(Icons.Outlined.Delete,"حذف کلاس",tint=MaterialTheme.colorScheme.error)}}}}
+   // V261 — درخواست‌های من (ویرایش/حذف کلاس معلم که نیاز به تأیید او دارد)
+   if(myRequests.isNotEmpty()){
+    val pending=myRequests.count{it.status=="pending"}
+    Card(Modifier.fillMaxWidth()){Column(Modifier.padding(12.dp),verticalArrangement=Arrangement.spacedBy(6.dp)){
+     Row(verticalAlignment=Alignment.CenterVertically){Text("درخواست‌های من"+(if(pending>0)" ($pending در انتظار)" else ""),Modifier.weight(1f),style=MaterialTheme.typography.titleMedium);TextButton(onClick={myRequestsOpen=!myRequestsOpen}){Text(if(myRequestsOpen)"بستن" else "نمایش")}}
+     if(myRequestsOpen)myRequests.take(30).forEach{r->Column{Text((if(r.targetType=="class")"کلاس " else "دانش‌آموز ")+r.targetName+" · "+r.changeSummary,style=MaterialTheme.typography.bodyMedium);Text("معلم: ${r.teacherName.ifBlank{"—"}} · وضعیت: ${r.status.toPersianManagerStatus()}",style=MaterialTheme.typography.bodySmall)}}
+    }}
+   }
   }else{
    Text("دانش‌آموزان کلاس",style=MaterialTheme.typography.titleMedium)
    if(!loading&&roster?.items.orEmpty().isEmpty())Text("این کلاس هنوز عضوی ندارد؛ با دکمهٔ + دانش‌آموز اضافه کنید.")
    roster?.items.orEmpty().forEach{st->Card(Modifier.fillMaxWidth()){Row(Modifier.fillMaxWidth().padding(10.dp),verticalAlignment=Alignment.CenterVertically){Text(st.fullName.ifBlank{st.username},Modifier.weight(1f));IconButton(onClick={scope.launch{repo.setClassStudent(selected!!.id,st.id,false).onSuccess{loadRoster(selected!!)}.onFailure{error=safeManagerError(it)}}}){Icon(Icons.Outlined.Delete,"حذف از کلاس",tint=MaterialTheme.colorScheme.error)}}}}
+   // V261 — کارنامهٔ کلاس (مثل سایت): نمرهٔ هر دانش‌آموز در هر آزمون کلاس + میانگین
+   Text("کارنامهٔ کلاس",style=MaterialTheme.typography.titleMedium)
+   reportError?.let{Text(it,color=MaterialTheme.colorScheme.error)}
+   val rep=report
+   if(rep!=null){
+    if(rep.exams.isEmpty())Text("هنوز آزمونی برای این کلاس برگزار یا تصحیح نشده است.")
+    else{
+     val examAvg=rep.exams.map{ex->rep.students.mapNotNull{st->st.grades[ex.id]?.takeIf{it.graded&&it.max>0}?.let{it.grade*100/it.max}}}
+     rep.students.forEach{st->
+      val pcts=rep.exams.mapNotNull{ex->st.grades[ex.id]?.takeIf{it.graded&&it.max>0}?.let{it.grade*100/it.max}}
+      Card(Modifier.fillMaxWidth()){Column(Modifier.padding(10.dp),verticalArrangement=Arrangement.spacedBy(4.dp)){
+       Row(verticalAlignment=Alignment.CenterVertically){Text(st.fullName.ifBlank{st.username},Modifier.weight(1f),style=MaterialTheme.typography.titleSmall);Text(if(pcts.isEmpty())"—" else "میانگین ${"%.1f".format(pcts.average())}٪",color=when{pcts.isEmpty()->MaterialTheme.colorScheme.onSurfaceVariant;pcts.average()>=50->MaterialTheme.colorScheme.primary;else->MaterialTheme.colorScheme.error})}
+       rep.exams.forEach{ex->val g=st.grades[ex.id];Text(ex.title+": "+when{g==null->"غایب";!g.graded->"تصحیح‌نشده";else->"${fmtScore(g.grade)} از ${fmtScore(g.max)} (${"%.0f".format(if(g.max>0)g.grade*100/g.max else 0.0)}٪)"},style=MaterialTheme.typography.bodySmall)}
+      }}
+     }
+     Card(Modifier.fillMaxWidth()){Column(Modifier.padding(10.dp)){Text("میانگین کلاس",style=MaterialTheme.typography.titleSmall);rep.exams.forEachIndexed{i,ex->val l=examAvg[i];Text(ex.title+": "+(if(l.isEmpty())"—" else "${"%.1f".format(l.average())}٪"),style=MaterialTheme.typography.bodySmall)}}}
+     Text("نمره‌ها پس از تأیید معلم نمایش داده می‌شوند؛ «غایب» یعنی دانش‌آموز در آن آزمون شرکت نکرده است.",style=MaterialTheme.typography.bodySmall)
+    }
+   }
   }
  }
  // V62.6 — دکمهٔ شناور + فقط داخل کلاس.
@@ -169,3 +204,14 @@ fun ManagerTeacherClassScreen(
   )
  }
 }
+
+// V261
+private fun String.toPersianManagerStatus() = when (this) {
+    "pending" -> "در انتظار معلم"
+    "approved" -> "تأیید شد"
+    "executed" -> "انجام شد"
+    "rejected" -> "رد شد"
+    "expired" -> "منقضی"
+    else -> this
+}
+private fun fmtScore(v: Double): String = if (v == Math.floor(v)) v.toLong().toString() else "%.2f".format(v).trimEnd('0').trimEnd('.')

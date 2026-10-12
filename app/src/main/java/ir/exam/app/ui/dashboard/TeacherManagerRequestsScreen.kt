@@ -68,7 +68,9 @@ fun TeacherManagerRequestsScreen() {
             NeumorphicPanel(Modifier.fillMaxWidth(), contentPadding = androidx.compose.foundation.layout.PaddingValues(14.dp)) {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(request.managerName.ifBlank { "مدیر مدرسه" }, style = MaterialTheme.typography.titleMedium)
-                    Text("${if (request.targetType == "class") "کلاس" else "حساب دانش‌آموز"} · ${if (request.action == "delete") "حذف" else "ویرایش"}")
+                    // V261 — نام هدف و خلاصهٔ تغییر درخواستی
+                    Text("${if (request.targetType == "class") "کلاس" else "حساب دانش‌آموز"}${if (request.targetName.isNotBlank()) " «${request.targetName}»" else ""} · ${if (request.action == "delete") "حذف" else if (request.changeSummary == "رمز جدید") "رمز جدید" else "ویرایش"}")
+                    if (request.changeSummary.isNotBlank() && request.changeSummary != "رمز جدید") Text(request.changeSummary, style = MaterialTheme.typography.bodySmall)
                     Text("وضعیت: ${request.status.toPersianRequestStatus()}")
                     if (request.status == "pending") {
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -87,7 +89,7 @@ private fun String.toPersianRequestStatus() = when (this) {
     "approved" -> "تأیید شده"
     "rejected" -> "رد شده"
     "expired" -> "منقضی شده"
-    "executed" -> "اجرا شده"
+    "executed" -> "انجام شد"
     else -> this
 }
 

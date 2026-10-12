@@ -284,10 +284,20 @@ class GradingViewModel(
         repository.deleteFeedback(id).getOrThrow();_state.update{it.copy(feedbackBank=repository.feedbackBank().getOrThrow())}
     }
 
-    fun approveAutoGrades() = action("نمره‌های خودکار تأیید شدند.") {
-        val id = state.value.selectedExam?.id ?: error("آزمون انتخاب نشده است.")
-        repository.approveAutoGrades(id).getOrThrow()
-        reloadSelected()
+    fun approveAutoGrades() = viewModelScope.launch {
+        // V261 — پیام بر اساس نتیجهٔ واقعی سرور (تأیید شد / فقط پیش‌پر شد چون آزمون تشریحی دارد)
+        _state.update { it.copy(actionLoading = true, error = null, message = null) }
+        runCatching {
+            val id = state.value.selectedExam?.id ?: error("آزمون انتخاب نشده است.")
+            val r = repository.approveAutoGrades(id).getOrThrow()
+            reloadSelected()
+            when {
+                r.approved > 0 -> "${r.approved} پاسخ به‌صورت خودکار نمره‌گذاری و تأیید شد."
+                r.prefilled > 0 -> "نمرهٔ سؤال‌های عینی ${r.prefilled} پاسخ پیش‌پر شد؛ چون آزمون سؤال تشریحی دارد، پس از تصحیح تشریحی‌ها «ذخیرهٔ نمره» را بزنید."
+                else -> "پاسخ تازه‌ای برای تأیید خودکار نبود."
+            }
+        }.onSuccess { msg -> _state.update { it.copy(actionLoading = false, message = msg) } }
+            .onFailure(::fail)
     }
 
     fun unapprove(answerId: String) = action("تأیید نمره برداشته شد.") {
