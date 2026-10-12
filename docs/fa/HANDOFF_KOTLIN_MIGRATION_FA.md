@@ -19425,6 +19425,11 @@ CI: `compileDebugUnitTestKotlin` به‌خاطر `assertFalse` بدون import �
 - باگ V202.5: `var LANDING_TILES` داخل `paintAuth` بعد از خطی که `landing()` را صدا می‌زد تعریف شده بود → به‌خاطر hoisting مقدارش undefined و `.map` خطا می‌داد → صفحهٔ اول خالی. حالا کنار `authActive` در سطح ماژول است (تست ترتیب را پین می‌کند).
 - دروازهٔ صفحهٔ اول: mobile.js `entered()/enter()` با `sessionStorage['m-entered']`، `gateActive() = MQ && user && !entered`؛ app.js `render()` پیش از m-mode اگر gateActive → paintAuth (landing حتی با user). دکمه: user ⇒ `enter(); S.render()`؛ وگرنه `goA('login')`؛ پیوند ثبت‌نام فقط بدون user. `afterLogin()` → `SiteMobile.enter()`.
 
+### V260.10 — SQL: approve_auto_grades پاسخ‌های صفرشدهٔ قدیمی را در آزمون تشریحی هم بازمی‌گرداند
+- QA کامل (qa/full_qa.py، qa/deep_qa.py): همهٔ پنل‌ها بدون PAGEERROR/console.error/HTTP≥400. یافته: teacher reports «میانگین درصد ۴.۶٪» ← ۷۲ پاسخ graded=true/auto_graded=true/total_grade=0 (graded_at 09:51، قبل از V260.7). در approve_auto_grades v260.7 شاخهٔ تشریحی فقط `graded=false` را به‌روز می‌کرد → این پاسخ‌ها هرگز اصلاح نمی‌شدند.
+- `supabase/migrations/20261012_native_approve_auto_grades_v260_10.sql`: همان تابع؛ شاخهٔ تشریحی ← `set grades, total_grade, graded=false, auto_graded=true, graded_at=null where graded=false or auto_graded=true`. پس از اجرای SQL، معلم باید روی سه آزمون (3YECPY, 4TLG5N, KYLCUE) «تأیید نمره‌های خودکار» بزند (یا QA: rpc approve_auto_grades).
+- ضمناً تست دستی: دانش‌آموز mg7_arash یک تلاش نیمه‌تمام روی 4TLG5N دارد (QA؛ ارسال نشد).
+
 ### V261.3 — site.yml: تکرار خودکار deploy
 - لاگ خام کاربر: آپلود ۲۹ فایل موفق، سپس `✘ [ERROR] Deployment failed! Failed to publish your Function. Got error: Unknown internal error occurred.` — site_out هیچ functions/_worker ندارد؛ خطای داخلی Cloudflare Pages. سه مرحلهٔ wrangler-action با `continue-on-error` + `preCommands: sleep`. site-only → بدون bump.
 
