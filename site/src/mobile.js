@@ -756,7 +756,8 @@
     function busy(b, on) { b.disabled = on; b.classList.toggle('loading', !!on); }
     if (A.screen === 'landing' || S.user()) wrap.appendChild(landing());
     else { var card = el('div', {class: 'ice-card'}); wrap.appendChild(card); ({login: loginPane, register: registerPane, otp: otpPane, setup: setupPane, recovery: recoveryPane})[A.screen](card); }
-    wrap.appendChild(msg);
+    /* V260.5 — پیام خطا داخل همان کارت (نه زیر آن روی پس‌زمینهٔ موج‌دار) */
+    if (card) card.appendChild(msg); else wrap.appendChild(msg);
     root.appendChild(shell);
 
     function goA(scr, patch) { A.screen = scr; Object.keys(patch || {}).forEach(function (k) { A[k] = patch[k]; }); S.render(); }
@@ -782,7 +783,7 @@
         apkBtn.onclick = function () { var a = el('a', {href: v.url, download: 'exam-app-' + v.name + '.apk'}); document.body.appendChild(a); a.click(); a.remove(); toast('دانلود برنامه آغاز شد.', 'ok'); };
       }).catch(function () { apkBtn.textContent = 'دریافت برنامه ممکن نشد'; });
       return el('div', {class: 'ice-landing'}, [
-        stag(0, el('div', {class: 'ice-hero'}, [ic('school')])),
+        stag(0, el('div', {class: 'ice-hero'}, [el('img', {src: '/pwa/v3/mark-256.png', alt: '', width: '60', height: '60'})])), /* V260.5 — لوگوی جدید «آزمون» مثل دسکتاپ و اپ */
         stag(1, el('div', {class: 'ice-title', text: 'آزمون آنلاین'})),
         stag(2, el('div', {class: 'ice-sub', text: 'به سامانهٔ آزمون و ارزشیابی خوش آمدید'})),
         /* V202.5 — صفحهٔ اول: «دریافت برنامه» (دانلود مستقیم APK از app_version) + «ورود به سامانه» + کاشی‌های معرفی سایت دسکتاپ */

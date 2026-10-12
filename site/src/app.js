@@ -515,9 +515,13 @@
     updateEmail: function (email) { return authApi.updateUser({email: email}); },
     /* V202.3 — همان منبع اپ (جدول عمومی app_version، بدون نیاز به نشست): آخرین نسخهٔ فعال با نشانی مستقیم APK */
     latestApk: async function () {
+      /* V260.5 — یک ساعت کش محلی: صفحهٔ فرود گوشی برای شمارهٔ نسخه منتظر یک رفت‌وبرگشت نمی‌ماند */
+      try { var ck = JSON.parse(localStorage.getItem('examsite.apk.v1') || 'null'); if (ck && Date.now() - ck.at < 3600000) return ck.v; } catch (e) {}
       var rows = await http('/rest/v1/app_version?select=version_code,version_name,apk_url,apk_size_bytes&is_active=eq.true&order=version_code.desc&limit=1', {auth: false});
       var r = Array.isArray(rows) && rows[0]; if (!r || !/^https:\/\//i.test(String(r.apk_url || ''))) return null;
-      return {code: r.version_code, name: r.version_name, url: String(r.apk_url).trim(), size: Number(r.apk_size_bytes) || 0};
+      var out = {code: r.version_code, name: r.version_name, url: String(r.apk_url).trim(), size: Number(r.apk_size_bytes) || 0};
+      try { localStorage.setItem('examsite.apk.v1', JSON.stringify({at: Date.now(), v: out})); } catch (e) {}
+      return out;
     },
     updateUsername: function (u) { return rpcObj('native_update_my_username_v1', {p_username: u.trim().toLowerCase()}); },
     // معلم

@@ -19425,6 +19425,12 @@ CI: `compileDebugUnitTestKotlin` به‌خاطر `assertFalse` بدون import �
 - باگ V202.5: `var LANDING_TILES` داخل `paintAuth` بعد از خطی که `landing()` را صدا می‌زد تعریف شده بود → به‌خاطر hoisting مقدارش undefined و `.map` خطا می‌داد → صفحهٔ اول خالی. حالا کنار `authActive` در سطح ماژول است (تست ترتیب را پین می‌کند).
 - دروازهٔ صفحهٔ اول: mobile.js `entered()/enter()` با `sessionStorage['m-entered']`، `gateActive() = MQ && user && !entered`؛ app.js `render()` پیش از m-mode اگر gateActive → paintAuth (landing حتی با user). دکمه: user ⇒ `enter(); S.render()`؛ وگرنه `goA('login')`؛ پیوند ثبت‌نام فقط بدون user. `afterLogin()` → `SiteMobile.enter()`.
 
+### V260.5 — سایت: رفع یافته‌های بررسی خودکار (Playwright)
+- سایت زنده با Chromium بدون‌سر در ۱۴۴۰/۱۰۲۴/۸۲۰/۷۶۸/۳۹۰ بررسی شد (بدون خطای JS، بدون سرریز افقی، ورود اشتباه و سقف تلاش و /status درست).
+- `mobile.js`: `.ice-hero` با `<img src=/pwa/v3/mark-256.png>`؛ `msg` خطا داخل `card` (در صورت وجود). `site.css`: `.ice-hero img`، `.ice-card .ice-err` (کادر قرمز کم‌رنگ + تاریک)؛ مدیای `.lp` از ۱۰۲۴ به ۸۶۰ و بازهٔ ۸۶۱–۱۰۲۴ دوستونه `1fr 400px`.
+- `app.js` `latestApk`: کش `examsite.apk.v1` یک‌ساعته. فایل جدید `site/_headers` (nosniff، SAMEORIGIN، HSTS، Referrer-Policy، Permissions-Policy بدون محدودیت میکروفون؛ کش immutable برای `/fonts/*` و `/engines.*.js`).
+- تست: `V260_5_SiteQaFixesTest.kt`. فقط سایت؛ بدون bump. اسکریپت‌های بررسی در فضای کار `qa/` (خارج از مخزن).
+
 ### V260.4 — سایت: کش پروفایل و داشبورد (stale-while-revalidate)
 - یافتهٔ پروب V260.3 روی دستگاه کاربر (3g، rtt≈600ms): قبل از نمایش داشبورد ۳ رفت‌وبرگشت پشت‌سرهم (login-email → token → ensure_profile) و سپس ۵ درخواست موازی؛ خود صفحه سریع است.
 - `site/src/app.js`: `LS_PROFILE` / `LS_DASH` + `cacheGet/cacheSet` (با uid)؛ `currentProfile` نتیجه را کش می‌کند؛ `boot()` اگر پروفایل کش‌شدهٔ همین uid باشد فوراً رندر و در پس‌زمینه `currentProfile()` را تازه می‌کند (تغییر → رندر مجدد؛ 401/JWT → خروج). داشبورد معلم به `paintTeacherDash(c, r, failed, stale)` جدا شد؛ ابتدا دادهٔ کش (فهرست آزمون‌ها، شمار کلاس/دانش‌آموز، موجودی، درخواست‌ها — نه فهرست دانش‌آموزان) و بعد دادهٔ تازه. `saveSession(null)` کش‌ها را پاک می‌کند.
