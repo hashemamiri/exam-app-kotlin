@@ -5,8 +5,9 @@ name: آزمون آنلاین
 on:
   push:
     branches: [main]
+    # V261.2 — text/APP_VERSION.txt دیگر نادیده گرفته نمی‌شود: هر bump نسخه حتماً CI اپ را اجرا می‌کند (V261.1 فقط فایل‌های نادیده را تغییر داده بود و APK ساخته نشد)
     # V189 — تغییرات فقط-سایت (منبع سایت، تست‌های آینهٔ سایت، پل پرداخت، توابع Supabase، مستندات) CI اپ را اجرا نمی‌کنند
-    paths-ignore: ['site/**', 'docs/**', 'text/**', 'relay/**', 'supabase/**', '.github/workflows/site.yml', 'app/src/test/**/V1*_Site*Test.kt', 'app/src/test/**/V1*_Pay*Test.kt', 'app/src/test/**/V1*_Print*Test.kt', 'app/src/test/**/V*_Site*Test.kt']
+    paths-ignore: ['site/**', 'docs/**', 'text/CHANGELOG_FA.txt', 'text/*.md', 'relay/**', 'supabase/**', '.github/workflows/site.yml', 'app/src/test/**/V1*_Site*Test.kt', 'app/src/test/**/V1*_Pay*Test.kt', 'app/src/test/**/V1*_Print*Test.kt', 'app/src/test/**/V*_Site*Test.kt']
   workflow_dispatch:
 
 permissions:

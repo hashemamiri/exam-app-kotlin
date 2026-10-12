@@ -19425,6 +19425,11 @@ CI: `compileDebugUnitTestKotlin` به‌خاطر `assertFalse` بدون import �
 - باگ V202.5: `var LANDING_TILES` داخل `paintAuth` بعد از خطی که `landing()` را صدا می‌زد تعریف شده بود → به‌خاطر hoisting مقدارش undefined و `.map` خطا می‌داد → صفحهٔ اول خالی. حالا کنار `authActive` در سطح ماژول است (تست ترتیب را پین می‌کند).
 - دروازهٔ صفحهٔ اول: mobile.js `entered()/enter()` با `sessionStorage['m-entered']`، `gateActive() = MQ && user && !entered`؛ app.js `render()` پیش از m-mode اگر gateActive → paintAuth (landing حتی با user). دکمه: user ⇒ `enter(); S.render()`؛ وگرنه `goA('login')`؛ پیوند ثبت‌نام فقط بدون user. `afterLogin()` → `SiteMobile.enter()`.
 
+### V261.2 — CI: bump همیشه CI اپ را اجرا می‌کند
+- android.yml `paths-ignore`: `text/**` → `text/CHANGELOG_FA.txt`, `text/*.md` تا `text/APP_VERSION.txt` تریگر باشد. V261.1 (f19edb34 در GitHub) فقط workflow سایت را اجرا کرد؛ APK 1.01.46 هرگز ساخته نشد.
+- وضعیت GitHub Actions (API عمومی): site برای V260.9 و V261.1 در مرحلهٔ «Deploy to Cloudflare Pages» (wrangler-action v3, `pages deploy`) FAILED؛ خروجی ساخت سایت موفق و تفاوت site_out با V260.8.1 (موفق) فقط ۸ خط index.html — خطا سمت Cloudflare/توکن است؛ لاگ خام لازم است (API لاگ بدون دسترسی admin ۴۰۳ می‌دهد).
+- bump 1.01.46 → 1.01.47.
+
 ### V261.1 — رفع CI (پین‌های تست سایت)
 - لاگ CI: compileDebugKotlin ✓؛ `V218_MathRenderDarkTest.siteDesktopDarkPalette` (regex `background:#fff\b` روی site.css — خط `.ice-hero img` از V260.5) و `V251_SiteDashboardErrorsTest` (دو رشتهٔ app.js که در V260.6 تغییر کرده بودند) FAILED.
 - رفع: site.css `.ice-hero img{...background:#FFFFFF...}`؛ V251 پین‌های جدید. درس: بعد از هر تغییر سایت، `grep -F` رشته‌های تست‌های `V*Test.kt` که site/ را می‌خوانند بررسی شود (فهرست: `grep -ln 'site/src' app/src/test -r`).
