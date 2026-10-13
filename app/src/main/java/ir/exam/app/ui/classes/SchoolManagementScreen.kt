@@ -133,6 +133,9 @@ fun SchoolManagementScreen(
     var creatingClass by remember { mutableStateOf(false) }
     // V61.1 — پنجرهٔ ساخت مدرسهٔ جدید (فقط مدیر).
     var creatingSchool by remember { mutableStateOf(false) }
+    // V262 — ویرایش/حذف مدرسه (فقط مدیر)
+    var editingSchool by remember { mutableStateOf<TeacherSchoolItem?>(null) }
+    var deletingSchool by remember { mutableStateOf<TeacherSchoolItem?>(null) }
     // V61.5 — پنجرهٔ عضویت معلم در مدرسهٔ جدید با کد دعوت.
     var joiningSchool by remember { mutableStateOf(false) }
     var deletingClass by remember { mutableStateOf<SchoolClass?>(null) }
@@ -342,6 +345,9 @@ fun SchoolManagementScreen(
                     onCreateSchool = if (managerTeacherPicker) {
                         { creatingSchool = true }
                     } else null,
+                    // V262 — فقط مدیر: ویرایش و حذف مدرسه
+                    onEditSchool = if (managerTeacherPicker) { { editingSchool = it } } else null,
+                    onDeleteSchool = if (managerTeacherPicker) { { deletingSchool = it } } else null,
                     // V62.6 — از داک مدیر: بدون «بازگشت به کلاس‌ها».
                     showBackToClasses = !(schoolsFromDock && managerTeacherPicker),
                     // V61.6 — فقط معلم: پیوستن به مدرسه با کد دعوت.
@@ -359,7 +365,8 @@ fun SchoolManagementScreen(
                     // V62.6 — سوییچ «قابل مشاهده برای مدیر» فقط برای معلم.
                     onShareChanged = if (!managerTeacherPicker) {
                         { item, shared -> viewModel.setClassShared(item.id, shared) }
-                    } else null
+                    } else null,
+                    managerCreatedIds = state.managerCreatedClassIds
                 )
             }
         }
@@ -405,6 +412,40 @@ fun SchoolManagementScreen(
                 ) { Text("ساخت مدرسه") }
             },
             dismissButton = { TextButton(onClick = { creatingSchool = false }) { Text("انصراف") } }
+        )
+    }
+
+    editingSchool?.let { sch ->
+        // V262 — ویرایش مدرسه (مدیر): همان فرم ساخت با مقادیر فعلی
+        var schoolName by remember(sch.id) { mutableStateOf(sch.name) }
+        var schoolProvince by remember(sch.id) { mutableStateOf(sch.province) }
+        var schoolCity by remember(sch.id) { mutableStateOf(sch.city) }
+        AlertDialog(
+            onDismissRequest = { editingSchool = null },
+            title = { Text("ویرایش مدرسه") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedTextField(schoolName, { schoolName = it.take(160) }, label = { Text("نام مدرسه") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        OutlinedTextField(schoolProvince, { schoolProvince = it.take(100) }, label = { Text("استان") }, singleLine = true, modifier = Modifier.weight(1f))
+                        OutlinedTextField(schoolCity, { schoolCity = it.take(100) }, label = { Text("شهر") }, singleLine = true, modifier = Modifier.weight(1f))
+                    }
+                }
+            },
+            confirmButton = {
+                Button(onClick = { viewModel.updateSchool(sch.id, schoolName, schoolProvince, schoolCity); editingSchool = null }, enabled = schoolName.trim().length >= 2) { Text("ذخیره") }
+            },
+            dismissButton = { TextButton(onClick = { editingSchool = null }) { Text("انصراف") } }
+        )
+    }
+    deletingSchool?.let { sch ->
+        // V262 — حذف مدرسه با تأیید؛ سرور فقط مدرسهٔ خالی را حذف می‌کند و آخرین مدرسه حذف نمی‌شود
+        AlertDialog(
+            onDismissRequest = { deletingSchool = null },
+            title = { Text("حذف مدرسه") },
+            text = { Text("مدرسهٔ «${sch.name}» حذف می‌شود. فقط مدرسهٔ خالی (بدون کلاس، آزمون، دانش‌آموز و معلم) قابل حذف است و آخرین مدرسه حذف نمی‌شود.") },
+            confirmButton = { Button(onClick = { viewModel.deleteSchool(sch.id); deletingSchool = null }) { Text("حذف") } },
+            dismissButton = { TextButton(onClick = { deletingSchool = null }) { Text("انصراف") } }
         )
     }
 
@@ -724,7 +765,9 @@ private fun ClassesContent(
     onEdit: (SchoolClass) -> Unit,
     onDelete: (SchoolClass) -> Unit,
     // V62.6 — سوییچ اشتراک کلاس با مدیر (فقط برای معلم پاس می‌شود).
-    onShareChanged: ((SchoolClass, Boolean) -> Unit)? = null
+    onShareChanged: ((SchoolClass, Boolean) -> Unit)? = null,
+    // V262 — کلاس‌های مدیرساخته: چیپ «کلاس مدیر» به‌جای چشم اشتراک
+    managerCreatedIds: Set<String> = emptySet()
 ) {
     Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         // V61.0 — دکمهٔ «مدارس» کنار ساخت کلاس جدید.
@@ -758,7 +801,15 @@ private fun ClassesContent(
                             ) {
                                 // V62.8 — آیکن چشم به‌جای سوییچ: فعال = کلاس با
                                 // اعضایش برای مدیر قابل مشاهده؛ پیام از ViewModel.
-                                onShareChanged?.let { share ->
+                                if (item.id in managerCreatedIds) {
+                                    // V262 — کلاس را مدیر ساخته و همیشه برای او قابل مشاهده است
+                                    Text(
+                                        "کلاس مدیر",
+                                        style = MaterialTheme.typography.labelMedium,
+                                        color = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.padding(horizontal = 6.dp)
+                                    )
+                                } else onShareChanged?.let { share ->
                                     IconButton(onClick = { share(item, !item.sharedWithManager) }) {
                                         Icon(
                                             if (item.sharedWithManager) Icons.Outlined.Visibility
@@ -797,7 +848,10 @@ private fun SchoolsContent(
     // V61.6 — معلم: دکمهٔ «پیوستن به مدرسه» در ردیف بازگشت.
     onJoinSchool: (() -> Unit)? = null,
     // V62.6 — کارت «مدارس» داک مدیر بدون دکمهٔ بازگشت به کلاس‌ها.
-    showBackToClasses: Boolean = true
+    showBackToClasses: Boolean = true,
+    // V262 — فقط مدیر: ویرایش/حذف مدرسه
+    onEditSchool: ((TeacherSchoolItem) -> Unit)? = null,
+    onDeleteSchool: ((TeacherSchoolItem) -> Unit)? = null
 ) {
     Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         // V61.6 — عنوان داخلی «مدارس من» حذف شد (هدر صفحه «مدرسه من» است)؛
@@ -834,6 +888,17 @@ private fun SchoolsContent(
                                     .ifBlank { "—" }
                             )
                             Text("کلاس‌های من در این مدرسه: ${PersianDigits.convert(item.classCount)}")
+                            if (onEditSchool != null || onDeleteSchool != null) {
+                                // V262 — ویرایش/حذف مدرسه (مدیر)
+                                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.End)) {
+                                    onEditSchool?.let { edit ->
+                                        IconButton(onClick = { edit(item) }) { Icon(Icons.Outlined.Edit, contentDescription = "ویرایش مدرسه") }
+                                    }
+                                    onDeleteSchool?.let { del ->
+                                        IconButton(onClick = { del(item) }) { Icon(Icons.Outlined.Delete, contentDescription = "حذف مدرسه", tint = MaterialTheme.colorScheme.error) }
+                                    }
+                                }
+                            }
                         }
                     }
                 }
@@ -1907,6 +1972,29 @@ private fun BulkStudentDialog(
     // می‌کند و پنجره هرگز بزرگ نمی‌شود. زیر دکمه‌ها فقط شمارهٔ کارت‌ها فهرست می‌شود
     // و دانش‌آموزها بدون نیاز به انتخاب کلاس ثبت می‌شوند.
     var activeIndex by remember { mutableIntStateOf(0) }
+    // V263 — ورود از اکسل/CSV (آینهٔ «📥 از اکسل» سایت V230): حداکثر ۱۰۰ کارت؛ ردیف‌های فایل جایگزین کارت‌های خالی می‌شوند
+    val recomputeSuggestionsHolder = remember { mutableStateOf<(() -> Unit)?>(null) }
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val importLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.OpenDocument()
+    ) { uri ->
+        if (uri == null) return@rememberLauncherForActivityResult
+        runCatching {
+            val bytes = context.contentResolver.openInputStream(uri)?.use { it.readBytes() } ?: error("فایل خوانده نشد.")
+            val name = uri.lastPathSegment.orEmpty()
+            val parsed = ir.exam.app.core.io.SpreadsheetImport.toStudents(ir.exam.app.core.io.SpreadsheetImport.readRows(bytes, name))
+            require(parsed.isNotEmpty()) { "ردیفی با نام در فایل پیدا نشد. ستون‌ها: نام، نام خانوادگی، نام پدر، پایه، رشته، جنسیت، نام کاربری، رمز." }
+            val drafts = parsed.take(100).map { r ->
+                BulkStudentDraft(first = r.first, last = r.last, username = r.username, usernameEdited = r.username.isNotBlank(),
+                    password = r.password.ifBlank { generatePassword(10) }, gender = r.gender, father = r.father, grade = r.grade, field = r.field)
+            }
+            val keep = rows.filter { it.first.isNotBlank() || it.last.isNotBlank() }
+            rows.clear(); rows.addAll((keep + drafts).take(100))
+            recomputeSuggestionsHolder.value?.invoke()
+            activeIndex = rows.lastIndex
+            error = if (parsed.size > 100) "فقط ۱۰۰ ردیف اول وارد شد." else null
+        }.onFailure { error = UserFacingError.of(it, "خواندن فایل ناموفق بود.") }
+    }
 
     fun rowComplete(row: BulkStudentDraft): Boolean =
         row.first.isNotBlank() && row.username.length >= 4 &&
@@ -1927,6 +2015,8 @@ private fun BulkStudentDialog(
             }
         }
     }
+
+    recomputeSuggestionsHolder.value = ::recomputeSuggestions
 
     fun submitBulk() {
         runCatching {
@@ -2012,6 +2102,11 @@ private fun BulkStudentDialog(
                             onClick = ::submitBulk,
                             modifier = Modifier.weight(2f)
                         ) { Text("ایجاد") }
+                        // V263 — ورود از اکسل/CSV
+                        OutlinedButton(
+                            onClick = { importLauncher.launch(arrayOf("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "text/csv", "text/comma-separated-values", "text/tab-separated-values", "text/plain", "application/octet-stream")) },
+                            modifier = Modifier.weight(1f).semantics { contentDescription = "ورود از اکسل" }
+                        ) { Text("اکسل") }
                         Button(
                             onClick = onDismiss,
                             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFE5484D)),

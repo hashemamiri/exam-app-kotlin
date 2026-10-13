@@ -61,7 +61,9 @@ data class ClassesState(
     val filterMeta: Map<String, StudentFilterMeta> = emptyMap(),
     // V62.6 — کلاس‌های قابل‌مشاهدهٔ مدیر برای بخش «کلاس» پنجرهٔ فیلتر
     // (state.classes مدیر خالی است چون native_my_classes فقط کلاس‌های خود کاربر است).
-    val managerFilterClasses: List<SchoolClass> = emptyList()
+    val managerFilterClasses: List<SchoolClass> = emptyList(),
+    // V262 — شناسهٔ کلاس‌هایی که مدیر ساخته (native_my_classes_flags_v1): به‌جای چشم «اشتراک با مدیر» چیپ «کلاس مدیر»
+    val managerCreatedClassIds: Set<String> = emptySet()
 )
 
 /** V61.0 — معلم قابل انتخاب هنگام ساخت کلاس توسط مدیر. */
@@ -133,6 +135,7 @@ class ClassesViewModel(
             val selected = old.selectedClass?.id?.let { id -> classes.firstOrNull { it.id == id } }
             old.copy(loading = false, classes = classes, students = students, selectedClass = selected,studentNotes=notes)
         }
+        loadManagerCreatedFlags()
         state.value.selectedClass?.let { loadRoster(it.id) }
     }
 
@@ -273,6 +276,55 @@ class ClassesViewModel(
         }
         name to items
     }.getOrDefault("" to emptyList())
+
+    /** V262 — پرچم «کلاس مدیرساخته» (اگر SQL V260.9 اجرا نشده باشد بی‌صدا خالی می‌ماند). */
+    private suspend fun loadManagerCreatedFlags() {
+        val ids = runCatching {
+            val raw = SupabaseProvider.client.postgrest.rpc("native_my_classes_flags_v1")
+                .decodeAs<kotlinx.serialization.json.JsonObject>()
+            ((raw["items"] as? kotlinx.serialization.json.JsonArray) ?: kotlinx.serialization.json.JsonArray(emptyList())).mapNotNull { element ->
+                val obj = element as? kotlinx.serialization.json.JsonObject ?: return@mapNotNull null
+                val flagged = (obj["manager_created"] as? kotlinx.serialization.json.JsonPrimitive)?.content == "true"
+                if (flagged) (obj["id"] as? kotlinx.serialization.json.JsonPrimitive)?.content else null
+            }.toSet()
+        }.getOrDefault(emptySet())
+        _state.update { it.copy(managerCreatedClassIds = ids) }
+    }
+
+    /** V262 — ویرایش نام/استان/شهر مدرسه (فقط مدیر؛ native_manager_update_school_v1). */
+    fun updateSchool(id: String, name: String, province: String, city: String) = viewModelScope.launch {
+        _state.update { it.copy(actionLoading = true, error = null, message = null) }
+        runCatching {
+            val raw = SupabaseProvider.client.postgrest.rpc(
+                "native_manager_update_school_v1",
+                kotlinx.serialization.json.buildJsonObject {
+                    put("p_school", kotlinx.serialization.json.JsonPrimitive(id))
+                    put("p_name", kotlinx.serialization.json.JsonPrimitive(name.trim()))
+                    put("p_province", kotlinx.serialization.json.JsonPrimitive(province.trim()))
+                    put("p_city", kotlinx.serialization.json.JsonPrimitive(city.trim()))
+                }
+            ).decodeAs<kotlinx.serialization.json.JsonObject>()
+            (raw["error"] as? kotlinx.serialization.json.JsonPrimitive)?.content?.takeIf(String::isNotBlank)?.let(::error)
+        }.onSuccess {
+            _state.update { it.copy(actionLoading = false, message = "مدرسه ویرایش شد.") }
+            loadSchoolsNow()
+        }.onFailure { error -> _state.update { it.copy(actionLoading = false, error = safeSchoolError(error)) } }
+    }
+
+    /** V262 — حذف مدرسهٔ خالی (سرور: مدرسهٔ دارای کلاس/آزمون/دانش‌آموز/معلم یا آخرین مدرسه را رد می‌کند). */
+    fun deleteSchool(id: String) = viewModelScope.launch {
+        _state.update { it.copy(actionLoading = true, error = null, message = null) }
+        runCatching {
+            val raw = SupabaseProvider.client.postgrest.rpc(
+                "native_manager_delete_school_v1",
+                kotlinx.serialization.json.buildJsonObject { put("p_school", kotlinx.serialization.json.JsonPrimitive(id)) }
+            ).decodeAs<kotlinx.serialization.json.JsonObject>()
+            (raw["error"] as? kotlinx.serialization.json.JsonPrimitive)?.content?.takeIf(String::isNotBlank)?.let(::error)
+        }.onSuccess {
+            _state.update { it.copy(actionLoading = false, message = "مدرسه حذف شد.") }
+            loadSchoolsNow()
+        }.onFailure { error -> _state.update { it.copy(actionLoading = false, error = safeSchoolError(error)) } }
+    }
 
     /** V61.1 — مدیر مدرسهٔ جدید می‌سازد؛ لیست مدارس تازه می‌شود. */
     fun createSchool(name: String, province: String, city: String) = viewModelScope.launch {

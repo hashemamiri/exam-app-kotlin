@@ -27,6 +27,8 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Surface
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -100,6 +102,11 @@ fun QuestionBankScreen(
                     label = { Text("همه (${state.questions.size})") }
                 )
                 OutlinedButton(onClick = { newCategory = true }) { Text("دسته جدید") }
+                // V263 — بانک مدرسه (سؤال‌های اشتراکی همکاران هم‌مدرسه؛ آینهٔ سایت V230)
+                OutlinedButton(
+                    onClick = { viewModel.openSchoolBank(true) },
+                    modifier = Modifier.semantics { contentDescription = "بانک مدرسه" }
+                ) { Text("بانک مدرسه") }
             }
         }
         if (state.categories.isNotEmpty()) {
@@ -139,11 +146,44 @@ fun QuestionBankScreen(
                     item = item,
                     onUse = { onUseInExam(item) },
                     onEdit = { editing = item },
-                    onDelete = { deleting = item }
+                    onDelete = { deleting = item },
+                    onShare = { shared -> viewModel.setShared(item.id, shared) }
                 )
             }
         }
     }
+    }
+
+    // V263 — پنجرهٔ تمام‌صفحهٔ بانک مدرسه
+    if (state.schoolOpen) {
+        androidx.compose.ui.window.Dialog(
+            onDismissRequest = { viewModel.openSchoolBank(false) },
+            properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false)
+        ) {
+            Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
+                Column(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                        Text("بانک مدرسه", style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
+                        TextButton(onClick = viewModel::loadSchoolBank) { Text("به‌روزرسانی") }
+                        TextButton(onClick = { viewModel.openSchoolBank(false) }) { Text("بستن") }
+                    }
+                    Text(
+                        "سؤال‌هایی که همکاران هم‌مدرسهٔ شما به اشتراک گذاشته‌اند. برای اشتراک سؤال‌های خودتان، در کارت سؤال «اشتراک با مدرسه» را روشن کنید.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    if (state.schoolLoading || state.actionLoading) CircularProgressIndicator()
+                    state.message?.let { Text(it, color = MaterialTheme.colorScheme.primary) }
+                    state.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+                    LazyColumn(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        if (!state.schoolLoading && state.schoolItems.isEmpty()) item { Text("هنوز سؤال اشتراکی در مدرسهٔ شما ثبت نشده است.") }
+                        items(state.schoolItems, key = { it.id }) { item ->
+                            SchoolBankCard(item = item, onCopy = { viewModel.copyFromSchool(item.id) })
+                        }
+                    }
+                }
+            }
+        }
     }
 
     if (newCategory) {
@@ -375,7 +415,8 @@ private fun BankQuestionCard(
     item: BankQuestionOption,
     onUse: () -> Unit,
     onEdit: () -> Unit,
-    onDelete: () -> Unit
+    onDelete: () -> Unit,
+    onShare: ((Boolean) -> Unit)? = null // V263
 ) {
     val q = item.question
     // V259 — کارت فشرده: نوع/بارم، عنوان آزمون و درس؛ محتوای سؤال فقط با آیکن چشم (پنجره) نمایش داده می‌شود.
@@ -423,6 +464,64 @@ private fun BankQuestionCard(
                 Button(onClick = onUse) { Text("افزودن به آزمون") }
                 OutlinedButton(onClick = onEdit) { Text("ویرایش") }
                 TextButton(onClick = onDelete) { Text("حذف", color = MaterialTheme.colorScheme.error) }
+            }
+            // V263 — اشتراک با همکاران هم‌مدرسه
+            if (onShare != null) {
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Text("اشتراک با مدرسه", style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f))
+                    androidx.compose.material3.Switch(
+                        checked = item.shared,
+                        onCheckedChange = { onShare(it) },
+                        modifier = Modifier.semantics { contentDescription = "اشتراک با مدرسه" }
+                    )
+                }
+            }
+        }
+    }
+    if (preview) {
+        AlertDialog(
+            onDismissRequest = { preview = false },
+            title = { Text(q.type.faLabel() + " — بارم ${q.score}") },
+            confirmButton = { TextButton(onClick = { preview = false }) { Text("بستن") } },
+            text = { BankQuestionContent(q) }
+        )
+    }
+}
+
+/** V263 — کارت سؤال بانک مدرسه: نوع/بارم/درس، نام همکار، چشم، «افزودن» (غیرفعال اگر قبلاً کپی شده). */
+@Composable
+private fun SchoolBankCard(item: ir.exam.app.ui.builder.SchoolBankItem, onCopy: () -> Unit) {
+    val q = item.question
+    var preview by remember(item.id) { mutableStateOf(false) }
+    NeumorphicPanel(
+        modifier = Modifier.fillMaxWidth(),
+        radius = 22.dp,
+        depth = 9.dp,
+        contentPadding = androidx.compose.foundation.layout.PaddingValues(14.dp)
+    ) {
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+                BankChip(q.type.faLabel(), accent = true)
+                BankChip("بارم ${q.score}")
+                androidx.compose.foundation.layout.Spacer(Modifier.weight(1f))
+                IconButton(onClick = { preview = true }, modifier = Modifier.size(36.dp)) {
+                    Icon(Icons.Outlined.Visibility, contentDescription = "نمایش محتوای سؤال", tint = MaterialTheme.colorScheme.primary)
+                }
+            }
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                Column(Modifier.weight(1f)) {
+                    Text("همکار", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(item.teacher.ifBlank { "—" }, style = MaterialTheme.typography.bodyMedium, maxLines = 1)
+                }
+                Column(Modifier.weight(1f)) {
+                    Text("درس", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(item.subject.orEmpty().ifBlank { "بدون درس" }, style = MaterialTheme.typography.bodyMedium, maxLines = 1)
+                }
+            }
+            NativeMathText(q.text.ifBlank { "بدون متن" }, maxLines = 2)
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+                Button(onClick = onCopy, enabled = !item.already) { Text(if (item.already) "در بانک شما هست" else "افزودن به بانک من") }
             }
         }
     }

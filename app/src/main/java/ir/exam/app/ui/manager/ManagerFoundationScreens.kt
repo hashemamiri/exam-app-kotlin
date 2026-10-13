@@ -522,10 +522,91 @@ fun ManagerStatsScreen(
                     }
                 }
                 }
+                // V263 — مقایسهٔ کلاس‌ها (آینهٔ سایت V230): در هر دو بخش داشبورد و کارنامه
+                ManagerClassComparison()
             }
         }
     }
 }
+
+/** V263 — مقایسهٔ کلاس‌های مدرسه: میانگین، پراکندگی، زیر ۵۰٪، روند ماهانه و آزمون‌های برتر (RPC native_manager_class_stats_v1). */
+@Composable
+private fun ManagerClassComparison() {
+    var loading by remember { mutableStateOf(true) }
+    var error by remember { mutableStateOf<String?>(null) }
+    var stats by remember { mutableStateOf<ManagerClassStats?>(null) }
+    LaunchedEffect(Unit) {
+        runCatching {
+            val raw = SupabaseProvider.client.postgrest.rpc("native_manager_class_stats_v1").decodeAs<JsonObject>()
+            raw["error"]?.jsonPrimitive?.contentOrNull?.takeIf(String::isNotBlank)?.let(::error)
+            fun arr(key: String) = (raw[key] as? kotlinx.serialization.json.JsonArray).orEmpty().mapNotNull { it as? JsonObject }
+            fun JsonObject.str(k: String) = this[k]?.jsonPrimitive?.contentOrNull.orEmpty()
+            fun JsonObject.int(k: String) = this[k]?.jsonPrimitive?.intOrNull ?: 0
+            fun JsonObject.dbl(k: String) = this[k]?.jsonPrimitive?.doubleOrNull ?: 0.0
+            ManagerClassStats(
+                classes = arr("classes").map {
+                    ManagerClassRow(it.str("name"), it.str("grade"), it.str("field"), it.str("teacher"), it.int("students"), it.int("exams"),
+                        it.int("answers"), it.int("graded"), it.dbl("average_percent"), it.dbl("spread_percent"), it.int("below_half"))
+                },
+                months = arr("months").map { ManagerMonthRow(it.str("month"), it.int("answers"), it.dbl("average_percent")) },
+                topExams = arr("top_exams").map { ManagerTopExamRow(it.str("title"), it.str("teacher"), it.int("answers"), it.dbl("average_percent")) }
+            )
+        }.onSuccess { stats = it; loading = false }
+            .onFailure { error = safeManagerError(it); loading = false }
+    }
+    Text("مقایسهٔ کلاس‌ها", style = MaterialTheme.typography.titleMedium)
+    when {
+        loading -> CircularProgressIndicator()
+        error != null -> Text(error.orEmpty(), color = MaterialTheme.colorScheme.error)
+        else -> {
+            val data = checkNotNull(stats)
+            if (data.classes.isEmpty()) Text("هنوز کلاسی با آزمون در این مدرسه ثبت نشده است.")
+            data.classes.forEach { row ->
+                Card(Modifier.fillMaxWidth()) {
+                    Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Text(listOf(row.name, row.grade, row.field).filter { it.isNotBlank() }.joinToString(" · "), style = MaterialTheme.typography.titleSmall)
+                        if (row.teacher.isNotBlank()) Text("معلم: ${row.teacher}", style = MaterialTheme.typography.bodySmall)
+                        Text("دانش‌آموز ${row.students} · آزمون ${row.exams} · پاسخ ${row.answers} (تصحیح‌شده ${row.graded})")
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            StatChip("میانگین", "${row.averagePercent}٪", Modifier.weight(1f))
+                            StatChip("پراکندگی", "${row.spreadPercent}٪", Modifier.weight(1f))
+                            StatChip("زیر ۵۰٪", row.belowHalf.toString(), Modifier.weight(1f))
+                        }
+                    }
+                }
+            }
+            if (data.months.isNotEmpty()) {
+                Text("روند ماهانه", style = MaterialTheme.typography.titleSmall)
+                data.months.forEach { m -> Text("${m.month}: ${m.answers} پاسخ · میانگین ${m.averagePercent}٪") }
+            }
+            if (data.topExams.isNotEmpty()) {
+                Text("آزمون‌های برتر", style = MaterialTheme.typography.titleSmall)
+                data.topExams.forEach { e ->
+                    Text("${e.title}${if (e.teacher.isNotBlank()) " (${e.teacher})" else ""}: ${e.answers} پاسخ · میانگین ${e.averagePercent}٪")
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun StatChip(label: String, value: String, modifier: Modifier = Modifier) {
+    Card(modifier) {
+        Column(Modifier.fillMaxWidth().padding(8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+            Text(label, style = MaterialTheme.typography.labelSmall)
+            Text(value, style = MaterialTheme.typography.titleSmall)
+        }
+    }
+}
+
+internal data class ManagerClassRow(
+    val name: String, val grade: String, val field: String, val teacher: String,
+    val students: Int, val exams: Int, val answers: Int, val graded: Int,
+    val averagePercent: Double, val spreadPercent: Double, val belowHalf: Int
+)
+internal data class ManagerMonthRow(val month: String, val answers: Int, val averagePercent: Double)
+internal data class ManagerTopExamRow(val title: String, val teacher: String, val answers: Int, val averagePercent: Double)
+internal data class ManagerClassStats(val classes: List<ManagerClassRow>, val months: List<ManagerMonthRow>, val topExams: List<ManagerTopExamRow>)
 
 /** V61.0 — کارت میان‌بر پنل سریع داشبورد. */
 @Composable

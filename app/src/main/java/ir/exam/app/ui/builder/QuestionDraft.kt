@@ -331,7 +331,18 @@ data class BankQuestionOption(
     val categoryIds: Set<Long> = emptySet(),
     val categoryNames: List<String> = emptyList(),
     // V259 — عنوان آزمونی که سؤال از آن به بانک رفته (داخل JSON سؤال، کلید examTitle).
-    val examTitle: String? = null
+    val examTitle: String? = null,
+    // V263 — اشتراک با همکاران هم‌مدرسه (question_bank.shared_school؛ سایت V230)
+    val shared: Boolean = false
+)
+
+/** V263 — سؤال بانک مدرسه (اشتراکی همکاران هم‌مدرسه) */
+data class SchoolBankItem(
+    val id: Long,
+    val subject: String?,
+    val question: QuestionDraft,
+    val teacher: String,
+    val already: Boolean
 )
 
 data class ExamBuilderState(

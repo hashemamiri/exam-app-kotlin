@@ -24,6 +24,7 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.jsonPrimitive
@@ -245,6 +246,33 @@ class SupabaseExamBuilderRepository(context: Context) {
         })
     }
 
+    /** V263 — اشتراک/لغو اشتراک سؤال با همکاران هم‌مدرسه */
+    suspend fun setBankShared(id: Long, shared: Boolean): Result<Unit> = runCatching {
+        rpcObject("native_bank_set_shared_v1", buildJsonObject { put("p_id", id); put("p_shared", shared) }); Unit
+    }
+
+    /** V263 — بانک مدرسه: سؤال‌های اشتراکی همکاران (already = قبلاً در بانک من کپی شده) */
+    suspend fun schoolBank(): Result<List<ir.exam.app.ui.builder.SchoolBankItem>> = runCatching {
+        val raw = SupabaseProvider.client.postgrest.rpc("native_school_bank_v1").decodeAs<JsonObject>()
+        raw["error"]?.jsonPrimitive?.contentOrNull?.takeIf(String::isNotBlank)?.let(::error)
+        (raw["items"] as? JsonArray).orEmpty().mapNotNull { element ->
+            val row = element as? JsonObject ?: return@mapNotNull null
+            val id = row["id"]?.jsonPrimitive?.longOrNull ?: return@mapNotNull null
+            val combined = row["question"] as? JsonObject ?: return@mapNotNull null
+            val question = ExamQuestionCodec.decode(JsonArray(listOf(combined)), JsonArray(listOf(combined))).firstOrNull() ?: return@mapNotNull null
+            ir.exam.app.ui.builder.SchoolBankItem(
+                id, row["subject"]?.jsonPrimitive?.contentOrNull, question,
+                row["teacher"]?.jsonPrimitive?.contentOrNull.orEmpty(),
+                row["already"]?.jsonPrimitive?.booleanOrNull ?: false
+            )
+        }
+    }
+
+    /** V263 — کپی سؤال بانک مدرسه به بانک خودم */
+    suspend fun copyFromSchoolBank(id: Long): Result<Unit> = runCatching {
+        rpcObject("native_bank_copy_from_school_v1", buildJsonObject { put("p_id", id) }); Unit
+    }
+
     suspend fun deleteFromBank(id: Long): Result<Unit> = runCatching {
         rpcObject("native_bank_delete_question_v1", buildJsonObject { put("p_id", id) })
     }
@@ -291,7 +319,8 @@ class SupabaseExamBuilderRepository(context: Context) {
             val catNames = (row["cat_names"] as? JsonArray).orEmpty().mapNotNull { it.jsonPrimitive.contentOrNull }
             BankQuestionOption(
                 id, row["subject"]?.jsonPrimitive?.contentOrNull, question, catIds, catNames,
-                examTitle = combined["examTitle"]?.jsonPrimitive?.contentOrNull?.takeIf(String::isNotBlank)
+                examTitle = combined["examTitle"]?.jsonPrimitive?.contentOrNull?.takeIf(String::isNotBlank),
+                shared = row["shared"]?.jsonPrimitive?.booleanOrNull ?: false
             )
         }
         return BankSnapshot(questions, categories)

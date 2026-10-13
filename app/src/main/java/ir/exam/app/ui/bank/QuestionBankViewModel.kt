@@ -24,7 +24,11 @@ data class QuestionBankUiState(
     val query: String = "",
     val categoryId: Long? = null,
     val message: String? = null,
-    val error: String? = null
+    val error: String? = null,
+    // V263 — بانک مدرسه
+    val schoolOpen: Boolean = false,
+    val schoolLoading: Boolean = false,
+    val schoolItems: List<ir.exam.app.ui.builder.SchoolBankItem> = emptyList()
 ) {
     val visibleQuestions: List<BankQuestionOption>
         get() {
@@ -106,6 +110,29 @@ class QuestionBankViewModel(
 
     fun deleteQuestion(id: Long) = action("سؤال از بانک حذف شد.") {
         repository.deleteFromBank(id).getOrThrow()
+    }
+
+    /** V263 — اشتراک سؤال با همکاران هم‌مدرسه */
+    fun setShared(id: Long, shared: Boolean) = action(if (shared) "سؤال با همکاران مدرسه به اشتراک گذاشته شد." else "اشتراک سؤال برداشته شد.") {
+        repository.setBankShared(id, shared).getOrThrow()
+    }
+
+    /** V263 — باز/بسته کردن بانک مدرسه و بارگذاری سؤال‌های اشتراکی همکاران */
+    fun openSchoolBank(open: Boolean) {
+        _state.update { it.copy(schoolOpen = open, error = null) }
+        if (open) loadSchoolBank()
+    }
+
+    fun loadSchoolBank() = viewModelScope.launch {
+        _state.update { it.copy(schoolLoading = true) }
+        repository.schoolBank()
+            .onSuccess { items -> _state.update { it.copy(schoolLoading = false, schoolItems = items) } }
+            .onFailure { error -> _state.update { it.copy(schoolLoading = false, error = safeBankError(error)) } }
+    }
+
+    fun copyFromSchool(id: Long) = action("سؤال به بانک شما افزوده شد.") {
+        repository.copyFromSchoolBank(id).getOrThrow()
+        repository.schoolBank().onSuccess { items -> _state.update { it.copy(schoolItems = items) } }
     }
 
     private fun action(success: String, block: suspend () -> Unit) = viewModelScope.launch {

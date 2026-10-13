@@ -19425,6 +19425,17 @@ CI: `compileDebugUnitTestKotlin` به‌خاطر `assertFalse` بدون import �
 - باگ V202.5: `var LANDING_TILES` داخل `paintAuth` بعد از خطی که `landing()` را صدا می‌زد تعریف شده بود → به‌خاطر hoisting مقدارش undefined و `.map` خطا می‌داد → صفحهٔ اول خالی. حالا کنار `authActive` در سطح ماژول است (تست ترتیب را پین می‌کند).
 - دروازهٔ صفحهٔ اول: mobile.js `entered()/enter()` با `sessionStorage['m-entered']`، `gateActive() = MQ && user && !entered`؛ app.js `render()` پیش از m-mode اگر gateActive → paintAuth (landing حتی با user). دکمه: user ⇒ `enter(); S.render()`؛ وگرنه `goA('login')`؛ پیوند ثبت‌نام فقط بدون user. `afterLogin()` → `SiteMobile.enter()`.
 
+### V263 — اپ: بانک مدرسه + مقایسهٔ کلاس‌ها + ورود از اکسل (پاریته با سایت V230)
+- بانک: `BankQuestionOption.shared` (از `shared` در `native_bank_snapshot_v1`)؛ `setBankShared` → `native_bank_set_shared_v1(p_id,p_shared)`؛ `schoolBank()` → `native_school_bank_v1` (items: id/subject/question/teacher/already → `SchoolBankItem`)؛ `copyFromSchoolBank` → `native_bank_copy_from_school_v1(p_id)`. VM: `setShared/openSchoolBank/loadSchoolBank/copyFromSchool`؛ صفحه: Switch «اشتراک با مدرسه» در کارت، دکمهٔ «بانک مدرسه» → Dialog تمام‌صفحه با `SchoolBankCard` («افزودن به بانک من» غیرفعال اگر `already`).
+- مدیر: `ManagerClassComparison()` در `ManagerFoundationScreens.kt` (RPC `native_manager_class_stats_v1`؛ classes/months/top_exams) زیر داشبورد و کارنامه.
+- اکسل: `core/io/SpreadsheetImport.kt` (xlsx با ZipInputStream+regex روی sheet1 و sharedStrings؛ CSV/TSV؛ `toStudents` آینهٔ `rowsToStudents` سایت). در `BulkStudentDialog` دکمهٔ «اکسل» با `OpenDocument`؛ ردیف‌های خالی حذف، سقف ۱۰۰، رمز کوتاه → `generatePassword(10)`.
+- تست: `V263_AppParitySchoolBankCompareExcelAppTest` (CSV و xlsx واقعی + پین‌های کد). نسخه 1.01.49.
+
+### V262 — اپ: ویرایش/حذف مدرسه + چیپ «کلاس مدیر»
+- `ClassesViewModel`: `updateSchool`, `deleteSchool`, `loadManagerCreatedFlags()` (بعد از `load()`؛ state.managerCreatedClassIds).
+- `SchoolManagementScreen`: `SchoolsContent(onEditSchool, onDeleteSchool)` فقط وقتی `managerTeacherPicker`؛ دیالوگ‌های «ویرایش مدرسه»/«حذف مدرسه»؛ `ClassesContent(managerCreatedIds)` ← متن «کلاس مدیر» به‌جای IconButton چشم.
+- تست `V262_SchoolEditDeleteAppTest`. bump 1.01.47 → 1.01.48.
+
 ### V260.10 — SQL: approve_auto_grades پاسخ‌های صفرشدهٔ قدیمی را در آزمون تشریحی هم بازمی‌گرداند
 - QA کامل (qa/full_qa.py، qa/deep_qa.py): همهٔ پنل‌ها بدون PAGEERROR/console.error/HTTP≥400. یافته: teacher reports «میانگین درصد ۴.۶٪» ← ۷۲ پاسخ graded=true/auto_graded=true/total_grade=0 (graded_at 09:51، قبل از V260.7). در approve_auto_grades v260.7 شاخهٔ تشریحی فقط `graded=false` را به‌روز می‌کرد → این پاسخ‌ها هرگز اصلاح نمی‌شدند.
 - `supabase/migrations/20261012_native_approve_auto_grades_v260_10.sql`: همان تابع؛ شاخهٔ تشریحی ← `set grades, total_grade, graded=false, auto_graded=true, graded_at=null where graded=false or auto_graded=true`. پس از اجرای SQL، معلم باید روی سه آزمون (3YECPY, 4TLG5N, KYLCUE) «تأیید نمره‌های خودکار» بزند (یا QA: rpc approve_auto_grades).
