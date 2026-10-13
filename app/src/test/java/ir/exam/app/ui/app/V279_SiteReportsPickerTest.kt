@@ -7,7 +7,8 @@ import java.io.File
 
 /** V279 — فیلتر کارنامهٔ سایت: ردیف‌های انتخاب که پنجرهٔ انتخاب (جست‌وجو، تیک/دایره، همه/هیچ‌کدام) باز می‌کنند. */
 class V279_SiteReportsPickerTest {
-    private fun src(p: String) = File(p).readText()
+    private fun root(): File = listOf(File("."), File("..")).first { File(it, "site/src/extras.js").isFile }
+    private fun src(p: String) = File(root(), p).readText()
 
     @Test
     fun `site reports filter uses picker rows and dialog`() {

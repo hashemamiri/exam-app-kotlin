@@ -87,13 +87,13 @@ fun GradingScreen(
 
         val exam = state.selectedExam
         if (exam == null) {
-            // V130 — عنوان و فهرست متناسب با کارتِ انتخاب‌شده (پاسخ/مانده/تصحیح)
-            val heading = when {
-                state.pendingOnly -> "مانده — پاسخ‌های در انتظار تصحیح"
-                state.gradedOnly -> "پاسخ — وضعیت پاسخ‌دهی آزمون‌ها"
-                else -> "تصحیح — وضعیت تصحیح آزمون‌ها"
+            // V279.1 — عنوان داخل صفحه حذف شد؛ هدر برنامه («تصحیح»/«مانده»/«پاسخ») همان را نشان می‌دهد (دو هدر نباشد). فقط توضیح کوتاه می‌ماند.
+            val hint = when {
+                state.pendingOnly -> "پاسخ‌های در انتظار تصحیح"
+                state.gradedOnly -> "وضعیت پاسخ‌دهی آزمون‌ها"
+                else -> "وضعیت تصحیح آزمون‌ها"
             }
-            Text(heading, style = MaterialTheme.typography.headlineSmall)
+            Text(hint, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             val visibleExams = if (state.pendingOnly) {
                 // «مانده» فقط آزمون‌هایی را نشان می‌دهد که پاسخِ تصحیح‌نشده دارند (تا آمار نرسیده، همه می‌مانند).
                 state.exams.filter { ex -> state.cardStats[ex.id]?.let { it.pending > 0 } ?: true }
