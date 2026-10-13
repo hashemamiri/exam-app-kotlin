@@ -53,6 +53,7 @@ android {
         targetSdk = 35
         versionCode = appVersionCode
         versionName = appVersionName
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner" // V276 — تست UI روی شبیه‌ساز (گردش کار دستی app-ui-test.yml)
         buildConfigField("String", "SUPABASE_URL", "\"$supabaseUrl\"")
         buildConfigField("String", "SUPABASE_ANON_KEY", "\"$supabaseAnonKey\"")
         buildConfigField("String", "GOOGLE_WEB_CLIENT_ID", "\"$googleWebClientId\"")
@@ -68,6 +69,17 @@ android {
             if (project.hasProperty("baselineAbi")) abiFilters += project.property("baselineAbi").toString()
         }
     }
+
+    // V276 — شبیه‌ساز مدیریت‌شدهٔ Gradle برای تست UI (فقط گردش کار دستی؛ در ساخت عادی نقشی ندارد)
+    testOptions.managedDevices.devices {
+        create<com.android.build.api.dsl.ManagedVirtualDevice>("uiPixel6Api34") {
+            device = "Pixel 6"
+            apiLevel = 34
+            systemImageSource = "aosp"
+        }
+    }
+
+    packaging { resources.excludes += setOf("/META-INF/{AL2.0,LGPL2.1}") } // V276 — تداخل مجوزها در APK تست
 
     androidResources {
         // V76.9 — دادهٔ زبانِ OCR نباید فشرده شود (کپیِ سالم از assets).
@@ -168,6 +180,12 @@ dependencies {
     implementation("io.ktor:ktor-client-okhttp:3.0.3")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.3")
     testImplementation("junit:junit:4.13.2")
+    // V276 — تست UI خودکار (Compose) روی شبیه‌ساز
+    androidTestImplementation(platform("androidx.compose:compose-bom:2025.06.01"))
+    androidTestImplementation("androidx.compose.ui:ui-test-junit4")
+    androidTestImplementation("androidx.test.ext:junit:1.2.1")
+    androidTestImplementation("androidx.test:runner:1.6.2")
+    debugImplementation("androidx.compose.ui:ui-test-manifest")
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.9.0")
 }
 

@@ -1,0 +1,89 @@
+name: تست UI اپ روی شبیه‌ساز
+# V276 — «تست پرسونا» برای اپ اندروید: چون در محیط توسعه شبیه‌ساز نداریم، تست UI واقعی روی شبیه‌ساز
+# مدیریت‌شدهٔ Gradle (Pixel 6 / API 34) در GitHub Actions اجرا می‌شود. فقط دستی:
+# GitHub → Actions → «تست UI اپ روی شبیه‌ساز» → Run workflow (نام کاربری/رمز معلم آزمایشی را وارد کنید
+# یا Secretهای UI_TEST_TEACHER_USER / UI_TEST_TEACHER_PASS را یک بار بسازید).
+# خروجی: گزارش HTML تست + logcat به‌عنوان Artifact (۱۴ روز). هیچ APK منتشر نمی‌شود.
+on:
+  workflow_dispatch:
+    inputs:
+      teacher_user:
+        description: 'نام کاربری معلم آزمایشی (خالی = Secret UI_TEST_TEACHER_USER)'
+        required: false
+        default: ''
+      teacher_pass:
+        description: 'رمز معلم آزمایشی (خالی = Secret UI_TEST_TEACHER_PASS)'
+        required: false
+        default: ''
+
+permissions:
+  contents: read
+
+concurrency:
+  group: app-ui-test
+  cancel-in-progress: false
+
+jobs:
+  ui-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: دریافت سورس
+        uses: actions/checkout@v5
+      - name: فعال‌سازی KVM برای شبیه‌ساز
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: آماده‌سازی Java
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: آماده‌سازی Gradle
+        uses: gradle/actions/setup-gradle@v4
+      - name: پذیرش مجوزهای SDK
+        run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null || true
+      - name: آماده‌سازی اتصال Supabase (کلید عمومی از Secret)
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+        run: |
+          test -n "$SUPABASE_URL"
+          test -n "$SUPABASE_ANON_KEY"
+          # شمارهٔ نسخهٔ بسیار بالا تا پنجرهٔ «بروزرسانی جدید» وسط تست باز نشود
+          printf 'SUPABASE_URL=%s\nSUPABASE_ANON_KEY=%s\nAPP_VERSION_CODE=2099999900\nAPP_VERSION_NAME=ui-test\n' "$SUPABASE_URL" "$SUPABASE_ANON_KEY" > local.properties
+      - name: اجرای تست UI روی شبیه‌ساز مدیریت‌شده
+        env:
+          IN_USER: ${{ inputs.teacher_user }}
+          IN_PASS: ${{ inputs.teacher_pass }}
+          SEC_USER: ${{ secrets.UI_TEST_TEACHER_USER }}
+          SEC_PASS: ${{ secrets.UI_TEST_TEACHER_PASS }}
+        run: |
+          set -Eeuo pipefail
+          T_USER="${IN_USER:-$SEC_USER}"; T_PASS="${IN_PASS:-$SEC_PASS}"
+          if [ -z "$T_USER" ] || [ -z "$T_PASS" ]; then echo "نام کاربری/رمز معلم آزمایشی داده نشده (ورودی گردش کار یا Secret)."; exit 1; fi
+          echo "::add-mask::$T_PASS"
+          ./gradlew :app:uiPixel6Api34DebugAndroidTest \
+            -PbaselineAbi=x86_64 \
+            -Pandroid.testInstrumentationRunnerArguments.teacherUser="$T_USER" \
+            -Pandroid.testInstrumentationRunnerArguments.teacherPass="$T_PASS" \
+            -Pandroid.testoptions.manageddevices.emulator.gpu=swiftshader_indirect \
+            --stacktrace
+      - name: خلاصهٔ نتیجه
+        if: always()
+        run: |
+          for x in $(find app/build/outputs/androidTest-results -name '*.xml' 2>/dev/null); do
+            echo "== $x =="; grep -oE 'tests="[0-9]+"|failures="[0-9]+"|errors="[0-9]+"' "$x" | tr '\n' ' '; echo
+            grep -oE '<failure message="[^"]{0,400}' "$x" || true
+          done
+      - name: بایگانی گزارش تست و logcat
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ui-test-report-${{ github.run_number }}
+          path: |
+            app/build/reports/androidTests/
+            app/build/outputs/androidTest-results/
+          if-no-files-found: warn
+          retention-days: 14

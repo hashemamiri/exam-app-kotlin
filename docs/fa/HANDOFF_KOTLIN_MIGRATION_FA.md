@@ -19425,6 +19425,16 @@ CI: `compileDebugUnitTestKotlin` به‌خاطر `assertFalse` بدون import �
 - باگ V202.5: `var LANDING_TILES` داخل `paintAuth` بعد از خطی که `landing()` را صدا می‌زد تعریف شده بود → به‌خاطر hoisting مقدارش undefined و `.map` خطا می‌داد → صفحهٔ اول خالی. حالا کنار `authActive` در سطح ماژول است (تست ترتیب را پین می‌کند).
 - دروازهٔ صفحهٔ اول: mobile.js `entered()/enter()` با `sessionStorage['m-entered']`، `gateActive() = MQ && user && !entered`؛ app.js `render()` پیش از m-mode اگر gateActive → paintAuth (landing حتی با user). دکمه: user ⇒ `enter(); S.render()`؛ وگرنه `goA('login')`؛ پیوند ثبت‌نام فقط بدون user. `afterLogin()` → `SiteMobile.enter()`.
 
+### V276 — تست UI اپ روی شبیه‌ساز (گردش کار دستی) + رفع شکست CI
+- چرا: در محیط توسعه KVM/RAM برای شبیه‌ساز نیست؛ ماشین‌های GitHub دارند. گردش کار `.github/workflows/app-ui-test.yml` («تست UI اپ روی شبیه‌ساز») فقط با Run workflow اجرا می‌شود؛ APK منتشر نمی‌کند.
+- اجزا: در `app/build.gradle.kts` دستگاه مدیریت‌شدهٔ `uiPixel6Api34` (Pixel 6/API 34/aosp)، `testInstrumentationRunner`، وابستگی‌های `ui-test-junit4`/`ui-test-manifest`، `packaging.excludes` مجوزها. ساخت با `-PbaselineAbi=x86_64` (همان سازوکار V215 برای کتابخانهٔ OCR).
+- تست: `app/src/androidTest/java/ir/exam/app/uitest/TeacherExamFlowUiTest.kt` — ورود معلم با نام کاربری → «+» → «آزمون جدید» → عنوان «UI-TEST <زمان>» → سؤال صحیح/غلط → ذخیره → پنجرهٔ «ذخیره شد» با یادآوری «بسته است» → «ادامهٔ ویرایش» → ذخیرهٔ دوباره → همان کد (پوشش باگ V275.1) و عنوان «ویرایش آزمون». هر اجرا یک آزمون آزمایشی در حساب معلم می‌سازد (۱۰۰۰ تومان از کیف پول) — گاهی پاک شود.
+- اعتبارنامه: ورودی‌های Run workflow (`teacher_user`/`teacher_pass`) یا Secretهای `UI_TEST_TEACHER_USER`/`UI_TEST_TEACHER_PASS`؛ به‌صورت آرگومان instrumentation (`teacherUser`/`teacherPass`) می‌رسند؛ در کد/لاگ نیستند (`add-mask`). نسخهٔ ساخت تست 2099999900 تا پنجرهٔ بروزرسانی باز نشود.
+- قلاب‌های UI: `testTag("builder-question-text")` روی کادر متن سؤال؛ `LaunchedEffect(state.saving)` در ExamBuilderScreen تا ذخیرهٔ دوم با همان کد دوباره پنجرهٔ «ذخیره شد» را نشان دهد (قبلاً `dismissedSavedCode == code` آن را پنهان می‌کرد).
+- رفع CI: پین `V272_SitePickRulesTest` با ظرف `.b-pr-wrap` (V275) هم‌خوان شد (CI نسخهٔ 1.01.59 به همین دلیل شکست؛ منتشر نشد).
+- خروجی اجرا: Artifact `ui-test-report-<run>` (گزارش HTML + XML). مرحلهٔ بعد: سناریوی دانش‌آموز (بازکردن قفل → ورود با کد → پاسخ → کارنامه).
+- تست واحد: `V276_AppUiTestWorkflowTest`. نسخه 1.01.60.
+
 ### V275.1 — همان یافته‌ها در اپ (بررسی کد؛ اجرای اندروید در این محیط ممکن نیست)
 - یافته ۱ (فیلدهای نوع در pick rules): در اپ Compose واکنشی است (`typeCounts` از `state.questions`) → مشکلی نداشت.
 - یافته ۲ (مدت ۰): سمت سرور بود؛ اصلاح SQL V272 اپ را هم پوشش می‌دهد (`StudentExamPayloadCodec.serverDeadline` با `expires_at = null` → بدون محدودیت).

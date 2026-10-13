@@ -248,6 +248,8 @@ fun ExamBuilderScreen(
     var errorDialog by remember { mutableStateOf<String?>(null) }
     var dismissedSavedCode by remember { mutableStateOf<String?>(null) }
     LaunchedEffect(state.error) { state.error?.let { errorDialog = it } }
+    // V276 — ذخیرهٔ دوبارهٔ همان آزمون (کد یکسان) باید دوباره پنجرهٔ «ذخیره شد» را نشان دهد
+    LaunchedEffect(state.saving) { if (state.saving) dismissedSavedCode = null }
     errorDialog?.let { message ->
         AlertDialog(
             onDismissRequest = { errorDialog = null },

@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.ui.platform.testTag
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material3.Icon
@@ -219,6 +220,7 @@ fun QuestionTextWebSection(
                                     currentOnText(RichTextSplitter.reconstruct(parts, index, newText))
                                 },
                                 modifier = Modifier
+                                    .testTag("builder-question-text") // V276 — تست UI خودکار
                                     .widthIn(min = 12.dp)
                                     .heightIn(min = 28.dp)
                                     .then(if (text.isBlank()) Modifier.fillMaxWidth() else Modifier)
