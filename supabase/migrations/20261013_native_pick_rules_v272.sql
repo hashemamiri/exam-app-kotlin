@@ -87,7 +87,8 @@ begin
     select coalesce(max(attempt_no), 0) + 1 into v_no
       from exam_attempts where exam_id = v_exam.id and student_id = auth.uid();
 
-    v_exp := case when v_exam.duration is not null
+    -- V275 — مدت ۰/خالی = بدون محدودیت (مثل اپ و سایت)؛ پیش‌تر expires_at = now() می‌شد و آزمون بلافاصله «پایان‌یافته» ارسال می‌شد
+    v_exp := case when coalesce(v_exam.duration, 0) > 0
                   then now() + make_interval(mins => v_exam.duration) end;
 
     insert into exam_attempts

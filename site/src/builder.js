@@ -562,6 +562,7 @@
     function totalScore() { return state.questions.reduce(function (s, q) { return s + (Number(q.score) || 0); }, 0); }
     function drawRail() {
       rail.innerHTML = '';
+      if (typeof refreshPickRules === 'function') refreshPickRules(); /* V275 */
       /* V259.2 — زیر هر دکمهٔ ریل نامش نوشته می‌شود (برچسب کوتاه)؛ زیر چشم، کارت «بارم» = جمع بارم آزمون */
       function rb(icon, label, on, cls, short) { var b = el('button', {class: 'b-rail-btn ' + (cls || ''), title: label, 'aria-label': label, html: icon, onclick: on}); b.appendChild(el('span', {class: 'b-rail-lbl', text: short || label})); return b; }
       rail.appendChild(rb('<svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>', 'افزودن سؤال', function (e) { addMenu(e.currentTarget); }, 'add', 'افزودن'));
@@ -884,6 +885,10 @@
       box.appendChild(hintEl);
       return box;
     }
+    /* V275 — پنل «مشخصات آزمون» دسکتاپ یک بار ساخته می‌شود؛ فیلدهای «انتخاب تصادفی بر اساس نوع» باید با هر افزودن/حذف سؤال تازه شوند */
+    function refreshPickRules() {
+      document.querySelectorAll('.b-pr-wrap').forEach(function (w) { w.innerHTML = ''; var b = pickRulesBox(state); if (b) w.appendChild(b); });
+    }
     function settingsForm(m_) {
       function redrawSettings() { var y = m_.scrollTop; m_.innerHTML = ''; settingsForm(m_); m_.scrollTop = y; }
       /* V228 — قالب‌های تنظیمات آزمون (مدت، نمرهٔ منفی، دفعات، سیاست نمره، فاصله، به‌هم‌ریختن، ثبت خودکار، پیام معلم) در همین مرورگر ذخیره می‌شوند */
@@ -927,7 +932,7 @@
         inp('نمایش تصادفی چند سؤال از کل؟ (خالی = همه)', state.pickCount || '', function (v) { state.pickCount = en(v).replace(/[^0-9]/g, ''); mark(); }, 'number'),
         el('div', {class: 'muted', style: 'font-size:12px', text: pickHint(state)})
       ]));
-      var prb = pickRulesBox(state); if (prb) m_.appendChild(prb); /* V272 */
+      var prw = el('div', {class: 'b-pr-wrap'}); var prb = pickRulesBox(state); if (prb) prw.appendChild(prb); m_.appendChild(prw); /* V272 — V275: ظرف ثابت تا با افزودن/حذف سؤال تازه شود */
       m_.appendChild(el('div', {class: 'row', style: 'margin-bottom:12px'}, [chk('به‌هم‌ریختن سؤال‌ها', state.shuffleQuestions, function (v) { state.shuffleQuestions = v; mark(); }), chk('به‌هم‌ریختن گزینه‌ها', state.shuffleOptions, function (v) { state.shuffleOptions = v; mark(); }), chk('ثبت خودکار با پایان زمان', state.attemptOnTimeout, function (v) { state.attemptOnTimeout = v; mark(); })]));
       var tm = el('textarea', {rows: 2, style: 'width:100%;border:1px solid var(--line);border-radius:10px;padding:8px'}); tm.value = state.teacherMessage; tm.addEventListener('input', function () { state.teacherMessage = tm.value; mark(); });
       m_.appendChild(el('div', {class: 'field'}, [el('label', {text: 'پیام معلم به دانش‌آموز (اختیاری)'}), tm]));
@@ -1076,6 +1081,7 @@
           questions: enc.publicQuestions, answer_key: enc.answerKey, audience: state.audienceMode, classes: state.audienceClasses.slice().sort(), students: state.audienceStudents.slice().sort(), schools: state.audienceSchools.slice().sort()};
         var n = state.questions.length;
         if (!(await S.confirmDlg('ذخیرهٔ آزمون', 'آزمون «' + esc(state.title) + '» با ' + fa(n) + ' سؤال ذخیره می‌شود. هزینهٔ سؤال‌های جدید (' + fa('1,000') + ' تومان/سؤال) و رسانه‌ها از کیف پول کسر می‌شود.', 'ذخیره'))) return;
+        var wasNew = !state.examId; /* V275 */
         var raw = await S.rpc('native_save_exam_v2', {p_payload: payload});
         if (raw && raw.error) { var m = String(raw.error); if (raw.balance != null && raw.required != null) m += '؛ موجودی ' + fa(raw.balance) + ' تومان و مبلغ لازم ' + fa(raw.required) + ' تومان است.'; throw new Error(m); }
         state.examId = examId; state.code = (raw && raw.code) || code; state.dirty = false; saveDraft();
@@ -1083,7 +1089,8 @@
         try { var nowUrls = S.mediaUrlsIn ? S.mediaUrlsIn(state.questions) : []; var gone = (state.persistedMedia || []).filter(function (u) { return nowUrls.indexOf(u) < 0; }); state.persistedMedia = nowUrls; if (gone.length && S.deleteMedia) S.deleteMedia(gone); } catch (eM) {}
         msg.appendChild(el('div', {class: 'alert ok', html: '✅ ذخیره شد. کد آزمون: <b class="code">' + esc(state.code) + '</b>' + (raw && raw.cost ? ' · هزینه: ' + S.money(raw.cost) : '') + (raw && raw.balance != null ? ' · موجودی: ' + S.money(raw.balance) : '')}));
         /* V202 — پیام کسر وسط صفحه، فقط با «تأیید» بسته می‌شود */
-        await S.costDoneDlg((raw && raw.cost) || 0, raw ? raw.balance : null, 'آزمون ذخیره شد. کد آزمون: <b class="code">' + esc(state.code) + '</b>');
+        /* V275 — یافتهٔ تست پرسونا: آزمون تازه «بسته» ساخته می‌شود و دانش‌آموز با پیام «این آزمون بسته است» برمی‌گردد؛ همین‌جا به معلم گفته می‌شود */
+        await S.costDoneDlg((raw && raw.cost) || 0, raw ? raw.balance : null, 'آزمون ذخیره شد. کد آزمون: <b class="code">' + esc(state.code) + '</b>' + (wasNew ? '<br><small>آزمون فعلاً <b>بسته</b> است؛ در صفحهٔ «آزمون‌ها» قفل آن را باز کنید تا دانش‌آموزان بتوانند با این کد وارد شوند.</small>' : ''));
       } catch (e) { msg.appendChild(el('div', {class: 'alert error', text: errMsg(e)})); }
     }
     drawList(); drawEditor();
