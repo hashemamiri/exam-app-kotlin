@@ -353,6 +353,8 @@
     }, 200);
   }
   if (PERF_ON) { window.addEventListener('load', function () { setTimeout(perfRender, 500); setTimeout(perfRender, 4000); setTimeout(perfRender, 10000); }); }
+  var RETRY_DELAYS = [700, 1800, 4000];
+  function sleep(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
   async function http(path, opts) {
     requireKey();
     opts = opts || {};
@@ -362,11 +364,17 @@
       headers['Authorization'] = 'Bearer ' + (session && session.access_token ? session.access_token : ANON);
     }
     if (opts.headers) Object.keys(opts.headers).forEach(function (k) { headers[k] = opts.headers[k]; });
-    var res, _t0 = performance.now();
-    try {
-      res = await fetch(SUPABASE_URL + path, {method: opts.method || 'GET', headers: headers, body: opts.body !== undefined ? JSON.stringify(opts.body) : undefined});
-    } catch (e) { perfLog(path, performance.now() - _t0, 'ERR'); throw new Error('اتصال به سرور برقرار نشد. اینترنت را بررسی کنید.'); }
-    var text = await res.text();
+    var res, _t0 = performance.now(), text;
+    /* V266 — تحمل بار: فقط برای ۴۲۹ (محدودیت نرخ) و ۵۰۳ (سرور شلوغ؛ درخواست اجرا نشده) تا سه بار با تأخیر تصادفی تلاش مجدد می‌کنیم؛
+       بقیهٔ خطاها (از جمله ۵۰۴ که ممکن است اجرا شده باشد) بدون تکرار برمی‌گردند. */
+    for (var attempt = 0; ; attempt++) {
+      try {
+        res = await fetch(SUPABASE_URL + path, {method: opts.method || 'GET', headers: headers, body: opts.body !== undefined ? JSON.stringify(opts.body) : undefined});
+      } catch (e) { perfLog(path, performance.now() - _t0, 'ERR'); throw new Error('اتصال به سرور برقرار نشد. اینترنت را بررسی کنید.'); }
+      text = await res.text();
+      if ((res.status !== 429 && res.status !== 503) || attempt >= RETRY_DELAYS.length) break;
+      await sleep(RETRY_DELAYS[attempt] + Math.random() * RETRY_DELAYS[attempt]);
+    }
     perfLog(path, performance.now() - _t0, res.status + ' ' + text.length + 'B');
     var data = null;
     try { data = text ? JSON.parse(text) : null; } catch (e) { data = text; }
@@ -383,7 +391,7 @@
     if (/email not confirmed/i.test(m)) return 'ایمیل هنوز تأیید نشده است.';
     if (/token has expired|otp_expired/i.test(m)) return 'کد منقضی شده است؛ دوباره درخواست کنید.';
     if (/invalid.*token|Token has expired or is invalid/i.test(m)) return 'کد واردشده نادرست یا منقضی است.';
-    if (/rate limit|too many/i.test(m)) return 'درخواست‌ها بیش از حد مجاز است؛ کمی بعد دوباره تلاش کنید.';
+    if (/rate limit|too many/i.test(m)) return 'ورود یا درخواست هم‌زمان از این شبکه بیش از حد مجاز است؛ یکی‌دو دقیقه صبر کنید و دوباره تلاش کنید.';
     if (/signups not allowed|Signups not allowed for otp/i.test(m)) return 'حسابی با این ایمیل وجود ندارد.';
     if (/User already registered/i.test(m)) return 'این ایمیل قبلاً ثبت شده است.';
     if (/JWT expired|invalid JWT/i.test(m)) return 'نشست ورود منقضی شده؛ دوباره وارد شوید.';
@@ -394,17 +402,23 @@
   /* V250 — تازه‌سازی نشست: (۱) درخواست‌های هم‌زمان یک تازه‌سازی مشترک دارند (refresh_token یک‌بارمصرف است)؛
      (۲) قطع اینترنت/خطای سرور دیگر کاربر را خارج نمی‌کند — فقط پاسخ ۴۰۰/۴۰۱/۴۰۳ (توکن نامعتبر) نشست را پاک می‌کند. */
   var refreshing = null;
+  /* V266 — هر مرورگر پنجرهٔ تازه‌سازی مخصوص خودش را دارد (۲ تا ۱۲ دقیقه قبل از انقضا) تا در یک کلاس/مدرسه
+     همهٔ دانش‌آموزان هم‌زمان توکن تازه نکنند (سقف ۱۵۰ تازه‌سازی در ۵ دقیقه به ازای هر IP). */
+  var REFRESH_LEAD_MS = (2 + Math.random() * 10) * 60 * 1000;
+  var refreshRetryAt = 0;
   function ensureFreshSession() {
     if (!session || !session.refresh_token) return Promise.resolve();
     var exp = Number(session.expires_at || 0) * 1000;
-    if (exp && exp - Date.now() > 60 * 1000) return Promise.resolve();
+    if (exp && exp - Date.now() > REFRESH_LEAD_MS) return Promise.resolve();
+    if (Date.now() < refreshRetryAt && exp - Date.now() > 60 * 1000) return Promise.resolve();
     if (refreshing) return refreshing;
     refreshing = (async function () {
       try {
         var res = await fetch(SUPABASE_URL + '/auth/v1/token?grant_type=refresh_token', {method: 'POST', headers: {'apikey': ANON, 'Content-Type': 'application/json'}, body: JSON.stringify({refresh_token: session.refresh_token})});
         var data = null; try { data = await res.json(); } catch (e) { data = null; }
-        if (res.ok && data && data.access_token) saveSession(data);
+        if (res.ok && data && data.access_token) { saveSession(data); refreshRetryAt = 0; }
         else if (res.status === 400 || res.status === 401 || res.status === 403) saveSession(null);
+        else refreshRetryAt = Date.now() + 20000 + Math.random() * 40000; /* ۴۲۹/۵xx: ۲۰ تا ۶۰ ثانیهٔ بعد دوباره */
       } catch (e) { /* شبکه: نشست می‌ماند؛ درخواست بعدی دوباره تلاش می‌کند */ }
       finally { refreshing = null; }
     })();

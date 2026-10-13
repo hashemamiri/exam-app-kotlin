@@ -11,6 +11,13 @@ package ir.exam.app.core.network
 object UserFacingError {
     const val NETWORK = "خطا در ارتباط با سرور؛ از اتصال به اینترنت مطمئن شوید و دوباره تلاش کنید."
     const val SERVER = "خطا در سرور؛ از اتصال به اینترنت مطمئن شوید و دوباره تلاش کنید."
+    /** V266 — محدودیت نرخ Auth/سرور (۴۲۹): در مدرسه همهٔ دانش‌آموزان پشت یک IP هستند. */
+    const val RATE_LIMIT = "ورود یا درخواست هم‌زمان از این شبکه بیش از حد مجاز است؛ یکی‌دو دقیقه صبر کنید و دوباره تلاش کنید."
+
+    fun isRateLimited(raw: String?): Boolean {
+        val lower = raw.orEmpty().lowercase()
+        return "rate limit" in lower || "over_request_rate_limit" in lower || "too many requests" in lower
+    }
 
     private val technicalMarkers = listOf(
         "http request", "failed with message", "unable to resolve host", "no address associated",
@@ -55,6 +62,7 @@ object UserFacingError {
             "connection reset", "connection refused", "network is unreachable", "unknownhost", "software caused connection abort"
         ).any(lower::contains)
         if (networkLike) return NETWORK
+        if (isRateLimited(clean)) return RATE_LIMIT
         if (!isTechnical(clean)) return clean.take(maxLength)
         // متن فارسی با دنبالهٔ فنی («آپلود ناموفق بود: HTTP request …») → فقط بخش فارسیِ قبل از «:»
         val head = clean.substringBefore(":").trim()
@@ -65,6 +73,7 @@ object UserFacingError {
     /** پیام نهایی از روی خطا. */
     fun of(error: Throwable?, fallback: String, maxLength: Int = 260): String {
         if (error == null) return fallback
+        if (isRateLimited(error.message)) return RATE_LIMIT
         if (NetworkFailureClassifier.isNetworkFailure(error)) {
             // اگر خودِ برنامه پیام فارسی شبکه ساخته، همان را نگه می‌داریم
             val clean = sanitize(error.message)

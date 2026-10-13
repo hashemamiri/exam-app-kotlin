@@ -19425,6 +19425,12 @@ CI: `compileDebugUnitTestKotlin` به‌خاطر `assertFalse` بدون import �
 - باگ V202.5: `var LANDING_TILES` داخل `paintAuth` بعد از خطی که `landing()` را صدا می‌زد تعریف شده بود → به‌خاطر hoisting مقدارش undefined و `.map` خطا می‌داد → صفحهٔ اول خالی. حالا کنار `authActive` در سطح ماژول است (تست ترتیب را پین می‌کند).
 - دروازهٔ صفحهٔ اول: mobile.js `entered()/enter()` با `sessionStorage['m-entered']`، `gateActive() = MQ && user && !entered`؛ app.js `render()` پیش از m-mode اگر gateActive → paintAuth (landing حتی با user). دکمه: user ⇒ `enter(); S.render()`؛ وگرنه `goA('login')`؛ پیوند ثبت‌نام فقط بدون user. `afterLogin()` → `SiteMobile.enter()`.
 
+### V266 — تحمل بار: محدودیت نرخ Auth (۴۲۹) + تازه‌سازی پراکنده + تلاش مجدد
+- زمینه: سنجش V265 نشان داد گلوگاه، سقف Supabase Auth است (ورود ۳۰/۵min و تازه‌سازی ۱۵۰/۵min به ازای IP). کاربر سقف‌ها را در داشبورد بالا برد (مورد ۱)؛ این نسخه موارد ۲ و ۳ است.
+- اپ: `UserFacingError.RATE_LIMIT` + `isRateLimited(raw)` («rate limit»/«over_request_rate_limit»/«too many requests»)؛ در `of()` و `fromText()` پیش از تشخیص متن فنی بررسی می‌شود → ورود و هر safe*Error پیام فارسی روشن می‌دهد (`safeAuthError` به `fromText` می‌افتد).
+- سایت `app.js`: `http()` فقط برای ۴۲۹ و ۵۰۳ تا ۳ بار با `RETRY_DELAYS=[700,1800,4000]` + جیتر تکرار می‌کند (۵۰۴ تکرار نمی‌شود چون ممکن است اجرا شده باشد). `ensureFreshSession`: `REFRESH_LEAD_MS` تصادفی ۲–۱۲ دقیقه برای هر مرورگر؛ شکست غیر ۴۰۰/۴۰۱/۴۰۳ → `refreshRetryAt` ۲۰–۶۰ ثانیهٔ بعد (تا ۶۰ ثانیهٔ آخر که همیشه تلاش می‌کند). متن ۴۲۹ در `translateAuthError` به‌روز شد.
+- تست‌ها: `V266_RateLimitHardeningTest` (اپ)، `V266_SiteLoadHardeningTest` (پین‌های سایت). نسخه 1.01.53.
+
 ### V265 — حذف کامل محدودیت ساخت دانش‌آموز
 - SQL `supabase/migrations/20261013_native_student_quota_removed_v265.sql` (کپی: sql_v265.sql): `native_consume_student_create_quota(uuid,int,int,int)` با همان امضا بازتعریف شد → همیشه `{ok:true, remaining_hour:999999, unlimited:true}`؛ رویداد همچنان ثبت و بعد از ۷ روز پاک می‌شود؛ تابع لبهٔ `manage-student` بدون تغییر (نیاز به deploy ندارد). سهمیهٔ ساعتی ۳۰ / روزانهٔ ۲۰۰ (V75.5) عملاً برداشته شد.
 - اپ: `SupabaseSchoolRepository.createStudentsBulk` بدون `require(size in 1..100)`؛ همهٔ ردیف‌ها اعتبارسنجی و با `requests.chunked(100)` دسته‌دسته به action=bulk فرستاده می‌شوند (لبه همچنان `rows.slice(0,100)` دارد). `SchoolManagementScreen.kt`: ثابت `BULK_STUDENT_MAX = 1000` جای پنج سقف ۱۰۰ (کارت‌ها/اکسل/دکمهٔ افزودن).
