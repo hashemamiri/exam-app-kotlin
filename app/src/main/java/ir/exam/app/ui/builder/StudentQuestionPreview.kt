@@ -55,6 +55,10 @@ fun StudentQuestionPreviewDialog(question: QuestionDraft, number: Int, onDismiss
                             color = MaterialTheme.colorScheme.primary
                         )
                         NativeMathText(question.text.ifBlank { "متن سؤال" })
+                        // V269 — صوت سؤال هم مثل صفحهٔ آزمون دانش‌آموز در پیش‌نمایش پخش می‌شود
+                        question.audioUri?.takeIf { it.isNotBlank() }?.let { audio ->
+                            ir.exam.app.ui.audio.QuestionAudioPlayer(url = audio, durationMs = question.audioMs, modifier = Modifier.fillMaxWidth())
+                        }
                         question.images.forEach { media ->
                             AsyncImage(media.uri, "تصویر سؤال", Modifier.fillMaxWidth())
                         }

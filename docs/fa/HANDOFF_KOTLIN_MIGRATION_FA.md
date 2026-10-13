@@ -19425,6 +19425,13 @@ CI: `compileDebugUnitTestKotlin` به‌خاطر `assertFalse` بدون import �
 - باگ V202.5: `var LANDING_TILES` داخل `paintAuth` بعد از خطی که `landing()` را صدا می‌زد تعریف شده بود → به‌خاطر hoisting مقدارش undefined و `.map` خطا می‌داد → صفحهٔ اول خالی. حالا کنار `authActive` در سطح ماژول است (تست ترتیب را پین می‌کند).
 - دروازهٔ صفحهٔ اول: mobile.js `entered()/enter()` با `sessionStorage['m-entered']`، `gateActive() = MQ && user && !entered`؛ app.js `render()` پیش از m-mode اگر gateActive → paintAuth (landing حتی با user). دکمه: user ⇒ `enter(); S.render()`؛ وگرنه `goA('login')`؛ پیوند ثبت‌نام فقط بدون user. `afterLogin()` → `SiteMobile.enter()`.
 
+### V269 — بستر آزمون در گزارش نظارتی + قفل کپی/ثبت تلاش‌ها + صوت در پیش‌نمایش سازنده
+- گزارش نظارتی (V58 `native_monitor_upsert_v1` / `native_monitor_list_v1`، بدون تغییر SQL): فیلد تازهٔ `report.platform` = `app` (اپ، `StudentExamViewModel.monitorReport`) / `desktop` / `mobile` (سایت `student.js platformName()` از `SiteMobile.active()`). نمایش: اپ `GradingScreen` «بستر آزمون: …» (`monitorPlatformLabel`)، سایت `admin.js tabMonitor` چیپ «بستر: …» (`PF`). گزارش‌های قدیمی → «نامشخص».
+- قفل کپی در آزمون (سایت دسکتاپ و گوشی): `guardsOn()/guardsOff()` در `startExam/stopAll` — رویدادهای `copy/cut/contextmenu/dragstart` روی متن سؤال جلوگیری + `copy_attempt`؛ `PrintScreen` → `screenshot_attempt` (مرورگر اجازهٔ مسدود کردن اسکرین‌شات را نمی‌دهد؛ فقط گزارش)؛ `Ctrl/⌘+P/S` → `print_attempt`؛ `Ctrl+C/X/A` بیرون از کادر پاسخ → `copy_attempt`. CSS `body.st-nocopy .st-exam{user-select:none}` با استثنای input/textarea؛ `@media print` آزمون مخفی. اپ: FLAG_SECURE (اسکرین‌شات سیاه + `screenshot_attempt` در اندروید ۱۴+) و متن‌های Compose غیرقابل‌انتخاب از قبل.
+- برچسب‌های تازه در هر دو پنل: copy_attempt، print_attempt، window_blur، multi_window، app_close، exam_screen_leave، screenshot_attempt.
+- پیش‌نمایش دانش‌آموز در سازنده: صوت سؤال پخش می‌شود (اپ `StudentQuestionPreview` با `QuestionAudioPlayer`، سایت `builder.js studentPreview` با `<audio controls>`).
+- تست‌ها: `V269_MonitorPlatformCopyGuardTest` (اپ)، `V269_SiteMonitorCopyGuardTest` (سایت). نسخه 1.01.56.
+
 ### V268.1 — رفع CI V268 (پین‌های سایت)
 - V267 (فقط سایت، بدون CI) `MQ` و `@media (min-width:861px)` را عوض کرد؛ CI اپ V268 دو پین قدیمی را شکست: `V148_SiteMobileShellTest` → `matchMedia('(max-width: 860px) and (pointer: coarse)')` و `V165_SiteDesktopRailTest` → `@media (min-width:861px),(pointer:fine){`. درس: بعد از هر تغییر سایت، چک‌کنندهٔ پین‌ها را روی همهٔ تست‌ها اجرا کن. نسخه 1.01.55.
 

@@ -523,6 +523,8 @@
       var txt = el('div', {class: 'b-sp-text', html: esc(q.text || 'متن سؤال').replace(/\n/g, '<br>')}); card.appendChild(txt);
       if (window.SiteStudent && window.SiteStudent.richHtml) window.SiteStudent.richHtml(q.text || 'متن سؤال').then(function (h) { txt.innerHTML = h; if (window.SiteStudent.fitMath) window.SiteStudent.fitMath(txt); });
       /* V188 — تصاویر سؤال شیء {uri,…} هستند (پیش‌تر [object Object] می‌شد) */
+      /* V269 — صوت سؤال هم مثل صفحهٔ آزمون دانش‌آموز (student.js) در پیش‌نمایش پخش می‌شود */
+      if (q.audio) card.appendChild(el('audio', {controls: 'controls', src: q.audio, style: 'width:100%;margin:8px 0'}));
       (q.images || []).forEach(function (u) { var src = u && typeof u === 'object' ? u.uri : u; if (src) card.appendChild(el('img', {src: src, alt: 'تصویر سؤال', class: 'b-sp-img'})); });
       var AB = ['الف', 'ب', 'ج', 'د', 'ه', 'و', 'ز', 'ح'];
       /* V258.1 — گزینه‌ها و موارد جورکردنی هم مثل متن سؤال با موتور رندر (فرمول/شکل = نماد، نه کد) — همان مسیر صفحهٔ آزمون دانش‌آموز */

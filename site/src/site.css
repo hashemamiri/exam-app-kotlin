@@ -1850,3 +1850,9 @@ html body:not(.m-mode) .bank-card label.bk-check:has(> input[type=checkbox]:chec
 
 /* V267 — دسکتاپ (ماوس): زیر ۱۰۲۴px چیدمان عوض نمی‌شود؛ پنجره اسکرول افقی می‌گیرد */
 @media (pointer:fine){html{min-width:1024px}body{min-width:1024px}}
+
+/* V269 — هنگام آزمون: متن سؤال‌ها انتخاب/کپی نمی‌شود؛ کادرهای پاسخ آزادند */
+body.st-nocopy .st-exam{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+body.st-nocopy .st-exam input,body.st-nocopy .st-exam textarea,body.st-nocopy .st-exam [contenteditable=true]{-webkit-user-select:text;user-select:text}
+body.st-nocopy .st-exam img{-webkit-user-drag:none;pointer-events:auto}
+@media print{body.st-nocopy .st-exam{display:none}}

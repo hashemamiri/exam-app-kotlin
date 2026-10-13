@@ -442,6 +442,7 @@ private fun MonitorReportsDialog(reports: JsonObject?, onDismiss: () -> Unit) {
                             Card(Modifier.fillMaxWidth()) {
                                 Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                                     Text("رویدادها", style = MaterialTheme.typography.titleSmall)
+                                    Text("بستر آزمون: ${monitorPlatformLabel(report)}", style = MaterialTheme.typography.bodySmall)
                                     if (events.isNullOrEmpty()) {
                                         Text("رویداد مشکوکی ثبت نشده است.", style = MaterialTheme.typography.bodySmall)
                                     } else events.forEach { (kind, count) ->
@@ -564,7 +565,19 @@ private fun String.faMonitorEvent(): String = when (this) {
     "app_leave" -> "خارج شدن از برنامه"
     "app_close" -> "بستن برنامه"
     "exam_screen_leave" -> "خارج شدن از صفحه آزمون"
+    "window_blur" -> "خروج از پنجره"
+    "copy_attempt" -> "تلاش برای کپی متن"
+    "print_attempt" -> "تلاش برای چاپ/ذخیرهٔ صفحه"
+    "multi_window" -> "چندپنجره"
     else -> this
+}
+
+/** V269 — بستر آزمون از گزارش نظارتی. */
+internal fun monitorPlatformLabel(report: JsonObject?): String = when ((report?.get("platform") as? JsonPrimitive)?.contentOrNull) {
+    "app" -> "اپ اندروید"
+    "desktop" -> "سایت دسکتاپ"
+    "mobile" -> "سایت گوشی"
+    else -> "نامشخص"
 }
 
 private fun Long.faClock(): String {

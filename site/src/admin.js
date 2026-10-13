@@ -200,13 +200,15 @@
       var rows = raw.rows || [];
       body.innerHTML = '';
       if (!rows.length) return body.appendChild(S.emptyBox('🛡', 'گزارشی ثبت نشده است.'));
-      var EV = {app_leave: 'ترک صفحه/برنامه', window_blur: 'خروج از پنجره', screen_record_attempt: 'تلاش ضبط صفحه', multi_window: 'چندپنجره', screenshot: 'اسکرین‌شات'};
+      var EV = {app_leave: 'ترک صفحه/برنامه', window_blur: 'خروج از پنجره', screen_record_attempt: 'تلاش ضبط صفحه', multi_window: 'چندپنجره', screenshot: 'اسکرین‌شات', screenshot_attempt: 'تلاش برای اسکرین‌شات', copy_attempt: 'تلاش برای کپی متن', print_attempt: 'تلاش برای چاپ/ذخیرهٔ صفحه', app_close: 'بستن برنامه', exam_screen_leave: 'خروج از صفحهٔ آزمون'};
+      /* V269 — بستر آزمون (اپ / سایت دسکتاپ / سایت گوشی) از report.platform */
+      var PF = {app: 'اپ اندروید', desktop: 'سایت دسکتاپ', mobile: 'سایت گوشی'};
       rows.forEach(function (row) {
         var rep = row.report || {}, ev = rep.events || {}, times = rep.question_time_ms || {}, visits = rep.question_visits || {}, labels = rep.question_labels || {};
         var score = Object.keys(ev).reduce(function (s, k) { return s + num(ev[k]); }, 0);
         var det = el('div', {style: 'display:none;margin-top:8px'});
         var qrows = Object.keys(times).sort(function (a, b) { return num(labels[a]) - num(labels[b]); });
-        det.appendChild(el('div', {class: 'row', style: 'flex-wrap:wrap;gap:6px'}, Object.keys(ev).map(function (k) { return el('span', {class: 'chip warn', text: (EV[k] || k) + ': ' + fa(ev[k])}); })));
+        det.appendChild(el('div', {class: 'row', style: 'flex-wrap:wrap;gap:6px'}, [el('span', {class: 'chip brand', text: 'بستر: ' + (PF[rep.platform] || 'نامشخص')})].concat(Object.keys(ev).map(function (k) { return el('span', {class: 'chip warn', text: (EV[k] || k) + ': ' + fa(ev[k])}); }))));
         det.appendChild(el('div', {class: 'muted', style: 'font-size:12px;margin:6px 0', text: 'ورود: ' + S.fmtDate(new Date(num(rep.entered_at_epoch_ms)).toISOString()) + ' · آخرین فعالیت: ' + S.fmtDate(new Date(num(rep.left_at_epoch_ms)).toISOString()) + (rep.submitted ? ' · ارسال‌شده' : '')}));
         if (qrows.length) det.appendChild(el('table', {class: 'tbl'}, [el('thead', {}, [el('tr', {}, ['سؤال', 'مدت پاسخ‌گویی', 'بازدید'].map(function (h) { return el('th', {text: h}); }))]), el('tbody', {}, qrows.map(function (id) { var ms = num(times[id]); return el('tr', {}, [el('td', {text: fa(labels[id] || '?')}), el('td', {text: fa(Math.floor(ms / 60000)) + ':' + fa(String(Math.floor(ms % 60000 / 1000)).padStart(2, '0'))}), el('td', {text: fa(visits[id] || 0)})]); }))]));
         body.appendChild(el('div', {class: 'card', style: 'margin-bottom:8px'}, [el('div', {class: 'row', style: 'cursor:pointer', onclick: function () { det.style.display = det.style.display === 'none' ? '' : 'none'; }}, [el('b', {class: 'grow', text: row.student_name || 'دانش‌آموز'}), el('span', {class: 'chip ' + (score ? 'warn' : 'ok'), text: score ? fa(score) + ' رویداد مشکوک' : 'بدون تخلف'}), el('span', {class: 'muted', text: '▾'})]), det]));

@@ -248,6 +248,7 @@
     run.qEnter[0] = Date.now(); run.qVisits[exam.questions[0] && exam.questions[0].id] = 1;
     document.addEventListener('visibilitychange', onVis);
     window.addEventListener('blur', onBlur);
+    guardsOn();
     run.monitorTimer = setInterval(function () { reportMonitor(false); }, 60000);
     reportMonitor(false);
     /* V149 — در پوستهٔ موبایل، آزمون تمام‌صفحه می‌شود (نوار بالا حذف؛ مثل StudentExamScreen اپ) */
@@ -255,6 +256,22 @@
     c.innerHTML = ''; c.appendChild(examUI(c));
     if (resumed) toast('به آزمون نیمه‌تمام پیوستید.', 'ok');
   }
+  /* V269 — بستر آزمون برای گزارش نظارتی معلم */
+  function platformName() { return window.SiteMobile && window.SiteMobile.active() ? 'mobile' : 'desktop'; }
+  /* V269 — جلوگیری از کپی متن سؤال‌ها و ثبت تلاش‌ها (کپی/برش/منوی راست‌کلیک/کشیدن، PrintScreen، Ctrl+P / Ctrl+S)؛
+     کادرهای پاسخ (input/textarea) آزادند. مرورگر امکان مسدود کردن اسکرین‌شات را نمی‌دهد؛ فقط تلاش گزارش می‌شود. */
+  function inField(t) { return !!(t && t.closest && t.closest('input, textarea, [contenteditable=true]')); }
+  function onCopyGuard(e) { if (!run || run.finished || inField(e.target)) return; e.preventDefault(); secEvent('copy_attempt'); toast('کپی متن آزمون مجاز نیست.', 'err'); }
+  function onCtxGuard(e) { if (!run || run.finished || inField(e.target)) return; e.preventDefault(); secEvent('copy_attempt'); }
+  function onKeyGuard(e) {
+    if (!run || run.finished) return;
+    var k = (e.key || '').toLowerCase();
+    if (k === 'printscreen') { secEvent('screenshot_attempt'); toast('اسکرین‌شات از آزمون گزارش می‌شود.', 'err'); try { navigator.clipboard && navigator.clipboard.writeText(''); } catch (x) {} return; }
+    if ((e.ctrlKey || e.metaKey) && (k === 'p' || k === 's' || (e.shiftKey && k === 's'))) { e.preventDefault(); secEvent('print_attempt'); toast('چاپ/ذخیرهٔ صفحهٔ آزمون مجاز نیست.', 'err'); return; }
+    if ((e.ctrlKey || e.metaKey) && (k === 'c' || k === 'x' || k === 'a') && !inField(e.target)) { e.preventDefault(); secEvent('copy_attempt'); }
+  }
+  function guardsOn() { document.addEventListener('copy', onCopyGuard); document.addEventListener('cut', onCopyGuard); document.addEventListener('contextmenu', onCtxGuard); document.addEventListener('dragstart', onCtxGuard); document.addEventListener('keydown', onKeyGuard); document.body.classList.add('st-nocopy'); }
+  function guardsOff() { document.removeEventListener('copy', onCopyGuard); document.removeEventListener('cut', onCopyGuard); document.removeEventListener('contextmenu', onCtxGuard); document.removeEventListener('dragstart', onCtxGuard); document.removeEventListener('keydown', onKeyGuard); document.body.classList.remove('st-nocopy'); }
   function onVis() { if (document.hidden) secEvent('app_leave'); }
   function onBlur() { secEvent('window_blur'); }
   function secEvent(k) { if (!run || run.finished || !run.started) return; run.events[k] = (run.events[k] || 0) + 1; reportMonitor(false); }
@@ -263,7 +280,7 @@
     var q = run.exam.questions[run.index]; var ent = run.qEnter[run.index];
     if (q && ent != null) times[q.id] = (times[q.id] || 0) + (now - ent);
     var labels = {}; run.exam.questions.forEach(function (x) { labels[x.id] = x.originalIndex + 1; });
-    return {entered_at_epoch_ms: run.enteredAt, left_at_epoch_ms: now, submitted: !!final, events: run.events, question_time_ms: times, question_visits: run.qVisits, question_labels: labels};
+    return {entered_at_epoch_ms: run.enteredAt, left_at_epoch_ms: now, submitted: !!final, platform: platformName(), events: run.events, question_time_ms: times, question_visits: run.qVisits, question_labels: labels};
   }
   var lastReport = 0;
   function reportMonitor(final) {
@@ -280,7 +297,7 @@
     var nq = run.exam.questions[run.index]; if (nq) run.qVisits[nq.id] = (run.qVisits[nq.id] || 0) + 1;
   }
   function saveDraft() { draftSet(run.exam.id, {answers: run.answers, images: run.images}); }
-  function stopAll() { clearInterval(run.timer); clearInterval(run.monitorTimer); document.removeEventListener('visibilitychange', onVis); window.removeEventListener('blur', onBlur); }
+  function stopAll() { guardsOff(); clearInterval(run.timer); clearInterval(run.monitorTimer); document.removeEventListener('visibilitychange', onVis); window.removeEventListener('blur', onBlur); }
 
   function examUI(c) {
     var ex = run.exam;

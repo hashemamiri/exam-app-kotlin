@@ -249,6 +249,8 @@ class StudentExamViewModel(
             put("left_at_epoch_ms", kotlinx.serialization.json.JsonPrimitive(now))
             // V137 — تا پیش از ارسال نهایی، «زمان خروج» فقط آخرین فعالیت است، نه ترک آزمون.
             put("submitted", kotlinx.serialization.json.JsonPrimitive(final))
+            // V269 — بستر آزمون برای گزارش نظارتی معلم (اپ / سایت دسکتاپ / سایت گوشی)
+            put("platform", kotlinx.serialization.json.JsonPrimitive("app"))
             put("events", kotlinx.serialization.json.JsonObject(
                 securityEvents.mapValues { kotlinx.serialization.json.JsonPrimitive(it.value) }
             ))
