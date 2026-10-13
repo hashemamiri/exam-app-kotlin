@@ -20,7 +20,7 @@ class V172_SiteCardsTargetsTest {
         assertTrue("async function pageRequests(c)" in a && "managerRequestsCard(true)" in a)
         assertTrue("title = {reports: a.section === 'grades' ? 'کارنامه' : 'آمار', grading: a.filter === 'pending' ? 'مانده' : (a.filter === 'graded' ? 'پاسخ' : 'تصحیح'), bank: 'بانک سؤال', requests: 'درخواست‌ها'}[view.panel] || ''" in a)
         val x = source("site/src/extras.js")
-        assertTrue("async function reportsPage(c, arg)" in x && "text: gradesOnly ? 'کارنامه و لیست نمرات' : 'آمار و تحلیل آزمون‌ها'" in x)
+        assertTrue("async function reportsPage(c, arg)" in x && "gradesOnly = section === 'grades'" in x) // V278: عنوان داخل صفحه حذف شد (هدر سایت کافی است)
         // V208 — تحلیل پیشرفتهٔ کیفیت سؤال از بخش آمار حذف شد؛ به‌جایش نمودار وضعیت پاسخ‌ها
         assertTrue("window.SiteAdmin.questionAnalysis(anBody, e.id)" !in x && "class: 'card rp-status'" in x)
         assertTrue("questionAnalysis: function (body, examId) { return tabAnalysis(body, {examId: examId}); }" in source("site/src/admin.js"))
