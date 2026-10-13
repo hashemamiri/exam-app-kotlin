@@ -21,6 +21,7 @@
   function selectOf(list, value, emptyLabel) { var s = el('select'); list.forEach(function (v) { s.appendChild(el('option', {value: v, text: v || (emptyLabel || '—')})); }); if (value && list.indexOf(value) < 0) s.appendChild(el('option', {value: value, text: value})); s.value = value || ''; return s; }
 
   /* ---------------- Edge Function manage-student ---------------- */
+  var BULK_MAX = 1000; /* V265 — سقف کارت‌ها در یک نوبت (کارایی صفحه)؛ محدودیت نرخ سرور برداشته شد */
   async function manageStudent(body) {
     var r = await S.http('/functions/v1/manage-student', {method: 'POST', body: body});
     /* V260.8 — «درخواست … برای تأیید معلم ارسال شد» خطا نیست؛ پیام سبز و پایان کار */
@@ -182,7 +183,7 @@
       modal.innerHTML = '';
       var r = rows[active];
       modal.appendChild(el('div', {class: 'row st-new-bar'}, [
-        el('button', {class: 'btn', text: '+', title: 'کارت تازه', disabled: rows.length >= 100 || busy ? 'disabled' : null, onclick: function () { rows.push(blank()); recompute(); active = rows.length - 1; draw(); }}),
+        el('button', {class: 'btn', text: '+', title: 'کارت تازه', disabled: rows.length >= BULK_MAX || busy ? 'disabled' : null, onclick: function () { rows.push(blank()); recompute(); active = rows.length - 1; draw(); }}),
         el('button', {class: 'btn', text: busy ? 'در حال ایجاد…' : 'ایجاد', disabled: busy ? 'disabled' : null, onclick: submit}),
         /* V230 — ورود از اکسل/CSV: ردیف‌های فایل به کارت‌ها تبدیل می‌شوند (حداکثر ۱۰۰) */
         el('button', {class: 'btn light', text: '📥 از اکسل', title: 'ستون‌ها: نام، نام خانوادگی، نام پدر، پایه، رشته، جنسیت، نام کاربری (اختیاری)، رمز (اختیاری)', disabled: busy ? 'disabled' : null, onclick: function () {
@@ -193,8 +194,8 @@
               var list = rowsToStudents(await readSpreadsheet(file));
               if (!list.length) throw new Error('ردیفی با نام پیدا نشد. ستون اول باید «نام» و ستون دوم «نام خانوادگی» باشد.');
               var keep = rows.filter(function (r) { return r.first || r.last; });
-              rows = keep.concat(list).slice(0, 100); recompute(); active = keep.length; error = list.length > 100 - keep.length ? 'فقط ۱۰۰ کارت در هر نوبت ممکن است؛ بقیه وارد نشد.' : ''; draw();
-              toast(fa(Math.min(list.length, 100 - keep.length)) + ' دانش‌آموز از فایل خوانده شد؛ پیش از «ایجاد» بررسی کنید.', 'ok');
+              rows = keep.concat(list).slice(0, BULK_MAX); recompute(); active = keep.length; error = list.length > BULK_MAX - keep.length ? 'فقط ' + fa(BULK_MAX) + ' کارت در هر نوبت ممکن است؛ بقیه وارد نشد.' : ''; draw();
+              toast(fa(Math.min(list.length, BULK_MAX - keep.length)) + ' دانش‌آموز از فایل خوانده شد؛ پیش از «ایجاد» بررسی کنید.', 'ok');
             } catch (e) { error = errMsg(e); draw(); }
           });
           document.body.appendChild(f); f.click(); setTimeout(function () { f.remove(); }, 60000);

@@ -88,6 +88,6 @@ class V22ClassStudentCardsTest {
             .substringBefore("} else {")
         assertTrue(teacherMenu.indexOf("دانش‌آموزان") < teacherMenu.indexOf("\"تقویم\""))
         val repository = File(root, "app/src/main/java/ir/exam/app/data/repository/SupabaseSchoolRepository.kt").readText()
-        assertTrue("requests.size in 1..100" in repository)
+        assertTrue("requests.chunked(100)" in repository) // V265 — بدون سقف؛ ارسال ۱۰۰تایی
     }
 }

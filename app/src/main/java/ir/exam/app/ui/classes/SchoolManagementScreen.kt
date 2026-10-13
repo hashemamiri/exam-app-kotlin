@@ -1987,15 +1987,15 @@ private fun BulkStudentDialog(
             val name = uri.lastPathSegment.orEmpty()
             val parsed = ir.exam.app.core.io.SpreadsheetImport.toStudents(ir.exam.app.core.io.SpreadsheetImport.readRows(bytes, name))
             require(parsed.isNotEmpty()) { "ردیفی با نام در فایل پیدا نشد. ستون‌ها: نام، نام خانوادگی، نام پدر، پایه، رشته، جنسیت، نام کاربری، رمز." }
-            val drafts = parsed.take(100).map { r ->
+            val drafts = parsed.take(BULK_STUDENT_MAX).map { r ->
                 BulkStudentDraft(first = r.first, last = r.last, username = r.username, usernameEdited = r.username.isNotBlank(),
                     password = r.password.ifBlank { generatePassword(10) }, gender = r.gender, father = r.father, grade = r.grade, field = r.field)
             }
             val keep = rows.filter { it.first.isNotBlank() || it.last.isNotBlank() }
-            rows.clear(); rows.addAll((keep + drafts).take(100))
+            rows.clear(); rows.addAll((keep + drafts).take(BULK_STUDENT_MAX))
             recomputeSuggestionsHolder.value?.invoke()
             activeIndex = rows.lastIndex
-            error = if (parsed.size > 100) "فقط ۱۰۰ ردیف اول وارد شد." else null
+            error = if (parsed.size > BULK_STUDENT_MAX) "فقط $BULK_STUDENT_MAX ردیف اول وارد شد." else null
         }.onFailure { error = UserFacingError.of(it, "خواندن فایل ناموفق بود.") }
         }
     }
@@ -2090,13 +2090,13 @@ private fun BulkStudentDialog(
                     ) {
                         Button(
                             onClick = {
-                                if (rows.size < 100) {
+                                if (rows.size < BULK_STUDENT_MAX) {
                                     rows.add(BulkStudentDraft())
                                     recomputeSuggestions()
                                     activeIndex = rows.lastIndex
                                 }
                             },
-                            enabled = rows.size < 100,
+                            enabled = rows.size < BULK_STUDENT_MAX,
                             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF25A86B)),
                             modifier = Modifier
                                 .weight(1f)
@@ -2506,6 +2506,9 @@ internal fun applyStudentFilter(
             (filter.teacherId == null || meta[student.id]?.teacherId == filter.teacherId)
     }
 }
+
+/** V265 — سقف کارت‌ها در یک نوبت فقط برای کارایی صفحه؛ محدودیت نرخ سرور برداشته شد. */
+private const val BULK_STUDENT_MAX = 1000
 
 private fun generatePassword(length: Int = 8): String {
     val chars = "abcdefghjkmnpqrstuvwxyz23456789"

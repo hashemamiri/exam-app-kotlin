@@ -19425,6 +19425,13 @@ CI: `compileDebugUnitTestKotlin` به‌خاطر `assertFalse` بدون import �
 - باگ V202.5: `var LANDING_TILES` داخل `paintAuth` بعد از خطی که `landing()` را صدا می‌زد تعریف شده بود → به‌خاطر hoisting مقدارش undefined و `.map` خطا می‌داد → صفحهٔ اول خالی. حالا کنار `authActive` در سطح ماژول است (تست ترتیب را پین می‌کند).
 - دروازهٔ صفحهٔ اول: mobile.js `entered()/enter()` با `sessionStorage['m-entered']`، `gateActive() = MQ && user && !entered`؛ app.js `render()` پیش از m-mode اگر gateActive → paintAuth (landing حتی با user). دکمه: user ⇒ `enter(); S.render()`؛ وگرنه `goA('login')`؛ پیوند ثبت‌نام فقط بدون user. `afterLogin()` → `SiteMobile.enter()`.
 
+### V265 — حذف کامل محدودیت ساخت دانش‌آموز
+- SQL `supabase/migrations/20261013_native_student_quota_removed_v265.sql` (کپی: sql_v265.sql): `native_consume_student_create_quota(uuid,int,int,int)` با همان امضا بازتعریف شد → همیشه `{ok:true, remaining_hour:999999, unlimited:true}`؛ رویداد همچنان ثبت و بعد از ۷ روز پاک می‌شود؛ تابع لبهٔ `manage-student` بدون تغییر (نیاز به deploy ندارد). سهمیهٔ ساعتی ۳۰ / روزانهٔ ۲۰۰ (V75.5) عملاً برداشته شد.
+- اپ: `SupabaseSchoolRepository.createStudentsBulk` بدون `require(size in 1..100)`؛ همهٔ ردیف‌ها اعتبارسنجی و با `requests.chunked(100)` دسته‌دسته به action=bulk فرستاده می‌شوند (لبه همچنان `rows.slice(0,100)` دارد). `SchoolManagementScreen.kt`: ثابت `BULK_STUDENT_MAX = 1000` جای پنج سقف ۱۰۰ (کارت‌ها/اکسل/دکمهٔ افزودن).
+- سایت `school.js`: `var BULK_MAX = 1000` (پیش از `manageStudent`) برای دکمهٔ «+»، ورود اکسل و متن خطا.
+- تست `V265_StudentQuotaRemovedTest` (بدون پین سایت)؛ پین V22 به `requests.chunked(100)`. نسخه 1.01.52.
+- سنجش بار (۱۳ مهر، ۲۸ دانش‌آموز QA، aiohttp مستقیم به Supabase): `get_exam_for_student` با ۳۰۰ درخواست هم‌زمان: ۰ خطا، p95 = 1.55s. ارسال هم‌زمان ۵ نسخهٔ یک `p_operation` → یک ثبت + ۴ پاسخ idempotent (درست). **گلوگاه واقعی: محدودیت نرخ Auth سوپابیس** — ورود با رمز ۳۰ درخواست در ۵ دقیقه به ازای هر IP (`over_request_rate_limit` 429) و تازه‌سازی توکن ۱۵۰ در ۵ دقیقه به ازای IP؛ در مدرسه همهٔ دانش‌آموزان پشت یک IP هستند → باید در داشبورد Authentication → Rate Limits بالا برده شود (پیشنهاد V266: پیام فارسی ۴۲۹ در اپ، تازه‌سازی زودتر با جیتر در سایت، تلاش مجدد خودکار برای ۴۲۹/۵۰۳).
+
 ### V264.1 — رفع CI V263
 - `V252_AppAuditTest` («no raw SAF stream in screens») به‌خاطر `openInputStream(` در `SchoolManagementScreen.kt` (ورود اکسل V263) شکست خورد. `DocumentIo.readBytes(context, uri, maxBytes, tooBigMessage)` اضافه شد و ورود اکسل داخل `rememberCoroutineScope().launch` از آن استفاده می‌کند. نسخه 1.01.51.
 
