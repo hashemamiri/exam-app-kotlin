@@ -432,6 +432,8 @@ private fun AuthenticatedExamApp(
         managerInviteHeader = managerInviteHeader,
         // V62.6 — هدر پویا «کلاس‌های نام معلم / نام کلاس» به‌جای «معلم‌ها».
         managerClassHeader = managerClassHeader,
+        // V280 — توضیح کوتاه جلوی هدر تصحیح/مانده/پاسخ (یک ردیف، با فاصله)
+        gradingHint = if (page == MainPage.GRADING) (if (gradingPendingOnly) "پاسخ‌های در انتظار تصحیح" else if (gradingGradedOnly) "وضعیت پاسخ‌دهی آزمون‌ها" else "وضعیت تصحیح آزمون‌ها") else null,
         gradingHeader = if (page == MainPage.REPORTS) (if (reportsSection == "grades") "کارنامه و لیست نمرات" else "آمار") else if (page == MainPage.GRADING) (if (gradingPendingOnly) "مانده" else if (gradingGradedOnly) "پاسخ" else "تصحیح") else null,
         menuOpen = menuOpen,
         quickAddOpen = quickAddOpen,
@@ -983,6 +985,7 @@ private fun AuthenticatedShell(
     managerClassHeader: String? = null,
     // V130 — هدرِ صفحهٔ تصحیح متناسب با کارتِ واردشده («پاسخ» / «مانده» / «تصحیح»)
     gradingHeader: String? = null,
+    gradingHint: String? = null,
     menuOpen: Boolean,
     quickAddOpen: Boolean,
     studentExamActive: Boolean = false,
@@ -1153,15 +1156,19 @@ private fun AuthenticatedShell(
                                     containerColor = androidx.compose.ui.graphics.Color.Transparent
                                 ),
                                 title = {
-                                    Text(
-                                        // V62.6 — داخل مدیریت معلم: «کلاس‌های نام معلم» یا نام کلاس.
-                                        if (user.role == UserRole.MANAGER && page == MainPage.HOME && managerClassHeader != null) managerClassHeader
-                                        else if (user.role == UserRole.MANAGER && page == MainPage.HOME && managerInviteHeader) "کدهای دعوت معلم"
-                                        // V61.6 — نمای مدارس: هدر «مدرسه من» به‌جای «کلاس‌ها».
-                                        else if (page == MainPage.SCHOOL && schoolsViewOpen && !schoolStudentsSelected) "مدرسه من"
-                                        else if ((page == MainPage.GRADING || page == MainPage.REPORTS) && gradingHeader != null) gradingHeader
-                                        else page.sectionTitle(user.role, profileDestination, schoolStudentsSelected)
-                                    )
+                                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                                        Text(
+                                            // V62.6 — داخل مدیریت معلم: «کلاس‌های نام معلم» یا نام کلاس.
+                                            if (user.role == UserRole.MANAGER && page == MainPage.HOME && managerClassHeader != null) managerClassHeader
+                                            else if (user.role == UserRole.MANAGER && page == MainPage.HOME && managerInviteHeader) "کدهای دعوت معلم"
+                                            // V61.6 — نمای مدارس: هدر «مدرسه من» به‌جای «کلاس‌ها».
+                                            else if (page == MainPage.SCHOOL && schoolsViewOpen && !schoolStudentsSelected) "مدرسه من"
+                                            else if ((page == MainPage.GRADING || page == MainPage.REPORTS) && gradingHeader != null) gradingHeader
+                                            else page.sectionTitle(user.role, profileDestination, schoolStudentsSelected)
+                                        )
+                                        // V280 — توضیح کوتاه جلوی عنوان تصحیح/مانده/پاسخ، در همان ردیف
+                                        if (page == MainPage.GRADING && gradingHint != null) Text(gradingHint, style = MaterialTheme.typography.bodySmall, color = colors.muted, maxLines = 1)
+                                    }
                                 },
                                 navigationIcon = {
                                     if (user.role == UserRole.STUDENT) {

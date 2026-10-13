@@ -80,6 +80,8 @@ fun GradingScreen(
         )
     }
 
+    // V280 — کدام کارت آزمون باز است (دکمه‌ها فقط روی کارت لمس‌شده)
+    var expandedCardId by remember { mutableStateOf<String?>(null) }
     Column(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         state.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
         state.message?.let { Text(it, color = MaterialTheme.colorScheme.primary) }
@@ -87,13 +89,7 @@ fun GradingScreen(
 
         val exam = state.selectedExam
         if (exam == null) {
-            // V279.1 — عنوان داخل صفحه حذف شد؛ هدر برنامه («تصحیح»/«مانده»/«پاسخ») همان را نشان می‌دهد (دو هدر نباشد). فقط توضیح کوتاه می‌ماند.
-            val hint = when {
-                state.pendingOnly -> "پاسخ‌های در انتظار تصحیح"
-                state.gradedOnly -> "وضعیت پاسخ‌دهی آزمون‌ها"
-                else -> "وضعیت تصحیح آزمون‌ها"
-            }
-            Text(hint, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            // V280 — توضیح کوتاه به هدر برنامه منتقل شد (ExamApp › gradingHint)؛ داخل صفحه هیچ عنوانی نیست.
             val visibleExams = if (state.pendingOnly) {
                 // «مانده» فقط آزمون‌هایی را نشان می‌دهد که پاسخِ تصحیح‌نشده دارند (تا آمار نرسیده، همه می‌مانند).
                 state.exams.filter { ex -> state.cardStats[ex.id]?.let { it.pending > 0 } ?: true }
@@ -103,6 +99,8 @@ fun GradingScreen(
             else LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 items(visibleExams, key = { it.id }) { item ->
                     val st = state.cardStats[item.id]
+                    // V280 — کارت بدون دکمه؛ لمس کارت دکمه‌های «ورود به تصحیح/گزارش‌ها» را باز می‌کند
+                    val expanded = expandedCardId == item.id
                     // رنگِ کادر: پاسخ → نسبتِ پاسخ‌داده‌ها به کلِ دانش‌آموزان؛ تصحیح → نسبتِ تصحیح‌شده‌ها به پاسخ‌ها
                     val level = when {
                         st == null -> null
@@ -118,7 +116,7 @@ fun GradingScreen(
                         null -> null
                     }
                     Card(
-                        Modifier.fillMaxWidth(),
+                        Modifier.fillMaxWidth().clickable { expandedCardId = if (expanded) null else item.id },
                         border = border?.let { BorderStroke(2.dp, it) }
                     ) {
                         Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -131,7 +129,7 @@ fun GradingScreen(
                                     style = MaterialTheme.typography.bodySmall
                                 )
                             }
-                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            if (expanded) Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                 Button(onClick = { viewModel.selectExam(item.id) }) { Text("ورود به تصحیح") }
                                 // V58.0 — گزارش‌های نظارتی: رویدادهای امنیتی و زمان‌بندی هر دانش‌آموز.
                                 OutlinedButton(onClick = { viewModel.openMonitorReports(item.id) }) { Text("گزارش‌ها") }

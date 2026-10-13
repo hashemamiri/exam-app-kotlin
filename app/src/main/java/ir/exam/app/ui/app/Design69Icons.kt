@@ -308,6 +308,70 @@ object Design69Icons {
         vector("Design69Chevron") { strokePath(2f) { moveTo(15f, 6f); lineTo(9f, 12f); lineTo(15f, 18f) } }
     }
 
+    // V280 — آیکن‌های متمایز کارت‌های مدیریت معلم (کارنامه/بانک سؤال/مانده/پاسخ/درخواست‌ها)
+    /** کارنامه: برگه با گوشهٔ تا‌خورده، سطرهای نمره و تیک. */
+    val ReportCard: ImageVector by lazy {
+        vector("Design69ReportCard") {
+            strokePath {
+                moveTo(6f, 3f); lineTo(14f, 3f); lineTo(19f, 8f); lineTo(19f, 21f); lineTo(6f, 21f); close()
+                moveTo(14f, 3f); lineTo(14f, 8f); lineTo(19f, 8f)
+                moveTo(9f, 12f); lineTo(16f, 12f)
+                moveTo(9f, 15.5f); lineTo(16f, 15.5f)
+                moveTo(9f, 18.5f); lineTo(13f, 18.5f)
+            }
+        }
+    }
+
+    /** بانک سؤال: چند کتاب کنار هم با علامت سؤال. */
+    val QuestionBank: ImageVector by lazy {
+        vector("Design69QuestionBank") {
+            strokePath {
+                moveTo(4f, 4f); lineTo(8f, 4f); lineTo(8f, 20f); lineTo(4f, 20f); close()
+                moveTo(10f, 4f); lineTo(14f, 4f); lineTo(14f, 20f); lineTo(10f, 20f); close()
+                moveTo(15.5f, 5.5f); lineTo(19.5f, 4.5f); lineTo(21.5f, 19.5f); lineTo(17.5f, 20.5f); close()
+                moveTo(4f, 8f); lineTo(8f, 8f)
+                moveTo(10f, 8f); lineTo(14f, 8f)
+            }
+        }
+    }
+
+    /** مانده: ساعت شنی (در انتظار تصحیح). */
+    val Pending: ImageVector by lazy {
+        vector("Design69Pending") {
+            strokePath {
+                moveTo(7f, 3f); lineTo(17f, 3f)
+                moveTo(7f, 21f); lineTo(17f, 21f)
+                moveTo(8f, 3f); lineTo(8f, 7f); lineTo(12f, 12f); lineTo(16f, 7f); lineTo(16f, 3f)
+                moveTo(8f, 21f); lineTo(8f, 17f); lineTo(12f, 12f); lineTo(16f, 17f); lineTo(16f, 21f)
+                moveTo(10f, 19f); lineTo(14f, 19f)
+            }
+        }
+    }
+
+    /** پاسخ: حباب گفت‌وگو با سه نقطه. */
+    val Answers: ImageVector by lazy {
+        vector("Design69Answers") {
+            strokePath {
+                moveTo(4f, 5f); lineTo(20f, 5f); lineTo(20f, 16f); lineTo(10f, 16f); lineTo(6f, 20f); lineTo(6f, 16f); lineTo(4f, 16f); close()
+                moveTo(8f, 10.5f); lineTo(8.2f, 10.5f)
+                moveTo(12f, 10.5f); lineTo(12.2f, 10.5f)
+                moveTo(16f, 10.5f); lineTo(16.2f, 10.5f)
+            }
+        }
+    }
+
+    /** درخواست‌ها: صندوق ورودی با پیکان. */
+    val Requests: ImageVector by lazy {
+        vector("Design69Requests") {
+            strokePath {
+                moveTo(4f, 13f); lineTo(4f, 20f); lineTo(20f, 20f); lineTo(20f, 13f)
+                moveTo(4f, 13f); lineTo(9f, 13f); lineTo(10f, 16f); lineTo(14f, 16f); lineTo(15f, 13f); lineTo(20f, 13f)
+                moveTo(12f, 3f); lineTo(12f, 11f)
+                moveTo(9f, 8f); lineTo(12f, 11f); lineTo(15f, 8f)
+            }
+        }
+    }
+
     private fun vector(
         name: String,
         content: ImageVector.Builder.() -> Unit

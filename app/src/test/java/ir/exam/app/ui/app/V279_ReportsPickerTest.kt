@@ -31,6 +31,6 @@ class V279_1_GradingSingleHeaderTest {
         val s = java.io.File(root(), "app/src/main/java/ir/exam/app/ui/grading/GradingScreen.kt").readText()
         assertFalse("مانده — پاسخ‌های در انتظار تصحیح" in s)
         assertFalse("Text(heading, style = MaterialTheme.typography.headlineSmall)" in s)
-        assertTrue("Text(hint, style = MaterialTheme.typography.bodySmall" in s)
+        assertFalse("Text(hint, style = MaterialTheme.typography.bodySmall" in s) // V280: توضیح به هدر رفت
     }
 }

@@ -19425,6 +19425,12 @@ CI: `compileDebugUnitTestKotlin` به‌خاطر `assertFalse` بدون import �
 - باگ V202.5: `var LANDING_TILES` داخل `paintAuth` بعد از خطی که `landing()` را صدا می‌زد تعریف شده بود → به‌خاطر hoisting مقدارش undefined و `.map` خطا می‌داد → صفحهٔ اول خالی. حالا کنار `authActive` در سطح ماژول است (تست ترتیب را پین می‌کند).
 - دروازهٔ صفحهٔ اول: mobile.js `entered()/enter()` با `sessionStorage['m-entered']`، `gateActive() = MQ && user && !entered`؛ app.js `render()` پیش از m-mode اگر gateActive → paintAuth (landing حتی با user). دکمه: user ⇒ `enter(); S.render()`؛ وگرنه `goA('login')`؛ پیوند ثبت‌نام فقط بدون user. `afterLogin()` → `SiteMobile.enter()`.
 
+### V280 — هدر تصحیح/مانده/پاسخ یک‌ردیفه، کارت‌های آزمون جمع‌شونده، آیکن‌های متمایز (اپ 1.01.67)
+- ExamApp: پارامتر جدید `gradingHint` («پاسخ‌های در انتظار تصحیح»/«وضعیت پاسخ‌دهی آزمون‌ها»/«وضعیت تصحیح آزمون‌ها»)؛ `title` در TopAppBar حالا `Row(spacedBy(14.dp))` = عنوان + توضیح `bodySmall` با `colors.muted` (فقط صفحهٔ GRADING). GradingScreen دیگر هیچ متن عنوان/توضیح ندارد.
+- GradingScreen: `var expandedCardId: String?`؛ کارت آزمون `clickable` و دکمه‌های «ورود به تصحیح/گزارش‌ها» فقط وقتی `expanded` نمایش داده می‌شوند (لمس دوباره = جمع‌شدن).
+- Design69Icons: پنج آیکن خطی جدید با همان سبک (`strokePath`): `ReportCard` (برگهٔ تا‌خورده با سطرها)، `QuestionBank` (کتاب‌ها)، `Pending` (ساعت شنی)، `Answers` (حباب گفت‌وگو)، `Requests` (صندوق ورودی). TeacherManagementCardsScreen: آمار=Reports (نمودار)، کارنامه=ReportCard، بانک سؤال=QuestionBank، تصحیح=Grading، مانده=Pending، پاسخ=Answers، درخواست‌ها=Requests. کارت‌های مدیر دست‌نخورده.
+- تست `V280_GradingCardsHeaderIconsTest`؛ پین V279.1 (`Text(hint…)`) به assertFalse تبدیل شد.
+
 ### V279.1 — رفع CI V279 + حذف هدر دوم «تصحیح/مانده/پاسخ» (اپ 1.01.66)
 - CI 1.01.65: دو تست V279 با `FileNotFoundException` شکستند چون `File(p)` نسبی بود (cwd تست = `app/`). الگوی درست همهٔ تست‌های منبع: `root() = listOf(File("."), File("..")).first { File(it, "site/src/extras.js").isFile }`. کامپایل Kotlin V279 موفق بود.
 - کاربر: صفحه‌های «تصحیح»، «مانده» و «پاسخ» اپ دو هدر داشتند (هدر برنامه `gradingHeader` در ExamApp + `Text(heading, headlineSmall)` در GradingScreen). مثل V277 برای کارنامه: عنوان داخلی حذف شد و فقط یک توضیح کوتاه `bodySmall` می‌ماند («پاسخ‌های در انتظار تصحیح» / «وضعیت پاسخ‌دهی آزمون‌ها» / «وضعیت تصحیح آزمون‌ها»). تست `V279_1_GradingSingleHeaderTest` (در فایل V279_ReportsPickerTest.kt).

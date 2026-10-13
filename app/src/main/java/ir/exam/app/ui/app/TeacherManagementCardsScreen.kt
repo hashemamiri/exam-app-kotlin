@@ -111,14 +111,14 @@ fun TeacherManagementCardsScreen(
             ManagementCardSpec(
                 "کارنامه",
                 "کارنامه و لیست نمرات کلاس؛ انتخاب آزمون‌ها و خروجی Excel یا PDF.",
-                Design69Icons.Reports,
+                Design69Icons.ReportCard, // V280 — آیکن متمایز از «آمار»
                 listOf(Color(0xFF0EA5E9), Color(0xFF6366F1)),
                 onGradeList
             ),
             ManagementCardSpec(
                 "بانک سؤال",
                 "جست‌وجو، دسته‌بندی، مشاهده، ویرایش، حذف و افزودن سؤال به آزمون.",
-                Design69Icons.Exams,
+                Design69Icons.QuestionBank,
                 listOf(Color(0xFF2878DB), Color(0xFF24B8C8)),
                 onQuestionBank
             ),
@@ -132,21 +132,21 @@ fun TeacherManagementCardsScreen(
             ManagementCardSpec(
                 "مانده",
                 "فقط پاسخ‌های در انتظار تصحیح و پیگیری را نمایش می‌دهد.",
-                Design69Icons.Cards,
+                Design69Icons.Pending,
                 listOf(Color(0xFFE0587F), Color(0xFF7D6CF4)),
                 onPending
             ),
             ManagementCardSpec(
                 "پاسخ",
                 "فقط پاسخ‌های تصحیح‌شده دارای نمره و بازخورد نهایی را نمایش می‌دهد.",
-                Design69Icons.Grading,
+                Design69Icons.Answers,
                 listOf(Color(0xFF4D5B74), Color(0xFF273247)),
                 onAnswers
             ),
             ManagementCardSpec(
                 "درخواست‌ها",
                 "درخواست‌های ویرایش یا حذف مدیر را مشاهده، تأیید یا رد کنید.",
-                Design69Icons.Cards,
+                Design69Icons.Requests,
                 listOf(Color(0xFF7D6CF4), Color(0xFFE0587F)),
                 onRequests
             )
