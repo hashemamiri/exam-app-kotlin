@@ -52,8 +52,8 @@ h1,h2,h3,h4{margin:0 0 .5em;line-height:1.4}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:0 16px}
 .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
 .grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
-@media (max-width:900px){.grid3,.grid4{grid-template-columns:1fr 1fr}}
-@media (max-width:600px){.grid2,.grid3,.grid4{grid-template-columns:1fr}}
+@media (max-width:900px) and (pointer:coarse){.grid3,.grid4{grid-template-columns:1fr 1fr}}
+@media (max-width:600px) and (pointer:coarse){.grid2,.grid3,.grid4{grid-template-columns:1fr}}
 .alert{border-radius:10px;padding:10px 14px;font-size:14px;margin:10px 0;border:1px solid transparent}
 .alert.error{background:var(--danger-soft);color:#8a1f16;border-color:#f5c2bd}
 .alert.ok{background:var(--ok-soft);color:#155e35;border-color:#bfe6cd}
@@ -92,9 +92,9 @@ table.tbl tr:hover td{background:#f8faff}
 .nav{display:flex;gap:18px;margin-inline-start:20px}
 .nav a{color:var(--muted);font-weight:600}
 .nav a:hover{color:var(--brand)}
-@media (max-width:760px){.nav{display:none}}
+@media (max-width:760px) and (pointer:coarse){.nav{display:none}}
 .hero{max-width:1140px;margin:0 auto;padding:70px 20px 40px;display:grid;grid-template-columns:1.1fr .9fr;gap:40px;align-items:center}
-@media (max-width:900px){.hero{grid-template-columns:1fr;padding-top:40px}}
+@media (max-width:900px) and (pointer:coarse){.hero{grid-template-columns:1fr;padding-top:40px}}
 .hero h1{font-size:40px;font-weight:900;line-height:1.35;margin-bottom:14px}
 .hero h1 span{color:var(--brand)}
 .hero p{font-size:17px;color:var(--muted);margin-bottom:26px}
@@ -114,14 +114,14 @@ table.tbl tr:hover td{background:#f8faff}
 .section h2{font-size:26px;font-weight:800;text-align:center;margin-bottom:8px}
 .section .sub{text-align:center;color:var(--muted);margin-bottom:30px}
 .features{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
-@media (max-width:900px){.features{grid-template-columns:1fr 1fr}}
-@media (max-width:600px){.features{grid-template-columns:1fr}}
+@media (max-width:900px) and (pointer:coarse){.features{grid-template-columns:1fr 1fr}}
+@media (max-width:600px) and (pointer:coarse){.features{grid-template-columns:1fr}}
 .feature{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:22px}
 .feature .ic{width:44px;height:44px;border-radius:12px;background:var(--brand-soft);color:var(--brand);display:flex;align-items:center;justify-content:center;font-size:22px;margin-bottom:12px}
 .feature h3{font-size:16px}
 .feature p{color:var(--muted);font-size:14px;margin:0}
 .roles{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
-@media (max-width:900px){.roles{grid-template-columns:1fr}}
+@media (max-width:900px) and (pointer:coarse){.roles{grid-template-columns:1fr}}
 .role{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:24px;text-align:center}
 .role .em{font-size:40px}
 .role ul{text-align:right;color:var(--muted);font-size:14px;padding-inline-start:18px;margin:12px 0 18px}
@@ -161,7 +161,7 @@ footer{border-top:1px solid var(--line);padding:26px 20px;color:var(--muted);fon
 .main .head{display:flex;align-items:center;gap:14px;margin-bottom:20px}
 .main .head h1{font-size:22px;margin:0;flex:1}
 .hamb{display:none}
-@media (max-width:860px){
+@media (max-width:860px) and (pointer:coarse){
   .sidebar{position:fixed;inset-inline-start:0;top:0;z-index:40;transform:translateX(100%);transition:.2s}
   [dir=rtl] .sidebar{transform:translateX(100%)}
   .sidebar.open{transform:none}
@@ -239,7 +239,7 @@ code.k{background:#f1f3f8;border-radius:6px;padding:1px 6px;font-size:13px;direc
 .b-qhead .icon-btn svg{width:19px;height:19px}
 .modal.wide{max-width:860px;width:min(860px,94vw)}
 .grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:12px}
-@media (max-width:900px){.b-body{grid-template-columns:1fr}.b-list{position:static;max-height:none}.grid4{grid-template-columns:1fr 1fr}}
+@media (max-width:900px) and (pointer:coarse){.b-body{grid-template-columns:1fr}.b-list{position:static;max-height:none}.grid4{grid-template-columns:1fr 1fr}}
 
 /* ---- فاز ۳: پنل دانش‌آموز ---- */
 .st-head{display:flex;align-items:center;gap:12px;position:sticky;top:64px;z-index:5}
@@ -301,7 +301,7 @@ code.k{background:#f1f3f8;border-radius:6px;padding:1px 6px;font-size:13px;direc
 .cal-d .n{font-weight:700;font-size:14px;margin-bottom:4px}
 .cal-ev{background:var(--brand-soft);color:#173d9c;border-radius:6px;padding:2px 6px;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .cal-ev.hol{background:var(--danger-soft);color:#8a1f16}
-@media (max-width:900px){.g-wrap{grid-template-columns:1fr}.g-list{max-height:none}.cal-d{min-height:60px}}
+@media (max-width:900px) and (pointer:coarse){.g-wrap{grid-template-columns:1fr}.g-list{max-height:none}.cal-d{min-height:60px}}
 
 /* ---- فاز ۵: دانش‌آموزان / بانک ---- */
 .chip.warn{background:#fff3e0;color:#7c4a03}
@@ -332,7 +332,7 @@ img,video,canvas,iframe{max-width:100%}
 .tbl-wrap{width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch}
 .tbl-wrap table.tbl{min-width:560px}
 /* تبلت (≤ 1024px): سایدبار باریک‌تر، فاصله‌های کمتر */
-@media (max-width:1024px){
+@media (max-width:1024px) and (pointer:coarse){
   .sidebar{width:220px;flex-basis:220px}
   .main{padding:20px}
   .b-body{grid-template-columns:280px 1fr}
@@ -340,7 +340,7 @@ img,video,canvas,iframe{max-width:100%}
   .hero h1{font-size:34px}
 }
 /* تبلت عمودی و گوشی (≤ 860px): سایدبار کشویی با پس‌زمینه، منوی پایین */
-@media (max-width:860px){
+@media (max-width:860px) and (pointer:coarse){
   .sidebar{width:min(300px,84vw);flex-basis:auto;height:100dvh;box-shadow:-8px 0 30px rgba(0,0,0,.15)}
   .sb-bg{display:none}
   .sidebar.open + .sb-bg,.sb-bg.on{display:block}
@@ -381,9 +381,9 @@ img,video,canvas,iframe{max-width:100%}
   .bottom-nav button.on{color:var(--brand)}
   .bottom-nav button span:last-child{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
 }
-@media (min-width:861px){.bottom-nav{display:none}}
+@media (min-width:861px),(pointer:fine){.bottom-nav{display:none}}
 /* گوشی (≤ 600px) */
-@media (max-width:600px){
+@media (max-width:600px) and (pointer:coarse){
   html,body{font-size:14px}
   .hero{padding:28px 16px 20px;gap:20px}
   .hero h1{font-size:26px}
@@ -436,7 +436,7 @@ img,video,canvas,iframe{max-width:100%}
 .pwa-bar .t b{display:block}
 .pwa-bar .btn{padding:7px 12px;font-size:13px}
 .pwa-bar .x{border:0;background:transparent;color:#fff;font-size:18px;padding:0 4px}
-@media (min-width:861px){.pwa-bar{bottom:auto;top:16px;inset-inline:0;margin-inline:auto;width:max-content;max-width:min(560px,calc(100vw - 240px))}} /* V253.2 — در دسکتاپ وسطِ بالا */
+@media (min-width:861px),(pointer:fine){.pwa-bar{bottom:auto;top:16px;inset-inline:0;margin-inline:auto;width:max-content;max-width:min(560px,calc(100vw - 240px))}} /* V253.2 — در دسکتاپ وسطِ بالا */
 @media (display-mode:standalone){.topbar .in .btn.pwa-hide{display:none}}
 
 /* ---- V148: پوستهٔ موبایل معلم — آینهٔ Design69/Neumorphic اپ ---- */
@@ -522,7 +522,7 @@ img,video,canvas,iframe{max-width:100%}
 .m-row-ic{color:var(--m-acc)}
 /* کارت‌ها */
 /* پوستهٔ موبایل فقط برای عرض کم؛ روی دسکتاپ اصلاً ساخته نمی‌شود ولی برای اطمینان */
-@media (min-width:861px){.m-shell{display:none}}
+@media (min-width:861px),(pointer:fine){.m-shell{display:none}}
 
 /* ---- V149: دانش‌آموز در پوستهٔ موبایل + رفع کادر خاکستری دسکتاپ ---- */
 .m-head-student{justify-content:space-between}
@@ -626,7 +626,7 @@ img,video,canvas,iframe{max-width:100%}
 @keyframes mradial{from{opacity:0;transform:translate(0,0) scale(.6)}to{opacity:1;transform:translate(var(--tx),var(--ty)) scale(1)}}
 @keyframes mx{from{transform:rotate(0);background:linear-gradient(135deg,var(--m-acc),var(--m-acc2))}to{transform:rotate(0)}}
 @keyframes mfade{from{opacity:0}to{opacity:1}}
-@media (max-width:380px){.m-radial-item{width:60px;height:60px;left:-30px;top:-30px}.m-radial-item .l{font-size:8px}}
+@media (max-width:380px) and (pointer:coarse){.m-radial-item{width:60px;height:60px;left:-30px;top:-30px}.m-radial-item .l{font-size:8px}}
 /* V153 — افزودن سریع ضربدری (Design69QuickAddOverlay) */
 .m-qa-bg{align-items:center;padding:0 16px}
 .m-qa-stage{position:relative;width:100%;max-width:420px;height:466px;display:flex;align-items:center;justify-content:center}
@@ -744,7 +744,7 @@ img,video,canvas,iframe{max-width:100%}
 .ice-err{color:#B91C1C;font-size:13px;text-align:center;padding:4px 0}
 .ice-card .ice-err{background:rgba(185,28,28,.08);border:1px solid rgba(185,28,28,.25);border-radius:12px;padding:10px 12px;line-height:1.8;margin:0} /* V260.5 */
 .m-dark .ice-card .ice-err{color:#FCA5A5;background:rgba(252,165,165,.1);border-color:rgba(252,165,165,.3)}
-@media (max-width:380px){.ice-otp-b{width:34px;height:46px;font-size:18px}.ice-otp{gap:6px}}
+@media (max-width:380px) and (pointer:coarse){.ice-otp-b{width:34px;height:46px;font-size:18px}.ice-otp{gap:6px}}
 
 /* ---- V155: بدون زوم/کش‌آمدن؛ اسکرول فقط وقتی محتوا بلندتر است ---- */
 .m-mode,.m-mode body{overscroll-behavior:none;touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
@@ -772,7 +772,7 @@ img,video,canvas,iframe{max-width:100%}
 .hdr-fields{display:grid;grid-template-columns:1fr 1fr;gap:8px 10px;max-height:52vh;overflow:auto;padding:2px}
 .hdr-fields .field.full{grid-column:1/-1}
 .hdr-actions{gap:8px}.hdr-actions .btn{flex:1}
-@media (max-width:860px){.hdr-fields{grid-template-columns:1fr}.m-mode .hdr-modal{border-radius:24px}}
+@media (max-width:860px) and (pointer:coarse){.hdr-fields{grid-template-columns:1fr}.m-mode .hdr-modal{border-radius:24px}}
 
 /* V157 — دانش‌آموزان در گوشی (StudentsContent) */
 .m-sttools{display:flex;justify-content:center;align-items:center;gap:6px;margin-bottom:10px}
@@ -826,7 +826,7 @@ img,video,canvas,iframe{max-width:100%}
 .studio-ex{display:flex;align-items:center;gap:8px;background:#1f2937;border-radius:12px;padding:6px}
 .studio-ex img{width:64px;height:48px;object-fit:cover;border-radius:8px;background:#FFFFFF}
 .studio-ex .danger-text{color:#fca5a5}
-@media (max-width:700px){.studio-tools{max-height:48vh}.studio-tab{font-size:12px;padding:5px 9px}}
+@media (max-width:700px) and (pointer:coarse){.studio-tools{max-height:48vh}.studio-tab{font-size:12px;padding:5px 9px}}
 .img-broken{outline:2px dashed #dc2626;min-width:48px;min-height:32px}
 /* V161 — حساب گوشی مثل ProfileSettingsScreen */
 .m-chip{border:1px solid var(--m-dark);background:transparent;color:var(--m-ink);border-radius:999px;padding:6px 14px;font:inherit;font-size:13px}
@@ -917,7 +917,7 @@ img,video,canvas,iframe{max-width:100%}
   .lp .tiles{grid-template-columns:repeat(3,1fr);gap:12px;margin-top:28px}
   .lp h1{font-size:34px}
 }
-@media(max-width:860px){
+@media (max-width:860px) and (pointer:coarse){
   .lp{grid-template-columns:1fr}
   .lp-r{order:1;display:block;padding:22px 16px 0}
   .lp .card{padding:26px 20px}
@@ -940,7 +940,7 @@ body.dk{--bg:#eef2f5;--card:#fff;--ink:#1d2935;--muted:#6c7985;--line:#d9e1e6;--
 .dk .dk-ic{display:inline-grid;place-items:center}
 .dk .dk-ic svg{width:22px;height:22px}
 .dk .dk-mark,.dk .dk-burger{display:none}
-@media (min-width:861px){
+@media (min-width:861px),(pointer:fine){
   /* سایدبار و منوی پایین قدیمی روی دسکتاپ نیست؛ جای آن ریل سمت راست است */
   .dk .sidebar,.dk .sb-bg,.dk .bottom-nav,.dk .hamb{display:none !important}
   .dk .app{display:block;min-height:100vh;overflow-x:clip}
@@ -1006,14 +1006,14 @@ body.dk{--bg:#eef2f5;--card:#fff;--ink:#1d2935;--muted:#6c7985;--line:#d9e1e6;--
   .dk .soon b{color:#39758a}
   .dk a{color:#39758a}
 }
-@media (min-width:861px) and (max-width:1100px){.dk .dk-grid{grid-template-columns:repeat(3,1fr)}}
-@media (min-width:861px) and (max-height:760px){.dk .dk-rail{--size:44px}.dk .dk-rail-item .dk-ic{width:36px;height:36px}.dk .dk-rail-item .dk-ic svg{width:19px;height:19px}}
+@media (min-width:861px) and (max-width:1100px) and (pointer:coarse){.dk .dk-grid{grid-template-columns:repeat(3,1fr)}}
+@media (min-width:861px) and (max-height:760px),(pointer:fine) and (max-height:760px){.dk .dk-rail{--size:44px}.dk .dk-rail-item .dk-ic{width:36px;height:36px}.dk .dk-rail-item .dk-ic svg{width:19px;height:19px}}
 
 /* ===================== V166 — سازندهٔ آزمون دسکتاپ به سبک «نسخهٔ یکپارچه» (سه‌ستونه + ریل چپ) ===================== */
 .b-rail,.b-types,.b-settings{display:none}
 .b-addmenu{position:fixed;z-index:80;display:grid;gap:6px;padding:10px;min-width:180px;border-radius:14px}
 .b-addmenu .btn{justify-content:flex-start}
-@media (min-width:861px){
+@media (min-width:861px),(pointer:fine){
   /* V207 — دسکتاپ: کادر بالای سازنده (که فقط کد آزمون را نشان می‌داد) کلاً حذف شد؛ کد آزمون در پیام ذخیره و کارت آزمون هست */
   .dk .builder .b-top{display:none}
   .dk .b-body{grid-template-columns:1fr;margin:0}
@@ -1262,8 +1262,8 @@ button.stat:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
 /* V198.1 — قانون عمومی «.card + .card{margin-top}» داخل گرید کارت‌های ۲ تا ۵ را پایین می‌کشید و فقط کارت اول (آزمون) بلند می‌ماند */
 .grid2 .card+.card,.grid3 .card+.card,.grid4 .card+.card,.grid5 .card+.card{margin-top:0}
 .grid5>.stat{height:100%;box-sizing:border-box}
-@media (max-width:1100px){.grid5{grid-template-columns:repeat(3,1fr)}}
-@media (max-width:600px){.grid5{grid-template-columns:1fr 1fr}}
+@media (max-width:1100px) and (pointer:coarse){.grid5{grid-template-columns:repeat(3,1fr)}}
+@media (max-width:600px) and (pointer:coarse){.grid5{grid-template-columns:1fr 1fr}}
 .stat.stat-attn .v{color:#c2410c}
 .stat.stat-attn{box-shadow:0 0 0 2px rgba(194,65,12,.18),0 10px 28px rgba(28,49,62,.065)}
 .mr-embed{box-shadow:none;border:0;padding:0;background:transparent}
@@ -1281,7 +1281,7 @@ button.stat:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
 .m-act.paid{color:#16a34a}
 
 /* ===== V200 — ریل کناری دسکتاپ: نام هر آیکون زیر خودش (به‌جای پیلِ هاور) ===== */
-@media (min-width:861px){
+@media (min-width:861px),(pointer:fine){
   .dk .dk-rail{--size:52px;width:78px;padding:8px 4px}
   .dk .dk-rail-item{width:68px;height:auto;min-height:var(--size);grid-template-rows:auto auto;row-gap:2px;padding:4px 2px 5px;border-radius:14px}
   .dk .dk-rail-item .dk-ic{width:34px;height:34px}
@@ -1290,7 +1290,7 @@ button.stat:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
   .dk .dk-rail-item:hover .dk-rail-label,.dk .dk-rail-item:focus-visible .dk-rail-label{transform:none}
   .dk .dk-rail-item.active .dk-rail-label{color:var(--dk-neon-ink)}
 }
-@media (min-width:861px) and (max-height:760px){
+@media (min-width:861px) and (max-height:760px),(pointer:fine) and (max-height:760px){
   .dk .dk-rail-item .dk-ic{width:28px;height:28px}
   .dk .dk-rail-item .dk-ic svg{width:16px;height:16px}
   .dk .dk-rail-item .dk-rail-label{font-size:9.5px}
@@ -1847,3 +1847,6 @@ html body:not(.m-mode) .bank-card label.bk-check:has(> input[type=checkbox]:chec
 .math-key{min-width:42px;height:42px;border:1px solid var(--line);border-radius:10px;background:var(--card);font:inherit;font-size:17px;cursor:pointer}
 .math-key:hover{border-color:var(--brand)}
 .btn.on{box-shadow:0 0 0 2px var(--brand) inset}
+
+/* V267 — دسکتاپ (ماوس): زیر ۱۰۲۴px چیدمان عوض نمی‌شود؛ پنجره اسکرول افقی می‌گیرد */
+@media (pointer:fine){html{min-width:1024px}body{min-width:1024px}}

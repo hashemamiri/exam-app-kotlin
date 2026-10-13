@@ -19425,6 +19425,12 @@ CI: `compileDebugUnitTestKotlin` به‌خاطر `assertFalse` بدون import �
 - باگ V202.5: `var LANDING_TILES` داخل `paintAuth` بعد از خطی که `landing()` را صدا می‌زد تعریف شده بود → به‌خاطر hoisting مقدارش undefined و `.map` خطا می‌داد → صفحهٔ اول خالی. حالا کنار `authActive` در سطح ماژول است (تست ترتیب را پین می‌کند).
 - دروازهٔ صفحهٔ اول: mobile.js `entered()/enter()` با `sessionStorage['m-entered']`، `gateActive() = MQ && user && !entered`؛ app.js `render()` پیش از m-mode اگر gateActive → paintAuth (landing حتی با user). دکمه: user ⇒ `enter(); S.render()`؛ وگرنه `goA('login')`؛ پیوند ثبت‌نام فقط بدون user. `afterLogin()` → `SiteMobile.enter()`.
 
+### V267 — سایت (فقط سایت، بدون bump): دسکتاپ با پنجرهٔ کوچک + رفرش به همان صفحه
+- تست بار دوباره پس از بالا بردن سقف‌های Auth توسط کاربر: ۲۸/۲۸ ورود موفق، ۳۰۰ درخواست هم‌زمان `get_exam_for_student` بدون خطا (p95 ≈ 1.1s).
+- چیدمان گوشی فقط برای دستگاه لمسی: `mobile.js` `MQ = (max-width: 860px) and (pointer: coarse)`؛ در `site.css` همهٔ `@media (max-width:≤1100px)` با `and (pointer:coarse)` و `(min-width:861px)` با `,(pointer:fine)` گره خورد؛ `@media (pointer:fine){html,body{min-width:1024px}}` → کوچک کردن پنجرهٔ مرورگر دسکتاپ اسکرول افقی می‌دهد، نه چیدمان موبایل. تبلت‌ها (pointer:coarse) مثل قبل.
+- رفرش: `rememberView()` در `navTrack` هر تغییر پنل را در `sessionStorage['site-view']` ({uid, panel, arg}) می‌نویسد؛ `restoreView()` در `boot` پیش از اولین `render` برای همان کاربر برمی‌گرداند؛ `doLogout` پاک می‌کند. فقط همان تب (sessionStorage).
+- تست `V267_SiteDesktopMinWidthRefreshTest` (الگوی `*_Site*Test.kt`، در paths-ignore).
+
 ### V266 — تحمل بار: محدودیت نرخ Auth (۴۲۹) + تازه‌سازی پراکنده + تلاش مجدد
 - زمینه: سنجش V265 نشان داد گلوگاه، سقف Supabase Auth است (ورود ۳۰/۵min و تازه‌سازی ۱۵۰/۵min به ازای IP). کاربر سقف‌ها را در داشبورد بالا برد (مورد ۱)؛ این نسخه موارد ۲ و ۳ است.
 - اپ: `UserFacingError.RATE_LIMIT` + `isRateLimited(raw)` («rate limit»/«over_request_rate_limit»/«too many requests»)؛ در `of()` و `fromText()` پیش از تشخیص متن فنی بررسی می‌شود → ورود و هر safe*Error پیام فارسی روشن می‌دهد (`safeAuthError` به `fromText` می‌افتد).

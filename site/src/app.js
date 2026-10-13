@@ -1196,6 +1196,20 @@
       else { navStack.push(navLast); if (navStack.length > 30) navStack.shift(); try { history.pushState({nav: 1}, ''); } catch (e) {} }
     }
     navLast = {key: k, panel: view.panel, arg: view.arg};
+    rememberView();
+  }
+  /* V267 — رفرش صفحه: همان صفحه (پنل + آرگومان) برمی‌گردد، نه داشبورد. فقط در همین تب (sessionStorage) و فقط برای همین کاربر. */
+  var SS_VIEW = 'site-view';
+  function rememberView() {
+    if (!user) return;
+    try { sessionStorage.setItem(SS_VIEW, JSON.stringify({uid: user.id, panel: view.panel, arg: view.arg === undefined ? null : view.arg})); } catch (e) {}
+  }
+  function restoreView() {
+    try {
+      var raw = sessionStorage.getItem(SS_VIEW); if (!raw || !user) return;
+      var v = JSON.parse(raw); if (!v || v.uid !== user.id || !v.panel) return;
+      view.panel = v.panel; view.arg = v.arg === null ? undefined : v.arg;
+    } catch (e) {}
   }
   function navBack() {
     var prev = navStack.pop();
@@ -1443,7 +1457,7 @@
     drawCompletion(m, user.pendingRole || 'teacher', user.name, msg, function (t) { msg.innerHTML = ''; if (t) msg.appendChild(el('div', {class: 'alert error', text: t})); });
     m.appendChild(el('button', {class: 'btn light', style: 'width:100%;margin-top:10px', text: 'خروج', onclick: doLogout}));
   }
-  async function doLogout() { await authApi.signOut(); user = null; view.panel = 'dashboard'; render(); }
+  async function doLogout() { await authApi.signOut(); user = null; view.panel = 'dashboard'; view.arg = undefined; try { sessionStorage.removeItem(SS_VIEW); } catch (e) {} render(); }
 
   /* ---------------- پنل ---------------- */
   var MENUS = {
@@ -2156,6 +2170,7 @@
       }
     }
     if (user && user.requiresSetup) { renderSetupGate(); return; }
+    restoreView();
     render();
     if (user) prefetchEngines();
     if (profileStale) currentProfile().then(function (fresh) {

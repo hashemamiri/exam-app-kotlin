@@ -7,7 +7,7 @@
   'use strict';
   var S = window.ExamSite; if (!S) return;
   var el = S.el, fa = S.fa, esc = S.esc, toast = S.toast, api = S.api, view = S.view;
-  var MQ = window.matchMedia('(max-width: 860px)');
+  var MQ = window.matchMedia('(max-width: 860px) and (pointer: coarse)'); /* V267 — کوچک کردن پنجرهٔ دسکتاپ (ماوس) دیگر چیدمان گوشی نمی‌شود */
   var ui = {menuOpen: false, addOpen: false, expanded: null};
 
   /* V149 — معلم و دانش‌آموز (مدیر در مرحلهٔ بعد) */
