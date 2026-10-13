@@ -35,7 +35,7 @@ class V165_SiteDesktopRailTest {
     fun `desktop css is scoped to body dk and wide screens`() {
         val css = source("site/src/site.css")
         assertTrue("body.dk{--bg:#eef2f5;--card:#fff;--ink:#1d2935;--muted:#6c7985;--line:#d9e1e6;--brand:#39758a;" in css)
-        assertTrue("@media (min-width:861px){" in css && ".dk .sidebar,.dk .sb-bg,.dk .bottom-nav,.dk .hamb{display:none !important}" in css)
+        assertTrue("@media (min-width:861px),(pointer:fine){" in css && ".dk .sidebar,.dk .sb-bg,.dk .bottom-nav,.dk .hamb{display:none !important}" in css)
         assertTrue(".dk .dk-rail{--size:52px;position:fixed;z-index:50;right:14px;top:22px;bottom:22px;width:72px;" in css)
         assertTrue(".dk .dk-rail-item.active{color:var(--dk-neon-ink);border-color:var(--dk-neon);" in css)
         assertTrue(".dk .dk-rail-item .dk-rail-label{position:absolute;top:50%;right:calc(100% + 10px);" in css)

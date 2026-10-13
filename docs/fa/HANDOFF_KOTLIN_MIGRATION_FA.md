@@ -19425,6 +19425,9 @@ CI: `compileDebugUnitTestKotlin` به‌خاطر `assertFalse` بدون import �
 - باگ V202.5: `var LANDING_TILES` داخل `paintAuth` بعد از خطی که `landing()` را صدا می‌زد تعریف شده بود → به‌خاطر hoisting مقدارش undefined و `.map` خطا می‌داد → صفحهٔ اول خالی. حالا کنار `authActive` در سطح ماژول است (تست ترتیب را پین می‌کند).
 - دروازهٔ صفحهٔ اول: mobile.js `entered()/enter()` با `sessionStorage['m-entered']`، `gateActive() = MQ && user && !entered`؛ app.js `render()` پیش از m-mode اگر gateActive → paintAuth (landing حتی با user). دکمه: user ⇒ `enter(); S.render()`؛ وگرنه `goA('login')`؛ پیوند ثبت‌نام فقط بدون user. `afterLogin()` → `SiteMobile.enter()`.
 
+### V268.1 — رفع CI V268 (پین‌های سایت)
+- V267 (فقط سایت، بدون CI) `MQ` و `@media (min-width:861px)` را عوض کرد؛ CI اپ V268 دو پین قدیمی را شکست: `V148_SiteMobileShellTest` → `matchMedia('(max-width: 860px) and (pointer: coarse)')` و `V165_SiteDesktopRailTest` → `@media (min-width:861px),(pointer:fine){`. درس: بعد از هر تغییر سایت، چک‌کنندهٔ پین‌ها را روی همهٔ تست‌ها اجرا کن. نسخه 1.01.55.
+
 ### V268 — صف ورود (۴۲۹) در اپ و سایت
 - یافتهٔ تست بار ۱۰۰ نفره (۷۲ دانش‌آموز تازه `qa_load_001..072` در سه کلاس «فسا» با یک bulk ۲۴تایی برای هر کلاس — تأیید عملی V265): از ۱۰۲ ورود هم‌زمان فقط ۳۰ تا موفق، ۷۱ تا `over_request_rate_limit`. طبق مستندات Supabase سطل `/auth/v1/token` **ظرفیت آنی ثابت ۳۰** به ازای هر IP دارد و عدد داشبورد فقط نرخ پر شدن است (اندازه‌گیری: ≥ ۱ ورود/ثانیه بعد از انفجار اولیه). ورود با رمز و تازه‌سازی توکن هر دو از همین سطل مصرف می‌کنند (تنظیم مربوطه در داشبورد: Token refresh / token endpoint، نه «sign-ups and sign-ins» که برای /signup و /otp است).
 - اپ: `SupabaseAuthRepository.signInQueued` — تکرار `auth.signInWith(Email)` فقط وقتی `UserFacingError.isRateLimited`، تا `LOGIN_QUEUE_MS = 120_000`، فاصلهٔ ۳–۷ ثانیه؛ `CancellationException` عبور می‌کند. تست `V268_LoginQueueTest`.

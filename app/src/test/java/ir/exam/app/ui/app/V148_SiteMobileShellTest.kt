@@ -19,7 +19,7 @@ class V148_SiteMobileShellTest {
         for (t in listOf("item('منو'", "item('کیف پول'", "item('آزمون‌ها'", "item('کارت‌ها'", "'افزودن سریع'")) assertTrue(t, t in m)
         for (t in listOf("['آمار',", "['کارنامه',", "['بانک سؤال',", "['تصحیح',", "['مانده',", "['پاسخ',", "['درخواست‌ها',")) assertTrue(t, t in m)
         assertTrue("'آزمون‌های چاپی'" in m && "'واردکردن'" in m && "'ساخت آزمون جدید'" in m)
-        assertTrue("window.matchMedia('(max-width: 860px)')" in m && "role === 'teacher'" in m)
+        assertTrue("window.matchMedia('(max-width: 860px) and (pointer: coarse)')" in m && "role === 'teacher'" in m)
         val app = source("site/src/app.js")
         assertTrue("window.SiteMobile.active()) { document.body.classList.add('m-mode'); window.SiteMobile.paint(); return; }" in app)
         assertTrue("function renderPage(c)" in app && "render: render, renderPage: renderPage, printExam: printExam, logout: doLogout" in app)
