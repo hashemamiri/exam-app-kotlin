@@ -87,7 +87,9 @@ data class ClassGradeRow(
     val studentId: String,
     val studentName: String,
     val scores: Map<String, Double?>,
-    val averagePercent: Double?
+    val averagePercent: Double?,
+    // V277 — سقف نمرهٔ هر آزمون برای همین دانش‌آموز (پیک تصادفی: از خود پاسخ) تا کارنامهٔ تکی «نمره از سقف» نشان دهد
+    val maxScores: Map<String, Double> = emptyMap()
 )
 
 data class QuestionAnalysisRow(

@@ -19425,6 +19425,13 @@ CI: `compileDebugUnitTestKotlin` به‌خاطر `assertFalse` بدون import �
 - باگ V202.5: `var LANDING_TILES` داخل `paintAuth` بعد از خطی که `landing()` را صدا می‌زد تعریف شده بود → به‌خاطر hoisting مقدارش undefined و `.map` خطا می‌داد → صفحهٔ اول خالی. حالا کنار `authActive` در سطح ماژول است (تست ترتیب را پین می‌کند).
 - دروازهٔ صفحهٔ اول: mobile.js `entered()/enter()` با `sessionStorage['m-entered']`، `gateActive() = MQ && user && !entered`؛ app.js `render()` پیش از m-mode اگر gateActive → paintAuth (landing حتی با user). دکمه: user ⇒ `enter(); S.render()`؛ وگرنه `goA('login')`؛ پیوند ثبت‌نام فقط بدون user. `afterLogin()` → `SiteMobile.enter()`.
 
+### V277 — کارنامه با فیلتر پلکانی + تصحیح سؤال‌محور مرتب (اپ)
+- دو هدر: عنوان داخل `ReportsScreen` («کارنامه و لیست نمرات»/«آمار و تحلیل آزمون‌ها») حذف شد؛ هدر برنامه (`gradingHeader` در ExamApp ~435) کافی است.
+- فیلتر پلکانی کارنامه (`ReportsViewModel`/`ReportsScreen`): ۱) مدرسه (فقط اگر `native_teacher_schools_v61` مدرسه‌ای برگرداند؛ گزینهٔ «همهٔ کلاس‌های من») → ۲) کلاس (کلاس‌های مدرسه از `native_teacher_school_classes_v61` یا همهٔ کلاس‌ها) → ۳) دانش‌آموزان (roster، چیپ چندانتخابی + «همه/هیچ‌کدام») → ۴) آزمون‌ها (چیپ + همه/هیچ‌کدام) → دکمهٔ «نمایش کارنامه‌ها» (`showReports()`؛ دیگر با هر تغییر خودکار محاسبه نمی‌شود). هر مرحله `FilterStepCard` با FlowRow.
+- نتیجه: کارت هر دانش‌آموز فقط نام + نشان میانگین + آیکن کارنامه (`Icons.Outlined.Description`)؛ ریز نمرات از روی کارت حذف شد. آیکن → `StudentReportCardDialog`: جدول آزمون/نمره از سقف/درصد (سقف از `ClassGradeRow.maxScores` — فیلد جدید با پیش‌فرض خالی؛ پیک تصادفی از meta.max_score)، میانگین، «چاپ / PDF» (همان `ReportPrintHelper` با یک سطر). Excel/چاپ لیست پس از نمایش.
+- تصحیح سؤال‌محور (`QuestionCentricContent`): نوار پیمایش با دو `FilledTonalIconButton` جهت‌دار (RTL: قبلی = ArrowBack رو به راست، بعدی = ArrowForward رو به چپ) و «سؤال n از N / بارم» وسط؛ دکمه‌های عملیات تمام‌عرض («ثبت نمره‌های این سؤال برای همه»، «نهایی‌سازی کل آزمون»)؛ کارت دانش‌آموز: نام + فیلد نمرهٔ باریک (112dp، صفحه‌کلید اعشاری) در یک سطر، پاسخ و تصاویر زیر آن.
+- تست: `V277_ReportsFilterAndGradingLayoutTest`. نسخه 1.01.63. سایت دست نخورده (فیلتر پلکانی سایت در صورت درخواست).
+
 ### V276.2 — اولین نتیجهٔ واقعی تست UI روی شبیه‌ساز
 - اجرای گیت‌هاب: ورود معلم، «+» → «آزمون جدید» و باز شدن سازنده همه موفق؛ شکست در `performClick` روی «مشخصات آزمون»: «could not find any node … 'مشخصات آزمون'».
 - علت (کد): `ExamBuilderScreen` تا `state.loading` تمام نشود فقط `CircularProgressIndicator` نشان می‌دهد (خط ~429) و LazyColumn/دکمه رندر نمی‌شود؛ تست فقط منتظر عنوان نوار بالا «ساخت آزمون» بود که زودتر می‌آید.

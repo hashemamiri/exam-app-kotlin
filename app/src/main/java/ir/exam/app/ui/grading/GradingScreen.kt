@@ -8,6 +8,17 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.ArrowBack
+import androidx.compose.material.icons.automirrored.outlined.ArrowForward
+import androidx.compose.material3.FilledTonalIconButton
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextOverflow
+import ir.exam.app.core.calendar.PersianDigits
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
@@ -265,26 +276,37 @@ private fun QuestionCentricContent(state: GradingUiState, viewModel: GradingView
     val exam = state.selectedExam ?: return
     val index = state.selectedQuestionIndex.coerceIn(0, exam.questions.lastIndex.coerceAtLeast(0))
     val question = exam.questions.getOrNull(index) ?: return
+    // V277 — چیدمان مرتب: نوار پیمایش (قبلی | «سؤال ۳ از ۱۰ · بارم ۲» | بعدی) با آیکن جهت‌دار،
+    // متن سؤال، دکمه‌های عملیات تمام‌عرض، و کارت هر دانش‌آموز با نام و نمره در یک سطر.
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Card(Modifier.fillMaxWidth()) {
-            Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedButton(onClick = { viewModel.moveQuestion(-1) }, enabled = index > 0) { Text("سؤال قبل") }
-                    Text("سؤال ${index + 1} از ${exam.questions.size} · بارم ${question.score}")
-                    OutlinedButton(onClick = { viewModel.moveQuestion(1) }, enabled = index < exam.questions.lastIndex) { Text("سؤال بعد") }
+            Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    FilledTonalIconButton(onClick = { viewModel.moveQuestion(-1) }, enabled = index > 0) {
+                        Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "سؤال قبل") // RTL: رو به راست
+                    }
+                    Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text("سؤال ${PersianDigits.convert(index + 1)} از ${PersianDigits.convert(exam.questions.size)}", style = MaterialTheme.typography.titleMedium)
+                        Text("بارم ${PersianDigits.convert(question.score.toString())}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    FilledTonalIconButton(onClick = { viewModel.moveQuestion(1) }, enabled = index < exam.questions.lastIndex) {
+                        Icon(Icons.AutoMirrored.Outlined.ArrowForward, contentDescription = "سؤال بعد") // RTL: رو به چپ
+                    }
                 }
+                HorizontalDivider()
                 NativeMathText(question.text)
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Button(
-                        enabled = state.submissions.isNotEmpty() && !state.actionLoading,
-                        onClick = viewModel::saveCurrentQuestionForAll
-                    ) { Text("ثبت اتمیک همه نمره‌ها") }
-                    OutlinedButton(
-                        enabled = state.submissions.isNotEmpty() && !state.actionLoading,
-                        onClick = viewModel::finalizeAllGrades
-                    ) { Text("نهایی‌سازی کل آزمون") }
-                }
-                Text("اگر حتی یک نمره نامعتبر باشد، هیچ‌کدام ذخیره نمی‌شود.")
+                HorizontalDivider()
+                Button(
+                    enabled = state.submissions.isNotEmpty() && !state.actionLoading,
+                    onClick = viewModel::saveCurrentQuestionForAll,
+                    modifier = Modifier.fillMaxWidth()
+                ) { Text("ثبت نمره‌های این سؤال برای همه") }
+                OutlinedButton(
+                    enabled = state.submissions.isNotEmpty() && !state.actionLoading,
+                    onClick = viewModel::finalizeAllGrades,
+                    modifier = Modifier.fillMaxWidth()
+                ) { Text("نهایی‌سازی کل آزمون") }
+                Text("اگر حتی یک نمره نامعتبر باشد، هیچ‌کدام ذخیره نمی‌شود.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
         if (state.submissions.isEmpty()) Text("هنوز پاسخی ثبت نشده است.")
@@ -292,23 +314,29 @@ private fun QuestionCentricContent(state: GradingUiState, viewModel: GradingView
             items(state.submissions, key = { it.id }) { submission ->
                 val edit = state.edits[submission.id]
                 Card(Modifier.fillMaxWidth()) {
-                    Column(Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
-                        Text(submission.studentName, style = MaterialTheme.typography.titleMedium)
+                    Column(Modifier.padding(horizontal = 12.dp, vertical = 10.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                         // V255 — پیک تصادفی: این سؤال برای این دانش‌آموز نمایش داده نشده است.
                         if (!submission.isShown(index)) {
-                            Text("این سؤال برای این دانش‌آموز نمایش داده نشده است (پیک تصادفی).")
+                            Text(submission.studentName, style = MaterialTheme.typography.titleSmall)
+                            Text("این سؤال برای این دانش‌آموز نمایش داده نشده است (پیک تصادفی).", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             return@Column
                         }
-                        Text("پاسخ: ${submission.responses.getOrNull(index).displayText()}")
-                        AnswerImagesRow(submission.answerImagesFor(question.id, index))
                         val scoreKey = "${submission.id}:$index"
-                        OutlinedTextField(
-                            value = state.scoreInputs[scoreKey] ?: edit?.grades?.getOrNull(index)?.toString().orEmpty(),
-                            onValueChange = { viewModel.setScore(submission.id, index, it) },
-                            isError = scoreKey in state.scoreErrors,
-                            supportingText = if (scoreKey in state.scoreErrors) ({ Text("نمره نامعتبر است.") }) else null,
-                            label = { Text("نمره از ${question.score}") }
-                        )
+                        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                            Text(submission.studentName, style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            OutlinedTextField(
+                                value = state.scoreInputs[scoreKey] ?: edit?.grades?.getOrNull(index)?.toString().orEmpty(),
+                                onValueChange = { viewModel.setScore(submission.id, index, it) },
+                                isError = scoreKey in state.scoreErrors,
+                                singleLine = true,
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                                label = { Text("از ${PersianDigits.convert(question.score.toString())}") },
+                                modifier = Modifier.width(112.dp)
+                            )
+                        }
+                        if (scoreKey in state.scoreErrors) Text("نمره باید بین صفر و ${PersianDigits.convert(question.score.toString())} باشد.", color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+                        Text("پاسخ: ${submission.responses.getOrNull(index).displayText()}", style = MaterialTheme.typography.bodyMedium)
+                        AnswerImagesRow(submission.answerImagesFor(question.id, index))
                     }
                 }
             }

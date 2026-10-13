@@ -5,6 +5,20 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Description
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import ir.exam.app.data.dto.ExamDashboardDto
+import ir.exam.app.domain.model.ClassGradeRow
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -64,11 +78,28 @@ fun ReportsScreen(
     }
     LaunchedEffect(Unit) { viewModel.load() }
 
+    // V277 — کارنامهٔ تکی باز
+    var reportCardRow by remember { mutableStateOf<ClassGradeRow?>(null) }
+    val selectedExams = remember(state.exams, state.selectedExamIds) { state.exams.filter { it.id in state.selectedExamIds } }
+    reportCardRow?.let { row ->
+        StudentReportCardDialog(
+            row = row,
+            exams = selectedExams,
+            onDismiss = { reportCardRow = null },
+            onPrint = {
+                scope.launch {
+                    runCatching { ReportPrintHelper.print(context, "کارنامهٔ ${row.studentName}", selectedExams, listOf(row)) }
+                        .onFailure(viewModel::reportError)
+                }
+            }
+        )
+    }
+
     LazyColumn(
         modifier = Modifier.fillMaxSize().padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        item { Text(if (gradesOnly) "کارنامه و لیست نمرات" else "آمار و تحلیل آزمون‌ها", style = MaterialTheme.typography.headlineSmall) }
+        // V277 — عنوان داخل صفحه حذف شد؛ هدر برنامه («کارنامه و لیست نمرات»/«آمار») همان را نشان می‌دهد (دو هدر نباشد)
         state.error?.let { item { Text(it, color = MaterialTheme.colorScheme.error) } }
         if (state.loading) item { CircularProgressIndicator() }
         if (statsOnly) state.analytics?.let { analytics ->
@@ -89,90 +120,90 @@ fun ReportsScreen(
             item { AnswerStatusCard(total = analytics.answerCount, graded = analytics.gradedCount, pending = analytics.pendingCount) }
         }
         // V208 — «تحلیل پیشرفته کیفیت سؤال» به درخواست کاربر از بخش آمار حذف شد.
-        if (gradesOnly) item {
-            Text("انتخاب کلاس", style = MaterialTheme.typography.titleMedium)
-            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                state.classes.take(6).forEach { item ->
-                    FilterChip(
-                        selected = state.selectedClass?.id == item.id,
-                        onClick = { viewModel.selectClass(item) },
-                        label = { Text(item.name) }
-                    )
+        if (gradesOnly) {
+            // V277 — فیلتر پلکانی: ۱ مدرسه (اگر هست) → ۲ کلاس → ۳ دانش‌آموزان → ۴ آزمون‌ها → نمایش
+            var step = 1
+            if (state.schools.isNotEmpty()) {
+                item {
+                    FilterStepCard("${PersianDigits.convert(step)}. مدرسه") {
+                        FilterChip(selected = state.selectedSchoolId == null, onClick = { viewModel.selectSchool(null) }, label = { Text("همهٔ کلاس‌های من") })
+                        state.schools.forEach { sch ->
+                            FilterChip(selected = state.selectedSchoolId == sch.id, onClick = { viewModel.selectSchool(sch.id) }, label = { Text(sch.name) })
+                        }
+                    }
                 }
+                step++
             }
-        }
-        if (gradesOnly && state.selectedClass != null) {
             item {
-                Text("آزمون‌های گزارش", style = MaterialTheme.typography.titleMedium)
-                Column {
-                    state.exams.forEach { exam ->
-                        FilterChip(
-                            selected = exam.id in state.selectedExamIds,
-                            onClick = { viewModel.toggleExam(exam.id) },
-                            label = { Text(exam.title) }
-                        )
+                FilterStepCard("${PersianDigits.convert(step)}. کلاس") {
+                    if (state.classOptions.isEmpty()) Text("کلاسی یافت نشد.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    state.classOptions.forEach { item ->
+                        FilterChip(selected = state.selectedClass?.id == item.id, onClick = { viewModel.selectClass(item) }, label = { Text(item.name) })
                     }
                 }
             }
-            item {
-                val selectedExams = state.exams.filter { it.id in state.selectedExamIds }
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Button(
-                        enabled = state.rows.isNotEmpty(),
-                        onClick = { xlsxLauncher.launch("grade-list-${state.selectedClass?.name.orEmpty()}.xlsx") }
-                    ) { Text("خروجی Excel واقعی") }
-                    OutlinedButton(
-                        enabled = state.rows.isNotEmpty(),
-                        onClick = {
-                            scope.launch {
-                                runCatching {
-                                    ReportPrintHelper.print(
-                                        context,
-                                        "لیست نمرات ${state.selectedClass?.name.orEmpty()}",
-                                        selectedExams,
-                                        state.rows
-                                    )
-                                }.onFailure(viewModel::reportError)
-                            }
+            step++
+            if (state.selectedClass != null) {
+                item {
+                    val allStudents = state.roster.isNotEmpty() && state.selectedStudentIds.size == state.roster.size
+                    FilterStepCard(
+                        "${PersianDigits.convert(step)}. دانش‌آموزان (${PersianDigits.convert(state.selectedStudentIds.size)} از ${PersianDigits.convert(state.roster.size)})",
+                        trailing = { TextButton(onClick = { viewModel.setAllStudents(!allStudents) }) { Text(if (allStudents) "هیچ‌کدام" else "همه") } }
+                    ) {
+                        if (state.rosterLoading) CircularProgressIndicator(Modifier.size(20.dp))
+                        else if (state.roster.isEmpty()) Text("دانش‌آموزی در این کلاس نیست.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        state.roster.forEach { st ->
+                            FilterChip(selected = st.id in state.selectedStudentIds, onClick = { viewModel.toggleStudent(st.id) }, label = { Text(st.fullName) })
                         }
-                    ) { Text("چاپ / PDF") }
+                    }
+                }
+                item {
+                    val allExams = state.exams.isNotEmpty() && state.selectedExamIds.size == state.exams.size
+                    FilterStepCard(
+                        "${PersianDigits.convert(step + 1)}. آزمون‌ها (${PersianDigits.convert(state.selectedExamIds.size)} از ${PersianDigits.convert(state.exams.size)})",
+                        trailing = { TextButton(onClick = { viewModel.setAllExams(!allExams) }) { Text(if (allExams) "هیچ‌کدام" else "همه") } }
+                    ) {
+                        state.exams.forEach { exam ->
+                            FilterChip(selected = exam.id in state.selectedExamIds, onClick = { viewModel.toggleExam(exam.id) }, label = { Text(exam.title) })
+                        }
+                    }
+                }
+                item {
+                    Button(
+                        enabled = state.selectedStudentIds.isNotEmpty() && state.selectedExamIds.isNotEmpty() && !state.loading,
+                        onClick = viewModel::showReports,
+                        modifier = Modifier.fillMaxWidth()
+                    ) { Text("نمایش کارنامه‌ها") }
                 }
             }
-            item {
-                val selectedExams = state.exams.filter { it.id in state.selectedExamIds }
-                // V208 — جدول مرتب: ستون نام (و ریز نمرات زیر آن) + ستون ثابتِ میانگین، با خط جداکننده
-                Card(Modifier.fillMaxWidth()) {
-                    Column(Modifier.padding(horizontal = 12.dp, vertical = 8.dp)) {
-                        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                            Text("دانش‌آموز", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.weight(1f))
-                            Text("میانگین", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.width(72.dp), textAlign = TextAlign.Center)
-                        }
-                        HorizontalDivider(Modifier.padding(vertical = 6.dp))
-                        if (state.rows.isEmpty()) Text("دانش‌آموزی در این کلاس نیست.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        state.rows.forEachIndexed { index, row ->
-                            if (index > 0) HorizontalDivider(Modifier.padding(vertical = 6.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = .5f))
-                            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                                    Text(row.studentName, style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                                    Text(
-                                        selectedExams.joinToString("   ") { exam -> "${exam.title}: ${row.scores[exam.id]?.toString() ?: "غایب"}" },
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
+            if (state.rowsShown) {
+                item {
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Button(
+                            enabled = state.rows.isNotEmpty(),
+                            onClick = { xlsxLauncher.launch("grade-list-${state.selectedClass?.name.orEmpty()}.xlsx") }
+                        ) { Text("خروجی Excel") }
+                        OutlinedButton(
+                            enabled = state.rows.isNotEmpty(),
+                            onClick = {
+                                scope.launch {
+                                    runCatching {
+                                        ReportPrintHelper.print(context, "لیست نمرات ${state.selectedClass?.name.orEmpty()}", selectedExams, state.rows)
+                                    }.onFailure(viewModel::reportError)
                                 }
-                                val avg = row.averagePercent
-                                Surface(
-                                    shape = MaterialTheme.shapes.small,
-                                    color = when { avg == null -> MaterialTheme.colorScheme.surfaceVariant; avg >= 50.0 -> Color(0xFFE3F5E8); else -> Color(0xFFFDE7E7) },
-                                    modifier = Modifier.width(72.dp)
-                                ) {
-                                    Text(
-                                        avg?.let { "%.1f٪".format(it) } ?: "—",
-                                        style = MaterialTheme.typography.labelLarge,
-                                        textAlign = TextAlign.Center,
-                                        modifier = Modifier.padding(vertical = 6.dp)
-                                    )
-                                }
+                            }
+                        ) { Text("چاپ / PDF") }
+                    }
+                }
+                if (state.rows.isEmpty()) item { Text("نتیجه‌ای برای این انتخاب نیست.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+                // V277 — کارت تمیز هر دانش‌آموز: نام + میانگین + آیکن کارنامه (ریز نمرات فقط داخل کارنامهٔ تکی)
+                items(state.rows, key = { it.studentId }) { row ->
+                    Card(Modifier.fillMaxWidth()) {
+                        Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Text(row.studentName, style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+                            AverageBadge(row.averagePercent)
+                            IconButton(onClick = { reportCardRow = row }) {
+                                Icon(Icons.Outlined.Description, contentDescription = "کارنامهٔ ${row.studentName}", tint = MaterialTheme.colorScheme.primary)
                             }
                         }
                     }
@@ -181,6 +212,89 @@ fun ReportsScreen(
         }
     }
 }
+
+/** V277 — کارت یک مرحلهٔ فیلتر: عنوان + چیپ‌ها در FlowRow (در گوشی باریک به سطر بعد می‌روند). */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun FilterStepCard(title: String, trailing: (@Composable () -> Unit)? = null, content: @Composable () -> Unit) {
+    Card(Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(horizontal = 12.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Text(title, style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f))
+                trailing?.invoke()
+            }
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(0.dp)) { content() }
+        }
+    }
+}
+
+@Composable
+private fun AverageBadge(avg: Double?) {
+    Surface(
+        shape = MaterialTheme.shapes.small,
+        color = when { avg == null -> MaterialTheme.colorScheme.surfaceVariant; avg >= 50.0 -> Color(0xFFE3F5E8); else -> Color(0xFFFDE7E7) },
+        modifier = Modifier.width(72.dp)
+    ) {
+        Text(
+            avg?.let { PersianDigits.convert("%.1f".format(it)) + "٪" } ?: "—",
+            style = MaterialTheme.typography.labelLarge,
+            color = if (avg == null) MaterialTheme.colorScheme.onSurfaceVariant else Color(0xFF1F2937),
+            textAlign = TextAlign.Center,
+            modifier = Modifier.padding(vertical = 6.dp)
+        )
+    }
+}
+
+/** V277 — کارنامهٔ تکی دانش‌آموز: هر آزمون یک سطر (نمره از سقف · درصد · وضعیت) + میانگین + چاپ. */
+@Composable
+private fun StudentReportCardDialog(row: ClassGradeRow, exams: List<ExamDashboardDto>, onDismiss: () -> Unit, onPrint: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("کارنامهٔ ${row.studentName}") },
+        text = {
+            Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Row(Modifier.fillMaxWidth()) {
+                    Text("آزمون", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.weight(1f))
+                    Text("نمره", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.width(84.dp), textAlign = TextAlign.Center)
+                    Text("درصد", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.width(56.dp), textAlign = TextAlign.Center)
+                }
+                HorizontalDivider()
+                exams.forEach { exam ->
+                    val score = row.scores[exam.id]
+                    val max = row.maxScores[exam.id] ?: exam.totalScore
+                    val pct = if (score != null && max > 0) score * 100.0 / max else null
+                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                        Column(Modifier.weight(1f)) {
+                            Text(exam.title, style = MaterialTheme.typography.bodyMedium, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                            exam.subject?.takeIf { it.isNotBlank() }?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+                        }
+                        Text(
+                            if (score == null) "غایب" else PersianDigits.convert(trimNum(score)) + " از " + PersianDigits.convert(trimNum(max)),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = if (score == null) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface,
+                            modifier = Modifier.width(84.dp), textAlign = TextAlign.Center
+                        )
+                        Text(
+                            pct?.let { PersianDigits.convert("%.0f".format(it)) + "٪" } ?: "—",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = when { pct == null -> MaterialTheme.colorScheme.onSurfaceVariant; pct >= 50.0 -> Color(0xFF2E9E6B); else -> Color(0xFFC62828) },
+                            modifier = Modifier.width(56.dp), textAlign = TextAlign.Center
+                        )
+                    }
+                }
+                HorizontalDivider()
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    Text("میانگین درصد", style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f))
+                    AverageBadge(row.averagePercent)
+                }
+            }
+        },
+        confirmButton = { Button(onClick = onPrint) { Text("چاپ / PDF") } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("بستن") } }
+    )
+}
+
+private fun trimNum(v: Double): String = if (v == Math.floor(v)) v.toLong().toString() else "%.2f".format(v).trimEnd('0').trimEnd('.')
 
 @Composable
 private fun StatCard(label: String, value: String, modifier: Modifier = Modifier) {
