@@ -64,19 +64,35 @@ jobs:
           T_USER="${IN_USER:-$SEC_USER}"; T_PASS="${IN_PASS:-$SEC_PASS}"
           if [ -z "$T_USER" ] || [ -z "$T_PASS" ]; then echo "نام کاربری/رمز معلم آزمایشی داده نشده (ورودی گردش کار یا Secret)."; exit 1; fi
           echo "::add-mask::$T_PASS"
+          set +e
           ./gradlew :app:uiPixel6Api34DebugAndroidTest \
             -PbaselineAbi=x86_64 \
             -Pandroid.testInstrumentationRunnerArguments.teacherUser="$T_USER" \
             -Pandroid.testInstrumentationRunnerArguments.teacherPass="$T_PASS" \
-            -Pandroid.testoptions.manageddevices.emulator.gpu=swiftshader_indirect \
-            --stacktrace
-      - name: خلاصهٔ نتیجه
-        if: always()
-        run: |
-          for x in $(find app/build/outputs/androidTest-results -name '*.xml' 2>/dev/null); do
-            echo "== $x =="; grep -oE 'tests="[0-9]+"|failures="[0-9]+"|errors="[0-9]+"' "$x" | tr '\n' ' '; echo
-            grep -oE '<failure message="[^"]{0,400}' "$x" || true
-          done
+            -Pandroid.testoptions.manageddevices.emulator.gpu=swiftshader_indirect
+          RC=$?
+          set -e
+          # V276.1 — علت شکست تست همین‌جا (و در صفحهٔ Summary اجرا) چاپ می‌شود؛ نیازی به باز کردن Artifact نیست
+          python3 - <<'PY' | tee -a "$GITHUB_STEP_SUMMARY"
+          import glob, html, re
+          files = glob.glob('app/build/**/androidTest-results/**/*.xml', recursive=True) + glob.glob('app/build/outputs/androidTest-results/**/*.xml', recursive=True)
+          files = sorted(set(files))
+          print('## نتیجهٔ تست UI اپ')
+          if not files:
+              print('هیچ فایل نتیجهٔ تست (XML) پیدا نشد — تست اصلاً اجرا نشده؛ لاگ بالا را ببینید.')
+          for f in files:
+              t = open(f, encoding='utf-8', errors='ignore').read()
+              m = re.search(r'tests="(\d+)"[^>]*?failures="(\d+)"[^>]*?errors="(\d+)"', t)
+              print(f'- `{f}`: ' + (f'tests={m.group(1)} failures={m.group(2)} errors={m.group(3)}' if m else '(بدون خلاصه)'))
+              for name in re.findall(r'<testcase name="([^"]+)"', t):
+                  print(f'  - تست: {name}')
+              for msg in re.findall(r'<failure message="([^"]*)"', t):
+                  print('  - **علت شکست:** ' + html.unescape(msg)[:600])
+              for body in re.findall(r'<failure[^>]*>([\s\S]*?)</failure>', t):
+                  lines = [l for l in html.unescape(body).splitlines() if l.strip()][:12]
+                  print('    ```'); print('\n'.join(lines)); print('    ```')
+          PY
+          exit $RC
       - name: بایگانی گزارش تست و logcat
         if: always()
         uses: actions/upload-artifact@v4

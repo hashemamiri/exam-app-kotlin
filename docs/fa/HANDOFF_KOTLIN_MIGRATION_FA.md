@@ -19425,6 +19425,10 @@ CI: `compileDebugUnitTestKotlin` به‌خاطر `assertFalse` بدون import �
 - باگ V202.5: `var LANDING_TILES` داخل `paintAuth` بعد از خطی که `landing()` را صدا می‌زد تعریف شده بود → به‌خاطر hoisting مقدارش undefined و `.map` خطا می‌داد → صفحهٔ اول خالی. حالا کنار `authActive` در سطح ماژول است (تست ترتیب را پین می‌کند).
 - دروازهٔ صفحهٔ اول: mobile.js `entered()/enter()` با `sessionStorage['m-entered']`، `gateActive() = MQ && user && !entered`؛ app.js `render()` پیش از m-mode اگر gateActive → paintAuth (landing حتی با user). دکمه: user ⇒ `enter(); S.render()`؛ وگرنه `goA('login')`؛ پیوند ثبت‌نام فقط بدون user. `afterLogin()` → `SiteMobile.enter()`.
 
+### V276.1 — علت شکست تست UI در خودِ لاگ و Summary
+- اولین اجرای گردش کار: شبیه‌ساز بالا آمد، اپ نصب شد، تست اجرا شد ولی شکست؛ لاگ Gradle فقط «There were failing tests» می‌گوید و کاربر نتوانست Artifact/مرحلهٔ خلاصه را بفرستد.
+- اصلاح: در همان مرحلهٔ اجرا، پس از Gradle (با `set +e`)، اسکریپت پایتون همهٔ XMLهای `androidTest-results` را می‌خواند و نام تست + `failure message` + ۱۲ خط اول stack را در لاگ و `$GITHUB_STEP_SUMMARY` (صفحهٔ Summary اجرا) می‌نویسد؛ سپس با کد خروجی Gradle خارج می‌شود. مرحلهٔ جداگانهٔ «خلاصهٔ نتیجه» حذف شد. نسخه 1.01.61.
+
 ### V276 — تست UI اپ روی شبیه‌ساز (گردش کار دستی) + رفع شکست CI
 - چرا: در محیط توسعه KVM/RAM برای شبیه‌ساز نیست؛ ماشین‌های GitHub دارند. گردش کار `.github/workflows/app-ui-test.yml` («تست UI اپ روی شبیه‌ساز») فقط با Run workflow اجرا می‌شود؛ APK منتشر نمی‌کند.
 - اجزا: در `app/build.gradle.kts` دستگاه مدیریت‌شدهٔ `uiPixel6Api34` (Pixel 6/API 34/aosp)، `testInstrumentationRunner`، وابستگی‌های `ui-test-junit4`/`ui-test-manifest`، `packaging.excludes` مجوزها. ساخت با `-PbaselineAbi=x86_64` (همان سازوکار V215 برای کتابخانهٔ OCR).
