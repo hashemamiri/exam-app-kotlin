@@ -19425,6 +19425,13 @@ CI: `compileDebugUnitTestKotlin` به‌خاطر `assertFalse` بدون import �
 - باگ V202.5: `var LANDING_TILES` داخل `paintAuth` بعد از خطی که `landing()` را صدا می‌زد تعریف شده بود → به‌خاطر hoisting مقدارش undefined و `.map` خطا می‌داد → صفحهٔ اول خالی. حالا کنار `authActive` در سطح ماژول است (تست ترتیب را پین می‌کند).
 - دروازهٔ صفحهٔ اول: mobile.js `entered()/enter()` با `sessionStorage['m-entered']`، `gateActive() = MQ && user && !entered`؛ app.js `render()` پیش از m-mode اگر gateActive → paintAuth (landing حتی با user). دکمه: user ⇒ `enter(); S.render()`؛ وگرنه `goA('login')`؛ پیوند ثبت‌نام فقط بدون user. `afterLogin()` → `SiteMobile.enter()`.
 
+### V275.1 — همان یافته‌ها در اپ (بررسی کد؛ اجرای اندروید در این محیط ممکن نیست)
+- یافته ۱ (فیلدهای نوع در pick rules): در اپ Compose واکنشی است (`typeCounts` از `state.questions`) → مشکلی نداشت.
+- یافته ۲ (مدت ۰): سمت سرور بود؛ اصلاح SQL V272 اپ را هم پوشش می‌دهد (`StudentExamPayloadCodec.serverDeadline` با `expires_at = null` → بدون محدودیت).
+- یافته ۳ (آزمون بسته): به دیالوگ «ذخیره شد» اپ همان یادآوری اضافه شد وقتی `lastSaveResult.wasNew`.
+- باگ تازه که در بررسی کد اپ پیدا شد: `ExamBuilderViewModel.save()` پس از موفقیت `examId`/`code` را در وضعیت نمی‌گذاشت (`SupabaseExamBuilderRepository.save` خط ~148: `state.examId ?: UUID.randomUUID()`) → «ادامهٔ ویرایش» + ذخیرهٔ دوباره یک آزمون **تازه** با کد و هزینهٔ تازه می‌ساخت. رفع: `ExamSaveResult.examId/wasNew`؛ VM `examId = result.examId ?: it.examId`, `code = it.code ?: result.code`. (چاپی از قبل `applyPrintSaved` داشت.)
+- تست: `V275_1_AppSaveKeepsExamIdTest`. نسخه 1.01.59.
+
 ### V275 — تست پرسونا روی سایت دسکتاپ (به‌جای MiroFish) و سه رفع
 - کاربر خواست سایت با «کاربران مجازی» بررسی شود (MiroFish نیاز به کلید LLM/Zep دارد؛ انجام نشد). به‌جای آن سه پرسونا با Playwright روی نسخهٔ محلی (`qa/localsite.sh`، `qa/persona_qa.py`، `qa/probe3.py`، `qa/probe4.py`) اجرا شد: معلم تازه‌کار (`teach`: ساخت آزمون ۳ سؤالی با منوی شعاعی، + گزینه‌ها، پیش‌نمایش دانش‌آموز، ذخیره، کلاس جدید، آمار، کارنامه، تصحیح، تنظیمات، تقویم…)، دانش‌آموز (`qa_load_002`: کد اشتباه، ورود، پاسخ، ارسال، کارنامه)، مدیر (`amiri`: همهٔ صفحه‌ها). هیچ خطای JS/HTTP ثبت نشد؛ آزمون `A2ZFKM` («آزمون پرسونا 1814») روی حساب teach ساخته شد.
 - یافته ۱ (باگ V272، دسکتاپ): پنل راست «مشخصات آزمون» یک بار ساخته می‌شود و `pickRulesBox` با ۰ سؤال `null` بود → فیلدهای «انتخاب تصادفی بر اساس نوع» هرگز ظاهر نمی‌شدند. رفع: ظرف ثابت `.b-pr-wrap` + `refreshPickRules()` که در `drawRail()` (هر افزودن/حذف/جابه‌جایی سؤال) بازسازی می‌کند؛ تایپ در خود فیلدها rail را بازنمی‌سازد.

@@ -771,6 +771,8 @@ class ExamBuilderViewModel(
             _state.update {
                 it.copy(
                     saving = false,
+                    examId = result.examId ?: it.examId, // V275.1 — «ادامهٔ ویرایش» + ذخیرهٔ دوباره دیگر آزمون/کد/هزینهٔ تازه نمی‌سازد
+                    code = it.code ?: result.code,
                     savedCode = result.code,
                     chargedToman = result.chargedToman,
                     walletBalanceToman = result.walletBalanceToman,

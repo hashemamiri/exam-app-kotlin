@@ -269,6 +269,10 @@ fun ExamBuilderScreen(
                         "مبلغ کسرشده: ${state.chargedToman.asToman()} تومان" +
                             (state.walletBalanceToman?.let { " · مانده: ${it.asToman()} تومان" } ?: "")
                     )
+                    // V275.1 — یافتهٔ تست پرسونا: آزمون تازه «بسته» ساخته می‌شود؛ همین‌جا به معلم گفته می‌شود
+                    if (state.lastSaveResult?.wasNew == true) {
+                        Text("آزمون فعلاً بسته است؛ در فهرست آزمون‌ها قفل آن را باز کنید تا دانش‌آموزان بتوانند با این کد وارد شوند.", style = MaterialTheme.typography.bodySmall)
+                    }
                     state.lastSaveResult?.takeIf { it.chargedToman > 0 }?.let { r ->
                         Text("سؤال‌ها: ${PersianDigits.convert(r.billedQuestions)} × ۱٬۰۰۰ = ${r.questionCostToman.asToman()} تومان")
                         if (r.billedImages > 0) Text("تصاویر: ${PersianDigits.convert(r.billedImages)} × ۱٬۰۰۰ = ${r.imageCostToman.asToman()} تومان")

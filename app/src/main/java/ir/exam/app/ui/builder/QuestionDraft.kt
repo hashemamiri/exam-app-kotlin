@@ -440,7 +440,10 @@ data class ExamSaveResult(
     val billedImages: Int = 0,
     val imageCostToman: Long = 0,
     val billedAudio: Int = 0,
-    val audioCostToman: Long = 0
+    val audioCostToman: Long = 0,
+    // V275.1 — شناسهٔ آزمون ذخیره‌شده (ذخیرهٔ دوم همان آزمون را به‌روز می‌کند، نه آزمون تازه) و آیا تازه ساخته شد
+    val examId: String? = null,
+    val wasNew: Boolean = false
 )
 
 data class ExamImportDraft(
