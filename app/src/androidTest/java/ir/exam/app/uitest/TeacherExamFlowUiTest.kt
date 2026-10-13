@@ -69,11 +69,14 @@ class TeacherExamFlowUiTest {
 
         // سازندهٔ آزمون
         waitForText("ساخت آزمون", timeout = 15_000)
+        // V276.2 — تا state.loading تمام نشود فهرست (و دکمهٔ «مشخصات آزمون») رندر نمی‌شود؛ باید منتظر ماند
+        waitForText("مشخصات آزمون")
         val title = "UI-TEST ${System.currentTimeMillis() / 1000}"
         rule.onNodeWithText("مشخصات آزمون").performClick() // کارت مشخصات پیش‌فرض بسته است
         waitForText("عنوان آزمون", timeout = 10_000)
         rule.onNodeWithText("عنوان آزمون").performTextInput(title)
         rule.onNodeWithText("بستن مشخصات آزمون").performClick()
+        waitForText("+", timeout = 10_000)
         rule.onNodeWithText("+").performClick()
         waitForText("صحیح/غلط", timeout = 10_000)
         rule.onNodeWithText("صحیح/غلط").performClick()

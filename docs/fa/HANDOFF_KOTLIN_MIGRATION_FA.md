@@ -19425,6 +19425,11 @@ CI: `compileDebugUnitTestKotlin` به‌خاطر `assertFalse` بدون import �
 - باگ V202.5: `var LANDING_TILES` داخل `paintAuth` بعد از خطی که `landing()` را صدا می‌زد تعریف شده بود → به‌خاطر hoisting مقدارش undefined و `.map` خطا می‌داد → صفحهٔ اول خالی. حالا کنار `authActive` در سطح ماژول است (تست ترتیب را پین می‌کند).
 - دروازهٔ صفحهٔ اول: mobile.js `entered()/enter()` با `sessionStorage['m-entered']`، `gateActive() = MQ && user && !entered`؛ app.js `render()` پیش از m-mode اگر gateActive → paintAuth (landing حتی با user). دکمه: user ⇒ `enter(); S.render()`؛ وگرنه `goA('login')`؛ پیوند ثبت‌نام فقط بدون user. `afterLogin()` → `SiteMobile.enter()`.
 
+### V276.2 — اولین نتیجهٔ واقعی تست UI روی شبیه‌ساز
+- اجرای گیت‌هاب: ورود معلم، «+» → «آزمون جدید» و باز شدن سازنده همه موفق؛ شکست در `performClick` روی «مشخصات آزمون»: «could not find any node … 'مشخصات آزمون'».
+- علت (کد): `ExamBuilderScreen` تا `state.loading` تمام نشود فقط `CircularProgressIndicator` نشان می‌دهد (خط ~429) و LazyColumn/دکمه رندر نمی‌شود؛ تست فقط منتظر عنوان نوار بالا «ساخت آزمون» بود که زودتر می‌آید.
+- اصلاح تست: `waitForText("مشخصات آزمون")` (مهلت شبکه) پیش از کلیک؛ و `waitForText("+")` پیش از باز کردن منوی شعاعی. بدون تغییر در اپ. نسخه 1.01.62.
+
 ### V276.1 — علت شکست تست UI در خودِ لاگ و Summary
 - اولین اجرای گردش کار: شبیه‌ساز بالا آمد، اپ نصب شد، تست اجرا شد ولی شکست؛ لاگ Gradle فقط «There were failing tests» می‌گوید و کاربر نتوانست Artifact/مرحلهٔ خلاصه را بفرستد.
 - اصلاح: در همان مرحلهٔ اجرا، پس از Gradle (با `set +e`)، اسکریپت پایتون همهٔ XMLهای `androidTest-results` را می‌خواند و نام تست + `failure message` + ۱۲ خط اول stack را در لاگ و `$GITHUB_STEP_SUMMARY` (صفحهٔ Summary اجرا) می‌نویسد؛ سپس با کد خروجی Gradle خارج می‌شود. مرحلهٔ جداگانهٔ «خلاصهٔ نتیجه» حذف شد. نسخه 1.01.61.
