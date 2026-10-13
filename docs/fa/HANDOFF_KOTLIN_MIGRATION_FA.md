@@ -19425,6 +19425,9 @@ CI: `compileDebugUnitTestKotlin` به‌خاطر `assertFalse` بدون import �
 - باگ V202.5: `var LANDING_TILES` داخل `paintAuth` بعد از خطی که `landing()` را صدا می‌زد تعریف شده بود → به‌خاطر hoisting مقدارش undefined و `.map` خطا می‌داد → صفحهٔ اول خالی. حالا کنار `authActive` در سطح ماژول است (تست ترتیب را پین می‌کند).
 - دروازهٔ صفحهٔ اول: mobile.js `entered()/enter()` با `sessionStorage['m-entered']`، `gateActive() = MQ && user && !entered`؛ app.js `render()` پیش از m-mode اگر gateActive → paintAuth (landing حتی با user). دکمه: user ⇒ `enter(); S.render()`؛ وگرنه `goA('login')`؛ پیوند ثبت‌نام فقط بدون user. `afterLogin()` → `SiteMobile.enter()`.
 
+### V278.1 — رفع شکست CI نسخهٔ 1.01.63
+- `V255_PickCountTest` خط ۴۷ به عبارت قدیمی سقف نمره در `ReportsViewModel` پین بود که در V277 به `maxScores` بازنویسی شد؛ پین به‌روز شد. درس: پیش از هر کامیت اپ، اسکن پین‌های تست روی فایل‌های تغییریافته (اسکریپت موقت در جلسه؛ `assertFalse`ها را نادیده بگیرد). نسخه 1.01.64.
+
 ### V278 — همان V277 در سایت (دسکتاپ و موبایل؛ فقط سایت، بدون bump)
 - `site/src/extras.js › reportsPage` (مشترک دسکتاپ/موبایل): `h2.rp-title` حذف (هدر سایت «کارنامه»/«آمار» کافی است)؛ کارت «📈 گزارش کلاس» با select کلاس حذف.
 - فیلتر پلکانی `.rp-filter`: ۱ مدرسه (`native_teacher_schools_v61`؛ فقط اگر مدرسه‌ای باشد؛ «همهٔ کلاس‌های من») → ۲ کلاس (`native_teacher_school_classes_v61` یا `native_my_classes_v28`) → ۳ دانش‌آموزان (`class_roster`، چیپ چندانتخابی + همه/هیچ‌کدام + شمارنده) → ۴ آزمون‌ها (چیپ + همه/هیچ‌کدام) → دکمهٔ «نمایش کارنامه‌ها» (`st.shown`; compute فقط با دکمه، و پس از رسیدن پاسخ‌ها فقط اگر shown).

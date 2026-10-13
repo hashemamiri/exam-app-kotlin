@@ -44,7 +44,7 @@ class V255_PickCountTest {
         val m = source("app/src/main/java/ir/exam/app/domain/model/GradingModels.kt")
         assertTrue("fun isShown(index: Int): Boolean = shownQuestions == null || index in shownQuestions" in m)
         assertTrue("if (!submission.isShown(index)) {" in source("app/src/main/java/ir/exam/app/ui/grading/GradingScreen.kt"))
-        assertTrue("val max = attempts.maxByOrNull { it.totalGrade }?.maxScore ?: exam.totalScore" in source("app/src/main/java/ir/exam/app/ui/reports/ReportsViewModel.kt"))
+        assertTrue("exam.id to (attempts.maxByOrNull { it.totalGrade }?.maxScore ?: exam.totalScore)" in source("app/src/main/java/ir/exam/app/ui/reports/ReportsViewModel.kt")) // V277: maxScores
     }
 
     @Test
