@@ -41,6 +41,25 @@ object DocumentIo {
             }
         }
 
+    /** V264 — بایت‌های فایل (xlsx/CSV) با سقف حجم؛ روی نخ IO. */
+    suspend fun readBytes(context: Context, uri: Uri, maxBytes: Int, tooBigMessage: String): Result<ByteArray> =
+        withContext(Dispatchers.IO) {
+            runCatching {
+                context.contentResolver.openInputStream(uri)?.use { input ->
+                    val output = ByteArrayOutputStream()
+                    val buffer = ByteArray(16 * 1024)
+                    var total = 0
+                    while (true) {
+                        val n = input.read(buffer); if (n < 0) break
+                        total += n
+                        if (total > maxBytes) error(tooBigMessage)
+                        output.write(buffer, 0, n)
+                    }
+                    output.toByteArray()
+                } ?: error(READ_FAILED)
+            }
+        }
+
     fun readLimited(input: InputStream, maxBytes: Int, tooBigMessage: String): String {
         val output = ByteArrayOutputStream()
         val buffer = ByteArray(8192)

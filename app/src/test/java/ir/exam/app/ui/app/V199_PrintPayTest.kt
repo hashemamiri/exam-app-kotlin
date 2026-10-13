@@ -106,7 +106,9 @@ class V199_PrintPayTest {
         assertTrue("return costDoneDlg(r.cost || cost, r.balance).then(function () { if (printCtx === ctx) doNative(); else ctx.busy = false; });" in a)
         assertFalse("toast('کسر '" in a)
         assertTrue("await S.costDoneDlg((raw && raw.cost) || 0, raw ? raw.balance : null" in source("site/src/builder.js"))
-        assertTrue("await S.costDoneDlg(r.cost || 0, r.balance, 'کپی ساخته شد" in source("site/src/mobile.js"))
+        // V264 — تکثیر موبایل از پنجرهٔ مشترک S.duplicateExamDlg (app.js) می‌گذرد که همان costDoneDlg را نشان می‌دهد
+        assertTrue("S.duplicateExamDlg(x, function () { examsScreen(c); })" in source("site/src/mobile.js"))
+        assertTrue("await costDoneDlg(r.cost || 0, r.balance, 'کپی ساخته شد'" in source("site/src/app.js"))
         assertTrue("await S.costDoneDlg(raw.amount || a, raw.manager_balance" in source("site/src/admin.js"))
         assertTrue("text: 'تأیید', onclick: function () { bg2.remove(); S.go('dashboard'); }" in source("site/src/extras.js"))
     }

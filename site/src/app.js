@@ -280,6 +280,27 @@
       bg.appendChild(m); document.body.appendChild(bg);
     });
   }
+  /* V264 — پنجرهٔ تکثیر با انتخاب کلاس مقصد (اختیاری): بدون کلاس = تکثیر معمولی؛ با کلاس = native_duplicate_exam_to_class_v1
+     (مخاطب فقط همان کلاس؛ عنوان «عنوان — نام کلاس»). مشترک دسکتاپ/موبایل. */
+  function duplicateExamDlg(x, after) {
+    var bg = el('div', {class: 'modal-bg'});
+    var sel = el('select', {style: 'width:100%;margin-top:8px;border:1px solid var(--line);border-radius:10px;padding:10px 12px;background:var(--card)'}, [el('option', {value: '', text: 'بدون کلاس (تکثیر معمولی)'})]);
+    var hint = el('p', {class: 'muted', style: 'font-size:12px;margin-top:6px'});
+    api.classes().then(function (list) { (list || []).forEach(function (c) { sel.appendChild(el('option', {value: c.id, text: c.name + (c.grade ? ' · ' + c.grade : '')})); }); }).catch(function () {});
+    sel.addEventListener('change', function () { var o = sel.options[sel.selectedIndex]; hint.textContent = sel.value ? 'کپی فقط برای دانش‌آموزان کلاس «' + o.text.split(' · ')[0] + '» باز می‌شود و عنوانش «' + x.title + ' — ' + o.text.split(' · ')[0] + '» خواهد بود.' : ''; ok.textContent = sel.value ? 'کپی به کلاس' : 'تأیید و تکثیر'; });
+    var ok = el('button', {class: 'btn', text: 'تأیید و تکثیر', onclick: async function () {
+      ok.disabled = true;
+      try { var r = sel.value ? await api.duplicateExamToClass(x.id, sel.value) : await api.duplicateExam(x.id); bg.remove(); await costDoneDlg(r.cost || 0, r.balance, 'کپی ساخته شد' + (r.class_name ? ' برای کلاس «' + esc(r.class_name) + '»' : '') + '؛ کد جدید: <b class="code">' + esc(r.code || '') + '</b>'); if (after) after(); }
+      catch (e) { ok.disabled = false; toast(errMsg(e), 'err'); }
+    }});
+    bg.appendChild(el('div', {class: 'modal'}, [
+      el('h2', {text: 'تکثیر آزمون'}),
+      el('p', {class: 'muted', text: 'کپی آزمون «' + x.title + '» مثل یک آزمون جدید است و هزینهٔ سؤال‌ها (و تصویر/صوت) طبق تعرفه از کیف پول کسر می‌شود.'}),
+      el('label', {class: 'muted', style: 'font-size:13px', text: 'کپی به کلاس (اختیاری)'}), sel, hint,
+      el('div', {class: 'row', style: 'justify-content:flex-start;margin-top:14px'}, [ok, el('button', {class: 'btn light', text: 'انصراف', onclick: function () { bg.remove(); }})])
+    ]));
+    document.body.appendChild(bg);
+  }
   /* V202 — پیام یکسانِ «کسر هزینه» برای همهٔ مسیرهای کسر از کیف پول: وسط صفحه، فقط با دکمهٔ «تأیید» محو می‌شود (نه toast) */
   function infoDlg(title, body, okLabel) {
     return new Promise(function (resolve) {
@@ -551,6 +572,7 @@
     setExamOpen: function (id, open) { return rpcObj('native_set_exam_open_v1', {p_exam: id, p_open: !!open}); },
     deleteExam: function (id) { return rpcObj('native_delete_exam', {p_exam: id}); },
     duplicateExam: function (id) { return rpcObj('native_duplicate_exam_v2', {p_exam: id, p_operation: uuid()}); },
+    duplicateExamToClass: function (id, classId) { return rpcObj('native_duplicate_exam_to_class_v1', {p_exam: id, p_class: classId, p_operation: uuid()}); }, /* V264 */
     /* V202.1 — v2: پرداخت چاپ آزمون آنلاین/محلی روی سرور ثبت می‌شود؛ همان محتوا در اپ/سایت دسکتاپ/سایت گوشی دوباره کسر نمی‌شود */
     chargePrint: function (examId, count, mode, content) { return rpcObj('native_charge_print_v2', {p_exam: examId, p_operation: uuid(), p_questions: count, p_mode: mode, p_content: content || ''}); },
     printChargeQuote: function (examId, count, content) { return rpcObj('native_charge_print_quote_v2', {p_exam: examId, p_questions: count, p_content: content || ''}); },
@@ -1740,9 +1762,8 @@
       try { await api.setExamOpen(x.id, !x.is_open); toast(x.is_open ? 'آزمون بسته شد.' : 'آزمون باز شد.', 'ok'); refresh(); } catch (e) { toast(errMsg(e), 'err'); }
     }}));
     if (window.SiteExtras) wrap.appendChild(el('button', {class: 'icon-btn', title: 'صدور فایل آزمون', html: '<i>📤</i><span>صدور</span>', onclick: function () { window.SiteExtras.exportExamDlg(x); }}));
-    wrap.appendChild(el('button', {class: 'icon-btn', title: 'کپی آزمون', html: '<i>⧉</i><span>کپی</span>', onclick: async function () {
-      if (!(await confirmDlg('کپی آزمون', 'از «' + esc(x.title) + '» یک نسخهٔ جدید ساخته می‌شود (هزینهٔ سؤال‌ها طبق تعرفه کسر می‌شود).', 'کپی'))) return;
-      try { var r = await api.duplicateExam(x.id); await costDoneDlg(r.cost || 0, r.balance, 'کپی ساخته شد؛ کد جدید: <b class="code">' + esc(r.code || '') + '</b>'); refresh(); } catch (e) { toast(errMsg(e), 'err'); }
+    wrap.appendChild(el('button', {class: 'icon-btn', title: 'کپی آزمون / کپی به کلاس', html: '<i>⧉</i><span>کپی</span>', onclick: function () {
+      duplicateExamDlg(x, refresh); /* V264 */
     }}));
     wrap.appendChild(el('button', {class: 'icon-btn danger', title: 'حذف', html: '<i>🗑</i><span>حذف</span>', onclick: async function () {
       if (!(await confirmDlg('حذف آزمون', 'آزمون «' + esc(x.title) + '» و پاسخ‌های آن برای همیشه حذف می‌شود.', 'حذف', true))) return;
@@ -2056,7 +2077,9 @@
       var r = await Promise.all([api.myGrades(), api.myAnswers().catch(function () { return []; })]);
       var grades = mergeAnswerMax(r[0] || [], r[1] || []), answers = r[1] || [];
       c.innerHTML = '';
-      var card = el('div', {class: 'card'}, [el('div', {class: 'row'}, [el('h3', {class: 'grow', text: '📊 نمرات'}), window.SiteExtras && grades.length ? window.SiteExtras.gradesExcelButton(grades) : null])]);
+      /* V264 — «ذخیرهٔ PDF» کارنامهٔ دانش‌آموز (printSection؛ گزینهٔ «ذخیره به‌صورت PDF» مرورگر) کنار Excel */
+      var card = el('div', {class: 'card'}, [el('div', {class: 'row'}, [el('h3', {class: 'grow', text: '📊 نمرات'}), window.SiteExtras && grades.length ? window.SiteExtras.gradesExcelButton(grades) : null,
+        grades.length ? el('button', {class: 'btn light sm no-print', text: '🖨 ذخیرهٔ PDF', 'aria-label': 'ذخیرهٔ کارنامه به‌صورت PDF', onclick: function () { printSection('کارنامهٔ ' + ((user || {}).name || 'دانش‌آموز'), card); }}) : null])]);
       if (!grades.length) card.appendChild(emptyBox('📊', 'هنوز نمره‌ای ثبت نشده است.'));
       else card.appendChild(el('table', {class: 'tbl'}, [
         el('thead', {}, [el('tr', {}, ['آزمون', 'درس', 'ارسال', 'نمره', 'درصد', 'بازخورد'].map(function (h) { return el('th', {text: h}); }))]),
@@ -2177,7 +2200,7 @@
     localState: localState, setLocalState: setLocalState, loading: loading, showErr: showErr, emptyBox: emptyBox, qType: qType, engineHtml: engineHtml, loadEngines: loadEngines,
     user: function () { return user; }, session: function () { return session; }, config: {url: SUPABASE_URL, anon: ANON},
     go: function (panel, arg) { view.panel = panel; view.arg = arg; render(); }, navBack: navBack, view: view, examActions: examActions,
-    render: render, renderPage: renderPage, printExam: printExam, logout: doLogout, printSection: printSection, /* V230 */
+    render: render, renderPage: renderPage, printExam: printExam, logout: doLogout, printSection: printSection, /* V230 */ duplicateExamDlg: duplicateExamDlg, /* V264 */
     __setSession: function (s) { saveSession(s); }, __setUser: function (u) { user = u; view.page = 'panel'; render(); },
     auth: {keyReady: KEY_READY, login: function (u) { user = u; afterLogin(); }, currentProfile: currentProfile, requireEmail: requireEmail, drawCompletion: drawCompletion, logout: doLogout} /* برای تست خودکار بدون سرور */};
   /* V234 — کلیک روی هر کد آزمون (.code) در سراسر سایت = کپی در حافظهٔ موقت */

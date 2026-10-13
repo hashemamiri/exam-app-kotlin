@@ -1841,3 +1841,9 @@ html body:not(.m-mode) .bank-card label.bk-check:has(> input[type=checkbox]:chec
 .m-dark .dk .dk-qa.on{background:#5FD3F5;border-color:#5FD3F5;color:#13202A}
 /* V260.4 — داشبورد با دادهٔ کش‌شده تا رسیدن پاسخ سرور: کمی کم‌رنگ */
 .dash-stale .stat .v{opacity:.55;transition:opacity .25s}
+
+/* V264 — صفحه‌کلید ریاضی پاسخ دانش‌آموز */
+.math-pad{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;direction:ltr}
+.math-key{min-width:42px;height:42px;border:1px solid var(--line);border-radius:10px;background:var(--card);font:inherit;font-size:17px;cursor:pointer}
+.math-key:hover{border-color:var(--brand)}
+.btn.on{box-shadow:0 0 0 2px var(--brand) inset}

@@ -19425,6 +19425,17 @@ CI: `compileDebugUnitTestKotlin` به‌خاطر `assertFalse` بدون import �
 - باگ V202.5: `var LANDING_TILES` داخل `paintAuth` بعد از خطی که `landing()` را صدا می‌زد تعریف شده بود → به‌خاطر hoisting مقدارش undefined و `.map` خطا می‌داد → صفحهٔ اول خالی. حالا کنار `authActive` در سطح ماژول است (تست ترتیب را پین می‌کند).
 - دروازهٔ صفحهٔ اول: mobile.js `entered()/enter()` با `sessionStorage['m-entered']`، `gateActive() = MQ && user && !entered`؛ app.js `render()` پیش از m-mode اگر gateActive → paintAuth (landing حتی با user). دکمه: user ⇒ `enter(); S.render()`؛ وگرنه `goA('login')`؛ پیوند ثبت‌نام فقط بدون user. `afterLogin()` → `SiteMobile.enter()`.
 
+### V264.1 — رفع CI V263
+- `V252_AppAuditTest` («no raw SAF stream in screens») به‌خاطر `openInputStream(` در `SchoolManagementScreen.kt` (ورود اکسل V263) شکست خورد. `DocumentIo.readBytes(context, uri, maxBytes, tooBigMessage)` اضافه شد و ورود اکسل داخل `rememberCoroutineScope().launch` از آن استفاده می‌کند. نسخه 1.01.51.
+
+### V264 — کپی آزمون به کلاس + PDF کارنامه + تشخیص شکل تخته + صفحه‌کلید ریاضی
+- SQL `supabase/migrations/20261013_native_copy_exam_to_class_v264.sql`: `native_duplicate_exam_to_class_v1(p_exam,p_class,p_operation)` — کپی همهٔ ستون‌ها با `jsonb_populate_record`، `audience='classes'` + `exam_audience_classes`، هزینه = سؤال×۱۰۰۰ + `native_question_media_cost_v135`؛ idempotent با `native_exam_operations`. **باید دستی اجرا شود.**
+- اپ: `SupabaseTeacherDashboardRepository.duplicateExamToClass`؛ `TeacherDashboardViewModel.duplicate(exam, classId?)` + `loadClassesForCopy()` (`copyClasses` در state)؛ پنجرهٔ تکثیر با FilterChip کلاس‌ها. سایت: `api.duplicateExamToClass`، پنجرهٔ مشترک `S.duplicateExamDlg(x, after)` (دسکتاپ و موبایل).
+- PDF کارنامه: `core/io/ReportCardPdf.kt` (PdfDocument، A4، صفحه‌بندی `layoutRows`) + دکمهٔ «PDF» در `StudentResultsScreen`؛ سایت `pageGrades` دکمهٔ «🖨 ذخیرهٔ PDF» با `printSection`.
+- تشخیص شکل: `core/geometry/ShapeRecognizer.kt` (خط/دایره/مثلث/مستطیل؛ Douglas–Peucker) + `recognizeStroke` و چیپ «تشخیص شکل» در `StudentWhiteboardDialog`؛ سایت `recognizeShape` + دکمهٔ ✨ در `openWhiteboard`.
+- صفحه‌کلید ریاضی: `ui/student/MathKeypad.kt` (`MathKeys.apply` خالص) در `StudentExamScreen` برای FillBlank/Numeric؛ سایت `.math-pad` در `answerArea`.
+- تست `V264_CopyToClassPdfShapesMathKeysAppTest`؛ پین V199 موبایل به `S.duplicateExamDlg` به‌روز شد. نسخه 1.01.50.
+
 ### V263 — اپ: بانک مدرسه + مقایسهٔ کلاس‌ها + ورود از اکسل (پاریته با سایت V230)
 - بانک: `BankQuestionOption.shared` (از `shared` در `native_bank_snapshot_v1`)؛ `setBankShared` → `native_bank_set_shared_v1(p_id,p_shared)`؛ `schoolBank()` → `native_school_bank_v1` (items: id/subject/question/teacher/already → `SchoolBankItem`)؛ `copyFromSchoolBank` → `native_bank_copy_from_school_v1(p_id)`. VM: `setShared/openSchoolBank/loadSchoolBank/copyFromSchool`؛ صفحه: Switch «اشتراک با مدرسه» در کارت، دکمهٔ «بانک مدرسه» → Dialog تمام‌صفحه با `SchoolBankCard` («افزودن به بانک من» غیرفعال اگر `already`).
 - مدیر: `ManagerClassComparison()` در `ManagerFoundationScreens.kt` (RPC `native_manager_class_stats_v1`؛ classes/months/top_exams) زیر داشبورد و کارنامه.

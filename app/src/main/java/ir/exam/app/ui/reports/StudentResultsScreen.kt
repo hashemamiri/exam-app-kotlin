@@ -61,6 +61,23 @@ fun StudentResultsScreen(viewModel: StudentResultsViewModel = remember { Student
             ioScope.launch { runCatching { XlsxWorkbook.build(listOf(XlsxSheet("کارنامه",rows))) }.fold({ bytes -> DocumentIo.writeBytes(context, uri, bytes) }, { Result.failure<Unit>(it) }).onFailure { DocumentIo.toast(context, it) } }
         }
     }
+    // V264 — «PDF» کارنامه بدون WebView (ReportCardPdf) با انتخاب محل ذخیره
+    val pdfExporter = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/pdf")) { uri ->
+        if (uri != null) {
+            val grades = state.grades
+            val avg = if (grades.isEmpty()) 0.0 else grades.map { it.percent }.average()
+            ioScope.launch {
+                runCatching {
+                    ir.exam.app.core.io.ReportCardPdf.build(
+                        title = "کارنامهٔ من",
+                        subtitle = "سامانهٔ آزمون آنلاین · ${ir.exam.app.core.calendar.JalaliCalendar.today().display()}",
+                        rows = grades.map { ir.exam.app.core.io.ReportCardPdf.Row(it.title, it.subject, "${it.grade} از ${it.total}", "%.1f%%".format(it.percent), it.feedback) },
+                        summary = "میانگین کل: %.1f%% · تعداد آزمون: ${grades.size}".format(avg)
+                    )
+                }.fold({ bytes -> DocumentIo.writeBytes(context, uri, bytes) }, { Result.failure<Unit>(it) }).onFailure { DocumentIo.toast(context, it) }
+            }
+        }
+    }
     LaunchedEffect(Unit) { viewModel.load() }
 
     LazyColumn(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -72,7 +89,10 @@ fun StudentResultsScreen(viewModel: StudentResultsViewModel = remember { Student
                 val avg = state.grades.map { it.percent }.average()
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                     Text("میانگین کل: %.1f%%".format(avg))
-                    Button(onClick = { exporter.launch("my-grades.xlsx") }) { Text("Excel واقعی") }
+                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Button(onClick = { exporter.launch("my-grades.xlsx") }) { Text("Excel واقعی") }
+                        OutlinedButton(onClick = { pdfExporter.launch("my-grades.pdf") }) { Text("PDF") }
+                    }
                 }
             }
             item { Card(Modifier.fillMaxWidth()){Column(Modifier.padding(10.dp)){Text("روند پیشرفت");NativeLineChart(state.grades.sortedBy{it.submittedAt}.map{it.percent})}} }

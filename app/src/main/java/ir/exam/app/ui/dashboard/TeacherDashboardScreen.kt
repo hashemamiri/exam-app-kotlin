@@ -62,7 +62,7 @@ import ir.exam.app.data.dto.ExamDashboardDto
 import ir.exam.app.ui.app.NeumorphicPanel
 import ir.exam.app.ui.builder.ExamImportDraft
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
 fun TeacherDashboardScreen(
     refreshKey: Int = 0,
@@ -277,12 +277,29 @@ fun TeacherDashboardScreen(
         ir.exam.app.ui.common.CostDeductedDialog(message = msg, onConfirm = viewModel::dismissCostDialog)
     }
     duplicateCandidate?.let { exam ->
+        // V264 — «کپی به کلاس»: انتخاب کلاس مقصد (اختیاری)؛ بدون کلاس = تکثیر معمولی.
+        var targetClass by remember(exam.id) { mutableStateOf<ir.exam.app.domain.model.SchoolClass?>(null) }
+        LaunchedEffect(exam.id) { viewModel.loadClassesForCopy() }
         AlertDialog(
             onDismissRequest = { duplicateCandidate = null },
             title = { Text("تکثیر آزمون") },
-            text = { Text("کپی آزمون «${exam.title}» مثل یک آزمون جدید است و هزینه همه سؤال‌های آن با نرخ هر سؤال ۱٬۰۰۰ تومان به‌صورت اتمیک کسر می‌شود. ادامه می‌دهید؟") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("کپی آزمون «${exam.title}» مثل یک آزمون جدید است و هزینه همه سؤال‌های آن با نرخ هر سؤال ۱٬۰۰۰ تومان (و تصویر/صوت طبق تعرفه) به‌صورت اتمیک کسر می‌شود. ادامه می‌دهید؟")
+                    if (state.copyClasses.isNotEmpty()) {
+                        Text("کپی به کلاس (اختیاری)", style = MaterialTheme.typography.labelMedium)
+                        androidx.compose.foundation.layout.FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                            androidx.compose.material3.FilterChip(selected = targetClass == null, onClick = { targetClass = null }, label = { Text("بدون کلاس") })
+                            state.copyClasses.forEach { cls ->
+                                androidx.compose.material3.FilterChip(selected = targetClass?.id == cls.id, onClick = { targetClass = cls }, label = { Text(cls.name) })
+                            }
+                        }
+                        targetClass?.let { Text("کپی فقط برای دانش‌آموزان کلاس «${it.name}» باز می‌شود و عنوانش «${exam.title} — ${it.name}» خواهد بود.", style = MaterialTheme.typography.bodySmall) }
+                    }
+                }
+            },
             confirmButton = {
-                Button(onClick = { viewModel.duplicate(exam); duplicateCandidate = null }) { Text("تأیید و تکثیر") }
+                Button(onClick = { viewModel.duplicate(exam, targetClass?.id); duplicateCandidate = null }) { Text(if (targetClass == null) "تأیید و تکثیر" else "کپی به کلاس") }
             },
             dismissButton = { TextButton(onClick = { duplicateCandidate = null }) { Text("انصراف") } }
         )

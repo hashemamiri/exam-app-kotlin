@@ -28,6 +28,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Calculate
 import androidx.compose.material.icons.outlined.KeyboardArrowLeft
 import androidx.compose.material.icons.outlined.KeyboardArrowRight
 import androidx.compose.material3.AlertDialog
@@ -359,16 +360,43 @@ fun StudentExamContent(
                             modifier = Modifier.fillMaxWidth()
                         )
                     }
-                    is FillBlankQuestion -> OutlinedTextField(
-                        value = (state.answers[question.id] as? TextAnswer)?.value.orEmpty(),
-                        onValueChange = { onAnswer(TextAnswer(question.id, it)) },
-                        label = { Text("پاسخ جای خالی") }
-                    )
-                    is NumericQuestion -> OutlinedTextField(
-                        value = (state.answers[question.id] as? TextAnswer)?.value.orEmpty(),
-                        onValueChange = { value -> onAnswer(TextAnswer(question.id, value.filter { it.isDigit() || it in ".-" })) },
-                        label = { Text("پاسخ عددی") }
-                    )
+                    // V264 — صفحه‌کلید ریاضی (آیتم ۱۲) کنار کادر پاسخ جای خالی/عددی؛ با دکمهٔ ماشین‌حساب باز/بسته می‌شود
+                    is FillBlankQuestion -> {
+                        val current = (state.answers[question.id] as? TextAnswer)?.value.orEmpty()
+                        var keypad by remember(question.id) { mutableStateOf(false) }
+                        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                            OutlinedTextField(
+                                value = current,
+                                onValueChange = { onAnswer(TextAnswer(question.id, it)) },
+                                label = { Text("پاسخ جای خالی") },
+                                trailingIcon = {
+                                    IconButton(onClick = { keypad = !keypad }) {
+                                        Icon(Icons.Outlined.Calculate, contentDescription = "صفحه‌کلید ریاضی", tint = if (keypad) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant)
+                                    }
+                                },
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                            if (keypad) MathKeypad(numeric = false, onKey = { k -> onAnswer(TextAnswer(question.id, MathKeys.apply(current, k, numeric = false))) })
+                        }
+                    }
+                    is NumericQuestion -> {
+                        val current = (state.answers[question.id] as? TextAnswer)?.value.orEmpty()
+                        var keypad by remember(question.id) { mutableStateOf(false) }
+                        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                            OutlinedTextField(
+                                value = current,
+                                onValueChange = { value -> onAnswer(TextAnswer(question.id, value.filter { it.isDigit() || it in ".-" })) },
+                                label = { Text("پاسخ عددی") },
+                                trailingIcon = {
+                                    IconButton(onClick = { keypad = !keypad }) {
+                                        Icon(Icons.Outlined.Calculate, contentDescription = "صفحه‌کلید عددی", tint = if (keypad) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant)
+                                    }
+                                },
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                            if (keypad) MathKeypad(numeric = true, onKey = { k -> onAnswer(TextAnswer(question.id, MathKeys.apply(current, k, numeric = true))) })
+                        }
+                    }
                     is MultipleChoiceQuestion -> Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         question.options.forEachIndexed { displayIndex, option ->
                             val originalIndex = question.optionOriginalIndices.getOrElse(displayIndex) { displayIndex }

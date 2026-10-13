@@ -27,7 +27,9 @@ data class TeacherDashboardState(
     val error: String? = null,
     val message: String? = null,
     /** V202 — پیام کسر هزینهٔ تکثیر؛ در پنجرهٔ وسط صفحه نشان داده می‌شود و فقط با «تأیید» پاک می‌شود. */
-    val costDialog: String? = null
+    val costDialog: String? = null,
+    /** V264 — کلاس‌های مقصد برای «کپی به کلاس» */
+    val copyClasses: List<ir.exam.app.domain.model.SchoolClass> = emptyList()
 )
 
 class TeacherDashboardViewModel(
@@ -60,23 +62,32 @@ class TeacherDashboardViewModel(
         repository.setOpen(exam.id, !exam.isOpen).getOrThrow()
     }
 
-    fun duplicate(exam: ExamDashboardDto) = viewModelScope.launch {
+    // V264 — classId != null → کپی به کلاس (native_duplicate_exam_to_class_v1)؛ کلید idempotent جدا برای هر (آزمون، کلاس).
+    fun duplicate(exam: ExamDashboardDto, classId: String? = null) = viewModelScope.launch {
         _state.update { it.copy(actionLoading = true, error = null, message = null) }
-        val operation = duplicateOperations.getOrPut(exam.id) { UUID.randomUUID().toString() }
-        repository.duplicateExam(exam.id, operation)
+        val opKey = if (classId == null) exam.id else exam.id + ":" + classId
+        val operation = duplicateOperations.getOrPut(opKey) { UUID.randomUUID().toString() }
+        (if (classId == null) repository.duplicateExam(exam.id, operation) else repository.duplicateExamToClass(exam.id, classId, operation))
             .onSuccess { result ->
-                duplicateOperations.remove(exam.id)
+                duplicateOperations.remove(opKey)
                 val exams = repository.getMyExams().getOrThrow()
                 val balance = result.balanceToman?.let { " (موجودی: ${formatToman(it)} تومان)" }.orEmpty()
+                val target = result.className?.let { " برای کلاس «$it»" }.orEmpty()
                 _state.update {
                     it.copy(
                         actionLoading = false,
                         exams = exams,
-                        costDialog = "کپی با کد ${result.code} ساخته شد.\nکسر ${formatToman(result.costToman)} تومان از کیف پول با موفقیت انجام شد$balance"
+                        costDialog = "کپی با کد ${result.code}$target ساخته شد.\nکسر ${formatToman(result.costToman)} تومان از کیف پول با موفقیت انجام شد$balance"
                     )
                 }
             }
             .onFailure { error -> _state.update { it.copy(actionLoading = false, error = safeDashboardError(error)) } }
+    }
+
+    /** V264 — کلاس‌های معلم برای انتخاب مقصد کپی (بارگذاری هنگام باز شدن پنجرهٔ تکثیر). */
+    fun loadClassesForCopy() = viewModelScope.launch {
+        ir.exam.app.data.repository.SupabaseSchoolRepository().getClasses()
+            .onSuccess { classes -> _state.update { it.copy(copyClasses = classes) } }
     }
 
     fun dismissCostDialog() = _state.update { it.copy(costDialog = null) }

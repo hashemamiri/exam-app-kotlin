@@ -338,9 +338,21 @@
       } else if (q.type === 'truefalse') {
         box.appendChild(el('div', {class: 'row'}, [[true, '✓ صحیح'], [false, '✗ غلط']].map(function (o) { return el('button', {class: 'btn ' + (a === o[0] ? '' : 'light'), text: o[1], onclick: function () { set(o[0]); box.replaceWith(answerArea(q)); }}); })));
       } else if (q.type === 'fill' || q.type === 'numeric') {
-        var i = el('input', {type: 'text', class: 'st-input', placeholder: q.type === 'numeric' ? 'پاسخ عددی' : 'پاسخ جای خالی', value: a != null ? String(a) : '', style: q.type === 'numeric' ? 'direction:ltr;text-align:left' : ''});
+        var i = el('input', {type: 'text', class: 'st-input', placeholder: q.type === 'numeric' ? 'پاسخ عددی' : 'پاسخ جای خالی', value: a != null ? String(a) : '', style: (q.type === 'numeric' ? 'direction:ltr;text-align:left;' : '') + 'flex:1;min-width:0'});
         i.addEventListener('input', function () { var v = i.value; if (q.type === 'numeric') { v = en(v).replace(/[^0-9.\-]/g, ''); i.value = v; } set(v); });
-        box.appendChild(i);
+        /* V264 — صفحه‌کلید ریاضی (آیتم ۱۲): عددی = رقم/ممیز/منفی؛ جای خالی = رقم + نمادها؛ درج در محل مکان‌نما */
+        var pad = el('div', {class: 'math-pad', style: 'display:none'});
+        var keys = ['7', '8', '9', '4', '5', '6', '1', '2', '3', '.', '0', '-'].concat(q.type === 'numeric' ? [] : ['+', '−', '×', '÷', '=', '≠', '<', '>', '≤', '≥', '(', ')', '√', 'π', '²', '³', '^', '/', '%', '°', '∞', 'θ', 'α', 'β', 'x', 'y']).concat(['⌫']);
+        keys.forEach(function (k) { pad.appendChild(el('button', {type: 'button', class: 'math-key', text: k, 'aria-label': k === '⌫' ? 'پاک کردن' : 'کلید ' + k, onclick: function () {
+          var st = i.selectionStart == null ? i.value.length : i.selectionStart, en2 = i.selectionEnd == null ? st : i.selectionEnd;
+          if (k === '⌫') { if (st === en2 && st > 0) st -= 1; i.setRangeText('', st, en2, 'end'); }
+          else if (q.type === 'numeric' && ((k === '-' && i.value.length) || (k === '.' && i.value.indexOf('.') >= 0))) { i.focus(); return; }
+          else i.setRangeText(k, st, en2, 'end');
+          i.dispatchEvent(new Event('input')); i.focus();
+        }})); });
+        var padBtn = el('button', {type: 'button', class: 'btn light sm', text: '⌨ کلید ریاضی', 'aria-label': 'صفحه‌کلید ریاضی', onclick: function () { var on = pad.style.display === 'none'; pad.style.display = on ? 'flex' : 'none'; padBtn.classList.toggle('on', on); }});
+        box.appendChild(el('div', {class: 'row', style: 'gap:8px;align-items:center'}, [i, padBtn]));
+        box.appendChild(pad);
       } else if (q.type === 'matching') {
         var cur = (a && typeof a === 'object') ? a : {};
         /* V259.5 — موارد ستون راست با حرف (الف، ب…) تا با شمارهٔ موارد ستون چپ اشتباه نشود (مثل اپ) */
@@ -462,6 +474,30 @@
 
   /* ================================================================ تختهٔ سفید (رسم آزاد → تصویر پاسخ؛ چند صفحه؛ زمینه: خالی/شطرنجی/محور) */
   /* V206 — opts (اختیاری؛ سازندهٔ معلم): {title, doneLabel, prev:[dataURL]} — بدون opts همان تختهٔ دانش‌آموز است */
+  /* V264 — تشخیص شکل دست‌آزاد (آینهٔ core/geometry/ShapeRecognizer.kt): {kind:'line'|'circle'|'triangle'|'rect', a, b} یا null */
+  function recognizeShape(pts, minSize) {
+    minSize = minSize || 24;
+    if (!pts || pts.length < 8) return null;
+    function dist(p, q) { return Math.hypot(p.x - q.x, p.y - q.y); }
+    function p2s(p, a, b) { var vx = b.x - a.x, vy = b.y - a.y, l2 = vx * vx + vy * vy; if (!l2) return dist(p, a); var t = Math.max(0, Math.min(1, ((p.x - a.x) * vx + (p.y - a.y) * vy) / l2)); return dist(p, {x: a.x + t * vx, y: a.y + t * vy}); }
+    function simplify(list, eps) { if (list.length < 3) return list; var a = list[0], b = list[list.length - 1], md = 0, idx = 0; for (var i = 1; i < list.length - 1; i++) { var d = p2s(list[i], a, b); if (d > md) { md = d; idx = i; } } if (md > eps) { var l = simplify(list.slice(0, idx + 1), eps), r = simplify(list.slice(idx), eps); return l.slice(0, -1).concat(r); } return [a, b]; }
+    var f = pts[0], l = pts[pts.length - 1], minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity, len = 0;
+    pts.forEach(function (p, i) { minX = Math.min(minX, p.x); minY = Math.min(minY, p.y); maxX = Math.max(maxX, p.x); maxY = Math.max(maxY, p.y); if (i) len += dist(pts[i - 1], p); });
+    var w = maxX - minX, h = maxY - minY, size = Math.max(w, h);
+    if (size < minSize || len <= 0) return null;
+    var chord = dist(f, l);
+    if (chord > 0.7 * len) { var maxDev = 0; pts.forEach(function (p) { maxDev = Math.max(maxDev, p2s(p, f, l)); }); if (maxDev < 0.08 * len + 2) return {kind: 'line', a: f, b: l}; }
+    if (!(chord < 0.25 * len || chord < 0.3 * size)) return null;
+    var tl = {x: minX, y: minY}, br = {x: maxX, y: maxY}, cx = (minX + maxX) / 2, cy = (minY + maxY) / 2, rx = Math.max(w / 2, 1), ry = Math.max(h / 2, 1);
+    var radii = pts.map(function (p) { var dx = (p.x - cx) / rx, dy = (p.y - cy) / ry; return Math.sqrt(dx * dx + dy * dy); });
+    var mean = radii.reduce(function (s, v) { return s + v; }, 0) / radii.length, std = Math.sqrt(radii.reduce(function (s, v) { return s + (v - mean) * (v - mean); }, 0) / radii.length);
+    var sp = simplify(pts, 0.07 * size), n = sp.length;
+    if (n >= 3 && (dist(sp[0], sp[n - 1]) < 0.001 || dist(sp[0], sp[n - 1]) < 0.35 * dist(sp[0], sp[1]))) n -= 1;
+    if (std < 0.14 && mean >= 0.75 && mean <= 1.15 && n >= 5) return {kind: 'circle', a: tl, b: br};
+    if (n === 3) return {kind: 'triangle', a: tl, b: br};
+    if (n === 4) return {kind: 'rect', a: tl, b: br};
+    return (std < 0.2 && mean >= 0.7 && mean <= 1.2) ? {kind: 'circle', a: tl, b: br} : null;
+  }
   function openWhiteboard(q, onDone, opts) {
     opts = opts || null;
     var W = 1400, H = 1000;
@@ -485,9 +521,10 @@
     }
     function push() { undo.push(canvas.toDataURL('image/png')); if (undo.length > 30) undo.shift(); }
     function pos(e) { var r = canvas.getBoundingClientRect(); var t = e.touches ? e.touches[0] : e; return {x: (t.clientX - r.left) * W / r.width, y: (t.clientY - r.top) * H / r.height}; }
-    function down(e) { e.preventDefault(); drawing = true; last = startPt = pos(e); push(); if (tool !== 'pen' && tool !== 'eraser') { snapshotImg = new Image(); snapshotImg.src = canvas.toDataURL(); } if (tool === 'text') { drawing = false; var at = last; S.promptDlg('متن روی تخته', '', 'متن', '').then(function (t) { if (t && t.trim()) { ctx.fillStyle = color; ctx.font = (size * 6 + 10) + 'px Vazirmatn, sans-serif'; ctx.direction = 'rtl'; ctx.fillText(t.trim(), at.x, at.y); } }); } }
+    function down(e) { e.preventDefault(); drawing = true; last = startPt = pos(e); push(); penPts = [last]; if (tool !== 'pen' && tool !== 'eraser') { snapshotImg = new Image(); snapshotImg.src = canvas.toDataURL(); } if (tool === 'text') { drawing = false; var at = last; S.promptDlg('متن روی تخته', '', 'متن', '').then(function (t) { if (t && t.trim()) { ctx.fillStyle = color; ctx.font = (size * 6 + 10) + 'px Vazirmatn, sans-serif'; ctx.direction = 'rtl'; ctx.fillText(t.trim(), at.x, at.y); } }); } }
     function move(e) {
       if (!drawing) return; e.preventDefault(); var p = pos(e);
+      if (tool === 'pen') penPts.push(p);
       if (tool === 'pen' || tool === 'eraser') { ctx.save(); ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.strokeStyle = tool === 'eraser' ? '#fff' : color; ctx.lineWidth = tool === 'eraser' ? size * 8 : size; ctx.beginPath(); ctx.moveTo(last.x, last.y); ctx.lineTo(p.x, p.y); ctx.stroke(); ctx.restore(); last = p; }
       else { if (snapshotImg && snapshotImg.complete) ctx.drawImage(snapshotImg, 0, 0); shape(startPt, p); }
     }
@@ -499,7 +536,24 @@
       if (tool === 'arrow') { ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); var an = Math.atan2(b.y - a.y, b.x - a.x); ctx.moveTo(b.x, b.y); ctx.lineTo(b.x - 14 * Math.cos(an - 0.45), b.y - 14 * Math.sin(an - 0.45)); ctx.moveTo(b.x, b.y); ctx.lineTo(b.x - 14 * Math.cos(an + 0.45), b.y - 14 * Math.sin(an + 0.45)); }
       ctx.stroke(); ctx.restore();
     }
-    function up(e) { if (!drawing) return; drawing = false; snapshotImg = null; }
+    /* V264 — تشخیص شکل (آیتم ۱۲): همان الگوریتم ShapeRecognizer.kt اپ؛ وقتی «تشخیص شکل» روشن است ضربهٔ قلم پس از رها شدن به خط/دایره/مثلث/مستطیل تبدیل می‌شود */
+    var autoShape = false, penPts = [];
+    function up(e) {
+      if (!drawing) return; drawing = false; snapshotImg = null;
+      if (autoShape && tool === 'pen' && penPts.length >= 8) {
+        var sh = recognizeShape(penPts); penPts = [];
+        if (sh) { var base = undo[undo.length - 1]; if (!base) return; var im = new Image(); im.onload = function () { ctx.drawImage(im, 0, 0); drawRecognized(sh); }; im.src = base; }
+      }
+      penPts = [];
+    }
+    function drawRecognized(sh) {
+      ctx.save(); ctx.strokeStyle = color; ctx.lineWidth = size; ctx.beginPath();
+      if (sh.kind === 'line') { ctx.moveTo(sh.a.x, sh.a.y); ctx.lineTo(sh.b.x, sh.b.y); }
+      else if (sh.kind === 'rect') ctx.rect(sh.a.x, sh.a.y, sh.b.x - sh.a.x, sh.b.y - sh.a.y);
+      else if (sh.kind === 'circle') ctx.ellipse((sh.a.x + sh.b.x) / 2, (sh.a.y + sh.b.y) / 2, Math.max(1, (sh.b.x - sh.a.x) / 2), Math.max(1, (sh.b.y - sh.a.y) / 2), 0, 0, Math.PI * 2);
+      else if (sh.kind === 'triangle') { ctx.moveTo((sh.a.x + sh.b.x) / 2, sh.a.y); ctx.lineTo(sh.b.x, sh.b.y); ctx.lineTo(sh.a.x, sh.b.y); ctx.closePath(); }
+      ctx.stroke(); ctx.restore();
+    }
     canvas.addEventListener('pointerdown', down); canvas.addEventListener('pointermove', move); window.addEventListener('pointerup', up);
     function savePage() { pages[cur].data = canvas.toDataURL('image/webp', 0.85); pages[cur].grid = grid; }
     function loadPage(i) { cur = i; grid = pages[i].grid || 'blank'; gridSel.value = grid; if (pages[i].data) { var im = new Image(); im.onload = function () { ctx.drawImage(im, 0, 0); }; im.src = pages[i].data; ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, W, H); } else blank(); undo = []; status.textContent = 'صفحهٔ ' + fa(i + 1) + ' از ' + fa(pages.length); }
@@ -512,6 +566,7 @@
     var bar = el('div', {class: 'engine-bar wb-bar'}, [
       el('span', {text: opts && opts.title ? '🖍 ' + opts.title : '🖍 تختهٔ سفید — سؤال ' + fa(run.exam.questions.indexOf(q) + 1)}),
       tb('pen', '✏️', 'قلم'), tb('eraser', '🧽', 'پاک‌کن'), tb('line', '╱', 'خط'), tb('arrow', '➚', 'پیکان'), tb('rect', '▭', 'مستطیل'), tb('circle', '◯', 'دایره'), tb('text', 'T', 'متن'),
+      (function () { var b = el('button', {class: 'wb-tool', text: '✨', title: 'تشخیص شکل: خط/دایره/مثلث/مستطیل دست‌آزاد به شکل منظم تبدیل می‌شود', 'aria-label': 'تشخیص شکل', onclick: function () { autoShape = !autoShape; b.classList.toggle('on', autoShape); if (autoShape && toolBtns.pen) toolBtns.pen.click(); }}); return b; })(), /* V264 */
       colorIn, sizeIn, gridSel,
       el('button', {class: 'wb-tool', text: '↶', title: 'برگرداندن', onclick: function () { var d = undo.pop(); if (!d) return; var im = new Image(); im.onload = function () { ctx.drawImage(im, 0, 0); }; im.src = d; }}),
       el('button', {class: 'wb-tool', text: '🗑', title: 'پاک کردن صفحه', onclick: async function () { if (await S.confirmDlg('پاک کردن صفحه', 'کل این صفحه پاک شود؟', 'پاک شود', true)) { push(); blank(); } }}),

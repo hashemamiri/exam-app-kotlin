@@ -63,6 +63,21 @@ class SupabaseTeacherDashboardRepository {
         )
     }
 
+    /** V264 — کپی یک‌کلیکی آزمون به کلاس دیگر (native_duplicate_exam_to_class_v1؛ مخاطب = همان کلاس). */
+    suspend fun duplicateExamToClass(examId: String, classId: String, operationId: String): Result<DuplicateExamResult> = runCatching {
+        val raw = rpcObject("native_duplicate_exam_to_class_v1", buildJsonObject {
+            put("p_exam", examId)
+            put("p_class", classId)
+            put("p_operation", operationId)
+        }).throwIfDashboardError()
+        DuplicateExamResult(
+            code = raw["code"]?.jsonPrimitive?.contentOrNull ?: error("کد آزمون کپی‌شده دریافت نشد."),
+            costToman = raw["cost"]?.jsonPrimitive?.longOrNull ?: 0,
+            balanceToman = raw["balance"]?.jsonPrimitive?.longOrNull,
+            className = raw["class_name"]?.jsonPrimitive?.contentOrNull
+        )
+    }
+
     suspend fun managerRequests(): Result<List<ManagerApprovalItem>> = runCatching {
         val raw = rpcObject("native_teacher_manager_requests_v41", buildJsonObject { }).throwIfDashboardError()
         (raw["items"] as? kotlinx.serialization.json.JsonArray).orEmpty().mapNotNull { element ->
@@ -94,7 +109,7 @@ class SupabaseTeacherDashboardRepository {
         ?: error("نشست ورود پیدا نشد. دوباره وارد شوید.")
 }
 
-data class DuplicateExamResult(val code: String, val costToman: Long, val balanceToman: Long?)
+data class DuplicateExamResult(val code: String, val costToman: Long, val balanceToman: Long?, val className: String? = null)
 
 private fun JsonObject.throwIfDashboardError(): JsonObject {
     this["error"]?.jsonPrimitive?.contentOrNull?.takeIf(String::isNotBlank)?.let(::error)

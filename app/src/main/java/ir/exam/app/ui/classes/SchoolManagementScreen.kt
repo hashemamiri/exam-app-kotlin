@@ -1975,12 +1975,15 @@ private fun BulkStudentDialog(
     // V263 — ورود از اکسل/CSV (آینهٔ «📥 از اکسل» سایت V230): حداکثر ۱۰۰ کارت؛ ردیف‌های فایل جایگزین کارت‌های خالی می‌شوند
     val recomputeSuggestionsHolder = remember { mutableStateOf<(() -> Unit)?>(null) }
     val context = androidx.compose.ui.platform.LocalContext.current
+    val importScope = rememberCoroutineScope()
     val importLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
         androidx.activity.result.contract.ActivityResultContracts.OpenDocument()
     ) { uri ->
         if (uri == null) return@rememberLauncherForActivityResult
+        importScope.launch {
         runCatching {
-            val bytes = context.contentResolver.openInputStream(uri)?.use { it.readBytes() } ?: error("فایل خوانده نشد.")
+            // V264 — خواندن از طریق DocumentIo (نخ IO، سقف ۵ مگابایت) مثل بقیهٔ صفحه‌ها
+            val bytes = DocumentIo.readBytes(context, uri, 5 * 1024 * 1024, "فایل بزرگ‌تر از ۵ مگابایت است.").getOrThrow()
             val name = uri.lastPathSegment.orEmpty()
             val parsed = ir.exam.app.core.io.SpreadsheetImport.toStudents(ir.exam.app.core.io.SpreadsheetImport.readRows(bytes, name))
             require(parsed.isNotEmpty()) { "ردیفی با نام در فایل پیدا نشد. ستون‌ها: نام، نام خانوادگی، نام پدر، پایه، رشته، جنسیت، نام کاربری، رمز." }
@@ -1994,6 +1997,7 @@ private fun BulkStudentDialog(
             activeIndex = rows.lastIndex
             error = if (parsed.size > 100) "فقط ۱۰۰ ردیف اول وارد شد." else null
         }.onFailure { error = UserFacingError.of(it, "خواندن فایل ناموفق بود.") }
+        }
     }
 
     fun rowComplete(row: BulkStudentDraft): Boolean =

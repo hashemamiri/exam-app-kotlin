@@ -36,6 +36,7 @@ import androidx.compose.material.icons.automirrored.outlined.HelpOutline
 import androidx.compose.material.icons.automirrored.outlined.Redo
 import androidx.compose.material.icons.automirrored.outlined.Undo
 import androidx.compose.material.icons.outlined.AddBox
+import androidx.compose.material.icons.outlined.AutoFixHigh
 import androidx.compose.material.icons.outlined.Architecture
 import androidx.compose.material.icons.outlined.AutoFixNormal
 import androidx.compose.material.icons.outlined.Block
@@ -270,6 +271,7 @@ fun StudentWhiteboardDialog(
     val bitmaps = remember(questionId) { mutableStateMapOf<String, Bitmap>() }
     var draft by remember { mutableStateOf<BoardStroke?>(null) }
     var tool by remember { mutableStateOf(BoardTool.PEN) }
+    var autoShape by remember { mutableStateOf(false) } // V264
     var color by remember { mutableStateOf(BOARD_PALETTE.first()) }
     var width by remember { mutableStateOf(5f) }
     var background by remember { mutableStateOf(BoardBackground.PLAIN) }
@@ -401,7 +403,9 @@ fun StudentWhiteboardDialog(
                         BoardIconChip(selected = tool == t, icon = t.icon, label = t.label, onClick = { tool = t; if (t != BoardTool.SELECT) selectedId = null })
                     }
                     BoardIconChip(selected = insertMenu, icon = Icons.Outlined.AddBox, label = "درج…", onClick = { insertMenu = !insertMenu })
-                    Text(tool.label, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
+                    // V264 — تشخیص شکل: خط/دایره/مثلث/مستطیلِ دست‌آزاد با قلم، پس از رها کردن انگشت به شکل منظم تبدیل می‌شود
+                    BoardIconChip(selected = autoShape, icon = Icons.Outlined.AutoFixHigh, label = "تشخیص شکل", onClick = { autoShape = !autoShape; if (autoShape) tool = BoardTool.PEN })
+                    Text(if (autoShape && tool == BoardTool.PEN) "قلم + تشخیص شکل" else tool.label, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
                 }
                 // V137.2 — ابزارهای هندسی (V137.5: آیکون)
                 Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -547,7 +551,14 @@ fun StudentWhiteboardDialog(
                                         }
                                     }
                                 },
-                                onDragEnd = { draft?.let { commit(it) }; draft = null; moving = null; instMode = null; snapLock = null },
+                                onDragEnd = {
+                                    draft?.let { d ->
+                                        // V264 — تشخیص شکل روی ضربهٔ قلم
+                                        val recognized = if (autoShape && d.tool == BoardTool.PEN) recognizeStroke(d) else null
+                                        commit(recognized ?: d)
+                                    }
+                                    draft = null; moving = null; instMode = null; snapLock = null
+                                },
                                 onDragCancel = { draft = null; moving = null; instMode = null; snapLock = null },
                                 onDrag = { change, delta ->
                                     change.consume()
@@ -676,6 +687,7 @@ fun StudentWhiteboardDialog(
                     HelpRow(Icons.Outlined.Close, "بستن", "تخته بسته می‌شود؛ پیش‌نویس می‌ماند.")
                     Text("ابزارها", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
                     HelpRow(BoardTool.PEN.icon, "قلم", "کشیدن آزاد با رنگ و ضخامت انتخابی.")
+                    HelpRow(Icons.Outlined.AutoFixHigh, "تشخیص شکل", "وقتی روشن است، خط، دایره، مثلث یا مستطیلی که با قلم می‌کشید پس از رها کردن انگشت به شکل منظم تبدیل می‌شود.")
                     HelpRow(BoardTool.HIGHLIGHT.icon, "هایلایتر", "خط پهنِ نیمه‌شفاف برای برجسته‌کردن.")
                     HelpRow(BoardTool.ERASER.icon, "پاک‌کن", "هر جا بکشید پاک می‌شود.")
                     HelpRow(BoardTool.OBJ_ERASER.icon, "پاک‌کن شیء", "روی هر خط/شکل/متن بزنید تا کامل حذف شود.")
@@ -736,6 +748,19 @@ fun StudentWhiteboardDialog(
 // ============================================================ V137.2 — ابزارهای هندسی
 
 /** هدف چسبیدن ضربه: لبهٔ شماره‌دار (index) یا کمان (arc) یا کمانِ پرگار (compass). */
+/** V264 — تبدیل ضربهٔ قلم به شیء هندسی (ShapeRecognizer؛ خالص و تست‌شده). */
+internal fun recognizeStroke(d: BoardStroke): BoardStroke? {
+    val pts = d.points.map { ir.exam.app.core.geometry.ShapeRecognizer.Pt(it.x, it.y) }
+    val shape = ir.exam.app.core.geometry.ShapeRecognizer.recognize(pts) ?: return null
+    val tool = when (shape.kind) {
+        ir.exam.app.core.geometry.ShapeRecognizer.Kind.LINE -> BoardTool.LINE
+        ir.exam.app.core.geometry.ShapeRecognizer.Kind.CIRCLE -> BoardTool.CIRCLE
+        ir.exam.app.core.geometry.ShapeRecognizer.Kind.TRIANGLE -> BoardTool.TRIANGLE
+        ir.exam.app.core.geometry.ShapeRecognizer.Kind.RECT -> BoardTool.RECT
+    }
+    return d.copy(tool = tool, points = listOf(Offset(shape.a.x, shape.a.y), Offset(shape.b.x, shape.b.y)))
+}
+
 internal data class SnapTarget(val edge: Int = -1, val arc: Boolean = false, val compass: Boolean = false)
 
 internal fun defaultInstrument(kind: BoardInstrument, board: IntSize, density: Float): InstrumentState {
