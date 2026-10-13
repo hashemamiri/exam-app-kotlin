@@ -879,6 +879,29 @@ private fun ExamSettingsCard(state: ExamBuilderState, viewModel: ExamBuilderView
                 },
                 modifier = Modifier.fillMaxWidth()
             )
+            // V272 — «۵۰ سؤال بساز، ۲۰ تا تصادفی» با بخش‌بندی: برای هر نوع سؤالِ موجود «چند تا از N»؛ خالی = همهٔ آن نوع.
+            val typeCounts = state.questions.groupingBy { it.type }.eachCount()
+            if (typeCounts.isNotEmpty()) {
+                Text("انتخاب تصادفی بر اساس نوع سؤال (خالی = همهٔ آن نوع)", style = MaterialTheme.typography.labelLarge)
+                QuestionType.values().filter { (typeCounts[it] ?: 0) > 0 }.forEach { type ->
+                    val count = typeCounts[type] ?: 0
+                    OutlinedTextField(
+                        state.pickRules[type.wireName()]?.toString().orEmpty(),
+                        { viewModel.setPickRule(type, it) },
+                        label = { Text("${type.faLabel()} ($count سؤال)") },
+                        placeholder = { Text("همه") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+                val shown = typeCounts.entries.sumOf { (t, c) -> state.pickRules[t.wireName()]?.coerceAtMost(c) ?: c }
+                if (state.pickRules.isNotEmpty()) {
+                    Text(
+                        "هر دانش‌آموز $shown سؤال از ${state.questions.size} می‌بیند؛ نمره از جمع بارم همان سؤال‌ها.",
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
+            }
         }
     }
 }

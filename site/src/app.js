@@ -209,6 +209,9 @@
     if (!iso) return '—';
     try { return new Intl.DateTimeFormat('fa-IR', {year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit'}).format(new Date(iso)); } catch (e) { return String(iso).slice(0, 16); }
   }
+  /* V270 — نام پایه یکدست: «8» یا «۸» → «هشتم»؛ متن‌های دیگر دست نمی‌خورند */
+  var GRADE_WORDS = ['', 'اول', 'دوم', 'سوم', 'چهارم', 'پنجم', 'ششم', 'هفتم', 'هشتم', 'نهم', 'دهم', 'یازدهم', 'دوازدهم'];
+  function gradeLabel(v) { var t = String(v == null ? '' : v).trim(); if (!t) return '—'; var n = Number(en(t)); return n >= 1 && n <= 12 && /^[0-9۰-۹]+$/.test(t) ? GRADE_WORDS[n] : t; }
   function fmtScore(v) { v = Number(v) || 0; return v % 1 === 0 ? String(v) : String(Math.round(v * 100) / 100); }
   function uuid() {
     if (window.crypto && crypto.randomUUID) return crypto.randomUUID();
@@ -1865,7 +1868,7 @@
       c.appendChild(el('div', {class: 'card'}, [el('table', {class: 'tbl tbl-cyan'}, [
         el('thead', {}, [el('tr', {}, ['نام کلاس', 'پایه', 'رشته', 'پسر', 'دختر', 'کل', 'اشتراک با مدیر', ''].map(function (h) { return el('th', {text: h}); }))]),
         el('tbody', {}, list.map(function (k) {
-          return el('tr', {}, [el('td', {html: '<b>' + esc(k.name) + '</b>'}), el('td', {text: k.grade || '—'}), el('td', {text: k.field_of_study || '—'}), el('td', {text: fa(k.boys || 0)}), el('td', {text: fa(k.girls || 0)}), el('td', {text: fa(k.total || 0)}),
+          return el('tr', {}, [el('td', {html: '<b>' + esc(k.name) + '</b>'}), el('td', {text: gradeLabel(k.grade)}), el('td', {text: k.field_of_study || '—'}), el('td', {text: fa(k.boys || 0)}), el('td', {text: fa(k.girls || 0)}), el('td', {text: fa(k.total || 0)}),
             el('td', {}, [(flags[k.id] && flags[k.id].manager_created) ? el('span', {class: 'chip brand', text: 'کلاس مدیر', title: 'این کلاس را مدیر مدرسه' + (flags[k.id].school_name ? ' «' + flags[k.id].school_name + '»' : '') + ' ساخته است و همیشه برای او قابل مشاهده است.'}) : window.SiteSchool ? window.SiteSchool.classShareChip(k, function () { pageClasses(c); }) : el('span', {class: 'chip ' + (k.shared_with_manager ? 'ok' : 'off'), text: k.shared_with_manager ? 'بله' : 'خیر'})]),
             el('td', {}, [el('div', {class: 'acts'}, [
               el('button', {class: 'icon-btn', title: 'فهرست دانش‌آموزان', html: '👥', onclick: function () { rosterDlg(k); }}),
@@ -1923,14 +1926,22 @@
     var bg = el('div', {class: 'modal-bg'});
     var name = fld('نام کلاس', k ? k.name : ''), grade = fld('پایه', k ? (k.grade || '') : ''), field = fld('رشته', k ? (k.field_of_study || '') : '');
     var msg = el('div');
+    /* V270 — هنگام ساخت کلاس: «اشتراک با مدیر مدرسه» تا کلاس در کارنامهٔ مدیر دیده شود */
+    var shareChk = el('input', {type: 'checkbox'});
+    var shareRow = k ? null : el('label', {class: 'row', style: 'gap:8px;align-items:center;cursor:pointer;margin-bottom:12px'}, [shareChk, el('span', {text: 'اشتراک با مدیر مدرسه (کلاس و نمره‌هایش در کارنامهٔ مدیر دیده شود)'})]);
     var b = el('button', {class: 'btn', text: k ? 'ذخیره' : 'ایجاد'});
     b.addEventListener('click', async function () {
       b.disabled = true; msg.innerHTML = '';
-      try { await api.saveClass(k ? k.id : null, name.querySelector('input').value, grade.querySelector('input').value, field.querySelector('input').value); bg.remove(); toast('ذخیره شد.', 'ok'); done(); }
+      try {
+        var r = await api.saveClass(k ? k.id : null, name.querySelector('input').value, grade.querySelector('input').value, field.querySelector('input').value);
+        var warn = '';
+        if (!k && shareChk.checked && r && r.id) { try { var sr = await rpcObj('native_teacher_share_class_v137', {p_class: r.id, p_share: true}); if (sr && sr.error) warn = sr.error; } catch (e2) { warn = errMsg(e2); } }
+        bg.remove(); toast(warn ? 'کلاس ساخته شد؛ اما اشتراک با مدیر انجام نشد: ' + warn : 'ذخیره شد.', warn ? 'err' : 'ok'); done();
+      }
       catch (e) { msg.appendChild(el('div', {class: 'alert error', text: errMsg(e)})); }
       b.disabled = false;
     });
-    bg.appendChild(el('div', {class: 'modal'}, [el('button', {class: 'x', text: '✕', onclick: function () { bg.remove(); }}), el('h2', {text: k ? 'ویرایش کلاس' : 'کلاس جدید'}), msg, name, el('div', {class: 'grid2'}, [grade, field]), el('div', {class: 'row'}, [b, el('button', {class: 'btn light', text: 'انصراف', onclick: function () { bg.remove(); }})])]));
+    bg.appendChild(el('div', {class: 'modal'}, [el('button', {class: 'x', text: '✕', onclick: function () { bg.remove(); }}), el('h2', {text: k ? 'ویرایش کلاس' : 'کلاس جدید'}), msg, name, el('div', {class: 'grid2'}, [grade, field]), shareRow, el('div', {class: 'row'}, [b, el('button', {class: 'btn light', text: 'انصراف', onclick: function () { bg.remove(); }})])]));
     document.body.appendChild(bg);
     function fld(l, v) { return el('div', {class: 'field'}, [el('label', {text: l}), el('input', {type: 'text', value: v})]); }
   }
@@ -1948,7 +1959,7 @@
       el('thead', {}, [el('tr', {}, ['نام', 'نام کاربری', 'جنسیت', 'پایه', 'رشته', 'کلاس‌ها', 'وضعیت'].map(function (h) { return el('th', {text: h}); }))]),
       el('tbody', {}, list.map(function (s) {
         return el('tr', {}, [el('td', {html: '<b>' + esc(s.full_name || ((s.first_name || '') + ' ' + (s.last_name || ''))) + '</b>'}), el('td', {}, [el('span', {class: 'code', text: s.username || '—'})]),
-          el('td', {text: s.gender === 'male' ? 'پسر' : (s.gender === 'female' ? 'دختر' : '—')}), el('td', {text: s.grade || '—'}), el('td', {text: s.field_of_study || '—'}), el('td', {class: 'muted', text: s.class_names || '—'}),
+          el('td', {text: s.gender === 'male' ? 'پسر' : (s.gender === 'female' ? 'دختر' : '—')}), el('td', {text: gradeLabel(s.grade)}), el('td', {text: s.field_of_study || '—'}), el('td', {class: 'muted', text: s.class_names || '—'}),
           el('td', {}, [el('span', {class: 'chip ' + (s.is_active !== false ? 'ok' : 'off'), text: s.is_active !== false ? 'فعال' : 'غیرفعال'})])]);
       }))
     ]);
@@ -2236,7 +2247,7 @@
     return SUPABASE_URL + '/storage/v1/object/public/' + MEDIA_BUCKET + '/' + path;
   }
   window.ExamSite = {emojiSvg: function (k) { return emojiSvg(k, false) || ''; }, headerFingerprint: headerFingerprint, printHeaderFp: printHeaderFp, ensurePrintPaid: ensurePrintPaid, jalaliPicker: jalaliPicker, jalaliDisplay: jalaliDisplay, openFormulaEditor: openFormulaEditor, openHeaderSettings: openHeaderSettings, headerSettingsForm: headerSettingsForm, readPrintHeader: readPrintHeader, faReason: faReason, uploadMedia: uploadMedia, openPrintPreview: openPrintPreview, buildPrintPayload: buildPrintPayload, api: api, demoPrint: demoPrint,
-    el: el, esc: esc, fa: fa, en: en, toast: toast, confirmDlg: confirmDlg, infoDlg: infoDlg, costDoneDlg: costDoneDlg, promptDlg: promptDlg, mediaBlobUrl: mediaBlobUrl, isOwnStorageUrl: isOwnStorageUrl, deleteMedia: deleteMedia, mediaUrlsIn: mediaUrlsIn, isOwnedMediaUrl: isOwnedMediaUrl, rpc: rpc, rpcObj: rpcObj, select: select, http: http, uuid: uuid, fmtScore: fmtScore, fmtDate: fmtDate, money: money, errMsg: errMsg,
+    el: el, esc: esc, fa: fa, en: en, gradeLabel: gradeLabel, toast: toast, confirmDlg: confirmDlg, infoDlg: infoDlg, costDoneDlg: costDoneDlg, promptDlg: promptDlg, mediaBlobUrl: mediaBlobUrl, isOwnStorageUrl: isOwnStorageUrl, deleteMedia: deleteMedia, mediaUrlsIn: mediaUrlsIn, isOwnedMediaUrl: isOwnedMediaUrl, rpc: rpc, rpcObj: rpcObj, select: select, http: http, uuid: uuid, fmtScore: fmtScore, fmtDate: fmtDate, money: money, errMsg: errMsg,
     localState: localState, setLocalState: setLocalState, loading: loading, showErr: showErr, emptyBox: emptyBox, qType: qType, engineHtml: engineHtml, loadEngines: loadEngines,
     user: function () { return user; }, session: function () { return session; }, config: {url: SUPABASE_URL, anon: ANON},
     go: function (panel, arg) { view.panel = panel; view.arg = arg; render(); }, navBack: navBack, view: view, examActions: examActions,

@@ -127,7 +127,9 @@ class SupabaseGradingRepository {
         AutoApproveResult(
             approved = raw["count"]?.jsonPrimitive?.intOrNull ?: 0,
             prefilled = raw["prefilled"]?.jsonPrimitive?.intOrNull ?: 0,
-            hasEssay = raw["has_essay"]?.jsonPrimitive?.booleanOrNull ?: false
+            hasEssay = raw["has_essay"]?.jsonPrimitive?.booleanOrNull ?: false,
+            // V270 — شمارهٔ سؤال‌های تشریحی که برای تصحیح مانده‌اند
+            essayQuestions = (raw["essay_questions"] as? JsonArray)?.mapNotNull { it.jsonPrimitive.intOrNull } ?: emptyList()
         )
     }
 
@@ -374,4 +376,4 @@ private fun JsonObject.throwRpcError(): JsonObject {
 }
 
 /** V261 */
-data class AutoApproveResult(val approved: Int, val prefilled: Int, val hasEssay: Boolean)
+data class AutoApproveResult(val approved: Int, val prefilled: Int, val hasEssay: Boolean, val essayQuestions: List<Int> = emptyList())

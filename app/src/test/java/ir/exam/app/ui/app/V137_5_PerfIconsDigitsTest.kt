@@ -17,7 +17,7 @@ class V137_5_PerfIconsDigitsTest {
         val pgs = source("app/src/main/assets/print/web/pgs_engine.js")
         assertTrue("function contentSignature()" in pgs)
         assertTrue("function paginateIfChanged()" in pgs)
-        assertTrue("setTimeout(paginateIfChanged, 160);" in pgs)
+        assertTrue("pagWaves.push(setTimeout(paginateIfChanged, 160));" in pgs) // V271 — موج‌ها قابل لغو
         assertFalse("setTimeout(function () { if (!pgsState.paginating) paginate(); }, 160);" in pgs)
         assertTrue("if (over && trimSepPadToFit(row, ctx.sheet)) over = overflows(ctx.sheet);" in pgs)
         assertTrue("if (key === lastThumbsKey && box.children.length === list.length) return;" in pgs)

@@ -1062,7 +1062,7 @@ function addQuestion(type) {
   renderAll();
 }
 function removeQuestion(id) { questions = questions.filter(q => q.id !== id); renderAll(); }
-function updateQ(id, field, value) { const q = questions.find(x => x.id === id); if (q) q[field] = value; renderPreview(); }
+function updateQ(id, field, value) { const q = questions.find(x => x.id === id); if (q) q[field] = value; renderPreviewSoon(); } /* V271 */
 function updateOpt(qId, idx, field, value) {
   const q = questions.find(x => x.id === qId);
   if (!q) return;
@@ -1084,7 +1084,7 @@ function updatePair(qId, idx, side, value) {
   if (!q.pairs) q.pairs = [];
   if (!q.pairs[idx]) q.pairs[idx] = {left:'', right:''};
   q.pairs[idx][side] = value;
-  renderPreview();
+  renderPreviewSoon(); /* V271 */
 }
 function addPair(qId) {
   const q = questions.find(x => x.id === qId);
@@ -1871,10 +1871,18 @@ document.addEventListener('focusout', function(e) {
     syncEditorReturnSoon();
   }
 }, true);
+/* V271 — تایپ بدون لگ: به‌جای بازسازی کامل پیش‌نمایش با هر کلید، ۲۲۰ میلی‌ثانیه پس از آخرین کلید یک بار بازسازی می‌شود
+   (change/blur همچنان فوری). renderPreview هم‌زمان صفحه‌بندی PGS را هم راه می‌اندازد؛ قبلاً هر کلید = یک رندر + ۴ صفحه‌بندی. */
+var __rpTimer = null;
+function renderPreviewSoon(delay) {
+  clearTimeout(__rpTimer);
+  __rpTimer = setTimeout(function () { __rpTimer = null; renderPreview(); }, delay == null ? 220 : delay);
+}
+window.renderPreviewSoon = renderPreviewSoon;
 document.addEventListener('input', e => {
-  if (e.target.closest('.field') || e.target.closest('.questions-area') || e.target.closest('.exam-tools')) renderPreview();
+  if (e.target.closest('.field') || e.target.closest('.questions-area') || e.target.closest('.exam-tools')) renderPreviewSoon();
 });
-document.addEventListener('change', () => renderPreview());
+document.addEventListener('change', () => { clearTimeout(__rpTimer); __rpTimer = null; renderPreview(); });
 
 function loadSample() {
   document.getElementById('f_course').value = 'برنامه‌نویسی پیشرفته';

@@ -671,15 +671,21 @@
     paginate();
     lastSignature = contentSignature();
   }
+  /* V271 — امواج باز-صفحه‌بندی قابل لغو: با هر درخواست تازه، موج‌های قبلی پاک می‌شوند تا هنگام تایپ پشت‌سرهم
+     چند صفحه‌بندی روی هم انباشته نشود (پیش از این هر کلیدِ تایپ ۱+۳ صفحه‌بندی کامل می‌ساخت). */
+  var pagWaves = [];
+  function clearWaves() { while (pagWaves.length) clearTimeout(pagWaves.pop()); }
   function schedulePaginate(delay) {
     clearTimeout(pagTimer);
+    clearWaves();
     pagTimer = setTimeout(function () {
       paginate();
       lastSignature = contentSignature();
       /* امواج باز-صفحه‌بندی: بعد از fit شدن فرمول‌ها/تصاویر ارتفاع‌ها عوض می‌شود */
-      setTimeout(paginateIfChanged, 160);
-      setTimeout(paginateIfChanged, 550);
-      setTimeout(paginateIfChanged, 1300);
+      clearWaves();
+      pagWaves.push(setTimeout(paginateIfChanged, 160));
+      pagWaves.push(setTimeout(paginateIfChanged, 550));
+      pagWaves.push(setTimeout(paginateIfChanged, 1300));
     }, delay || 0);
   }
 

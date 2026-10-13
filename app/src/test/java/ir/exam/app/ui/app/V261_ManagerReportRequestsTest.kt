@@ -49,6 +49,6 @@ class V261_ManagerReportRequestsTest {
         val vm = src("app/src/main/java/ir/exam/app/ui/grading/GradingViewModel.kt")
         assertTrue("r.approved > 0 ->" in vm && "r.prefilled > 0 ->" in vm)
         val repo = src("app/src/main/java/ir/exam/app/data/repository/SupabaseGradingRepository.kt")
-        assertTrue("data class AutoApproveResult(val approved: Int, val prefilled: Int, val hasEssay: Boolean)" in repo)
+        assertTrue("data class AutoApproveResult(val approved: Int, val prefilled: Int, val hasEssay: Boolean, val essayQuestions: List<Int>" in repo) // V270
     }
 }

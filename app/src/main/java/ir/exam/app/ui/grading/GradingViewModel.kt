@@ -293,7 +293,7 @@ class GradingViewModel(
             reloadSelected()
             when {
                 r.approved > 0 -> "${r.approved} پاسخ به‌صورت خودکار نمره‌گذاری و تأیید شد."
-                r.prefilled > 0 -> "نمرهٔ سؤال‌های عینی ${r.prefilled} پاسخ پیش‌پر شد؛ چون آزمون سؤال تشریحی دارد، پس از تصحیح تشریحی‌ها «ذخیرهٔ نمره» را بزنید."
+                r.prefilled > 0 -> "نمرهٔ سؤال‌های تستی ${r.prefilled} پاسخ ثبت شد؛ فقط سؤال تشریحی ${r.essayQuestions.joinToString("، ")} مانده: در «تصحیح سؤال‌به‌سؤال» نمره بدهید و «نهایی‌سازی» را بزنید." // V270
                 else -> "پاسخ تازه‌ای برای تأیید خودکار نبود."
             }
         }.onSuccess { msg -> _state.update { it.copy(actionLoading = false, message = msg) } }

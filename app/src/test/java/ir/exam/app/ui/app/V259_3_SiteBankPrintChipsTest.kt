@@ -16,7 +16,7 @@ class V259_3_SiteBankPrintChipsTest {
     @Test
     fun `bank allowed on desktop for print exams`() {
         val js = source("site/src/builder.js")
-        assertTrue("function bankAllowed() { return state.mode === 'online' || document.body.classList.contains('dk'); }" in js)
+        assertTrue("function bankAllowed() { return true; }" in js) // V274 — بانک در حالت چاپی روی گوشی هم
         assertTrue("if (key === 'bank') { if (bankAllowed()) openBank();" in js)
         assertTrue(".concat(bankAllowed() ? [el('button', {class: 'btn soft sm', text: '🏦 از بانک سؤال'" in js)
         assertTrue("if (bankAllowed()) list.appendChild(el('button', {class: 'btn soft sm', style: 'width:100%;margin-top:8px', text: '🏦 از بانک سؤال'" in js)

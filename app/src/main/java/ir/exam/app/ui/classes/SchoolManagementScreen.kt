@@ -510,8 +510,8 @@ fun SchoolManagementScreen(
             item = classEditor,
             teachers = if (creatingClass && managerTeacherPicker) state.schoolTeachers else emptyList(),
             onDismiss = { creatingClass = false; classEditor = null },
-            onSave = { name, grade, field, teacherId ->
-                viewModel.saveClass(classEditor?.id, name, grade, field, teacherId)
+            onSave = { name, grade, field, teacherId, share ->
+                viewModel.saveClass(classEditor?.id, name, grade, field, teacherId, share)
                 creatingClass = false
                 classEditor = null
             }
@@ -1550,9 +1550,11 @@ private fun ClassEditorDialog(
     item: SchoolClass?,
     teachers: List<SchoolTeacherPick> = emptyList(),
     onDismiss: () -> Unit,
-    onSave: (String, String, String, String?) -> Unit
+    onSave: (String, String, String, String?, Boolean) -> Unit
 ) {
     var name by remember(item?.id) { mutableStateOf(item?.name.orEmpty()) }
+    // V270 — «اشتراک با مدیر مدرسه» فقط هنگام ساخت کلاس توسط معلم
+    var shareWithManager by remember(item?.id) { mutableStateOf(false) }
     var grade by remember(item?.id) { mutableStateOf(item?.grade.orEmpty()) }
     var field by remember(item?.id) { mutableStateOf(item?.fieldOfStudy.orEmpty()) }
     // V61.0 — انتخاب معلم (فقط مدیر هنگام ساخت کلاس).
@@ -1595,11 +1597,20 @@ private fun ClassEditorDialog(
                         modifier = Modifier.weight(1f)
                     )
                 }
+                if (item == null && teachers.isEmpty()) {
+                    Row(
+                        Modifier.fillMaxWidth().clickable { shareWithManager = !shareWithManager },
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Checkbox(checked = shareWithManager, onCheckedChange = { shareWithManager = it })
+                        Text("اشتراک با مدیر مدرسه (در کارنامهٔ مدیر دیده شود)", style = MaterialTheme.typography.bodySmall)
+                    }
+                }
             }
         },
         confirmButton = {
             Button(
-                onClick = { onSave(name, grade, field, teacherId) },
+                onClick = { onSave(name, grade, field, teacherId, shareWithManager) },
                 enabled = name.isNotBlank() && (teachers.isEmpty() || teacherId != null)
             ) { Text("ذخیره") }
         },

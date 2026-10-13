@@ -161,9 +161,10 @@ class ClassesViewModel(
         name: String,
         grade: String,
         fieldOfStudy: String = "",
-        teacherId: String? = null
+        teacherId: String? = null,
+        shareWithManager: Boolean = false // V270 — اشتراک با مدیر هنگام ساخت
     ) = action(
-        successMessage = if (id == null) "کلاس ساخته شد." else "کلاس ویرایش شد."
+        successMessage = if (id == null) (if (shareWithManager) "کلاس ساخته و با مدیر به اشتراک گذاشته شد." else "کلاس ساخته شد.") else "کلاس ویرایش شد."
     ) {
         when {
             // V61.0 — مدیر: ساخت کلاس برای معلم انتخابی از لیست معلم‌های مدرسه.
@@ -179,6 +180,16 @@ class ClassesViewModel(
                 ).decodeAs<kotlinx.serialization.json.JsonObject>()
                 (raw["error"] as? kotlinx.serialization.json.JsonPrimitive)?.content
                     ?.takeIf(String::isNotBlank)?.let(::error)
+            }
+            id == null && shareWithManager -> {
+                // V270 — اول ساخت، بعد اشتراک؛ اگر اشتراک نشد (مثلاً معلم عضو مدرسه نیست) کلاس می‌ماند و پیام سرور نشان داده می‌شود.
+                val newId = repository.createClassReturningId(name, grade, fieldOfStudy).getOrThrow()
+                if (newId.isNotBlank()) {
+                    repository.setClassShared(newId, true).getOrElse { e ->
+                        reloadData()
+                        error("کلاس ساخته شد؛ اما اشتراک با مدیر انجام نشد: ${e.message.orEmpty()}")
+                    }
+                }
             }
             id == null -> repository.createClass(name, grade, fieldOfStudy).getOrThrow()
             else -> repository.updateClass(id, name, grade, fieldOfStudy).getOrThrow()

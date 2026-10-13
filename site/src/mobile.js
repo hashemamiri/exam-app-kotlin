@@ -533,7 +533,9 @@
     var save = el('button', {class: 'm-fab save', 'aria-label': 'ذخیره آزمون', onclick: function () { if (saveBtn) saveBtn.click(); }}, [ic('grading')]);
     var plus = el('button', {class: 'm-fab add', 'aria-label': 'افزودن سؤال', onclick: function () { radialOpen = !radialOpen; drawRadial(); }}, [el('span', {class: 'm-fab-plus', text: '+'})]);
     /* V156 — مثل ExamBuilderScreen: در حالت چاپ FAB پیش‌نمایش (چشم) + FAB چاپ (منوی «چاپ آزمون (دانش‌آموز)» / «چاپ با کلید (پاسخ‌نامه)»)؛ آنلاین فقط ✓ و + */
-    var prev = isPrint && prevBtn ? el('button', {class: 'm-fab prev', 'aria-label': 'پیش‌نمایش آزمون', onclick: function () { prevBtn.click(); }}, [ic('eye')]) : null;
+    /* V274 — آنلاین هم مثل اپ (ExamBuilderScreen: FAB ذخیره + چشم): چشم = پیش‌نمایش دانش‌آموزی سؤال انتخاب‌شده (پیش‌تر فقط دسکتاپ از ریل داشت) */
+    var prev = isPrint && prevBtn ? el('button', {class: 'm-fab prev', 'aria-label': 'پیش‌نمایش آزمون', onclick: function () { prevBtn.click(); }}, [ic('eye')])
+      : (!isPrint && window.__builderStudentPreview ? el('button', {class: 'm-fab prev', 'aria-label': 'پیش‌نمایش دانش‌آموز', onclick: function () { window.__builderStudentPreview(); }}, [ic('eye')]) : null);
     var printFab = isPrint && prevBtn ? el('button', {class: 'm-fab print', 'aria-label': 'چاپ آزمون', onclick: function () {
       var bg = el('div', {class: 'm-sheet-bg', onclick: function (e) { if (e.target === e.currentTarget) bg.remove(); }});
       var body = el('div', {class: 'm-sheet'}, [el('h3', {text: 'چاپ آزمون'})]);

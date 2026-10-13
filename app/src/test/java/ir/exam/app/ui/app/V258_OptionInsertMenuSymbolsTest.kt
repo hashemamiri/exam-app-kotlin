@@ -41,7 +41,7 @@ class V258_OptionInsertMenuSymbolsTest {
         val js = source("site/src/builder.js")
         assertTrue("function tokenTextarea(ta, opts) {" in js)
         assertTrue("var tt = tokenTextarea(t, {small: true}); tt.wrap.style.flex = '1';" in js)
-        assertTrue("DK ? el('button', {class: 'icon-btn b-opt-plus', title: 'درج در گزینهٔ ' + fa(k + 1)" in js)
+        assertTrue("el('button', {class: 'icon-btn b-opt-plus', title: 'درج در گزینهٔ ' + fa(k + 1)" in js) // V274 — بدون شرط DK
         assertTrue("function insertMenu(anchor, ta, q, o) {" in js)
         assertTrue("item('fx', 'فرمول', 'is-fx'" in js && "item('periodic', 'جدول تناوبی', 'is-pt'" in js && "item('gallery', 'گالری', 'is-ana'" in js)
         // به insertFigure نباید q داده شود (q.text را بازنویسی می‌کند)

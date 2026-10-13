@@ -27,7 +27,9 @@ data class ExamDetailDto(
     @SerialName("attempt_on_timeout") val attemptOnTimeout: Boolean = false,
     @SerialName("grade_policy") val gradePolicy: String = "last",
     @SerialName("attempt_cooldown") val attemptCooldown: Int = 0,
-    @SerialName("pick_count") val pickCount: Int = 0
+    @SerialName("pick_count") val pickCount: Int = 0,
+    // V272 — قاعده‌های تصادفی بر اساس نوع؛ ستون نبود (SQL اجرا نشده) → خالی.
+    @SerialName("pick_rules") val pickRules: Map<String, Int> = emptyMap()
 )
 
 @Serializable
@@ -45,7 +47,8 @@ data class ExamUpdateDto(
     @SerialName("attempt_on_timeout") val attemptOnTimeout: Boolean,
     @SerialName("grade_policy") val gradePolicy: String,
     @SerialName("attempt_cooldown") val attemptCooldown: Int,
-    @SerialName("pick_count") val pickCount: Int = 0
+    @SerialName("pick_count") val pickCount: Int = 0,
+    @SerialName("pick_rules") val pickRules: Map<String, Int> = emptyMap() // V272
 )
 
 @Serializable

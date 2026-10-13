@@ -79,6 +79,7 @@ class ExamBuilderViewModel(
                         gradePolicy = imported.gradePolicy,
                         attemptCooldown = imported.attemptCooldown.takeUnless { it == 0 }?.toString().orEmpty(),
                         pickCount = imported.pickCount.takeUnless { it == 0 }?.toString().orEmpty(),
+                        pickRules = imported.pickRules, // V272
                         questions = imported.questions,
                         importedBy = imported.exportedBy
                     )
@@ -137,6 +138,7 @@ class ExamBuilderViewModel(
                 gradePolicy = draft.gradePolicy,
                 attemptCooldown = draft.attemptCooldown,
                 pickCount = draft.pickCount,
+                pickRules = draft.pickRules, // V272
                 audienceMode = draft.audienceMode,
                 audienceClasses = draft.audienceClasses,
                 audienceStudents = draft.audienceStudents,
@@ -177,6 +179,17 @@ class ExamBuilderViewModel(
     fun setAttemptOnTimeout(value: Boolean) { _state.update { it.copy(attemptOnTimeout = value) } }
     fun setGradePolicy(value: String) { if (value in setOf("last", "best", "all")) _state.update { it.copy(gradePolicy = value) } }
     fun setPickCount(value: String) { _state.update { it.copy(pickCount = value.filter(Char::isDigit).take(4)) } }
+
+    /** V272 — قاعدهٔ تصادفی یک نوع سؤال؛ خالی = حذف قاعده (همهٔ آن نوع نمایش داده می‌شود). */
+    fun setPickRule(type: QuestionType, value: String) {
+        val n = value.filter(Char::isDigit).take(4).toIntOrNull()
+        _state.update { st ->
+            val max = st.questions.count { it.type == type }
+            val rules = st.pickRules.toMutableMap()
+            if (n == null || n <= 0) rules.remove(type.wireName()) else rules[type.wireName()] = n.coerceAtMost(max.coerceAtLeast(1))
+            st.copy(pickRules = rules)
+        }
+    }
     fun setAttemptCooldown(value: String) { _state.update { it.copy(attemptCooldown = value.filter(Char::isDigit).take(4)) } }
     fun reportError(error: Throwable) {
         _state.update { it.copy(error = safeBuilderError(error)) }
@@ -232,6 +245,7 @@ class ExamBuilderViewModel(
                 gradePolicy = imported.gradePolicy,
                 attemptCooldown = imported.attemptCooldown.takeUnless { it == 0 }?.toString().orEmpty(),
                         pickCount = imported.pickCount.takeUnless { it == 0 }?.toString().orEmpty(),
+                pickRules = imported.pickRules, // V272
                 questions = imported.questions.map {
                     it.copy(id = UUID.randomUUID().toString()).ensureEditorIds()
                 },
@@ -806,6 +820,7 @@ private fun draftFingerprint(state: ExamBuilderState): Int = listOf(
     state.gradePolicy,
     state.attemptCooldown,
     state.pickCount,
+    state.pickRules,
     state.audienceMode,
     state.audienceClasses,
     state.audienceStudents,

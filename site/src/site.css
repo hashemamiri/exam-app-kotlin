@@ -1741,6 +1741,9 @@ body.rail-dragging .b-rail-row:not(.dragging):hover .b-rail-grip{background:tran
 .dk .b-opt .b-opt-plus{color:var(--brand);border-color:#c9dfe6}
 .dk .b-opt .b-opt-plus:hover{background:var(--brand-soft)}
 .b-ins-menu{position:absolute;z-index:1200;background:var(--card);border:1px solid var(--line);border-radius:18px;box-shadow:0 14px 40px rgba(28,49,62,.18);padding:10px;direction:rtl;width:300px}
+/* V274 — منوی درج روی گوشی: در عرض صفحه جا شود؛ دکمهٔ + گزینه‌ها در همهٔ چیدمان‌ها رنگ برند */
+.m-mode .b-ins-menu{width:min(300px,calc(100vw - 16px))}
+.b-opt .b-opt-plus{color:var(--brand)}
 .b-ins-title{font-size:12.5px;font-weight:700;color:#2f687c;text-align:center;margin-bottom:8px}
 .b-ins-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
 .b-ins-grid .tool-btn{width:auto!important;height:auto!important;min-height:62px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:8px 4px;font-size:22px!important;border-radius:14px!important;box-shadow:none!important;border:1px solid var(--line)}

@@ -10,6 +10,9 @@ import ir.exam.app.domain.model.UpdateStudentRequest
 interface SchoolRepository {
     suspend fun getClasses(): Result<List<SchoolClass>>
     suspend fun createClass(name: String, grade: String, fieldOfStudy: String = ""): Result<Unit>
+    /** V270 — ساخت کلاس و برگرداندن شناسهٔ آن (برای «اشتراک با مدیر» بلافاصله پس از ساخت). پیش‌فرض: شناسهٔ خالی. */
+    suspend fun createClassReturningId(name: String, grade: String, fieldOfStudy: String = ""): Result<String> =
+        createClass(name, grade, fieldOfStudy).map { "" }
     suspend fun updateClass(id: String, name: String, grade: String, fieldOfStudy: String = ""): Result<Unit>
     suspend fun deleteClass(id: String): Result<Unit>
     suspend fun getStudents(): Result<List<StudentProfile>>

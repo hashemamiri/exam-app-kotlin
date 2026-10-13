@@ -230,7 +230,7 @@
     S.loading(c);
     try {
       var draft = null; try { draft = JSON.parse(localStorage.getItem(LS_DRAFT) || 'null'); } catch (e) {}
-      if (arg.importPkg) { var pk = arg.importPkg; state = blankState('online'); state.title = pk.title; state.subject = pk.subject; state.duration = pk.duration ? String(pk.duration) : ''; state.negativeMarking = pk.negativeMarking ? String(pk.negativeMarking) : ''; state.attemptCooldown = pk.attemptCooldown ? String(pk.attemptCooldown) : ''; state.shuffleQuestions = pk.shuffleQuestions; state.shuffleOptions = pk.shuffleOptions; state.teacherMessage = pk.teacherMessage; state.attemptsAllowed = pk.attemptsAllowed; state.attemptOnTimeout = pk.attemptOnTimeout; state.gradePolicy = pk.gradePolicy; state.pickCount = pk.pickCount ? String(pk.pickCount) : ''; state.opensAt = isoToLocal(pk.opensAtIso); state.closesAt = isoToLocal(pk.closesAtIso); state.questions = pk.questions.map(function (q) { var d = decodeQuestion(q, q); d.id = uuid(); return d; }); state.selected = 0; state.dirty = true; }
+      if (arg.importPkg) { var pk = arg.importPkg; state = blankState('online'); state.title = pk.title; state.subject = pk.subject; state.duration = pk.duration ? String(pk.duration) : ''; state.negativeMarking = pk.negativeMarking ? String(pk.negativeMarking) : ''; state.attemptCooldown = pk.attemptCooldown ? String(pk.attemptCooldown) : ''; state.shuffleQuestions = pk.shuffleQuestions; state.shuffleOptions = pk.shuffleOptions; state.teacherMessage = pk.teacherMessage; state.attemptsAllowed = pk.attemptsAllowed; state.attemptOnTimeout = pk.attemptOnTimeout; state.gradePolicy = pk.gradePolicy; state.pickCount = pk.pickCount ? String(pk.pickCount) : ''; state.pickRules = (pk.pickRules && typeof pk.pickRules === 'object') ? Object.assign({}, pk.pickRules) : {}; state.opensAt = isoToLocal(pk.opensAtIso); state.closesAt = isoToLocal(pk.closesAtIso); state.questions = pk.questions.map(function (q) { var d = decodeQuestion(q, q); d.id = uuid(); return d; }); state.selected = 0; state.dirty = true; }
       else if (arg.bankEdit) { state = blankState('online'); state.bankEdit = {id: arg.bankEdit.id, cats: arg.bankEdit.cats || []}; state.subject = arg.bankEdit.subject || ''; state.title = 'سؤال بانک'; if (arg.bankEdit.question) state.questions = [decodeQuestion(arg.bankEdit.question, arg.bankEdit.question)]; else state.questions = [newQuestion('multiple')]; state.selected = 0; }
       else if (arg.examId) state = await loadOnline(arg.examId);
       /* V223.1 — مثل اپ (V113.2 onOpenPrintExam): آزمون چاپی در سازندهٔ *آنلاین* به‌صورت پیش‌نویس تازه باز می‌شود؛ رکورد چاپی دست‌نخورده می‌ماند */
@@ -259,7 +259,7 @@
     st.examId = exam.id; st.code = exam.code; st.title = exam.title || ''; st.subject = exam.subject || ''; st.duration = exam.duration != null ? String(exam.duration) : ''; st.opensAt = isoToLocal(exam.opens_at); st.closesAt = isoToLocal(exam.closes_at);
     st.questions = (Array.isArray(exam.questions) ? exam.questions : []).map(function (q, i) { return decodeQuestion(q, keys[i]); });
     st.shuffleQuestions = !!exam.shuffle_q; st.shuffleOptions = !!exam.shuffle_opt; st.negativeMarking = exam.neg_marking ? String(exam.neg_marking) : ''; st.teacherMessage = exam.teacher_message || '';
-    st.attemptsAllowed = Math.max(1, Math.min(5, Number(exam.attempts_allowed) || 1)); st.attemptOnTimeout = !!exam.attempt_on_timeout; st.gradePolicy = exam.grade_policy || 'last'; st.attemptCooldown = exam.attempt_cooldown ? String(exam.attempt_cooldown) : ''; st.pickCount = exam.pick_count ? String(exam.pick_count) : ''; /* V255 */
+    st.attemptsAllowed = Math.max(1, Math.min(5, Number(exam.attempts_allowed) || 1)); st.attemptOnTimeout = !!exam.attempt_on_timeout; st.gradePolicy = exam.grade_policy || 'last'; st.attemptCooldown = exam.attempt_cooldown ? String(exam.attempt_cooldown) : ''; st.pickCount = exam.pick_count ? String(exam.pick_count) : ''; st.pickRules = (exam.pick_rules && typeof exam.pick_rules === 'object') ? Object.assign({}, exam.pick_rules) : {}; /* V272 */ /* V255 */
     await loadOptions(st);
     try { var a = await S.rpcObj('get_exam_audience', {p_exam: examId}); st.audienceMode = a.mode || 'all'; st.audienceClasses = a.classes || []; st.audienceStudents = a.students || []; } catch (e) {}
     try { var sc = await S.rpcObj('native_exam_audience_schools_v61', {p_exam: examId}); if (sc.schools && sc.schools.length) { st.audienceMode = 'schools'; st.audienceSchools = sc.schools; st.audienceStudents = []; } } catch (e) {}
@@ -819,13 +819,11 @@
           var tt = tokenTextarea(t, {small: true}); tt.wrap.style.flex = '1';
           var img = q.optionImages[k];
           var pickImg = function () { if (img) { q.optionImages[k] = null; mark(); redraw(); return; } window.SiteStudio.open({onInsert: function (u) { q.optionImages[k] = u; mark(); redraw(); }}); };
-          var DK = document.body.classList.contains('dk');
           box.appendChild(el('div', {class: 'b-opt'}, [r, tt.wrap,
             img ? el('img', {src: img, class: 'thumb', title: 'تصویر گزینه — برای حذف کلیک کنید', onclick: pickImg}) : null,
             /* V258 — دسکتاپ مثل اپ (OptionInsertButton): یک دکمهٔ + که منوی ابزارهای درج همان گزینه را باز می‌کند */
-            DK ? el('button', {class: 'icon-btn b-opt-plus', title: 'درج در گزینهٔ ' + fa(k + 1), 'aria-label': 'درج در گزینهٔ ' + fa(k + 1), html: QI.plus, onclick: function (e) { insertMenu(e.currentTarget, t, q, {label: 'گزینهٔ ' + fa(k + 1), image: pickImg, hasImage: !!img}); }}) : null,
-            DK ? null : el('button', {class: 'icon-btn', title: 'تصویر گزینه', html: img ? '🖼✕' : '🖼', onclick: pickImg}),
-            DK ? null : el('button', {class: 'icon-btn', title: 'فرمول', html: '∑', onclick: function () { S.openFormulaEditor(t.value, t.selectionStart, t.selectionEnd).then(function (v) { if (v != null && v !== t.value) { t.value = v; t.dispatchEvent(new Event('input')); } }); }}),
+            /* V274 — گوشی هم مثل اپ (OptionInsertButton): همان دکمهٔ + با منوی فرمول/شکل/نمودار/محور/جدول/جدول تناوبی/گالری/تصویر (پیش‌تر فقط 🖼 و ∑ داشت) */
+            el('button', {class: 'icon-btn b-opt-plus', title: 'درج در گزینهٔ ' + fa(k + 1), 'aria-label': 'درج در گزینهٔ ' + fa(k + 1), html: QI.plus, onclick: function (e) { insertMenu(e.currentTarget, t, q, {label: 'گزینهٔ ' + fa(k + 1), image: pickImg, hasImage: !!img}); }}),
             el('button', {class: 'icon-btn danger', html: '✕', title: 'حذف گزینه', onclick: function () { if (q.options.length <= 2) return toast('حداقل دو گزینه لازم است.', 'err'); q.options.splice(k, 1); q.optionImages.splice(k, 1); if (q.correctIndex === k) q.correctIndex = null; else if (q.correctIndex > k) q.correctIndex--; mark(); redraw(); }})
           ]));
         });
@@ -846,9 +844,9 @@
           var l = el('textarea', {rows: 1, placeholder: 'راست ' + fa(k + 1)}); l.value = q.matchingLeft[k] || ''; l.addEventListener('input', function () { q.matchingLeft[k] = l.value; mark(); });
           var r = el('textarea', {rows: 1, placeholder: 'چپ ' + fa(k + 1)}); r.value = q.matchingRight[k] || ''; r.addEventListener('input', function () { q.matchingRight[k] = r.value; mark(); });
           var lt = tokenTextarea(l, {small: true}), rt = tokenTextarea(r, {small: true}); lt.wrap.style.flex = '1'; rt.wrap.style.flex = '1';
-          var MDK = document.body.classList.contains('dk');
-          var lp = MDK ? el('button', {class: 'icon-btn b-opt-plus', title: 'درج در مورد راست ' + fa(k + 1), html: QI.plus, onclick: function (e) { insertMenu(e.currentTarget, l, q, {label: 'مورد راست ' + fa(k + 1)}); }}) : null;
-          var rp = MDK ? el('button', {class: 'icon-btn b-opt-plus', title: 'درج در مورد چپ ' + fa(k + 1), html: QI.plus, onclick: function (e) { insertMenu(e.currentTarget, r, q, {label: 'مورد چپ ' + fa(k + 1)}); }}) : null;
+          /* V274 — دکمهٔ + درج برای موردهای جورکردنی روی گوشی هم (مثل اپ) */
+          var lp = el('button', {class: 'icon-btn b-opt-plus', title: 'درج در مورد راست ' + fa(k + 1), html: QI.plus, onclick: function (e) { insertMenu(e.currentTarget, l, q, {label: 'مورد راست ' + fa(k + 1)}); }});
+          var rp = el('button', {class: 'icon-btn b-opt-plus', title: 'درج در مورد چپ ' + fa(k + 1), html: QI.plus, onclick: function (e) { insertMenu(e.currentTarget, r, q, {label: 'مورد چپ ' + fa(k + 1)}); }});
           var s = el('select'); s.appendChild(el('option', {value: '', text: '— جفت —'}));
           q.matchingRight.forEach(function (_, j) { var o = el('option', {value: String(j), text: 'چپ ' + fa(j + 1)}); if (q.matchingPairs[k] === j) o.selected = true; s.appendChild(o); });
           s.addEventListener('change', function () { if (s.value === '') delete q.matchingPairs[k]; else q.matchingPairs[k] = Number(s.value); mark(); });
@@ -862,7 +860,30 @@
     }
     /* --- مشخصات آزمون (آنلاین) --- */
     /* V166 — فرم «مشخصات آزمون» مشترک: پنجرهٔ بازشو (گوشی/تبلت) و ستون راست سازندهٔ دسکتاپ */
-    function pickHint(st) { var n = parseInt(st.pickCount, 10) || 0, t = st.questions.length; return (n > 0 && n < t) ? 'هر دانش‌آموز ' + fa(n) + ' سؤال از ' + fa(t) + ' سؤال می‌بیند؛ نمره از جمع بارم همان ' + fa(n) + ' سؤال.' : 'همهٔ ' + fa(t) + ' سؤال نمایش داده می‌شود.'; }
+    function pickHint(st) {
+      var t = st.questions.length, rules = pickRulesClean(st), keys = Object.keys(rules);
+      /* V272 — قاعده‌های بخش‌بندی‌شده بر پیک ساده مقدم‌اند */
+      if (keys.length) {
+        var cnt = typeCounts(st), shown = 0, parts = [];
+        TYPES.forEach(function (tp) { var c = cnt[tp[0]] || 0; if (!c) return; var n = rules[tp[0]] != null ? Math.min(rules[tp[0]], c) : c; shown += n; parts.push(fa(n) + ' از ' + fa(c) + ' ' + tp[1]); });
+        return 'هر دانش‌آموز ' + fa(shown) + ' سؤال از ' + fa(t) + ' می‌بیند (' + parts.join('، ') + ')؛ نمره از جمع بارم همان سؤال‌ها.';
+      }
+      var n = parseInt(st.pickCount, 10) || 0; return (n > 0 && n < t) ? 'هر دانش‌آموز ' + fa(n) + ' سؤال از ' + fa(t) + ' سؤال می‌بیند؛ نمره از جمع بارم همان ' + fa(n) + ' سؤال.' : 'همهٔ ' + fa(t) + ' سؤال نمایش داده می‌شود.';
+    }
+    function typeCounts(st) { var c = {}; st.questions.forEach(function (q) { var k = q.type === 'long' ? 'essay' : q.type; c[k] = (c[k] || 0) + 1; }); return c; }
+    function pickRulesClean(st) { var out = {}, r = st.pickRules || {}; Object.keys(r).forEach(function (k) { var n = parseInt(r[k], 10); if (n > 0) out[k] = n; }); return out; }
+    /* V272 — «۵۰ سؤال بساز، ۲۰ تا تصادفی» با بخش‌بندی: برای هر نوع سؤالِ موجود یک فیلد «چند تا از N»؛ خالی = همهٔ آن نوع */
+    function pickRulesBox(st) {
+      var cnt = typeCounts(st), box = el('div', {class: 'field'}, [el('label', {text: 'انتخاب تصادفی بر اساس نوع سؤال (خالی = همهٔ آن نوع)'})]);
+      var grid = el('div', {class: 'b-pick-rules', style: 'display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px'});
+      var any = false;
+      TYPES.forEach(function (tp) { var c = cnt[tp[0]] || 0; if (!c) return; any = true; var v = (st.pickRules || {})[tp[0]]; var i = el('input', {type: 'number', min: '0', max: String(c), placeholder: 'همه', value: v != null && v !== '' ? String(v) : '', style: 'width:100%', 'aria-label': tp[1]}); i.addEventListener('input', function () { st.pickRules = st.pickRules || {}; var n = en(i.value).replace(/[^0-9]/g, ''); if (n === '') delete st.pickRules[tp[0]]; else st.pickRules[tp[0]] = Math.min(c, parseInt(n, 10)); mark(); hintEl.textContent = pickHint(st); }); grid.appendChild(el('div', {}, [el('div', {class: 'muted', style: 'font-size:12px;margin-bottom:4px', text: tp[1] + ' (' + fa(c) + ' سؤال)'}), i])); });
+      if (!any) return null;
+      box.appendChild(grid);
+      var hintEl = el('div', {class: 'muted', style: 'font-size:12px;margin-top:6px', text: pickHint(st)});
+      box.appendChild(hintEl);
+      return box;
+    }
     function settingsForm(m_) {
       function redrawSettings() { var y = m_.scrollTop; m_.innerHTML = ''; settingsForm(m_); m_.scrollTop = y; }
       /* V228 — قالب‌های تنظیمات آزمون (مدت، نمرهٔ منفی، دفعات، سیاست نمره، فاصله، به‌هم‌ریختن، ثبت خودکار، پیام معلم) در همین مرورگر ذخیره می‌شوند */
@@ -906,6 +927,7 @@
         inp('نمایش تصادفی چند سؤال از کل؟ (خالی = همه)', state.pickCount || '', function (v) { state.pickCount = en(v).replace(/[^0-9]/g, ''); mark(); }, 'number'),
         el('div', {class: 'muted', style: 'font-size:12px', text: pickHint(state)})
       ]));
+      var prb = pickRulesBox(state); if (prb) m_.appendChild(prb); /* V272 */
       m_.appendChild(el('div', {class: 'row', style: 'margin-bottom:12px'}, [chk('به‌هم‌ریختن سؤال‌ها', state.shuffleQuestions, function (v) { state.shuffleQuestions = v; mark(); }), chk('به‌هم‌ریختن گزینه‌ها', state.shuffleOptions, function (v) { state.shuffleOptions = v; mark(); }), chk('ثبت خودکار با پایان زمان', state.attemptOnTimeout, function (v) { state.attemptOnTimeout = v; mark(); })]));
       var tm = el('textarea', {rows: 2, style: 'width:100%;border:1px solid var(--line);border-radius:10px;padding:8px'}); tm.value = state.teacherMessage; tm.addEventListener('input', function () { state.teacherMessage = tm.value; mark(); });
       m_.appendChild(el('div', {class: 'field'}, [el('label', {text: 'پیام معلم به دانش‌آموز (اختیاری)'}), tm]));
@@ -937,7 +959,7 @@
     function syncMeta() { var meta = top.querySelector('.b-meta'); if (meta) meta.textContent = [state.title, state.subject, state.duration ? fa(state.duration) + ' دقیقه' : ''].filter(Boolean).join(' · ') || 'عنوان، درس و مدت را در «مشخصات آزمون» وارد کنید.'; }
     /* --- بانک سؤال --- */
     /* V259.3 — بانک سؤال در دسکتاپ برای آزمون چاپی هم در دسترس است (گوشی: فقط آنلاین، مثل قبل) */
-    function bankAllowed() { return state.mode === 'online' || document.body.classList.contains('dk'); }
+    function bankAllowed() { return true; } /* V274 — بانک سؤال برای آزمون چاپی روی گوشی هم (مثل منوی شعاعی اپ: onBank در هر دو حالت) */
     async function openBank() {
       var bg = el('div', {class: 'modal-bg'});
       var m = el('div', {class: 'modal wide b-bank-modal'}, [el('button', {class: 'x', text: '✕', onclick: function () { bg.remove(); }}), el('h2', {text: '🏦 بانک سؤال'})]);
@@ -987,6 +1009,7 @@
       S.openPrintPreview(payload, {title: state.title || 'آزمون', examId: state.mode === 'online' ? ((state.dirty || !state.examId) ? 'local' : state.examId) : (state.printId || 'local'), printExam: state.mode === 'print' ? (state.printId || '') : undefined, printDirty: state.mode === 'print' && !!state.printDirty, printMode: typeof printMode === 'string' ? printMode : '', onSnapshot: function (snap) { applySnapshot(snap); }});
     }
     window.__builderPreview = preview;
+    window.__builderStudentPreview = studentPreview; /* V274 — FAB چشم سازندهٔ آنلاین گوشی (مثل اپ: ذخیره + چشم) */
     function applySnapshot(snap) {
       /* بازگشت چیدمان/قالب‌بندی پیش‌نمایش به سؤال‌ها (مثل ExamBuilderViewModel.applyLayoutSnapshot) */
       try {
@@ -1049,7 +1072,7 @@
         var code = state.code || genCode();
         var payload = {operation_id: uuid(), id: examId, code: code, title: state.title.trim(), subject: state.subject.trim(), duration: Math.max(0, Math.min(1440, parseInt(state.duration, 10) || 0)), opens_at: opens, closes_at: closes,
           total_score: state.questions.reduce(function (s, q) { return s + (Number(q.score) || 0); }, 0), shuffle_q: !!state.shuffleQuestions, shuffle_opt: !!state.shuffleOptions, neg_marking: parseFloat(state.negativeMarking) || 0,
-          teacher_message: state.teacherMessage.trim() || null, attempts_allowed: Math.max(1, Math.min(5, state.attemptsAllowed)), attempt_on_timeout: !!state.attemptOnTimeout, grade_policy: state.gradePolicy, attempt_cooldown: Math.max(0, Math.min(1440, parseInt(state.attemptCooldown, 10) || 0)), pick_count: Math.max(0, Math.min(9999, parseInt(state.pickCount, 10) || 0)),
+          teacher_message: state.teacherMessage.trim() || null, attempts_allowed: Math.max(1, Math.min(5, state.attemptsAllowed)), attempt_on_timeout: !!state.attemptOnTimeout, grade_policy: state.gradePolicy, attempt_cooldown: Math.max(0, Math.min(1440, parseInt(state.attemptCooldown, 10) || 0)), pick_count: Math.max(0, Math.min(9999, parseInt(state.pickCount, 10) || 0)), pick_rules: pickRulesClean(state), /* V272 */
           questions: enc.publicQuestions, answer_key: enc.answerKey, audience: state.audienceMode, classes: state.audienceClasses.slice().sort(), students: state.audienceStudents.slice().sort(), schools: state.audienceSchools.slice().sort()};
         var n = state.questions.length;
         if (!(await S.confirmDlg('ذخیرهٔ آزمون', 'آزمون «' + esc(state.title) + '» با ' + fa(n) + ' سؤال ذخیره می‌شود. هزینهٔ سؤال‌های جدید (' + fa('1,000') + ' تومان/سؤال) و رسانه‌ها از کیف پول کسر می‌شود.', 'ذخیره'))) return;

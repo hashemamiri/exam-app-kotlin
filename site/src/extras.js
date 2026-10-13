@@ -114,7 +114,20 @@
           stCard.appendChild(el('div', {class: 'rp-bar'}, [el('span', {class: 'g', style: 'width:' + pct(graded) + '%'}), el('span', {class: 'p', style: 'width:' + pct(pending) + '%'})]));
           stCard.appendChild(el('div', {class: 'rp-legend'}, [el('i', {class: 'g'}), el('span', {text: 'تصحیح‌شده'}), el('b', {text: fa(graded) + ' پاسخ · ' + fa(pct(graded)) + '٪'})]));
           stCard.appendChild(el('div', {class: 'rp-legend'}, [el('i', {class: 'p'}), el('span', {text: 'در انتظار تصحیح'}), el('b', {text: fa(pending) + ' پاسخ · ' + fa(pct(pending)) + '٪'})]));
+          /* V270 — جدول آزمون‌ها: پاسخ، تصحیح‌شده، مانده، میانگین/کمینه/بیشینهٔ درصد؛ کلیک روی ردیف → تصحیح همان آزمون */
+          exTbl.innerHTML = '';
+          exTbl.appendChild(el('h3', {text: 'آزمون‌ها'}));
+          exTbl.appendChild(el('table', {class: 'tbl tbl-cyan rp-exams'}, [el('thead', {}, [el('tr', {}, ['آزمون', 'پاسخ', 'تصحیح‌شده', 'مانده', 'میانگین', 'کمترین', 'بیشترین'].map(function (h) { return el('th', {text: h}); }))]),
+            el('tbody', {}, exams.map(function (e) {
+              var mine = answersByExam[e.id] || [], g = mine.filter(function (a) { return a.graded; }), mx = Number(e.total_score) || 0;
+              var ps = g.map(function (a) { var m = answerMax(a, mx); return m > 0 ? Number(a.total_grade) * 100 / m : null; }).filter(function (x) { return x != null; });
+              var avg = ps.length ? ps.reduce(function (s2, x) { return s2 + x; }, 0) / ps.length : null;
+              function pc(v) { return v == null ? '—' : fa(Math.round(v)) + '٪'; }
+              return el('tr', {style: 'cursor:pointer', title: 'باز کردن تصحیح این آزمون', onclick: function () { S.go('grading', {examId: e.id}); }}, [el('td', {html: '<b>' + esc(e.title || 'آزمون') + '</b>' + (e.subject ? ' <span class="muted">· ' + esc(e.subject) + '</span>' : '')}), el('td', {text: fa(mine.length)}), el('td', {text: fa(g.length)}), el('td', {text: fa(mine.length - g.length)}), el('td', {text: pc(avg)}), el('td', {text: pc(ps.length ? Math.min.apply(null, ps) : null)}), el('td', {text: pc(ps.length ? Math.max.apply(null, ps) : null)})]);
+            }))]));
         };
+        var exTbl = el('div', {class: 'card', style: 'margin-top:12px'}, [el('p', {class: 'muted', text: 'در حال دریافت…'})]);
+        c.appendChild(exTbl);
         if (st.allAnswers) st.onAnswers(st.allAnswers);
         return;
       }
@@ -176,7 +189,7 @@
     var combined = enc.publicQuestions.map(function (p, i) { var o = Object.assign({}, p, includeKey ? (enc.answerKey[i] || {}) : {}); delete o.i; return o; });
     var prof = null; try { prof = await S.api.profile(); } catch (e) {}
     var root = {_app: 'exam-system', _kind: 'exam', _v: 2, exported_at: new Date().toISOString(), by: ((prof && (prof.displayName || prof.fullName)) || '').slice(0, 120),
-      exam: {title: String(full.title || '').slice(0, 250), subject: String(full.subject || '').slice(0, 250), duration: Math.max(0, Math.min(1440, Number(full.duration) || 0)), opens_at: full.opens_at || null, closes_at: full.closes_at || null, neg_marking: Math.max(0, Number(full.neg_marking) || 0), shuffle_q: !!full.shuffle_q, shuffle_opt: !!full.shuffle_opt, teacher_message: String(full.teacher_message || '').slice(0, 1000), attempts_allowed: Math.max(1, Math.min(5, Number(full.attempts_allowed) || 1)), attempt_on_timeout: !!full.attempt_on_timeout, grade_policy: full.grade_policy || 'last', answer_key: !!includeKey, attempt_cooldown: Math.max(0, Math.min(1440, Number(full.attempt_cooldown) || 0)), pick_count: Math.max(0, Math.min(9999, Number(full.pick_count) || 0)), questions: combined}};
+      exam: {title: String(full.title || '').slice(0, 250), subject: String(full.subject || '').slice(0, 250), duration: Math.max(0, Math.min(1440, Number(full.duration) || 0)), opens_at: full.opens_at || null, closes_at: full.closes_at || null, neg_marking: Math.max(0, Number(full.neg_marking) || 0), shuffle_q: !!full.shuffle_q, shuffle_opt: !!full.shuffle_opt, teacher_message: String(full.teacher_message || '').slice(0, 1000), attempts_allowed: Math.max(1, Math.min(5, Number(full.attempts_allowed) || 1)), attempt_on_timeout: !!full.attempt_on_timeout, grade_policy: full.grade_policy || 'last', answer_key: !!includeKey, attempt_cooldown: Math.max(0, Math.min(1440, Number(full.attempt_cooldown) || 0)), pick_count: Math.max(0, Math.min(9999, Number(full.pick_count) || 0)), pick_rules: (full.pick_rules && typeof full.pick_rules === 'object') ? full.pick_rules : {}, questions: combined}};
     var content = PKG_TAG + '\n' + utf8b64(JSON.stringify(root));
     download('آزمون-' + safeName(full.title) + (includeKey ? '' : '-بدون-پاسخنامه') + PKG_EXT, content, 'application/octet-stream');
   }
@@ -196,7 +209,7 @@
     var ex = root.exam; if (!ex) throw new Error('بدنه آزمون در فایل وجود ندارد.');
     var qs = Array.isArray(ex.questions) ? ex.questions : [];
     if (qs.length < 1 || qs.length > 500) throw new Error('تعداد سؤال‌های فایل باید بین ۱ و ۵۰۰ باشد.');
-    return {title: String(ex.title || '').slice(0, 250) || 'آزمون واردشده', subject: String(ex.subject || '').slice(0, 250), duration: Math.max(0, Math.min(1440, Number(ex.duration) || 0)), negativeMarking: Math.max(0, Number(ex.neg_marking) || 0), shuffleQuestions: !!ex.shuffle_q, shuffleOptions: !!ex.shuffle_opt, teacherMessage: String(ex.teacher_message || '').slice(0, 1000), attemptsAllowed: Math.max(1, Math.min(5, Number(ex.attempts_allowed) || 1)), attemptOnTimeout: !!ex.attempt_on_timeout, gradePolicy: ['last', 'best', 'all'].indexOf(ex.grade_policy) >= 0 ? ex.grade_policy : 'last', attemptCooldown: Math.max(0, Math.min(1440, Number(ex.attempt_cooldown) || 0)), pickCount: Math.max(0, Math.min(9999, Number(ex.pick_count) || 0)), questions: qs, hasKey: ex.answer_key !== false, by: root.by || ''};
+    return {title: String(ex.title || '').slice(0, 250) || 'آزمون واردشده', subject: String(ex.subject || '').slice(0, 250), duration: Math.max(0, Math.min(1440, Number(ex.duration) || 0)), negativeMarking: Math.max(0, Number(ex.neg_marking) || 0), shuffleQuestions: !!ex.shuffle_q, shuffleOptions: !!ex.shuffle_opt, teacherMessage: String(ex.teacher_message || '').slice(0, 1000), attemptsAllowed: Math.max(1, Math.min(5, Number(ex.attempts_allowed) || 1)), attemptOnTimeout: !!ex.attempt_on_timeout, gradePolicy: ['last', 'best', 'all'].indexOf(ex.grade_policy) >= 0 ? ex.grade_policy : 'last', attemptCooldown: Math.max(0, Math.min(1440, Number(ex.attempt_cooldown) || 0)), pickCount: Math.max(0, Math.min(9999, Number(ex.pick_count) || 0)), pickRules: (ex.pick_rules && typeof ex.pick_rules === 'object') ? ex.pick_rules : {}, questions: qs, hasKey: ex.answer_key !== false, by: root.by || ''};
   }
   async function importExam() {
     var f = await pickFile('.azmoon,.json,.txt,application/octet-stream'); if (!f) return;

@@ -32,6 +32,8 @@ data class ExamBuilderDraftPayload(
     val audienceSchools: Set<String> = emptySet(),
     // V255 — پیک تصادفی؛ default برای پیش‌نویس‌های قدیمی.
     val pickCount: String = "",
+    // V272 — قاعده‌های نوع سؤال؛ default برای پیش‌نویس‌های قدیمی.
+    val pickRules: Map<String, Int> = emptyMap(),
     val savedAt: Long
 )
 
@@ -69,6 +71,7 @@ class ExamBuilderDraftStore(private val dao: ExamBuilderDraftDao) {
             audienceStudents = state.audienceStudents,
             audienceSchools = state.audienceSchools,
             pickCount = state.pickCount,
+            pickRules = state.pickRules,
             savedAt = now
         )
         dao.upsert(

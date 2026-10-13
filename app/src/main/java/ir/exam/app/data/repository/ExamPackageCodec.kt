@@ -42,7 +42,8 @@ object ExamPackageCodec {
         val by: String,
         val opensAtIso: String? = null,
         val closesAtIso: String? = null,
-        val pickCount: Int = 0
+        val pickCount: Int = 0,
+        val pickRules: Map<String, Int> = emptyMap() // V272
     )
 
     fun encode(source: ExportedExam, includeAnswerKey: Boolean = true): String {
@@ -82,6 +83,7 @@ object ExamPackageCodec {
                 put("answer_key", includeAnswerKey)
                 put("attempt_cooldown", source.attemptCooldown.coerceIn(0, 1440))
                 put("pick_count", source.pickCount.coerceIn(0, 9999))
+                put("pick_rules", buildJsonObject { source.pickRules.forEach { (k, v) -> if (v > 0) put(k, v) } }) // V272
                 put("questions", combined)
             })
         }
@@ -120,6 +122,7 @@ object ExamPackageCodec {
             gradePolicy = exam["grade_policy"]?.jsonPrimitive?.contentOrNull?.takeIf { it in setOf("last", "best", "all") } ?: "last",
             attemptCooldown = exam["attempt_cooldown"]?.jsonPrimitive?.intOrNull?.coerceIn(0, 1440) ?: 0,
             pickCount = exam["pick_count"]?.jsonPrimitive?.intOrNull?.coerceIn(0, 9999) ?: 0,
+            pickRules = (exam["pick_rules"] as? JsonObject)?.mapNotNull { (k, v) -> (v as? JsonPrimitive)?.intOrNull?.takeIf { it > 0 }?.let { k to it } }?.toMap() ?: emptyMap(), // V272
             questions = questions,
             opensAtIso = exam["opens_at"]?.jsonPrimitive?.contentOrNull?.takeIf(String::isNotBlank),
             closesAtIso = exam["closes_at"]?.jsonPrimitive?.contentOrNull?.takeIf(String::isNotBlank),

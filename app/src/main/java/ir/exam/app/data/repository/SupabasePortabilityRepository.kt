@@ -66,6 +66,7 @@ class SupabasePortabilityRepository {
                 gradePolicy = exam.gradePolicy,
                 attemptCooldown = exam.attemptCooldown,
                 pickCount = exam.pickCount,
+                pickRules = exam.pickRules, // V272
                 questions = questions,
                 by = profile.displayName?.takeIf(String::isNotBlank) ?: profile.fullName.orEmpty(),
                 opensAtIso = exam.opensAt,

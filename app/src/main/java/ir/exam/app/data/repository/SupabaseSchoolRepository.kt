@@ -40,6 +40,17 @@ class SupabaseSchoolRepository : SchoolRepository {
         }).throwIfError()
     }
 
+    // V270 — همان RPC؛ شناسهٔ کلاس تازه را برمی‌گرداند تا «اشتراک با مدیر» هنگام ساخت انجام شود.
+    override suspend fun createClassReturningId(name: String, grade: String, fieldOfStudy: String): Result<String> = runCatching {
+        require(name.trim().isNotEmpty()) { "نام کلاس را وارد کنید." }
+        rpcObject("native_save_class_v28", buildJsonObject {
+            put("p_class", null as String?)
+            put("p_name", name.trim())
+            put("p_grade", grade.trim())
+            put("p_field", fieldOfStudy.trim())
+        }).throwIfError()["id"]?.jsonPrimitive?.contentOrNull.orEmpty()
+    }
+
     override suspend fun updateClass(
         id: String,
         name: String,

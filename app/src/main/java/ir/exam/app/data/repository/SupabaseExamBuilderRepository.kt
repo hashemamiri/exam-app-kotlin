@@ -113,6 +113,7 @@ class SupabaseExamBuilderRepository(context: Context) {
                 gradePolicy = exam.gradePolicy,
                 attemptCooldown = exam.attemptCooldown.toString(),
                 pickCount = exam.pickCount.takeIf { it > 0 }?.toString().orEmpty(),
+                pickRules = exam.pickRules.filterValues { it > 0 }, // V272
                 audienceMode = if (audienceSchools.isNotEmpty()) "schools" else audience.mode,
                 audienceClasses = audience.classes,
                 audienceStudents = if (audienceSchools.isNotEmpty()) emptySet() else audience.students,
@@ -174,6 +175,8 @@ class SupabaseExamBuilderRepository(context: Context) {
             put("grade_policy", state.gradePolicy)
             put("attempt_cooldown", state.attemptCooldown.toIntOrNull()?.coerceIn(0, 1440) ?: 0)
             put("pick_count", state.pickCount.toIntOrNull()?.coerceIn(0, 9999) ?: 0)
+            // V272 — قاعده‌های نوع سؤال؛ سرور فقط مقدارهای عددی مثبت را نگه می‌دارد.
+            put("pick_rules", buildJsonObject { state.pickRules.forEach { (k, v) -> if (v > 0) put(k, v) } })
             put("questions", encoded.publicQuestions)
             put("answer_key", encoded.answerKey)
             put("audience", state.audienceMode)

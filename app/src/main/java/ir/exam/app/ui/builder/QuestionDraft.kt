@@ -7,6 +7,26 @@ import kotlinx.serialization.json.JsonObject
 @Serializable
 enum class QuestionType { ESSAY, MULTIPLE_CHOICE, TRUE_FALSE, FILL_BLANK, NUMERIC, MATCHING }
 
+/** V272 — نام سیمیِ نوع سؤال (همان کلیدهای سرور/سایت: essay, multiple, truefalse, fill, numeric, matching). */
+fun QuestionType.wireName(): String = when (this) {
+    QuestionType.ESSAY -> "essay"
+    QuestionType.MULTIPLE_CHOICE -> "multiple"
+    QuestionType.TRUE_FALSE -> "truefalse"
+    QuestionType.FILL_BLANK -> "fill"
+    QuestionType.NUMERIC -> "numeric"
+    QuestionType.MATCHING -> "matching"
+}
+
+/** V272 — برچسب فارسی نوع سؤال برای فیلدهای «انتخاب تصادفی بر اساس نوع». */
+fun QuestionType.faLabel(): String = when (this) {
+    QuestionType.ESSAY -> "تشریحی"
+    QuestionType.MULTIPLE_CHOICE -> "چندگزینه‌ای"
+    QuestionType.TRUE_FALSE -> "صحیح / غلط"
+    QuestionType.FILL_BLANK -> "جای‌خالی"
+    QuestionType.NUMERIC -> "عددی"
+    QuestionType.MATCHING -> "جورکردنی"
+}
+
 /**
  * V61.6 — رنگ پاستلی اختصاصی هر نوع سؤال (درخواست کاربر):
  * تشریحی=صورتی #FFD1DC، چندگزینه‌ای=آبی #AEC6CF، صحیح/غلط=سبز #B4EEB4،
@@ -365,6 +385,8 @@ data class ExamBuilderState(
     val attemptCooldown: String = "",
     // V255 — «نمایش تصادفی N سؤال از کل» (خالی/۰ = همه).
     val pickCount: String = "",
+    // V272 — قاعده‌های بخش‌بندی‌شده: نوع سؤال (essay/multiple/…) → چند تا تصادفی؛ نوع بدون قاعده = همه. بر pickCount مقدم است.
+    val pickRules: Map<String, Int> = emptyMap(),
     val audienceMode: String = "all",
     val audienceClasses: Set<String> = emptySet(),
     val audienceStudents: Set<String> = emptySet(),
@@ -446,6 +468,7 @@ data class ExamImportDraft(
     val questions: List<QuestionDraft>,
     val opensAtIso: String? = null,
     val pickCount: Int = 0,
+    val pickRules: Map<String, Int> = emptyMap(), // V272
     val closesAtIso: String? = null,
     val exportedBy: String? = null,
     // V101 — اگر این import یک «آزمون چاپیِ محلی» است، شناسهٔ رکوردش:
