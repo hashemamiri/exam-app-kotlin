@@ -19425,6 +19425,11 @@ CI: `compileDebugUnitTestKotlin` به‌خاطر `assertFalse` بدون import �
 - باگ V202.5: `var LANDING_TILES` داخل `paintAuth` بعد از خطی که `landing()` را صدا می‌زد تعریف شده بود → به‌خاطر hoisting مقدارش undefined و `.map` خطا می‌داد → صفحهٔ اول خالی. حالا کنار `authActive` در سطح ماژول است (تست ترتیب را پین می‌کند).
 - دروازهٔ صفحهٔ اول: mobile.js `entered()/enter()` با `sessionStorage['m-entered']`، `gateActive() = MQ && user && !entered`؛ app.js `render()` پیش از m-mode اگر gateActive → paintAuth (landing حتی با user). دکمه: user ⇒ `enter(); S.render()`؛ وگرنه `goA('login')`؛ پیوند ثبت‌نام فقط بدون user. `afterLogin()` → `SiteMobile.enter()`.
 
+### V268 — صف ورود (۴۲۹) در اپ و سایت
+- یافتهٔ تست بار ۱۰۰ نفره (۷۲ دانش‌آموز تازه `qa_load_001..072` در سه کلاس «فسا» با یک bulk ۲۴تایی برای هر کلاس — تأیید عملی V265): از ۱۰۲ ورود هم‌زمان فقط ۳۰ تا موفق، ۷۱ تا `over_request_rate_limit`. طبق مستندات Supabase سطل `/auth/v1/token` **ظرفیت آنی ثابت ۳۰** به ازای هر IP دارد و عدد داشبورد فقط نرخ پر شدن است (اندازه‌گیری: ≥ ۱ ورود/ثانیه بعد از انفجار اولیه). ورود با رمز و تازه‌سازی توکن هر دو از همین سطل مصرف می‌کنند (تنظیم مربوطه در داشبورد: Token refresh / token endpoint، نه «sign-ups and sign-ins» که برای /signup و /otp است).
+- اپ: `SupabaseAuthRepository.signInQueued` — تکرار `auth.signInWith(Email)` فقط وقتی `UserFacingError.isRateLimited`، تا `LOGIN_QUEUE_MS = 120_000`، فاصلهٔ ۳–۷ ثانیه؛ `CancellationException` عبور می‌کند. تست `V268_LoginQueueTest`.
+- سایت `authApi.signInPassword`: همان حلقه با `LOGIN_QUEUE_MS` و یک toast «در صف ورود هستید…» (روی ۳ تکرار داخلی `http()` سوار است). تست `V268_SiteLoginQueueTest`. نسخه 1.01.54.
+
 ### V267 — سایت (فقط سایت، بدون bump): دسکتاپ با پنجرهٔ کوچک + رفرش به همان صفحه
 - تست بار دوباره پس از بالا بردن سقف‌های Auth توسط کاربر: ۲۸/۲۸ ورود موفق، ۳۰۰ درخواست هم‌زمان `get_exam_for_student` بدون خطا (p95 ≈ 1.1s).
 - چیدمان گوشی فقط برای دستگاه لمسی: `mobile.js` `MQ = (max-width: 860px) and (pointer: coarse)`؛ در `site.css` همهٔ `@media (max-width:≤1100px)` با `and (pointer:coarse)` و `(min-width:861px)` با `,(pointer:fine)` گره خورد؛ `@media (pointer:fine){html,body{min-width:1024px}}` → کوچک کردن پنجرهٔ مرورگر دسکتاپ اسکرول افقی می‌دهد، نه چیدمان موبایل. تبلت‌ها (pointer:coarse) مثل قبل.

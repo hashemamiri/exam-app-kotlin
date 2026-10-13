@@ -7,6 +7,7 @@ import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.auth.providers.builtin.Email
 import io.github.jan.supabase.auth.providers.builtin.OTP
 import io.github.jan.supabase.postgrest.postgrest
+import ir.exam.app.core.network.UserFacingError
 import ir.exam.app.data.dto.NativeProfileDto
 import ir.exam.app.data.local.AuthUserCache
 import ir.exam.app.data.remote.SupabaseProvider
@@ -15,6 +16,7 @@ import ir.exam.app.domain.model.UserRole
 import ir.exam.app.domain.repository.AuthRepository
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
@@ -22,6 +24,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.withTimeoutOrNull
+import kotlin.random.Random
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.buildJsonObject
@@ -142,11 +145,31 @@ class SupabaseAuthRepository(context: Context) : AuthRepository {
         } else {
             AuthIdentifier.passwordLoginEmail(identifier)
         }
-        auth.signInWith(Email) {
-            email = loginEmail
-            this.password = password
-        }
+        signInQueued(loginEmail, password)
         persistUser(currentProfile())
+    }
+
+    /**
+     * V268 — صف ورود: سطل Supabase Auth حداکثر ۳۰ ورود آنی به ازای هر IP دارد و با نرخ تنظیم‌شده پر می‌شود.
+     * وقتی یک کلاس هم‌زمان وارد می‌شود، پاسخ ۴۲۹ تا ۱۲۰ ثانیه با فاصلهٔ تصادفی ۳–۷ ثانیه دوباره تلاش می‌شود؛
+     * بقیهٔ خطاها (رمز نادرست و …) بلافاصله برمی‌گردند.
+     */
+    private suspend fun signInQueued(loginEmail: String, password: String) {
+        val started = System.currentTimeMillis()
+        while (true) {
+            try {
+                auth.signInWith(Email) {
+                    email = loginEmail
+                    this.password = password
+                }
+                return
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                if (!UserFacingError.isRateLimited(e.message) || System.currentTimeMillis() - started > LOGIN_QUEUE_MS) throw e
+                delay(3000L + Random.nextLong(4000L))
+            }
+        }
     }
 
     /**
@@ -405,3 +428,5 @@ class SupabaseAuthRepository(context: Context) : AuthRepository {
         const val PROFILE_REFRESH_TIMEOUT_MS = 5_000L
     }
 }
+
+private const val LOGIN_QUEUE_MS = 120_000L

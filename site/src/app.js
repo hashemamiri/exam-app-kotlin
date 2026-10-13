@@ -354,6 +354,7 @@
   }
   if (PERF_ON) { window.addEventListener('load', function () { setTimeout(perfRender, 500); setTimeout(perfRender, 4000); setTimeout(perfRender, 10000); }); }
   var RETRY_DELAYS = [700, 1800, 4000];
+  var LOGIN_QUEUE_MS = 120000;
   function sleep(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
   async function http(path, opts) {
     requireKey();
@@ -433,7 +434,17 @@
   function select(table, query) { return http('/rest/v1/' + table + '?' + query); }
   var authApi = {
     signInPassword: async function (email, password) {
-      var data = await http('/auth/v1/token?grant_type=password', {method: 'POST', auth: false, body: {email: email, password: password}});
+      /* V268 — صف ورود: سطل Supabase Auth حداکثر ۳۰ ورود آنی به ازای هر IP دارد و با نرخ تنظیم‌شده پر می‌شود؛
+         وقتی یک کلاس هم‌زمان وارد می‌شود، ۴۲۹ها تا ۱۲۰ ثانیه با فاصلهٔ تصادفی ۳–۷ ثانیه دوباره تلاش می‌کنند (بعد از ۳ تکرار داخلی http). */
+      var started = Date.now(), data, told = false;
+      for (;;) {
+        try { data = await http('/auth/v1/token?grant_type=password', {method: 'POST', auth: false, body: {email: email, password: password}}); break; }
+        catch (e) {
+          if (e.status !== 429 || Date.now() - started > LOGIN_QUEUE_MS) throw e;
+          if (!told) { told = true; toast('ورود هم‌زمان زیاد است؛ در صف ورود هستید، لطفاً صبر کنید…', 'info'); }
+          await sleep(3000 + Math.random() * 4000);
+        }
+      }
       saveSession(data); return data;
     },
     sendOtp: function (email, createUser, data) {
