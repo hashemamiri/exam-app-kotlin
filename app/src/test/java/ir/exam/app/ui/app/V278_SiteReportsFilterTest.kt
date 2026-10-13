@@ -14,13 +14,13 @@ class V278_SiteReportsFilterTest {
     fun `site reports page mirrors app V277`() {
         val x = src("site/src/extras.js")
         assertFalse("rp-title" in x)
-        assertTrue("S.rpcObj('native_teacher_schools_v61', {})" in x && "S.rpc('native_teacher_school_classes_v61', {p_school: sc.id})" in x)
-        assertTrue("'. مدرسه'" in x && "'. کلاس'" in x && "'. دانش‌آموزان ('" in x && "'. آزمون‌ها ('" in x)
+        assertTrue("S.rpcObj('native_teacher_schools_v61', {})" in x && "S.rpc('native_teacher_school_classes_v61', {p_school: id})" in x)
+        assertTrue("'. مدرسه'" in x && "'. کلاس'" in x && "'. دانش‌آموزان'" in x && "'. آزمون‌ها'" in x)
         assertTrue("text: 'نمایش کارنامه‌ها'" in x && "if (st.classId && st.shown) compute();" in x)
         assertTrue("st.roster.filter(function (s) { return !!st.students[s.id]; })" in x)
         assertTrue("function reportCardModal(r, sel, cls)" in x && "class: 'rp-ic'" in x && "el('th', {class: 'num', text: 'کارنامه'})" in x)
         assertFalse("text: '📈 گزارش کلاس'" in x)
         val css = src("site/src/site.css")
-        assertTrue(".rp-step{" in css && ".rp-ic{" in css && ".rp-chips{" in css)
+        assertTrue(".rp-rows{" in css && ".rp-ic{" in css && ".rp-pick-modal{" in css) /* V279: ردیف‌های انتخاب جای چیپ‌ها */
     }
 }

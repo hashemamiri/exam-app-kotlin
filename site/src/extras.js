@@ -137,42 +137,66 @@
       var filt = el('div', {class: 'card rp-filter'}); c.appendChild(filt);
       var out = el('div', {class: 'card', style: 'display:none'}); c.appendChild(out); /* V278 — تا «نمایش کارنامه‌ها» پنهان */
       function docIcon() { return '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="M9 13h6M9 17h6"/></svg>'; }
-      function chip(text, on, fn) { return el('button', {class: 'chip ' + (on ? 'brand' : 'off'), text: text, onclick: fn}); }
-      function stepBox(title, chips, trailing) {
-        var h = el('div', {class: 'rp-step-h'}, [el('b', {text: title})]); if (trailing) h.appendChild(trailing);
-        return el('div', {class: 'rp-step'}, [h, el('div', {class: 'rp-chips'}, chips)]);
-      }
       function classOptions() { return st.schoolId ? (st.schoolClasses || []) : classes; }
       function countOn(m) { return Object.keys(m).filter(function (k) { return m[k]; }).length; }
       function resetFrom(level) { /* 0=مدرسه 1=کلاس */ if (level <= 1) { st.classId = ''; st.roster = []; st.students = {}; } st.shown = false; out.innerHTML = ''; out.style.display = 'none'; }
+      /* V279 — انتخاب از پنجره: هر مرحله یک ردیف «عنوان | مقدار ▾»؛ پنجره با جست‌وجو و تیک/دایره */
+      function pickerDlg(opts) { /* {title, items:[{id,title,sub}], selected:{}, multi, onOk(ids)} */
+        var bg = el('div', {class: 'modal-bg'}), picked = Object.assign({}, opts.selected || {}), q = '';
+        var list = el('div', {class: 'rp-pick-list'}), cnt = el('span', {class: 'muted', style: 'font-size:12px'});
+        function shownItems() { var qq = q.trim().toLowerCase(); return opts.items.filter(function (it) { return !qq || ((it.title || '') + ' ' + (it.sub || '')).toLowerCase().indexOf(qq) >= 0; }); }
+        function draw() {
+          list.innerHTML = ''; var sh = shownItems();
+          if (!sh.length) list.appendChild(el('div', {class: 'muted', text: 'موردی یافت نشد.'}));
+          sh.forEach(function (it) {
+            var on = !!picked[it.id];
+            var row = el('label', {class: 'rp-pick-row' + (on ? ' on' : '')}, [el('input', {type: opts.multi ? 'checkbox' : 'radio', name: 'rp-pick'}), el('span', {class: 'grow'}, [el('b', {text: it.title}), it.sub ? el('small', {class: 'muted', text: ' · ' + it.sub}) : null])]);
+            row.firstChild.checked = on;
+            row.firstChild.addEventListener('change', function () { if (opts.multi) { if (row.firstChild.checked) picked[it.id] = true; else delete picked[it.id]; } else { picked = {}; picked[it.id] = true; } draw(); });
+            list.appendChild(row);
+          });
+          cnt.textContent = opts.multi ? fa(Object.keys(picked).length) + ' انتخاب' : '';
+        }
+        var head = [];
+        if (opts.items.length > 6) { var inp = el('input', {type: 'search', placeholder: 'جست‌وجو…', class: 'rp-pick-q'}); inp.addEventListener('input', function () { q = inp.value; draw(); }); head.push(inp); }
+        if (opts.multi) head.push(el('div', {class: 'row', style: 'gap:4px'}, [el('button', {class: 'btn light sm', text: 'همه', onclick: function () { shownItems().forEach(function (it) { picked[it.id] = true; }); draw(); }}), el('button', {class: 'btn light sm', text: 'هیچ‌کدام', onclick: function () { shownItems().forEach(function (it) { delete picked[it.id]; }); draw(); }}), cnt]));
+        draw();
+        bg.appendChild(el('div', {class: 'modal rp-pick-modal'}, [el('button', {class: 'x', text: '✕', onclick: function () { bg.remove(); }}), el('h2', {text: opts.title})].concat(head, [list,
+          el('div', {class: 'row', style: 'margin-top:12px;justify-content:flex-start'}, [el('button', {class: 'btn', text: 'تأیید', onclick: function () { var ids = Object.keys(picked); if (!opts.multi && !ids.length) return; bg.remove(); opts.onOk(ids); }}), el('button', {class: 'btn light', text: 'انصراف', onclick: function () { bg.remove(); }})])])));
+        bg.addEventListener('click', function (ev) { if (ev.target === bg) bg.remove(); });
+        document.body.appendChild(bg);
+      }
+      function pickRow(label, value, enabled, fn) {
+        var b = el('button', {class: 'rp-row', type: 'button', onclick: fn}, [el('span', {class: 'rp-row-l', text: label}), el('span', {class: 'rp-row-v', text: value}), el('span', {class: 'rp-row-c', text: '▾'})]);
+        b.disabled = !enabled; return b;
+      }
       function drawFilter() {
         filt.innerHTML = ''; var n = 1;
+        var box = el('div', {class: 'rp-rows'}); filt.appendChild(box);
         if (schools.length) {
-          filt.appendChild(stepBox(fa(n++) + '. مدرسه', [chip('همهٔ کلاس‌های من', !st.schoolId, function () { st.schoolId = ''; st.schoolClasses = null; resetFrom(0); drawFilter(); })].concat(schools.map(function (sc) {
-            return chip(sc.name + (sc.city ? ' — ' + sc.city : ''), st.schoolId === sc.id, async function () {
-              st.schoolId = sc.id; st.schoolClasses = null; resetFrom(0); drawFilter();
-              try { st.schoolClasses = (await S.rpc('native_teacher_school_classes_v61', {p_school: sc.id})) || []; } catch (e) { st.schoolClasses = []; toast(errMsg(e), 'err'); }
-              drawFilter();
-            });
-          }))));
+          var sc0 = schools.filter(function (x) { return x.id === st.schoolId; })[0];
+          box.appendChild(pickRow(fa(n++) + '. مدرسه', sc0 ? sc0.name : 'همهٔ کلاس‌های من', true, function () {
+            pickerDlg({title: 'انتخاب مدرسه', multi: false, selected: (function () { var o = {}; o[st.schoolId || ''] = true; return o; })(), items: [{id: '', title: 'همهٔ کلاس‌های من'}].concat(schools.map(function (x) { return {id: x.id, title: x.name, sub: x.city || ''}; })), onOk: async function (ids) {
+              var id = ids[0] || ''; st.schoolId = id; st.schoolClasses = null; resetFrom(0); drawFilter();
+              if (id) { try { st.schoolClasses = (await S.rpc('native_teacher_school_classes_v61', {p_school: id})) || []; } catch (e) { st.schoolClasses = []; toast(errMsg(e), 'err'); } drawFilter(); }
+            }});
+          }));
         }
-        var co = classOptions();
-        filt.appendChild(stepBox(fa(n++) + '. کلاس', co.length ? co.map(function (k) {
-          return chip(k.name, st.classId === k.id, async function () {
-            resetFrom(1); st.classId = k.id; st.rosterLoading = true; drawFilter();
-            try { st.roster = (await S.rpc('class_roster', {p_class: k.id})) || []; st.students = {}; st.roster.forEach(function (x) { st.students[x.id] = true; }); } catch (e) { st.roster = []; toast(errMsg(e), 'err'); }
+        var co = classOptions(), k0 = co.filter(function (x) { return x.id === st.classId; })[0];
+        box.appendChild(pickRow(fa(n++) + '. کلاس', k0 ? k0.name : (st.schoolId && !st.schoolClasses ? 'در حال دریافت…' : (co.length ? 'انتخاب کنید' : 'کلاسی یافت نشد')), co.length > 0, function () {
+          pickerDlg({title: 'انتخاب کلاس', multi: false, selected: (function () { var o = {}; if (st.classId) o[st.classId] = true; return o; })(), items: co.map(function (x) { return {id: x.id, title: x.name, sub: [x.grade, x.field_of_study].filter(Boolean).join(' · ')}; }), onOk: async function (ids) {
+            resetFrom(1); st.classId = ids[0]; st.rosterLoading = true; drawFilter();
+            try { st.roster = (await S.rpc('class_roster', {p_class: st.classId})) || []; st.students = {}; st.roster.forEach(function (x) { st.students[x.id] = true; }); } catch (e) { st.roster = []; toast(errMsg(e), 'err'); }
             st.rosterLoading = false; drawFilter();
-          });
-        }) : [el('span', {class: 'muted', text: st.schoolId && !st.schoolClasses ? 'در حال دریافت…' : 'کلاسی یافت نشد.'})]));
+          }});
+        }));
         if (!st.classId) return;
-        var allSt = st.roster.length && countOn(st.students) === st.roster.length;
-        filt.appendChild(stepBox(fa(n) + '. دانش‌آموزان (' + fa(countOn(st.students)) + ' از ' + fa(st.roster.length) + ')',
-          st.rosterLoading ? [el('span', {class: 'muted', text: 'در حال دریافت…'})] : (st.roster.length ? st.roster.map(function (x) { return chip(x.full_name, !!st.students[x.id], function () { st.students[x.id] = !st.students[x.id]; st.shown = false; out.innerHTML = ''; out.style.display = 'none'; drawFilter(); }); }) : [el('span', {class: 'muted', text: 'دانش‌آموزی در این کلاس نیست.'})]),
-          el('button', {class: 'btn light sm', text: allSt ? 'هیچ‌کدام' : 'همه', onclick: function () { st.students = {}; if (!allSt) st.roster.forEach(function (x) { st.students[x.id] = true; }); st.shown = false; out.innerHTML = ''; out.style.display = 'none'; drawFilter(); }})));
-        var allEx = exams.length && countOn(st.selected) === exams.length;
-        filt.appendChild(stepBox(fa(n + 1) + '. آزمون‌ها (' + fa(countOn(st.selected)) + ' از ' + fa(exams.length) + ')',
-          exams.map(function (e) { return chip(e.title, !!st.selected[e.id], function () { st.selected[e.id] = !st.selected[e.id]; st.shown = false; out.innerHTML = ''; out.style.display = 'none'; drawFilter(); }); }),
-          el('button', {class: 'btn light sm', text: allEx ? 'هیچ‌کدام' : 'همه', onclick: function () { st.selected = {}; if (!allEx) exams.forEach(function (e) { st.selected[e.id] = true; }); st.shown = false; out.innerHTML = ''; out.style.display = 'none'; drawFilter(); }})));
+        box.appendChild(pickRow(fa(n) + '. دانش‌آموزان', st.rosterLoading ? 'در حال دریافت…' : fa(countOn(st.students)) + ' از ' + fa(st.roster.length), !st.rosterLoading && st.roster.length > 0, function () {
+          pickerDlg({title: 'انتخاب دانش‌آموزان', multi: true, selected: st.students, items: st.roster.map(function (x) { return {id: x.id, title: x.full_name, sub: x.username || ''}; }), onOk: function (ids) { st.students = {}; ids.forEach(function (id) { st.students[id] = true; }); st.shown = false; out.innerHTML = ''; out.style.display = 'none'; drawFilter(); }});
+        }));
+        box.appendChild(pickRow(fa(n + 1) + '. آزمون‌ها', fa(countOn(st.selected)) + ' از ' + fa(exams.length), exams.length > 0, function () {
+          pickerDlg({title: 'انتخاب آزمون‌ها', multi: true, selected: st.selected, items: exams.map(function (e) { return {id: e.id, title: e.title, sub: e.subject || ''}; }), onOk: function (ids) { st.selected = {}; ids.forEach(function (id) { st.selected[id] = true; }); st.shown = false; out.innerHTML = ''; out.style.display = 'none'; drawFilter(); }});
+        }));
         var showBtn = el('button', {class: 'btn rp-show', text: 'نمایش کارنامه‌ها', onclick: function () { st.shown = true; compute(); }});
         showBtn.disabled = !(countOn(st.students) && countOn(st.selected));
         filt.appendChild(showBtn);

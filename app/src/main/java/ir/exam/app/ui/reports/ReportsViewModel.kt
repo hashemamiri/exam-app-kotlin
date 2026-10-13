@@ -159,6 +159,10 @@ class ReportsViewModel(
         old.copy(selectedStudentIds = if (all) old.roster.mapTo(linkedSetOf(), StudentProfile::id) else emptySet(), rowsShown = false)
     }
 
+    /** V279 — نتیجهٔ پنجره‌های انتخاب. */
+    fun setStudents(ids: Set<String>) = _state.update { old -> old.copy(selectedStudentIds = ids.filterTo(linkedSetOf()) { id -> old.roster.any { it.id == id } }, rowsShown = false) }
+    fun setExams(ids: Set<String>) = _state.update { old -> old.copy(selectedExamIds = ids.filterTo(linkedSetOf()) { id -> old.exams.any { it.id == id } }, rowsShown = false) }
+
     fun toggleExam(id: String) = _state.update { old ->
         val selected = if (id in old.selectedExamIds) old.selectedExamIds - id else old.selectedExamIds + id
         old.copy(selectedExamIds = selected, rowsShown = false)

@@ -14,9 +14,10 @@ class V277_ReportsFilterAndGradingLayoutTest {
     fun `reports grades page has stepwise filter and single report card`() {
         val scr = src("app/src/main/java/ir/exam/app/ui/reports/ReportsScreen.kt")
         assertFalse("دو هدر", "Text(if (gradesOnly) \"کارنامه و لیست نمرات\"" in scr)
-        assertTrue("FilterStepCard(\"\${PersianDigits.convert(step)}. مدرسه\")" in scr)
-        assertTrue("FilterStepCard(\"\${PersianDigits.convert(step)}. کلاس\")" in scr)
-        assertTrue("دانش‌آموزان (" in scr && "آزمون‌ها (" in scr && "Text(\"نمایش کارنامه‌ها\")" in scr)
+        /* V279: ردیف‌های انتخاب (PickerRow) جای کارت‌های چیپی */
+        assertTrue("PickerRow(\"\${PersianDigits.convert(n++)}. مدرسه\"" in scr)
+        assertTrue("PickerRow(\"\${PersianDigits.convert(n++)}. کلاس\"" in scr)
+        assertTrue(". دانش‌آموزان\"" in scr && ". آزمون‌ها\"" in scr && "Text(\"نمایش کارنامه‌ها\")" in scr)
         assertTrue("Icon(Icons.Outlined.Description, contentDescription = \"کارنامهٔ \${row.studentName}\"" in scr)
         assertTrue("private fun StudentReportCardDialog(" in scr)
         assertFalse("ریز نمرات روی کارت", "selectedExams.joinToString(\"   \")" in scr)

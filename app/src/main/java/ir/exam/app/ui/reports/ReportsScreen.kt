@@ -5,8 +5,13 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.material.icons.outlined.ArrowDropDown
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.RadioButton
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -36,7 +41,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -80,6 +84,38 @@ fun ReportsScreen(
 
     // V277 — کارنامهٔ تکی باز
     var reportCardRow by remember { mutableStateOf<ClassGradeRow?>(null) }
+    // V279 — کدام پنجرهٔ انتخاب باز است: school / class / students / exams
+    var picker by remember { mutableStateOf<String?>(null) }
+    when (picker) {
+        "school" -> PickerDialog(
+            title = "انتخاب مدرسه",
+            items = listOf(PickItem("", "همهٔ کلاس‌های من")) + state.schools.map { PickItem(it.id, it.name, it.city.takeIf(String::isNotBlank)) },
+            selected = setOf(state.selectedSchoolId ?: ""), multi = false,
+            onDismiss = { picker = null },
+            onConfirm = { ids -> viewModel.selectSchool(ids.firstOrNull()?.takeIf(String::isNotBlank)); picker = null }
+        )
+        "class" -> PickerDialog(
+            title = "انتخاب کلاس",
+            items = state.classOptions.map { PickItem(it.id, it.name, listOfNotNull(it.grade, it.fieldOfStudy).filter(String::isNotBlank).joinToString(" · ").ifBlank { null }) },
+            selected = state.selectedClass?.id?.let(::setOf) ?: emptySet(), multi = false,
+            onDismiss = { picker = null },
+            onConfirm = { ids -> state.classOptions.firstOrNull { it.id == ids.firstOrNull() }?.let(viewModel::selectClass); picker = null }
+        )
+        "students" -> PickerDialog(
+            title = "انتخاب دانش‌آموزان",
+            items = state.roster.map { PickItem(it.id, it.fullName, it.username) },
+            selected = state.selectedStudentIds, multi = true,
+            onDismiss = { picker = null },
+            onConfirm = { ids -> viewModel.setStudents(ids); picker = null }
+        )
+        "exams" -> PickerDialog(
+            title = "انتخاب آزمون‌ها",
+            items = state.exams.map { PickItem(it.id, it.title, it.subject?.takeIf(String::isNotBlank)) },
+            selected = state.selectedExamIds, multi = true,
+            onDismiss = { picker = null },
+            onConfirm = { ids -> viewModel.setExams(ids); picker = null }
+        )
+    }
     val selectedExams = remember(state.exams, state.selectedExamIds) { state.exams.filter { it.id in state.selectedExamIds } }
     reportCardRow?.let { row ->
         StudentReportCardDialog(
@@ -121,53 +157,26 @@ fun ReportsScreen(
         }
         // V208 — «تحلیل پیشرفته کیفیت سؤال» به درخواست کاربر از بخش آمار حذف شد.
         if (gradesOnly) {
-            // V277 — فیلتر پلکانی: ۱ مدرسه (اگر هست) → ۲ کلاس → ۳ دانش‌آموزان → ۴ آزمون‌ها → نمایش
-            var step = 1
-            if (state.schools.isNotEmpty()) {
-                item {
-                    FilterStepCard("${PersianDigits.convert(step)}. مدرسه") {
-                        FilterChip(selected = state.selectedSchoolId == null, onClick = { viewModel.selectSchool(null) }, label = { Text("همهٔ کلاس‌های من") })
-                        state.schools.forEach { sch ->
-                            FilterChip(selected = state.selectedSchoolId == sch.id, onClick = { viewModel.selectSchool(sch.id) }, label = { Text(sch.name) })
-                        }
-                    }
-                }
-                step++
-            }
+            // V279 — انتخاب از پنجره: هر مرحله یک ردیف «عنوان: مقدار ▾» که پنجرهٔ انتخاب (با جست‌وجو) باز می‌کند
             item {
-                FilterStepCard("${PersianDigits.convert(step)}. کلاس") {
-                    if (state.classOptions.isEmpty()) Text("کلاسی یافت نشد.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    state.classOptions.forEach { item ->
-                        FilterChip(selected = state.selectedClass?.id == item.id, onClick = { viewModel.selectClass(item) }, label = { Text(item.name) })
+                Card(Modifier.fillMaxWidth()) {
+                    Column(Modifier.padding(horizontal = 4.dp, vertical = 4.dp)) {
+                        var n = 1
+                        if (state.schools.isNotEmpty()) {
+                            PickerRow("${PersianDigits.convert(n++)}. مدرسه", state.schools.firstOrNull { it.id == state.selectedSchoolId }?.name ?: "همهٔ کلاس‌های من") { picker = "school" }
+                            HorizontalDivider()
+                        }
+                        PickerRow("${PersianDigits.convert(n++)}. کلاس", state.selectedClass?.name ?: "انتخاب کنید", enabled = state.classOptions.isNotEmpty() || state.selectedSchoolId != null) { picker = "class" }
+                        if (state.selectedClass != null) {
+                            HorizontalDivider()
+                            PickerRow("${PersianDigits.convert(n)}. دانش‌آموزان", if (state.rosterLoading) "در حال دریافت…" else "${PersianDigits.convert(state.selectedStudentIds.size)} از ${PersianDigits.convert(state.roster.size)}", enabled = !state.rosterLoading && state.roster.isNotEmpty()) { picker = "students" }
+                            HorizontalDivider()
+                            PickerRow("${PersianDigits.convert(n + 1)}. آزمون‌ها", "${PersianDigits.convert(state.selectedExamIds.size)} از ${PersianDigits.convert(state.exams.size)}", enabled = state.exams.isNotEmpty()) { picker = "exams" }
+                        }
                     }
                 }
             }
-            step++
             if (state.selectedClass != null) {
-                item {
-                    val allStudents = state.roster.isNotEmpty() && state.selectedStudentIds.size == state.roster.size
-                    FilterStepCard(
-                        "${PersianDigits.convert(step)}. دانش‌آموزان (${PersianDigits.convert(state.selectedStudentIds.size)} از ${PersianDigits.convert(state.roster.size)})",
-                        trailing = { TextButton(onClick = { viewModel.setAllStudents(!allStudents) }) { Text(if (allStudents) "هیچ‌کدام" else "همه") } }
-                    ) {
-                        if (state.rosterLoading) CircularProgressIndicator(Modifier.size(20.dp))
-                        else if (state.roster.isEmpty()) Text("دانش‌آموزی در این کلاس نیست.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        state.roster.forEach { st ->
-                            FilterChip(selected = st.id in state.selectedStudentIds, onClick = { viewModel.toggleStudent(st.id) }, label = { Text(st.fullName) })
-                        }
-                    }
-                }
-                item {
-                    val allExams = state.exams.isNotEmpty() && state.selectedExamIds.size == state.exams.size
-                    FilterStepCard(
-                        "${PersianDigits.convert(step + 1)}. آزمون‌ها (${PersianDigits.convert(state.selectedExamIds.size)} از ${PersianDigits.convert(state.exams.size)})",
-                        trailing = { TextButton(onClick = { viewModel.setAllExams(!allExams) }) { Text(if (allExams) "هیچ‌کدام" else "همه") } }
-                    ) {
-                        state.exams.forEach { exam ->
-                            FilterChip(selected = exam.id in state.selectedExamIds, onClick = { viewModel.toggleExam(exam.id) }, label = { Text(exam.title) })
-                        }
-                    }
-                }
                 item {
                     Button(
                         enabled = state.selectedStudentIds.isNotEmpty() && state.selectedExamIds.isNotEmpty() && !state.loading,
@@ -213,19 +222,59 @@ fun ReportsScreen(
     }
 }
 
-/** V277 — کارت یک مرحلهٔ فیلتر: عنوان + چیپ‌ها در FlowRow (در گوشی باریک به سطر بعد می‌روند). */
-@OptIn(ExperimentalLayoutApi::class)
+/** V279 — ردیف انتخاب: عنوان سمت راست، مقدار فعلی + ▾ سمت چپ؛ لمس = پنجرهٔ انتخاب. */
 @Composable
-private fun FilterStepCard(title: String, trailing: (@Composable () -> Unit)? = null, content: @Composable () -> Unit) {
-    Card(Modifier.fillMaxWidth()) {
-        Column(Modifier.padding(horizontal = 12.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                Text(title, style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f))
-                trailing?.invoke()
-            }
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(0.dp)) { content() }
-        }
+private fun PickerRow(label: String, value: String, enabled: Boolean = true, onClick: () -> Unit) {
+    Row(
+        Modifier.fillMaxWidth().clickable(enabled = enabled, onClick = onClick).padding(horizontal = 12.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        Text(label, style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f))
+        Text(value, style = MaterialTheme.typography.bodyMedium, color = if (enabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.widthIn(max = 200.dp))
+        Icon(Icons.Outlined.ArrowDropDown, contentDescription = null, tint = if (enabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant)
     }
+}
+
+data class PickItem(val id: String, val title: String, val subtitle: String? = null)
+
+/** V279 — پنجرهٔ انتخاب: جست‌وجو، فهرست با تیک (چندانتخابی) یا دایره (تک‌انتخابی)، «همه/هیچ‌کدام»، تأیید. */
+@Composable
+private fun PickerDialog(title: String, items: List<PickItem>, selected: Set<String>, multi: Boolean, onDismiss: () -> Unit, onConfirm: (Set<String>) -> Unit) {
+    var query by remember { mutableStateOf("") }
+    var picked by remember(selected) { mutableStateOf(selected) }
+    val shown = remember(items, query) { if (query.isBlank()) items else items.filter { (it.title + " " + (it.subtitle ?: "")).contains(query.trim(), ignoreCase = true) } }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(title) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                if (items.size > 6) OutlinedTextField(query, { query = it }, singleLine = true, label = { Text("جست‌وجو") }, modifier = Modifier.fillMaxWidth())
+                if (multi) Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    TextButton(onClick = { picked = picked + shown.map { it.id } }) { Text("همه") }
+                    TextButton(onClick = { picked = picked - shown.map { it.id }.toSet() }) { Text("هیچ‌کدام") }
+                    Text("${PersianDigits.convert(picked.size)} انتخاب", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.align(Alignment.CenterVertically))
+                }
+                if (shown.isEmpty()) Text("موردی یافت نشد.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                LazyColumn(Modifier.heightIn(max = 380.dp)) {
+                    items(shown, key = { it.id }) { row ->
+                        val on = row.id in picked
+                        Row(
+                            Modifier.fillMaxWidth().clickable { picked = if (multi) (if (on) picked - row.id else picked + row.id) else setOf(row.id) }.padding(vertical = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            if (multi) Checkbox(checked = on, onCheckedChange = null) else RadioButton(selected = on, onClick = null)
+                            Column(Modifier.weight(1f)) {
+                                Text(row.title, style = MaterialTheme.typography.bodyMedium, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                                row.subtitle?.let { sub -> Text(sub, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis) }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = { Button(onClick = { onConfirm(picked) }, enabled = multi || picked.isNotEmpty()) { Text("تأیید") } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("انصراف") } }
+    )
 }
 
 @Composable
