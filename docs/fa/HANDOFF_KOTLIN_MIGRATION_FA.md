@@ -19425,6 +19425,9 @@ CI: `compileDebugUnitTestKotlin` به‌خاطر `assertFalse` بدون import �
 - باگ V202.5: `var LANDING_TILES` داخل `paintAuth` بعد از خطی که `landing()` را صدا می‌زد تعریف شده بود → به‌خاطر hoisting مقدارش undefined و `.map` خطا می‌داد → صفحهٔ اول خالی. حالا کنار `authActive` در سطح ماژول است (تست ترتیب را پین می‌کند).
 - دروازهٔ صفحهٔ اول: mobile.js `entered()/enter()` با `sessionStorage['m-entered']`، `gateActive() = MQ && user && !entered`؛ app.js `render()` پیش از m-mode اگر gateActive → paintAuth (landing حتی با user). دکمه: user ⇒ `enter(); S.render()`؛ وگرنه `goA('login')`؛ پیوند ثبت‌نام فقط بدون user. `afterLogin()` → `SiteMobile.enter()`.
 
+### V274.1 — رفع CI (Conflicting overloads)
+- V272 در `QuestionDraft.kt` یک `QuestionType.faLabel()` عمومی اضافه کرده بود، در حالی که `ExamBuilderScreen.kt` (خط ~2142) از قبل نسخهٔ private هم‌نام در همان پکیج داشت → `Overload resolution ambiguity`/`Conflicting overloads`. تعریف تکراری از `QuestionDraft.kt` حذف شد؛ فیلدهای V272 همان `faLabel` خودِ صفحه را استفاده می‌کنند. نسخه 1.01.58.
+
 ### V274 — هم‌ترازی سایت گوشی با دسکتاپ (بررسی کد‌به‌کد؛ فقط افزودن، چیدمان گوشی دست‌نخورده)
 - روش: هر صفحهٔ دسکتاپ (`app.js` MENUS/pages/pageExams/examActions/pageDashboard/pageProfile/pageSettings، `school.js studentsPage`، `builder.js` ریل/گزینه‌ها/بانک، `admin.js calendarPage`) با صفحهٔ هم‌نام گوشی (`mobile.js` examsScreen/cardsScreen/studentsScreen/profileScreen/settingsScreen/builderFabs/radialMenu) مقایسه شد. صفحه‌های مشترک (کلاس‌ها، کیف پول، تصحیح، آمار/کارنامه، بانک، درخواست‌ها، تقویم، مدرسه، دانش‌آموز) از قبل با `S.renderPage` همان کد دسکتاپ را اجرا می‌کنند.
 - کمبودهای واقعی و رفع آن‌ها (همه در سازندهٔ آزمون):

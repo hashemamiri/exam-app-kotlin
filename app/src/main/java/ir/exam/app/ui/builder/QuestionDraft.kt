@@ -17,16 +17,6 @@ fun QuestionType.wireName(): String = when (this) {
     QuestionType.MATCHING -> "matching"
 }
 
-/** V272 — برچسب فارسی نوع سؤال برای فیلدهای «انتخاب تصادفی بر اساس نوع». */
-fun QuestionType.faLabel(): String = when (this) {
-    QuestionType.ESSAY -> "تشریحی"
-    QuestionType.MULTIPLE_CHOICE -> "چندگزینه‌ای"
-    QuestionType.TRUE_FALSE -> "صحیح / غلط"
-    QuestionType.FILL_BLANK -> "جای‌خالی"
-    QuestionType.NUMERIC -> "عددی"
-    QuestionType.MATCHING -> "جورکردنی"
-}
-
 /**
  * V61.6 — رنگ پاستلی اختصاصی هر نوع سؤال (درخواست کاربر):
  * تشریحی=صورتی #FFD1DC، چندگزینه‌ای=آبی #AEC6CF، صحیح/غلط=سبز #B4EEB4،
