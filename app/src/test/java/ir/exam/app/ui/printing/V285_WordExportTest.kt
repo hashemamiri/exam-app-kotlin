@@ -61,7 +61,7 @@ class V285_WordExportTest {
         assertTrue("printableExam(exam.id, includeAnswerKey = false)" in dash)
         // تعرفه‌ها
         val wallet = src("app/src/main/java/ir/exam/app/ui/billing/WalletScreen.kt")
-        assertTrue("\"فایل Word آزمون: هر فایل (جدا از چاپ)\" to ir.exam.app.domain.repository.WORD_EXPORT_COST_TOMAN" in wallet)
+        assertTrue("\"فایل Word آزمون: هر فایل\" to ir.exam.app.domain.repository.WORD_EXPORT_COST_TOMAN" in wallet)
         assertTrue("startsWith(\"exam:word:\") -> \"فایل Word آزمون\"" in wallet)
     }
 
@@ -74,7 +74,7 @@ class V285_WordExportTest {
         assertTrue(app.indexOf("b64 = await buildWordDocx(payload)") < app.indexOf("r = await api.chargeWord(opts.examRef || 'local', title)") && app.indexOf("r = await api.chargeWord(") < app.indexOf("window.SiteExtras.download(name, new Blob([u8]"))
         assertTrue("w.wordExportBase64('student')" in app)
         assertTrue("html: WORD_ICON_HTML + '<span>Word</span>', onclick: function () { wordOnlineExam(x); }" in app)
-        assertTrue("['فایل Word آزمون: هر فایل (جدا از چاپ)', '۵۰٬۰۰۰']" in src("site/src/admin.js"))
+        assertTrue("['فایل Word آزمون: هر فایل', '۵۰٬۰۰۰']" in src("site/src/admin.js"))
         val mob = src("site/src/mobile.js")
         assertTrue("act('word', 'Word', function () { S.wordOnlineExam(x); })" in mob)
         assertTrue("act('word', 'فایل Word (هزینهٔ جداگانه)'" in mob)
@@ -90,5 +90,17 @@ class V285_WordExportTest {
         assertTrue("if (cl.contains('an-frame')) {" in js)
         assertTrue("if (cl.contains('an-af-row')) {" in js)
         assertTrue("walkBlock(sec, td, Math.max(60, w - 120) / TWIP_PER_PX);" in js)
+    }
+
+    @Test
+    fun v286_2_rowspanAndPrintCenterWordIcon() {
+        val js = src("app/src/main/assets/print/web/word_export.js")
+        assertTrue("<w:vMerge w:val=\"restart\"/>" in js)
+        assertTrue("var vcont = function () {" in js)
+        val pc = src("app/src/main/java/ir/exam/app/ui/printing/ExamPrintCenterScreen.kt")
+        assertTrue("WordExportFlow(wordRequest) { wordRequest = null }" in pc)
+        assertTrue("Icon(Icons.Outlined.Description, contentDescription = \"فایل Word\"" in pc)
+        assertTrue("(جدا از چاپ)" !in src("site/src/admin.js").substringAfter("var rows = [").substringBefore("]];"))
+        assertTrue("\"فایل Word آزمون: هر فایل\" to" in src("app/src/main/java/ir/exam/app/ui/billing/WalletScreen.kt"))
     }
 }

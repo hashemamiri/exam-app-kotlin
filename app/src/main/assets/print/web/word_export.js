@@ -498,7 +498,19 @@
   function tableXml(ctx, table, maxW) {
     var trs = []; table.querySelectorAll(':scope > thead > tr, :scope > tbody > tr, :scope > tfoot > tr, :scope > tr').forEach(function (tr) { if (!hidden(tr)) trs.push(tr); });
     if (!trs.length) return '';
-    var ncol = 0; trs.forEach(function (tr) { var n = 0; for (var i = 0; i < tr.children.length; i++) n += Math.max(1, parseInt(tr.children[i].getAttribute('colspan') || '1', 10)); ncol = Math.max(ncol, n); });
+    /* V286.2: rowspan → ستون‌های اشغال‌شده در ردیف‌های بعدی (vMerge) هم در شمارش ستون‌ها و هم در چینش خانه‌ها لحاظ می‌شود */
+    var ncol = 0, occ = [];
+    trs.forEach(function (tr, ri) {
+      var n = 0;
+      for (var i = 0; i < tr.children.length; i++) {
+        while (occ[ri] && occ[ri][n]) n++;
+        var sp = Math.max(1, parseInt(tr.children[i].getAttribute('colspan') || '1', 10)), rs = Math.max(1, parseInt(tr.children[i].getAttribute('rowspan') || '1', 10));
+        for (var r2 = 1; r2 < rs; r2++) { occ[ri + r2] = occ[ri + r2] || []; for (var k2 = 0; k2 < sp; k2++) occ[ri + r2][n + k2] = {w: sp}; }
+        n += sp;
+      }
+      while (occ[ri] && occ[ri][n]) n++;
+      ncol = Math.max(ncol, n);
+    });
     var tr0 = trs[0], rect = rectOf(table), tw = rect.width > 2 ? Math.min(rect.width, maxW) : maxW;
     var widths = [], used = 0;
     for (var i = 0; i < tr0.children.length && widths.length < ncol; i++) {
@@ -506,6 +518,16 @@
       for (var k = 0; k < span; k++) widths.push(w > 0 ? w / span : 0);
     }
     while (widths.length < ncol) widths.push(0);
+    /* ستون‌هایی که در ردیف اول اندازه نگرفته‌اند (مثلاً فقط زیر یک خانهٔ colspan بوده‌اند) از ردیف‌های بعدی */
+    for (var ri2 = 1; ri2 < trs.length; ri2++) {
+      var ci2 = 0;
+      for (var i2 = 0; i2 < trs[ri2].children.length; i2++) {
+        while (occ[ri2] && occ[ri2][ci2]) ci2++;
+        var td2 = trs[ri2].children[i2], sp2 = Math.max(1, parseInt(td2.getAttribute('colspan') || '1', 10));
+        if (sp2 === 1 && ci2 < widths.length && !(widths[ci2] > 0)) widths[ci2] = rectOf(td2).width;
+        ci2 += sp2;
+      }
+    }
     used = widths.reduce(function (a, b) { return a + b; }, 0);
     var scale = used > 0 ? tw / used : 1;
     widths = widths.map(function (w) { return Math.max(720, Math.round((used > 0 ? w * scale : tw / ncol) * TWIP_PER_PX)); });
@@ -520,17 +542,24 @@
       var isHead = tr.parentElement && tr.parentElement.tagName === 'THEAD';
       x += '<w:tr>' + (isHead ? '<w:trPr><w:cantSplit/><w:tblHeader/></w:trPr>' : '');
       var ci = 0;
+      var vcont = function () { /* خانهٔ ادامهٔ rowspan */
+        var o = occ[ri][ci], sw = 0; for (var k3 = 0; k3 < o.w && ci + k3 < widths.length; k3++) sw += widths[ci + k3];
+        x += '<w:tc><w:tcPr><w:tcW w:w="' + sw + '" w:type="dxa"/>' + (o.w > 1 ? '<w:gridSpan w:val="' + o.w + '"/>' : '') + '<w:vMerge/></w:tcPr><w:p/></w:tc>';
+        ci += o.w;
+      };
       for (var i = 0; i < tr.children.length; i++) {
         var td = tr.children[i]; if (hidden(td) && td.tagName !== 'TD' && td.tagName !== 'TH') continue;
-        var span = Math.max(1, parseInt(td.getAttribute('colspan') || '1', 10)), w = 0; for (var k = 0; k < span && ci + k < widths.length; k++) w += widths[ci + k];
+        while (occ[ri] && occ[ri][ci]) vcont();
+        var span = Math.max(1, parseInt(td.getAttribute('colspan') || '1', 10)), rspan = Math.max(1, parseInt(td.getAttribute('rowspan') || '1', 10)), w = 0; for (var k = 0; k < span && ci + k < widths.length; k++) w += widths[ci + k];
         var st = cs(td), shade = st ? hexColor(st.backgroundColor) : null;
         var va = st && st.verticalAlign === 'middle' ? 'center' : (st && st.verticalAlign === 'bottom' ? 'bottom' : 'top');
         var cb = st ? sideBorders(st, false) : '';
-        x += '<w:tc><w:tcPr><w:tcW w:w="' + w + '" w:type="dxa"/>' + (span > 1 ? '<w:gridSpan w:val="' + span + '"/>' : '') + (cb ? '<w:tcBorders>' + cb + '</w:tcBorders>' : '') + (shade && shade !== 'FFFFFF' ? '<w:shd w:val="clear" w:color="auto" w:fill="' + shade + '"/>' : '') + '<w:vAlign w:val="' + va + '"/></w:tcPr>';
+        x += '<w:tc><w:tcPr><w:tcW w:w="' + w + '" w:type="dxa"/>' + (span > 1 ? '<w:gridSpan w:val="' + span + '"/>' : '') + (rspan > 1 ? '<w:vMerge w:val="restart"/>' : '') + (cb ? '<w:tcBorders>' + cb + '</w:tcBorders>' : '') + (shade && shade !== 'FFFFFF' ? '<w:shd w:val="clear" w:color="auto" w:fill="' + shade + '"/>' : '') + '<w:vAlign w:val="' + va + '"/></w:tcPr>';
         var sec = new Section(ctx, td); walkBlock(sec, td, Math.max(60, w - 120) / TWIP_PER_PX); /* V286.1: حاشیهٔ ۶۰+۶۰ خانه کم می‌شود تا جدول/شکل تودرتو از خانه بیرون نزند */
         x += cellXml(sec.xml()) + '</w:tc>';
         ci += span;
       }
+      while (occ[ri] && occ[ri][ci]) vcont();
       x += '</w:tr>';
     });
     return x + '</w:tbl>';

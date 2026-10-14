@@ -297,7 +297,7 @@ private fun TariffDialog(onDismiss: () -> Unit) {
         "صوت سؤال تا ۳ مگابایت" to 6_000L,
         "چاپ: هر سؤال" to 1_000L,
         "چاپ: هر تصویر" to 1_000L,
-        "فایل Word آزمون: هر فایل (جدا از چاپ)" to ir.exam.app.domain.repository.WORD_EXPORT_COST_TOMAN,
+        "فایل Word آزمون: هر فایل" to ir.exam.app.domain.repository.WORD_EXPORT_COST_TOMAN,
         "بازیابی پشتیبان: هر سؤال" to 1_000L
     )
     AlertDialog(

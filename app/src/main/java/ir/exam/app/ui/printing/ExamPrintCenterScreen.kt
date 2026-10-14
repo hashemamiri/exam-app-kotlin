@@ -14,6 +14,7 @@ import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.AccountBalanceWallet
 import androidx.compose.material.icons.outlined.Print
+import androidx.compose.material.icons.outlined.Description
 import androidx.compose.material3.Button
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.AlertDialog
@@ -61,7 +62,6 @@ fun ExamPrintCenterScreen(
     val state by viewModel.state.collectAsState()
     // V107 — سربرگ فقط از تنظیماتِ ذخیره‌شدهٔ دستگاه خوانده می‌شود و در
     // آزمون‌سازِ چاپی (پیش‌نمایش/چاپ) به کار می‌رود؛ خودِ این صفحه چاپ نمی‌کند.
-    @Suppress("UNUSED_VARIABLE")
     val headerStore = remember(context.applicationContext) {
         ir.exam.app.data.local.PrintHeaderStore(context.applicationContext)
     }
@@ -92,6 +92,9 @@ fun ExamPrintCenterScreen(
     var payBusy by remember { mutableStateOf(false) }
     // V129 — آزمونی که کاربر روی سطلش زده و منتظر تأیید حذف است (id، عنوان).
     var pendingDelete by remember { mutableStateOf<Pair<String, String>?>(null) }
+    // V286.2 — «فایل Word» روی کارت آزمون چاپی در همین صفحه (قبلاً فقط در پنجرهٔ داشبورد بود)
+    var wordRequest by remember { mutableStateOf<WordExportRequest?>(null) }
+    WordExportFlow(wordRequest) { wordRequest = null }
     var printStatus by remember { mutableStateOf<String?>(null) }
     var printStatusIsError by remember { mutableStateOf(false) }
     var costDone by remember { mutableStateOf<String?>(null) } // V202
@@ -322,6 +325,20 @@ fun ExamPrintCenterScreen(
                                         else -> androidx.compose.ui.graphics.Color(0xFFDC2626)
                                     }
                                 )
+                            }
+                            // V286.2 — فایل Word این آزمون چاپی (هزینهٔ جداگانه از چاپ)
+                            IconButton(onClick = {
+                                wordRequest = WordExportRequest(rec.id, rec.title) {
+                                    val full = printRepo.get(rec.id) ?: error("آزمون چاپی یافت نشد.")
+                                    ir.exam.app.domain.model.PrintableFromDrafts.build(
+                                        title = full.title.ifBlank { "آزمون" },
+                                        subject = full.subject,
+                                        header = ir.exam.app.data.local.printHeaderOf(headerStore.read()),
+                                        questions = full.questions
+                                    )
+                                }
+                            }) {
+                                Icon(Icons.Outlined.Description, contentDescription = "فایل Word", tint = MaterialTheme.colorScheme.primary)
                             }
                             // V129 — حذف فقط بعد از تأیید کاربر (پنجرهٔ پرسش).
                             IconButton(onClick = { pendingDelete = rec.id to rec.title }) {

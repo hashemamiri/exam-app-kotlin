@@ -19425,6 +19425,12 @@ CI: `compileDebugUnitTestKotlin` به‌خاطر `assertFalse` بدون import �
 - باگ V202.5: `var LANDING_TILES` داخل `paintAuth` بعد از خطی که `landing()` را صدا می‌زد تعریف شده بود → به‌خاطر hoisting مقدارش undefined و `.map` خطا می‌داد → صفحهٔ اول خالی. حالا کنار `authActive` در سطح ماژول است (تست ترتیب را پین می‌کند).
 - دروازهٔ صفحهٔ اول: mobile.js `entered()/enter()` با `sessionStorage['m-entered']`، `gateActive() = MQ && user && !entered`؛ app.js `render()` پیش از m-mode اگر gateActive → paintAuth (landing حتی با user). دکمه: user ⇒ `enter(); S.render()`؛ وگرنه `goA('login')`؛ پیوند ثبت‌نام فقط بدون user. `afterLogin()` → `SiteMobile.enter()`.
 
+### V286.2 — Word: rowspan سربرگ؛ آیکن Word در صفحهٔ چاپ؛ متن تعرفه (اپ 1.01.82 + سایت)
+- **سربرگ درهم (classic):** `tableXml` در `word_export.js` اصلاً `rowspan` را نمی‌فهمید؛ خانهٔ لوگو (rowspan=4) فقط ردیف اول را می‌گرفت و خانه‌های ردیف‌های بعدی یک ستون به چپ می‌لغزیدند. حالا نقشهٔ اشغال (`occ[row][col]`) ساخته می‌شود: خانهٔ مبدأ `<w:vMerge w:val="restart"/>` و ردیف‌های بعدی خانهٔ خالی `<w:vMerge/>` با همان gridSpan؛ شمارش ستون‌ها و عرض ستون‌های بی‌اندازه در ردیف اول هم از ردیف‌های بعدی تکمیل می‌شود. QA: `/home/user/qa/cls.py` (سربرگ classic) → LibreOffice: لوگو ۴ ردیف، «دانشگاه آزاد اسلامی/واحد» ۲ ردیف، ستون چپ سر جای خود.
+- **اپ:** `ExamPrintCenterScreen` کارت آزمون چاپی آیکن `Description` («فایل Word») گرفت → همان `WordExportRequest/WordExportFlow` V286 با سربرگ دستگاه (`PrintHeaderStore`). پنجرهٔ داشبورد هم همان را دارد.
+- **تعرفه:** «فایل Word آزمون: هر فایل» بدون «(جدا از چاپ)» در `WalletScreen.kt` و `site/src/admin.js`.
+- تست: `V285_WordExportTest.v286_2_rowspanAndPrintCenterWordIcon`.
+
 ### V286.1 — اصلاح خروجی Word برای شکل‌های علوم/آناتومی و برش متن (اپ 1.01.81 + سایت)
 - **علت نبودِ شکل:** `word_export.js/loadImg` تصویر اطلس (`figure_atlas/science/*.jpg`؛ در سایت از raw.githubusercontent) را بدون `crossOrigin='anonymous'` می‌خواند → canvas آلوده → `toDataURL` خطا → تصویر حذف؛ ولی `svg.an-ov` (لایهٔ فلش‌ها، `position:absolute`) جداگانه به‌صورت PNG سفیدِ بزرگ خروجی می‌رفت → فضای خالی + کادر.
 - **اصلاح:** `loadImg` برای src شبکه‌ای `crossOrigin` می‌گذارد؛ تابع جدید `frameElement()` کل `.an-frame` (تصویر پایه یا svg + لایهٔ `.an-ov` + دایره‌های `.an-tail` + شماره‌های `.an-num`) را در یک canvas (مقیاس ۲) ترکیب و یک `w:drawing` وسط‌چین می‌دهد؛ `walkInline` دیگر svg با کلاس `an-ov/an-draft` را تنها خروجی نمی‌دهد. `.an-af-row` → یک پاراگراف «۱)» + خط dashed (رنگ یکی‌درمیان تا Word گروه نکند).
