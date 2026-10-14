@@ -51,6 +51,9 @@ data class StudentExamUiState(
     val queued: Boolean = false,
     val submissionMessage: String? = null,
     val pendingSubmissions: List<PendingSubmissionStatus> = emptyList(),
+    // V281 — وضعیت اتصال و آخرین ذخیرهٔ محلی (برای نوار اطمینان وسط آزمون)
+    val online: Boolean = true,
+    val draftSavedAtMs: Long = 0L,
     val error: String? = null
 )
 
@@ -64,7 +67,8 @@ class StudentExamViewModel(
     private val exams: ExamRepository,
     private val drafts: AnswerDraftRepository,
     private val pending: PendingActionRepository? = null,
-    private val ownerUserId: String = ""
+    private val ownerUserId: String = "",
+    private val connectivity: kotlinx.coroutines.flow.Flow<Boolean>? = null /* V281 */
 ) : ViewModel() {
     private val _state = MutableStateFlow(StudentExamUiState())
     val state = _state.asStateFlow()
@@ -89,6 +93,8 @@ class StudentExamViewModel(
     }
 
     init {
+        // V281 — رصد زندهٔ اتصال
+        if (connectivity != null) viewModelScope.launch { connectivity.collect { on -> _state.update { it.copy(online = on) } } }
         if (pending != null && ownerUserId.isNotBlank()) {
             pending.schedule()
             viewModelScope.launch {
@@ -429,7 +435,7 @@ class StudentExamViewModel(
             val draft = StudentDraft(answers, images, current.flaggedQuestionIds, current.questionIndex)
             lastSavedDraft = draft
             // V252 — خطای پایگاه‌دادهٔ محلی (حافظهٔ پر/خراب) نباید وسط آزمون برنامه را ببندد؛ وضعیت در حافظه می‌ماند
-            runCatching { drafts.save(examId, draft) }
+            runCatching { drafts.save(examId, draft) }.onSuccess { _state.update { it.copy(draftSavedAtMs = System.currentTimeMillis()) } } /* V281 */
         }
     }
 
@@ -499,7 +505,7 @@ class StudentExamViewModel(
                                 submitting = false,
                                 finished = true,
                                 queued = true,
-                                submissionMessage = "پاسخ در حافظه امن دستگاه صف شد و با اتصال اینترنت خودکار ارسال می‌شود."
+                                submissionMessage = "اینترنت در دسترس نبود؛ پاسخ شما روی همین دستگاه ذخیره شد و به‌محض وصل شدن اینترنت خودکار ارسال می‌شود. برنامه را حذف نکنید."
                             )
                         }
                     }

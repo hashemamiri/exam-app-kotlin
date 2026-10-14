@@ -166,6 +166,32 @@ class SupabaseProfileRepository(context: Context) {
         SupabaseProvider.client.auth.updateUser { email = clean }
     }
 
+    /** V282 — وضعیت درخواست حذف: purge_at (ISO) یا null. */
+    suspend fun deletionState(): Result<String?> = runCatching {
+        val raw = SupabaseProvider.client.postgrest.rpc("native_my_deletion_state_v282").decodeAs<JsonObject>()
+        (raw["purge_at"] as? JsonPrimitive)?.contentOrNull?.takeIf(String::isNotBlank)
+    }
+
+    /** V282 — درخواست حذف حساب (معلم/مدیر): حساب علامت می‌خورد و ۳۰ روز بعد حذف می‌شود. خروجی: purge_at. */
+    suspend fun requestDeletion(): Result<String> = runCatching {
+        val raw = SupabaseProvider.client.postgrest.rpc("native_request_account_deletion_v282").decodeAs<JsonObject>()
+        (raw["error"] as? JsonPrimitive)?.contentOrNull?.takeIf(String::isNotBlank)?.let(::error)
+        (raw["purge_at"] as? JsonPrimitive)?.contentOrNull.orEmpty()
+    }
+
+    /** V282 — انصراف از حذف. */
+    suspend fun cancelDeletion(): Result<Unit> = runCatching {
+        SupabaseProvider.client.postgrest.rpc("native_cancel_account_deletion_v282").decodeAs<JsonObject>()
+        Unit
+    }
+
+    /** V282 — دانش‌آموز: درخواست حذف به معلم‌ها (اعلان)؛ خودش چیزی حذف نمی‌کند. */
+    suspend fun studentRequestDeletion(): Result<Int> = runCatching {
+        val raw = SupabaseProvider.client.postgrest.rpc("native_student_request_deletion_v282").decodeAs<JsonObject>()
+        (raw["error"] as? JsonPrimitive)?.contentOrNull?.takeIf(String::isNotBlank)?.let(::error)
+        (raw["teachers"] as? JsonPrimitive)?.contentOrNull?.toIntOrNull() ?: 0
+    }
+
     /**
      * V59.1 — حذف کامل حساب معلم/مدیر: Edge function manage-student با اکشن
      * delete_account؛ دانش‌آموزان مشترک به لیست دیگر منتقل و بقیه حذف می‌شوند

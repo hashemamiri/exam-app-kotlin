@@ -266,6 +266,8 @@ fun StudentExamContent(
             modifier = Modifier.padding(padding).padding(18.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
+            // V281 — نوار اطمینان: قطع اینترنت ⇒ هشدار کهربایی با توضیح ساده؛ وصل ⇒ «ذخیره روی دستگاه» با ساعت آخرین ذخیره
+            item { ConnectionBanner(online = state.online, savedAtMs = state.draftSavedAtMs) }
             // V58.0 — هدر و نام آزمون حذف شد؛ شماره سؤال‌ها در یک سطر اسکرول‌شونده
             // با آیکن قبلی/بعدی در دو سر؛ نگه‌داشتن ۲ ثانیه‌ای = علامت برای مرور.
             item {
@@ -479,7 +481,7 @@ fun StudentExamContent(
         }},confirmButton={Button(onClick=onConfirmSubmit){Text("تأیید و ارسال نهایی")}},dismissButton={TextButton(onClick=onDismissSubmit){Text("بازگشت و مرور")}})
     }
     // V58.0.2 — درخواست کاربر: تأیید خروج = خروج از «صفحهٔ آزمون» (نه بستن برنامه).
-    if(showExit)AlertDialog(onDismissRequest={showExit=false},title={Text("خروج از آزمون")},text={Text("پاسخ‌ها ذخیره شده‌اند و زمان سرور ادامه دارد. از صفحهٔ آزمون خارج شوید؟")},confirmButton={Button(onClick={showExit=false;onExitExam()}){Text("خروج از آزمون")}},dismissButton={TextButton(onClick={showExit=false}){Text("ادامه آزمون")}})
+    if(showExit)AlertDialog(onDismissRequest={showExit=false},title={Text("خروج از آزمون")},text={Text(if (state.online) "پاسخ‌ها ذخیره شده‌اند و زمان سرور ادامه دارد. از صفحهٔ آزمون خارج شوید؟" else "اینترنت قطع است ولی پاسخ‌ها روی دستگاه ذخیره شده‌اند و زمان آزمون ادامه دارد. با وصل شدن اینترنت می‌توانید با همان کد ادامه دهید. خارج می‌شوید؟")},confirmButton={Button(onClick={showExit=false;onExitExam()}){Text("خروج از آزمون")}},dismissButton={TextButton(onClick={showExit=false}){Text("ادامه آزمون")}})
     // V58.0 — معلم وسط آزمون ویرایش کرد: نمایش موارد؛ تا بستن، تایمر مکث است.
     if (state.examChangeNotes.isNotEmpty()) {
         AlertDialog(
@@ -741,4 +743,30 @@ internal object ExamLeaveGuard {
     fun suppressNext() { suppressed = true }
     fun consumeSuppressed(): Boolean { val s = suppressed; suppressed = false; return s }
     fun clear() { suppressed = false }
+}
+
+
+/** V281 — نوار وضعیت اتصال وسط آزمون؛ بدون واژهٔ فنی. */
+@Composable
+private fun ConnectionBanner(online: Boolean, savedAtMs: Long) {
+    if (!online) {
+        androidx.compose.material3.Surface(
+            shape = MaterialTheme.shapes.medium,
+            color = androidx.compose.ui.graphics.Color(0xFFFFF4D6),
+            contentColor = androidx.compose.ui.graphics.Color(0xFF7A4B00),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Column(Modifier.padding(horizontal = 12.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Text("اتصال اینترنت قطع است", style = MaterialTheme.typography.titleSmall)
+                Text("نگران نباشید: هر پاسخی که می‌نویسید روی همین دستگاه ذخیره می‌شود و زمان آزمون ادامه دارد. به‌محض وصل شدن، همه‌چیز خودکار ارسال می‌شود.", style = MaterialTheme.typography.bodySmall)
+            }
+        }
+    } else if (savedAtMs > 0L) {
+        val time = remember(savedAtMs) { java.text.SimpleDateFormat("HH:mm:ss", java.util.Locale.US).format(java.util.Date(savedAtMs)) }
+        Text(
+            "✓ پاسخ‌ها روی دستگاه ذخیره شد (" + ir.exam.app.core.calendar.PersianDigits.convert(time) + ")",
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+    }
 }

@@ -22,13 +22,48 @@ Deno.serve(async (request) => {
     const contentLength = Number(request.headers.get('content-length') || 0);
     if (contentLength > 262_144) return json({ error: 'حجم درخواست بیش از حد مجاز است' }, 413);
     const authorization = request.headers.get('Authorization') || '';
-    if (!authorization.startsWith('Bearer ')) return json({ error: 'ابتدا وارد شوید' }, 401);
-
     const service = createClient(
       Deno.env.get('SUPABASE_URL')!,
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
       { auth: { persistSession: false, autoRefreshToken: false } },
     );
+
+    // V282 — حذف کامل یک حساب کادر مدرسه (همان منطق V59.1) — هم برای «حذف فوری» قدیمی و هم برای پاک‌سازی ۳۰روزه
+    const deleteStaffAccount = async (actorId: string) => {
+      const { data: prep, error: prepError } = await service.rpc('native_prepare_account_deletion_v1', { p_actor: actorId });
+      if (prepError) return { error: 'آماده‌سازی حذف حساب ناموفق بود' };
+      const prepBody = prep as Record<string, unknown> | null;
+      if (prepBody && typeof prepBody.error === 'string' && prepBody.error) return { error: prepBody.error };
+      const deletable = Array.isArray(prepBody?.deletable_students)
+        ? (prepBody!.deletable_students as unknown[]).map((x) => String(x)).slice(0, 5000)
+        : [];
+      let removed = 0;
+      for (const studentId of deletable) {
+        const { error } = await service.auth.admin.deleteUser(studentId);
+        if (!error) removed++;
+      }
+      try {
+        await service.from('student_admin_audit').insert({ teacher_id: actorId, student_id: null, action: 'delete_account', details: { transferred: prepBody?.transferred ?? 0, students_removed: removed } });
+      } catch { /* ممیزی اختیاری */ }
+      const { error: selfError } = await service.auth.admin.deleteUser(actorId);
+      if (selfError) return { error: `حذف حساب اصلی ناموفق بود: ${selfError.message ?? 'خطای auth'}` };
+      return { ok: true, transferred: prepBody?.transferred ?? 0, students_removed: removed };
+    };
+
+    // V282 — پاک‌سازی زمان‌بندی‌شده: pg_cron → pg_net با هدر x-push-secret (همان Secret اعلان‌ها) → حساب‌هایی که ۳۰ روز از
+    // درخواست حذفشان گذشته و لغو نشده، برای همیشه حذف می‌شوند.
+    const purgeSecret = request.headers.get('x-push-secret') || '';
+    if (purgeSecret) {
+      const expected = Deno.env.get('PUSH_WEBHOOK_SECRET') || '';
+      if (!expected || purgeSecret !== expected) return json({ error: 'دسترسی نامعتبر' }, 401);
+      const { data: due } = await service.rpc('native_due_account_deletions_v282');
+      const ids = Array.isArray(due) ? (due as unknown[]).map((x) => String(x)).slice(0, 50) : [];
+      const results: Record<string, unknown>[] = [];
+      for (const id of ids) results.push({ id, ...(await deleteStaffAccount(id)) });
+      return json({ ok: true, purged: results.filter((r) => r.ok).length, results });
+    }
+
+    if (!authorization.startsWith('Bearer ')) return json({ error: 'ابتدا وارد شوید' }, 401);
     const { data: authData, error: authError } = await service.auth.getUser(authorization.slice(7));
     if (authError || !authData.user) return json({ error: 'نشست نامعتبر است' }, 401);
     const teacherId = authData.user.id;
@@ -321,33 +356,10 @@ Deno.serve(async (request) => {
     }
 
     if (action === 'delete_account') {
-      // V59.1 — حذف کامل حساب معلم/مدیر متقاضی:
-      // ۱) آماده‌سازی اتمیک در SQL: انتقال مالکیت دانش‌آموزان مشترک به لیست
-      //    دیگر (کنترل کامل شامل رمز از همین مسیر manage-student دنبال
-      //    profiles.teacher_id می‌آید) + حذف کلاس‌ها + فهرست حذف‌شدنی‌ها.
-      // ۲) حذف auth دانش‌آموزان تک‌مالکه و سپس خود متقاضی.
-      const { data: prep, error: prepError } = await service.rpc('native_prepare_account_deletion_v1', { p_actor: teacherId });
-      if (prepError) return json({ error: 'آماده‌سازی حذف حساب ناموفق بود' }, 502);
-      const prepBody = prep as Record<string, unknown> | null;
-      if (prepBody && typeof prepBody.error === 'string' && prepBody.error) return json({ error: prepBody.error }, 403);
-      const deletable = Array.isArray(prepBody?.deletable_students)
-        ? (prepBody!.deletable_students as unknown[]).map((x) => String(x)).slice(0, 5000)
-        : [];
-      let removed = 0;
-      for (const studentId of deletable) {
-        const { error } = await service.auth.admin.deleteUser(studentId);
-        if (!error) removed++;
-      }
-      await audit('delete_account', teacherId, {
-        transferred: prepBody?.transferred ?? 0,
-        students_removed: removed,
-      });
-      const { error: selfError } = await service.auth.admin.deleteUser(teacherId);
-      if (selfError) {
-        // V59.2.1 — علت دقیق برای عیب‌یابی (مثلاً FK بلاک‌کننده) برگردانده شود.
-        return json({ error: `حذف حساب اصلی ناموفق بود: ${selfError.message ?? 'خطای auth'}` }, 502);
-      }
-      return json({ ok: true, transferred: prepBody?.transferred ?? 0, students_removed: removed });
+      // V59.1/V282 — حذف فوری (فقط برای سازگاری نسخه‌های قدیمی؛ مسیر جدید: درخواست حذف + ۳۰ روز مهلت)
+      const r = await deleteStaffAccount(teacherId);
+      if (r.error) return json({ error: r.error }, 502);
+      return json(r);
     }
 
     return json({ error: 'عملیات ناشناخته است' }, 400);

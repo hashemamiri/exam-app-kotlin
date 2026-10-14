@@ -368,6 +368,7 @@ private fun RegisterPane(state: AuthUiState, viewModel: AuthViewModel) {
 private fun TeacherRegistrationPane(state: AuthUiState, viewModel: AuthViewModel) {
     StaggeredItem(2) {
         Text("ثبت‌نام معلم", fontSize = 21.sp, fontWeight = FontWeight.Bold, color = IceInk)
+        LegalConsentLine() // V282
     }
     StaggeredItem(3) {
         Text(
@@ -443,6 +444,7 @@ private fun TeacherSetupPane(state: AuthUiState, viewModel: AuthViewModel) {
 private fun ManagerRegistrationPane(state: AuthUiState, viewModel: AuthViewModel) {
     StaggeredItem(2) {
         Text("ثبت‌نام مدیر/معاون", fontSize = 21.sp, fontWeight = FontWeight.Bold, color = IceInk)
+        LegalConsentLine() // V282
     }
     StaggeredItem(3) {
         Text(
@@ -719,4 +721,15 @@ private fun GoogleAuthButton(
         Spacer(Modifier.width(8.dp))
         label()
     }
+}
+
+
+/** V282 — یادآوری پذیرش شرایط استفاده و حریم خصوصی زیر عنوان ثبت‌نام (متن کامل در «درباره»). */
+@Composable
+private fun LegalConsentLine() {
+    Text(
+        "با ثبت‌نام، «شرایط استفاده» و «حریم خصوصی» سامانه را می‌پذیرید (متن کامل در بخش درباره و onlineexam.ir/terms.html).",
+        fontSize = 11.sp,
+        color = IceTextSecondary
+    )
 }

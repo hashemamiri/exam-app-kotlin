@@ -35,8 +35,9 @@ class V59_1DeleteAccountTest {
         assertTrue("if (role != UserRole.STUDENT) item {" in settings)
         assertTrue("title = \"حذف حساب\"" in settings)
         assertTrue("confirmDeleteAccount = true" in settings)
-        assertTrue("بله، حساب حذف شود" in settings)
-        assertTrue("این عمل قابل بازگشت نیست" in settings)
+        // V282: حذف با مهلت ۳۰ روز — دکمهٔ تأیید و متن تغییر کرد
+        assertTrue("بله، درخواست حذف ثبت شود" in settings)
+        assertTrue("تا آن زمان می‌توانید از همین‌جا انصراف دهید" in settings)
         // V59.3: onDone حالا onAccountDeleted است (خروج محلی به صفحهٔ ورود).
         assertTrue("onDeleteAccount = { viewModel.deleteAccount(onDone = onAccountDeleted) }" in settings)
         assertTrue("if (role == UserRole.STUDENT) return@launch" in settingsVm)
@@ -54,10 +55,10 @@ class V59_1DeleteAccountTest {
     fun `edge function transfers shared students then deletes the rest`() {
         assertTrue("action === 'delete_account'" in edge)
         assertTrue("native_prepare_account_deletion_v1" in edge)
-        assertTrue("{ p_actor: teacherId }" in edge)
+        assertTrue("{ p_actor: actorId }" in edge) // V282: منطق مشترک deleteStaffAccount(actorId)
         assertTrue("deletable_students" in edge)
         // خود حساب در پایان حذف می‌شود
-        assertTrue("await service.auth.admin.deleteUser(teacherId)" in edge)
+        assertTrue("await service.auth.admin.deleteUser(actorId)" in edge)
     }
 
     @Test

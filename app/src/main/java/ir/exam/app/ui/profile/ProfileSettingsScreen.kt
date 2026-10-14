@@ -228,6 +228,10 @@ fun ProfileSettingsScreen(
                 onChangeUsername = viewModel::changeTeacherUsername,
                 onChangeEmail = viewModel::changeEmail,
                 onDeleteAccount = { viewModel.deleteAccount(onDone = onAccountDeleted) },
+                // V282 — حذف با مهلت ۳۰ روز / انصراف / درخواست دانش‌آموز
+                onRequestDeletion = viewModel::requestDeletion,
+                onCancelDeletion = viewModel::cancelDeletion,
+                onStudentRequestDeletion = viewModel::studentRequestDeletion,
                 // V62.5 — بازیابی رمز فعلی با کد ایمیل.
                 onSendRecoveryCode = viewModel::sendPasswordRecoveryOtp,
                 onRecoverPassword = viewModel::recoverPassword
@@ -609,6 +613,9 @@ private fun AccountSection(
     onChangeUsername: (String) -> Unit,
     onChangeEmail: (String) -> Unit,
     onDeleteAccount: () -> Unit = {},
+    onRequestDeletion: () -> Unit = {},
+    onCancelDeletion: () -> Unit = {},
+    onStudentRequestDeletion: () -> Unit = {},
     // V62.5 — بازیابی رمز فعلی با کد ایمیل.
     onSendRecoveryCode: (String) -> Unit = {},
     onRecoverPassword: (String, String, String, String) -> Unit = { _, _, _, _ -> }
@@ -881,26 +888,44 @@ private fun AccountSection(
             }
         }
         if (role != UserRole.STUDENT) item {
-            // V59.1 — حذف کامل حساب معلم/مدیر با تأیید دومرحله‌ای.
+            // V282 — حذف حساب با مهلت: درخواست → علامت‌گذاری → حذف قطعی پس از ۳۰ روز؛ تا آن زمان «انصراف از حذف».
             AccountAccordionCard(
                 title = "حذف حساب",
                 expanded = expandedCard == "delete",
                 onToggle = { toggle("delete") }
             ) {
-                Text(
-                    "با حذف حساب، کلاس‌ها و دانش‌آموزانی که فقط با این حساب ساخته شده‌اند برای همیشه حذف می‌شوند. " +
-                        "دانش‌آموزی که به لیست حساب دیگری هم اضافه شده باشد حذف نمی‌شود و کنترل کامل حسابش " +
-                        "(شامل مدیریت رمز) به آن حساب منتقل می‌شود. این عمل بازگشت‌ناپذیر است.",
-                    style = MaterialTheme.typography.bodySmall
-                )
-                Button(
-                    onClick = { confirmDeleteAccount = true },
-                    enabled = !state.accountSaving,
-                    colors = androidx.compose.material3.ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.error
-                    ),
-                    modifier = Modifier.fillMaxWidth()
-                ) { Text("حذف حساب") }
+                val purgeAt = state.deletionPurgeAt
+                if (purgeAt != null) {
+                    val purgeDay = remember(purgeAt) {
+                        runCatching { ir.exam.app.core.calendar.JalaliCalendar.fromGregorian(java.time.OffsetDateTime.parse(purgeAt).toLocalDate()).longDisplay() }.getOrDefault("۳۰ روز دیگر")
+                    }
+                    Text("درخواست حذف این حساب ثبت شده و در تاریخ $purgeDay برای همیشه حذف می‌شود. تا آن زمان می‌توانید انصراف دهید.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
+                    Button(onClick = onCancelDeletion, enabled = !state.accountSaving, modifier = Modifier.fillMaxWidth()) { Text("انصراف از حذف حساب") }
+                } else {
+                    Text(
+                        "با درخواست حذف، حساب شما علامت‌گذاری می‌شود و پس از ۳۰ روز همراه با کلاس‌ها و دانش‌آموزانی که فقط با این حساب ساخته شده‌اند برای همیشه حذف می‌شود. " +
+                            "دانش‌آموزی که به لیست حساب دیگری هم اضافه شده باشد حذف نمی‌شود و به آن حساب منتقل می‌شود. در این ۳۰ روز می‌توانید از حذف انصراف دهید.",
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                    Button(
+                        onClick = { confirmDeleteAccount = true },
+                        enabled = !state.accountSaving,
+                        colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.error
+                        ),
+                        modifier = Modifier.fillMaxWidth()
+                    ) { Text("درخواست حذف حساب") }
+                }
+            }
+        } else item {
+            // V282 — دانش‌آموز هرگز خودش حساب را حذف نمی‌کند؛ فقط درخواست به معلم (اعلان).
+            AccountAccordionCard(
+                title = "درخواست حذف حساب",
+                expanded = expandedCard == "delete",
+                onToggle = { toggle("delete") }
+            ) {
+                Text("حساب دانش‌آموز فقط توسط معلم حذف می‌شود. با این دکمه، درخواست شما برای معلم فرستاده می‌شود و تصمیم با اوست.", style = MaterialTheme.typography.bodySmall)
+                OutlinedButton(onClick = onStudentRequestDeletion, enabled = !state.accountSaving, modifier = Modifier.fillMaxWidth()) { Text("ارسال درخواست حذف به معلم") }
             }
         }
         if (state.accountSaving) item { CircularProgressIndicator() }
@@ -910,20 +935,20 @@ private fun AccountSection(
     if (confirmDeleteAccount) {
         AlertDialog(
             onDismissRequest = { confirmDeleteAccount = false },
-            title = { Text("حذف کامل حساب") },
+            title = { Text("درخواست حذف حساب") },
             text = {
                 Text(
-                    "آیا مطمئن هستید؟ همهٔ کلاس‌ها و دانش‌آموزانِ فقط-متعلق-به-شما حذف می‌شوند و " +
-                        "دانش‌آموزان مشترک به حساب دیگر منتقل می‌شوند. این عمل قابل بازگشت نیست."
+                    "حساب شما ۳۰ روز دیگر برای همیشه حذف می‌شود (همراه با کلاس‌ها و دانش‌آموزانِ فقط-متعلق-به-شما؛ دانش‌آموزان مشترک به حساب دیگر منتقل می‌شوند). " +
+                        "تا آن زمان می‌توانید از همین‌جا انصراف دهید. ادامه می‌دهید؟"
                 )
             },
             confirmButton = {
                 Button(
-                    onClick = { confirmDeleteAccount = false; onDeleteAccount() },
+                    onClick = { confirmDeleteAccount = false; onRequestDeletion() },
                     colors = androidx.compose.material3.ButtonDefaults.buttonColors(
                         containerColor = MaterialTheme.colorScheme.error
                     )
-                ) { Text("بله، حساب حذف شود") }
+                ) { Text("بله، درخواست حذف ثبت شود") }
             },
             dismissButton = { TextButton(onClick = { confirmDeleteAccount = false }) { Text("انصراف") } }
         )

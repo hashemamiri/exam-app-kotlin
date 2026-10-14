@@ -476,15 +476,39 @@
     }
     draw();
   }
+  /* V282 — حذف حساب با مهلت ۳۰ روز (معلم/مدیر): درخواست → علامت‌گذاری → حذف قطعی؛ تا آن زمان «انصراف». دانش‌آموز: فقط درخواست به معلم. */
   function deleteAccountCard(onDeleted) {
-    var card = el('div', {class: 'card', style: 'border-color:#f3c1bd'}, [el('h3', {text: '🗑 حذف حساب'}), el('p', {class: 'muted', style: 'font-size:13px', text: 'همهٔ آزمون‌ها، کلاس‌ها و دانش‌آموزانِ فقط متعلق به شما برای همیشه حذف می‌شوند. دانش‌آموزانی که معلم دیگری هم دارند، حفظ می‌شوند. این کار برگشت‌ناپذیر است.'})]);
-    var conf = el('input', {type: 'text', placeholder: 'برای تأیید بنویسید: حذف', style: 'max-width:200px'});
-    var b = el('button', {class: 'btn danger', text: 'حذف کامل حساب', onclick: async function () {
-      if (conf.value.trim() !== 'حذف') return toast('برای تأیید، کلمهٔ «حذف» را بنویسید.', 'err');
-      if (!(await S.confirmDlg('حذف حساب', 'آیا مطمئن هستید؟ این کار برگشت‌ناپذیر است.', 'بله، حذف کن', true))) return;
-      try { b.disabled = true; var r = await S.http('/functions/v1/manage-student', {method: 'POST', body: {action: 'delete_account'}}); if (r && r.error) { if (/عملیات ناشناخته/.test(String(r.error))) throw new Error('نسخهٔ سرور به‌روز نیست؛ تابع manage-student باید دوباره منتشر (deploy) شود.'); throw new Error(String(r.error)); } toast('حساب حذف شد.', 'ok'); onDeleted(); } catch (e) { toast(errMsg(e), 'err'); b.disabled = false; }
-    }});
-    card.appendChild(el('div', {class: 'row'}, [conf, b]));
+    var u = S.user && S.user();
+    var card = el('div', {class: 'card', style: 'border-color:#f3c1bd'});
+    if (u && u.role === 'student') {
+      card.appendChild(el('h3', {text: 'درخواست حذف حساب'}));
+      card.appendChild(el('p', {class: 'muted', style: 'font-size:13px', text: 'حساب دانش‌آموز فقط توسط معلم حذف می‌شود. با این دکمه، درخواست شما برای معلم فرستاده می‌شود و تصمیم با اوست.'}));
+      var sb = el('button', {class: 'btn light', text: 'ارسال درخواست حذف به معلم', onclick: async function () {
+        try { sb.disabled = true; var r = await S.rpcObj('native_student_request_deletion_v282', {}); toast(r.teachers > 0 ? 'درخواست شما برای معلم فرستاده شد.' : 'معلمی برای این حساب پیدا نشد؛ با مدرسه صحبت کنید.', 'ok'); } catch (e) { toast(errMsg(e), 'err'); sb.disabled = false; }
+      }});
+      card.appendChild(sb); return card;
+    }
+    card.appendChild(el('h3', {text: '🗑 حذف حساب'}));
+    var body = el('div'); card.appendChild(body);
+    function paint(purgeAt) {
+      body.innerHTML = '';
+      if (purgeAt) {
+        var d = new Date(purgeAt), day = isNaN(d) ? '۳۰ روز دیگر' : S.fa(new Intl.DateTimeFormat('fa-IR-u-nu-latn', {year: 'numeric', month: 'long', day: 'numeric'}).format(d));
+        body.appendChild(el('p', {style: 'font-size:13px;color:#b42318', text: 'درخواست حذف این حساب ثبت شده و در تاریخ ' + day + ' برای همیشه حذف می‌شود. تا آن زمان می‌توانید انصراف دهید.'}));
+        var cb = el('button', {class: 'btn', text: 'انصراف از حذف حساب', onclick: async function () { try { cb.disabled = true; await S.rpcObj('native_cancel_account_deletion_v282', {}); toast('حذف حساب لغو شد.', 'ok'); paint(null); } catch (e) { toast(errMsg(e), 'err'); cb.disabled = false; } }});
+        body.appendChild(cb); return;
+      }
+      body.appendChild(el('p', {class: 'muted', style: 'font-size:13px', text: 'با درخواست حذف، حساب شما علامت‌گذاری می‌شود و پس از ۳۰ روز همراه با آزمون‌ها، کلاس‌ها و دانش‌آموزانِ فقط متعلق به شما برای همیشه حذف می‌شود. دانش‌آموزانی که معلم دیگری هم دارند حفظ می‌شوند. در این ۳۰ روز می‌توانید انصراف دهید.'}));
+      var conf = el('input', {type: 'text', placeholder: 'برای تأیید بنویسید: حذف', style: 'max-width:200px'});
+      var b = el('button', {class: 'btn danger', text: 'درخواست حذف حساب', onclick: async function () {
+        if (conf.value.trim() !== 'حذف') return toast('برای تأیید، کلمهٔ «حذف» را بنویسید.', 'err');
+        if (!(await S.confirmDlg('درخواست حذف حساب', 'حساب شما ۳۰ روز دیگر برای همیشه حذف می‌شود؛ تا آن زمان می‌توانید انصراف دهید. ادامه می‌دهید؟', 'بله، درخواست ثبت شود', true))) return;
+        try { b.disabled = true; var r = await S.rpcObj('native_request_account_deletion_v282', {}); toast('درخواست حذف ثبت شد. تا ۳۰ روز می‌توانید انصراف دهید.', 'ok'); paint(r.purge_at || new Date(Date.now() + 30 * 864e5).toISOString()); } catch (e) { toast(errMsg(e), 'err'); b.disabled = false; }
+      }});
+      body.appendChild(el('div', {class: 'row'}, [conf, b]));
+    }
+    paint(null);
+    S.rpcObj('native_my_deletion_state_v282', {}).then(function (st) { if (st && st.purge_at) paint(st.purge_at); }).catch(function () {});
     return card;
   }
 

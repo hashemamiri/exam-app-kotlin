@@ -392,6 +392,7 @@
   function translateAuthError(m) {
     m = String(m);
     if (/invalid login credentials/i.test(m)) return 'نام کاربری/ایمیل یا رمز عبور نادرست است.';
+    if (/banned/i.test(m)) return 'به‌خاطر چند بار رمز اشتباه، ورود این حساب موقتاً بسته است؛ ۱۵ دقیقه دیگر دوباره تلاش کنید.'; /* V283 */
     if (/email not confirmed/i.test(m)) return 'ایمیل هنوز تأیید نشده است.';
     if (/token has expired|otp_expired/i.test(m)) return 'کد منقضی شده است؛ دوباره درخواست کنید.';
     if (/invalid.*token|Token has expired or is invalid/i.test(m)) return 'کد واردشده نادرست یا منقضی است.';
@@ -493,6 +494,16 @@
     if (/بیش از حد|نامعتبر/.test(err)) throw new Error(err);
     return null;
   }
+  async function loginGate(identifier, password) { /* V283 */
+    var raw;
+    try { raw = await rpc('native_login_gate_v283', {p_identifier: identifier, p_password: password}); }
+    catch (e) { return null; } /* تابع نیست / شبکه → مسیر قبلی */
+    var email = raw && raw.email ? String(raw.email).trim() : '';
+    if (email) return email;
+    var err = raw && raw.error ? String(raw.error) : '';
+    if (err) throw new Error(err);
+    return null;
+  }
   async function currentProfile() {
     var su = authApi.user(); if (!su) throw new Error('نشست ورود پیدا نشد. دوباره وارد شوید.');
     var fallback = (su.email || '').split('@')[0] || 'کاربر';
@@ -517,7 +528,10 @@
       /* V260.6 — نام کاربری→ایمیل روی همین دستگاه به‌خاطر سپرده می‌شود (فقط بعد از ورود موفق): هم یک رفت‌وبرگشت کمتر،
          هم سهمیهٔ ۵ بار در ۱۰ دقیقهٔ native_staff_login_email_v1 با ورودهای عادی مصرف نمی‌شود. اگر رمز رد شد، از سرور دوباره پرسیده می‌شود. */
       var LS_UL = 'examsite.ulogin.v1', ul = {}; try { ul = JSON.parse(localStorage.getItem(LS_UL) || '{}') || {}; } catch (e) {}
-      if (clean.indexOf('@') < 0 && USERNAME_RE.test(clean)) {
+      /* V283 — دروازهٔ قفل ورود: ۵ رمز اشتباه در ۱۵ دقیقه → حساب ۱۵ دقیقه بسته؛ اگر تابع روی سرور نبود مسیر قبلی */
+      var gated = await loginGate(clean, password);
+      if (gated) email = gated;
+      else if (clean.indexOf('@') < 0 && USERNAME_RE.test(clean)) {
         if (ul[clean]) { email = ul[clean]; fromCache = true; }
         else email = (await staffLoginEmail(clean)) || passwordLoginEmail(clean);
       } else email = passwordLoginEmail(identifier);
@@ -1304,6 +1318,7 @@
       var isLogin = state.mode === 'login';
       m.appendChild(el('h2', {text: isLogin ? 'ورود به حساب' : 'ساخت حساب جدید'}));
       m.appendChild(el('p', {class: 's', text: isLogin ? 'معلم، مدیر و دانش‌آموز' : 'برای معلم و مدیر / معاون'}));
+      if (!isLogin) m.appendChild(el('p', {class: 's', style: 'font-size:11px'}, [el('span', {text: 'با ثبت‌نام، '}), el('a', {href: '/terms.html', target: '_blank', rel: 'noopener', text: 'شرایط استفاده'}), el('span', {text: ' و '}), el('a', {href: '/privacy.html', target: '_blank', rel: 'noopener', text: 'حریم خصوصی'}), el('span', {text: ' را می‌پذیرید.'})])); /* V282 */
       if (!KEY_READY) m.appendChild(el('div', {class: 'alert warn', text: 'کلید SUPABASE_ANON_KEY در فایل وارد نشده؛ ورود ممکن نیست.'}));
       var tabs = el('div', {class: 'tabs neo-in', role: 'tablist'}, [
         el('button', {type: 'button', role: 'tab', 'aria-selected': String(isLogin), class: isLogin ? 'on' : '', text: 'ورود', onclick: function () { state.mode = 'login'; state.step = 'form'; state.otpMode = false; draw(); }}),
@@ -2115,7 +2130,7 @@
       c.appendChild(sec);
       if (p.role === 'teacher' && window.SiteSchool) c.appendChild(window.SiteSchool.joinSchoolCard(function () { pageProfile(c); }));
       if (p.role === 'teacher' && window.SiteExtras) { c.appendChild(window.SiteExtras.backupCard()); c.appendChild(window.SiteExtras.mediaDiagCard()); }
-      if (p.role !== 'student' && window.SiteExtras) c.appendChild(window.SiteExtras.deleteAccountCard(async function () { saveSession(null); user = null; view.panel = 'dashboard'; render(); }));
+      if (window.SiteExtras) c.appendChild(window.SiteExtras.deleteAccountCard(async function () { saveSession(null); user = null; view.panel = 'dashboard'; render(); })); /* V282 — دانش‌آموز: فقط درخواست به معلم */
     } catch (e) { showErr(c, e); }
   }
 

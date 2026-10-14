@@ -1887,3 +1887,16 @@ table.rp-single td.num,table.rp-single th.num{text-align:center;white-space:nowr
 .rp-pick-row input{width:18px;height:18px;accent-color:var(--brand);flex:none}
 .rp-pick-row b{font-weight:600;font-size:14px}
 .m-dark .rp-rows,.m-dark .rp-row{border-color:rgba(255,255,255,.12)}
+
+/* V284 — زنگولهٔ مرکز اعلان (شناور؛ گوشی: پایین‌چپ بالای داک، دسکتاپ: بالا کنار ریل) */
+.nc-bell{position:fixed;left:14px;bottom:calc(86px + env(safe-area-inset-bottom));z-index:45;width:46px;height:46px;border:0;border-radius:50%;background:var(--card);color:#39758a;box-shadow:0 8px 22px rgba(20,40,60,.18);display:grid;place-items:center;padding:0;cursor:pointer}
+.nc-bell .nc-ic{display:grid;place-items:center}
+.nc-badge{position:absolute;top:-4px;right:-4px;min-width:20px;height:20px;padding:0 5px;border-radius:10px;background:#d14b5a;color:#fff;font-size:11px;font-weight:800;display:grid;place-items:center;line-height:1}
+.dk .nc-bell{left:118px;bottom:auto;top:16px}
+.nc-list{max-height:62vh;overflow:auto;display:flex;flex-direction:column;gap:6px;margin-top:10px}
+.nc-item{text-align:right;border:0;border-radius:12px;background:rgba(88,113,124,.08);padding:10px 12px;font:inherit;color:inherit;cursor:pointer;display:flex;flex-direction:column;gap:4px}
+.nc-item.unread{background:rgba(34,198,239,.14);box-shadow:inset 3px 0 0 #22c6ef}
+.nc-row{display:flex;align-items:center;gap:8px;justify-content:space-between}
+.nc-row small{color:var(--muted);font-size:11px;white-space:nowrap}
+.nc-body{font-size:13px;color:var(--muted)}
+.m-dark .nc-bell{color:#9fd8ea}

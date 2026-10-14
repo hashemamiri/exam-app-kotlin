@@ -137,6 +137,10 @@ def main():
     with open(dest, "w", encoding="utf-8") as f:
         f.write(out)
     print("site/index.html نوشته شد: %.1f MB — %s: %.1f MB" % (os.path.getsize(dest) / 1048576.0, engines_name, len(engines_b) / 1048576.0))
+    # V282 — صفحه‌های ایستای «شرایط استفاده» و «حریم خصوصی» از منبع یکتا site/src/legal_fa.py
+    sys.path.insert(0, os.path.join(SITE, "src"))
+    import legal_fa
+    legal_fa.write_pages(SITE)
 
 
 if __name__ == "__main__":

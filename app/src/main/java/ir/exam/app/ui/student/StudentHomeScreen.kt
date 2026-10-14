@@ -49,11 +49,13 @@ fun StudentHomeScreen(
     }
     val viewModel = remember(appContext, database, pending, userId) {
         val remote = SupabaseStudentExamRepository(appContext)
+        val network = NetworkMonitor(appContext)
         StudentExamViewModel(
-            exams = QueuedExamRepository(remote, NetworkMonitor(appContext), pending),
+            exams = QueuedExamRepository(remote, network, pending),
             drafts = RoomAnswerDraftRepository(database.answerDraftDao(), userId), /* V252 — پیش‌نویس مخصوص همین حساب */
             pending = pending,
-            ownerUserId = userId
+            ownerUserId = userId,
+            connectivity = network.observe() /* V281 */
         )
     }
     val state by viewModel.state.collectAsState()
@@ -164,7 +166,7 @@ fun StudentHomeScreen(
                     )
                     Text(
                         if (blocked > 0) "$blocked مورد نیازمند تلاش دوباره است."
-                        else "با اتصال معتبر اینترنت، WorkManager خودکار ارسال می‌کند."
+                        else "به‌محض وصل شدن اینترنت، خودکار ارسال می‌شود."
                     )
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         Button(onClick = viewModel::retryPending) { Text("تلاش دوباره") }

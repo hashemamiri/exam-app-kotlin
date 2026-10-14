@@ -27,6 +27,7 @@ data class ProfileSettingsState(
     val loading: Boolean = true,
     val saving: Boolean = false,
     val accountSaving: Boolean = false,
+    val deletionPurgeAt: String? = null, // V282 — اگر درخواست حذف ثبت شده: زمان حذف قطعی (ISO)
     val uploadingAvatar: Boolean = false,
     val savedVersion: Int = 0,
     val error: String? = null,
@@ -50,6 +51,7 @@ class ProfileSettingsViewModel(
             .onSuccess { profile ->
                 _state.update { it.copy(loading = false, profile = profile) }
                 if (role == UserRole.STUDENT) loadTeacher()
+                else repository.deletionState().onSuccess { at -> _state.update { it.copy(deletionPurgeAt = at) } } // V282
             }
             .onFailure { error -> _state.update { it.copy(loading = false, error = safeProfileError(error)) } }
     }
@@ -151,6 +153,30 @@ class ProfileSettingsViewModel(
      * کلاس‌ها حذف، سپس خود حساب پاک و نشست باطل می‌شود؛ AuthGate خودکار به
      * صفحهٔ ورود برمی‌گردد.
      */
+    /** V282 — درخواست حذف با مهلت ۳۰ روز (جایگزین حذف فوری در UI؛ deleteAccount برای سازگاری می‌ماند). */
+    fun requestDeletion() = viewModelScope.launch {
+        if (role == UserRole.STUDENT) return@launch
+        _state.update { it.copy(accountSaving = true, error = null, message = null) }
+        repository.requestDeletion()
+            .onSuccess { at -> _state.update { it.copy(accountSaving = false, deletionPurgeAt = at, message = "درخواست حذف ثبت شد. تا ۳۰ روز می‌توانید انصراف دهید.") } }
+            .onFailure { error -> _state.update { it.copy(accountSaving = false, error = safeProfileError(error)) } }
+    }
+
+    fun cancelDeletion() = viewModelScope.launch {
+        _state.update { it.copy(accountSaving = true, error = null, message = null) }
+        repository.cancelDeletion()
+            .onSuccess { _state.update { it.copy(accountSaving = false, deletionPurgeAt = null, message = "حذف حساب لغو شد.") } }
+            .onFailure { error -> _state.update { it.copy(accountSaving = false, error = safeProfileError(error)) } }
+    }
+
+    fun studentRequestDeletion() = viewModelScope.launch {
+        if (role != UserRole.STUDENT) return@launch
+        _state.update { it.copy(accountSaving = true, error = null, message = null) }
+        repository.studentRequestDeletion()
+            .onSuccess { n -> _state.update { it.copy(accountSaving = false, message = if (n > 0) "درخواست شما برای معلم فرستاده شد." else "معلمی برای این حساب پیدا نشد؛ با مدرسه صحبت کنید.") } }
+            .onFailure { error -> _state.update { it.copy(accountSaving = false, error = safeProfileError(error)) } }
+    }
+
     fun deleteAccount(onDone: () -> Unit) = viewModelScope.launch {
         if (role == UserRole.STUDENT) return@launch
         _state.update { it.copy(accountSaving = true, error = null, message = null) }

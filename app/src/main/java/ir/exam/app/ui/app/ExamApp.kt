@@ -352,6 +352,7 @@ private fun AuthenticatedExamApp(
             "requests" -> when (user.role) { UserRole.TEACHER -> MainPage.REQUESTS; UserRole.MANAGER -> MainPage.CARDS; else -> null }
             "calendar" -> if (user.role == UserRole.MANAGER) null else MainPage.CALENDAR
             "grading" -> if (user.role == UserRole.TEACHER) MainPage.GRADING else null
+            "students" -> if (user.role == UserRole.TEACHER) MainPage.SCHOOL else null // V282 — درخواست حذف حساب دانش‌آموز
             else -> null
         } ?: return@LaunchedEffect
         closeTransientNavigation()
@@ -1169,6 +1170,14 @@ private fun AuthenticatedShell(
                                         // V280 — توضیح کوتاه جلوی عنوان تصحیح/مانده/پاسخ، در همان ردیف
                                         if (page == MainPage.GRADING && gradingHint != null) Text(gradingHint, style = MaterialTheme.typography.bodySmall, color = colors.muted, maxLines = 1)
                                     }
+                                },
+                                actions = {
+                                    // V284 — زنگولهٔ مرکز اعلان (همهٔ نقش‌ها)
+                                    ir.exam.app.ui.notifications.NotificationBell(
+                                        userId = user.id,
+                                        tint = colors.muted,
+                                        onOpen = { p, c -> ir.exam.app.core.push.PushNavigation.open(p, c) }
+                                    )
                                 },
                                 navigationIcon = {
                                     if (user.role == UserRole.STUDENT) {

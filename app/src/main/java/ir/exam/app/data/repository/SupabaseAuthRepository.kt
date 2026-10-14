@@ -140,7 +140,9 @@ class SupabaseAuthRepository(context: Context) : AuthRepository {
         // V60.0 — نام کاربری بدون @: اول نگاشت کادر مدرسه (معلم/مدیر) از سرور؛
         // اگر نبود، همان مسیر دانش‌آموز (username@student.exam.local).
         val clean = identifier.trim().lowercase()
-        val loginEmail = if ('@' !in clean && AuthIdentifier.validUsername(clean)) {
+        // V283 — دروازهٔ قفل ورود: ۵ رمز اشتباه در ۱۵ دقیقه → حساب ۱۵ دقیقه بسته. اگر تابع روی سرور نبود، مسیر قبلی.
+        val gated = loginGate(clean, password)
+        val loginEmail = gated ?: if ('@' !in clean && AuthIdentifier.validUsername(clean)) {
             staffLoginEmail(clean) ?: AuthIdentifier.passwordLoginEmail(clean)
         } else {
             AuthIdentifier.passwordLoginEmail(identifier)
@@ -179,6 +181,28 @@ class SupabaseAuthRepository(context: Context) : AuthRepository {
      * پیش‌تر هر خطایی بی‌صدا به مسیرِ دانش‌آموز (username@student.exam.local) می‌افتاد
      * و ورودِ معلم/مدیر با نام کاربری با پیامِ گمراه‌کنندهٔ «رمز نادرست» شکست می‌خورد.
      */
+    /**
+     * V283 — `native_login_gate_v283(identifier, password)`: رمز را سمت سرور با همان bcrypt می‌سنجد و شکست‌ها را می‌شمارد.
+     * خروجی: ایمیل ورود (ok) / خطای فارسی (رمز اشتباه، قفل ۱۵ دقیقه) / null وقتی تابع هنوز روی سرور نیست.
+     */
+    private suspend fun loginGate(identifier: String, password: String): String? {
+        val raw = runCatching {
+            SupabaseProvider.client.postgrest.rpc(
+                "native_login_gate_v283",
+                buildJsonObject { put("p_identifier", identifier); put("p_password", password) }
+            ).decodeAs<JsonObject>()
+        }.getOrElse { e ->
+            val msg = e.message.orEmpty()
+            if ("native_login_gate_v283" in msg || "PGRST202" in msg || "404" in msg) return null
+            if (UserFacingError.isRateLimited(msg)) return null
+            return null // خطای شبکه و … → مسیر قبلی خودش پیام می‌دهد
+        }
+        raw["email"]?.jsonPrimitive?.contentOrNull?.takeIf(String::isNotBlank)?.let { return it }
+        val err = raw["error"]?.jsonPrimitive?.contentOrNull.orEmpty()
+        if (err.isNotBlank()) error(err)
+        return null
+    }
+
     private suspend fun staffLoginEmail(username: String): String? {
         val raw = runCatching {
             SupabaseProvider.client.postgrest.rpc(

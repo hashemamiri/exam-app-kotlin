@@ -824,6 +824,8 @@
       card.appendChild(stag(0, brand()));
       card.appendChild(stag(1, tabs(['معلم', 'مدیر/معاون'], A.regTab, function (i) { goA('register', {regTab: i, step: 'form'}); })));
       card.appendChild(stag(2, h(manager ? 'ثبت‌نام مدیر/معاون' : 'ثبت‌نام معلم')));
+      /* V282 — پذیرش شرایط استفاده و حریم خصوصی */
+      card.appendChild(stag(2, el('p', {class: 'ice-sub right', style: 'font-size:11px;margin-top:2px'}, [el('span', {text: 'با ثبت‌نام، '}), el('a', {href: '/terms.html', target: '_blank', rel: 'noopener', text: 'شرایط استفاده'}), el('span', {text: ' و '}), el('a', {href: '/privacy.html', target: '_blank', rel: 'noopener', text: 'حریم خصوصی'}), el('span', {text: ' را می‌پذیرید.'})])));
       card.appendChild(stag(3, el('p', {class: 'ice-sub right', text: manager ? 'مدیر یا معاون مدرسه با ایمیل ثبت‌نام می‌کند و پس از تأیید، مدرسهٔ خود را می‌سازد.' : 'دانش‌آموز نباید از این بخش ثبت‌نام کند؛ حساب دانش‌آموز را معلم می‌سازد.'})));
       var name = field('نام و نام خانوادگی', {value: A.fullName}), em = field(manager ? 'ایمیل مدیر/معاون' : 'ایمیل معلم', {type: 'email', ltr: true, value: A.email});
       var send = btn('ارسال کد تأیید', async function (b) { setMsg(''); busy(b, true); try { A.fullName = name.input.value; A.email = S.auth.requireEmail(em.input.value); await api.sendRegistrationOtp(A.email, A.fullName, role); goA('otp', {otpKind: 'register', regRole: role}); } catch (e) { setMsg(S.errMsg(e)); busy(b, false); } });
@@ -1005,6 +1007,8 @@
       el('p', {class: 'muted', text: 'پیشنهاد، گزارش اشکال یا هر نظری دارید، برای ما بنویسید؛ همهٔ پیام‌ها خوانده می‌شوند.'}),
       el('div', {class: 'm-lv'}, [el('span', {text: 'ایمیل'}), el('a', {href: 'mailto:' + mail + '?subject=' + encodeURIComponent('نظر دربارهٔ آزمون آنلاین'), text: mail, style: 'direction:ltr;font-weight:800'})]),
       el('div', {class: 'm-lv'}, [el('span', {text: 'وضعیت سرویس'}), el('a', {href: '/status.html', target: '_blank', rel: 'noopener', text: 'onlineexam.ir/status.html', style: 'direction:ltr;font-weight:800'})]), /* V228 */
+      el('div', {class: 'm-lv'}, [el('span', {text: 'شرایط استفاده'}), el('a', {href: '/terms.html', target: '_blank', rel: 'noopener', text: 'onlineexam.ir/terms.html', style: 'direction:ltr;font-weight:800'})]), /* V282 */
+      el('div', {class: 'm-lv'}, [el('span', {text: 'حریم خصوصی'}), el('a', {href: '/privacy.html', target: '_blank', rel: 'noopener', text: 'onlineexam.ir/privacy.html', style: 'direction:ltr;font-weight:800'})]),
       el('div', {class: 'row', style: 'gap:8px;margin-top:8px'}, [
         el('button', {class: 'btn', style: 'flex:1', text: 'ارسال ایمیل', onclick: function () { location.href = 'mailto:' + mail + '?subject=' + encodeURIComponent('نظر دربارهٔ آزمون آنلاین'); }}),
         el('button', {class: 'btn light', style: 'flex:1', text: 'کپی نشانی', onclick: function () { (navigator.clipboard ? navigator.clipboard.writeText(mail) : Promise.reject()).then(function () { toast('نشانی ایمیل کپی شد.', 'ok'); }, function () { toast(mail, 'info'); }); }})])]));

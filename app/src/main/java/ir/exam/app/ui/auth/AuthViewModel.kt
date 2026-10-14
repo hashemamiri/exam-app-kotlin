@@ -479,6 +479,7 @@ private fun safeAuthError(raw: String?): String {
         "invalid" in text && ("token" in text || "otp" in text) -> "کد نادرست یا منقضی است."
         "email not confirmed" in text -> "ایمیل کاربر تأیید نشده است."
         "invalid login credentials" in text -> "ایمیل/نام کاربری یا رمز عبور نادرست است."
+        "banned" in text -> "به‌خاطر چند بار رمز اشتباه، ورود این حساب موقتاً بسته است؛ ۱۵ دقیقه دیگر دوباره تلاش کنید." // V283
         "user not found" in text -> "اطلاعات حساب پیدا نشد."
         else -> UserFacingError.fromText(clean, "عملیات ورود کامل نشد. دوباره تلاش کنید.") // V209 — بدون متن فنی
     }

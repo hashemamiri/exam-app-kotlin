@@ -119,6 +119,7 @@
     if (page === 'grading') return role === 'teacher' ? ['grading'] : null;
     if (page === 'exam') return role === 'student' ? ['join', extra.code ? {code: extra.code} : null] : (role === 'teacher' ? ['dashboard'] : null);
     if (page === 'requests') return role === 'teacher' ? ['requests'] : (role === 'manager' ? ['dashboard'] : null);
+    if (page === 'students') return role === 'teacher' ? ['students'] : null; /* V282 */
     if (page === 'calendar') return ['calendar'];
     return null;
   }
@@ -141,10 +142,62 @@
   var lastUser = null;
   setInterval(function () {
     var u = S.user(); var id = u && u.id || null;
-    if (id && id !== lastUser) { lastUser = id; sync(false); setTimeout(offer, 2500); }
+    if (id && id !== lastUser) { lastUser = id; sync(false); setTimeout(offer, 2500); setTimeout(ncRefresh, 800); }
+    if (!id && document.getElementById('nc-bell')) document.getElementById('nc-bell').remove();
     if (!id) lastUser = null;
     if (id && pendingNav) { var n = pendingNav; pendingNav = null; navigate(n.page, n.extra); }
   }, 2000);
 
-  window.SitePush = {available: available, isEnabled: function () { return isEnabled() && Notification.permission === 'granted' && !!ls('push.token'); }, enable: enable, disable: disable, sync: sync, navigate: navigate};
+  /* --- V284 — مرکز اعلان: زنگولهٔ شناور با شمارندهٔ خوانده‌نشده؛ فهرست اعلان‌های گذشته (push_outbox) --- */
+  var ncUnread = 0, ncTimer = null;
+  function ncBell() {
+    var b = document.getElementById('nc-bell');
+    if (!b) {
+      b = el('button', {id: 'nc-bell', class: 'nc-bell', 'aria-label': 'اعلان‌ها', title: 'اعلان‌ها', onclick: ncOpen}, [
+        el('span', {class: 'nc-ic', html: '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg>'}),
+        el('span', {class: 'nc-badge', id: 'nc-badge'})
+      ]);
+      document.body.appendChild(b);
+    }
+    return b;
+  }
+  function ncPaintBadge() {
+    var b = document.getElementById('nc-badge'); if (!b) return;
+    b.textContent = ncUnread > 0 ? S.fa(Math.min(ncUnread, 99)) : '';
+    b.style.display = ncUnread > 0 ? '' : 'none';
+  }
+  async function ncRefresh() {
+    var u = S.user(); if (!u || !u.id) { var old = document.getElementById('nc-bell'); if (old) old.remove(); return null; }
+    var inExam = window.SiteStudent && window.SiteStudent.inExam && window.SiteStudent.inExam();
+    var bell = ncBell(); bell.style.display = inExam ? 'none' : '';
+    try { var r = await S.rpc('native_my_notifications_v284', {p_limit: 50}); ncUnread = (r && r.unread) || 0; ncPaintBadge(); return r; }
+    catch (e) { return null; }
+  }
+  function ncWhen(iso) { try { return S.jalaliDisplay(new Date(iso), true); } catch (e) { return ''; } }
+  async function ncOpen() {
+    if (document.getElementById('nc-modal')) return;
+    var bg = el('div', {class: 'modal-bg', id: 'nc-modal', onclick: function (e) { if (e.target === bg) bg.remove(); }});
+    var list = el('div', {class: 'nc-list'}, [el('p', {class: 'muted', text: 'در حال دریافت…'})]);
+    var m = el('div', {class: 'modal'}, [
+      el('h2', {text: 'اعلان‌ها'}), list,
+      el('div', {class: 'row', style: 'justify-content:flex-start;margin-top:14px'}, [el('button', {class: 'btn light', text: 'بستن', onclick: function () { bg.remove(); }})])
+    ]);
+    bg.appendChild(m); document.body.appendChild(bg);
+    var r = await ncRefresh();
+    list.innerHTML = '';
+    var items = (r && r.items) || [];
+    if (!items.length) { list.appendChild(el('p', {class: 'muted', text: r ? 'هنوز اعلانی ندارید.' : 'دریافت اعلان‌ها ممکن نشد.'})); return; }
+    items.forEach(function (n) {
+      var d = n.data || {};
+      list.appendChild(el('button', {class: 'nc-item' + (n.read_at ? '' : ' unread'), onclick: function () { bg.remove(); navigate(d.page, {exam_id: d.exam_id, code: d.code}); }}, [
+        el('div', {class: 'nc-row'}, [el('b', {text: n.title}), el('small', {text: ncWhen(n.created_at)})]),
+        el('div', {class: 'nc-body', text: n.body})
+      ]));
+    });
+    if (ncUnread > 0) { try { await S.rpc('native_notifications_read_v284', {}); ncUnread = 0; ncPaintBadge(); } catch (e) {} }
+  }
+  ncTimer = setInterval(ncRefresh, 90000);
+  setTimeout(ncRefresh, 1500);
+
+  window.SitePush = {available: available, notifications: {refresh: ncRefresh, open: ncOpen}, isEnabled: function () { return isEnabled() && Notification.permission === 'granted' && !!ls('push.token'); }, enable: enable, disable: disable, sync: sync, navigate: navigate};
 })();

@@ -25,4 +25,7 @@ object PushNavigation {
     }
 
     fun clear() { _pending.value = null }
+
+    /** V284 — مرکز اعلان داخل اپ: همان مسیر ضربه روی اعلان سیستم. */
+    fun open(page: String?, code: String? = null) { if (!page.isNullOrBlank()) _pending.value = PushTarget(page, null, code) }
 }

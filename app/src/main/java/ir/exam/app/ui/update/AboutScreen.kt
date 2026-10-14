@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Download
@@ -152,6 +153,8 @@ fun AboutScreen(
         }
         // V221 — «تماس با ما و نظرات»: ایمیل پشتیبانی (آینه در سایت: mobile.js aboutSection).
         item { ContactCard(onError = viewModel::reportInstallError) }
+        // V282 — شرایط استفاده و حریم خصوصی (متن داخل برنامه + نشانی وب)
+        item { LegalCard() }
         // V132 — لیست تغییرات نسخهٔ جدید زیرِ دکمه‌های بررسی/دریافت (همیشه دیده می‌شود؛ چه قبل از دانلود چه بعد از آن).
         // V208 — سه نسخهٔ آخر، هر کدام با تیترهای کوتاه (بلوک اول = نسخهٔ جدید).
         state.update?.takeIf { it.notesFa.isNotEmpty() }?.let { remote ->
@@ -220,5 +223,38 @@ private fun ChangeListCard(version: String, notes: List<String>) {
                 }
             }
         }
+    }
+}
+
+
+/** V282 — کارت «شرایط استفاده و حریم خصوصی»: دو دکمه، هر کدام متن کامل را در پنجرهٔ اسکرول‌شونده نشان می‌دهد. */
+@Composable
+private fun LegalCard() {
+    var open by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf<String?>(null) }
+    Card(Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text("شرایط استفاده و حریم خصوصی", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+            Text("آخرین به‌روزرسانی: ${ir.exam.app.core.legal.LegalTexts.UPDATED} · نسخهٔ وب: onlineexam.ir/terms.html و onlineexam.ir/privacy.html", style = MaterialTheme.typography.bodySmall)
+            androidx.compose.foundation.layout.Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedButton(onClick = { open = "terms" }, modifier = Modifier.weight(1f)) { Text("شرایط استفاده") }
+                OutlinedButton(onClick = { open = "privacy" }, modifier = Modifier.weight(1f)) { Text("حریم خصوصی") }
+            }
+        }
+    }
+    open?.let { which ->
+        val sections = if (which == "terms") ir.exam.app.core.legal.LegalTexts.TERMS else ir.exam.app.core.legal.LegalTexts.PRIVACY
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { open = null },
+            title = { Text(if (which == "terms") "شرایط استفاده" else "حریم خصوصی") },
+            text = {
+                LazyColumn(Modifier.fillMaxWidth().heightIn(max = 460.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    items(sections.size) { i ->
+                        Text(sections[i].first, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+                        Text(sections[i].second, style = MaterialTheme.typography.bodySmall)
+                    }
+                }
+            },
+            confirmButton = { androidx.compose.material3.TextButton(onClick = { open = null }) { Text("بستن") } }
+        )
     }
 }
