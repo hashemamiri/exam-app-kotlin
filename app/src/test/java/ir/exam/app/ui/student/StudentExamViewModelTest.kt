@@ -58,7 +58,7 @@ class StudentExamViewModelTest {
 
         assertTrue(viewModel.state.value.finished)
         assertTrue(viewModel.state.value.queued)
-        assertTrue(viewModel.state.value.submissionMessage.orEmpty().contains("صف"))
+        assertTrue(viewModel.state.value.submissionMessage.orEmpty().contains("خودکار ارسال")) // V281: پیام فارسی غیرفنی
         assertTrue(repository.activeCleared)
     }
 

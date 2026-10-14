@@ -19425,6 +19425,9 @@ CI: `compileDebugUnitTestKotlin` به‌خاطر `assertFalse` بدون import �
 - باگ V202.5: `var LANDING_TILES` داخل `paintAuth` بعد از خطی که `landing()` را صدا می‌زد تعریف شده بود → به‌خاطر hoisting مقدارش undefined و `.map` خطا می‌داد → صفحهٔ اول خالی. حالا کنار `authActive` در سطح ماژول است (تست ترتیب را پین می‌کند).
 - دروازهٔ صفحهٔ اول: mobile.js `entered()/enter()` با `sessionStorage['m-entered']`، `gateActive() = MQ && user && !entered`؛ app.js `render()` پیش از m-mode اگر gateActive → paintAuth (landing حتی با user). دکمه: user ⇒ `enter(); S.render()`؛ وگرنه `goA('login')`؛ پیوند ثبت‌نام فقط بدون user. `afterLogin()` → `SiteMobile.enter()`.
 
+### V284.2 — رفع CI 1.01.72 (اپ 1.01.73)
+- دو تست قدیمی: `V143_SitePhase6Test:27` (پین `action: 'delete_account'`/«عملیات ناشناخته» در extras.js که V282 حذف کرد → پین RPCهای v282) و `StudentExamViewModelTest` «queued …» (پیام صف V281 دیگر واژهٔ «صف» ندارد → «خودکار ارسال»). اسکن پین از این پس باید نسبت به **پایهٔ آخرین نصب‌کنندهٔ ارسال‌شده** و برای همهٔ `*Test.kt` (نه فقط `V*Test.kt`) اجرا شود.
+
 ### V284.1 — رفع CI 1.01.71 (اپ 1.01.72)
 - `AboutScreen.kt` `LegalCard()`: `var open by remember{...}` بدون `import androidx.compose.runtime.setValue` → compileDebugKotlin شکست. فقط ایمپورت اضافه شد. یادآوری برای آینده: هر فایل تازه با `by remember` باید هر دو `getValue/setValue` را ایمپورت کند.
 

@@ -24,7 +24,7 @@ class V143_SitePhase6Test {
         assertTrue("3 * 1024 * 1024" in js && "S.uploadMedia(blob, 'audio', 'audio', examId" in js && "MediaRecorder" in js)
         // auth extras
         assertTrue("/auth/v1/authorize?provider=google" in js && "native_set_registration_role_v1" in js)
-        assertTrue("action: 'delete_account'" in js && "عملیات ناشناخته" in js)
+        assertTrue("native_request_account_deletion_v282" in js && "native_student_request_deletion_v282" in js) // V282: حذف با مهلت ۳۰ روز
         assertTrue("sendRecoveryOtp" in js && "verifyRecoveryOtp" in js && "changePassword" in js)
         // xlsx بدون کتابخانه
         assertTrue("[Content_Types].xml" in js && "xl/workbook.xml" in js && "rightToLeft=\"1\"" in js)
