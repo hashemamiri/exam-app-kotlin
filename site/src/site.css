@@ -1917,3 +1917,6 @@ table.rp-single td.num,table.rp-single th.num{text-align:center;white-space:nowr
 .nc-row small{color:var(--muted);font-size:11px;white-space:nowrap}
 .nc-body{font-size:13px;color:var(--muted)}
 .m-dark .nc-bell{color:#9fd8ea}
+/* V290 — کادر عنوان وقتی ذخیره بدون عنوان زده شود */
+.builder input.need-title,.modal input.need-title{border-color:#d9534f !important;box-shadow:0 0 0 3px rgba(217,83,79,.25) !important;animation:needTitle .9s ease 2}
+@keyframes needTitle{0%,100%{box-shadow:0 0 0 3px rgba(217,83,79,.25)}50%{box-shadow:0 0 0 6px rgba(217,83,79,.45)}}

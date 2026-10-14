@@ -19425,7 +19425,10 @@ CI: `compileDebugUnitTestKotlin` به‌خاطر `assertFalse` بدون import �
 - باگ V202.5: `var LANDING_TILES` داخل `paintAuth` بعد از خطی که `landing()` را صدا می‌زد تعریف شده بود → به‌خاطر hoisting مقدارش undefined و `.map` خطا می‌داد → صفحهٔ اول خالی. حالا کنار `authActive` در سطح ماژول است (تست ترتیب را پین می‌کند).
 - دروازهٔ صفحهٔ اول: mobile.js `entered()/enter()` با `sessionStorage['m-entered']`، `gateActive() = MQ && user && !entered`؛ app.js `render()` پیش از m-mode اگر gateActive → paintAuth (landing حتی با user). دکمه: user ⇒ `enter(); S.render()`؛ وگرنه `goA('login')`؛ پیوند ثبت‌نام فقط بدون user. `afterLogin()` → `SiteMobile.enter()`.
 
-### V289.1 — رفع CI 1.01.88 (اپ 1.01.89)
+### V290 — سایت: خطای «عنوان خالی» هنگام ذخیره در دسکتاپ دیده شود (فقط site/**)
+- علت: `save()` خطا را در `msg` داخل `.b-top` می‌گذاشت و `.dk .builder .b-top{display:none}`. حالا در `catch` همیشه `toast(errMsg(e),'err')` + برای `e.needTitle` تابع `focusTitleField()` (ستون `settings` در دسکتاپ؛ در موبایل `openSettings()`) با کلاس `need-title` (site.css). تست: `V290_SiteSaveTitleTest` (paths-ignore).
+
+## V289.1 — رفع CI 1.01.88 (اپ 1.01.89)
 - `V135AudioMediaCostTest` رشتهٔ `تصاویر (سؤال، گزینه‌ها، جورکردنی)` را در `ExamBuilderScreen.kt` پین می‌کند → متن V289 به شکل سازگار تغییر کرد. درس: تست‌هایی که `import ir.exam` دارند در اجرای محلی سندباکس نیستند؛ قبل از تغییر متن‌های UI با grep در `app/src/test` پین‌ها را چک کن.
 
 ## V289 — هزینهٔ «تصویر خودم + فلش‌گذاری» = تصویر (اپ 1.01.88 + سایت + SQL)

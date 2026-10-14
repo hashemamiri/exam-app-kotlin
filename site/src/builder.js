@@ -1056,7 +1056,7 @@
           if (braw && braw.error) throw new Error(String(braw.error));
           state.dirty = false; saveDraft(); toast('در بانک ذخیره شد.', 'ok'); S.go('bank'); return;
         }
-        if (state.mode !== 'print' && !state.title.trim()) throw new Error('عنوان آزمون را در «مشخصات آزمون» وارد کنید.');
+        if (state.mode !== 'print' && !state.title.trim()) { var te = new Error('عنوان آزمون را در «مشخصات آزمون» وارد کنید.'); te.needTitle = true; throw te; }
         if (!state.questions.length) throw new Error('حداقل یک سؤال اضافه کنید.');
         if (state.questions.some(function (q) { return !q.text.trim(); })) throw new Error('متن همه سؤال‌ها را وارد کنید.');
         if (state.mode === 'print') {
@@ -1106,7 +1106,26 @@
         /* V202 — پیام کسر وسط صفحه، فقط با «تأیید» بسته می‌شود */
         /* V275 — یافتهٔ تست پرسونا: آزمون تازه «بسته» ساخته می‌شود و دانش‌آموز با پیام «این آزمون بسته است» برمی‌گردد؛ همین‌جا به معلم گفته می‌شود */
         await S.costDoneDlg((raw && raw.cost) || 0, raw ? raw.balance : null, 'آزمون ذخیره شد. کد آزمون: <b class="code">' + esc(state.code) + '</b>' + (wasNew ? '<br><small>آزمون فعلاً <b>بسته</b> است؛ در صفحهٔ «آزمون‌ها» قفل آن را باز کنید تا دانش‌آموزان بتوانند با این کد وارد شوند.</small>' : ''));
-      } catch (e) { msg.appendChild(el('div', {class: 'alert error', text: errMsg(e)})); }
+      } catch (e) {
+        msg.appendChild(el('div', {class: 'alert error', text: errMsg(e)}));
+        /* V290 — در دسکتاپ نوار بالا (و msg) دیده نمی‌شود؛ خطا همیشه به‌صورت toast هم بیاید و اگر عنوان خالی است، کادر عنوان نشان داده و فوکوس شود */
+        toast(errMsg(e), 'err');
+        if (e && e.needTitle) focusTitleField();
+      }
+    }
+    function focusTitleField() {
+      function focusIn(root) {
+        if (!root) return false;
+        var lab = Array.prototype.find.call(root.querySelectorAll('.field > label'), function (l) { return l.textContent === 'عنوان آزمون'; });
+        var i = lab && lab.parentNode ? lab.parentNode.querySelector('input') : null;
+        if (!i) return false;
+        try { i.scrollIntoView({block: 'center', behavior: 'smooth'}); } catch (err) {}
+        i.focus(); i.classList.add('need-title');
+        i.addEventListener('input', function h() { i.classList.remove('need-title'); i.removeEventListener('input', h); });
+        return true;
+      }
+      if (focusIn(settings)) return; /* دسکتاپ: ستون «مشخصات آزمون» همیشه باز است */
+      if (state.mode === 'online' && !state.bankEdit) { openSettings(); setTimeout(function () { focusIn(document.querySelector('.modal.wide')); }, 50); }
     }
     drawList(); drawEditor();
     return wrap;
