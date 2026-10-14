@@ -20,7 +20,7 @@ returns void language sql security definer set search_path=public,pg_temp as $$
 $$;
 
 -- مخاطبان آزمون (مشترک برای باز شدن / یادآوری / پایان مهلت)
-create or replace function private.exam_audience_v284(p_exam uuid) returns table(student_id uuid)
+create or replace function private.exam_audience_v284(p_exam text) returns table(student_id uuid)
 language sql security definer set search_path=public,pg_temp stable as $$
   with e as (select id,teacher_id from public.exams where id=p_exam),
   explicit as (
