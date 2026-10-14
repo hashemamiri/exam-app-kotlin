@@ -19425,6 +19425,14 @@ CI: `compileDebugUnitTestKotlin` به‌خاطر `assertFalse` بدون import �
 - باگ V202.5: `var LANDING_TILES` داخل `paintAuth` بعد از خطی که `landing()` را صدا می‌زد تعریف شده بود → به‌خاطر hoisting مقدارش undefined و `.map` خطا می‌داد → صفحهٔ اول خالی. حالا کنار `authActive` در سطح ماژول است (تست ترتیب را پین می‌کند).
 - دروازهٔ صفحهٔ اول: mobile.js `entered()/enter()` با `sessionStorage['m-entered']`، `gateActive() = MQ && user && !entered`؛ app.js `render()` پیش از m-mode اگر gateActive → paintAuth (landing حتی با user). دکمه: user ⇒ `enter(); S.render()`؛ وگرنه `goA('login')`؛ پیوند ثبت‌نام فقط بدون user. `afterLogin()` → `SiteMobile.enter()`.
 
+### V285.2 — وفاداری سربرگ در خروجی Word (اپ 1.01.79 + سایت)
+- علت اصلی به‌هم‌ریختگی: سلولی که آخرین فرزندش `<w:tbl>` تودرتو بود و بعدش `<w:p>` نداشت → Word/LO فایل را خراب می‌دانند و چیدمان را روی هم می‌ریزند. حالا `cellXml()` تضمین می‌کند هر `<w:tc>` با پاراگراف تمام شود (در `tableXml` و `gridAsTable`).
+- جدول‌های هم‌سطحِ چسبیده ادغام می‌شدند → `TBL_SEP` (پاراگراف صفر ارتفاع) در `Section.block`، خروجی `mergeTables` و پایان بدنه قبل از `sectPr`.
+- خطوط: `sideBorders(st, withNil)` → `tblBorders` از border خودِ عنصر جدول/grid + `tcBorders` هر سلول فقط برای ضلع‌های موجود (`nil` صریح در LO خط سلول‌های همسایه را حذف می‌کرد). ظرف‌های کادردارِ چندبلوکی (قاب سربرگ، جعبهٔ رئیس) در `walkBlock` داخل جدول تک‌سلولی کادردار می‌روند.
+- `gridAsTable` فقط grid دوستونه‌ای را که ستونی <40px دارد رد می‌کند (برچسب+مقدار → پاراگراف)؛ grid جورکردنی ۵ستونه با ستون نقطه‌ها همچنان جدول است. حداقل عرض «ردیف» 720 twip.
+- خط‌های پاسخ: Word پاراگراف‌های پشت‌سرهم با pBdr یکسان را یک گروه می‌کند و فقط خط آخر را می‌کشد → رنگ یکی‌درمیان 555555/565656 و یک run فاصله در هر خط.
+- بررسی: هر ۷ قالب سربرگ با Chromium ساخته و با LibreOffice رندر و با پیش‌نمایش مقایسه شد (qa/hdr.py). فقط LibreOffice؛ با Word واقعی آزمایش نشده. سایت: engines.7d3db3541634.js (قدیمی 72f4d68fc6b7 حذف).
+
 ### V285.1 — رفع CI 1.01.76/1.01.77 (اپ 1.01.78)
 - در مخزن کاربر `supabase/migrations/20261014_native_notification_center_v284.sql` هنوز `exam_audience_v284(p_exam uuid)` بود (تغییر V284.3 در مخزن او اعمال نشده بود؛ `supabase/**` در paths-ignore است و با پین تست `(p_exam text)` CI قرمز می‌شد). این نسخه فایل SQL را دوباره تحویل می‌دهد و فقط برای اجرای CI bump می‌کند. درس: پس از هر نسخه، فایل‌های payload را با `git diff --stat` کاربر تطبیق بده؛ تست‌های پین‌کنندهٔ فایل‌های ignore‌شده می‌توانند جدا از بیلد قرمز شوند.
 

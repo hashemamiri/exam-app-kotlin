@@ -47,6 +47,14 @@
     return /block|flex|grid|list-item|table-caption|flow-root/.test(d) || el.tagName === 'DIV' || el.tagName === 'P' || /^H[1-6]$/.test(el.tagName) || el.tagName === 'LI';
   }
   function cm2twip(cm) { return Math.round(cm * 567); }
+  /* بینندهٔ PGS بوم را با transform:scale زوم می‌کند؛ اندازه‌های getBoundingClientRect باید بر آن تقسیم شوند */
+  var ZOOM = 1;
+  function measureZoom() {
+    ZOOM = 1;
+    try { var c = document.getElementById('pgsCanvas'); if (c && c.offsetWidth > 0) { var w = c.getBoundingClientRect().width; if (w > 0) ZOOM = w / c.offsetWidth; } } catch (e) {}
+    if (!(ZOOM > 0.05 && ZOOM < 20)) ZOOM = 1;
+  }
+  function rectOf(el) { var r = el.getBoundingClientRect(); return {left: r.left / ZOOM, right: r.right / ZOOM, top: r.top / ZOOM, bottom: r.bottom / ZOOM, width: r.width / ZOOM, height: r.height / ZOOM}; }
 
   /* ---------------------------------------------------------------- نویسندهٔ ZIP (store) */
   var CRC_T = (function () { var t = new Uint32Array(256); for (var n = 0; n < 256; n++) { var c = n; for (var k = 0; k < 8; k++) c = (c & 1) ? (0xEDB88320 ^ (c >>> 1)) : (c >>> 1); t[n] = c >>> 0; } return t; })();
@@ -93,14 +101,14 @@
   function imgElement(ctx, el, maxW) {
     var src = el.currentSrc || el.src || ''; if (!src) return Promise.resolve(null);
     var w = el.naturalWidth || px(el.getAttribute('width')) || 300, h = el.naturalHeight || px(el.getAttribute('height')) || 200;
-    var r = el.getBoundingClientRect(); var dw = r.width > 2 ? r.width : (px(el.style.width) || w); var dh = dw * h / Math.max(1, w);
+    var r = rectOf(el); var dw = r.width > 2 ? r.width : (px(el.style.width) || w); var dh = dw * h / Math.max(1, w);
     if (dw > maxW) { dh = dh * maxW / dw; dw = maxW; }
     var d = /^data:/.test(src) ? dataUrlBytes(src) : null;
     if (d && (d.mime === 'image/png' || d.mime === 'image/jpeg')) return Promise.resolve(ctx.addImage(d.bytes, d.mime === 'image/png' ? 'png' : 'jpg', dw, dh));
     return loadImg(src).then(function (im) { return ctx.addImage(canvasPng(function (x) { x.drawImage(im, 0, 0, w, h); }, w, h, 1), 'png', dw, dh); }).catch(function () { return null; });
   }
   function svgElement(ctx, el, maxW) {
-    var r = el.getBoundingClientRect(); var vb = (el.getAttribute('viewBox') || '').split(/[\s,]+/).map(parseFloat);
+    var r = rectOf(el); var vb = (el.getAttribute('viewBox') || '').split(/[\s,]+/).map(parseFloat);
     var w = r.width > 2 ? r.width : (px(el.getAttribute('width')) || (vb.length === 4 ? vb[2] : 300));
     var h = r.height > 2 ? r.height : (px(el.getAttribute('height')) || (vb.length === 4 ? vb[3] : 200));
     var dw = w, dh = h; if (dw > maxW) { dh = dh * maxW / dw; dw = maxW; }
@@ -127,10 +135,10 @@
       var f = firstFont(s.fontFamily); if (f) p += '<w:rFonts w:ascii="' + esc(f) + '" w:hAnsi="' + esc(f) + '" w:cs="' + esc(f) + '"/>';
       if (px(s.fontWeight) >= 600 || s.fontWeight === 'bold' || s.fontWeight === 'bolder') p += '<w:b/><w:bCs/>';
       if (s.fontStyle === 'italic' || s.fontStyle === 'oblique') p += '<w:i/><w:iCs/>';
-      if (/underline/.test(s.textDecorationLine || s.textDecoration || '')) p += '<w:u w:val="single"/>';
       if (/line-through/.test(s.textDecorationLine || s.textDecoration || '')) p += '<w:strike/>';
       var c = hexColor(s.color); if (c) p += '<w:color w:val="' + c + '"/>';
       var hp = Math.round(px(s.fontSize) * 1.5); if (hp > 0) p += '<w:sz w:val="' + hp + '"/><w:szCs w:val="' + hp + '"/>';
+      if (/underline/.test(s.textDecorationLine || s.textDecoration || '')) p += '<w:u w:val="single"/>';
     }
     if (extra) p += extra;
     return p;
@@ -250,14 +258,16 @@
 
   /* ---------------------------------------------------------------- پاراگراف‌ها و جدول‌ها */
   function paraProps(el, opts) {
-    var s = cs(el), p = '<w:bidi/>';
+    var s = cs(el), p = '';
     var ta = s ? s.textAlign : 'start';
     var jc = ta === 'center' ? 'center' : (ta === 'left' || ta === 'end' ? 'left' : (ta === 'justify' ? 'both' : 'right'));
-    p += '<w:jc w:val="' + jc + '"/>';
+    /* ترتیب عناصر طبق اسکیمای OOXML: pBdr → bidi → spacing → ind → jc */
+    if (opts && opts.border) p += opts.border;
+    p += '<w:bidi/>';
     if (opts && opts.spacing) p += opts.spacing;
     else p += '<w:spacing w:before="0" w:after="60" w:line="' + Math.round((s && px(s.lineHeight) > 0 ? px(s.lineHeight) : px(s ? s.fontSize : 14) * 1.6) * TWIP_PER_PX) + '" w:lineRule="atLeast"/>';
-    if (opts && opts.border) p += opts.border;
     if (opts && opts.ind) p += opts.ind;
+    p += '<w:jc w:val="' + jc + '"/>';
     return '<w:pPr>' + p + '</w:pPr>';
   }
   function Para(el, opts) { this.el = el; this.opts = opts || {}; this.runs = []; }
@@ -267,7 +277,16 @@
   function Section(ctx, blockEl) { this.ctx = ctx; this.blockEl = blockEl; this.blocks = []; this.open = null; }
   Section.prototype.para = function (el) { if (!this.open) this.open = new Para(el || this.blockEl); return this.open; };
   Section.prototype.flush = function () { if (this.open) { var x = this.open.xml(); if (x) this.blocks.push(x); this.open = null; } };
-  Section.prototype.block = function (xml) { this.flush(); if (xml) this.blocks.push(xml); };
+  /* دو جدول پشت‌سرهم بدون پاراگراف میانی را Word/LibreOffice یکی می‌کنند → پاراگراف ریز جداکننده */
+  var TBL_SEP = '<w:p><w:pPr><w:spacing w:before="0" w:after="0" w:line="20" w:lineRule="exact"/><w:rPr><w:sz w:val="2"/><w:szCs w:val="2"/></w:rPr></w:pPr></w:p>';
+  /* هر خانهٔ جدول باید با پاراگراف تمام شود (پس از جدولِ تودرتو الزامی است؛ وگرنه Word فایل را خراب می‌داند) */
+  function cellXml(inner) { if (!inner) return '<w:p/>'; return /<\/w:tbl>\s*$/.test(inner) ? inner + TBL_SEP : inner; }
+  function startsWithTbl(x) { return typeof x === 'string' && x.indexOf('<w:tbl>') === 0; }
+  Section.prototype.block = function (xml) {
+    this.flush(); if (!xml) return;
+    if (startsWithTbl(xml) && this.blocks.length && startsWithTbl(this.blocks[this.blocks.length - 1])) this.blocks.push(TBL_SEP);
+    this.blocks.push(xml);
+  };
   Section.prototype.xml = function () { this.flush(); return this.blocks.join(''); };
 
   function walkInline(sec, node, maxW) {
@@ -313,7 +332,8 @@
         var rows = el.querySelectorAll('.answer-line-row');
         for (var i = 0; i < rows.length; i++) {
           var hcm = parseFloat(rows[i].style.height) || 0.75;
-          sec.block('<w:p><w:pPr><w:bidi/><w:spacing w:before="0" w:after="0" w:line="' + cm2twip(hcm) + '" w:lineRule="exact"/><w:pBdr><w:bottom w:val="dotted" w:sz="6" w:space="1" w:color="555555"/></w:pBdr></w:pPr></w:p>');
+          /* Word پاراگراف‌های هم‌کادر پشت‌سرهم را یک گروه می‌کند و فقط خط آخر را می‌کشد → رنگ یکی‌درمیان کمی متفاوت */
+          sec.block('<w:p><w:pPr><w:pBdr><w:bottom w:val="dotted" w:sz="6" w:space="1" w:color="' + (i % 2 ? '565656' : '555555') + '"/></w:pBdr><w:bidi/><w:spacing w:before="0" w:after="0" w:line="' + cm2twip(hcm) + '" w:lineRule="exact"/></w:pPr><w:r><w:t xml:space="preserve"> </w:t></w:r></w:p>');
         }
       } else {
         var hc = parseFloat(el.style.minHeight) || 2, n = Math.max(1, Math.round(hc / 0.75));
@@ -329,8 +349,11 @@
     var s = cs(el), border = '';
     if (s && el.tagName !== 'TD' && el.tagName !== 'TH') { /* خطِ خانه‌های جدول را خودِ جدول می‌کشد */
       var bb = px(s.borderBottomWidth) > 0 && s.borderBottomStyle !== 'none', bt = px(s.borderTopWidth) > 0 && s.borderTopStyle !== 'none';
+      var bl = px(s.borderLeftWidth) > 0 && s.borderLeftStyle !== 'none', br = px(s.borderRightWidth) > 0 && s.borderRightStyle !== 'none';
       if (bt) border += '<w:top w:val="single" w:sz="' + Math.max(4, Math.round(px(s.borderTopWidth) * 8)) + '" w:space="1" w:color="' + (hexColor(s.borderTopColor) || '000000') + '"/>';
+      if (bl) border += '<w:left w:val="single" w:sz="' + Math.max(4, Math.round(px(s.borderLeftWidth) * 8)) + '" w:space="4" w:color="' + (hexColor(s.borderLeftColor) || '000000') + '"/>';
       if (bb) border += '<w:bottom w:val="single" w:sz="' + Math.max(4, Math.round(px(s.borderBottomWidth) * 8)) + '" w:space="1" w:color="' + (hexColor(s.borderBottomColor) || '000000') + '"/>';
+      if (br) border += '<w:right w:val="single" w:sz="' + Math.max(4, Math.round(px(s.borderRightWidth) * 8)) + '" w:space="4" w:color="' + (hexColor(s.borderRightColor) || '000000') + '"/>';
       if (border) border = '<w:pBdr>' + border + '</w:pBdr>';
     }
     var sub = new Section(ctx, el);
@@ -342,7 +365,7 @@
       for (var ch = el.firstChild; ch; ch = ch.nextSibling) walkInline(sub, ch, maxW);
       sub.flush();
       /* فضاهای خالی با ارتفاع صریح (مثل محل امضا) */
-      if (!sub.blocks.length && s && px(el.style.minHeight || s.minHeight) > 10) sub.block('<w:p><w:pPr><w:spacing w:before="0" w:after="0" w:line="' + Math.round(px(el.style.minHeight || s.minHeight) * TWIP_PER_PX) + '" w:lineRule="exact"/>' + border + '</w:pPr></w:p>');
+      if (!sub.blocks.length && s && px(el.style.minHeight || s.minHeight) > 10) sub.block('<w:p><w:pPr>' + border + '<w:spacing w:before="0" w:after="0" w:line="' + Math.round(px(el.style.minHeight || s.minHeight) * TWIP_PER_PX) + '" w:lineRule="exact"/></w:pPr></w:p>');
     } else {
       /* فرزندان تورفته‌تر: گرید/فلکس با چند ستون → پشت‌سرهم */
       var grid = s && /grid|flex/.test(s.display) && s.flexDirection !== 'column';
@@ -353,7 +376,16 @@
         if (isBlock(c2) || c2.tagName === 'TABLE') walkBlock(sub, c2, maxW); else walkInline(sub, c2, maxW);
       }
     }
-    sec.block(sub.xml());
+    var subXml = sub.xml();
+    if (hasBlockChild && s && subXml) {
+      /* کادرِ دورِ یک ظرفِ چندبلوکی (مثل کادر سربرگ یا جعبهٔ «شماره صندلی») → جدول یک‌خانه‌ای با همان خطوط */
+      var ob = sideBorders(s, false);
+      if (ob) {
+        var bw = Math.min(maxW, rectOf(el).width || maxW), tw = Math.round(bw * TWIP_PER_PX);
+        subXml = '<w:tbl><w:tblPr><w:bidiVisual/><w:tblW w:w="' + tw + '" w:type="dxa"/><w:jc w:val="center"/><w:tblBorders>' + ob + '</w:tblBorders><w:tblLayout w:type="fixed"/><w:tblCellMar><w:left w:w="0" w:type="dxa"/><w:right w:w="0" w:type="dxa"/></w:tblCellMar></w:tblPr><w:tblGrid><w:gridCol w:w="' + tw + '"/></w:tblGrid><w:tr><w:tc><w:tcPr><w:tcW w:w="' + tw + '" w:type="dxa"/></w:tcPr>' + cellXml(subXml) + '</w:tc></w:tr></w:tbl>';
+      }
+    }
+    sec.block(subXml);
   }
 
   /* گرید/فلکس چندستونه (گزینه‌های چندگزینه‌ای، ردیف‌های سربرگ، جورکردنی) → جدول بدون خط با همان تعداد ستون */
@@ -363,24 +395,30 @@
     /* ردیف‌ها از روی هندسه: عنصری که زیرِ ردیفِ جاری شروع شود، ردیف تازه است */
     var rows = [], cur = null, curBottom = -1e9;
     kids.forEach(function (k) {
-      var r = k.getBoundingClientRect();
+      var r = rectOf(k); k.__wr = r;
       if (!cur || r.top >= curBottom - 2) { cur = []; rows.push(cur); curBottom = r.bottom; }
       else curBottom = Math.max(curBottom, r.bottom);
       cur.push(k);
     });
+    /* ترتیب دیداری راست→چپ (مستقل از direction و ترتیب DOM؛ جدول bidiVisual است) */
+    rows.forEach(function (r) { r.sort(function (a, b) { return b.__wr.left - a.__wr.left; }); });
     var ncol = 0, ref = null; rows.forEach(function (r) { if (r.length > ncol) { ncol = r.length; ref = r; } });
     if (ncol < 2 || ncol > 8) return false;
-    var cols = ref.map(function (k) { return k.getBoundingClientRect(); });
+    var cols = ref.map(function (k) { return k.__wr; });
     if (cols[0].width < 1) return false;
+    if (ncol === 2 && cols.some(function (r) { return r.width < 40; })) return false; /* ستون‌های خیلی باریک (برچسب+مقدار) → پاراگراف */
+    /* گرید CSS: عرض واقعی ستون‌ها از grid-template-columns (محاسبه‌شده، چپ→راست) */
+    var gs = cs(el), tpl = gs && gs.display === 'grid' ? String(gs.gridTemplateColumns || '').trim().split(/\s+/).map(parseFloat).filter(function (v) { return isFinite(v) && v > 0; }) : [];
+    if (tpl.length === ncol) cols = tpl.slice().reverse().map(function (w) { return {width: w}; });
     var total = cols.reduce(function (a, r) { return a + r.width; }, 0) || maxW;
     var tw = Math.min(maxW, total), widths = cols.map(function (r) { return Math.round(tw * r.width / total * TWIP_PER_PX); });
-    /* راست‌به‌چپ: ترتیب DOM = راست به چپ؛ bidiVisual خودش برمی‌گرداند */
-    var x = '<w:tbl><w:tblPr><w:tblW w:w="' + Math.round(tw * TWIP_PER_PX) + '" w:type="dxa"/><w:bidiVisual/><w:tblLayout w:type="fixed"/><w:tblCellMar><w:left w:w="40" w:type="dxa"/><w:right w:w="40" w:type="dxa"/></w:tblCellMar></w:tblPr><w:tblGrid>' + widths.map(function (w) { return '<w:gridCol w:w="' + w + '"/>'; }).join('') + '</w:tblGrid>';
+    var gb = gs ? sideBorders(gs, false) : '';
+    var x = '<w:tbl><w:tblPr><w:bidiVisual/><w:tblW w:w="' + Math.round(tw * TWIP_PER_PX) + '" w:type="dxa"/>' + (gb ? '<w:tblBorders>' + gb + '</w:tblBorders>' : '') + '<w:tblLayout w:type="fixed"/><w:tblCellMar><w:left w:w="40" w:type="dxa"/><w:right w:w="40" w:type="dxa"/></w:tblCellMar></w:tblPr><w:tblGrid>' + widths.map(function (w) { return '<w:gridCol w:w="' + w + '"/>'; }).join('') + '</w:tblGrid>';
     rows.forEach(function (row) {
       x += '<w:tr>';
       for (var j = 0; j < ncol; j++) {
         var cell = row[j]; x += '<w:tc><w:tcPr><w:tcW w:w="' + widths[j] + '" w:type="dxa"/></w:tcPr>';
-        if (cell) { var cs2 = new Section(sec.ctx, cell); walkBlock(cs2, cell, widths[j] / TWIP_PER_PX); var inner = cs2.xml(); x += inner || '<w:p/>'; } else x += '<w:p/>';
+        if (cell) { var cs2 = new Section(sec.ctx, cell); walkBlock(cs2, cell, widths[j] / TWIP_PER_PX); x += cellXml(cs2.xml()); } else x += '<w:p/>';
         x += '</w:tc>';
       }
       x += '</w:tr>';
@@ -389,38 +427,52 @@
     return true;
   }
 
+  /* چهار خط یک عنصر از computed style → عناصر top/left/bottom/right (ترتیب اسکیمای OOXML)؛ withNil: خط نداشته = nil */
+  function sideBorders(st, withNil) {
+    var out = '';
+    [['Top', 'top'], ['Left', 'left'], ['Bottom', 'bottom'], ['Right', 'right']].forEach(function (p) {
+      var w = px(st['border' + p[0] + 'Width']), style = st['border' + p[0] + 'Style'];
+      if (w > 0 && style && style !== 'none' && style !== 'hidden') {
+        var val = style === 'dotted' ? 'dotted' : (style === 'dashed' ? 'dashed' : (style === 'double' ? 'double' : 'single'));
+        out += '<w:' + p[1] + ' w:val="' + val + '" w:sz="' + Math.max(2, Math.round(w * 8)) + '" w:space="0" w:color="' + (hexColor(st['border' + p[0] + 'Color']) || '000000') + '"/>';
+      } else if (withNil) out += '<w:' + p[1] + ' w:val="nil"/>';
+    });
+    return out;
+  }
   function tableXml(ctx, table, maxW) {
     var trs = []; table.querySelectorAll(':scope > thead > tr, :scope > tbody > tr, :scope > tfoot > tr, :scope > tr').forEach(function (tr) { if (!hidden(tr)) trs.push(tr); });
     if (!trs.length) return '';
     var ncol = 0; trs.forEach(function (tr) { var n = 0; for (var i = 0; i < tr.children.length; i++) n += Math.max(1, parseInt(tr.children[i].getAttribute('colspan') || '1', 10)); ncol = Math.max(ncol, n); });
-    var tr0 = trs[0], rect = table.getBoundingClientRect(), tw = rect.width > 2 ? Math.min(rect.width, maxW) : maxW;
+    var tr0 = trs[0], rect = rectOf(table), tw = rect.width > 2 ? Math.min(rect.width, maxW) : maxW;
     var widths = [], used = 0;
     for (var i = 0; i < tr0.children.length && widths.length < ncol; i++) {
-      var td = tr0.children[i], span = Math.max(1, parseInt(td.getAttribute('colspan') || '1', 10)), w = td.getBoundingClientRect().width;
+      var td = tr0.children[i], span = Math.max(1, parseInt(td.getAttribute('colspan') || '1', 10)), w = rectOf(td).width;
       for (var k = 0; k < span; k++) widths.push(w > 0 ? w / span : 0);
     }
     while (widths.length < ncol) widths.push(0);
     used = widths.reduce(function (a, b) { return a + b; }, 0);
     var scale = used > 0 ? tw / used : 1;
-    widths = widths.map(function (w) { return Math.max(560, Math.round((used > 0 ? w * scale : tw / ncol) * TWIP_PER_PX)); });
-    var ts = cs(table), bordered = false;
-    var firstTd = table.querySelector('td,th'); var tds = firstTd ? cs(firstTd) : null;
-    if ((tds && px(tds.borderBottomWidth) > 0 && tds.borderBottomStyle !== 'none') || (ts && px(ts.borderTopWidth) > 0 && ts.borderTopStyle !== 'none')) bordered = true;
-    var bcolor = (tds && hexColor(tds.borderBottomColor)) || '000000';
-    var tb = bordered ? '<w:tblBorders><w:top w:val="single" w:sz="4" w:color="' + bcolor + '"/><w:left w:val="single" w:sz="4" w:color="' + bcolor + '"/><w:bottom w:val="single" w:sz="4" w:color="' + bcolor + '"/><w:right w:val="single" w:sz="4" w:color="' + bcolor + '"/><w:insideH w:val="single" w:sz="4" w:color="' + bcolor + '"/><w:insideV w:val="single" w:sz="4" w:color="' + bcolor + '"/></w:tblBorders>' : '';
-    var x = '<w:tbl><w:tblPr><w:tblW w:w="' + Math.round(tw * TWIP_PER_PX) + '" w:type="dxa"/><w:jc w:val="center"/><w:bidiVisual/>' + tb + '<w:tblLayout w:type="fixed"/><w:tblCellMar><w:left w:w="60" w:type="dxa"/><w:right w:w="60" w:type="dxa"/></w:tblCellMar></w:tblPr><w:tblGrid>' + widths.map(function (w) { return '<w:gridCol w:w="' + w + '"/>'; }).join('') + '</w:tblGrid>';
+    widths = widths.map(function (w) { return Math.max(720, Math.round((used > 0 ? w * scale : tw / ncol) * TWIP_PER_PX)); });
+    /* خطوط: کادر خودِ جدول (tblBorders بیرونی) + خط هر خانه از computed style همان خانه (tcBorders) */
+    var ts = cs(table), tb = '';
+    if (ts) {
+      var ob = sideBorders(ts, false);
+      if (ob) tb = '<w:tblBorders>' + ob + '</w:tblBorders>';
+    }
+    var x = '<w:tbl><w:tblPr><w:bidiVisual/><w:tblW w:w="' + Math.round(tw * TWIP_PER_PX) + '" w:type="dxa"/><w:jc w:val="center"/>' + tb + '<w:tblLayout w:type="fixed"/><w:tblCellMar><w:left w:w="60" w:type="dxa"/><w:right w:w="60" w:type="dxa"/></w:tblCellMar></w:tblPr><w:tblGrid>' + widths.map(function (w) { return '<w:gridCol w:w="' + w + '"/>'; }).join('') + '</w:tblGrid>';
     trs.forEach(function (tr, ri) {
       var isHead = tr.parentElement && tr.parentElement.tagName === 'THEAD';
-      x += '<w:tr>' + (isHead ? '<w:trPr><w:tblHeader/><w:cantSplit/></w:trPr>' : '');
+      x += '<w:tr>' + (isHead ? '<w:trPr><w:cantSplit/><w:tblHeader/></w:trPr>' : '');
       var ci = 0;
       for (var i = 0; i < tr.children.length; i++) {
         var td = tr.children[i]; if (hidden(td) && td.tagName !== 'TD' && td.tagName !== 'TH') continue;
         var span = Math.max(1, parseInt(td.getAttribute('colspan') || '1', 10)), w = 0; for (var k = 0; k < span && ci + k < widths.length; k++) w += widths[ci + k];
         var st = cs(td), shade = st ? hexColor(st.backgroundColor) : null;
         var va = st && st.verticalAlign === 'middle' ? 'center' : (st && st.verticalAlign === 'bottom' ? 'bottom' : 'top');
-        x += '<w:tc><w:tcPr><w:tcW w:w="' + w + '" w:type="dxa"/>' + (span > 1 ? '<w:gridSpan w:val="' + span + '"/>' : '') + (shade && shade !== 'FFFFFF' ? '<w:shd w:val="clear" w:color="auto" w:fill="' + shade + '"/>' : '') + '<w:vAlign w:val="' + va + '"/></w:tcPr>';
-        var sec = new Section(ctx, td); walkBlock(sec, td, w / TWIP_PER_PX); var inner = sec.xml();
-        x += (inner || '<w:p/>') + '</w:tc>';
+        var cb = st ? sideBorders(st, false) : '';
+        x += '<w:tc><w:tcPr><w:tcW w:w="' + w + '" w:type="dxa"/>' + (span > 1 ? '<w:gridSpan w:val="' + span + '"/>' : '') + (cb ? '<w:tcBorders>' + cb + '</w:tcBorders>' : '') + (shade && shade !== 'FFFFFF' ? '<w:shd w:val="clear" w:color="auto" w:fill="' + shade + '"/>' : '') + '<w:vAlign w:val="' + va + '"/></w:tcPr>';
+        var sec = new Section(ctx, td); walkBlock(sec, td, w / TWIP_PER_PX);
+        x += cellXml(sec.xml()) + '</w:tc>';
         ci += span;
       }
       x += '</w:tr>';
@@ -437,14 +489,16 @@
         var rows = b.xml.slice(b.xml.indexOf('<w:tr'), b.xml.lastIndexOf('</w:tbl>'));
         if (rows.indexOf('<w:tr') >= 0) {
           /* سرستون تکراری حذف می‌شود */
-          rows = rows.replace(/<w:tr><w:trPr><w:tblHeader\/>[\s\S]*?<\/w:tr>/, '');
+          rows = rows.replace(/<w:tr><w:trPr><w:cantSplit\/><w:tblHeader\/>[\s\S]*?<\/w:tr>/, '');
           prev.xml = prev.xml.slice(0, prev.xml.lastIndexOf('</w:tbl>')) + rows + '</w:tbl>';
         }
         return;
       }
       out.push(b);
     });
-    return out.map(function (b) { return b.xml; }).join('');
+    var xml = '';
+    out.forEach(function (b, i) { if (i && startsWithTbl(b.xml) && startsWithTbl(out[i - 1].xml)) xml += TBL_SEP; xml += b.xml; });
+    return xml;
   }
 
   /* ---------------------------------------------------------------- تنظیمات صفحه */
@@ -484,6 +538,7 @@
     return new Promise(function (resolve, reject) {
       try {
         var roots = sourceRoots();
+        measureZoom();
         if (!roots.length) throw new Error('پیش‌نمایش آماده نیست.');
         var ps = pageSetup();
         var textWmm = Math.max(60, ps.W - ps.mL - ps.mR), maxW = textWmm * 3.7795; /* px در 96dpi */
@@ -502,8 +557,8 @@
         var area = document.getElementById('previewArea'), af = cs(area), baseFont = firstFont(af ? af.fontFamily : '') || 'B Nazanin';
         var title = (window.examTitleForWord && window.examTitleForWord()) || document.title || 'آزمون';
         Promise.all(ctx.pending).then(function () {
-          var bodyXml = mergeTables(blocks).replace(/\u0001IMG(\d+)\u0001/g, function (_, i) { return ctx.slots[+i] || ''; });
-          var sect = '<w:sectPr><w:pgSz w:w="' + Math.round(ps.W * TWIP_PER_MM) + '" w:h="' + Math.round(ps.H * TWIP_PER_MM) + '"' + (ps.landscape ? ' w:orient="landscape"' : '') + '/><w:pgMar w:top="' + Math.round(ps.mT * TWIP_PER_MM) + '" w:right="' + Math.round(ps.mR * TWIP_PER_MM) + '" w:bottom="' + Math.round(ps.mB * TWIP_PER_MM) + '" w:left="' + Math.round(ps.mL * TWIP_PER_MM) + '" w:header="567" w:footer="567" w:gutter="0"/><w:bidi/><w:cols w:space="708"/></w:sectPr>';
+          var bodyXml = (mergeTables(blocks) + TBL_SEP).replace(/\u0001IMG(\d+)\u0001/g, function (_, i) { return ctx.slots[+i] || ''; });
+          var sect = '<w:sectPr><w:pgSz w:w="' + Math.round(ps.W * TWIP_PER_MM) + '" w:h="' + Math.round(ps.H * TWIP_PER_MM) + '"' + (ps.landscape ? ' w:orient="landscape"' : '') + '/><w:pgMar w:top="' + Math.round(ps.mT * TWIP_PER_MM) + '" w:right="' + Math.round(ps.mR * TWIP_PER_MM) + '" w:bottom="' + Math.round(ps.mB * TWIP_PER_MM) + '" w:left="' + Math.round(ps.mL * TWIP_PER_MM) + '" w:header="567" w:footer="567" w:gutter="0"/><w:cols w:space="708"/><w:bidi/></w:sectPr>';
           var doc = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:document ' + W_NS + '><w:body>' + (bodyXml || '<w:p/>') + sect + '</w:body></w:document>';
           var files = [
             {name: '[Content_Types].xml', data: utf8(contentTypes())},
