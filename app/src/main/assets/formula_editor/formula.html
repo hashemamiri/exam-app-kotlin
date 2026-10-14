@@ -7698,6 +7698,25 @@ html[data-theme="light"] .q-math-prev { background: #f3f6ff; }
             </span>
           </button>
         </div>
+        <!-- V287 — ردیف اضافهٔ دسکتاپ (فقط با موس و صفحهٔ عریض دیده می‌شود) -->
+        <div class="mb-dk-extra" aria-label="دکمه‌های بیشتر (دسکتاپ)">
+          <button type="button" onclick="mbPadDo(['op',{v:'∑'}])" title="مجموع">∑</button>
+          <button type="button" onclick="mbPadDo(['op',{v:'∏'}])" title="حاصل‌ضرب">∏</button>
+          <button type="button" onclick="mbPadDo(['lim'])" title="حد">lim</button>
+          <button type="button" onclick="mbPadDo(['tpl','{}^{n}a'])" title="تتراسیون (توان چپ)">ⁿa</button>
+          <button type="button" onclick="mbPadDo(['sub'])" title="زیرنویس">x<sub>n</sub></button>
+          <button type="button" onclick="mbPadDo(['par',{o:'|',c:'|'}])" title="قدرمطلق">|x|</button>
+          <button type="button" onclick="mbPadDo(['sym','±'])" title="مثبت‌منفی">±</button>
+          <button type="button" onclick="mbPadDo(['sym','≠'])" title="نامساوی">≠</button>
+          <button type="button" onclick="mbPadDo(['sym','≤'])" title="کوچکتر یا مساوی">≤</button>
+          <button type="button" onclick="mbPadDo(['sym','≥'])" title="بزرگتر یا مساوی">≥</button>
+          <button type="button" onclick="mbPadDo(['sym','≈'])" title="تقریباً">≈</button>
+          <button type="button" onclick="mbPadDo(['sym','π'])" title="پی">π</button>
+          <button type="button" onclick="mbPadDo(['sym','θ'])" title="تتا">θ</button>
+          <button type="button" onclick="mbPadDo(['sym','∞'])" title="بی‌نهایت">∞</button>
+          <button type="button" onclick="mbPadDo(['sym','°'])" title="درجه">°</button>
+          <button type="button" onclick="mbPadDo(['sym','→'])" title="پیکان">→</button>
+        </div>
         <div class="mb-fixed-keypad" aria-label="صفحه‌کلید فرمول">
           <button type="button" class="mb-opkey mb-parkey" onclick="mbParMenu(event)" title="پرانتز/براکت — باز، جفت، بسته">()</button>
           <button type="button" class="mb-opkey mb-pencilkey" onclick="mbPencilAction(event)" title="مداد — دست‌نویس (تبدیل خط به فرمول)" aria-label="دست‌نویس">
@@ -9650,7 +9669,7 @@ function mEsc(e) {
         into = node.w;
         break;
       case 'matrix':
-        node = mbMatrix((arg && arg.rows) || 2, (arg && arg.cols) || 2);
+        node = mbMatrix((arg && arg.rows) || 2, (arg && arg.cols) || 2, arg && arg.env); /* V287 — پیش‌فرض کروشه؛ انتخاب کاربر از پنجرهٔ ماتریس */
         arr.splice(i, 0, node);
         into = node.cells[0][0];
         break;
@@ -9753,7 +9772,9 @@ function mEsc(e) {
   }
 
   /** ساخت ماتریس با ابعاد دلخواه؛ کروشه‌ها هنگام رندر با ارتفاع آن تنظیم می‌شوند. */
-  let MB_MATRIX_DIM = { r: 2, c: 2 };
+  let MB_MATRIX_DIM = { r: 2, c: 2, env: 'bmatrix' }; /* V287 — env: نوع کروشه */
+  function mbMatrixEnv(env) { MB_MATRIX_DIM = MB_MATRIX_DIM || { r: 2, c: 2 }; MB_MATRIX_DIM.env = env; mbMatrixPicker(); }
+  window.mbMatrixEnv = mbMatrixEnv;
   function mbMatrixStep(dr, dc) {
     const d = MB_MATRIX_DIM || { r: 2, c: 2 };
     d.r = Math.min(10, Math.max(1, d.r + dr));
@@ -9764,7 +9785,7 @@ function mEsc(e) {
   function mbMatrixConfirm() {
     const d = MB_MATRIX_DIM || { r: 2, c: 2 };
     mbVarClose();
-    mbInsert('matrix', { rows: d.r, cols: d.c });
+    mbInsert('matrix', { rows: d.r, cols: d.c, env: d.env || 'bmatrix' });
   }
   /* انتخابگر ابعاد ماتریس داخل پاپ‌آپ؛ جایگزین prompt (در iframe مسدود است) */
   function mbMatrixPicker() {
@@ -9783,12 +9804,18 @@ function mEsc(e) {
       '<div class="mbv-row"><span class="mbv-rt">ستون</span>' +
       rowBtn('−', 'mbMatrixStep(0,-1)', 'کمتر') + val(d.c) +
       rowBtn('+', 'mbMatrixStep(0,1)', 'بیشتر') + '</div>' +
+      '<div class="mbv-row"><span class="mbv-rt">کروشه</span>' +
+      [['bmatrix','[ ]'],['pmatrix','( )'],['vmatrix','| |'],['Bmatrix','{ }'],['matrix','بدون']].map(function (o) {
+        var on = (d.env || 'bmatrix') === o[0];
+        return '<button type="button" style="' + bStyle + (on ? ';background:linear-gradient(135deg,#11998e,var(--ok));border:0;font-weight:bold' : '') + '" onclick="mbMatrixEnv(\'' + o[0] + '\')" title="نوع کروشه">' + o[1] + '</button>';
+      }).join('') + '</div>' +
       '<div class="mbv-row" style="margin-top:10px">' +
       '<button type="button" style="' + bStyle + ';background:linear-gradient(135deg,#11998e,var(--ok));color:#fff;border:0;font-family:inherit;font-weight:bold" onclick="mbMatrixConfirm()">✅ درج ماتریس</button></div>' +
       '<div class="mbv-hint">با +/− اندازه را تنظیم کنید و «درج ماتریس» را بزنید.</div>';
     mbVarOpen(pop, null);
   }
   function mbInsertCustomMatrix() {
+    if (MB_MATRIX_DIM) MB_MATRIX_DIM.env = 'bmatrix'; /* V287 — هر بار پیش‌فرض کروشه */
     mbMatrixPicker();
   }
 
@@ -9862,6 +9889,9 @@ window.mbCloseSymbolLibrary = mbCloseSymbolLibrary;
     try { mbFocus(); } catch (e) {}
     try { notify(MB_DIGIT_FA ? 'ارقامِ صفحه‌کلید فارسی شد — ۰۱۲۳' : 'ارقامِ صفحه‌کلید انگلیسی شد — 0123', 'info', 1500); } catch (e) {}
   }
+  /* V287 — تنظیم «اعداد فارسی» میزبان (اپ/سایت) پیش از هر جلسه اعمال می‌شود */
+  function mbSetDigitsFa(v) { MB_DIGIT_FA = !!v; mbSyncDigitBtn(); }
+  window.mbSetDigitsFa = mbSetDigitsFa;
   try {
     window.mbToggleDigits = mbToggleDigits;
     window.mbDigitMap = mbDigitMap;
@@ -10569,7 +10599,7 @@ window.mbCloseSymbolLibrary = mbCloseSymbolLibrary;
   const CURRICULUM_PAD = [
     {id:'cur-num',label:'🔢 محاسبات',items:[['جمع','+',['sym','+']],['تفریق','−',['sym','−']],['ضرب','×',['sym','×']],['تقسیم','÷',['sym','÷']],['کسر','a⁄b',['frac']],['اعشار','0.5',['sym','.']],['درصد','٪',['sym','%']],['ضرب پیاپی','∏',['op',{v:'∏'}]]]},
     {id:'cur-number',label:'🔐 نظریه اعداد',items:[['عدد اول','p',['sym','p']],['ب.م.م','gcd',['fn','gcd']],['ک.م.م','lcm',['sym','lcm']],['فاکتوریل','n!',['fact']]]},
-    {id:'cur-power',label:'ⁿ توان و ریشه',items:[['توان','xⁿ',['sup']],['جذر','√x',['sqrt']],['ریشه سوم','∛x',['sqrt3']],['فرجه دلخواه','ⁿ√x',['sqrtn']],['نماد علمی','a×10ⁿ',['tpl','×10^n']]]},
+    {id:'cur-power',label:'ⁿ توان و ریشه',items:[['توان','xⁿ',['sup']],['جذر','√x',['sqrt']],['ریشه سوم','∛x',['sqrt3']],['فرجه دلخواه','ⁿ√x',['sqrtn']],['تتراسیون','ⁿa',['tpl','{}^{n}a']],['نماد علمی','a×10ⁿ',['tpl','×10^n']]]},
     {id:'cur-sets',label:'∩ مجموعه‌ها',items:[['عضو','∈',['sym','∈']],['اجتماع','∪',['sym','∪']],['اشتراک','∩',['sym','∩']],['تفاضل','∖',['sym','∖']],['زیرمجموعه','⊂',['sym','⊂']]]},
     {id:'cur-algebra',label:'𝑥 عبارات جبری',items:[['اتحاد مربع','(a+b)²',['tpl','(a+b)^2']],['اتحاد مزدوج','a²−b²',['tpl','a^2-b^2']],['تجزیه','(a+b)(a−b)',['sym','(a+b)(a-b)']],['ساده‌سازی','xⁿ',['sup']]]},
     {id:'cur-equations',label:'= معادلات',items:[['درجه اول','ax+b=0',['sym','ax+b=0']],['درجه دوم','ax²+bx+c=0',['tpl','ax^2+bx+c=0']],['نامعادله','x≤a',['sym','≤']],['دستگاه','{x,y}',['sym','{x,y}']]]},
@@ -11444,6 +11474,7 @@ window.mbCloseSymbolLibrary = mbCloseSymbolLibrary;
   function mbPadDo(act) {
     // هر انتخاب از کتابخانه، پیش از درج حالت انتخابی کتابخانه را می‌بندد.
     mbCloseSymbolLibrary();
+    try { if (window.__mbBracketDefault) window.__mbBracketDefault(); } catch (e0) {} /* V287 — پیش‌فرض کروشه برای قالب‌های دیررس */
     switch (act[0]) {
       case 'sym':
         // عبارت‌های چندنویسه‌ای (مانند ax²+bx+c=0) به مدل قابل‌ویرایش تبدیل می‌شوند.
@@ -12830,6 +12861,7 @@ const MF_SMART_LESSONS = {
     templates: [
       { label:'کسر', preview:'a⁄b', act:['frac'] },
       { label:'توان', preview:'x²', act:['sup'] },
+      { label:'تتراسیون', preview:'ⁿa', act:['tpl','{}^{n}a'] }, /* V287 */
       { label:'رادیکال', preview:'√x', act:['sqrt'] },
       { label:'معادله', preview:'ax²+bx+c=0', tex:'a x^2 + b x + c = 0' },
       { label:'حد', preview:'lim x→a', act:['lim'] },
@@ -13574,6 +13606,22 @@ window.addEventListener('load', function () {
   }
 }
 
+/* V287 — ردیف اضافهٔ دسکتاپ: پیش‌فرض پنهان؛ فقط صفحهٔ عریض + موس */
+.mb-dk-extra{display:none}
+@media (min-width:861px) and (pointer:fine){
+  #mfModal.box-fullscreen .mb-dk-extra{
+    display:grid !important;grid-column:1 / -1 !important;
+    grid-template-columns:repeat(8,minmax(0,1fr)) !important;gap:8px !important;
+    padding:6px 0 0 !important;margin:0 !important;border-top:1px dashed rgba(38,49,66,.14);
+  }
+  #mfModal.box-fullscreen .mb-dk-extra button{
+    height:40px !important;min-height:40px !important;border-radius:12px !important;
+    border:1px solid rgba(38,49,66,.12);background:var(--card);color:var(--text);
+    font:700 1rem Vazirmatn,Tahoma,sans-serif;cursor:pointer;direction:ltr;
+  }
+  #mfModal.box-fullscreen .mb-dk-extra button sub{font-size:.7em}
+  #mfModal.box-fullscreen .mb-dk-extra button:hover{transform:translateY(-1px);box-shadow:0 8px 18px rgba(38,49,66,.12)}
+}
 @media (min-width:561px){
   /* اسکلهٔ پایین: دو ردیف فشرده و وسط‌چین */
   #mfModal.box-fullscreen .mb-key-section{
@@ -13614,15 +13662,20 @@ window.addEventListener('load', function () {
     width:auto !important;
   }
 
-  /* ترتیب ردیف پایین: درج · ( · ) · abc · کسر · توان · رادیکال · C */
-  #mfModal.box-fullscreen .mb-top-six{order:1}
-  #mfModal.box-fullscreen .mb-top-six-input{order:2}
+  /* V287 — دو ردیف ۸تایی بدون جای خالی:
+     ردیف ۱: اخیر · تبدیل · log · ∫ · ٫٪ · sin · () · ✍
+     ردیف ۲: درج · abc · کسر · توان · رادیکال · 123 · فاصله · C */
+  #mfModal.box-fullscreen .mb-top-six{grid-column:1 / span 6 !important;order:1}
+  #mfModal.box-fullscreen .mb-parkey{order:2}
+  #mfModal.box-fullscreen .mb-pencilkey{order:3}
+  #mfModal.box-fullscreen .mb-top-six-input{order:5}
   #mfModal.box-fullscreen .mb-kt-apply{order:10}
-  #mfModal.box-fullscreen .mb-fixed-keypad button[onclick*="mbParSide"][onclick*="open"]{order:11}
-  #mfModal.box-fullscreen .mb-fixed-keypad button[onclick*="mbParSide"][onclick*="close"]{order:12}
   #mfModal.box-fullscreen .mb-key-tools .mb-kt:nth-child(3){order:13}
   #mfModal.box-fullscreen .mb-kt-quick{order:14}
+  #mfModal.box-fullscreen .mb-digitkey{order:17}
+  #mfModal.box-fullscreen .mb-spacekey{order:18}
   #mfModal.box-fullscreen .mb-clearall{order:20}
+  #mfModal.box-fullscreen .mb-dk-extra{order:30}
 
   #mfModal.box-fullscreen .mb-key-section > button,
   #mfModal.box-fullscreen .mb-top-six-btn,
@@ -15582,6 +15635,7 @@ window.openMath = function () {
       begin: function (text, s, e) {
         var t = field();
         if (!t) return;
+        try { if (window.__mfPersianDigits !== undefined && window.mbSetDigitsFa) window.mbSetDigitsFa(window.__mfPersianDigits); } catch (e0) {} /* V287 */
         window.__aoNativeClosing = false; /* اجازهٔ بازشدن برای جلسهٔ جدید */
         window.__beginRangeSynced = false; /* V67.1 — هر جلسه یک‌بار بازه با مکان‌نمای Native همگام شود */
         window.MF_SEL_START = s | 0;
@@ -23068,6 +23122,27 @@ window.mbHwState = function () { return state; };
   }
 
   applyFix();
+  /* V287 — پیش‌فرض ماتریس = کروشه: همهٔ قالب‌های کتابخانه که pmatrix دارند به bmatrix می‌روند،
+     مگر آیتم‌هایی که در نامشان «پرانتز» آمده (انتخاب صریح کاربر). */
+  function bracketDefault() {
+    if (typeof MB_PAD === 'undefined' || !MB_PAD.length) return false;
+    var i, j, pad, it;
+    var sw = function (t) { return String(t).replace(/\\begin\{pmatrix\}/g, '\\begin{bmatrix}').replace(/\\end\{pmatrix\}/g, '\\end{bmatrix}'); };
+    for (i = 0; i < MB_PAD.length; i++) {
+      pad = MB_PAD[i]; if (!pad || !pad.items) continue;
+      for (j = 0; j < pad.items.length; j++) {
+        it = pad.items[j]; if (!it || /پرانتز/.test(String(it[0]))) continue;
+        if (typeof it[1] === 'string' && /pmatrix/.test(it[1])) it[1] = sw(it[1]);
+        if (it[2] && it[2][0] === 'tpl' && /pmatrix/.test(String(it[2][1]))) it[2] = ['tpl', sw(it[2][1])];
+      }
+    }
+    W.__matBracketDefault = true;
+    return true;
+  }
+  W.__mbBracketDefault = bracketDefault;
+  bracketDefault();
+  /* لایه‌های بعدی (word-mat و …) دیرتر اضافه می‌شوند؛ تا ۶ ثانیه تکرار و در هر درج هم یک‌بار اجرا می‌شود */
+  var bdTries = 0, bdTimer = setInterval(function () { bdTries++; bracketDefault(); if (bdTries > 40) clearInterval(bdTimer); }, 150);
   var tries = 0;
   var timer = setInterval(function () { tries++; if (applyFix() || tries > 25) clearInterval(timer); }, 120);
 })();

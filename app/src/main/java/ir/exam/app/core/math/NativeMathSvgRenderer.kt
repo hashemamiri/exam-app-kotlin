@@ -177,7 +177,8 @@ object NativeMathSvgRenderer {
     }
 
     private fun symbol(node: MathNode.Symbol, size: Float): Layout {
-        val naturalWidth = estimateTextWidth(node.value, size)
+        val shownValue = ir.exam.app.core.figure.FigureDigits.apply(node.value) // V287 — فقط نمایش؛ طول/مکان‌های منبع تغییر نمی‌کند
+        val naturalWidth = estimateTextWidth(shownValue, size)
         val editable = node.editable && node.sourceStart >= 0 && node.sourceEnd >= node.sourceStart
         // V133 — عرضِ نماد = عرضِ طبیعیِ آن (حداقلِ قبلی .72em بین حروف فاصلهٔ ناخواسته می‌انداخت)
         val width = if (editable) max(naturalWidth, size * .50f) else naturalWidth.coerceAtLeast(size * .08f)
@@ -216,7 +217,7 @@ object NativeMathSvgRenderer {
             if (node.bold) append(" font-weight=\"700\"")
             if (italic) append(" font-style=\"italic\"")
             append(">")
-            append(escapeXml(node.value)).append("</text>")
+            append(escapeXml(shownValue)).append("</text>")
         }
         val plainValue = node.value.codePoints().allMatch { Character.isLetterOrDigit(it) }
         val sourceLength = node.sourceEnd - node.sourceStart

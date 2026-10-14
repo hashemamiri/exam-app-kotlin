@@ -685,10 +685,13 @@
     });
     return enginesReady;
   }
+  function persianDigitsOn() { try { var M = window.SiteMobile; return !!(M && M.appearance && M.appearance().persianDigits); } catch (e) { return false; } }
   function engineHtml(kind) {
     return loadEngines().then(function (E) {
       var src = E[kind] || '';
       if (!src) toast('موتور ' + (kind === 'print' ? 'چاپ' : 'فرمول') + ' در این فایل تعبیه نشده است.', 'err');
+      /* V287 — تنظیم «اعداد فارسی» سایت به هر دو موتور می‌رسد (فرمول: صفحه‌کلید؛ چاپ/پیش‌نمایش: شکل‌ها و فرمول‌ها) */
+      if (src) { var fa = persianDigitsOn(); src = src.replace(/<head([^>]*)>/i, function (m) { return m + '<script>window.__mfPersianDigits=' + fa + ';window.__figPersianDigits=' + fa + ';<\/script>'; }); }
       return src;
     }, function (e) { toast(errMsg(e), 'err'); return ''; });
   }
@@ -1211,7 +1214,7 @@
     var savedHeader = readPrintHeader(); Object.keys(savedHeader).forEach(function (k) { if (savedHeader[k] !== '' || k === 'f_headerTemplate') fields[k] = savedHeader[k]; });
     if (exam.duration > 0) fields.f_duration = exam.duration + ' دقیقه';
     if (opts.header) { if (opts.header.school) fields.f_branch = opts.header.school; }
-    return {reset: false, documentTitle: exam.title || 'آزمون', footerNote: '', totalScore: fmtScore(exam.total_score || total), includeAnswerKey: true, persianDigits: true, fields: fields, questions: out};
+    return {reset: false, documentTitle: exam.title || 'آزمون', footerNote: '', totalScore: fmtScore(exam.total_score || total), includeAnswerKey: true, persianDigits: persianDigitsOn(), /* V287 — از تنظیمات */ fields: fields, questions: out};
   }
 
   /* ================================================================ UI: وضعیت و مسیریابی */

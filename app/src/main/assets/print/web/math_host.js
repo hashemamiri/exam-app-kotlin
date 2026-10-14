@@ -512,8 +512,14 @@ function mEsc(e) {
     return '<span class="munk">\\' + mEsc(cmd) + '</span>';
   };
 
+  /* V287 — «اعداد فارسی» (تنظیمات اپ/سایت → window.__figPersianDigits): فقط متنِ بین تگ‌ها تبدیل می‌شود، نه صفت‌ها */
+  function faMathDigits(html) {
+    if (!window.__figPersianDigits || !/[0-9]/.test(html)) return html;
+    return html.replace(/>([^<]*[0-9][^<]*)</g, function (m, t) { return '>' + t.replace(/[0-9]/g, function (d) { return '۰۱۲۳۴۵۶۷۸۹'[+d]; }) + '<'; });
+  }
+  window.faMathDigits = faMathDigits;
   function mathToHtml(src) {
-    try { return '<span class="mathx">' + new MathParser(src).parseSeq(null) + '</span>'; }
+    try { return faMathDigits('<span class="mathx">' + new MathParser(src).parseSeq(null) + '</span>'); }
     catch (err) { return '<span class="munk">' + mEsc(src) + '</span>'; }
   }
 
@@ -528,7 +534,7 @@ function mEsc(e) {
         const end2 = t.indexOf('$$', start + 2);
         if (end2 >= 0) {
           out += mEsc(t.slice(i, start));
-          out += '<span class="mathx mdisp">' + new MathParser(t.slice(start + 2, end2)).parseSeq(null) + '</span>';
+          out += faMathDigits('<span class="mathx mdisp">' + new MathParser(t.slice(start + 2, end2)).parseSeq(null) + '</span>');
           i = end2 + 2;
           continue;
         }

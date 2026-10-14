@@ -216,6 +216,11 @@ object NativeMathParser {
             }
             val start = index
             val codePoint = source.codePointAt(index)
+            // V287 — توان/اندیس بدون پایه (تتراسیون «ⁿa» که ویرایشگر به‌صورت ^{n}a ذخیره می‌کند): پایهٔ خالی
+            if (codePoint == '^'.code || codePoint == '_'.code) {
+                val position = global(index)
+                return MathNode.Symbol("", sourceStart = position, sourceEnd = position)
+            }
             val charCount = Character.charCount(codePoint)
             if (isRtlChar(codePoint)) {
                 index += charCount

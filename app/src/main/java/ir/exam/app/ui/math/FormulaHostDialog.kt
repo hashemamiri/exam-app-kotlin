@@ -89,7 +89,7 @@ fun FormulaHostDialog(
                             if (FormulaEditorPool.current !== view) return
                             attempts++
                             view.evaluateJavascript(
-                                "(function(){if(window.ExamFormulaHost){" +
+                                "(function(){window.__mfPersianDigits=" + ir.exam.app.core.figure.FigureDigits.persian + ";if(window.ExamFormulaHost){" + // V287 — اعداد فارسی صفحه‌کلید فرمول از تنظیمات
                                     (if (darkTheme) "if(window.__mathHostTheme){__mathHostTheme.off();}" else "") +
                                     "ExamFormulaHost.begin($text, $selectionStart, $selectionEnd);return 'ok';}return 'wait';})();"
                             ) { result ->

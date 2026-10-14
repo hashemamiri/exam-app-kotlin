@@ -19425,7 +19425,15 @@ CI: `compileDebugUnitTestKotlin` به‌خاطر `assertFalse` بدون import �
 - باگ V202.5: `var LANDING_TILES` داخل `paintAuth` بعد از خطی که `landing()` را صدا می‌زد تعریف شده بود → به‌خاطر hoisting مقدارش undefined و `.map` خطا می‌داد → صفحهٔ اول خالی. حالا کنار `authActive` در سطح ماژول است (تست ترتیب را پین می‌کند).
 - دروازهٔ صفحهٔ اول: mobile.js `entered()/enter()` با `sessionStorage['m-entered']`، `gateActive() = MQ && user && !entered`؛ app.js `render()` پیش از m-mode اگر gateActive → paintAuth (landing حتی با user). دکمه: user ⇒ `enter(); S.render()`؛ وگرنه `goA('login')`؛ پیوند ثبت‌نام فقط بدون user. `afterLogin()` → `SiteMobile.enter()`.
 
-### V286.5 — سایت دسکتاپ: حذف راهنمای هاور ریل (بدون bump/CI)
+### V287 — ویرایشگر فرمول: ردیف دسکتاپ، اعداد فارسی همه‌جا، تتراسیون، کروشهٔ پیش‌فرض (اپ 1.01.84 + سایت)
+
+- **formula.html**: ردیف `.mb-dk-extra` (۱۶ دکمه) فقط زیر `@media (min-width:861px) and (pointer:fine)` در `#mfModal.box-fullscreen` دیده می‌شود؛ ترتیب دو ردیف اصلی دسکتاپ با `order` روی `.mb-parkey/.mb-pencilkey/.mb-digitkey/.mb-spacekey` درست شد (قبلاً انتخابگرهای `mbParSide` منسوخ بودند). گوشی/اپ بدون تغییر.
+- اعداد فارسی: `window.mbSetDigitsFa(v)` + خواندن `window.__mfPersianDigits` در `ExamFormulaHost.begin`. اپ: `FormulaHostDialog.tryBegin` مقدار `FigureDigits.persian` را تزریق می‌کند؛ رندر بومی (`NativeMathCanvasRenderer`/`NativeMathSvgRenderer`) فقط در نمایش `FigureDigits.apply(node.value)` (طول ۱:۱؛ AST و مکان‌های منبع دست نمی‌خورد). وب: `math_host.js → faMathDigits` فقط متن بین تگ‌ها را تبدیل می‌کند. سایت: `engineHtml()` هر دو پرچم `__mfPersianDigits/__figPersianDigits` را از `SiteMobile.appearance().persianDigits` در `<head>` موتورها تزریق می‌کند؛ payload چاپ هم همان مقدار.
+- تتراسیون: `['tpl','{}^{n}a']` در `cur-power`، فهرست سریع و ردیف دسکتاپ. ویرایشگر آن را `^{n}a` ذخیره می‌کند → `NativeMathParser.atom()` با دیدن `^`/`_` در آغاز، پایهٔ خالی برمی‌گرداند (math_host از قبل پشتیبانی می‌کرد).
+- ماتریس: `MB_MATRIX_DIM.env` (پیش‌فرض bmatrix، در هر بازشدن ریست)، ردیف انتخاب کروشه در `mbMatrixPicker`، `mbInsert('matrix',{…,env})`. لایهٔ `bracketDefault()` بعد از `applyFix` همهٔ `pmatrix`های کتابخانه را به `bmatrix` می‌برد (به‌جز نام‌های حاوی «پرانتز»)؛ چون لایه‌های دیررس (word-mat) هستند، تا ۶ ثانیه تکرار و در آغاز هر `mbPadDo` هم اجرا می‌شود.
+- تست: `V287_FormulaEditorDesktopTest.kt`. QA: `qa/v287.py` (پلی‌رایت؛ دسکتاپ ۴ ردیف ۸تایی، گوشی بدون ردیف اضافه، vmatrix/bmatrix، فقط «ماتریس پرانتزی» pmatrix می‌ماند).
+
+## V286.5 — سایت دسکتاپ: حذف راهنمای هاور ریل (بدون bump/CI)
 - کاربر V286.4 را برعکس خواست: هیچ دکمهٔ ریل (و نه زنگولهٔ `#nc-bell` در `push.js`) `title` ندارد. تست `V286_SiteRailHoverTest.railItemsHaveNoHoverTitle` منفی است. **قانون: روی ریل دسکتاپ tooltip/title نگذارید.**
 
 ### V286.4 — سایت دسکتاپ: title روی ریل؛ اسکرول خودکار ریل شماره‌ها (بدون bump/CI)

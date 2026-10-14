@@ -12,7 +12,7 @@ class NativeMathCanvasRenderer {
     fun measure(node: MathNode, size: Float): MathCanvasSize = when (node) {
         is MathNode.Symbol -> {
             val paint = paint(size, node.bold)
-            MathCanvasSize(paint.measureText(node.value).coerceAtLeast(2f), size * 1.35f)
+            MathCanvasSize(paint.measureText(ir.exam.app.core.figure.FigureDigits.apply(node.value)).coerceAtLeast(2f), size * 1.35f) // V287 — اعداد فارسی در فرمول‌ها
         }
         is MathNode.Sequence -> measureSequence(node, size)
         is MathNode.Fraction -> {
@@ -64,7 +64,7 @@ class NativeMathCanvasRenderer {
     ): Float = when (node) {
         is MathNode.Symbol -> {
             val paint = paint(size, node.bold, color)
-            canvas.drawText(node.value, x, top + size, paint)
+            canvas.drawText(ir.exam.app.core.figure.FigureDigits.apply(node.value), x, top + size, paint) // V287
             measure(node, size).width
         }
         is MathNode.Sequence -> drawSequence(canvas, node, x, top, size, color)

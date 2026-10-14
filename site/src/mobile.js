@@ -957,7 +957,7 @@
     appearanceSection.__redo = function () { c.innerHTML = ''; c.appendChild(chipRow([['appearance', 'ظاهر'], ['data', 'داده‌ها'], ['about', 'درباره']], settingsTab, function (k) { settingsTab = k; settingsScreen(c); })); appearanceSection(c); };
     c.appendChild(card('حالت نمایش', [
       chipRow([['SYSTEM', 'دستگاه'], ['LIGHT', 'روشن'], ['DARK', 'تیره']], a.themeMode, function (v) { setAppearance({themeMode: v}); rerun(); }),
-      switchRow('اعداد فارسی در ابزارها', 'محورها، نمودارها، شکل‌ها و جدول‌ها', a.persianDigits, function (v) { setAppearance({persianDigits: v}); }),
+      switchRow('اعداد فارسی در ابزارها و فرمول‌ها', 'محورها، نمودارها، شکل‌ها، جدول‌ها، فرمول‌ها و صفحه‌کلید فرمول', a.persianDigits, function (v) { setAppearance({persianDigits: v}); }),
       switchRow('حالت پرکنتراست', 'متن پررنگ‌تر، کادرهای مشخص‌تر و تمرکز واضح‌تر برای کم‌بینایان', a.highContrast, function (v) { setAppearance({highContrast: v}); })
     ]));
     /* V232.9 — اعلان‌های وب (فقط وقتی پیکربندی فایربیس در سایت هست) */
