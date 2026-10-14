@@ -780,7 +780,7 @@ fun ExamBuilderScreen(
                     // V135 — تفکیک هزینه: هر سؤال ۱۰۰۰ + هر تصویر ۱۰۰۰ + صوت (۲/۴/۶ هزار بر اساس حجم)
                     Text("• سؤال‌ها: ${PersianDigits.convert(state.questions.size)} × ۱٬۰۰۰ = ${(state.questions.size * 1_000L).asToman()} تومان")
                     if (state.totalImageCount > 0) {
-                        Text("• تصاویر (سؤال، گزینه‌ها، جورکردنی): ${PersianDigits.convert(state.totalImageCount)} × ۱٬۰۰۰ = ${state.imageChargeToman.asToman()} تومان")
+                        Text("• تصاویر (سؤال، گزینه‌ها، جورکردنی، «تصویر خودم»): ${PersianDigits.convert(state.totalImageCount)} × ۱٬۰۰۰ = ${state.imageChargeToman.asToman()} تومان")
                     }
                     if (state.audioQuestionCount > 0) {
                         Text("• فایل صوتی: ${PersianDigits.convert(state.audioQuestionCount)} سؤال = ${state.audioChargeToman.asToman()} تومان (تا ۱MB ۲٬۰۰۰ · تا ۲MB ۴٬۰۰۰ · تا ۳MB ۶٬۰۰۰)")

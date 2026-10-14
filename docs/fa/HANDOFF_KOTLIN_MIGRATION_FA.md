@@ -19425,7 +19425,13 @@ CI: `compileDebugUnitTestKotlin` به‌خاطر `assertFalse` بدون import �
 - باگ V202.5: `var LANDING_TILES` داخل `paintAuth` بعد از خطی که `landing()` را صدا می‌زد تعریف شده بود → به‌خاطر hoisting مقدارش undefined و `.map` خطا می‌داد → صفحهٔ اول خالی. حالا کنار `authActive` در سطح ماژول است (تست ترتیب را پین می‌کند).
 - دروازهٔ صفحهٔ اول: mobile.js `entered()/enter()` با `sessionStorage['m-entered']`، `gateActive() = MQ && user && !entered`؛ app.js `render()` پیش از m-mode اگر gateActive → paintAuth (landing حتی با user). دکمه: user ⇒ `enter(); S.render()`؛ وگرنه `goA('login')`؛ پیوند ثبت‌نام فقط بدون user. `afterLogin()` → `SiteMobile.enter()`.
 
-### V288.3 — تتراسیون در منوی «توان» + ممیز فارسی در منوی «٫ ٪» (اپ 1.01.87)
+### V289 — هزینهٔ «تصویر خودم + فلش‌گذاری» = تصویر (اپ 1.01.88 + سایت + SQL)
+- **SQL** `20261015_native_photo_fig_cost_v289.sql` (کاربر خودش اجرا می‌کند): `native_photo_fig_images_v289(jsonb) text[]` همهٔ رشته‌های سؤال را (`jsonb_path_query '$.**'`) برای توکن `%%FIG:{…}%%` با `"t":"photo"` می‌گردد و `photo:<md5(X.img)>` برمی‌گرداند؛ `native_question_media_cost_v135` (ذخیرهٔ آنلاین، کپی به کلاس…) این تعداد را به `images` می‌افزاید؛ `native_print_q_images_v199` این شناسه‌ها را به فهرست تصاویر چاپ اضافه می‌کند (فیلتر `^https?://` یا `photo:%`) → بدهی/پرداخت چاپ (V199) و تکرارنشماری در چاپ بعدی خودکار است. در Postgres 17 محلی تست شد (۳ توکن photo + ۱ فایل → images=4؛ چاپ ۳ شناسهٔ یکتا).
+- **اپ:** `QuestionDraft.imageCount()` += `photoFigureCount()` (`countPhotoFigures(vararg)` با همان regex)؛ متن تأیید ذخیره در `ExamBuilderScreen` و تعرفهٔ `WalletScreen` به‌روز. **سایت:** `admin.js` تعرفه. هزینه‌های واقعی همیشه از سرور می‌آید.
+- ورود از بانک/فایل: سؤال جدید → از قبل با همان فرمول حساب می‌شد (fingerprint V135)؛ تغییری لازم نبود.
+- تست: `ui/builder/V289_PhotoFigureCostTest`.
+
+## V288.3 — تتراسیون در منوی «توان» + ممیز فارسی در منوی «٫ ٪» (اپ 1.01.87)
 - `formula.html` → `mbToolMenu(kind==='sup')`: واریانت `['تتراسیون ⁿa','{}^{n}a',['tpl','{}^{n}a']]` پیش از «زیرنویس». `mbPercentMenu` (هر دو نسخه: تابع اصلی و override داخل `menus`): `['ممیز فارسی','0٫5',['let','٫']]`. ٫ (U+066B) در رندر بومی به‌عنوان متن RTL و در موتور چاپ/سایت بدون تغییر رندر می‌شود (`qa/shots/v2883_*.png`).
 - تست: `V288_3FormulaPadTetrationDecimalTest`.
 

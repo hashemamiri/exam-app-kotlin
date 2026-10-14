@@ -291,7 +291,7 @@ private fun providerFa(raw: String): String = when (raw.substringBefore(':').low
 private fun TariffDialog(onDismiss: () -> Unit) {
     val rows = listOf(
         "هر سؤال آزمون آنلاین" to WalletRules.QUESTION_COST_TOMAN,
-        "هر تصویر (سؤال/گزینه)" to 1_000L,
+        "هر تصویر (سؤال/گزینه/«تصویر خودم»)" to 1_000L,
         "صوت سؤال تا ۱ مگابایت" to 2_000L,
         "صوت سؤال تا ۲ مگابایت" to 4_000L,
         "صوت سؤال تا ۳ مگابایت" to 6_000L,

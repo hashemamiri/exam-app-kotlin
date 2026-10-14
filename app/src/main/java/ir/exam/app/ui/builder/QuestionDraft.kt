@@ -414,7 +414,20 @@ data class ExamBuilderState(
 /** V135 — تعداد تصاویر سؤال + گزینه‌ها + جورکردنی (مبنای ۱۰۰۰ تومان به‌ازای هر تصویر). */
 fun QuestionDraft.imageCount(): Int =
     images.size + optionImages.count { !it.isNullOrBlank() } +
-        matchingLeftImages.count { !it.isNullOrBlank() } + matchingRightImages.count { !it.isNullOrBlank() }
+        matchingLeftImages.count { !it.isNullOrBlank() } + matchingRightImages.count { !it.isNullOrBlank() } +
+        photoFigureCount() // V289
+
+/** V289 — توکن‌های «تصویر خودم + فلش‌گذاری» (%%FIG:{…"t":"photo"…}%%) داخل متن سؤال/گزینه‌ها/جورکردنی؛ هر کدام یک تصویر (۱۰۰۰ تومان) — همان شمارش سرور. */
+private val PHOTO_FIG_TOKEN = Regex("%%FIG:(\\{[^%]*\\})%%")
+
+fun countPhotoFigures(vararg texts: String?): Int = texts.sumOf { text ->
+    if (text.isNullOrEmpty() || !text.contains("%%FIG:")) 0
+    else PHOTO_FIG_TOKEN.findAll(text).count { m -> Regex("\"t\"\\s*:\\s*\"photo\"").containsMatchIn(m.groupValues[1]) }
+}
+
+fun QuestionDraft.photoFigureCount(): Int =
+    countPhotoFigures(text) + countPhotoFigures(*options.toTypedArray()) +
+        countPhotoFigures(*matchingLeft.toTypedArray()) + countPhotoFigures(*matchingRight.toTypedArray())
 
 /** V135 — هزینهٔ صوت: تا ۱MB ۲۰۰۰، تا ۲MB ۴۰۰۰، تا ۳MB ۶۰۰۰ تومان. */
 fun audioChargeForBytes(bytes: Long): Long = when {
