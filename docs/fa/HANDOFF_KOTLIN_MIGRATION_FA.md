@@ -19425,7 +19425,11 @@ CI: `compileDebugUnitTestKotlin` به‌خاطر `assertFalse` بدون import �
 - باگ V202.5: `var LANDING_TILES` داخل `paintAuth` بعد از خطی که `landing()` را صدا می‌زد تعریف شده بود → به‌خاطر hoisting مقدارش undefined و `.map` خطا می‌داد → صفحهٔ اول خالی. حالا کنار `authActive` در سطح ماژول است (تست ترتیب را پین می‌کند).
 - دروازهٔ صفحهٔ اول: mobile.js `entered()/enter()` با `sessionStorage['m-entered']`، `gateActive() = MQ && user && !entered`؛ app.js `render()` پیش از m-mode اگر gateActive → paintAuth (landing حتی با user). دکمه: user ⇒ `enter(); S.render()`؛ وگرنه `goA('login')`؛ پیوند ثبت‌نام فقط بدون user. `afterLogin()` → `SiteMobile.enter()`.
 
-### V288.1 — رفع CI 1.01.85 + رندر بومی معادلهٔ ارگون (اپ 1.01.86)
+### V288.2 — سایت: توان+اندیس هم‌زمان در کادر سؤال/پیش‌نمایش (فقط site/**)
+- `student.js`/`builder.js` → `mathCss()`: regex `keep` با `\b` انتها، `.msubsup` و `.ss-base` (SUBSUP_CSS موتور چاپ) را رد می‌کرد → فقط `sup.msup/sub.msub` منتقل می‌شد و شبکهٔ grid نبود؛ `msubsup|msubsup-[a-z]+|ss-base` اضافه شد. تست: `V288_2_SiteSubSupCssTest` (paths-ignore).
+- بازتولید: `/tmp/site_math.py` (iframe موتور چاپ + کپی CSS مثل سایت) → `qa/shots/site_ergun.png`.
+
+## V288.1 — رفع CI 1.01.85 + رندر بومی معادلهٔ ارگون (اپ 1.01.86)
 - **CI:** `V250_SiteAuditTest.no native browser prompt or confirm dialogs in site` با `confirm('…')` در `loadEngines` (app.js) شکست می‌خورد → جایگزین با `confirmDlg('به‌روزرسانی سایت', …)`.
 - **NativeMathAst.kt:** فاصلهٔ خام منبع در `parseSequence` نادیده گرفته می‌شود مگر کنار متن RTL (`spaceTouchesRtl`)؛ نام فرمان فقط ASCII؛ فرمان ناشناخته → بلندترین پیشوند شناخته‌شده (`knownCommandNames`)؛ `\big…\Bigg` → نماد بعدی؛ `trianglelefteq/…` اضافه شد.
 - **NativeMathSvgRenderer.kt:** حداقل عرض `.50em` نمادِ ویرایش‌پذیر فقط وقتی `showEditBoxes||showCaret` (ThreadLocal `editLayout`)، در نمایش `.18em`؛ `estimateTextWidth` برای `. , : ;` (.28)، `( ) [ ] | !` (.36)، `{ } /` (.42)، یونانی کوچک (.52/.62) و بزرگ (.68).
