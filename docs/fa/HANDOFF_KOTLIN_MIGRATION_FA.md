@@ -19425,6 +19425,13 @@ CI: `compileDebugUnitTestKotlin` به‌خاطر `assertFalse` بدون import �
 - باگ V202.5: `var LANDING_TILES` داخل `paintAuth` بعد از خطی که `landing()` را صدا می‌زد تعریف شده بود → به‌خاطر hoisting مقدارش undefined و `.map` خطا می‌داد → صفحهٔ اول خالی. حالا کنار `authActive` در سطح ماژول است (تست ترتیب را پین می‌کند).
 - دروازهٔ صفحهٔ اول: mobile.js `entered()/enter()` با `sessionStorage['m-entered']`، `gateActive() = MQ && user && !entered`؛ app.js `render()` پیش از m-mode اگر gateActive → paintAuth (landing حتی با user). دکمه: user ⇒ `enter(); S.render()`؛ وگرنه `goA('login')`؛ پیوند ثبت‌نام فقط بدون user. `afterLogin()` → `SiteMobile.enter()`.
 
+### V286.1 — اصلاح خروجی Word برای شکل‌های علوم/آناتومی و برش متن (اپ 1.01.81 + سایت)
+- **علت نبودِ شکل:** `word_export.js/loadImg` تصویر اطلس (`figure_atlas/science/*.jpg`؛ در سایت از raw.githubusercontent) را بدون `crossOrigin='anonymous'` می‌خواند → canvas آلوده → `toDataURL` خطا → تصویر حذف؛ ولی `svg.an-ov` (لایهٔ فلش‌ها، `position:absolute`) جداگانه به‌صورت PNG سفیدِ بزرگ خروجی می‌رفت → فضای خالی + کادر.
+- **اصلاح:** `loadImg` برای src شبکه‌ای `crossOrigin` می‌گذارد؛ تابع جدید `frameElement()` کل `.an-frame` (تصویر پایه یا svg + لایهٔ `.an-ov` + دایره‌های `.an-tail` + شماره‌های `.an-num`) را در یک canvas (مقیاس ۲) ترکیب و یک `w:drawing` وسط‌چین می‌دهد؛ `walkInline` دیگر svg با کلاس `an-ov/an-draft` را تنها خروجی نمی‌دهد. `.an-af-row` → یک پاراگراف «۱)» + خط dashed (رنگ یکی‌درمیان تا Word گروه نکند).
+- **برش متن سؤال/گزینه‌ها:** `tableXml` عرض خانه را بدون کسر حاشیهٔ ۶۰+۶۰ twip به فرزندان می‌داد؛ جدول/کادر تودرتو (مثل کادر متن سؤال با خط کناری) به اندازهٔ کامل خانه ساخته می‌شد و ۱۲۰ twip بیرون می‌زد → حرف آخر بریده و خط عمودی کنار متن. حالا `walkBlock(sec, td, (w-120)/TWIP_PER_PX)`.
+- QA: `/home/user/qa/phys.py` (سرور محلی روی assets تا `/figure_atlas/` resolve شود) → docx → LibreOffice → PDF؛ شکل، فلش‌ها، پین‌ها و ردیف‌های پاسخ درست‌اند؛ گزینه‌ها داخل خانه.
+- تست: `V285_WordExportTest.v286_1_scienceFigureCompositeAndCellInnerWidth`. سایت دوباره ساخته شد (engine جدید).
+
 ### V286 — Word روی کارت آزمون با هزینهٔ جداگانه؛ گروه‌بندی اعلان‌ها (اپ 1.01.80 + سایت)
 - **SQL جدید (کاربر اجرا می‌کند):** `supabase/migrations/20261014_native_charge_word_v286.sql` = `sql/manual/SQL_NATIVE_CHARGE_WORD_V286.sql` → `native_charge_word_v286(p_exam text, p_operation uuid, p_title text)`: مبلغ ثابت ۵۰٬۰۰۰، idempotent با `native_exam_operations`، تراکنش `exam:word:<ref>:<title>`؛ هیچ ارتباطی با `exam_print_payments` ندارد (چاپ و Word مستقل).
 - موتور: دکمه‌های «فایل Word» از منوی چاپ PGS حذف (`pgs_engine.js`)، `requestWord/pgsWordNow` از `webhost.js` حذف؛ `wordExportBase64/wordExportToBridge` باقی است و میزبان مستقیم صدا می‌زند.

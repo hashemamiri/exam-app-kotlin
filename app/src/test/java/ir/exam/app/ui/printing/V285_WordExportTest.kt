@@ -80,4 +80,15 @@ class V285_WordExportTest {
         assertTrue("act('word', 'فایل Word (هزینهٔ جداگانه)'" in mob)
         assertTrue("title: 'فایل Word (هزینهٔ جداگانه)', html: WORD_ICON" in src("site/src/builder.js"))
     }
+
+    @Test
+    fun v286_1_scienceFigureCompositeAndCellInnerWidth() {
+        val js = src("app/src/main/assets/print/web/word_export.js")
+        assertTrue("im.crossOrigin = 'anonymous'" in js)
+        assertTrue("function frameElement(ctx, frame, maxW)" in js)
+        assertTrue("if (tag === 'svg' && (cl.contains('an-ov') || cl.contains('an-draft'))) return;" in js)
+        assertTrue("if (cl.contains('an-frame')) {" in js)
+        assertTrue("if (cl.contains('an-af-row')) {" in js)
+        assertTrue("walkBlock(sec, td, Math.max(60, w - 120) / TWIP_PER_PX);" in js)
+    }
 }

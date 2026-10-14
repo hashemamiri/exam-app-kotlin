@@ -97,7 +97,54 @@
     var x = c.getContext('2d'); x.fillStyle = '#fff'; x.fillRect(0, 0, c.width, c.height); x.scale(scale, scale); draw(x);
     return dataUrlBytes(c.toDataURL('image/png')).bytes;
   }
-  function loadImg(src) { return new Promise(function (res, rej) { var im = new Image(); im.onload = function () { res(im); }; im.onerror = function () { rej(new Error('img')); }; im.src = src; }); }
+  function loadImg(src) { return new Promise(function (res, rej) { var im = new Image(); if (/^(https?:)?\/\//i.test(src)) im.crossOrigin = 'anonymous'; /* V286.1: اطلس تصاویر در سایت از دامنهٔ دیگر می‌آید؛ بدون این، canvas آلوده می‌شود و تصویر حذف می‌شد */ im.onload = function () { res(im); }; im.onerror = function () { rej(new Error('img')); }; im.src = src; }); }
+  function svgDataUrl(el, w, h) {
+    var clone = el.cloneNode(true);
+    clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg'); clone.setAttribute('width', w); clone.setAttribute('height', h);
+    if (!clone.getAttribute('viewBox') && w && h) clone.setAttribute('viewBox', '0 0 ' + w + ' ' + h);
+    try { var texts = clone.querySelectorAll('text'); var orig = el.querySelectorAll('text'); for (var i = 0; i < texts.length && i < orig.length; i++) { var s = cs(orig[i]); if (s) { texts[i].setAttribute('font-family', s.fontFamily); texts[i].setAttribute('font-size', s.fontSize); } } } catch (e) {}
+    return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(new XMLSerializer().serializeToString(clone));
+  }
+  /* V286.1: شکل‌های علوم/آناتومی (.an-frame) = تصویر پایه + لایهٔ فلش‌ها + شماره‌ها → یک PNG واحد */
+  function frameElement(ctx, frame, maxW) {
+    var r = rectOf(frame); var w = r.width > 2 ? r.width : 300, h = r.height > 2 ? r.height : 200;
+    var base = null, ov = null;
+    for (var c = frame.firstElementChild; c; c = c.nextElementSibling) {
+      if (c.classList.contains('an-ov') || c.classList.contains('an-draft')) { if (!ov) ov = c; continue; }
+      if (!base && (c.tagName === 'IMG' || c.tagName === 'svg')) base = c;
+    }
+    var baseP = Promise.resolve(null);
+    if (base && base.tagName === 'IMG') { var src = base.currentSrc || base.src || ''; if (src) baseP = loadImg(src).catch(function () { return null; }); }
+    else if (base) baseP = loadImg(svgDataUrl(base, w, h)).catch(function () { return null; });
+    var ovP = ov ? loadImg(svgDataUrl(ov, w, h)).catch(function () { return null; }) : Promise.resolve(null);
+    var pins = [];
+    var spans = frame.querySelectorAll('.an-tail,.an-num');
+    for (var i = 0; i < spans.length; i++) {
+      var sp = spans[i], sr = rectOf(sp);
+      pins.push({ num: sp.classList.contains('an-num'), x: sr.left - r.left + sr.width / 2, y: sr.top - r.top + sr.height / 2, w: sr.width, h: sr.height, text: (sp.textContent || '').trim(), font: (cs(sp) || {}).fontFamily || 'Vazirmatn' });
+    }
+    return Promise.all([baseP, ovP]).then(function (res) {
+      var bim = res[0], oim = res[1];
+      if (!bim && !oim) return null;
+      var dw = w, dh = h; if (dw > maxW) { dh = dh * maxW / dw; dw = maxW; }
+      var png = canvasPng(function (x) {
+        if (bim) { var br = base ? rectOf(base) : r; x.drawImage(bim, br.left - r.left, br.top - r.top, br.width || w, br.height || h); }
+        if (oim) x.drawImage(oim, 0, 0, w, h);
+        pins.forEach(function (p) {
+          if (p.num) {
+            var pw = Math.max(22, p.w || 22), ph = p.h || 22, rx = ph / 2;
+            x.fillStyle = '#be185d'; x.beginPath();
+            x.moveTo(p.x - pw / 2 + rx, p.y - ph / 2); x.lineTo(p.x + pw / 2 - rx, p.y - ph / 2); x.arc(p.x + pw / 2 - rx, p.y, rx, -Math.PI / 2, Math.PI / 2);
+            x.lineTo(p.x - pw / 2 + rx, p.y + ph / 2); x.arc(p.x - pw / 2 + rx, p.y, rx, Math.PI / 2, Math.PI * 1.5); x.closePath(); x.fill();
+            x.fillStyle = '#fff'; x.font = '800 12px ' + p.font; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText(p.text, p.x, p.y + 1);
+          } else {
+            x.beginPath(); x.arc(p.x, p.y, 5, 0, Math.PI * 2); x.fillStyle = '#fff'; x.fill(); x.lineWidth = 2; x.strokeStyle = '#be185d'; x.stroke();
+          }
+        });
+      }, w, h, 2);
+      return ctx.addImage(png, 'png', dw, dh);
+    }).catch(function () { return null; });
+  }
   function imgElement(ctx, el, maxW) {
     var src = el.currentSrc || el.src || ''; if (!src) return Promise.resolve(null);
     var w = el.naturalWidth || px(el.getAttribute('width')) || 300, h = el.naturalHeight || px(el.getAttribute('height')) || 200;
@@ -112,13 +159,8 @@
     var w = r.width > 2 ? r.width : (px(el.getAttribute('width')) || (vb.length === 4 ? vb[2] : 300));
     var h = r.height > 2 ? r.height : (px(el.getAttribute('height')) || (vb.length === 4 ? vb[3] : 200));
     var dw = w, dh = h; if (dw > maxW) { dh = dh * maxW / dw; dw = maxW; }
-    var clone = el.cloneNode(true);
-    clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg'); clone.setAttribute('width', w); clone.setAttribute('height', h);
-    if (!clone.getAttribute('viewBox') && w && h) clone.setAttribute('viewBox', '0 0 ' + w + ' ' + h);
     /* استایل‌های محاسبه‌شدهٔ متن داخل SVG (قلم) تا در canvas هم اعمال شوند */
-    try { var texts = clone.querySelectorAll('text'); var orig = el.querySelectorAll('text'); for (var i = 0; i < texts.length && i < orig.length; i++) { var s = cs(orig[i]); if (s) { texts[i].setAttribute('font-family', s.fontFamily); texts[i].setAttribute('font-size', s.fontSize); } } } catch (e) {}
-    var xml = new XMLSerializer().serializeToString(clone);
-    var url = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(xml);
+    var url = svgDataUrl(el, w, h);
     return loadImg(url).then(function (im) { return ctx.addImage(canvasPng(function (x) { x.drawImage(im, 0, 0, w, h); }, w, h, 2), 'png', dw, dh); }).catch(function () { return null; });
   }
   function drawingXml(img) {
@@ -261,6 +303,7 @@
     var s = cs(el), p = '';
     var ta = s ? s.textAlign : 'start';
     var jc = ta === 'center' ? 'center' : (ta === 'left' || ta === 'end' ? 'left' : (ta === 'justify' ? 'both' : 'right'));
+    if (opts && opts.center) jc = 'center';
     /* ترتیب عناصر طبق اسکیمای OOXML: pBdr → bidi → spacing → ind → jc */
     if (opts && opts.border) p += opts.border;
     p += '<w:bidi/>';
@@ -301,6 +344,7 @@
     var tag = node.tagName, cl = node.classList;
     if (tag === 'BR') { sec.para(node.parentElement).runs.push('<w:r><w:br/></w:r>'); return; }
     if (isMathRoot(node)) { var mx = omathXml(node); if (mx) sec.para(node.parentElement).runs.push(mx); return; }
+    if (tag === 'svg' && (cl.contains('an-ov') || cl.contains('an-draft'))) return; /* V286.1: لایهٔ روکش فقط همراه قاب خروجی می‌رود */
     if (tag === 'IMG' || tag === 'svg') {
       /* تصویر ناهمگام است؛ جای آن یک نشانه می‌گذاریم و در پایان (پس از لود) با w:drawing جایگزین می‌شود */
       var token = '\u0001IMG' + (ctx.slots.length) + '\u0001'; ctx.slots.push('');
@@ -344,6 +388,18 @@
     if (cl.contains('question-sep-cell-pad')) { var hpx = px(el.style.height); if (hpx > 4) sec.block('<w:p><w:pPr><w:spacing w:before="0" w:after="0" w:line="' + Math.round(hpx * TWIP_PER_PX) + '" w:lineRule="exact"/></w:pPr></w:p>'); return; }
     if (el.tagName === 'TABLE') { sec.block(tableXml(ctx, el, maxW)); return; }
     if (el.tagName === 'svg' || el.tagName === 'IMG') { walkInline(sec, el, maxW); sec.flush(); return; }
+    if (cl.contains('an-af-row')) { /* V286.1: ردیف پاسخ شکل (شماره + خط نقطه‌چین) در یک پاراگراف؛ شمارهٔ سفیدِ روی دایرهٔ رنگی در Word دیده نمی‌شد */
+      var nEl = el.querySelector('.an-af-n'), nTxt = nEl ? cleanText(nEl.textContent) : '';
+      sec.block('<w:p><w:pPr><w:pBdr><w:bottom w:val="dashed" w:sz="8" w:space="1" w:color="' + ((ctx.afN = (ctx.afN || 0) + 1) % 2 ? '64748B' : '64748C') + '"/></w:pBdr><w:bidi/><w:spacing w:before="60" w:after="60" w:line="' + cm2twip(0.9) + '" w:lineRule="atLeast"/><w:jc w:val="right"/></w:pPr>' +
+        (nTxt ? '<w:r><w:rPr><w:b/><w:bCs/><w:color w:val="BE185D"/><w:rtl/></w:rPr><w:t xml:space="preserve">' + esc(nTxt) + ')\u00a0</w:t></w:r>' : '') + '<w:r><w:t xml:space="preserve"> </w:t></w:r></w:p>');
+      return;
+    }
+    if (cl.contains('an-frame')) { /* V286.1 */
+      var ftoken = '\u0001IMG' + (ctx.slots.length) + '\u0001'; ctx.slots.push(''); var fidx = ctx.slots.length - 1;
+      var fp = sec.para(el); fp.runs.push(ftoken); fp.opts.center = true;
+      ctx.pending.push(frameElement(ctx, el, maxW).then(function (img) { ctx.slots[fidx] = img ? drawingXml(img) : ''; }, function () { ctx.slots[fidx] = ''; }));
+      sec.flush(); return;
+    }
     if (el.tagName === 'HR') { sec.block('<w:p><w:pPr><w:pBdr><w:bottom w:val="single" w:sz="6" w:space="1" w:color="000000"/></w:pBdr></w:pPr></w:p>'); return; }
     /* بلوک با خط زیر/بالا (مثل خط‌های سربرگ) */
     var s = cs(el), border = '';
@@ -471,7 +527,7 @@
         var va = st && st.verticalAlign === 'middle' ? 'center' : (st && st.verticalAlign === 'bottom' ? 'bottom' : 'top');
         var cb = st ? sideBorders(st, false) : '';
         x += '<w:tc><w:tcPr><w:tcW w:w="' + w + '" w:type="dxa"/>' + (span > 1 ? '<w:gridSpan w:val="' + span + '"/>' : '') + (cb ? '<w:tcBorders>' + cb + '</w:tcBorders>' : '') + (shade && shade !== 'FFFFFF' ? '<w:shd w:val="clear" w:color="auto" w:fill="' + shade + '"/>' : '') + '<w:vAlign w:val="' + va + '"/></w:tcPr>';
-        var sec = new Section(ctx, td); walkBlock(sec, td, w / TWIP_PER_PX);
+        var sec = new Section(ctx, td); walkBlock(sec, td, Math.max(60, w - 120) / TWIP_PER_PX); /* V286.1: حاشیهٔ ۶۰+۶۰ خانه کم می‌شود تا جدول/شکل تودرتو از خانه بیرون نزند */
         x += cellXml(sec.xml()) + '</w:tc>';
         ci += span;
       }
