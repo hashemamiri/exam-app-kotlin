@@ -81,7 +81,7 @@ object NativeMathParser {
         "bigoplus" to "⨁", "bigotimes" to "⨂", "bigvee" to "⋁", "bigwedge" to "⋀", "bigsqcup" to "⨆",
         "sqcup" to "⊔", "sqcap" to "⊓", "sqsubseteq" to "⊑", "sqsupseteq" to "⊒", "nexists" to "∄",
         "diamond" to "◇", "square" to "□", "Box" to "□", "blacksquare" to "∎", "qed" to "∎",
-        "lVert" to "‖", "rVert" to "‖", "Vert" to "‖", "lll" to "⋘", "ggg" to "⋙",
+        "lVert" to "‖", "rVert" to "‖", "Vert" to "‖", "trianglelefteq" to "⊴", "trianglerighteq" to "⊵", "triangleleft" to "◁", "triangleright" to "▷", "lhd" to "◁", "rhd" to "▷", "unlhd" to "⊴", "unrhd" to "⊵", "lll" to "⋘", "ggg" to "⋙",
         "nleq" to "≰", "ngeq" to "≱", "lesssim" to "≲", "gtrsim" to "≳", "nparallel" to "∦",
         "varpi" to "ϖ", "varrho" to "ϱ", "varsigma" to "ς", "varkappa" to "ϰ", "digamma" to "ϝ",
         "backslash" to "∖", "dots" to "…", "dotsc" to "…", "dotsb" to "⋯", "measuredangle" to "∡",
@@ -193,6 +193,17 @@ object NativeMathParser {
         }
     }
 
+    private val knownCommandNames: Set<String> by lazy {
+        commandSymbols.keys + namedFunctions + setOf(
+            "frac", "dfrac", "tfrac", "sfrac", "nicefrac", "sqrt", "root", "mathbf", "bold", "boldsymbol", "mathrm", "text", "mbox",
+            "operatorname", "mathbb", "mathcal", "mathscr", "mathfrak", "mathit", "mathsf", "mathtt", "hat", "widehat", "bar", "overline",
+            "underline", "vec", "overrightarrow", "overleftarrow", "overleftrightarrow", "dot", "ddot", "tilde", "widetilde", "left", "right",
+            "begin", "end", "quad", "qquad", "big", "Big", "bigg", "Bigg", "bigl", "Bigl", "biggl", "Biggl", "bigr", "Bigr", "biggr", "Biggr",
+            "bigm", "Bigm", "limits", "nolimits", "displaystyle", "textstyle", "scriptstyle", "scriptscriptstyle", "sum", "prod", "int", "lim",
+            "binom", "stackrel", "overset", "underset", "underbrace", "overbrace", "cases", "pmatrix", "bmatrix", "vmatrix", "matrix", "not", "cdot"
+        )
+    }
+
     private class Parser(
         private val source: String,
         private val sourceOffset: Int
@@ -203,6 +214,12 @@ object NativeMathParser {
             val output = mutableListOf<MathNode>()
             val emptyPosition = global(index)
             while (index < source.length && (stop == null || source[index] != stop)) {
+                // V288.1 — فاصلهٔ خامِ منبع در ریاضی (مثل TeX) نادیده گرفته می‌شود: «\\mu v» دیگر «μ v» با شکاف نمی‌شود.
+                // فاصلهٔ کنار متن فارسی/عربی (نگارش راست‌به‌چپ داخل فرمول) حفظ می‌ماند.
+                if (source[index] == ' ' && !spaceTouchesRtl(output)) {
+                    index++
+                    continue
+                }
                 var node = atom()
                 var upper: MathNode? = null
                 var lower: MathNode? = null
@@ -225,6 +242,16 @@ object NativeMathParser {
                 1 -> output.first()
                 else -> MathNode.Sequence(output)
             }
+        }
+
+        /** V288.1 — آیا فاصلهٔ فعلی به متن راست‌به‌چپ می‌چسبد (قبل یا بعدش)؟ در این صورت باید دیده شود. */
+        private fun spaceTouchesRtl(output: List<MathNode>): Boolean {
+            var look = index
+            while (look < source.length && source[look] == ' ') look++
+            if (look < source.length && isRtlChar(source.codePointAt(look))) return true
+            val previous = output.lastOrNull() as? MathNode.Symbol ?: return false
+            val last = previous.value.lastOrNull() ?: return false
+            return isRtlChar(last.code)
         }
 
         private fun isRtlChar(cp: Int): Boolean =
@@ -306,9 +333,26 @@ object NativeMathParser {
             }
 
             val nameStart = index
-            while (index < source.length && source[index].isLetter()) index++
-            val name = source.substring(nameStart, index)
+            // V288.1 — نام فرمان فقط حروف ASCII است؛ «\\congℤ» یعنی ≅ و بعد ℤ (قبلاً ℤ جزو نام می‌شد و □ می‌داد)
+            while (index < source.length && source[index] in 'a'..'z' || index < source.length && source[index] in 'A'..'Z') index++
+            var name = source.substring(nameStart, index)
+            if (name !in knownCommandNames) {
+                // V288.1 — فرمان چسبیده به حرف بعدی («\\Vertf» = \\Vert f ، «\\lambdaw» = λw): بلندترین پیشوند شناخته‌شده را بردار
+                for (cut in name.length - 1 downTo 1) {
+                    val head = name.substring(0, cut)
+                    if (head in knownCommandNames) {
+                        index = nameStart + cut
+                        name = head
+                        break
+                    }
+                }
+            }
             return when (name) {
+                // V288.1 — اندازه‌دهنده‌های \\big/\\Big/… خودِ نماد بعدی را نشان می‌دهند
+                "big", "Big", "bigg", "Bigg", "bigl", "Bigl", "biggl", "Biggl", "bigr", "Bigr", "biggr", "Biggr", "bigm", "Bigm" -> {
+                    skipWhitespace()
+                    if (index < source.length && source[index] == '\\') { index++; command(slashStart) } else atom()
+                }
                 "frac", "dfrac", "tfrac", "sfrac", "nicefrac" -> MathNode.Fraction(groupOrAtom(), groupOrAtom())
                 "sqrt" -> parseRadical()
                 "root" -> {

@@ -19425,7 +19425,14 @@ CI: `compileDebugUnitTestKotlin` به‌خاطر `assertFalse` بدون import �
 - باگ V202.5: `var LANDING_TILES` داخل `paintAuth` بعد از خطی که `landing()` را صدا می‌زد تعریف شده بود → به‌خاطر hoisting مقدارش undefined و `.map` خطا می‌داد → صفحهٔ اول خالی. حالا کنار `authActive` در سطح ماژول است (تست ترتیب را پین می‌کند).
 - دروازهٔ صفحهٔ اول: mobile.js `entered()/enter()` با `sessionStorage['m-entered']`، `gateActive() = MQ && user && !entered`؛ app.js `render()` پیش از m-mode اگر gateActive → paintAuth (landing حتی با user). دکمه: user ⇒ `enter(); S.render()`؛ وگرنه `goA('login')`؛ پیوند ثبت‌نام فقط بدون user. `afterLogin()` → `SiteMobile.enter()`.
 
-### V288 — کتابخانهٔ دانشگاهی + رفع لود نشدن گاه‌به‌گاه ویرایشگر فرمول (اپ 1.01.85 + سایت)
+### V288.1 — رفع CI 1.01.85 + رندر بومی معادلهٔ ارگون (اپ 1.01.86)
+- **CI:** `V250_SiteAuditTest.no native browser prompt or confirm dialogs in site` با `confirm('…')` در `loadEngines` (app.js) شکست می‌خورد → جایگزین با `confirmDlg('به‌روزرسانی سایت', …)`.
+- **NativeMathAst.kt:** فاصلهٔ خام منبع در `parseSequence` نادیده گرفته می‌شود مگر کنار متن RTL (`spaceTouchesRtl`)؛ نام فرمان فقط ASCII؛ فرمان ناشناخته → بلندترین پیشوند شناخته‌شده (`knownCommandNames`)؛ `\big…\Bigg` → نماد بعدی؛ `trianglelefteq/…` اضافه شد.
+- **NativeMathSvgRenderer.kt:** حداقل عرض `.50em` نمادِ ویرایش‌پذیر فقط وقتی `showEditBoxes||showCaret` (ThreadLocal `editLayout`)، در نمایش `.18em`؛ `estimateTextWidth` برای `. , : ;` (.28)، `( ) [ ] | !` (.36)، `{ } /` (.42)، یونانی کوچک (.52/.62) و بزرگ (.68).
+- **formula.html `mbTex`:** `join('')` → `reduce` که بین `\cmd` و حرف بعدی فاصله می‌گذارد.
+- تست: `core/math/V288_1NativeMathSpacingTest.kt`. (در سندباکس با kotlinc+junit، ۶۶۰ تست فایل‌خوان/خالص پاس شد.)
+
+## V288 — کتابخانهٔ دانشگاهی + رفع لود نشدن گاه‌به‌گاه ویرایشگر فرمول (اپ 1.01.85 + سایت)
 
 - **کتابخانه**: اسکریپت پایانی formula.html (`V288 — کتابخانهٔ «دانشگاه و تحصیلات تکمیلی»`) از `qa/gen_uni.py` تولید می‌شود (ویرایش محتوا ⇒ همان اسکریپت را دوباره اجرا کنید؛ بلوک قبلی را جایگزین می‌کند). ۲۴ پد `uni-*` به `MB_PAD`، گروه `uni` به `MB_GROUPS`، و تراشهٔ `[data-uni-chip]` در `.mb-chip-scroll` پیش از «همهٔ نمادها». قالب آیتم‌ها `[نام, TeX, ['tpl', TeX], null, 0]`. QA: `qa/v288.py` — هر ۴۳۱ قالب درج و بدون نماد ناشناخته رندر می‌شود.
 - **NativeMathAst**: ~۹۰ فرمان نماد جدید در `commandSymbols` و توابع نام‌دار (sup, inf, arg, Tr, rank, …)؛ `\|` → ‖.

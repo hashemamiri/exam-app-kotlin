@@ -67,7 +67,7 @@ window.SITE_CONFIG = { SUPABASE_URL: "https://eazwuyrymsvdkwckdpco.supabase.co",
 <noscript><p style="text-align:center;padding:16px">برای استفاده از سامانهٔ آزمون آنلاین باید جاوااسکریپت مرورگر فعال باشد.</p></noscript>
 </div>
 <div class="toast-wrap" id="toasts"></div>
-<script>window.__ENGINES_URL = "/engines.ce5ea15acdcd.js";
+<script>window.__ENGINES_URL = "/engines.8a3976228fc9.js";
 window.__HEADER_SCHEMA = {
  "templates": [
   {
@@ -1290,7 +1290,7 @@ enginesReady=null;try{sc.remove();}catch(e){}
 reject(err);}
 sc.onload=function(){if(window.__ENGINES)finish(true);else finish(false,new Error('موتورها بارگذاری نشد.'));};sc.onerror=function(){if(enginesAttempt===1){done=true;clearTimeout(slowTimer);clearTimeout(deadTimer);try{sc.remove();}catch(e){}
 enginesReady=null;setTimeout(function(){loadEngines().then(resolve,reject);},1500);return;}
-finish(false,new Error('دانلود موتور چاپ/فرمول ناموفق بود؛ اینترنت را بررسی کنید.'));if(navigator.onLine!==false){setTimeout(function(){if(window.__ENGINES)return;if(confirm('نسخهٔ تازهٔ سایت منتشر شده و موتور فرمول/چاپ این صفحه قدیمی است. برای ادامه باید صفحه دوباره بارگذاری شود. الان بارگذاری شود؟'))location.reload();},300);}};slowTimer=setTimeout(function(){if(!done)toast('در حال دریافت موتور فرمول و چاپ (حدود ۵ مگابایت)… لطفاً کمی صبر کنید.','info');},4000);deadTimer=setTimeout(function(){finish(false,new Error('دریافت موتور فرمول/چاپ بیش از حد طول کشید؛ اینترنت را بررسی و دوباره تلاش کنید.'));},120000);document.head.appendChild(sc);});return enginesReady;}
+finish(false,new Error('دانلود موتور چاپ/فرمول ناموفق بود؛ اینترنت را بررسی کنید.'));if(navigator.onLine!==false){setTimeout(function(){if(window.__ENGINES)return;confirmDlg('به‌روزرسانی سایت','نسخهٔ تازهٔ سایت منتشر شده و موتور فرمول/چاپ این صفحه قدیمی است. برای ادامه باید صفحه دوباره بارگذاری شود.','بارگذاری دوباره').then(function(ok){if(ok)location.reload();});},300);}};slowTimer=setTimeout(function(){if(!done)toast('در حال دریافت موتور فرمول و چاپ (حدود ۵ مگابایت)… لطفاً کمی صبر کنید.','info');},4000);deadTimer=setTimeout(function(){finish(false,new Error('دریافت موتور فرمول/چاپ بیش از حد طول کشید؛ اینترنت را بررسی و دوباره تلاش کنید.'));},120000);document.head.appendChild(sc);});return enginesReady;}
 function persianDigitsOn(){try{var M=window.SiteMobile;return!!(M&&M.appearance&&M.appearance().persianDigits);}catch(e){return false;}}
 function engineHtml(kind){return loadEngines().then(function(E){var src=E[kind]||'';if(!src)toast('موتور '+(kind==='print'?'چاپ':'فرمول')+' در این فایل تعبیه نشده است.','err');if(src){var fa=persianDigitsOn();src=src.replace(/<head([^>]*)>/i,function(m){return m+'<script>window.__mfPersianDigits='+fa+';window.__figPersianDigits='+fa+';<\/script>';});}
 return src;},function(e){toast(errMsg(e),'err');return'';});}

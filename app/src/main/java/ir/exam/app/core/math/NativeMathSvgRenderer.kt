@@ -48,6 +48,7 @@ object NativeMathSvgRenderer {
     private const val MIN_FONT = 8f
     private const val MAX_FONT = 160f
     private const val MAX_DIMENSION = 16_384f
+    private val editLayout = ThreadLocal<Boolean>() // V288.1
 
     fun render(
         tex: String,
@@ -70,7 +71,10 @@ object NativeMathSvgRenderer {
         val node = runCatching { NativeMathParser.parse(tex) }.getOrElse {
             MathNode.Symbol("□", sourceStart = 0, sourceEnd = tex.length)
         }
-        val layout = layout(node, safeFont)
+        // V288.1 — حداقل عرض .5em (هدفِ لمس) فقط در حالت ویرایش؛ در نمایش عادی (کادر سؤال/گزینه‌ها) نمادهای باریک مثل «.» «(» «ε»
+        // دیگر فاصلهٔ اضافه نمی‌اندازند (مثل «1. 75» یا «( 1− ε )» در معادلهٔ ارگون)
+        editLayout.set(showEditBoxes || showCaret)
+        val layout = try { layout(node, safeFont) } finally { editLayout.remove() }
         val paddingX = safeFont * .12f
         val paddingY = safeFont * .10f
         val width = (layout.width + paddingX * 2).coerceIn(1f, MAX_DIMENSION)
@@ -181,7 +185,8 @@ object NativeMathSvgRenderer {
         val naturalWidth = estimateTextWidth(shownValue, size)
         val editable = node.editable && node.sourceStart >= 0 && node.sourceEnd >= node.sourceStart
         // V133 — عرضِ نماد = عرضِ طبیعیِ آن (حداقلِ قبلی .72em بین حروف فاصلهٔ ناخواسته می‌انداخت)
-        val width = if (editable) max(naturalWidth, size * .50f) else naturalWidth.coerceAtLeast(size * .08f)
+        val minEditable = if (editLayout.get() == true) size * .50f else size * .18f // V288.1
+        val width = if (editable) max(naturalWidth, minEditable) else naturalWidth.coerceAtLeast(size * .08f)
         val baseline = size * .94f
         val height = size * 1.24f
         if (node.value.isEmpty()) {
@@ -745,6 +750,12 @@ object NativeMathSvgRenderer {
                 Character.getType(codePoint) == Character.NON_SPACING_MARK.toInt() -> 0f
                 Character.isWhitespace(codePoint) -> size * .34f
                 codePoint in '0'.code..'9'.code -> size * .58f
+                // V288.1 — عرض واقعی نمادهای باریک و حروف یونانی (قبلاً همه .62em بودند)
+                codePoint == '.'.code || codePoint == ','.code || codePoint == ':'.code || codePoint == ';'.code || codePoint == '\''.code -> size * .28f
+                codePoint == '('.code || codePoint == ')'.code || codePoint == '['.code || codePoint == ']'.code || codePoint == '|'.code || codePoint == '!'.code -> size * .36f
+                codePoint == '{'.code || codePoint == '}'.code || codePoint == '/'.code -> size * .42f
+                codePoint in 0x03B1..0x03C9 -> if (codePoint == 0x03C9 || codePoint == 0x03BC) size * .62f else size * .52f
+                codePoint in 0x0391..0x03A9 -> size * .68f
                 codePoint in 'A'.code..'Z'.code -> size * .66f
                 codePoint == 'i'.code || codePoint == 'j'.code || codePoint == 'l'.code -> size * .30f
                 codePoint == 't'.code || codePoint == 'f'.code || codePoint == 'r'.code -> size * .38f

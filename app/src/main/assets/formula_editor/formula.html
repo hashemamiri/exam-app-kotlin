@@ -12101,7 +12101,11 @@ window.mbCloseSymbolLibrary = mbCloseSymbolLibrary;
         case 'matrix': { const ev = node.env || 'bmatrix'; return '\\begin{' + ev + '}' + node.cells.map(row => row.map(cell => grp(cell)).join(' & ')).join(' \\\\ ') + '\\end{' + ev + '}'; }
         default: return '';
       }
-    }).join('');
+    }).reduce(function (acc, piece) {
+      /* V288.1 — فرمانِ حرفی چسبیده به حرف بعدی («\\Vert» + «f» → «\\Vertf») خراب می‌شود؛ یک فاصله بینشان بگذار */
+      if (acc && piece && /\\[A-Za-z]+$/.test(acc) && /^[A-Za-z]/.test(piece)) return acc + ' ' + piece;
+      return acc + piece;
+    }, '');
   }
 
   /** تبدیل کد TeX به مدل جعبه‌ای */
