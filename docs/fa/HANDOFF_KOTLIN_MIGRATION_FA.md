@@ -19425,6 +19425,9 @@ CI: `compileDebugUnitTestKotlin` به‌خاطر `assertFalse` بدون import �
 - باگ V202.5: `var LANDING_TILES` داخل `paintAuth` بعد از خطی که `landing()` را صدا می‌زد تعریف شده بود → به‌خاطر hoisting مقدارش undefined و `.map` خطا می‌داد → صفحهٔ اول خالی. حالا کنار `authActive` در سطح ماژول است (تست ترتیب را پین می‌کند).
 - دروازهٔ صفحهٔ اول: mobile.js `entered()/enter()` با `sessionStorage['m-entered']`، `gateActive() = MQ && user && !entered`؛ app.js `render()` پیش از m-mode اگر gateActive → paintAuth (landing حتی با user). دکمه: user ⇒ `enter(); S.render()`؛ وگرنه `goA('login')`؛ پیوند ثبت‌نام فقط بدون user. `afterLogin()` → `SiteMobile.enter()`.
 
+### V286.5 — سایت دسکتاپ: حذف راهنمای هاور ریل (بدون bump/CI)
+- کاربر V286.4 را برعکس خواست: هیچ دکمهٔ ریل (و نه زنگولهٔ `#nc-bell` در `push.js`) `title` ندارد. تست `V286_SiteRailHoverTest.railItemsHaveNoHoverTitle` منفی است. **قانون: روی ریل دسکتاپ tooltip/title نگذارید.**
+
 ### V286.4 — سایت دسکتاپ: title روی ریل؛ اسکرول خودکار ریل شماره‌ها (بدون bump/CI)
 - `app.js railItem()`: همهٔ دکمه‌ها `title: label` (و «+» `title: 'افزودن'`) گرفتند — زنگوله (`push.js`) از قبل title داشت و همین تفاوت بود.
 - `builder.js drawRail()`: قبل از `rail.innerHTML=''` مقدار `scrollTop` ریل شماره‌ها نگه داشته و بعد از بازسازی برگردانده می‌شود؛ `railRevealActive(nums)` اگر ردیف `.active` بیرون دید باشد آن را وسط می‌آورد (یک‌بار فوری + یک‌بار در rAF).

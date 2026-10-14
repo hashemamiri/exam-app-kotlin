@@ -155,7 +155,7 @@
   function ncBell() {
     var b = document.getElementById('nc-bell');
     if (!b) {
-      b = el('button', {id: 'nc-bell', class: 'nc-bell', 'aria-label': 'اعلان‌ها', title: 'اعلان‌ها', onclick: ncOpen}, [
+      b = el('button', {id: 'nc-bell', class: 'nc-bell', 'aria-label': 'اعلان‌ها', onclick: ncOpen}, [ /* V286.5 — بدون title تا با بقیهٔ ریل یکی باشد */
         el('span', {class: 'nc-ic', html: '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg>'}),
         el('span', {class: 'nc-badge', id: 'nc-badge'})
       ]);

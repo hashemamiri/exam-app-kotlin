@@ -4,16 +4,16 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.File
 
-/** V286.4 — دسکتاپ سایت: راهنمای هاور (title) روی همهٔ دکمه‌های ریل؛ ریل شمارهٔ سؤال‌ها سؤال فعال را خودکار نمایان می‌کند. */
+/** V286.4 — دسکتاپ سایت: بدون راهنمای هاور (title) روی ریل؛ ریل شمارهٔ سؤال‌ها سؤال فعال را خودکار نمایان می‌کند. */
 class V286_SiteRailHoverTest {
     private fun root(): File = listOf(File("."), File("..")).first { File(it, "site/src/extras.js").isFile }
     private fun src(p: String) = File(root(), p).readText()
 
     @Test
-    fun railItemsHaveTitle() {
+    fun railItemsHaveNoHoverTitle() { // V286.5 — کاربر راهنمای هاور را نخواست؛ زنگوله هم بدون title
         val app = src("site/src/app.js")
-        assertTrue("'aria-label': label, title: label," in app)
-        assertTrue("'aria-label': 'افزودن', title: 'افزودن'," in app)
+        assertTrue("title: label" !in app.substringAfter("function railItem(").substringBefore("var rail = el('nav'"))
+        assertTrue("title: 'اعلان‌ها'" !in src("site/src/push.js"))
     }
 
     @Test
