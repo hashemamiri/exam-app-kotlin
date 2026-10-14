@@ -19425,7 +19425,11 @@ CI: `compileDebugUnitTestKotlin` به‌خاطر `assertFalse` بدون import �
 - باگ V202.5: `var LANDING_TILES` داخل `paintAuth` بعد از خطی که `landing()` را صدا می‌زد تعریف شده بود → به‌خاطر hoisting مقدارش undefined و `.map` خطا می‌داد → صفحهٔ اول خالی. حالا کنار `authActive` در سطح ماژول است (تست ترتیب را پین می‌کند).
 - دروازهٔ صفحهٔ اول: mobile.js `entered()/enter()` با `sessionStorage['m-entered']`، `gateActive() = MQ && user && !entered`؛ app.js `render()` پیش از m-mode اگر gateActive → paintAuth (landing حتی با user). دکمه: user ⇒ `enter(); S.render()`؛ وگرنه `goA('login')`؛ پیوند ثبت‌نام فقط بدون user. `afterLogin()` → `SiteMobile.enter()`.
 
-### V288.2 — سایت: توان+اندیس هم‌زمان در کادر سؤال/پیش‌نمایش (فقط site/**)
+### V288.3 — تتراسیون در منوی «توان» + ممیز فارسی در منوی «٫ ٪» (اپ 1.01.87)
+- `formula.html` → `mbToolMenu(kind==='sup')`: واریانت `['تتراسیون ⁿa','{}^{n}a',['tpl','{}^{n}a']]` پیش از «زیرنویس». `mbPercentMenu` (هر دو نسخه: تابع اصلی و override داخل `menus`): `['ممیز فارسی','0٫5',['let','٫']]`. ٫ (U+066B) در رندر بومی به‌عنوان متن RTL و در موتور چاپ/سایت بدون تغییر رندر می‌شود (`qa/shots/v2883_*.png`).
+- تست: `V288_3FormulaPadTetrationDecimalTest`.
+
+## V288.2 — سایت: توان+اندیس هم‌زمان در کادر سؤال/پیش‌نمایش (فقط site/**)
 - `student.js`/`builder.js` → `mathCss()`: regex `keep` با `\b` انتها، `.msubsup` و `.ss-base` (SUBSUP_CSS موتور چاپ) را رد می‌کرد → فقط `sup.msup/sub.msub` منتقل می‌شد و شبکهٔ grid نبود؛ `msubsup|msubsup-[a-z]+|ss-base` اضافه شد. تست: `V288_2_SiteSubSupCssTest` (paths-ignore).
 - بازتولید: `/tmp/site_math.py` (iframe موتور چاپ + کپی CSS مثل سایت) → `qa/shots/site_ergun.png`.
 

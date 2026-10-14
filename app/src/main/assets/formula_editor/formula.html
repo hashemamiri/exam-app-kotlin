@@ -12602,6 +12602,7 @@ window.mbCloseSymbolLibrary = mbCloseSymbolLibrary;
         ['توان n', 'x^{n}', ['sup']],
         ['مربع ²', 'x^{2}', ['sup2']],
         ['مکعب ³', 'x^{3}', ['sup3']],
+        ['تتراسیون ⁿa', '{}^{n}a', ['tpl', '{}^{n}a']], /* V288.3 — گوشی/اپ هم */
         ['زیرنویس', 'x_{1}', ['sub']]
       ];
     } else if (kind === 'sqrt') {
@@ -13358,6 +13359,7 @@ function mbIntegralMenu(ev) {
 function mbPercentMenu(ev) {
   mbVarShow(ev, ev && ev.currentTarget, [
     ['ممیز', '0.5', ['let', '.']],
+    ['ممیز فارسی', '0٫5', ['let', '٫']], /* V288.3 */
     ['درصد', '\%', ['sym', '%']],
     ['در هزار', '‰', ['let', '‰']],
     ['درصد فرمولی', '\frac{a}{b} \times 100', ['tpl', '\frac{a}{b} \times 100']]
@@ -14897,6 +14899,7 @@ var __parSideInsert = (function(ch,sd){try{if(typeof mbVarClose==="function")mbV
         ],
         mbPercentMenu: [
           ['ممیز', '0.5', ['let', '.']],
+          ['ممیز فارسی', '0٫5', ['let', '٫']], /* V288.3 */
           ['درصد', '%', ['sym', '%']],
           ['در هزار', '‰', ['let', '‰']],
           ['درصد فرمولی', BS + 'frac{a}{b} ' + BS + 'times 100', ['tpl', BS + 'frac{a}{b} ' + BS + 'times 100']]

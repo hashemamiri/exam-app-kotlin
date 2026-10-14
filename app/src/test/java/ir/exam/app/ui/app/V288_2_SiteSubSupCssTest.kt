@@ -13,7 +13,7 @@ class V288_2_SiteSubSupCssTest {
     fun keepRegexCarriesSubSupContainer() {
         for (f in listOf("site/src/student.js", "site/src/builder.js")) {
             val keep = src(f).substringAfter("var keep = /").substringBefore("/;")
-            assertTrue(f, "|msubsup|msubsup-[a-z]+|ss-base)" in keep)
+            assertTrue(f, "|msubsup|msubsup-[a-z]+|ss-base|tbx|" in keep)
             val re = Regex(keep)
             for (sel in listOf(".msubsup", ".msubsup > .ss-base", ".msubsup-tall", ".msubsup > sup.msup", ".mfrac")) assertTrue("$f $sel", re.containsMatchIn(sel))
         }
