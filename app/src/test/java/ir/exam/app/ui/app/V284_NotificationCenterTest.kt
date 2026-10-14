@@ -18,8 +18,8 @@ class V284_NotificationCenterTest {
         assertTrue("create or replace function public.native_notifications_read_v284(p_ids bigint[] default null)" in sql)
         assertTrue("where user_id=auth.uid() and read_at is null and (p_ids is null or id = any(p_ids))" in sql)
         for (f in listOf("push_enqueue_exam_reminders", "push_enqueue_exam_closing", "push_on_class_member_added", "exam_audience_v284"))
-        assertTrue("private.exam_audience_v284(p_exam text)" in sql) // exams.id از نوع text است
             assertTrue(f, "function private.$f(" in sql)
+        assertTrue("private.exam_audience_v284(p_exam text)" in sql) // exams.id از نوع text است
         // بدون شرط توکن: اعلان برای همه ثبت می‌شود
         assertTrue("where p_user is not null\n  on conflict(dedupe_key) do nothing;" in sql)
         assertTrue("a.submitted_at is not null" in sql)

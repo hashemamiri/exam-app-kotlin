@@ -19425,6 +19425,9 @@ CI: `compileDebugUnitTestKotlin` به‌خاطر `assertFalse` بدون import �
 - باگ V202.5: `var LANDING_TILES` داخل `paintAuth` بعد از خطی که `landing()` را صدا می‌زد تعریف شده بود → به‌خاطر hoisting مقدارش undefined و `.map` خطا می‌داد → صفحهٔ اول خالی. حالا کنار `authActive` در سطح ماژول است (تست ترتیب را پین می‌کند).
 - دروازهٔ صفحهٔ اول: mobile.js `entered()/enter()` با `sessionStorage['m-entered']`، `gateActive() = MQ && user && !entered`؛ app.js `render()` پیش از m-mode اگر gateActive → paintAuth (landing حتی با user). دکمه: user ⇒ `enter(); S.render()`؛ وگرنه `goA('login')`؛ پیوند ثبت‌نام فقط بدون user. `afterLogin()` → `SiteMobile.enter()`.
 
+### V284.5 — رفع CI 1.01.75 (اپ 1.01.76)
+- در V284.3 پین تازه با `str.replace` بعد از خط `for (...)` و قبل از بدنهٔ تک‌خطی آن درج شده بود → `Unresolved reference 'f'`. خط جابه‌جا شد. درس: بعد از هر ویرایش تست، با یک اسکریپت ساده (تعادل آکولاد + `for` بدون بدنه) بررسی شود.
+
 ### V284.4 — بازخورد مرکز اعلان (اپ 1.01.75 + سایت)
 - خوانده‌شدن: باز کردن فهرست دیگر همه را خوانده نمی‌کند؛ لمس آیتم → `markRead(listOf(id))` (اپ) / `native_notifications_read_v284 {p_ids:[id]}` (سایت) + به‌روزرسانی خوش‌بینانهٔ شمارنده؛ دکمهٔ «همه خوانده شد» فقط وقتی خوانده‌نشده هست (اپ: `dismissButton`؛ سایت: کنار «بستن»).
 - دسته‌بندی (`SupabaseNotificationRepository.CATEGORIES/categoryOf` ↔ `push.js NC_CATS/ncCat`): آزمون‌ها = exam_open/exam_soon/exam_closing/submit؛ نمره‌ها = grade؛ تقویم = calendar/calendar_reminder؛ کلاس و درخواست‌ها = class_added/manager_request/request_decided/student_delete_request؛ بقیه «سایر». تب «همه» + فقط دسته‌هایی که اعلان دارند (اگر بیش از یک دسته)؛ برچسب هر تب شمارندهٔ خوانده‌نشده دارد. اپ: `FilterChip` در ردیف اسکرول افقی؛ سایت: `.nc-tabs/.nc-tab`.
