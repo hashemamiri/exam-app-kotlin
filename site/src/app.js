@@ -1621,8 +1621,8 @@
     var railActive = railKeys.indexOf(view.panel) >= 0 ? view.panel : 'menu';
     function railItem(key, label) {
       /* V225 — دکمهٔ «+» ریل بدون متن زیر خود؛ لمس آن منوی بادبزنی ۵ عمل (آزمون/دانش‌آموز/مدرسه/کلاس/آزمون چاپی جدید) را باز می‌کند */
-      if (key === 'builder' && user.role === 'teacher') return el('button', {class: 'dk-rail-item dk-rail-plus' + (railActive === key ? ' active' : ''), 'aria-label': 'افزودن', 'aria-haspopup': 'menu', onclick: function (ev) { dkQuickAdd(ev.currentTarget); }}, [dkIcon(key)]);
-      return el('button', {class: 'dk-rail-item' + (railActive === key ? ' active' : ''), 'aria-label': label, 'aria-current': railActive === key ? 'page' : null, onclick: function () { dkGo(key); }}, [dkIcon(key), el('span', {class: 'dk-rail-label', text: label})]);
+      if (key === 'builder' && user.role === 'teacher') return el('button', {class: 'dk-rail-item dk-rail-plus' + (railActive === key ? ' active' : ''), 'aria-label': 'افزودن', title: 'افزودن', 'aria-haspopup': 'menu', onclick: function (ev) { dkQuickAdd(ev.currentTarget); }}, [dkIcon(key)]);
+      return el('button', {class: 'dk-rail-item' + (railActive === key ? ' active' : ''), 'aria-label': label, title: label, /* V286.4 — راهنمای هاور مثل زنگولهٔ اعلان‌ها */ 'aria-current': railActive === key ? 'page' : null, onclick: function () { dkGo(key); }}, [dkIcon(key), el('span', {class: 'dk-rail-label', text: label})]);
     }
     var rail = el('nav', {class: 'dk-rail', 'aria-label': 'نوار اصلی', style: '--n:' + (railItems.length + 1)}, [railItem('menu', 'منو')].concat(railItems.map(function (it) { return railItem(it[0], it[2]); })));
     var main = el('main', {class: 'main'}, [

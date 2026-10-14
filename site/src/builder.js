@@ -563,6 +563,7 @@
     }
     function totalScore() { return state.questions.reduce(function (s, q) { return s + (Number(q.score) || 0); }, 0); }
     function drawRail() {
+      var prevNums = rail.querySelector('.b-rail-nums'), prevScroll = prevNums ? prevNums.scrollTop : 0; /* V286.4 — اسکرول ریل شماره‌ها با هر بازرسم از دست نرود */
       rail.innerHTML = '';
       if (typeof refreshPickRules === 'function') refreshPickRules(); /* V275 */
       /* V259.2 — زیر هر دکمهٔ ریل نامش نوشته می‌شود (برچسب کوتاه)؛ زیر چشم، کارت «بارم» = جمع بارم آزمون */
@@ -590,6 +591,18 @@
         nums.appendChild(row);
       });
       rail.appendChild(nums);
+      /* V286.4 — اسکرول خودکار: شمارهٔ سؤالِ در حال ویرایش همیشه در ریل دیده شود (فقط دسکتاپ؛ ریل فقط آنجا هست) */
+      nums.scrollTop = prevScroll;
+      railRevealActive(nums);
+    }
+    function railRevealActive(nums) {
+      var act = nums.querySelector('.b-rail-row.active'); if (!act) return;
+      var fix = function () {
+        var nr = nums.getBoundingClientRect(), ar = act.getBoundingClientRect(); if (!nr.height) return;
+        var top = ar.top - nr.top, bottom = top + ar.height;
+        if (top < 0 || bottom > nr.height) nums.scrollTop += top - (nr.height - ar.height) / 2;
+      };
+      fix(); if (window.requestAnimationFrame) window.requestAnimationFrame(fix);
     }
 
     function drawList() {

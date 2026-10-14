@@ -19425,6 +19425,11 @@ CI: `compileDebugUnitTestKotlin` به‌خاطر `assertFalse` بدون import �
 - باگ V202.5: `var LANDING_TILES` داخل `paintAuth` بعد از خطی که `landing()` را صدا می‌زد تعریف شده بود → به‌خاطر hoisting مقدارش undefined و `.map` خطا می‌داد → صفحهٔ اول خالی. حالا کنار `authActive` در سطح ماژول است (تست ترتیب را پین می‌کند).
 - دروازهٔ صفحهٔ اول: mobile.js `entered()/enter()` با `sessionStorage['m-entered']`، `gateActive() = MQ && user && !entered`؛ app.js `render()` پیش از m-mode اگر gateActive → paintAuth (landing حتی با user). دکمه: user ⇒ `enter(); S.render()`؛ وگرنه `goA('login')`؛ پیوند ثبت‌نام فقط بدون user. `afterLogin()` → `SiteMobile.enter()`.
 
+### V286.4 — سایت دسکتاپ: title روی ریل؛ اسکرول خودکار ریل شماره‌ها (بدون bump/CI)
+- `app.js railItem()`: همهٔ دکمه‌ها `title: label` (و «+» `title: 'افزودن'`) گرفتند — زنگوله (`push.js`) از قبل title داشت و همین تفاوت بود.
+- `builder.js drawRail()`: قبل از `rail.innerHTML=''` مقدار `scrollTop` ریل شماره‌ها نگه داشته و بعد از بازسازی برگردانده می‌شود؛ `railRevealActive(nums)` اگر ردیف `.active` بیرون دید باشد آن را وسط می‌آورد (یک‌بار فوری + یک‌بار در rAF).
+- تست: `V286_SiteRailHoverTest.kt` (الگوی `V*_Site*Test.kt` → paths-ignore).
+
 ### V286.3 — Word: جدول تناوبی به‌صورت تصویر (اپ 1.01.83 + سایت)
 - `.ptb` (periodic_fig.js) یک گرید CSS با ۱۹ ستون باریک است؛ تبدیل به جدول Word به‌هم می‌ریخت. تابع جدید `rasterBoxes(ctx, root, maxW)` در `word_export.js` همهٔ عناصر دارای پس‌زمینه/خط/متن مستقیم را از روی `getBoundingClientRect` و computed style (رنگ، radius، dashed، فونت، تراز) روی canvas (مقیاس ۲) می‌کشد → یک `w:drawing` وسط‌چین. در `walkBlock` قبل از `.an-frame`.
 - QA: `/home/user/qa/pt.py` (سؤال تشریحی با `%%FIG:{k:'p',t:'full'}%%`) → LibreOffice: جدول کامل با رنگ گروه‌ها، Z و نماد، ستاره‌ها و دو ردیف f.
