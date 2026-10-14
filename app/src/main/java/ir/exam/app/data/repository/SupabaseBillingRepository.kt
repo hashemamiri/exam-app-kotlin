@@ -89,6 +89,23 @@ class SupabaseBillingRepository : BillingRepository {
         )
     }
 
+    override suspend fun chargeWord(examRef: String, operationId: String, title: String): Result<PrintChargeResult> = runCatching {
+        val raw: JsonObject = SupabaseProvider.client.postgrest.rpc("native_charge_word_v286", buildJsonObject {
+            put("p_exam", examRef)
+            put("p_operation", operationId)
+            put("p_title", title)
+        }).decodeAs()
+        raw["error"]?.jsonPrimitive?.contentOrNull?.takeIf(String::isNotBlank)?.let { message ->
+            val required = raw["required"]?.jsonPrimitive?.longOrNull
+            val balance = raw["balance"]?.jsonPrimitive?.longOrNull
+            error(if (required != null && balance != null) "$message (لازم: $required تومان، موجودی: $balance تومان)" else message)
+        }
+        PrintChargeResult(
+            costToman = raw["cost"]?.jsonPrimitive?.longOrNull ?: 0,
+            balanceToman = raw["balance"]?.jsonPrimitive?.longOrNull
+        )
+    }
+
     override suspend fun quotePrint(examId: String, questionCount: Int, content: String): Result<PrintQuoteResult> = runCatching {
         val raw: JsonObject = SupabaseProvider.client.postgrest.rpc("native_charge_print_quote_v2", buildJsonObject {
             put("p_exam", examId)

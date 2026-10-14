@@ -695,7 +695,7 @@
     try { return window.matchMedia('(max-width:820px)').matches; } catch (e) { return false; }
   }
 
-  if (typeof window.pgsWordNow !== 'function') window.pgsWordNow = function () { try { alert('خروجی Word فقط در اپ یا سایت در دسترس است.'); } catch (e) {} };
+  /* V286 — خروجی Word از منوی چاپ حذف شد؛ آیکن Word روی کارت آزمون (اپ/سایت) با هزینهٔ جداگانه */
   function buildViewer() {
     var v = document.createElement('div');
     v.id = 'pgsViewer';
@@ -709,8 +709,6 @@
             '<button type="button" onclick="pgsPrintNow(\'student\')">🖨 چاپ نسخهٔ دانشجو</button>' +
             '<button type="button" onclick="pgsPrintNow(\'teacher\')">✅ چاپ نسخهٔ استاد / کلید</button>' +
             '<button type="button" onclick="pgsOpenPrintDlg()">⚙️ تنظیمات چاپ (بازه / تعداد نسخه)…</button>' +
-            '<button type="button" onclick="pgsWordNow(\'student\')">📄 فایل Word نسخهٔ دانشجو</button>' +
-            '<button type="button" onclick="pgsWordNow(\'teacher\')">📄 فایل Word نسخهٔ استاد / کلید</button>' +
           '</span>' +
         '</span>' +
         '<button type="button" class="pgs-btn" id="pgsModeBtn" onclick="pgsToggleMode()" title="جابجایی بین نسخهٔ دانشجو و استاد">👤<span class="pgs-t"> نسخه: دانشجو</span></button>' +

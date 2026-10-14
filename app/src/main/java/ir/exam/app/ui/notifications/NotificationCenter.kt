@@ -102,7 +102,15 @@ fun NotificationBell(userId: String, tint: Color, onOpen: (page: String?, code: 
                         loading && feed == null -> CircularProgressIndicator()
                         shown.isEmpty() -> Text("هنوز اعلانی ندارید.", style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(top = 8.dp))
                         else -> LazyColumn(Modifier.fillMaxWidth().heightIn(max = 420.dp)) {
-                            items(shown, key = { it.id }) { n ->
+                            // V286 — در تب «همه» اعلان‌ها زیر عنوان دسته‌شان گروه می‌شوند (کاربر: «دسته‌بندی دیده نمی‌شود»)
+                            val groups: List<Pair<String?, List<AppNotification>>> = if (tab == "همه")
+                                tabs.drop(1).map { c -> c to shown.filter { SupabaseNotificationRepository.categoryOf(it.kind) == c } }.filter { it.second.isNotEmpty() }
+                            else listOf(null to shown)
+                            groups.forEach { (cat, list) ->
+                                if (cat != null) item(key = "h-$cat") {
+                                    Text(cat, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(top = 10.dp, bottom = 4.dp))
+                                }
+                            items(list, key = { it.id }) { n ->
                                 NotificationRow(n) {
                                     // فقط همین اعلان خوانده‌شده می‌شود
                                     feed = feed?.let { f -> f.copy(unread = (f.unread - (if (n.read) 0 else 1)).coerceAtLeast(0), items = f.items.map { if (it.id == n.id) it.copy(read = true) else it }) }
@@ -111,6 +119,7 @@ fun NotificationBell(userId: String, tint: Color, onOpen: (page: String?, code: 
                                     onOpen(n.page, n.code)
                                 }
                                 HorizontalDivider()
+                            }
                             }
                         }
                     }

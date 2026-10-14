@@ -192,6 +192,7 @@
     if (r.indexOf('exam:create:') === 0) return 'ساخت آزمون';
     if (r.indexOf('exam:update:') === 0) return 'ویرایش آزمون';
     if (r.indexOf('exam:duplicate:') === 0) return 'تکثیر آزمون';
+    if (r.indexOf('exam:word:') === 0) return 'فایل Word آزمون';
     if (r.indexOf('exam:print:teacher') === 0) return 'چاپ آزمون با کلید';
     if (r.indexOf('exam:print:') === 0) return 'چاپ آزمون';
     if (r.indexOf('backup:restore') === 0) return 'بازیابی نسخهٔ پشتیبان';
@@ -616,6 +617,7 @@
     duplicateExam: function (id) { return rpcObj('native_duplicate_exam_v2', {p_exam: id, p_operation: uuid()}); },
     duplicateExamToClass: function (id, classId) { return rpcObj('native_duplicate_exam_to_class_v1', {p_exam: id, p_class: classId, p_operation: uuid()}); }, /* V264 */
     /* V202.1 — v2: پرداخت چاپ آزمون آنلاین/محلی روی سرور ثبت می‌شود؛ همان محتوا در اپ/سایت دسکتاپ/سایت گوشی دوباره کسر نمی‌شود */
+    chargeWord: function (examRef, title) { return rpcObj('native_charge_word_v286', {p_exam: examRef, p_operation: uuid(), p_title: title || ''}); }, /* V286 — ۵۰٬۰۰۰ تومان هر فایل، جدا از چاپ */
     chargePrint: function (examId, count, mode, content) { return rpcObj('native_charge_print_v2', {p_exam: examId, p_operation: uuid(), p_questions: count, p_mode: mode, p_content: content || ''}); },
     printChargeQuote: function (examId, count, content) { return rpcObj('native_charge_print_quote_v2', {p_exam: examId, p_questions: count, p_content: content || ''}); },
     /* V199 — پرداخت چاپ آزمون چاپی: برآورد / کسر / وضعیت کارت‌ها (سربرگ = اثر انگشت فیلدهای f_*) */
@@ -745,19 +747,8 @@
     print: function (mode) {
       if (!printCtx) return;
       var ctx = printCtx, w = ctx.iframe.contentWindow;
-      /* V285 — «فایل Word نسخهٔ دانشجو/استاد» (منوی چاپ پیش‌نمایش): همان دروازه‌های پرداخت چاپ؛ به‌جای پنجرهٔ چاپ، موتور docx می‌سازد و دانلود می‌شود */
-      var isWord = /^word-/.test(String(mode || '')); mode = String(mode || '').replace(/^word-/, '');
-      var doWord = function () {
-        ctx.busy = true;
-        var p = (typeof w.wordExportBase64 === 'function') ? w.wordExportBase64(mode) : Promise.reject(new Error('na'));
-        p.then(function (b64) {
-          ctx.busy = false;
-          var bin = atob(b64), u8 = new Uint8Array(bin.length); for (var i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
-          var name = String(ctx.title || 'آزمون').replace(/[\\/:*?"<>|]/g, ' ').trim() + (mode === 'teacher' ? ' - کلید' : '') + '.docx';
-          window.SiteExtras.download(name, new Blob([u8], {type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'}));
-          toast('فایل Word آماده شد.', 'ok');
-        }).catch(function () { ctx.busy = false; toast('ساخت فایل Word ناموفق بود.', 'err'); });
-      };
+      /* V286 — خروجی Word از منوی چاپ حذف شد (wordExam روی کارت آزمون با هزینهٔ جداگانه) */
+      mode = String(mode || '');
       var doNative = function () {
         ctx.busy = true;
         /* V180.1 — فقط چاپ بومی مرورگر؛ w.print() موتور دوباره به همین پل برمی‌گشت (حلقهٔ پنجرهٔ هزینه) */
@@ -772,7 +763,7 @@
           try { if (!(w.isPreviewOpen && w.isPreviewOpen())) w.ExamPrintRenderer.showPreview(); } catch (e) {}
         }, 400);
       };
-      var fire = isWord ? doWord : doNative;
+      var fire = doNative;
       var restore = function () { ctx.busy = false; try { w.ExamPrintRenderer.restorePreview(); } catch (e) {} };
       /* V180.1 — یک درخواست در جریان (پنجرهٔ هزینه باز / چاپ بومی) → درخواست دوباره نادیده گرفته می‌شود */
       if (ctx.busy) return;
@@ -1826,10 +1817,13 @@
     ]);
   }
   /* V186 — دسکتاپ: دکمه‌های عملیات آزمون با متن (نه آیکن)؛ گوشی همان آیکن‌ها */
+  /* V286 — آیکن Word (سند با W) روی کارت آزمون */
+  var WORD_ICON_HTML = '<i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="M8 12l1.3 6 1.7-4.5 1.7 4.5 1.3-6"/></svg></i>';
   function examActions(x, refresh) {
     var wrap = el('div', {class: 'acts acts-text'});
     wrap.appendChild(el('button', {class: 'icon-btn', title: 'ویرایش', html: '<i>✎</i><span>ویرایش</span>', onclick: function () { view.panel = 'builder'; view.arg = {examId: x.id}; render(); }}));
     wrap.appendChild(el('button', {class: 'icon-btn', title: 'پیش‌نمایش و چاپ', html: '<i>🖨</i><span>چاپ</span>', onclick: function () { printExam(x); }}));
+    wrap.appendChild(el('button', {class: 'icon-btn', title: 'فایل Word (هزینهٔ جداگانه)', html: WORD_ICON_HTML + '<span>Word</span>', onclick: function () { wordOnlineExam(x); }})); /* V286 */
     wrap.appendChild(el('button', {class: 'icon-btn', title: x.is_open ? 'بستن آزمون' : 'بازکردن آزمون', html: x.is_open ? '<i>🔒</i><span>بستن</span>' : '<i>🔓</i><span>بازکردن</span>', onclick: async function () {
       try { await api.setExamOpen(x.id, !x.is_open); toast(x.is_open ? 'آزمون بسته شد.' : 'آزمون باز شد.', 'ok'); refresh(); } catch (e) { toast(errMsg(e), 'err'); }
     }}));
@@ -1844,6 +1838,64 @@
       try { await api.deleteExam(x.id); toast('حذف شد.', 'ok'); refresh(); deleteMedia(mediaUrls); } catch (e) { toast(errMsg(e), 'err'); }
     }}));
     return wrap;
+  }
+  /* V286 — ساخت docx در iframe پنهان (بدون پیش‌نمایش): همان موتور چاپ، نسخهٔ دانشجو → base64 */
+  function buildWordDocx(payload) {
+    return new Promise(function (resolve, reject) {
+      var iframe = el('iframe', {title: 'word-engine', style: 'position:fixed;left:-20000px;top:0;width:1200px;height:1600px;border:0;opacity:0;pointer-events:none'});
+      document.body.appendChild(iframe);
+      var done = false;
+      function finish(err, b64) { if (done) return; done = true; try { iframe.remove(); } catch (e) {} if (err) reject(err); else resolve(b64); }
+      try { var ps = localStorage.getItem(LS_PAGESETUP); if (ps && payload.pageSetup === undefined) payload.pageSetup = JSON.parse(ps); } catch (e) {}
+      var inlined = inlinePrintImages(payload);
+      iframe.addEventListener('load', function () {
+        var w = iframe.contentWindow, tries = 0;
+        (function push() {
+          tries++;
+          try {
+            if (typeof w.setExamData === 'function' && w.renderPreview && w.renderPreview.__pgs && inlined.done) {
+              w.setExamData(payload);
+              setTimeout(function () {
+                try { w.ExamPrintRenderer.showPreview(); } catch (e) {}
+                setTimeout(function () {
+                  var p = (typeof w.wordExportBase64 === 'function') ? w.wordExportBase64('student') : Promise.reject(new Error('خروجی Word در دسترس نیست.'));
+                  p.then(function (b64) { finish(null, b64); }, function (e) { finish(e || new Error('ساخت فایل Word ناموفق بود.')); });
+                }, 400);
+              }, 120);
+              return;
+            }
+          } catch (e) {}
+          if (tries < 200 || (!inlined.done && tries < 1200)) setTimeout(push, 50); else finish(new Error(inlined.done ? 'موتور چاپ آماده نشد.' : 'بارگذاری تصویرهای آزمون طول کشید.'));
+        })();
+      });
+      engineHtml('print').then(function (h) { if (h) iframe.srcdoc = h; else finish(new Error('موتور چاپ در دسترس نیست.')); });
+      setTimeout(function () { finish(new Error('ساخت فایل Word طول کشید.')); }, 120000);
+    });
+  }
+  /* V286 — «فایل Word» از روی کارت آزمون (آنلاین/چاپی)، هزینهٔ ثابت WORD_COST برای هر فایل و کاملاً جدا از چاپ:
+     تأیید → ساخت فایل (رایگان؛ اگر شکست بخورد چیزی کسر نمی‌شود) → کسر (native_charge_word_v286) → دانلود */
+  var WORD_COST = 50000;
+  async function wordExam(opts) {
+    opts = opts || {};
+    var title = opts.title || 'آزمون';
+    if (!user) { toast('ابتدا وارد شوید.', 'err'); return; }
+    if (!(await confirmDlg('فایل Word — ' + esc(title), 'هزینهٔ هر فایل Word: ' + fa(WORD_COST) + ' تومان (جدا از هزینهٔ چاپ)<br>فایل نسخهٔ دانشجو ساخته و پس از کسر از کیف پول دانلود می‌شود.<br><b>مبلغ قابل کسر از کیف پول: ' + money(WORD_COST) + '</b>', 'پرداخت و دریافت فایل'))) return;
+    toast('در حال ساخت فایل Word…');
+    var payload;
+    try { payload = await opts.payload(); } catch (e) { toast(errMsg(e), 'err'); return; }
+    var b64;
+    try { b64 = await buildWordDocx(payload); } catch (e) { toast(errMsg(e) || 'ساخت فایل Word ناموفق بود؛ چیزی کسر نشد.', 'err'); return; }
+    var r;
+    try { r = await api.chargeWord(opts.examRef || 'local', title); } catch (e) { toast(errMsg(e), 'err'); return; }
+    if (r && r.error) { var m = String(r.error); if (r.balance != null && r.required != null) m += '؛ موجودی ' + money(r.balance) + ' و مبلغ لازم ' + money(r.required) + ' است.'; toast(m, 'err'); return; }
+    var bin = atob(b64), u8 = new Uint8Array(bin.length); for (var i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
+    var name = String(title).replace(/[\\/:*?"<>|]/g, ' ').trim() + '.docx';
+    window.SiteExtras.download(name, new Blob([u8], {type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'}));
+    await costDoneDlg(r.cost || WORD_COST, r.balance);
+  }
+  /* آزمون آنلاین: همان دادهٔ چاپ */
+  function wordOnlineExam(x) {
+    return wordExam({examRef: x.id, title: x.title, payload: async function () { var exam = await api.examDetail(x.id); var header = null; try { header = (await api.profile()).header; } catch (e) {} return buildPrintPayload(exam, {header: header}); }});
   }
   async function printExam(x) {
     toast('در حال آماده‌سازی پیش‌نمایش…');
@@ -2281,7 +2333,7 @@
     localState: localState, setLocalState: setLocalState, loading: loading, showErr: showErr, emptyBox: emptyBox, qType: qType, engineHtml: engineHtml, loadEngines: loadEngines,
     user: function () { return user; }, session: function () { return session; }, config: {url: SUPABASE_URL, anon: ANON},
     go: function (panel, arg) { view.panel = panel; view.arg = arg; render(); }, navBack: navBack, view: view, examActions: examActions,
-    render: render, renderPage: renderPage, printExam: printExam, logout: doLogout, printSection: printSection, /* V230 */ duplicateExamDlg: duplicateExamDlg, /* V264 */
+    render: render, renderPage: renderPage, printExam: printExam, wordExam: wordExam, wordOnlineExam: wordOnlineExam, WORD_ICON: WORD_ICON_HTML, /* V286 */ logout: doLogout, printSection: printSection, /* V230 */ duplicateExamDlg: duplicateExamDlg, /* V264 */
     __setSession: function (s) { saveSession(s); }, __setUser: function (u) { user = u; view.page = 'panel'; render(); },
     auth: {keyReady: KEY_READY, login: function (u) { user = u; afterLogin(); }, currentProfile: currentProfile, requireEmail: requireEmail, drawCompletion: drawCompletion, logout: doLogout} /* برای تست خودکار بدون سرور */};
   /* V234 — کلیک روی هر کد آزمون (.code) در سراسر سایت = کپی در حافظهٔ موقت */

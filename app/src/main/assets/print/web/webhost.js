@@ -342,14 +342,7 @@
     });
     return 'queued';
   }
-  /* V285 — خروجی Word: درخواست به میزبان (پرداخت مثل چاپ) → میزبان wordExportBase64(mode) را صدا می‌زند. */
-  function requestWord(mode) {
-    mode = mode === 'teacher' ? 'teacher' : 'student';
-    if (!window.ExamWord) { toast('خروجی Word در دسترس نیست.'); return 'na'; }
-    if (printing) return 'busy';
-    callBridge('print', 'word-' + mode);
-    return 'queued';
-  }
+  /* V286 — خروجی Word دیگر از منوی چاپ درخواست نمی‌شود؛ میزبان (کارت آزمون) مستقیماً wordExportBase64/wordExportToBridge را صدا می‌زند. */
   window.wordExportBase64 = function (mode) {
     mode = mode === 'teacher' ? 'teacher' : 'student';
     return new Promise(function (resolve, reject) {
@@ -794,7 +787,6 @@
   function installPrintOverrides() {
     /* دکمه‌های نوارِ PGS (چاپ دانشجو/استاد، دیالوگِ چاپ) و Ctrl+P → پلِ بومی. */
     window.pgsPrintNow = function (mode) { var m = $('pgsPrintMenu'); if (m) m.classList.remove('open'); requestPrint(mode || 'student'); };
-    window.pgsWordNow = function (mode) { var m = $('pgsPrintMenu'); if (m) m.classList.remove('open'); requestWord(mode || 'student'); };
     window.pgsDoPrintFromDlg = function () {
       var mode = (document.querySelector('input[name="pgsMode"]:checked') || {}).value || 'student';
       var rangeKind = (document.querySelector('input[name="pgsRange"]:checked') || {}).value || 'all';

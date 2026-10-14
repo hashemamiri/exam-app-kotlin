@@ -22,7 +22,7 @@ class V148_SiteMobileShellTest {
         assertTrue("window.matchMedia('(max-width: 860px) and (pointer: coarse)')" in m && "role === 'teacher'" in m)
         val app = source("site/src/app.js")
         assertTrue("window.SiteMobile.active()) { document.body.classList.add('m-mode'); window.SiteMobile.paint(); return; }" in app)
-        assertTrue("function renderPage(c)" in app && "render: render, renderPage: renderPage, printExam: printExam, logout: doLogout" in app)
+        assertTrue("function renderPage(c)" in app && "render: render, renderPage: renderPage, printExam: printExam, wordExam: wordExam, wordOnlineExam: wordOnlineExam, WORD_ICON: WORD_ICON_HTML, /* V286 */ logout: doLogout" in app)
         assertTrue("read(os.path.join(SITE, \"src\", \"mobile.js\"))" in source("site/build_site.py"))
         assertTrue("if (filt === 'pending') exams = exams.filter" in source("site/src/admin.js"))
         val css = source("site/src/site.css")

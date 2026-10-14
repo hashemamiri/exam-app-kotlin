@@ -26,6 +26,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.Delete
+import androidx.compose.material.icons.outlined.Description
 import androidx.compose.material.icons.outlined.Print
 import androidx.compose.material.icons.outlined.IosShare
 import androidx.compose.material.icons.outlined.ContentCopy
@@ -114,6 +115,9 @@ fun TeacherDashboardScreen(
     }
     // V113 — پنجرهٔ کارت‌های آزمون‌های چاپی (ذخیره‌شده روی دستگاه)
     var printExamsOpen by remember { mutableStateOf(false) }
+    // V286 — «فایل Word» از روی کارت آزمون (آنلاین و چاپی) با هزینهٔ جداگانه؛ از منوی چاپ حذف شد
+    var wordRequest by remember { mutableStateOf<ir.exam.app.ui.printing.WordExportRequest?>(null) }
+    ir.exam.app.ui.printing.WordExportFlow(wordRequest) { wordRequest = null }
     // V163 — از سرور (print_exams) خوانده می‌شود
     val printRepo = remember(context.applicationContext) {
         ir.exam.app.data.repository.SupabasePrintExamRepository(context.applicationContext)
@@ -262,6 +266,11 @@ fun TeacherDashboardScreen(
                                     ) { viewModel.setOpen(exam) }
                                     ExamCardAction(Icons.Outlined.ContentCopy, "تکثیر") { duplicateCandidate = exam }
                                     ExamCardAction(Icons.Outlined.IosShare, "صادرکردن") { exportCandidate = exam }
+                                    ExamCardAction(Icons.Outlined.Description, "Word") {
+                                        wordRequest = ir.exam.app.ui.printing.WordExportRequest(exam.id, exam.title) {
+                                            ir.exam.app.data.repository.SupabasePortabilityRepository().printableExam(exam.id, includeAnswerKey = false).getOrThrow()
+                                        }
+                                    }
                                     ExamCardAction(Icons.Outlined.Delete, "حذف", tint = MaterialTheme.colorScheme.error) { deleteCandidate = exam }
                                 }
                             }
@@ -347,7 +356,18 @@ fun TeacherDashboardScreen(
                 else if (list.isEmpty()) Text("هنوز آزمون چاپی‌ای ذخیره نشده است. از بخش «چاپ آزمون» بسازید.")
                 else Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text("با انتخاب هر آزمون، آزمون آنلاین جدیدی با همان سؤال‌ها ساخته می‌شود.", style = MaterialTheme.typography.bodySmall)
-                    PrintExamCards(list) { printExamsOpen = false; onOpenPrintExam(it) }
+                    PrintExamCards(list, onWord = { rec ->
+                        printExamsOpen = false
+                        wordRequest = ir.exam.app.ui.printing.WordExportRequest(rec.id, rec.title) {
+                            val full = printRepo.get(rec.id) ?: error("آزمون چاپی یافت نشد.")
+                            ir.exam.app.domain.model.PrintableFromDrafts.build(
+                                title = full.title.ifBlank { "آزمون" },
+                                subject = full.subject,
+                                header = ir.exam.app.data.local.printHeaderOf(ir.exam.app.data.local.PrintHeaderStore(context).read()),
+                                questions = full.questions
+                            )
+                        }
+                    }) { printExamsOpen = false; onOpenPrintExam(it) }
                 }
             },
             confirmButton = { TextButton(onClick = { printExamsOpen = false }) { Text("بستن") } }
@@ -385,6 +405,7 @@ private fun ExamCardAction(
 @Composable
 private fun PrintExamCards(
     printExams: List<ir.exam.app.data.repository.SupabasePrintExamRepository.Summary>,
+    onWord: (ir.exam.app.data.repository.SupabasePrintExamRepository.Summary) -> Unit = {},
     onPick: (String) -> Unit
 ) {
     LazyColumn(
@@ -403,6 +424,8 @@ private fun PrintExamCards(
                         Text(rec.title.ifBlank { "آزمون چاپی" }, style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
                         Text("${rec.subject.ifBlank { "بدون درس" }} · ${rec.questionCount} سؤال", style = MaterialTheme.typography.bodySmall)
                     }
+                    // V286 — فایل Word این آزمون چاپی (هزینهٔ جداگانه)
+                    IconButton(onClick = { onWord(rec) }) { Icon(Icons.Outlined.Description, contentDescription = "فایل Word", tint = MaterialTheme.colorScheme.primary) }
                 }
             }
         }

@@ -164,9 +164,9 @@
     /* V284.4 — دسکتاپ: زنگوله داخل ریل (آخرین خانه) تا با محتوا هم‌پوشانی نکند؛ گوشی: شناور */
     var rail = document.body.classList.contains('dk') ? document.querySelector('.dk-rail') : null;
     if (rail) {
-      if (b.parentNode !== rail) { b.classList.add('dk-rail-item', 'nc-rail'); rail.appendChild(b); }
+      if (b.parentNode !== rail) { b.classList.add('dk-rail-item', 'nc-rail'); if (!b.querySelector('.dk-rail-label')) b.appendChild(el('span', {class: 'dk-rail-label', text: 'اعلان‌ها'})); rail.appendChild(b); } /* V286 — نام زیر آیکن مثل بقیهٔ ریل */
       if (!rail.dataset.ncN) { rail.dataset.ncN = '1'; var n = parseInt((rail.style.getPropertyValue('--n') || '13'), 10); rail.style.setProperty('--n', String((isFinite(n) ? n : 13) + 1)); }
-    } else if (b.parentNode !== document.body) { b.classList.remove('dk-rail-item', 'nc-rail'); document.body.appendChild(b); }
+    } else if (b.parentNode !== document.body) { b.classList.remove('dk-rail-item', 'nc-rail'); var lb = b.querySelector('.dk-rail-label'); if (lb) lb.remove(); document.body.appendChild(b); }
     ncPaintBadge();
     return b;
   }
@@ -212,7 +212,11 @@
       list.innerHTML = '';
       var shown = items.filter(function (n) { return tab === 'همه' || ncCat(n.kind) === tab; });
       if (!shown.length) { list.appendChild(el('p', {class: 'muted', text: r ? 'هنوز اعلانی ندارید.' : 'دریافت اعلان‌ها ممکن نشد.'})); return; }
+      /* V286 — در تب «همه» اعلان‌ها زیر عنوان دسته‌شان گروه می‌شوند (کاربر: «دسته‌بندی دیده نمی‌شود») */
+      var lastCat = null;
+      if (tab === 'همه') shown = cats.slice(1).reduce(function (acc, c) { return acc.concat(shown.filter(function (n) { return ncCat(n.kind) === c; })); }, []);
       shown.forEach(function (n) {
+        if (tab === 'همه') { var cc = ncCat(n.kind); if (cc !== lastCat) { lastCat = cc; list.appendChild(el('div', {class: 'nc-cat', text: cc})); } }
         var d = n.data || {};
         list.appendChild(el('button', {class: 'nc-item' + (n.read_at ? '' : ' unread'), onclick: function () {
           /* فقط همین اعلان خوانده‌شده می‌شود */

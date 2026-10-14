@@ -266,6 +266,7 @@ private fun String.faReason(): String = when {
     startsWith("exam:create:") -> "ساخت آزمون"
     startsWith("exam:update:") -> "ویرایش آزمون"
     startsWith("exam:duplicate:") -> "تکثیر آزمون"
+    startsWith("exam:word:") -> "فایل Word آزمون"
     startsWith("exam:print:teacher") -> "چاپ آزمون با کلید"
     startsWith("exam:print:") -> "چاپ آزمون"
     startsWith("backup:restore") -> "بازیابی نسخهٔ پشتیبان"
@@ -296,6 +297,7 @@ private fun TariffDialog(onDismiss: () -> Unit) {
         "صوت سؤال تا ۳ مگابایت" to 6_000L,
         "چاپ: هر سؤال" to 1_000L,
         "چاپ: هر تصویر" to 1_000L,
+        "فایل Word آزمون: هر فایل (جدا از چاپ)" to ir.exam.app.domain.repository.WORD_EXPORT_COST_TOMAN,
         "بازیابی پشتیبان: هر سؤال" to 1_000L
     )
     AlertDialog(

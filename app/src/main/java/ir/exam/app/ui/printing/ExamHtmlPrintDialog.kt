@@ -110,8 +110,14 @@ fun ExamHtmlPrintDialog(
      * دکمهٔ چاپ پیش‌نمایش قرمز تا پرداخت نشده و سبز پس از پرداخت (setPrintPaid).
      */
     printPayExamId: String? = null,
-    printPayDirty: Boolean = false
+    printPayDirty: Boolean = false,
+    /**
+     * V286 — حالت «فقط Word»: بدون پیش‌نمایش؛ پس از آماده‌شدن موتور، نسخهٔ دانشجو به docx تبدیل و
+     * بایت‌ها به این callback داده می‌شود (null = خطا). پرداخت و ذخیره با فراخواننده است (WordExportFlow).
+     */
+    onWordBytes: ((ByteArray?) -> Unit)? = null
 ) {
+    val wordOnly = onWordBytes != null
     var loading by remember { mutableStateOf(true) }
     // V132 — درخواستِ چاپِ در انتظارِ تأیید هزینه: (mode, اجرای واقعی چاپ, بازگشت به پیش‌نمایش)
     var pendingPrintCharge by remember { mutableStateOf<PendingPrintCharge?>(null) }
@@ -287,12 +293,12 @@ fun ExamHtmlPrintDialog(
                                 printable = null,
                                 pendingPrintable = { inlinedRef.value },
                                 pendingReady = { printable == null || inlinedRef.value != null },
-                                printMode = initialPrintMode,
+                                printMode = if (wordOnly) "word" else initialPrintMode,
                                 // تزریقِ داده کامل شد: فقط در حالتِ پیش‌نمایش
                                 // پنجرهٔ پیش‌نمایش باز می‌شود؛ در چاپِ مستقیم
                                 // خودِ تابع پیش از این فراخوانی، چاپ را شلیک کرده است.
                                 onPageReady = {
-                                    loading = false
+                                    loading = wordOnly
                                     // V199 — رنگ دکمهٔ چاپ: قرمز تا پرداخت نشده؛ برآورد سرور اگر پرداخت‌شده باشد سبز می‌کند
                                     if (printPayExamId != null) {
                                         pushPaid(webViewRef, false)
@@ -320,16 +326,14 @@ fun ExamHtmlPrintDialog(
                                 onPrint = { rawMode ->
                                     webViewRef?.let { view ->
                                         view.post {
-                                            // V285 — «فایل Word نسخهٔ دانشجو/استاد»: همان دروازه‌های پرداخت چاپ؛ به‌جای پنل چاپ، موتور وب docx می‌سازد
-                                            val isWord = rawMode.startsWith("word-")
-                                            val mode = rawMode.removePrefix("word-")
+                                            // V286 — خروجی Word دیگر از منوی چاپ نمی‌آید (WordExportFlow روی کارت آزمون)
+                                            val mode = rawMode
                                             // V106 — پس از بسته‌شدنِ پنلِ چاپ، برگه به حالتِ
                                             // پیش‌نمایش برمی‌گردد (کلاسِ چاپ پاک، رندرِ دوباره).
                                             val restore = {
                                                 // چاپِ مستقیم از بیلدر: پنجره پس از پنلِ چاپ بسته می‌شود
                                                 // (پیش‌تر صفحهٔ خالیِ حالتِ چاپ می‌ماند).
-                                                if (isWord) Unit
-                                                else if (initialPrintMode != null) view.post { requestDismiss() }
+                                                if (initialPrintMode != null) view.post { requestDismiss() }
                                                 else view.post {
                                                     view.evaluateJavascript(
                                                         "(function(){try{return window.ExamPrintRenderer&&window.ExamPrintRenderer.restorePreview?window.ExamPrintRenderer.restorePreview():'missing'}catch(e){return 'err'}})()",
@@ -337,16 +341,7 @@ fun ExamHtmlPrintDialog(
                                                     )
                                                 }
                                             }
-                                            val fire = if (isWord) {
-                                                {
-                                                    view.evaluateJavascript(
-                                                        "(function(){try{return window.wordExportToBridge?window.wordExportToBridge('" + mode + "'):'missing'}catch(e){return 'err'}})()",
-                                                        null
-                                                    )
-                                                    Unit
-                                                }
-                                            } else {
-                                                {
+                                            val fire = {
                                                 runCatching {
                                                     val printContext = ctx.findActivityContext() ?: ctx
                                                     val printManager = printContext.getSystemService(Context.PRINT_SERVICE) as? PrintManager
@@ -359,7 +354,6 @@ fun ExamHtmlPrintDialog(
                                                     }
                                                 }.onFailure { restore() }
                                                 Unit
-                                                }
                                             }
                                             // V199 — آزمون چاپی: پرداخت سؤال/تصویر روی سرور؛ تا پرداخت نشده چاپ نمی‌شود
                                             if (printPayExamId != null) {
@@ -400,12 +394,13 @@ fun ExamHtmlPrintDialog(
                                 onError = { message ->
                                     // V101 — callback از تَرهٔ JS می‌آید؛ وضعیتِ Compose
                                     // باید روی تَرهٔ اصلی نوشته شود.
-                                    webViewRef?.post { jsError = message; loading = false }
+                                    webViewRef?.post { if (onWordBytes != null) onWordBytes(null) else { jsError = message; loading = false } }
                                 },
                                 onWordReady = { base64, mode ->
                                     val bytes = runCatching { android.util.Base64.decode(base64, android.util.Base64.DEFAULT) }.getOrNull()
                                     webViewRef?.post {
-                                        if (bytes == null || bytes.isEmpty()) { barStatusOk = false; barStatus = "ساخت فایل Word ناموفق بود." }
+                                        if (onWordBytes != null) onWordBytes(bytes?.takeIf { it.isNotEmpty() })
+                                        else if (bytes == null || bytes.isEmpty()) { barStatusOk = false; barStatus = "ساخت فایل Word ناموفق بود." }
                                         else {
                                             pendingWord = bytes
                                             val title = (printable?.documentTitle ?: "آزمون").ifBlank { "آزمون" }.replace(Regex("[\\\\/:*?\"<>|]"), " ").trim()
@@ -451,7 +446,8 @@ fun ExamHtmlPrintDialog(
                                 Text(
                                     // V99.1 — در چاپِ مستقیم متنِ «آماده‌سازی چاپ»؛
                                     // برگهٔ A4 را پنجرهٔ چاپِ اندروید نمایش می‌دهد.
-                                    if (initialPrintMode != null) "در حال آماده‌سازی چاپ..."
+                                    if (wordOnly) "در حال ساخت فایل Word..."
+                                    else if (initialPrintMode != null) "در حال آماده‌سازی چاپ..."
                                     else "در حال آماده‌سازی پیش‌نمایش برگه...",
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = Color.White
@@ -726,8 +722,6 @@ private class ExamPrintBridge(
         onPrint(
             when (mode) {
                 "teacher" -> "teacher"
-                "word-teacher" -> "word-teacher"
-                "word-student" -> "word-student"
                 else -> "student"
             }
         )
@@ -916,7 +910,7 @@ internal fun createExamPrintWebView(
                             // پیش‌نمایشِ HTML باز نمی‌شود: آن پنجرهٔ overlay هنگامِ
                             // چاپ پنهان می‌شود و چون محتوای چاپ داخلش منتقل شده،
                             // خروجی چاپ خالی می‌ماند.
-                            if (printMode != null) {
+                            if (printMode == "student" || printMode == "teacher") {
                                 view.evaluateJavascript(
                                     "try{document.body.classList.add('exam-print-mode');}catch(e){}",
                                     null
@@ -926,6 +920,11 @@ internal fun createExamPrintWebView(
                                 view.evaluateJavascript("if (typeof printStudent==='function') printStudent();", null)
                             } else if (printMode == "teacher") {
                                 view.evaluateJavascript("if (typeof printTeacher==='function') printTeacher();", null)
+                            } else if (printMode == "word") {
+                                // V286 — فقط Word: نسخهٔ دانشجو → docx → پل wordReady (بدون پیش‌نمایش و بدون منوی چاپ)
+                                view.evaluateJavascript(
+                                    "(function(){try{if(!window.wordExportToBridge)return 'missing';try{window.ExamPrintRenderer&&window.ExamPrintRenderer.showPreview&&window.ExamPrintRenderer.showPreview()}catch(e0){}setTimeout(function(){window.wordExportToBridge('student')},400);return 'ok'}catch(e){return 'err'}})()"
+                                ) { r -> if (r == null || r.contains("missing") || r.contains("err")) view.post { onError("خروجی Word در دسترس نیست.") } }
                             }
                             view.post { onPageReady() }
                         }

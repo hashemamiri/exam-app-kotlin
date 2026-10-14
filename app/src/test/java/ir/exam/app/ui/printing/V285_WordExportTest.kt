@@ -25,35 +25,59 @@ class V285_WordExportTest {
     }
 
     @Test
-    fun `preview print menu offers Word for student and teacher through the payment bridge`() {
+    fun `V286 - Word left the print menu and moved to exam cards with a separate flat fee`() {
         val pgs = src("app/src/main/assets/print/web/pgs_engine.js")
-        assertTrue("pgsWordNow(\\'student\\')\">📄 فایل Word نسخهٔ دانشجو" in pgs)
-        assertTrue("pgsWordNow(\\'teacher\\')\">📄 فایل Word نسخهٔ استاد / کلید" in pgs)
+        assertTrue("pgsWordNow" !in pgs && "فایل Word نسخهٔ" !in pgs)
         val host = src("app/src/main/assets/print/web/webhost.js")
-        assertTrue("callBridge('print', 'word-' + mode)" in host) // همان دروازهٔ پرداخت چاپ
+        assertTrue("pgsWordNow" !in host && "callBridge('print', 'word-'" !in host)
         assertTrue("window.wordExportBase64 = function (mode)" in host)
         assertTrue("callBridge('wordReady', b64, mode)" in host)
-        assertTrue("window.pgsWordNow = function (mode)" in host)
+        // سرور: مبلغ ثابت ۵۰٬۰۰۰ تومان، idempotent، جدا از exam_print_payments
+        val sql = src("supabase/migrations/20261014_native_charge_word_v286.sql")
+        assertTrue("create or replace function public.native_charge_word_v286(" in sql)
+        assertTrue("v_cost bigint := 50000;" in sql && "'exam:word:'" in sql && "exam_print_payments" !in sql)
+        assertTrue(sql == src("sql/manual/SQL_NATIVE_CHARGE_WORD_V286.sql"))
+        val repo = src("app/src/main/java/ir/exam/app/domain/repository/BillingRepository.kt")
+        assertTrue("const val WORD_EXPORT_COST_TOMAN: Long = 50_000" in repo)
+        assertTrue("rpc(\"native_charge_word_v286\"" in src("app/src/main/java/ir/exam/app/data/repository/SupabaseBillingRepository.kt"))
     }
 
     @Test
-    fun `app saves docx through SAF after the usual print charge`() {
+    fun `V286 - app flow builds first then charges then saves through SAF`() {
+        val flow = src("app/src/main/java/ir/exam/app/ui/printing/WordExportFlow.kt")
+        assertTrue("fun WordExportFlow(request: WordExportRequest?, onDone: () -> Unit)" in flow)
+        assertTrue(flow.indexOf("onWordBytes = { bytes ->") < flow.indexOf(".chargeWord(request.examRef") && flow.indexOf(".chargeWord(request.examRef") < flow.indexOf("launcher.launch(fileName)"))
+        assertTrue("ActivityResultContracts.CreateDocument(WORD_MIME)" in flow)
         val kt = src("app/src/main/java/ir/exam/app/ui/printing/ExamHtmlPrintDialog.kt")
-        assertTrue("internal const val WORD_MIME = \"application/vnd.openxmlformats-officedocument.wordprocessingml.document\"" in kt)
-        assertTrue("ActivityResultContracts.CreateDocument(WORD_MIME)" in kt)
+        assertTrue("onWordBytes: ((ByteArray?) -> Unit)? = null" in kt)
+        assertTrue("printMode = if (wordOnly) \"word\" else initialPrintMode" in kt)
+        assertTrue("} else if (printMode == \"word\") {" in kt && "window.wordExportToBridge('student')" in kt)
         assertTrue("fun wordReady(base64: String?, mode: String?)" in kt)
-        assertTrue("\"word-teacher\" -> \"word-teacher\"" in kt && "\"word-student\" -> \"word-student\"" in kt)
-        assertTrue("val isWord = rawMode.startsWith(\"word-\")" in kt)
-        assertTrue("window.wordExportToBridge('\" + mode + \"')" in kt)
-        assertTrue("DocumentIo.writeBytes(context, uri, bytes)" in kt)
+        assertTrue("\"word-teacher\"" !in kt && "rawMode.startsWith(\"word-\")" !in kt)
+        // کارت‌ها: آزمون آنلاین و آزمون چاپی
+        val dash = src("app/src/main/java/ir/exam/app/ui/dashboard/TeacherDashboardScreen.kt")
+        assertTrue("ExamCardAction(Icons.Outlined.Description, \"Word\")" in dash)
+        assertTrue("WordExportRequest(exam.id, exam.title)" in dash && "WordExportRequest(rec.id, rec.title)" in dash)
+        assertTrue("printableExam(exam.id, includeAnswerKey = false)" in dash)
+        // تعرفه‌ها
+        val wallet = src("app/src/main/java/ir/exam/app/ui/billing/WalletScreen.kt")
+        assertTrue("\"فایل Word آزمون: هر فایل (جدا از چاپ)\" to ir.exam.app.domain.repository.WORD_EXPORT_COST_TOMAN" in wallet)
+        assertTrue("startsWith(\"exam:word:\") -> \"فایل Word آزمون\"" in wallet)
     }
 
     @Test
-    fun `site downloads docx from the engine iframe`() {
+    fun `V286 - site cards get a Word icon with the same build-charge-download order`() {
         val app = src("site/src/app.js")
-        assertTrue("var isWord = /^word-/.test(String(mode || ''))" in app)
-        assertTrue("w.wordExportBase64(mode)" in app)
-        assertTrue("var fire = isWord ? doWord : doNative;" in app)
-        assertTrue("'application/vnd.openxmlformats-officedocument.wordprocessingml.document'" in app)
+        assertTrue("isWord" !in app && "doWord" !in app)
+        assertTrue("chargeWord: function (examRef, title) { return rpcObj('native_charge_word_v286'" in app)
+        assertTrue("var WORD_COST = 50000;" in app)
+        assertTrue(app.indexOf("b64 = await buildWordDocx(payload)") < app.indexOf("r = await api.chargeWord(opts.examRef || 'local', title)") && app.indexOf("r = await api.chargeWord(") < app.indexOf("window.SiteExtras.download(name, new Blob([u8]"))
+        assertTrue("w.wordExportBase64('student')" in app)
+        assertTrue("html: WORD_ICON_HTML + '<span>Word</span>', onclick: function () { wordOnlineExam(x); }" in app)
+        assertTrue("['فایل Word آزمون: هر فایل (جدا از چاپ)', '۵۰٬۰۰۰']" in src("site/src/admin.js"))
+        val mob = src("site/src/mobile.js")
+        assertTrue("act('word', 'Word', function () { S.wordOnlineExam(x); })" in mob)
+        assertTrue("act('word', 'فایل Word (هزینهٔ جداگانه)'" in mob)
+        assertTrue("title: 'فایل Word (هزینهٔ جداگانه)', html: WORD_ICON" in src("site/src/builder.js"))
     }
 }

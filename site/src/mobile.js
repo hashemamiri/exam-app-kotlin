@@ -62,6 +62,7 @@
     plus: '<svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>',
     calendar: '<svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>',
     print: '<svg viewBox="0 0 24 24"><path d="M7 8V4h10v4M5 8h14a2 2 0 0 1 2 2v6h-4v4H7v-4H3v-6a2 2 0 0 1 2-2z"/></svg>',
+    word: '<svg viewBox="0 0 24 24"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="M8 12l1.3 6 1.7-4.5 1.7 4.5 1.3-6"/></svg>', /* V286 */
     students: '<svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><circle cx="17" cy="9" r="2.4"/><path d="M15.5 14.5c2.8.2 5.5 2.3 5.5 5.5"/></svg>',
     classes: '<svg viewBox="0 0 24 24"><path d="M3 10l9-5 9 5-9 5-9-5z"/><path d="M7 12v5c0 1.5 2.5 3 5 3s5-1.5 5-3v-5"/></svg>',
     account: '<svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-7 8-7s8 3 8 7"/></svg>',
@@ -194,6 +195,7 @@
           act('copy', 'تکثیر', function () { S.duplicateExamDlg(x, function () { examsScreen(c); }); }), /* V264 — با انتخاب کلاس مقصد */
           act('share', 'صادرکردن', function () { if (window.SiteExtras) window.SiteExtras.exportExamDlg(x); }),
           act('print', 'چاپ', function () { S.printExam(x); }),
+          act('word', 'Word', function () { S.wordOnlineExam(x); }), /* V286 — هزینهٔ جداگانه */
           act('trash', 'حذف', async function () { if (!(await S.confirmDlg('حذف آزمون', 'آزمون «' + esc(x.title) + '» و پاسخ‌ها، تلاش‌ها و مخاطبان وابسته حذف شوند؟ این کار برگشت‌پذیر نیست.', 'حذف کامل', true))) return; try { await api.deleteExam(x.id); toast('حذف شد.', 'ok'); examsScreen(c); } catch (e) { toast(S.errMsg(e), 'err'); } }, true)
         ]));
       }
@@ -394,6 +396,7 @@
         el('div', {class: 'm-pcard-m', text: 'درس: ' + (r.subject || '—') + ' · ' + fa(r.question_count || 0) + ' سؤال'}),
         el('div', {class: 'm-pcard-acts'}, [
           act('edit', 'ویرایش آزمون چاپی', function () { go('builder', {mode: 'print', printId: r.id}); }),
+          act('word', 'فایل Word (هزینهٔ جداگانه)', function () { S.wordExam({examRef: r.id, title: r.title, payload: async function () { var full = await window.SiteBuilder.printExamGet(r.id); var st = {title: full.title, subject: full.subject, duration: full.duration, questions: window.SiteBuilder.draftsFromCombined(full.questions)}; return S.buildPrintPayload(window.SiteBuilder.toServerExam(st)); }}); }), /* V286 */
           act('wallet', 'پرداخت هزینهٔ چاپ این آزمون', async function () { try { var res = await S.ensurePrintPaid(r.id, S.printHeaderFp(), r.title); if (res.paid) { if (!res.cost) toast('هزینهٔ چاپ این آزمون قبلاً پرداخت شده است.', 'ok'); printCenter(c); } } catch (e) { toast(S.errMsg(e), 'err'); } }),
           printAct,
           act('trash', 'حذف آزمون چاپی', async function () { if (!(await S.confirmDlg('حذف آزمون چاپی', 'آزمون «' + esc(r.title || 'آزمون چاپی') + '» برای همیشه حذف شود؟ این کار برگشت‌پذیر نیست.', 'حذف', true))) return; try { await window.SiteBuilder.printExamDelete(r.id); printCenter(c); } catch (e) { toast(S.errMsg(e), 'err'); } }, true)
