@@ -1893,6 +1893,13 @@ table.rp-single td.num,table.rp-single th.num{text-align:center;white-space:nowr
 .nc-bell .nc-ic{display:grid;place-items:center}
 .nc-badge{position:absolute;top:-4px;right:-4px;min-width:20px;height:20px;padding:0 5px;border-radius:10px;background:#d14b5a;color:#fff;font-size:11px;font-weight:800;display:grid;place-items:center;line-height:1}
 .dk .nc-bell{left:118px;bottom:auto;top:16px}
+/* V284.4 — دسکتاپ: زنگوله به‌عنوان آخرین خانهٔ ریل (بدون هم‌پوشانی با محتوا) */
+.dk .nc-bell.nc-rail{position:relative;left:auto;top:auto;bottom:auto;width:var(--size);height:var(--size);border-radius:16px;background:transparent;box-shadow:none;color:var(--dk-rail-ink)}
+.dk .nc-bell.nc-rail:hover{background:var(--card);color:#2f687c;box-shadow:0 10px 24px rgba(24,54,68,.16)}
+.dk .nc-bell.nc-rail .nc-badge{top:2px;right:2px}
+.nc-tabs{display:flex;gap:6px;overflow-x:auto;margin-top:10px;padding-bottom:2px}
+.nc-tab{flex:none;border:1.4px solid rgba(88,113,124,.3);border-radius:999px;background:transparent;color:inherit;font:inherit;font-size:12px;font-weight:700;padding:5px 11px;cursor:pointer}
+.nc-tab.on{background:#39758a;border-color:#39758a;color:#fff}
 .nc-list{max-height:62vh;overflow:auto;display:flex;flex-direction:column;gap:6px;margin-top:10px}
 .nc-item{text-align:right;border:0;border-radius:12px;background:rgba(88,113,124,.08);padding:10px 12px;font:inherit;color:inherit;cursor:pointer;display:flex;flex-direction:column;gap:4px}
 .nc-item.unread{background:rgba(34,198,239,.14);box-shadow:inset 3px 0 0 #22c6ef}

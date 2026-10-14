@@ -1,6 +1,8 @@
 package ir.exam.app.ui.notifications
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -15,6 +17,8 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -26,6 +30,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -38,14 +43,17 @@ import ir.exam.app.data.repository.AppNotification
 import ir.exam.app.data.repository.NotificationFeed
 import ir.exam.app.data.repository.SupabaseNotificationRepository
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 /**
  * V284 — زنگولهٔ اعلان در هدر: شمارندهٔ خوانده‌نشده (هر ۹۰ ثانیه تازه می‌شود) و با لمس، فهرست اعلان‌های گذشته باز می‌شود؛
  * باز شدن فهرست = همه خوانده‌شده. لمس هر اعلان → onOpen(page, code) برای رفتن به مقصد (مثل ضربه روی اعلان سیستم).
  */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun NotificationBell(userId: String, tint: Color, onOpen: (page: String?, code: String?) -> Unit) {
     val repo = remember { SupabaseNotificationRepository() }
+    val scope = rememberCoroutineScope()
     var feed by remember(userId) { mutableStateOf<NotificationFeed?>(null) }
     var open by remember(userId) { mutableStateOf(false) }
     var loading by remember(userId) { mutableStateOf(false) }
@@ -70,23 +78,49 @@ fun NotificationBell(userId: String, tint: Color, onOpen: (page: String?, code: 
         LaunchedEffect(open) {
             repo.feed().onSuccess { feed = it }
             loading = false
-            if ((feed?.unread ?: 0) > 0) repo.markAllRead().onSuccess { feed = feed?.copy(unread = 0) }
         }
+        var tab by remember(open) { mutableStateOf("همه") }
+        val all = feed?.items.orEmpty()
+        val tabs = listOf("همه") + (SupabaseNotificationRepository.CATEGORIES.map { it.first } + SupabaseNotificationRepository.OTHER)
+            .filter { c -> all.any { SupabaseNotificationRepository.categoryOf(it.kind) == c } }
+        val shown = if (tab == "همه") all else all.filter { SupabaseNotificationRepository.categoryOf(it.kind) == tab }
         AlertDialog(
             onDismissRequest = { open = false },
             title = { Text("اعلان‌ها") },
             text = {
-                val items = feed?.items.orEmpty()
-                when {
-                    loading && feed == null -> CircularProgressIndicator()
-                    items.isEmpty() -> Text("هنوز اعلانی ندارید.", style = MaterialTheme.typography.bodyMedium)
-                    else -> LazyColumn(Modifier.fillMaxWidth().heightIn(max = 460.dp)) {
-                        items(items, key = { it.id }) { n ->
-                            NotificationRow(n) { open = false; onOpen(n.page, n.code) }
-                            HorizontalDivider()
+                Column(Modifier.fillMaxWidth()) {
+                    if (tabs.size > 2) {
+                        // V284.4 — دسته‌بندی: چیپ‌های افقی با شمارندهٔ خوانده‌نشدهٔ هر دسته
+                        Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            tabs.forEach { c ->
+                                val n = all.count { !it.read && (c == "همه" || SupabaseNotificationRepository.categoryOf(it.kind) == c) }
+                                FilterChip(selected = tab == c, onClick = { tab = c }, label = { Text(if (n > 0) "$c (${PersianDigits.convert(n)})" else c) })
+                            }
+                        }
+                    }
+                    when {
+                        loading && feed == null -> CircularProgressIndicator()
+                        shown.isEmpty() -> Text("هنوز اعلانی ندارید.", style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(top = 8.dp))
+                        else -> LazyColumn(Modifier.fillMaxWidth().heightIn(max = 420.dp)) {
+                            items(shown, key = { it.id }) { n ->
+                                NotificationRow(n) {
+                                    // فقط همین اعلان خوانده‌شده می‌شود
+                                    feed = feed?.let { f -> f.copy(unread = (f.unread - (if (n.read) 0 else 1)).coerceAtLeast(0), items = f.items.map { if (it.id == n.id) it.copy(read = true) else it }) }
+                                    scope.launch { repo.markRead(listOf(n.id)) }
+                                    open = false
+                                    onOpen(n.page, n.code)
+                                }
+                                HorizontalDivider()
+                            }
                         }
                     }
                 }
+            },
+            dismissButton = {
+                if (unread > 0) TextButton(onClick = {
+                    feed = feed?.let { f -> f.copy(unread = 0, items = f.items.map { it.copy(read = true) }) }
+                    scope.launch { repo.markAllRead() }
+                }) { Text("همه خوانده شد") }
             },
             confirmButton = { TextButton(onClick = { open = false }) { Text("بستن") } }
         )

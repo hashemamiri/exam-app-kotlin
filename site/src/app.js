@@ -1636,6 +1636,7 @@
       return el('button', {class: view.panel === it[0] ? 'on' : '', onclick: function () { view.panel = it[0]; view.arg = null; render(); }}, [el('span', {class: 'i', text: it[1]}), el('span', {text: it[2]})]);
     }).concat([el('button', {class: primary.some(function (it) { return it[0] === view.panel; }) ? '' : 'on', onclick: toggleSidebar}, [el('span', {class: 'i', text: '☰'}), el('span', {text: 'بیشتر'})])]));
     root.appendChild(el('div', {class: 'app'}, [side, sbBg, main, bottom, rail]));
+    if (window.SitePush && window.SitePush.notifications) window.SitePush.notifications.refresh(); /* V284.4 — زنگوله داخل ریل تازه */
     renderPage($('content'));
   }
   /* V165 — صفحهٔ «منو»: کارت پروفایل (نام، نقش، ایمیل/نام کاربری) + شبکهٔ کارت‌های همهٔ بخش‌ها + خروج */

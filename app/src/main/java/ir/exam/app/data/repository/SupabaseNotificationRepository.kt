@@ -4,6 +4,7 @@ import ir.exam.app.data.remote.SupabaseProvider
 import io.github.jan.supabase.postgrest.postgrest
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonObject
@@ -48,5 +49,27 @@ class SupabaseNotificationRepository {
     suspend fun markAllRead(): Result<Unit> = runCatching {
         SupabaseProvider.client.postgrest.rpc("native_notifications_read_v284", buildJsonObject { }).decodeAs<JsonObject>()
         Unit
+    }
+
+    /** V284.4 — فقط همان اعلان لمس‌شده خوانده‌شده می‌شود. */
+    suspend fun markRead(ids: List<Long>): Result<Unit> = runCatching {
+        if (ids.isEmpty()) return@runCatching
+        SupabaseProvider.client.postgrest.rpc(
+            "native_notifications_read_v284",
+            buildJsonObject { put("p_ids", JsonArray(ids.map { JsonPrimitive(it) })) }
+        ).decodeAs<JsonObject>()
+        Unit
+    }
+
+    companion object {
+        /** V284.4 — دسته‌بندی اعلان‌ها بر اساس kind. */
+        val CATEGORIES: List<Pair<String, Set<String>>> = listOf(
+            "آزمون‌ها" to setOf("exam_open", "exam_soon", "exam_closing", "submit"),
+            "نمره‌ها" to setOf("grade"),
+            "تقویم" to setOf("calendar", "calendar_reminder"),
+            "کلاس و درخواست‌ها" to setOf("class_added", "manager_request", "request_decided", "student_delete_request")
+        )
+        const val OTHER = "سایر"
+        fun categoryOf(kind: String): String = CATEGORIES.firstOrNull { kind in it.second }?.first ?: OTHER
     }
 }

@@ -150,6 +150,8 @@
 
   /* --- V284 — مرکز اعلان: زنگولهٔ شناور با شمارندهٔ خوانده‌نشده؛ فهرست اعلان‌های گذشته (push_outbox) --- */
   var ncUnread = 0, ncTimer = null;
+  var NC_CATS = [['آزمون‌ها', ['exam_open', 'exam_soon', 'exam_closing', 'submit']], ['نمره‌ها', ['grade']], ['تقویم', ['calendar', 'calendar_reminder']], ['کلاس و درخواست‌ها', ['class_added', 'manager_request', 'request_decided', 'student_delete_request']]];
+  function ncCat(kind) { for (var i = 0; i < NC_CATS.length; i++) if (NC_CATS[i][1].indexOf(kind) >= 0) return NC_CATS[i][0]; return 'سایر'; }
   function ncBell() {
     var b = document.getElementById('nc-bell');
     if (!b) {
@@ -159,6 +161,13 @@
       ]);
       document.body.appendChild(b);
     }
+    /* V284.4 — دسکتاپ: زنگوله داخل ریل (آخرین خانه) تا با محتوا هم‌پوشانی نکند؛ گوشی: شناور */
+    var rail = document.body.classList.contains('dk') ? document.querySelector('.dk-rail') : null;
+    if (rail) {
+      if (b.parentNode !== rail) { b.classList.add('dk-rail-item', 'nc-rail'); rail.appendChild(b); }
+      if (!rail.dataset.ncN) { rail.dataset.ncN = '1'; var n = parseInt((rail.style.getPropertyValue('--n') || '13'), 10); rail.style.setProperty('--n', String((isFinite(n) ? n : 13) + 1)); }
+    } else if (b.parentNode !== document.body) { b.classList.remove('dk-rail-item', 'nc-rail'); document.body.appendChild(b); }
+    ncPaintBadge();
     return b;
   }
   function ncPaintBadge() {
@@ -177,24 +186,45 @@
   async function ncOpen() {
     if (document.getElementById('nc-modal')) return;
     var bg = el('div', {class: 'modal-bg', id: 'nc-modal', onclick: function (e) { if (e.target === bg) bg.remove(); }});
+    var tabsBox = el('div', {class: 'nc-tabs'});
     var list = el('div', {class: 'nc-list'}, [el('p', {class: 'muted', text: 'در حال دریافت…'})]);
+    var allBtn = el('button', {class: 'btn light', text: 'همه خوانده شد', style: 'display:none', onclick: async function () {
+      try { await S.rpc('native_notifications_read_v284', {}); items.forEach(function (n) { n.read_at = n.read_at || new Date().toISOString(); }); ncUnread = 0; ncPaintBadge(); draw(); } catch (e) { toast(S.errMsg(e), 'err'); }
+    }});
     var m = el('div', {class: 'modal'}, [
-      el('h2', {text: 'اعلان‌ها'}), list,
-      el('div', {class: 'row', style: 'justify-content:flex-start;margin-top:14px'}, [el('button', {class: 'btn light', text: 'بستن', onclick: function () { bg.remove(); }})])
+      el('h2', {text: 'اعلان‌ها'}), tabsBox, list,
+      el('div', {class: 'row', style: 'justify-content:flex-start;margin-top:14px;gap:8px'}, [el('button', {class: 'btn light', text: 'بستن', onclick: function () { bg.remove(); }}), allBtn])
     ]);
     bg.appendChild(m); document.body.appendChild(bg);
     var r = await ncRefresh();
-    list.innerHTML = '';
     var items = (r && r.items) || [];
-    if (!items.length) { list.appendChild(el('p', {class: 'muted', text: r ? 'هنوز اعلانی ندارید.' : 'دریافت اعلان‌ها ممکن نشد.'})); return; }
-    items.forEach(function (n) {
-      var d = n.data || {};
-      list.appendChild(el('button', {class: 'nc-item' + (n.read_at ? '' : ' unread'), onclick: function () { bg.remove(); navigate(d.page, {exam_id: d.exam_id, code: d.code}); }}, [
-        el('div', {class: 'nc-row'}, [el('b', {text: n.title}), el('small', {text: ncWhen(n.created_at)})]),
-        el('div', {class: 'nc-body', text: n.body})
-      ]));
-    });
-    if (ncUnread > 0) { try { await S.rpc('native_notifications_read_v284', {}); ncUnread = 0; ncPaintBadge(); } catch (e) {} }
+    var tab = 'همه';
+    function unreadIn(c) { return items.filter(function (n) { return !n.read_at && (c === 'همه' || ncCat(n.kind) === c); }).length; }
+    function draw() {
+      /* V284.4 — دسته‌بندی: تب‌ها فقط برای دسته‌هایی که اعلان دارند */
+      var cats = ['همه'].concat(NC_CATS.map(function (c) { return c[0]; }).concat(['سایر']).filter(function (c) { return items.some(function (n) { return ncCat(n.kind) === c; }); }));
+      tabsBox.innerHTML = '';
+      if (cats.length > 2) cats.forEach(function (c) {
+        var u = unreadIn(c);
+        tabsBox.appendChild(el('button', {class: 'nc-tab' + (tab === c ? ' on' : ''), text: u ? c + ' (' + S.fa(u) + ')' : c, onclick: function () { tab = c; draw(); }}));
+      });
+      allBtn.style.display = unreadIn('همه') ? '' : 'none';
+      list.innerHTML = '';
+      var shown = items.filter(function (n) { return tab === 'همه' || ncCat(n.kind) === tab; });
+      if (!shown.length) { list.appendChild(el('p', {class: 'muted', text: r ? 'هنوز اعلانی ندارید.' : 'دریافت اعلان‌ها ممکن نشد.'})); return; }
+      shown.forEach(function (n) {
+        var d = n.data || {};
+        list.appendChild(el('button', {class: 'nc-item' + (n.read_at ? '' : ' unread'), onclick: function () {
+          /* فقط همین اعلان خوانده‌شده می‌شود */
+          if (!n.read_at) { n.read_at = new Date().toISOString(); ncUnread = Math.max(0, ncUnread - 1); ncPaintBadge(); S.rpc('native_notifications_read_v284', {p_ids: [n.id]}).catch(function () {}); }
+          bg.remove(); navigate(d.page, {exam_id: d.exam_id, code: d.code});
+        }}, [
+          el('div', {class: 'nc-row'}, [el('b', {text: n.title}), el('small', {text: ncWhen(n.created_at)})]),
+          el('div', {class: 'nc-body', text: n.body})
+        ]));
+      });
+    }
+    draw();
   }
   ncTimer = setInterval(ncRefresh, 90000);
   setTimeout(ncRefresh, 1500);

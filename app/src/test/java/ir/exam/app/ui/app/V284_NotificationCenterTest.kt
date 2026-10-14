@@ -18,6 +18,7 @@ class V284_NotificationCenterTest {
         assertTrue("create or replace function public.native_notifications_read_v284(p_ids bigint[] default null)" in sql)
         assertTrue("where user_id=auth.uid() and read_at is null and (p_ids is null or id = any(p_ids))" in sql)
         for (f in listOf("push_enqueue_exam_reminders", "push_enqueue_exam_closing", "push_on_class_member_added", "exam_audience_v284"))
+        assertTrue("private.exam_audience_v284(p_exam text)" in sql) // exams.id از نوع text است
             assertTrue(f, "function private.$f(" in sql)
         // بدون شرط توکن: اعلان برای همه ثبت می‌شود
         assertTrue("where p_user is not null\n  on conflict(dedupe_key) do nothing;" in sql)
@@ -30,7 +31,10 @@ class V284_NotificationCenterTest {
         val bell = src("app/src/main/java/ir/exam/app/ui/notifications/NotificationCenter.kt")
         assertTrue("fun NotificationBell(userId: String, tint: Color, onOpen: (page: String?, code: String?) -> Unit)" in bell)
         assertTrue("BadgedBox(badge = { if (unread > 0) Badge" in bell)
-        assertTrue("repo.markAllRead()" in bell)
+        // V284.4 — لمس یک اعلان فقط همان را خوانده می‌کند؛ «همه خوانده شد» جداگانه؛ دسته‌بندی با چیپ
+        assertTrue("scope.launch { repo.markRead(listOf(n.id)) }" in bell)
+        assertTrue("\"همه خوانده شد\"" in bell && "FilterChip(selected = tab == c" in bell)
+        assertTrue("fun categoryOf(kind: String): String" in src("app/src/main/java/ir/exam/app/data/repository/SupabaseNotificationRepository.kt"))
         val repo = src("app/src/main/java/ir/exam/app/data/repository/SupabaseNotificationRepository.kt")
         assertTrue("rpc(\"native_my_notifications_v284\"" in repo && "rpc(\"native_notifications_read_v284\"" in repo)
         assertTrue(".decodeAs<JsonObject>()" in repo)
@@ -48,7 +52,10 @@ class V284_NotificationCenterTest {
         assertTrue("id: 'nc-bell'" in js && "native_my_notifications_v284" in js && "native_notifications_read_v284" in js)
         assertTrue("navigate(d.page, {exam_id: d.exam_id, code: d.code})" in js)
         assertTrue("notifications: {refresh: ncRefresh, open: ncOpen}" in js)
+        // V284.4
+        assertTrue("S.rpc('native_notifications_read_v284', {p_ids: [n.id]})" in js && "function ncCat(kind)" in js && "b.classList.add('dk-rail-item', 'nc-rail')" in js)
+        assertTrue("window.SitePush.notifications.refresh(); /* V284.4" in src("site/src/app.js"))
         val css = src("site/src/site.css")
-        assertTrue(".nc-bell{position:fixed" in css && ".dk .nc-bell{left:118px;bottom:auto;top:16px}" in css)
+        assertTrue(".nc-bell{position:fixed" in css && ".dk .nc-bell.nc-rail{position:relative" in css)
     }
 }

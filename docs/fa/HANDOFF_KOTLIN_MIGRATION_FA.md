@@ -19425,6 +19425,14 @@ CI: `compileDebugUnitTestKotlin` به‌خاطر `assertFalse` بدون import �
 - باگ V202.5: `var LANDING_TILES` داخل `paintAuth` بعد از خطی که `landing()` را صدا می‌زد تعریف شده بود → به‌خاطر hoisting مقدارش undefined و `.map` خطا می‌داد → صفحهٔ اول خالی. حالا کنار `authActive` در سطح ماژول است (تست ترتیب را پین می‌کند).
 - دروازهٔ صفحهٔ اول: mobile.js `entered()/enter()` با `sessionStorage['m-entered']`، `gateActive() = MQ && user && !entered`؛ app.js `render()` پیش از m-mode اگر gateActive → paintAuth (landing حتی با user). دکمه: user ⇒ `enter(); S.render()`؛ وگرنه `goA('login')`؛ پیوند ثبت‌نام فقط بدون user. `afterLogin()` → `SiteMobile.enter()`.
 
+### V284.4 — بازخورد مرکز اعلان (اپ 1.01.75 + سایت)
+- خوانده‌شدن: باز کردن فهرست دیگر همه را خوانده نمی‌کند؛ لمس آیتم → `markRead(listOf(id))` (اپ) / `native_notifications_read_v284 {p_ids:[id]}` (سایت) + به‌روزرسانی خوش‌بینانهٔ شمارنده؛ دکمهٔ «همه خوانده شد» فقط وقتی خوانده‌نشده هست (اپ: `dismissButton`؛ سایت: کنار «بستن»).
+- دسته‌بندی (`SupabaseNotificationRepository.CATEGORIES/categoryOf` ↔ `push.js NC_CATS/ncCat`): آزمون‌ها = exam_open/exam_soon/exam_closing/submit؛ نمره‌ها = grade؛ تقویم = calendar/calendar_reminder؛ کلاس و درخواست‌ها = class_added/manager_request/request_decided/student_delete_request؛ بقیه «سایر». تب «همه» + فقط دسته‌هایی که اعلان دارند (اگر بیش از یک دسته)؛ برچسب هر تب شمارندهٔ خوانده‌نشده دارد. اپ: `FilterChip` در ردیف اسکرول افقی؛ سایت: `.nc-tabs/.nc-tab`.
+- دسکتاپ: `ncBell()` اگر `body.dk` و `.dk-rail` باشد، زنگوله را با کلاس `dk-rail-item nc-rail` به انتهای ریل می‌برد و `--n` ریل را یکی زیاد می‌کند (`data-nc-n` برای یک‌بار). چون `render()` ریل را از نو می‌سازد، در انتهای render دسکتاپ `SitePush.notifications.refresh()` صدا زده می‌شود. گوشی همچنان شناور پایین‌چپ.
+
+### V284.3 — اصلاح SQL V284 (اپ 1.01.74)
+- `private.exam_audience_v284(p_exam uuid)` با `exams.id text` خطای `operator does not exist: text = uuid` می‌داد → `p_exam text`. یادآوری دائمی: `exams.id` و `exam_id`ها **text** هستند؛ `class_id/student_id/note_id` uuid.
+
 ### V284.2 — رفع CI 1.01.72 (اپ 1.01.73)
 - دو تست قدیمی: `V143_SitePhase6Test:27` (پین `action: 'delete_account'`/«عملیات ناشناخته» در extras.js که V282 حذف کرد → پین RPCهای v282) و `StudentExamViewModelTest` «queued …» (پیام صف V281 دیگر واژهٔ «صف» ندارد → «خودکار ارسال»). اسکن پین از این پس باید نسبت به **پایهٔ آخرین نصب‌کنندهٔ ارسال‌شده** و برای همهٔ `*Test.kt` (نه فقط `V*Test.kt`) اجرا شود.
 
