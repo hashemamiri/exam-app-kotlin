@@ -19425,6 +19425,11 @@ CI: `compileDebugUnitTestKotlin` به‌خاطر `assertFalse` بدون import �
 - باگ V202.5: `var LANDING_TILES` داخل `paintAuth` بعد از خطی که `landing()` را صدا می‌زد تعریف شده بود → به‌خاطر hoisting مقدارش undefined و `.map` خطا می‌داد → صفحهٔ اول خالی. حالا کنار `authActive` در سطح ماژول است (تست ترتیب را پین می‌کند).
 - دروازهٔ صفحهٔ اول: mobile.js `entered()/enter()` با `sessionStorage['m-entered']`، `gateActive() = MQ && user && !entered`؛ app.js `render()` پیش از m-mode اگر gateActive → paintAuth (landing حتی با user). دکمه: user ⇒ `enter(); S.render()`؛ وگرنه `goA('login')`؛ پیوند ثبت‌نام فقط بدون user. `afterLogin()` → `SiteMobile.enter()`.
 
+### V286.3 — Word: جدول تناوبی به‌صورت تصویر (اپ 1.01.83 + سایت)
+- `.ptb` (periodic_fig.js) یک گرید CSS با ۱۹ ستون باریک است؛ تبدیل به جدول Word به‌هم می‌ریخت. تابع جدید `rasterBoxes(ctx, root, maxW)` در `word_export.js` همهٔ عناصر دارای پس‌زمینه/خط/متن مستقیم را از روی `getBoundingClientRect` و computed style (رنگ، radius، dashed، فونت، تراز) روی canvas (مقیاس ۲) می‌کشد → یک `w:drawing` وسط‌چین. در `walkBlock` قبل از `.an-frame`.
+- QA: `/home/user/qa/pt.py` (سؤال تشریحی با `%%FIG:{k:'p',t:'full'}%%`) → LibreOffice: جدول کامل با رنگ گروه‌ها، Z و نماد، ستاره‌ها و دو ردیف f.
+- تست: `V285_WordExportTest.v286_3_periodicTableRasterized`.
+
 ### V286.2 — Word: rowspan سربرگ؛ آیکن Word در صفحهٔ چاپ؛ متن تعرفه (اپ 1.01.82 + سایت)
 - **سربرگ درهم (classic):** `tableXml` در `word_export.js` اصلاً `rowspan` را نمی‌فهمید؛ خانهٔ لوگو (rowspan=4) فقط ردیف اول را می‌گرفت و خانه‌های ردیف‌های بعدی یک ستون به چپ می‌لغزیدند. حالا نقشهٔ اشغال (`occ[row][col]`) ساخته می‌شود: خانهٔ مبدأ `<w:vMerge w:val="restart"/>` و ردیف‌های بعدی خانهٔ خالی `<w:vMerge/>` با همان gridSpan؛ شمارش ستون‌ها و عرض ستون‌های بی‌اندازه در ردیف اول هم از ردیف‌های بعدی تکمیل می‌شود. QA: `/home/user/qa/cls.py` (سربرگ classic) → LibreOffice: لوگو ۴ ردیف، «دانشگاه آزاد اسلامی/واحد» ۲ ردیف، ستون چپ سر جای خود.
 - **اپ:** `ExamPrintCenterScreen` کارت آزمون چاپی آیکن `Description` («فایل Word») گرفت → همان `WordExportRequest/WordExportFlow` V286 با سربرگ دستگاه (`PrintHeaderStore`). پنجرهٔ داشبورد هم همان را دارد.

@@ -105,6 +105,41 @@
     try { var texts = clone.querySelectorAll('text'); var orig = el.querySelectorAll('text'); for (var i = 0; i < texts.length && i < orig.length; i++) { var s = cs(orig[i]); if (s) { texts[i].setAttribute('font-family', s.fontFamily); texts[i].setAttribute('font-size', s.fontSize); } } } catch (e) {}
     return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(new XMLSerializer().serializeToString(clone));
   }
+  /* V286.3: جدول تناوبی (.ptb) = گرید CSS با ۱۹ ستون باریک؛ به‌جای جدول Word (که به‌هم می‌ریخت) از روی مستطیل‌های DOM روی canvas کشیده می‌شود */
+  function rasterBoxes(ctx, root, maxW) {
+    var r = rectOf(root); var w = r.width, h = r.height; if (!(w > 2 && h > 2)) return Promise.resolve(null);
+    var boxes = [];
+    root.querySelectorAll('*').forEach(function (el) {
+      if (hidden(el)) return;
+      var st = cs(el); if (!st) return;
+      var er = rectOf(el); if (!(er.width > 0 && er.height > 0)) return;
+      var bg = hexColor(st.backgroundColor), bw = px(st.borderTopWidth), bc = st.borderTopStyle !== 'none' && bw > 0 ? hexColor(st.borderTopColor) : null;
+      var own = ''; for (var c = el.firstChild; c; c = c.nextSibling) if (c.nodeType === 3) own += c.nodeValue;
+      own = cleanText(own).replace(/\s+/g, ' ').trim();
+      if (!bg && !bc && !own) return;
+      boxes.push({ x: er.left - r.left, y: er.top - r.top, w: er.width, h: er.height, bg: bg && bg !== 'FFFFFF' ? bg : null, bc: bc, bw: bw, dash: st.borderTopStyle === 'dashed', rad: px(st.borderTopLeftRadius), text: own, font: st.fontWeight + ' ' + st.fontSize + ' ' + st.fontFamily, color: hexColor(st.color) || '000000', align: st.textAlign, pl: px(st.paddingLeft), pr: px(st.paddingRight) });
+    });
+    var dw = w, dh = h; if (dw > maxW) { dh = dh * maxW / dw; dw = maxW; }
+    try {
+      var png = canvasPng(function (x) {
+        boxes.forEach(function (b) {
+          if (b.bg || b.bc) {
+            x.beginPath(); var rd = Math.min(b.rad || 0, b.w / 2, b.h / 2);
+            if (x.roundRect) x.roundRect(b.x, b.y, b.w, b.h, rd); else x.rect(b.x, b.y, b.w, b.h);
+            if (b.bg) { x.fillStyle = '#' + b.bg; x.fill(); }
+            if (b.bc) { x.lineWidth = b.bw; x.strokeStyle = '#' + b.bc; x.setLineDash(b.dash ? [3, 2] : []); x.stroke(); x.setLineDash([]); }
+          }
+          if (b.text) {
+            x.fillStyle = '#' + b.color; x.font = b.font; x.textBaseline = 'middle';
+            var tx = b.x + b.w / 2, ta = 'center';
+            if (b.align === 'left' || b.align === 'start') { ta = 'left'; tx = b.x + b.pl; } else if (b.align === 'right' || b.align === 'end') { ta = 'right'; tx = b.x + b.w - b.pr; }
+            x.textAlign = ta; x.fillText(b.text, tx, b.y + b.h / 2 + 0.5, b.w);
+          }
+        });
+      }, w, h, 2);
+      return Promise.resolve(ctx.addImage(png, 'png', dw, dh));
+    } catch (e) { return Promise.resolve(null); }
+  }
   /* V286.1: شکل‌های علوم/آناتومی (.an-frame) = تصویر پایه + لایهٔ فلش‌ها + شماره‌ها → یک PNG واحد */
   function frameElement(ctx, frame, maxW) {
     var r = rectOf(frame); var w = r.width > 2 ? r.width : 300, h = r.height > 2 ? r.height : 200;
@@ -393,6 +428,12 @@
       sec.block('<w:p><w:pPr><w:pBdr><w:bottom w:val="dashed" w:sz="8" w:space="1" w:color="' + ((ctx.afN = (ctx.afN || 0) + 1) % 2 ? '64748B' : '64748C') + '"/></w:pBdr><w:bidi/><w:spacing w:before="60" w:after="60" w:line="' + cm2twip(0.9) + '" w:lineRule="atLeast"/><w:jc w:val="right"/></w:pPr>' +
         (nTxt ? '<w:r><w:rPr><w:b/><w:bCs/><w:color w:val="BE185D"/><w:rtl/></w:rPr><w:t xml:space="preserve">' + esc(nTxt) + ')\u00a0</w:t></w:r>' : '') + '<w:r><w:t xml:space="preserve"> </w:t></w:r></w:p>');
       return;
+    }
+    if (cl.contains('ptb')) { /* V286.3: جدول تناوبی → یک تصویر */
+      var ptoken = '\u0001IMG' + (ctx.slots.length) + '\u0001'; ctx.slots.push(''); var pidx = ctx.slots.length - 1;
+      var pp = sec.para(el); pp.runs.push(ptoken); pp.opts.center = true;
+      ctx.pending.push(rasterBoxes(ctx, el, maxW).then(function (img) { ctx.slots[pidx] = img ? drawingXml(img) : ''; }, function () { ctx.slots[pidx] = ''; }));
+      sec.flush(); return;
     }
     if (cl.contains('an-frame')) { /* V286.1 */
       var ftoken = '\u0001IMG' + (ctx.slots.length) + '\u0001'; ctx.slots.push(''); var fidx = ctx.slots.length - 1;

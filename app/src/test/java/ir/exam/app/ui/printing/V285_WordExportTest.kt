@@ -103,4 +103,11 @@ class V285_WordExportTest {
         assertTrue("(جدا از چاپ)" !in src("site/src/admin.js").substringAfter("var rows = [").substringBefore("]];"))
         assertTrue("\"فایل Word آزمون: هر فایل\" to" in src("app/src/main/java/ir/exam/app/ui/billing/WalletScreen.kt"))
     }
+
+    @Test
+    fun v286_3_periodicTableRasterized() {
+        val js = src("app/src/main/assets/print/web/word_export.js")
+        assertTrue("function rasterBoxes(ctx, root, maxW)" in js)
+        assertTrue("if (cl.contains('ptb')) {" in js)
+    }
 }
