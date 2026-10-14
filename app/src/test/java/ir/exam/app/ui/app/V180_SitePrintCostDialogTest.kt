@@ -25,7 +25,7 @@ class V180_SitePrintCostDialogTest {
         /* V180.4 — چاپ بومی از __nativePrint (ذخیره‌شده پیش از بازنویسی webhost.js)؛ Window.prototype.print در Chrome نیست */
         assertTrue("w.__nativePrint.call(w)" in a)
         assertTrue("window.__nativePrint = window.print;" in source("site/build_site.py"))
-        assertTrue("if (ctx.busy) return;" in a && "if (ctx.paid[mode]) { doNative(); return; }" in a && "ctx.paid.student = ctx.paid.teacher = true; setPreviewPaid(ctx, true);" in a)
+        assertTrue("if (ctx.busy) return;" in a && "if (ctx.paid[mode]) { fire(); return; }" in a && "ctx.paid.student = ctx.paid.teacher = true; setPreviewPaid(ctx, true);" in a)
         /* V180.2 — پس از پنجرهٔ چاپ: چاپ مستقیم → بستن؛ وگرنه بازگشت به پیش‌نمایش (نه صفحهٔ خالی) */
         assertTrue("if (ctx.direct) { if (printCtx === ctx) closePrintOverlay(); return; }" in a)
         assertTrue("if (!(w.isPreviewOpen && w.isPreviewOpen())) w.ExamPrintRenderer.showPreview();" in a)

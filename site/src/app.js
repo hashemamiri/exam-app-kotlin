@@ -745,6 +745,19 @@
     print: function (mode) {
       if (!printCtx) return;
       var ctx = printCtx, w = ctx.iframe.contentWindow;
+      /* V285 — «فایل Word نسخهٔ دانشجو/استاد» (منوی چاپ پیش‌نمایش): همان دروازه‌های پرداخت چاپ؛ به‌جای پنجرهٔ چاپ، موتور docx می‌سازد و دانلود می‌شود */
+      var isWord = /^word-/.test(String(mode || '')); mode = String(mode || '').replace(/^word-/, '');
+      var doWord = function () {
+        ctx.busy = true;
+        var p = (typeof w.wordExportBase64 === 'function') ? w.wordExportBase64(mode) : Promise.reject(new Error('na'));
+        p.then(function (b64) {
+          ctx.busy = false;
+          var bin = atob(b64), u8 = new Uint8Array(bin.length); for (var i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
+          var name = String(ctx.title || 'آزمون').replace(/[\\/:*?"<>|]/g, ' ').trim() + (mode === 'teacher' ? ' - کلید' : '') + '.docx';
+          window.SiteExtras.download(name, new Blob([u8], {type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'}));
+          toast('فایل Word آماده شد.', 'ok');
+        }).catch(function () { ctx.busy = false; toast('ساخت فایل Word ناموفق بود.', 'err'); });
+      };
       var doNative = function () {
         ctx.busy = true;
         /* V180.1 — فقط چاپ بومی مرورگر؛ w.print() موتور دوباره به همین پل برمی‌گشت (حلقهٔ پنجرهٔ هزینه) */
@@ -759,14 +772,15 @@
           try { if (!(w.isPreviewOpen && w.isPreviewOpen())) w.ExamPrintRenderer.showPreview(); } catch (e) {}
         }, 400);
       };
+      var fire = isWord ? doWord : doNative;
       var restore = function () { ctx.busy = false; try { w.ExamPrintRenderer.restorePreview(); } catch (e) {} };
       /* V180.1 — یک درخواست در جریان (پنجرهٔ هزینه باز / چاپ بومی) → درخواست دوباره نادیده گرفته می‌شود */
       if (ctx.busy) return;
       /* V180 — مثل PrintCostConfirmDialog اپ: هر چاپی (آنلاین، چاپی، محلی) اول پنجرهٔ هزینه؛ فقط مهمانِ صفحهٔ نمونه بدون کسر */
-      if (!user) { doNative(); return; }
+      if (!user) { fire(); return; }
       /* V180.1 — مثل printPrepaid اپ: هزینهٔ این نسخه در همین پنجرهٔ پیش‌نمایش یک‌بار پرداخت شده → چاپ دوباره بدون کسر */
       ctx.paid = ctx.paid || {};
-      if (ctx.paid[mode]) { doNative(); return; }
+      if (ctx.paid[mode]) { fire(); return; }
       /* V199 — آزمون چاپی: هزینه به‌ازای سؤال/تصویر روی سرور (print_exam_payments)؛ یک پرداخت برای هر دو نسخه؛ تا پرداخت نشده چاپ نمی‌شود */
       if (ctx.printExam !== undefined) {
         if (!ctx.printExam) { toast('برای چاپ، ابتدا آزمون چاپی را ذخیره کنید.', 'err'); restore(); return; }
@@ -775,7 +789,7 @@
         ensurePrintPaid(ctx.printExam, headerFingerprint(ctx.payload && ctx.payload.fields), ctx.title).then(function (r) {
           if (!r.paid) { restore(); return; }
           ctx.paid.student = ctx.paid.teacher = true; setPreviewPaid(ctx, true);
-          if (printCtx === ctx) doNative(); else ctx.busy = false;
+          if (printCtx === ctx) fire(); else ctx.busy = false;
         }).catch(function (e) { restore(); toast(errMsg(e), 'err'); });
         return;
       }
@@ -785,7 +799,7 @@
       var n = ctx.questionCount || 0, cost = n * PRINT_COST_PER_Q, content = printContentKey(ctx.payload);
       /* V202.1 — اول برآورد سرور: اگر همین محتوا قبلاً (اپ/سایت) پرداخت شده، بدون کسر دوباره چاپ می‌شود */
       api.printChargeQuote(examRef, n, content).then(function (q) {
-        if (q && q.paid) { ctx.paid.student = ctx.paid.teacher = true; setPreviewPaid(ctx, true); if (printCtx === ctx) doNative(); else ctx.busy = false; return; }
+        if (q && q.paid) { ctx.paid.student = ctx.paid.teacher = true; setPreviewPaid(ctx, true); if (printCtx === ctx) fire(); else ctx.busy = false; return; }
         return askAndCharge();
       }).catch(function () { return askAndCharge(); });
       function askAndCharge() {
@@ -793,9 +807,9 @@
         if (!ok) { restore(); return; }
         api.chargePrint(examRef, n, mode, content).then(function (r) {
           ctx.paid.student = ctx.paid.teacher = true; setPreviewPaid(ctx, true);
-          if (r && r.already_paid) { if (printCtx === ctx) doNative(); else ctx.busy = false; return; }
+          if (r && r.already_paid) { if (printCtx === ctx) fire(); else ctx.busy = false; return; }
           /* V202 — پیام کسر وسط صفحه؛ چاپ پس از «تأیید» */
-          return costDoneDlg(r.cost || cost, r.balance).then(function () { if (printCtx === ctx) doNative(); else ctx.busy = false; });
+          return costDoneDlg(r.cost || cost, r.balance).then(function () { if (printCtx === ctx) fire(); else ctx.busy = false; });
         }).catch(function (e) { restore(); toast(errMsg(e), 'err'); });
       });
       }

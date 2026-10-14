@@ -103,7 +103,7 @@ class V199_PrintPayTest {
         val a = source("site/src/app.js")
         assertTrue("function infoDlg(title, body, okLabel)" in a)
         assertTrue("await costDoneDlg(r.cost || q.due, r.balance);" in a)
-        assertTrue("return costDoneDlg(r.cost || cost, r.balance).then(function () { if (printCtx === ctx) doNative(); else ctx.busy = false; });" in a)
+        assertTrue("return costDoneDlg(r.cost || cost, r.balance).then(function () { if (printCtx === ctx) fire(); else ctx.busy = false; });" in a)
         assertFalse("toast('کسر '" in a)
         assertTrue("await S.costDoneDlg((raw && raw.cost) || 0, raw ? raw.balance : null" in source("site/src/builder.js"))
         // V264 — تکثیر موبایل از پنجرهٔ مشترک S.duplicateExamDlg (app.js) می‌گذرد که همان costDoneDlg را نشان می‌دهد
@@ -129,8 +129,8 @@ class V199_PrintPayTest {
         assertTrue("\"local\" else state.examId ?: \"local\"" in source("app/src/main/java/ir/exam/app/ui/builder/ExamBuilderScreen.kt"))
         val a = source("site/src/app.js")
         assertTrue("printChargeQuote: function (examId, count, content)" in a)
-        assertTrue("if (q && q.paid) { ctx.paid.student = ctx.paid.teacher = true; setPreviewPaid(ctx, true); if (printCtx === ctx) doNative(); else ctx.busy = false; return; }" in a)
-        assertTrue("if (r && r.already_paid) { if (printCtx === ctx) doNative(); else ctx.busy = false; return; }" in a)
+        assertTrue("if (q && q.paid) { ctx.paid.student = ctx.paid.teacher = true; setPreviewPaid(ctx, true); if (printCtx === ctx) fire(); else ctx.busy = false; return; }" in a)
+        assertTrue("if (r && r.already_paid) { if (printCtx === ctx) fire(); else ctx.busy = false; return; }" in a)
         assertTrue("if (printCtx && printCtx.iframe === iframe) { setPreviewPaid(printCtx, false); refreshPreviewPaid(printCtx); }" in a)
         assertTrue("(state.dirty || !state.examId) ? 'local' : state.examId" in source("site/src/builder.js"))
     }

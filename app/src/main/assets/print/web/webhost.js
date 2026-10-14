@@ -342,6 +342,32 @@
     });
     return 'queued';
   }
+  /* V285 — خروجی Word: درخواست به میزبان (پرداخت مثل چاپ) → میزبان wordExportBase64(mode) را صدا می‌زند. */
+  function requestWord(mode) {
+    mode = mode === 'teacher' ? 'teacher' : 'student';
+    if (!window.ExamWord) { toast('خروجی Word در دسترس نیست.'); return 'na'; }
+    if (printing) return 'busy';
+    callBridge('print', 'word-' + mode);
+    return 'queued';
+  }
+  window.wordExportBase64 = function (mode) {
+    mode = mode === 'teacher' ? 'teacher' : 'student';
+    return new Promise(function (resolve, reject) {
+      if (!window.ExamWord) { reject(new Error('خروجی Word در دسترس نیست.')); return; }
+      var prev = printMode;
+      function restore() { try { printMode = prev; window.renderPreview(); } catch (e) {} }
+      try { printMode = mode; window.renderPreview(); } catch (e) {}
+      waitForReady(function () {
+        window.ExamWord.buildBase64().then(function (b64) { restore(); resolve(b64); }, function (e) { restore(); reject(e); });
+      });
+    });
+  };
+  /* برای پلِ اندروید: نتیجه با wordReady(base64, mode) یا onError(پیام) برمی‌گردد. */
+  window.wordExportToBridge = function (mode) {
+    window.wordExportBase64(mode).then(function (b64) { callBridge('wordReady', b64, mode); },
+      function (e) { toast('ساخت فایل Word ناموفق بود.'); callBridge('onError', String(e && e.message || e)); });
+    return 'queued';
+  };
   function restorePreview() {
     printing = false; printRootReady = false;
     try { var ev = new Event('afterprint'); ev.__appHost = true; window.dispatchEvent(ev); } catch (e) {}
@@ -768,6 +794,7 @@
   function installPrintOverrides() {
     /* دکمه‌های نوارِ PGS (چاپ دانشجو/استاد، دیالوگِ چاپ) و Ctrl+P → پلِ بومی. */
     window.pgsPrintNow = function (mode) { var m = $('pgsPrintMenu'); if (m) m.classList.remove('open'); requestPrint(mode || 'student'); };
+    window.pgsWordNow = function (mode) { var m = $('pgsPrintMenu'); if (m) m.classList.remove('open'); requestWord(mode || 'student'); };
     window.pgsDoPrintFromDlg = function () {
       var mode = (document.querySelector('input[name="pgsMode"]:checked') || {}).value || 'student';
       var rangeKind = (document.querySelector('input[name="pgsRange"]:checked') || {}).value || 'all';

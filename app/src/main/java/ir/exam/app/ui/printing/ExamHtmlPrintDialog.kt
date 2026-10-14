@@ -146,6 +146,19 @@ fun ExamHtmlPrintDialog(
     var barStatus by remember { mutableStateOf<String?>(null) }
     // V134 — رنگِ پیامِ وضعیت: null = خنثی (تیره)، true = موفق (سبز)، false = خطا (قرمز)
     var barStatusOk by remember { mutableStateOf<Boolean?>(null) }
+    // V285 — خروجی Word: بایت‌های docx ساخته‌شده توسط موتور وب تا انتخاب محل ذخیره (SAF) نگه داشته می‌شود
+    var pendingWord by remember { mutableStateOf<ByteArray?>(null) }
+    val wordLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.CreateDocument(WORD_MIME)
+    ) { uri ->
+        val bytes = pendingWord
+        pendingWord = null
+        if (uri != null && bytes != null) chargeScope.launch {
+            ir.exam.app.core.io.DocumentIo.writeBytes(context, uri, bytes)
+                .onSuccess { barStatusOk = true; barStatus = "فایل Word ذخیره شد." }
+                .onFailure { barStatusOk = false; barStatus = "ذخیرهٔ فایل Word ناموفق بود." }
+        }
+    }
     // V202 — پیام «کسر هزینه» وسط صفحه؛ پس از «تأیید» چاپ آغاز می‌شود (پیش از این نوارِ سبزِ خودمحوشونده بود)
     var costDone by remember { mutableStateOf<Pair<String, () -> Unit>?>(null) }
     var previewOpen by remember { mutableStateOf(initialPreview) }
@@ -304,15 +317,19 @@ fun ExamHtmlPrintDialog(
                                         )
                                     }
                                 },
-                                onPrint = { mode ->
+                                onPrint = { rawMode ->
                                     webViewRef?.let { view ->
                                         view.post {
+                                            // V285 — «فایل Word نسخهٔ دانشجو/استاد»: همان دروازه‌های پرداخت چاپ؛ به‌جای پنل چاپ، موتور وب docx می‌سازد
+                                            val isWord = rawMode.startsWith("word-")
+                                            val mode = rawMode.removePrefix("word-")
                                             // V106 — پس از بسته‌شدنِ پنلِ چاپ، برگه به حالتِ
                                             // پیش‌نمایش برمی‌گردد (کلاسِ چاپ پاک، رندرِ دوباره).
                                             val restore = {
                                                 // چاپِ مستقیم از بیلدر: پنجره پس از پنلِ چاپ بسته می‌شود
                                                 // (پیش‌تر صفحهٔ خالیِ حالتِ چاپ می‌ماند).
-                                                if (initialPrintMode != null) view.post { requestDismiss() }
+                                                if (isWord) Unit
+                                                else if (initialPrintMode != null) view.post { requestDismiss() }
                                                 else view.post {
                                                     view.evaluateJavascript(
                                                         "(function(){try{return window.ExamPrintRenderer&&window.ExamPrintRenderer.restorePreview?window.ExamPrintRenderer.restorePreview():'missing'}catch(e){return 'err'}})()",
@@ -320,7 +337,16 @@ fun ExamHtmlPrintDialog(
                                                     )
                                                 }
                                             }
-                                            val fire = {
+                                            val fire = if (isWord) {
+                                                {
+                                                    view.evaluateJavascript(
+                                                        "(function(){try{return window.wordExportToBridge?window.wordExportToBridge('" + mode + "'):'missing'}catch(e){return 'err'}})()",
+                                                        null
+                                                    )
+                                                    Unit
+                                                }
+                                            } else {
+                                                {
                                                 runCatching {
                                                     val printContext = ctx.findActivityContext() ?: ctx
                                                     val printManager = printContext.getSystemService(Context.PRINT_SERVICE) as? PrintManager
@@ -333,6 +359,7 @@ fun ExamHtmlPrintDialog(
                                                     }
                                                 }.onFailure { restore() }
                                                 Unit
+                                                }
                                             }
                                             // V199 — آزمون چاپی: پرداخت سؤال/تصویر روی سرور؛ تا پرداخت نشده چاپ نمی‌شود
                                             if (printPayExamId != null) {
@@ -374,6 +401,18 @@ fun ExamHtmlPrintDialog(
                                     // V101 — callback از تَرهٔ JS می‌آید؛ وضعیتِ Compose
                                     // باید روی تَرهٔ اصلی نوشته شود.
                                     webViewRef?.post { jsError = message; loading = false }
+                                },
+                                onWordReady = { base64, mode ->
+                                    val bytes = runCatching { android.util.Base64.decode(base64, android.util.Base64.DEFAULT) }.getOrNull()
+                                    webViewRef?.post {
+                                        if (bytes == null || bytes.isEmpty()) { barStatusOk = false; barStatus = "ساخت فایل Word ناموفق بود." }
+                                        else {
+                                            pendingWord = bytes
+                                            val title = (printable?.documentTitle ?: "آزمون").ifBlank { "آزمون" }.replace(Regex("[\\\\/:*?\"<>|]"), " ").trim()
+                                            runCatching { wordLauncher.launch(title + (if (mode == "teacher") " - کلید" else "") + ".docx") }
+                                                .onFailure { pendingWord = null; barStatusOk = false; barStatus = "پنجرهٔ ذخیرهٔ فایل باز نشد." }
+                                        }
+                                    }
                                 },
                                 onToast = { message ->
                                     webViewRef?.post { if (message.isNotBlank()) barStatus = message }
@@ -634,7 +673,9 @@ private class ExamPrintBridge(
     private val onPreviewClosed: () -> Unit,
     private val pageSetupStore: ir.exam.app.data.local.PrintPageSetupStore,
     private val onPickFormat: (String) -> Unit = { },
-    private val onPickOption: (PrintOptionPickRequest) -> Unit = { }
+    private val onPickOption: (PrintOptionPickRequest) -> Unit = { },
+    // V285 — نتیجهٔ خروجی Word (base64 از ExamWord.buildBase64) — روی تَرهٔ JS صدا می‌شود
+    private val onWordReady: (String, String) -> Unit = { _, _ -> }
 ) {
     /** V131 — پنلِ 📐: بازکردنِ پنجرهٔ بومی برای یک select (id، مقدارِ فعلی، گزینه‌ها به‌صورت JSON [{value,label}]). */
     @JavascriptInterface
@@ -682,7 +723,21 @@ private class ExamPrintBridge(
 
     @JavascriptInterface
     fun print(mode: String?) {
-        onPrint(if (mode == "teacher") "teacher" else "student")
+        onPrint(
+            when (mode) {
+                "teacher" -> "teacher"
+                "word-teacher" -> "word-teacher"
+                "word-student" -> "word-student"
+                else -> "student"
+            }
+        )
+    }
+
+    /** V285 — فایل Word آماده شد (base64 docx). */
+    @JavascriptInterface
+    fun wordReady(base64: String?, mode: String?) {
+        val b = base64.orEmpty()
+        if (b.isNotBlank()) onWordReady(b, if (mode == "teacher") "teacher" else "student")
     }
 
     @JavascriptInterface
@@ -725,6 +780,8 @@ internal fun createExamPrintWebView(
     onPickFormat: (String) -> Unit = { },
     // V131 — پنجرهٔ بومیِ گزینه‌های پنلِ 📐
     onPickOption: (PrintOptionPickRequest) -> Unit = { },
+    // V285 — خروجی Word
+    onWordReady: (String, String) -> Unit = { _, _ -> },
     // V214 — تزریق تأخیری: اگر pendingReady() هنوز false باشد (تصاویر در حال آماده‌سازی)، صفحه بارگذاری می‌شود
     // ولی تزریق داده تا آماده شدن (حداکثر PENDING_WAIT_MS) به تعویق می‌افتد؛ داده از pendingPrintable خوانده می‌شود.
     pendingPrintable: (() -> OfficialExamPrintable?)? = null,
@@ -774,6 +831,7 @@ internal fun createExamPrintWebView(
             onPreviewClosed = onPreviewClosed,
             onPickFormat = onPickFormat,
             onPickOption = onPickOption,
+            onWordReady = onWordReady,
             // V126 — تنظیمات صفحه از پنلِ 📐 خودِ موتورِ وب روی دستگاه ذخیره می‌شود
             pageSetupStore = ir.exam.app.data.local.PrintPageSetupStore(context)
         ),
@@ -907,6 +965,9 @@ internal fun printContentOf(printable: OfficialExamPrintable?): String =
 
 internal fun formatToman(value: Long): String =
     java.text.NumberFormat.getIntegerInstance(java.util.Locale("fa", "IR")).format(value)
+
+/** V285 — نوع MIME فایل Word (docx) */
+internal const val WORD_MIME = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
 
 internal class PendingPrintCharge(val mode: String, val fire: () -> Unit, val restore: () -> Unit)
 /** V199 — برآورد پرداخت چاپ آزمون چاپی در انتظار تأیید. */
