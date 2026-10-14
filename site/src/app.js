@@ -673,14 +673,46 @@
   /* ================================================================ موتور چاپ (assets/print) و ویرایشگر فرمول — تعبیه‌شده */
   /* V162 — موتورها در فایل جداگانهٔ engines.<hash>.js (کش دائمی) هستند و فقط هنگام اولین نیاز بارگذاری می‌شوند. */
   var enginesReady = null;
+  /* V288 — علت‌های «گاهی فرمول/چاپ لود نمی‌شود» که برطرف شد:
+     ۱) دانلود ۵MB موتور روی اینترنت کند بیش از ۱۰ ثانیه طول می‌کشید و باز کردن فرمول با «آماده نشد» بسته می‌شد → مهلت زمانی ۱۲۰ ثانیه + پیام «در حال دریافت…».
+     ۲) اسکریپت موتور نه load می‌داد نه error (اتصال نیمه‌قطع) → مهلت ۱۲۰ ثانیه و امکان تلاش دوباره.
+     ۳) تب بازماندهٔ سایت پس از انتشار نسخهٔ جدید، فایل engines.<hash قدیمی>.js را می‌خواست که دیگر نبود (۴۰۴) →
+        یک تلاش دوباره، سپس پیشنهاد بارگذاری دوبارهٔ صفحه؛ build_site هم سه نسخهٔ آخر موتور را نگه می‌دارد. */
+  var enginesAttempt = 0;
   function loadEngines() {
     if (window.__ENGINES) return Promise.resolve(window.__ENGINES);
     if (enginesReady) return enginesReady;
     enginesReady = new Promise(function (resolve, reject) {
       var url = window.__ENGINES_URL; if (!url) { reject(new Error('نشانی موتورها در این فایل نیست.')); return; }
-      var sc = document.createElement('script'); sc.src = url; sc.async = true;
-      sc.onload = function () { if (window.__ENGINES) resolve(window.__ENGINES); else reject(new Error('موتورها بارگذاری نشد.')); };
-      sc.onerror = function () { enginesReady = null; reject(new Error('دانلود موتور چاپ/فرمول ناموفق بود؛ اینترنت را بررسی کنید.')); };
+      enginesAttempt++;
+      var done = false, slowTimer = null, deadTimer = null;
+      var sc = document.createElement('script'); sc.src = url + (enginesAttempt > 1 ? '?r=' + enginesAttempt : ''); sc.async = true;
+      function finish(ok, err) {
+        if (done) return; done = true;
+        clearTimeout(slowTimer); clearTimeout(deadTimer);
+        if (ok) { resolve(window.__ENGINES); return; }
+        enginesReady = null;
+        try { sc.remove(); } catch (e) {}
+        reject(err);
+      }
+      sc.onload = function () { if (window.__ENGINES) finish(true); else finish(false, new Error('موتورها بارگذاری نشد.')); };
+      sc.onerror = function () {
+        if (enginesAttempt === 1) { /* یک تلاش بی‌صدا (شبکهٔ لحظه‌ای) */
+          done = true; clearTimeout(slowTimer); clearTimeout(deadTimer); try { sc.remove(); } catch (e) {}
+          enginesReady = null;
+          setTimeout(function () { loadEngines().then(resolve, reject); }, 1500);
+          return;
+        }
+        finish(false, new Error('دانلود موتور چاپ/فرمول ناموفق بود؛ اینترنت را بررسی کنید.'));
+        if (navigator.onLine !== false) {
+          setTimeout(function () {
+            if (window.__ENGINES) return;
+            if (confirm('نسخهٔ تازهٔ سایت منتشر شده و موتور فرمول/چاپ این صفحه قدیمی است. برای ادامه باید صفحه دوباره بارگذاری شود. الان بارگذاری شود؟')) location.reload();
+          }, 300);
+        }
+      };
+      slowTimer = setTimeout(function () { if (!done) toast('در حال دریافت موتور فرمول و چاپ (حدود ۵ مگابایت)… لطفاً کمی صبر کنید.', 'info'); }, 4000);
+      deadTimer = setTimeout(function () { finish(false, new Error('دریافت موتور فرمول/چاپ بیش از حد طول کشید؛ اینترنت را بررسی و دوباره تلاش کنید.')); }, 120000);
       document.head.appendChild(sc);
     });
     return enginesReady;
@@ -906,8 +938,10 @@
   function makeFormulaOverlay() {
     var overlay = el('div', {class: 'engine-bg'}); overlay.style.display = 'none';
     var iframe = el('iframe', {title: 'formula-editor'});
-    overlay.appendChild(iframe); document.body.appendChild(overlay);
-    var w = {overlay: overlay, iframe: iframe, loaded: false, failed: false};
+    /* V288 — تا آماده شدن ویرایشگر، به‌جای صفحهٔ سفیدِ بی‌خبر، پیام فارسی و دکمهٔ انصراف */
+    var wait = el('div', {class: 'engine-wait'}, [el('div', {class: 'engine-wait-spin'}), el('div', {class: 'engine-wait-txt', text: 'در حال آماده‌سازی ویرایشگر فرمول…'}), el('button', {type: 'button', class: 'btn ghost', text: 'انصراف', onclick: function () { window.__formulaBridge.onEditorClosed(); }})]);
+    overlay.appendChild(wait); overlay.appendChild(iframe); document.body.appendChild(overlay);
+    var w = {overlay: overlay, iframe: iframe, wait: wait, loaded: false, failed: false};
     iframe.addEventListener('load', function () { w.loaded = true; });
     engineHtml('formula').then(function (h) { if (h) iframe.srcdoc = h; else w.failed = true; });
     return w;
@@ -927,13 +961,17 @@
       document.body.style.overflow = 'hidden'; document.body.classList.add('engine-open');
       formulaCtx = {overlay: overlay, iframe: iframe, text: text || '', resolve: resolve};
       var s = selStart == null ? (text || '').length : selStart, e = selEnd == null ? s : selEnd;
-      var tries = 0;
+      /* V288 — مهلت زمانی به‌جای شمارش: تا ۱۲۰ ثانیه برای دانلود موتور، ۲۰ ثانیه پس از بارگذاری برای پل */
+      var t0 = Date.now(), tLoaded = 0;
+      if (w.wait) w.wait.style.display = '';
       (function tryBegin() {
-        tries++;
-        if (formulaCtx && formulaCtx.iframe !== iframe) return;
-        try { var cw = iframe.contentWindow; if (w.loaded && cw && cw.ExamFormulaHost && typeof cw.ExamFormulaHost.begin === 'function') { cw.ExamFormulaHost.begin(text || '', s, e); return; } } catch (er) {}
-        if (w.failed || tries > 134) { toast('ویرایشگر فرمول آماده نشد.', 'err'); window.__formulaBridge.onEditorClosed(); return; }
-        setTimeout(tryBegin, w.loaded ? 150 : 75);
+        if (!formulaCtx || formulaCtx.iframe !== iframe) return;
+        try { var cw = iframe.contentWindow; if (w.loaded && cw && cw.ExamFormulaHost && typeof cw.ExamFormulaHost.begin === 'function') { if (w.wait) w.wait.style.display = 'none'; cw.ExamFormulaHost.begin(text || '', s, e); return; } } catch (er) {}
+        if (w.loaded && !tLoaded) tLoaded = Date.now();
+        var waited = Date.now() - t0;
+        if (w.failed || waited > 120000 || (tLoaded && Date.now() - tLoaded > 20000)) { toast('ویرایشگر فرمول آماده نشد؛ دوباره تلاش کنید.', 'err'); window.__formulaBridge.onEditorClosed(); return; }
+        if (w.wait && waited > 5000) { var tx = w.wait.querySelector('.engine-wait-txt'); if (tx) tx.textContent = w.loaded ? 'در حال راه‌اندازی ویرایشگر فرمول…' : 'در حال دریافت موتور فرمول (یک‌بار، حدود ۵ مگابایت)…'; }
+        setTimeout(tryBegin, w.loaded ? 150 : 100);
       })();
     });
   }

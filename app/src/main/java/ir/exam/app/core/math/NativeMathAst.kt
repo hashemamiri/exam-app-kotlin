@@ -71,13 +71,34 @@ object NativeMathParser {
         "bot" to "⊥", "top" to "⊤", "vdash" to "⊢", "models" to "⊨",
         "neg" to "¬", "mid" to "∣", "nmid" to "∤", "setminus" to "∖",
         "subsetneq" to "⊊", "nsubseteq" to "⊈", "vee" to "∨", "wedge" to "∧",
-        "triangle" to "△", "ell" to "ℓ"
+        "triangle" to "△", "ell" to "ℓ",
+        // V288 — نمادهای فرمول‌های دانشگاهی (کتابخانهٔ «دانشگاه و تحصیلات تکمیلی»)
+        "oplus" to "⊕", "ominus" to "⊖", "otimes" to "⊗", "odot" to "⊙", "oslash" to "⊘",
+        "dagger" to "†", "ddagger" to "‡", "dag" to "†", "aleph" to "ℵ", "beth" to "ℶ",
+        "Re" to "ℜ", "Im" to "ℑ", "wp" to "℘", "star" to "⋆", "bullet" to "•",
+        "implies" to "⇒", "iff" to "⇔", "impliedby" to "⇐", "triangleq" to "≜", "doteq" to "≐",
+        "prec" to "≺", "succ" to "≻", "preceq" to "≼", "succeq" to "≽", "asymp" to "≍", "bowtie" to "⋈",
+        "bigoplus" to "⨁", "bigotimes" to "⨂", "bigvee" to "⋁", "bigwedge" to "⋀", "bigsqcup" to "⨆",
+        "sqcup" to "⊔", "sqcap" to "⊓", "sqsubseteq" to "⊑", "sqsupseteq" to "⊒", "nexists" to "∄",
+        "diamond" to "◇", "square" to "□", "Box" to "□", "blacksquare" to "∎", "qed" to "∎",
+        "lVert" to "‖", "rVert" to "‖", "Vert" to "‖", "lll" to "⋘", "ggg" to "⋙",
+        "nleq" to "≰", "ngeq" to "≱", "lesssim" to "≲", "gtrsim" to "≳", "nparallel" to "∦",
+        "varpi" to "ϖ", "varrho" to "ϱ", "varsigma" to "ς", "varkappa" to "ϰ", "digamma" to "ϝ",
+        "backslash" to "∖", "dots" to "…", "dotsc" to "…", "dotsb" to "⋯", "measuredangle" to "∡",
+        "hslash" to "ℏ", "imath" to "ı", "jmath" to "ȷ", "nearrow" to "↗", "searrow" to "↘",
+        "nwarrow" to "↖", "swarrow" to "↙", "leadsto" to "⇝", "rightsquigarrow" to "⇝", "circledast" to "⊛",
+        "checkmark" to "✓", "natural" to "♮", "sharp" to "♯", "flat" to "♭", "Game" to "⅁", "Finv" to "Ⅎ",
+        "mho" to "℧", "eth" to "ð", "complement" to "∁", "intercal" to "⊺", "veebar" to "⊻", "barwedge" to "⊼",
+        "Omicron" to "Ο", "omicron" to "ο"
     )
 
     private val namedFunctions = setOf(
         "sin", "cos", "tan", "cot", "sec", "csc", "log", "ln", "exp",
         "arcsin", "arccos", "arctan", "sinh", "cosh", "tanh",
-        "det", "gcd", "deg", "dim", "mod", "lim", "max", "min"
+        "det", "gcd", "deg", "dim", "mod", "lim", "max", "min",
+        // V288
+        "sup", "inf", "arg", "sgn", "lcm", "Pr", "coth", "sech", "csch", "erf", "erfc", "Tr", "tr",
+        "rank", "ker", "hom", "liminf", "limsup", "injlim", "projlim", "argmax", "argmin", "span", "Var", "Cov", "sinc"
     )
 
     private val structuralCommands = setOf(
@@ -277,7 +298,8 @@ object NativeMathParser {
                     ' ' -> sourceSymbol(" ", slashStart, index, editable = false)
                     // V133 — فاصله‌های TeX (\, \: \; \!) مثل ویرایشگر: فاصلهٔ نازک، نه □
                     ',', ':', ';', '!' -> sourceSymbol(if (escaped == '!') "" else "\u2009", slashStart, index, editable = false)
-                    '{', '}', '%', '$', '#', '&', '_', '|' ->
+                    '|' -> sourceSymbol("‖", slashStart, index) // V288 — \| نُرم
+                    '{', '}', '%', '$', '#', '&', '_' ->
                         sourceSymbol(escaped.toString(), slashStart, index)
                     else -> sourceSymbol("□", slashStart, index)
                 }

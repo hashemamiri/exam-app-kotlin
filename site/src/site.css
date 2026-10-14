@@ -192,6 +192,10 @@ footer{border-top:1px solid var(--line);padding:26px 20px;color:var(--muted);fon
 body.engine-open > #root{visibility:hidden;pointer-events:none}
 body.engine-open > #root .m-radial-bg{display:none}
 .engine-bg iframe{border:0;width:100%;height:100%;background:#FFFFFF}
+/* V288 — پیام انتظار ویرایشگر فرمول روی iframe */
+.engine-wait{position:absolute;inset:0;z-index:2;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;background:var(--bg,#eceff4);color:var(--text,#16203a);font-size:15px}
+.engine-wait-spin{width:38px;height:38px;border-radius:50%;border:4px solid rgba(95,174,230,.25);border-top-color:#5FAEE6;animation:engineSpin .9s linear infinite}
+@keyframes engineSpin{to{transform:rotate(360deg)}}
 .engine-bar{position:absolute;top:0;inset-inline:0;height:44px;background:#0f172a;color:#fff;display:flex;align-items:center;gap:10px;padding:0 12px;font-size:14px;z-index:2}
 .engine-bar .btn{padding:5px 12px;font-size:13px}
 .engine-bg iframe.with-bar{height:calc(100% - 44px);margin-top:44px}

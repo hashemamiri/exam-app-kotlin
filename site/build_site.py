@@ -117,8 +117,17 @@ def main():
     engines_b = engines.encode("utf-8")
     engines_hash = hashlib.sha256(engines_b).hexdigest()[:12]
     engines_name = "engines.%s.js" % engines_hash
+    # V288 — سه نسخهٔ آخر موتور نگه داشته می‌شود تا تب‌های بازمانده پس از انتشار، ۴۰۴ نگیرند (فهرست در engines_keep.txt)
+    keep_path = os.path.join(SITE, "engines_keep.txt")
+    keep = []
+    if os.path.exists(keep_path):
+        keep = [l.strip() for l in open(keep_path, encoding="utf-8") if l.strip()]
+    keep = [engines_name] + [k for k in keep if k != engines_name]
+    keep = keep[:3]
+    with open(keep_path, "w", encoding="utf-8") as f:
+        f.write("\n".join(keep) + "\n")
     for old in os.listdir(SITE):
-        if old.startswith("engines.") and old.endswith(".js") and old != engines_name:
+        if old.startswith("engines.") and old.endswith(".js") and old not in keep:
             os.remove(os.path.join(SITE, old))
     with open(os.path.join(SITE, engines_name), "wb") as f:
         f.write(engines_b)
