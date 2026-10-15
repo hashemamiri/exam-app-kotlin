@@ -15,11 +15,12 @@ class V288_UniversityLibraryAndLoadTest {
     @Test
     fun universityGroupHas24Pads() {
         val f = src("app/src/main/assets/formula_editor/formula.html")
-        assertTrue("MB_GROUPS.push({ key: 'uni', label: '🎓 دانشگاه و تحصیلات تکمیلی'" in f)
+        // V292: کتابخانهٔ موضوعی در «رشته‌های دانشگاهی» ادغام شد؛ بلوک‌ها با همان شناسه‌ها باقی‌اند
+        assertTrue("MB_GROUPS.push({ key: 'uni', label: '🎓 رشته‌های دانشگاهی'" in f)
         val ids = listOf("uni-real", "uni-complex", "uni-ode", "uni-pde", "uni-linalg", "uni-abstract", "uni-topo", "uni-numeric",
             "uni-prob", "uni-optim", "uni-qm", "uni-em", "uni-mech", "uni-statmech", "uni-solid", "uni-pchem",
             "uni-engmech", "uni-ee", "uni-control", "uni-cs", "uni-econ", "uni-bio", "uni-earth", "uni-chemeng")
-        ids.forEach { assertTrue(it, "{ id: \"$it\", label:" in f) }
+        ids.forEach { assertTrue(it, "    \"$it\": [ /* " in f) }
         assertTrue("b.setAttribute('data-uni-chip', '1');" in f)
         assertTrue("\"شرودینگر وابسته به زمان\"" in f && "\"بلک-شولز\"" in f && "\"کوکرافت-گالت\"" in f)
     }

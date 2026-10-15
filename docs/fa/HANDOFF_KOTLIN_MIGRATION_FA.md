@@ -19425,7 +19425,13 @@ CI: `compileDebugUnitTestKotlin` به‌خاطر `assertFalse` بدون import �
 - باگ V202.5: `var LANDING_TILES` داخل `paintAuth` بعد از خطی که `landing()` را صدا می‌زد تعریف شده بود → به‌خاطر hoisting مقدارش undefined و `.map` خطا می‌داد → صفحهٔ اول خالی. حالا کنار `authActive` در سطح ماژول است (تست ترتیب را پین می‌کند).
 - دروازهٔ صفحهٔ اول: mobile.js `entered()/enter()` با `sessionStorage['m-entered']`، `gateActive() = MQ && user && !entered`؛ app.js `render()` پیش از m-mode اگر gateActive → paintAuth (landing حتی با user). دکمه: user ⇒ `enter(); S.render()`؛ وگرنه `goA('login')`؛ پیوند ثبت‌نام فقط بدون user. `afterLogin()` → `SiteMobile.enter()`.
 
-### V291.2 — رفع CI 1.01.90 (اپ 1.01.91)
+### V292 — کتابخانهٔ «رشته‌های دانشگاهی» مرحلهٔ ۱ (اپ 1.01.92 + سایت)
+- مولد: `qa/tools/gen_majors.py` (فضای کاری چت، import از `gen_uni.py` با ۲۴ بلوک V288). بلوک‌های جدید `n-math/phys/chem/stat/cs/ee/me/ce` (۳۴۹ فرمول). خروجی جایگزین بلوک `<script>` V288 در انتهای `formula.html` می‌شود؛ ساختار: `B = {blockId: items}`، `MAJORS = [[id,label,[blocks]]]`، `majorItems()` ادغام با حذف تکراری بر اساس TeX؛ گروه همان کلید `'uni'` با برچسب «🎓 رشته‌های دانشگاهی»، چیپ `data-uni-chip`.
+- رشته‌ها: maj-math, maj-phys, maj-chem, maj-stat, maj-cs, maj-ee, maj-me, maj-ce + موقتاً maj-econ/bio/earth/chemeng (فقط بلوک V288 تا مرحلهٔ ۲).
+- قاعده: همهٔ فرمان‌های TeX باید در `NativeMathAst.kt` شناخته باشند (`check_commands()`); `\bmod` ممنوع (→ `\ \mathrm{mod}\ `)، `\Big|` ممنوع (→ `\left.…\right|`). QA: ۱۱۷۴ آیتم با `renderMathText` بدون خطا (`qa/tools/v292.py`, `/tmp/chk.py`).
+- تست: `V292_MajorsLibraryTest`؛ پین‌های `V288_UniversityLibraryAndLoadTest` به ساختار جدید به‌روز شد.
+
+## V291.2 — رفع CI 1.01.90 (اپ 1.01.91)
 - `V263_AppParitySchoolBankCompareExcelAppTest:74` پین `{ Text("اکسل") }` → با `maxLines/softWrap` به‌روز شد. درس: grep تست‌ها با الگوی escape‌شده (`اکسل\\"`) انجام شود، نه با نقل‌قول ساده.
 
 ## V291.1 — قالب نصب‌کننده داخل مخزن (فقط docs؛ بدون bump و بدون CI اپ)
