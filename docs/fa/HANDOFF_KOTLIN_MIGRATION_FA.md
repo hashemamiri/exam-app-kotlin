@@ -19425,6 +19425,11 @@ CI: `compileDebugUnitTestKotlin` به‌خاطر `assertFalse` بدون import �
 - باگ V202.5: `var LANDING_TILES` داخل `paintAuth` بعد از خطی که `landing()` را صدا می‌زد تعریف شده بود → به‌خاطر hoisting مقدارش undefined و `.map` خطا می‌داد → صفحهٔ اول خالی. حالا کنار `authActive` در سطح ماژول است (تست ترتیب را پین می‌کند).
 - دروازهٔ صفحهٔ اول: mobile.js `entered()/enter()` با `sessionStorage['m-entered']`، `gateActive() = MQ && user && !entered`؛ app.js `render()` پیش از m-mode اگر gateActive → paintAuth (landing حتی با user). دکمه: user ⇒ `enter(); S.render()`؛ وگرنه `goA('login')`؛ پیوند ثبت‌نام فقط بدون user. `afterLogin()` → `SiteMobile.enter()`.
 
+### V294 — کتابخانهٔ «رشته‌های دانشگاهی» مرحلهٔ ۳ (اپ 1.01.94 + سایت)
+- `qa/tools/gen_majors.py`: `NEW3` با ۱۲ بلوک `n-bme/dent/vet/nutr/sport/radiol/poly/env/robot/act/astro/gis` (۴۹۹ فرمول)؛ `MAJORS` = ۳۶ رشته؛ `SECTIONS` گسترش یافت. جمع ۱۹۳۷ فرمول یکتا / ۳۷۵۴ کل.
+- فرمان‌های ممنوع جدید (در `NativeMathAst.kt` نیستند): `\\AA` (→ `\\text{Å}`)، `\\mathring` (→ `\\overset{\\circ}{e}_x`).
+- رفع اشکال موبایل: `mbVarOpen` موقعیت را پیش از افزودن کلاس `word-cats` حساب می‌کرد و پنجرهٔ پهن از لبهٔ راست بیرون می‌زد؛ در انتهای `decorateUniPopover()` left/top دوباره در صفحه clamp می‌شوند (در قالب مولد). QA: ۳۶۹۵ آیتم با `renderMathText` بدون خطا؛ `qa/shots/v294_*.png`. تست: `V292_MajorsLibraryTest` (۳۶ رشته، پین‌های V294).
+
 ### V293 — کتابخانهٔ «رشته‌های دانشگاهی» مرحلهٔ ۲ (اپ 1.01.93 + سایت)
 - `qa/tools/gen_majors.py`: `NEW2` با ۱۶ بلوک `n-med/pharm/nurs/bio/agri/econ/acc/mgmt/psy/cheme/mat/ie/arch/pet/aero/geo` (۶۵۸ فرمول)؛ `MAJORS` = ۲۴ رشته (ترکیب بلوک‌های n-* و uni-*). رشته‌های موقت maj-earth/maj-chemeng حذف و در maj-geo/maj-pet/maj-cheme/maj-mat ادغام شدند.
 - UI: `wrapOnce()` دور `mbGroupLibrary`/`mbShowSymbolCategory`؛ برای گروه `uni` کلاس آمادهٔ `word-cats` (شبکهٔ چندستونه، CSS از قبل موجود در formula.html) + سرفصل‌های `.mbv-sec` از `SECTIONS`؛ پس از انتخاب رشته کلاس برداشته می‌شود.
