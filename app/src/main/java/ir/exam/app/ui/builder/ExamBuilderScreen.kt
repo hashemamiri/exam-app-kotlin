@@ -1536,7 +1536,7 @@ private fun QuestionEditor(
             }
             }
             // V305 — حالت ابتدایی: نوع ویژهٔ سؤال (فقط وقتی کلید «حالت ابتدایی» آزمون روشن است)
-            if (primary && !printMode && (question.type == QuestionType.FILL_BLANK || question.type == QuestionType.MULTIPLE_CHOICE)) {
+            if (primary && !printMode && (question.type == QuestionType.FILL_BLANK || question.type == QuestionType.MULTIPLE_CHOICE || question.type == QuestionType.ESSAY)) {
                 PrimaryModeChooser(question, viewModel)
             }
             when (question.type) {
@@ -2204,10 +2204,11 @@ private fun QuestionType.faLabel(): String = when (this) {
 /** انتخاب نوع ویژهٔ سؤال: جای‌خالی → مرتب‌سازی؛ چندگزینه‌ای → انتخاب روی تصویر. */
 @Composable
 private fun PrimaryModeChooser(question: QuestionDraft, viewModel: ExamBuilderViewModel) {
-    val choices = if (question.type == QuestionType.FILL_BLANK) {
-        listOf("" to "جای خالی معمولی", "order" to "مرتب‌سازی با کشیدن")
-    } else {
-        listOf("" to "گزینه‌ای معمولی", "hotspot" to "انتخاب روی تصویر")
+    val choices = when (question.type) {
+        QuestionType.FILL_BLANK -> listOf("" to "جای خالی معمولی", "order" to "مرتب‌سازی با کشیدن", "dictation" to "املا (گوش بده و بنویس)")
+        // V306 — پاسخ تشریحی: متنی یا نقاشی روی تخته
+        QuestionType.ESSAY -> listOf("" to "پاسخ متنی", "draw" to "پاسخ با نقاشی (تخته بزرگ)")
+        else -> listOf("" to "گزینه‌ای معمولی", "hotspot" to "انتخاب روی تصویر")
     }
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         Text("نوع ابتدایی:")
@@ -2218,6 +2219,10 @@ private fun PrimaryModeChooser(question: QuestionDraft, viewModel: ExamBuilderVi
                 label = { Text(label) }
             )
         }
+    }
+    // V306 — راهنمای املا: متن املا همان «پاسخ درست» است و در داده‌های عمومی سؤال می‌آید (اگر صدای معلم نباشد).
+    if (question.mode == "dictation") {
+        Text("متن املا را در «پاسخ درست» بنویسید. اگر صدای معلم ضبط نشده باشد، دستگاه همین متن را می‌خواند و متن در داده‌های عمومی سؤال قرار می‌گیرد.", style = MaterialTheme.typography.bodySmall)
     }
 }
 

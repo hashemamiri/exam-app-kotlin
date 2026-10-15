@@ -19430,6 +19430,15 @@ CI: `compileDebugUnitTestKotlin` به‌خاطر `assertFalse` بدون import �
 - باگ V202.5: `var LANDING_TILES` داخل `paintAuth` بعد از خطی که `landing()` را صدا می‌زد تعریف شده بود → به‌خاطر hoisting مقدارش undefined و `.map` خطا می‌داد → صفحهٔ اول خالی. حالا کنار `authActive` در سطح ماژول است (تست ترتیب را پین می‌کند).
 - دروازهٔ صفحهٔ اول: mobile.js `entered()/enter()` با `sessionStorage['m-entered']`، `gateActive() = MQ && user && !entered`؛ app.js `render()` پیش از m-mode اگر gateActive → paintAuth (landing حتی با user). دکمه: user ⇒ `enter(); S.render()`؛ وگرنه `goA('login')`؛ پیوند ثبت‌نام فقط بدون user. `afterLogin()` → `SiteMobile.enter()`.
 
+### V306 — ابتدایی: پاسخ با نقاشی (۹)، املا (۱۱) (اپ 1.02.11 + سایت؛ مقصد: اصلی)
+- **SQL لازم (کاربر اجرا می‌کند):** `sql_v306.sql` (کپی در `supabase/migrations/20261015_native_dictation_v306.sql` و `sql/manual/SQL_NATIVE_DICTATION_V306.sql`). فقط `native_normalize_text_v1` تغییر کرده: فاصله و ZWNJ حذف، `ة→ه`، `ي/ك→ی/ک`. تصحیح جای خالی (`native_auto_grade_question_v1`) همین نرمال‌ساز را استفاده می‌کند؛ پس بر همهٔ جای خالی‌ها اثر دارد (کمی بخشنده‌تر: «کتاب ها» = «کتابها»). این تغییر عمدی و به درخواست نیم‌فاصله است.
+- **پاسخ با نقاشی:** `EssayQuestion.answerMode` (`text`|`draw`). کلید عمومی `mode:"draw"` در تشریحی. در اپ: بخش تشریحی به‌جای کادر متنی، `StudentWhiteboardEntry(big=true)` را نشان می‌دهد؛ بلوک قدیمی تخته فقط برای غیرِ draw اجرا می‌شود (خط `if (presentation.allowAnswerGraph || questionHasGraph) {` پین V58 حفظ شد). بررسی «پاسخ‌نداده» تصاویر تخته را هم پاسخ می‌شمارد.
+- **املا:** `FillBlankQuestion.dictationText`. کلید عمومی `mode:"dictation"` + `speak` (فقط وقتی `audioUri` خالی است). در اپ: `ReadAloudButton` متن املا را می‌خواند؛ صدای معلم (`QuestionAudioPlayer`) اولویت دارد. تصحیح = مسیر جای خالی (accept).
+- **محدودیت شناخته‌شده:** در املای بدون صدای معلم، متن املا در پاسخ عمومی سؤال است (برای TTS لازم است). معلم هشدار می‌بیند. اگر محرمانگی کامل لازم شد، باید فقط صدای معلم مجاز شود.
+- **ویرایشگر:** نوع ابتدایی برای تشریحی (`draw`) و جای خالی (`dictation`) در اپ و سایت؛ راهنمای املا زیر چیپ‌ها.
+- **هنوز انجام نشده از فهرست ابتدایی:** ۱۰ (پاسخ صوتی؛ تصمیم کاربر: ضبط با سقف مدت تعیین‌شده توسط معلم، ذخیره با روش تخته، SQL مجوز MIME صوت لازم)، ۱۲ (بانک آمادهٔ ابتدایی)، ۱۳ (مجموعه‌تصاویر در اطلس).
+- **تست محلی:** کامپایل `compileDebugKotlin` و `testDebugUnitTest` (۱۰۴۳ تست، شامل V306 و V305) در sandbox سبز. CI هنوز اجرا نشده. نمایش بصری روی دستگاه بررسی نشده.
+
 ### V305.1 — رفع CI V305 (کامپایل + SQL کارنامه) (اپ 1.02.10 + سایت؛ مقصد: اصلی)
 - **علت خطای CI (لاگ واقعی):** `e: ExamBuilderScreen.kt:27 Unresolved reference 'matchParentSize'` و `StudentExamScreen.kt:26` همان؛ `StudentExamScreen.kt:999 / 1027 Unresolved reference 'height'`. `matchParentSize` عضو `BoxScope` است و import جدا نمی‌خواهد (حذف شد). `height` در فایل صفحهٔ آزمون import نشده بود (اضافه شد).
 - **SQL:** `round(double precision, integer)` در PostgreSQL وجود ندارد (خطای 42883). در هر سه فایل (`sql_v305.sql`، migration، manual) به `round(g.grade::numeric * 100.0 / nullif(g.max_score::numeric, 0), 2)` تغییر کرد. کاربر باید `sql_v305.sql` را دوباره کامل اجرا کند.

@@ -79,7 +79,7 @@
     q.optionStyles = obj.optionStyles || null; q.leftStyles = obj.leftStyles || null; q.rightStyles = obj.rightStyles || null;
     q.spans = obj.spans || []; q.alignSpans = obj.alignSpans || [];
     /* V305 — حالت ابتدایی سؤال: ترتیب درست فقط در کلید (accept[0]) است */
-    q.mode = (obj.mode === 'order' && type === 'fill') || (obj.mode === 'hotspot' && type === 'multiple') ? obj.mode : '';
+    q.mode = (obj.mode === 'order' && type === 'fill') || (obj.mode === 'hotspot' && type === 'multiple') || (obj.mode === 'draw' && type === 'essay') || (obj.mode === 'dictation' && type === 'fill') ? obj.mode : '';
     q.orderItems = q.mode === 'order' ? ((key.accept && key.accept[0]) ? String(key.accept[0]).split(',').map(function (x) { return x.trim(); }).filter(Boolean) : (obj.items || []).map(String)) : [];
     q.hotspots = q.mode === 'hotspot' ? (Array.isArray(obj.hotspots) ? obj.hotspots.map(function (h) { return {x: Number(h.x) || 0, y: Number(h.y) || 0, w: Number(h.w) || 0, h: Number(h.h) || 0}; }) : []) : [];
     q.correctIndex = key.correctOption != null ? Number(key.correctOption) : (obj.correctIndex != null ? Number(obj.correctIndex) : null);
@@ -126,7 +126,11 @@
       var isOrd = q.type === 'fill' && q.mode === 'order', isHot = q.type === 'multiple' && q.mode === 'hotspot';
       if (isOrd) { v.mode = 'order'; v.items = shuffledPublicOrder(q.orderItems); } else { delete v.items; }
       if (isHot) { v.mode = 'hotspot'; v.hotspots = q.options.map(function (_, i) { var z = (q.hotspots || [])[i] || {}; return {x: Number(z.x) || 0, y: Number(z.y) || 0, w: Number(z.w) || 0, h: Number(z.h) || 0}; }); } else { delete v.hotspots; }
-      if (!isOrd && !isHot) delete v.mode;
+      /* V306 — پاسخ با تخته و املا: متن املا (speak) فقط وقتی صدای معلم نیست */
+      var isDraw = q.type === 'essay' && q.mode === 'draw', isDict = q.type === 'fill' && q.mode === 'dictation';
+      if (isDraw) v.mode = 'draw';
+      if (isDict) { v.mode = 'dictation'; if (!q.audio) v.speak = String(q.expectedText || '').split('|')[0].trim(); else delete v.speak; } else delete v.speak;
+      if (!isOrd && !isHot && !isDraw && !isDict) delete v.mode;
       if (q.type === 'multiple') { v.options = q.options.slice(); v.optionImages = q.options.map(function (_, i) { return q.optionImages[i] || ''; }); if (q.optionStyles) v.optionStyles = q.optionStyles; }
       if (q.type === 'matching') {
         v.leftItems = q.matchingLeft.slice(); v.rightItems = q.matchingRight.slice();
@@ -868,7 +872,7 @@
     function swap(a, b) { var t = state.questions[a]; state.questions[a] = state.questions[b]; state.questions[b] = t; state.selected = b; mark(); drawList(); drawEditor(); }
     /* V305 — ابتدایی: چیپ نوع ویژهٔ سؤال */
     function primaryModeChooser(q, redraw) {
-      var choices = q.type === 'fill' ? [['', 'جای خالی معمولی'], ['order', 'مرتب‌سازی با کشیدن']] : [['', 'گزینه‌ای معمولی'], ['hotspot', 'انتخاب روی تصویر']];
+      var choices = q.type === 'fill' ? [['', 'جای خالی معمولی'], ['order', 'مرتب‌سازی با کشیدن'], ['dictation', 'املا (گوش بده و بنویس)']] : q.type === 'essay' ? [['', 'پاسخ متنی'], ['draw', 'پاسخ با نقاشی (تخته بزرگ)']] : [['', 'گزینه‌ای معمولی'], ['hotspot', 'انتخاب روی تصویر']];
       return el('div', {class: 'row', style: 'gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px'}, [el('b', {text: 'نوع ابتدایی:'})].concat(choices.map(function (c) {
         return el('button', {type: 'button', class: 'btn sm ' + (q.mode === c[0] ? '' : 'light'), text: c[1], onclick: function () {
           q.mode = c[0];
@@ -929,7 +933,8 @@
     function typeSection(q) {      var box = el('div', {class: 'b-type'});
       function redraw() { var n = typeSection(q); box.replaceWith(n); }
       /* V305 — ابتدایی: نوع ویژهٔ سؤال (فقط وقتی حالت ابتدایی آزمون روشن است) */
-      if (state.primaryMode && (q.type === 'fill' || q.type === 'multiple')) box.appendChild(primaryModeChooser(q, redraw));
+      if (state.primaryMode && (q.type === 'fill' || q.type === 'multiple' || q.type === 'essay')) box.appendChild(primaryModeChooser(q, redraw));
+      if (state.primaryMode && q.type === 'fill' && q.mode === 'dictation') box.appendChild(el('p', {class: 'muted', style: 'font-size:13px', text: 'متن املا همان «پاسخ درست» است. اگر صدای معلم نباشد، دستگاه همین متن را می‌خواند و متن در داده‌های عمومی سؤال قرار می‌گیرد.'}));
       if (state.primaryMode && q.type === 'fill' && q.mode === 'order') { box.appendChild(orderEditor(q, redraw)); return box; }
       if (q.type === 'multiple') {
         box.appendChild(el('h4', {text: 'گزینه‌ها (پاسخ درست را علامت بزنید)'}));

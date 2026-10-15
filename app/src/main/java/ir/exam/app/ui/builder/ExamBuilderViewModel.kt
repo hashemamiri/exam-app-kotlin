@@ -185,6 +185,7 @@ class ExamBuilderViewModel(
     fun setQuestionMode(id: String, mode: String) = update(id) { q ->
         when (mode) {
             "order" -> q.copy(mode = mode, orderItems = q.orderItems.ifEmpty { listOf("", "", "") })
+            "draw", "dictation" -> q.copy(mode = mode)
             "hotspot" -> q.copy(mode = mode, hotspots = q.hotspots.takeIf { it.size == q.options.size } ?: List(q.options.size) { ir.exam.app.ui.builder.HotspotRect(0f, 0f, 0f, 0f) })
             else -> q.copy(mode = "")
         }

@@ -63,6 +63,9 @@
       }
       /* V305 — ابتدایی: مرتب‌سازی (موارد بُرخورده) و انتخاب روی تصویر (ناحیه‌ها به اندیس اصلی گزینه) */
       if (obj.mode === 'order' && type === 'fill') { q.mode = 'order'; q.orderItems = strs(obj.items).map(function (x) { return x.trim(); }).filter(Boolean); }
+      /* V306 — پاسخ با تخته (تشریحی ابتدایی) و املا (جای خالی + متن «بخوان») */
+      if (obj.mode === 'draw' && type === 'essay') q.mode = 'draw';
+      if (obj.mode === 'dictation' && type === 'fill') { q.mode = 'dictation'; q.dictationText = obj.speak ? String(obj.speak) : ''; }
       if (obj.mode === 'hotspot' && type === 'multiple') { q.mode = 'hotspot'; q.hotspots = (Array.isArray(obj.hotspots) ? obj.hotspots : []).map(function (h) { return {x: Number(h.x) || 0, y: Number(h.y) || 0, w: Number(h.w) || 0, h: Number(h.h) || 0}; }); }
       return q;
     });
@@ -272,7 +275,7 @@
     speechState.btn = b;
     b.addEventListener('click', function () {
       if (speechState.speaking) { speechStop(); return; }
-      var text = speechForQuestion(q); if (!text) return;
+      var text = (q.mode === 'dictation' && q.dictationText) ? q.dictationText : speechForQuestion(q); if (!text) return;
       var u = new SpeechSynthesisUtterance(text); u.lang = 'fa-IR'; u.rate = 0.85;
       var voices = window.speechSynthesis.getVoices() || [];
       var v = voices.filter(function (x) { return /^fa/i.test(x.lang); })[0]; if (v) u.voice = v;
@@ -383,7 +386,7 @@
       body.appendChild(txt);
       richHtml(q.text).then(function (h) { if (ex.questions[run.index] === q) { txt.innerHTML = h; fitMath(txt); } });
       if (p.audio) body.appendChild(el('audio', {controls: 'controls', src: p.audio, style: 'width:100%;margin:8px 0'}));
-      else if (ex.primary) body.appendChild(readAloudButton(q)); /* V302 — ابتدایی: «بخوان» با صدای مرورگر وقتی معلم صدا نگذاشته */
+      else if (ex.primary || q.mode === 'dictation') body.appendChild(readAloudButton(q)); /* V302 — ابتدایی: «بخوان» با صدای مرورگر وقتی معلم صدا نگذاشته */
       if (q.images.length) body.appendChild(el('div', {class: 'st-imgs'}, q.images.map(function (u) { return el('img', {src: u, onclick: function () { lightbox(u); }}); })));
       body.appendChild(answerArea(q));
     }
@@ -534,14 +537,19 @@
           richHtml(l).then(function (h) { var g = row.querySelector('.grow'); g.innerHTML = '<b>' + fa(li + 1) + '.</b> ' + h; fitMath(g); });
           box.appendChild(row);
         });
+      } else if (ex.primary && q.type === 'essay' && q.mode === 'draw') {
+        /* V306 — ابتدایی: پاسخ با تخته؛ کادر متنی نیست */
+        box.appendChild(el('p', {class: 'st-hint', text: 'پاسخ را روی تخته بکشید و ذخیره کنید؛ با دکمهٔ تخته زیر باز کنید.'}));
       } else {
         var ta = el('textarea', {class: 'st-input', rows: 6, placeholder: 'پاسخ تشریحی خود را بنویسید…'}); ta.value = a != null ? String(a) : '';
         ta.addEventListener('input', function () { set(ta.value); });
         box.appendChild(ta);
       }
       /* تصویر پاسخ / تخته */
-      var whiteboardOnly = q.pres.allowAnswerGraph && q.maxAnswerImages <= 0;
-      if (q.maxAnswerImages > 0 || q.pres.allowAnswerGraph) {
+      /* V306 — پاسخ با تخته: تخته همیشه (بزرگ) نشان داده می‌شود */
+      var drawMode = ex.primary && q.type === 'essay' && q.mode === 'draw';
+      var whiteboardOnly = (q.pres.allowAnswerGraph || drawMode) && q.maxAnswerImages <= 0;
+      if (q.maxAnswerImages > 0 || q.pres.allowAnswerGraph || drawMode) {
         var imgs = run.images[q.id] || [];
         var sec = el('div', {class: 'st-imgsec'});
         sec.appendChild(el('div', {class: 'row'}, [el('b', {style: 'font-size:13px', text: whiteboardOnly ? '🖍 تختهٔ سفید (پاسخ ترسیمی)' : ('📷 تصویر پاسخ' + (q.answerImagesRequired ? ' (اجباری)' : ' (اختیاری)') + ' — تا ' + fa(q.maxAnswerImages) + ' تصویر')}), el('span', {class: 'grow'}),

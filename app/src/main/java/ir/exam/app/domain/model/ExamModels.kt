@@ -61,7 +61,9 @@ data class EssayQuestion(
     override val images: List<String> = emptyList(),
     override val maxAnswerImages: Int = 0,
     override val answerImagesRequired: Boolean = false,
-    override val originalIndex: Int = 0
+    override val originalIndex: Int = 0,
+    /** V306 — حالت پاسخ: "text" (پیش‌فرض) یا "draw" (پاسخ با تخته/نقاشی بزرگ، حالت ابتدایی). */
+    val answerMode: String = "text"
 ) : Question
 
 data class MultipleChoiceQuestion(
@@ -102,7 +104,9 @@ data class FillBlankQuestion(
     override val answerImagesRequired: Boolean = false,
     override val originalIndex: Int = 0,
     /** V305 — مرتب‌سازی با کشیدن: موارد (به ترتیب نمایش بُرخورده)؛ خالی = جای خالی عادی. پاسخ = ترتیب با «,». */
-    val orderItems: List<String> = emptyList()
+    val orderItems: List<String> = emptyList(),
+    /** V306 — املا: متنی که «بخوان» می‌خواند (فقط وقتی صدای معلم نیست؛ در پاسخ عمومی همین است). */
+    val dictationText: String? = null
 ) : Question
 
 data class NumericQuestion(

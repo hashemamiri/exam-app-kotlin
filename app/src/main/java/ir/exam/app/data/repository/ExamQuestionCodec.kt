@@ -179,9 +179,9 @@ internal object ExamQuestionCodec {
                 audioBytes = (obj["audioBytes"] as? JsonPrimitive)?.longOrNull ?: 0L,
                 audioMs = (obj["audioMs"] as? JsonPrimitive)?.longOrNull ?: 0L,
                 // V305 — حالت ویژهٔ ابتدایی (مرتب‌سازی / انتخاب روی تصویر)
-                mode = obj["mode"]?.asString()?.takeIf { it in setOf("order", "hotspot") }.orEmpty(),
+                mode = obj["mode"]?.asString()?.takeIf { it in setOf("order", "hotspot", "draw", "dictation") }.orEmpty(),
                 // ترتیب درست فقط در کلید پاسخ (accept[0]) است؛ public items بُرخورده است.
-                orderItems = key["accept"].asArrayOrEmpty().firstOrNull()?.asString()
+                orderItems = if (obj["mode"]?.asString() != "order") emptyList() else key["accept"].asArrayOrEmpty().firstOrNull()?.asString()
                     ?.split(',')?.map { it.trim() }?.filter { it.isNotBlank() }
                     ?: obj["items"].asArrayOrEmpty().map { it.asString().orEmpty() },
                 hotspots = obj["hotspots"].asArrayOrEmpty().mapNotNull { h ->
@@ -251,7 +251,14 @@ internal object ExamQuestionCodec {
                 }
             }
             // V305 — حالت ویژه: mode/items/hotspots فقط وقتی فعال است نوشته می‌شود
-            values.remove("mode"); values.remove("items"); values.remove("hotspots")
+            values.remove("mode"); values.remove("items"); values.remove("hotspots"); values.remove("speak")
+            // V306 — پاسخ با تخته: فقط نشانهٔ حالت؛ پاسخ دانش‌آموز تصویر تخته است.
+            if (question.type == QuestionType.ESSAY && question.mode == "draw") values["mode"] = JsonPrimitive("draw")
+            // V306 — املا: صدای معلم اولویت دارد؛ اگر صدا نباشد، متن املا برای «بخوان» (TTS دستگاه) در سؤال عمومی می‌آید.
+            if (question.type == QuestionType.FILL_BLANK && question.mode == "dictation") {
+                values["mode"] = JsonPrimitive("dictation")
+                if (question.audioUri.isNullOrBlank()) values["speak"] = JsonPrimitive(question.expectedText.split('|').first().trim())
+            }
             if (question.type == QuestionType.FILL_BLANK && question.mode == "order") {
                 values["mode"] = JsonPrimitive("order")
                 // V305 — امنیت: موارد عمومی همیشه بُرخورده‌اند تا ترتیب درست در پاسخ عمومی لو نرود.

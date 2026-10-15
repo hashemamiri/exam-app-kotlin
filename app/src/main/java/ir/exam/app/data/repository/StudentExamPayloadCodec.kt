@@ -158,7 +158,9 @@ internal object StudentExamPayloadCodec {
             "fill", "fill_blank" -> FillBlankQuestion(
                 id, text, score, images, maxAnswerImages, answerImagesRequired, originalIndex,
                 // V305 — مرتب‌سازی: موارد همیشه با ترتیب پایدار بُر می‌خورند (مستقل از shuffle_opt)
-                orderItems = if (obj.text("mode") == "order") shuffledOrderItems(obj["items"].arrayStrings().filter { it.isNotBlank() }, "$optionSeed:$originalIndex:order") else emptyList()
+                orderItems = if (obj.text("mode") == "order") shuffledOrderItems(obj["items"].arrayStrings().filter { it.isNotBlank() }, "$optionSeed:$originalIndex:order") else emptyList(),
+                // V306 — املا: متن «بخوان» فقط وقتی در پاسخ عمومی آمده (صدای معلم نباشد)
+                dictationText = if (obj.text("mode") == "dictation") obj.text("speak")?.takeIf(String::isNotBlank) else null
             )
             "numeric", "number" -> NumericQuestion(
                 id, text, score, images, maxAnswerImages, answerImagesRequired, originalIndex
@@ -185,7 +187,9 @@ internal object StudentExamPayloadCodec {
                 )
             }
             else -> EssayQuestion(
-                id, text, score, images, maxAnswerImages, answerImagesRequired, originalIndex
+                id, text, score, images, maxAnswerImages, answerImagesRequired, originalIndex,
+                // V306 — پاسخ با تخته (حالت ابتدایی)
+                answerMode = if (obj.text("mode") == "draw") "draw" else "text"
             )
         }
     }

@@ -369,9 +369,10 @@ fun StudentExamContent(
                         ir.exam.app.ui.audio.QuestionAudioPlayer(url = audio, durationMs = presentation.audioMs, modifier = Modifier.fillMaxWidth())
                     }
                     // V302 — ابتدایی: اگر معلم صدا ضبط نکرده، دکمهٔ بزرگ «بخوان» با TTS دستگاه
-                    if (primary && presentation.audioUrl == null) {
+                    if ((primary || (question as? FillBlankQuestion)?.dictationText != null) && presentation.audioUrl == null) {
                         ir.exam.app.ui.audio.ReadAloudButton(
-                            text = remember(question.id) { ir.exam.app.core.speech.ReadAloudText.forQuestion(question) },
+                            // V306 — املا: «بخوان» فقط متن املا را می‌خواند
+                            text = remember(question.id) { (question as? FillBlankQuestion)?.dictationText ?: ir.exam.app.core.speech.ReadAloudText.forQuestion(question) },
                             modifier = Modifier.fillMaxWidth(),
                             key = question.id
                         )
@@ -405,7 +406,20 @@ fun StudentExamContent(
             }
             item {
                 when (question) {
-                    is EssayQuestion -> {
+                    is EssayQuestion -> if (question.answerMode == "draw") {
+                        // V306 — ابتدایی: پاسخ با تخته؛ کادر متنی نشان داده نمی‌شود
+                        Text("پاسخ را روی تخته بکشید و ذخیره کنید؛ با دکمهٔ بزرگ زیر باز کنید.", style = MaterialTheme.typography.bodyLarge)
+                        StudentWhiteboardEntry(
+                            questionId = question.id,
+                            current = if (question.maxAnswerImages > 0) emptyList() else state.responseImages[question.id].orEmpty(),
+                            onAdd = onAddImages,
+                            onRemove = onRemoveImage,
+                            questionNumber = state.questionIndex + 1,
+                            remainingSeconds = state.remainingSeconds,
+                            questionImages = question.images,
+                            big = true
+                        )
+                    } else {
                         // V57.0 — بخش آزاد پاسخ جدا از خطوط نامگذاری اطلس نگه‌داری
                         // می‌شود تا تایپ در کادر «پاسخ شما» پاسخ کادرهای شکل را پاک نکند.
                         val whole = (state.answers[question.id] as? TextAnswer)?.value.orEmpty()
@@ -573,7 +587,8 @@ fun StudentExamContent(
             // رسم آزاد می‌کند و نتیجه به‌عنوان تصویر پاسخ ثبت می‌شود.
             // V137 — «نمودار پاسخ دانش‌آموز» به‌کلی حذف شد؛ سؤالی که خودش نمودار دارد
             // (questionHasGraph) هم فقط تختهٔ وایت‌برد می‌گیرد.
-            if (presentation.allowAnswerGraph || questionHasGraph) {
+            val drawAnswer = (question as? EssayQuestion)?.answerMode == "draw"
+            if (!drawAnswer) if (presentation.allowAnswerGraph || questionHasGraph) {
                 item {
                     StudentWhiteboardEntry(
                         questionId = question.id,
@@ -594,7 +609,7 @@ fun StudentExamContent(
         val unanswered=exam.questions.mapIndexedNotNull { i,q ->
             val answer=state.answers[q.id]
             val answered=when(answer){is TextAnswer->answer.value.isNotBlank();is ChoiceAnswer,is BooleanAnswer->true;is MatchingAnswer->answer.pairs.isNotEmpty();else->false}
-            if(!answered)i+1 else null
+            if(!answered && state.responseImages[q.id].orEmpty().isEmpty())i+1 else null
         }
         AlertDialog(onDismissRequest=onDismissSubmit,title={Text(if (primary) "تمام شد؟" else "مرور پیش از ارسال")},text={Column(verticalArrangement=Arrangement.spacedBy(6.dp)){
             Text(if (primary) "به ${PersianDigits.convert(exam.questions.size-unanswered.size)} سؤال از ${PersianDigits.convert(exam.questions.size)} سؤال جواب دادی." else "پاسخ‌داده‌شده: ${exam.questions.size-unanswered.size} از ${exam.questions.size}")
@@ -831,13 +846,17 @@ private fun StudentWhiteboardEntry(
     onRemove: (String, String) -> Unit,
     questionNumber: Int = 0,
     remainingSeconds: Long = UNLIMITED_TIME,
-    questionImages: List<String> = emptyList()
+    questionImages: List<String> = emptyList(),
+    big: Boolean = false
 ) {
     var open by remember(questionId) { mutableStateOf(false) }
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Text("تخته وایت‌برد")
         // V137.1 — پیش‌نویس تخته ذخیره می‌شود؛ بازکردن دوباره همان محتوا را برای ویرایش می‌آورد.
-        Button(onClick = { open = true }) { Text(if (current.isEmpty()) "بازکردن تخته و نوشتن پاسخ" else "ویرایش تخته") }
+        // V306 — حالت نقاشی ابتدایی: دکمهٔ تمام‌عرض و بلند
+        Button(onClick = { open = true }, modifier = if (big) Modifier.fillMaxWidth().heightIn(min = 68.dp) else Modifier) {
+            Text(if (current.isEmpty()) "بازکردن تخته و نوشتن پاسخ" else "ویرایش تخته", fontSize = if (big) 20.sp else 14.sp)
+        }
         current.forEachIndexed { index, uri ->
             Column {
                 if (current.size > 1) Text("صفحهٔ ${index + 1}", style = MaterialTheme.typography.labelMedium)
