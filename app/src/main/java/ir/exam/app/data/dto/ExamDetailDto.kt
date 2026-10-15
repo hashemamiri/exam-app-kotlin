@@ -29,7 +29,9 @@ data class ExamDetailDto(
     @SerialName("attempt_cooldown") val attemptCooldown: Int = 0,
     @SerialName("pick_count") val pickCount: Int = 0,
     // V272 — قاعده‌های تصادفی بر اساس نوع؛ ستون نبود (SQL اجرا نشده) → خالی.
-    @SerialName("pick_rules") val pickRules: Map<String, Int> = emptyMap()
+    @SerialName("pick_rules") val pickRules: Map<String, Int> = emptyMap(),
+    // V301 — تنظیمات نمایشی ({"primary": true}); ستون نبود → خالی.
+    @SerialName("options") val options: kotlinx.serialization.json.JsonObject? = null
 )
 
 @Serializable

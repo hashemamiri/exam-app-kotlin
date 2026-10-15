@@ -72,7 +72,7 @@
       if (exp != null) { var sn = parseMs(raw.server_now); deadline = now + (sn != null ? exp - sn : exp - now); }
       else deadline = duration > 0 ? now + duration * 60000 : null;
     }
-    return {id: examId, title: (raw.title || '').trim() || 'آزمون', code: raw.code || '', duration: duration, questions: ordered, subject: raw.subject || '', teacherMessage: (raw.teacher_message || '').trim() || null, deadline: deadline,
+    return {id: examId, primary: !!(raw.options && raw.options.primary), /* V301 — حالت ابتدایی */ title: (raw.title || '').trim() || 'آزمون', code: raw.code || '', duration: duration, questions: ordered, subject: raw.subject || '', teacherMessage: (raw.teacher_message || '').trim() || null, deadline: deadline,
       attemptsAllowed: Math.max(1, Math.min(5, Number(raw.attempts_allowed) || 1)), attemptNumber: raw.attempt_no != null ? Number(raw.attempt_no) : (raw.attempt_number != null ? Number(raw.attempt_number) : null), attemptsRemaining: raw.attempts_remaining != null ? Number(raw.attempts_remaining) : null, raw: raw};
   }
 
@@ -301,7 +301,7 @@
 
   function examUI(c) {
     var ex = run.exam;
-    var wrap = el('div', {class: 'st-exam'});
+    var wrap = el('div', {class: 'st-exam' + (ex.primary ? ' primary' : '')}); /* V301 — کلاس primary: متن درشت و گزینه‌های بزرگ */
     wrap.appendChild(netBanner()); /* V231 — نوار قطع اینترنت */
     var timerEl = el('span', {class: 'st-timer'});
     var head = el('div', {class: 'card st-head'}, [
@@ -314,6 +314,7 @@
     var nav = el('div', {class: 'st-nav'});
     var body = el('div', {class: 'card st-body'});
     var foot = el('div', {class: 'row', style: 'margin-top:12px'});
+    if (ex.primary) nav.style.display = 'none'; /* V301 — ابتدایی: نوار شماره‌ها پنهان؛ فقط قبلی/بعدی بزرگ */
     wrap.appendChild(nav); wrap.appendChild(body); wrap.appendChild(foot);
     function answered(q) { var a = run.answers[q.id]; return (a != null && a !== '' && !(typeof a === 'object' && !Object.keys(a).length)) || (run.images[q.id] || []).length > 0; }
     function drawNav() {
@@ -353,7 +354,7 @@
           box.appendChild(lab);
         });
       } else if (q.type === 'truefalse') {
-        box.appendChild(el('div', {class: 'row'}, [[true, '✓ صحیح'], [false, '✗ غلط']].map(function (o) { return el('button', {class: 'btn ' + (a === o[0] ? '' : 'light'), text: o[1], onclick: function () { set(o[0]); box.replaceWith(answerArea(q)); }}); })));
+        box.appendChild(el('div', {class: 'row st-tf'}, [[true, ex.primary ? '✅ درست' : '✓ صحیح'], [false, ex.primary ? '❌ نادرست' : '✗ غلط']].map(function (o) { return el('button', {class: 'btn ' + (a === o[0] ? '' : 'light'), text: o[1], onclick: function () { set(o[0]); box.replaceWith(answerArea(q)); }}); })));
       } else if (q.type === 'fill' || q.type === 'numeric') {
         var i = el('input', {type: 'text', class: 'st-input', placeholder: q.type === 'numeric' ? 'پاسخ عددی' : 'پاسخ جای خالی', value: a != null ? String(a) : '', style: (q.type === 'numeric' ? 'direction:ltr;text-align:left;' : '') + 'flex:1;min-width:0'});
         i.addEventListener('input', function () { var v = i.value; if (q.type === 'numeric') { v = en(v).replace(/[^0-9.\-]/g, ''); i.value = v; } set(v); });
@@ -463,7 +464,7 @@
       run.finished = true; stopAll(); activeSet(null); draftClear(ex.id);
       ov.remove();
       c.innerHTML = '';
-      c.appendChild(el('div', {class: 'card', style: 'max-width:520px;margin:0 auto;text-align:center'}, [el('div', {style: 'font-size:48px', text: '✅'}), el('h3', {text: 'پاسخ‌های شما ثبت شد'}), raw && raw.receipt ? el('p', {class: 'muted', text: 'کد رهگیری: ' + raw.receipt}) : null,
+      c.appendChild(el('div', {class: 'card', style: 'max-width:520px;margin:0 auto;text-align:center'}, [el('div', {style: 'font-size:48px', text: ex.primary ? '🌟' : '✅'}), el('h3', {text: ex.primary ? 'آفرین! پاسخ‌هایت ثبت شد' : 'پاسخ‌های شما ثبت شد'}), raw && raw.receipt ? el('p', {class: 'muted', text: 'کد رهگیری: ' + raw.receipt}) : null,
         auto ? el('p', {class: 'muted', text: 'زمان آزمون به پایان رسید و پاسخ‌ها به‌صورت خودکار ارسال شد.'}) : null,
         el('div', {class: 'row', style: 'justify-content:center;margin-top:12px'}, [el('button', {class: 'btn', text: 'کارنامه', onclick: function () { run = null; S.go('grades'); }}), el('button', {class: 'btn light', text: 'آزمون دیگر', onclick: function () { run = null; S.go('join'); }})])]));
     } catch (e) {

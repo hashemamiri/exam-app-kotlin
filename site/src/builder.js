@@ -219,8 +219,11 @@
   }
 
   var state = null;
+  /* V301 — پایه‌های ابتدایی */
+  var PRIMARY_GRADES = ['پیش‌دبستانی', 'اول', 'دوم', 'سوم', 'چهارم', 'پنجم', 'ششم'];
+  function isPrimaryGrade(g) { g = String(g || '').trim().replace(/ي/g, 'ی').replace(/ك/g, 'ک'); if (!g) return false; return PRIMARY_GRADES.some(function (p) { return g === p || g.indexOf(p + ' ') === 0; }) || g.indexOf('ابتدایی') >= 0 || g.indexOf('دبستان') >= 0; }
   function blankState(mode) {
-    return {mode: mode || 'online', examId: null, code: null, title: '', subject: '', duration: '', opensAt: '', closesAt: '', questions: [], shuffleQuestions: false, shuffleOptions: false, negativeMarking: '', teacherMessage: '', attemptsAllowed: 1, attemptOnTimeout: false, gradePolicy: 'last', attemptCooldown: '',
+    return {mode: mode || 'online', examId: null, code: null, title: '', subject: '', duration: '', opensAt: '', closesAt: '', questions: [], shuffleQuestions: false, shuffleOptions: false, negativeMarking: '', teacherMessage: '', attemptsAllowed: 1, attemptOnTimeout: false, gradePolicy: 'last', attemptCooldown: '', primaryMode: false, /* V301 */
       audienceMode: 'all', audienceClasses: [], audienceStudents: [], audienceSchools: [], availableClasses: [], availableStudents: [], availableSchools: [], selected: 0, dirty: false, printId: null, bankEdit: null};
   }
   function isoToLocal(iso) { if (!iso) return ''; try { var d = new Date(iso); var p = function (n) { return (n < 10 ? '0' : '') + n; }; return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()) + 'T' + p(d.getHours()) + ':' + p(d.getMinutes()); } catch (e) { return ''; } }
@@ -250,7 +253,7 @@
   }
   async function loadOptions(st) {
     var r = await Promise.all([S.rpc('my_classes', {}).catch(function () { return []; }), S.rpc('my_students_for_pick', {}).catch(function () { return []; }), S.rpcObj('native_teacher_schools_v61', {}).catch(function () { return {items: []}; })]);
-    st.availableClasses = (r[0] || []).map(function (k) { return {id: k.id, name: k.name}; });
+    st.availableClasses = (r[0] || []).map(function (k) { return {id: k.id, name: k.name, grade: k.grade || ''}; }); /* V301 — پایه برای پیش‌فرض ابتدایی */
     st.availableStudents = (r[1] || []).map(function (s) { return {id: s.id, name: s.full_name, classNames: s.class_names}; });
     st.availableSchools = (r[2].items || []).map(function (s) { return {id: s.id, name: s.name, city: s.city}; });
   }
@@ -260,7 +263,7 @@
     var keys = {}; (Array.isArray(exam.__answers) ? exam.__answers : []).forEach(function (k, i) { if (k && typeof k === 'object') keys[k.i != null ? k.i : i] = k; });
     st.examId = exam.id; st.code = exam.code; st.title = exam.title || ''; st.subject = exam.subject || ''; st.duration = exam.duration != null ? String(exam.duration) : ''; st.opensAt = isoToLocal(exam.opens_at); st.closesAt = isoToLocal(exam.closes_at);
     st.questions = (Array.isArray(exam.questions) ? exam.questions : []).map(function (q, i) { return decodeQuestion(q, keys[i]); });
-    st.shuffleQuestions = !!exam.shuffle_q; st.shuffleOptions = !!exam.shuffle_opt; st.negativeMarking = exam.neg_marking ? String(exam.neg_marking) : ''; st.teacherMessage = exam.teacher_message || '';
+    st.shuffleQuestions = !!exam.shuffle_q; st.shuffleOptions = !!exam.shuffle_opt; st.primaryMode = !!(exam.options && exam.options.primary); /* V301 */ st.negativeMarking = exam.neg_marking ? String(exam.neg_marking) : ''; st.teacherMessage = exam.teacher_message || '';
     st.attemptsAllowed = Math.max(1, Math.min(5, Number(exam.attempts_allowed) || 1)); st.attemptOnTimeout = !!exam.attempt_on_timeout; st.gradePolicy = exam.grade_policy || 'last'; st.attemptCooldown = exam.attempt_cooldown ? String(exam.attempt_cooldown) : ''; st.pickCount = exam.pick_count ? String(exam.pick_count) : ''; st.pickRules = (exam.pick_rules && typeof exam.pick_rules === 'object') ? Object.assign({}, exam.pick_rules) : {}; /* V272 */ /* V255 */
     await loadOptions(st);
     try { var a = await S.rpcObj('get_exam_audience', {p_exam: examId}); st.audienceMode = a.mode || 'all'; st.audienceClasses = a.classes || []; st.audienceStudents = a.students || []; } catch (e) {}
@@ -949,6 +952,8 @@
       ]));
       var prw = el('div', {class: 'b-pr-wrap'}); var prb = pickRulesBox(state); if (prb) prw.appendChild(prb); m_.appendChild(prw); /* V272 — V275: ظرف ثابت تا با افزودن/حذف سؤال تازه شود */
       m_.appendChild(el('div', {class: 'row', style: 'margin-bottom:12px'}, [chk('به‌هم‌ریختن سؤال‌ها', state.shuffleQuestions, function (v) { state.shuffleQuestions = v; mark(); }), chk('به‌هم‌ریختن گزینه‌ها', state.shuffleOptions, function (v) { state.shuffleOptions = v; mark(); }), chk('ثبت خودکار با پایان زمان', state.attemptOnTimeout, function (v) { state.attemptOnTimeout = v; mark(); })]));
+      /* V301 — حالت ابتدایی (اول تا ششم): با انتخاب کلاس ابتدایی خودکار روشن می‌شود؛ معلم می‌تواند تغییر دهد. */
+      m_.appendChild(el('div', {class: 'row', style: 'margin-bottom:12px;flex-wrap:wrap;gap:8px'}, [chk('حالت ابتدایی (اول تا ششم)', state.primaryMode, function (v) { state.primaryMode = v; mark(); }), el('span', {class: 'muted', style: 'font-size:12px', text: 'متن درشت، گزینه‌های بزرگ و لمسی، یک سؤال در هر صفحه، زمان‌سنج کم‌رنگ و پایان دوستانه.'})]));
       var tm = el('textarea', {rows: 2, style: 'width:100%;border:1px solid var(--line);border-radius:10px;padding:8px'}); tm.value = state.teacherMessage; tm.addEventListener('input', function () { state.teacherMessage = tm.value; mark(); });
       m_.appendChild(el('div', {class: 'field'}, [el('label', {text: 'پیام معلم به دانش‌آموز (اختیاری)'}), tm]));
       /* مخاطبان */
@@ -962,7 +967,7 @@
         if (!src) return;
         if (!src.length) { aud.appendChild(el('div', {class: 'alert warn', text: 'موردی برای انتخاب وجود ندارد.'})); return; }
         var box = el('div', {class: 'b-aud'});
-        src.forEach(function (o) { var c = el('input', {type: 'checkbox'}); c.checked = sel_.indexOf(o.id) >= 0; c.addEventListener('change', function () { var ix = sel_.indexOf(o.id); if (c.checked && ix < 0) sel_.push(o.id); if (!c.checked && ix >= 0) sel_.splice(ix, 1); mark(); }); box.appendChild(el('label', {class: 'row', style: 'gap:6px'}, [c, o.name + (o.classNames ? ' (' + o.classNames + ')' : '') + (o.city ? ' — ' + o.city : '')])); });
+        src.forEach(function (o) { var c = el('input', {type: 'checkbox'}); c.checked = sel_.indexOf(o.id) >= 0; c.addEventListener('change', function () { var ix = sel_.indexOf(o.id); if (c.checked && ix < 0) { sel_.push(o.id); if (state.audienceMode === 'classes' && isPrimaryGrade(o.grade) && !state.primaryMode) { state.primaryMode = true; } } if (!c.checked && ix >= 0) sel_.splice(ix, 1); mark(); }); box.appendChild(el('label', {class: 'row', style: 'gap:6px'}, [c, o.name + (o.classNames ? ' (' + o.classNames + ')' : '') + (o.city ? ' — ' + o.city : '')])); });
         aud.appendChild(box);
       }
       drawAud(); m_.appendChild(aud);
@@ -1091,7 +1096,7 @@
         var enc = encodeQuestions(state.questions);
         var code = state.code || genCode();
         var payload = {operation_id: uuid(), id: examId, code: code, title: state.title.trim(), subject: state.subject.trim(), duration: Math.max(0, Math.min(1440, parseInt(state.duration, 10) || 0)), opens_at: opens, closes_at: closes,
-          total_score: state.questions.reduce(function (s, q) { return s + (Number(q.score) || 0); }, 0), shuffle_q: !!state.shuffleQuestions, shuffle_opt: !!state.shuffleOptions, neg_marking: parseFloat(state.negativeMarking) || 0,
+          total_score: state.questions.reduce(function (s, q) { return s + (Number(q.score) || 0); }, 0), shuffle_q: !!state.shuffleQuestions, shuffle_opt: !!state.shuffleOptions, options: {primary: !!state.primaryMode}, /* V301 */ neg_marking: parseFloat(state.negativeMarking) || 0,
           teacher_message: state.teacherMessage.trim() || null, attempts_allowed: Math.max(1, Math.min(5, state.attemptsAllowed)), attempt_on_timeout: !!state.attemptOnTimeout, grade_policy: state.gradePolicy, attempt_cooldown: Math.max(0, Math.min(1440, parseInt(state.attemptCooldown, 10) || 0)), pick_count: Math.max(0, Math.min(9999, parseInt(state.pickCount, 10) || 0)), pick_rules: pickRulesClean(state), /* V272 */
           questions: enc.publicQuestions, answer_key: enc.answerKey, audience: state.audienceMode, classes: state.audienceClasses.slice().sort(), students: state.audienceStudents.slice().sort(), schools: state.audienceSchools.slice().sort()};
         var n = state.questions.length;

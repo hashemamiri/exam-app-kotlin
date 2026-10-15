@@ -836,6 +836,20 @@ private fun ExamSettingsCard(state: ExamBuilderState, viewModel: ExamBuilderView
                     modifier = Modifier.weight(1f)
                 )
             }
+            // V301 — «حالت ابتدایی» (پایهٔ اول تا ششم): نمای درشت و ساده برای دانش‌آموز؛ با انتخاب کلاس ابتدایی خودکار روشن می‌شود.
+            Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                BoldToggleChip(
+                    label = "حالت ابتدایی (اول تا ششم)",
+                    selected = state.primaryMode,
+                    onClick = { viewModel.setPrimaryMode(!state.primaryMode) },
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Text(
+                    "متن درشت، گزینه‌های بزرگ و لمسی، یک سؤال در هر صفحه، زمان‌سنج کم‌رنگ و پایان دوستانه (اپ و سایت).",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
                 BoldToggleChip(
                     label = "اتمام تلاش در پایان زمان",

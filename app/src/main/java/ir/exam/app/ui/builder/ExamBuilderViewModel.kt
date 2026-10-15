@@ -139,6 +139,7 @@ class ExamBuilderViewModel(
                 attemptCooldown = draft.attemptCooldown,
                 pickCount = draft.pickCount,
                 pickRules = draft.pickRules, // V272
+                primaryMode = draft.primaryMode, // V301
                 audienceMode = draft.audienceMode,
                 audienceClasses = draft.audienceClasses,
                 audienceStudents = draft.audienceStudents,
@@ -175,6 +176,8 @@ class ExamBuilderViewModel(
     fun setTeacherMessage(value: String) { _state.update { it.copy(teacherMessage = value.take(1000), error = null) } }
     fun setShuffleQuestions(value: Boolean) { _state.update { it.copy(shuffleQuestions = value) } }
     fun setShuffleOptions(value: Boolean) { _state.update { it.copy(shuffleOptions = value) } }
+    // V301 — «حالت ابتدایی»؛ معلم هر وقت بخواهد دستی تغییر می‌دهد.
+    fun setPrimaryMode(value: Boolean) { _state.update { it.copy(primaryMode = value) } }
     fun setAttempts(value: Int) { _state.update { it.copy(attemptsAllowed = value.coerceIn(1, 5)) } }
     fun setAttemptOnTimeout(value: Boolean) { _state.update { it.copy(attemptOnTimeout = value) } }
     fun setGradePolicy(value: String) { if (value in setOf("last", "best", "all")) _state.update { it.copy(gradePolicy = value) } }
@@ -198,7 +201,15 @@ class ExamBuilderViewModel(
     fun setAudienceMode(value: String) {
         if (value in setOf("all", "schools", "classes", "students")) _state.update { it.copy(audienceMode = value) }
     }
-    fun toggleAudienceClass(id: String) { _state.update { it.copy(audienceClasses = it.audienceClasses.toggle(id)) } }
+    fun toggleAudienceClass(id: String) {
+        _state.update { st ->
+            val classes = st.audienceClasses.toggle(id)
+            // V301 — پیش‌فرض از پایهٔ کلاس: افزودن کلاس ابتدایی (وقتی هنوز روشن نیست) → حالت ابتدایی روشن؛ معلم می‌تواند خاموشش کند.
+            val added = id in classes && id !in st.audienceClasses
+            val isPrimaryClass = st.availableClasses.firstOrNull { it.id == id }?.let { PrimaryGrades.isPrimary(it.grade) } == true
+            st.copy(audienceClasses = classes, primaryMode = st.primaryMode || (added && isPrimaryClass))
+        }
+    }
     fun toggleAudienceStudent(id: String) { _state.update { it.copy(audienceStudents = it.audienceStudents.toggle(id)) } }
     fun toggleAudienceSchool(id: String) { _state.update { it.copy(audienceSchools = it.audienceSchools.toggle(id)) } }
 
@@ -823,6 +834,7 @@ private fun draftFingerprint(state: ExamBuilderState): Int = listOf(
     state.attemptCooldown,
     state.pickCount,
     state.pickRules,
+    state.primaryMode, // V301
     state.audienceMode,
     state.audienceClasses,
     state.audienceStudents,

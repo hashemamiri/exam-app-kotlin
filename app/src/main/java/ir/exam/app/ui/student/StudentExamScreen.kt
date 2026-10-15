@@ -16,6 +16,17 @@ import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.CardDefaults
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.Density
+import ir.exam.app.core.calendar.PersianDigits
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -212,14 +223,17 @@ fun StudentExamContent(
             if (!finishedNow) securityEventNow("exam_screen_leave")
         }
     }
+    val primary = exam.primaryMode // V301 — حالت ابتدایی
     if (state.finished) {
         Column(Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            if (primary) Text("🌟", style = MaterialTheme.typography.displayMedium) // V301 — پایان دوستانه
             Text(
-                if (state.queued) "پاسخ شما در صف امن ارسال است." else "پاسخ شما با موفقیت ثبت شد.",
+                if (primary) (if (state.queued) "آفرین! پاسخ‌هایت ذخیره شد و به‌زودی فرستاده می‌شود." else "آفرین! پاسخ‌هایت ثبت شد.")
+                else if (state.queued) "پاسخ شما در صف امن ارسال است." else "پاسخ شما با موفقیت ثبت شد.",
                 style = MaterialTheme.typography.headlineSmall,
                 color = if (state.queued) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.primary
             )
-            Text("کد آزمون: ${exam.code}")
+            if (!primary) Text("کد آزمون: ${exam.code}")
             state.submissionMessage?.let { Text(it) }
             if (state.queued) {
                 Text("تا ارسال موفق، پیش‌نویس و تصاویر از دستگاه حذف نمی‌شوند.")
@@ -248,7 +262,10 @@ fun StudentExamContent(
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 OutlinedButton(onClick = { showExit = true }) { Text("خروج") }
-                ExamCountdownText(
+                // V301 — ابتدایی: زمان‌سنج کم‌رنگ و کوچک (بدون استرس)
+                if (primary) Box(Modifier.alpha(0.55f)) {
+                    ExamCountdownText(initialRemainingSeconds = state.remainingSeconds, totalSeconds = state.totalSeconds, paused = state.timerPaused)
+                } else ExamCountdownText(
                     initialRemainingSeconds = state.remainingSeconds,
                     totalSeconds = state.totalSeconds,
                     // V121 — وقتی معلم وسط آزمون ویرایش می‌کند، تایمر باید واقعاً
@@ -257,20 +274,37 @@ fun StudentExamContent(
                     paused = state.timerPaused
                 )
                 Button(onClick = onSubmit, enabled = !state.submitting) {
-                    Text(if (state.submitting) "در حال ارسال..." else "ارسال نهایی")
+                    Text(if (state.submitting) "در حال ارسال..." else if (primary) "تمام شد" else "ارسال نهایی")
                 }
             }
         }
     ) { padding ->
+        // V301 — ابتدایی: همهٔ متن‌ها ۳۰٪ درشت‌تر (fontScale) و فاصلهٔ بیشتر
+        val baseDensity = LocalDensity.current
+        CompositionLocalProvider(LocalDensity provides if (primary) Density(baseDensity.density, baseDensity.fontScale * 1.3f) else baseDensity) {
         LazyColumn(
             modifier = Modifier.padding(padding).padding(18.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+            verticalArrangement = Arrangement.spacedBy(if (primary) 18.dp else 12.dp)
         ) {
             // V281 — نوار اطمینان: قطع اینترنت ⇒ هشدار کهربایی با توضیح ساده؛ وصل ⇒ «ذخیره روی دستگاه» با ساعت آخرین ذخیره
             item { ConnectionBanner(online = state.online, savedAtMs = state.draftSavedAtMs) }
             // V58.0 — هدر و نام آزمون حذف شد؛ شماره سؤال‌ها در یک سطر اسکرول‌شونده
             // با آیکن قبلی/بعدی در دو سر؛ نگه‌داشتن ۲ ثانیه‌ای = علامت برای مرور.
-            item {
+            if (primary) item {
+                // V301 — ابتدایی: به‌جای نوار شماره‌ها، دو دکمهٔ بزرگ و «سؤال ۳ از ۱۰» در وسط
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Button(onClick = onPrevious, enabled = state.questionIndex > 0, modifier = Modifier.weight(1f).heightIn(min = 52.dp)) {
+                        Icon(Icons.Outlined.KeyboardArrowRight, contentDescription = null); Text("قبلی")
+                    }
+                    Text(
+                        "سؤال ${PersianDigits.convert(state.questionIndex + 1)} از ${PersianDigits.convert(exam.questions.size)}",
+                        style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center, modifier = Modifier.weight(1.2f)
+                    )
+                    Button(onClick = onNext, enabled = state.questionIndex < exam.questions.lastIndex, modifier = Modifier.weight(1f).heightIn(min = 52.dp)) {
+                        Text("بعدی"); Icon(Icons.Outlined.KeyboardArrowLeft, contentDescription = null)
+                    }
+                }
+            } else item {
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                     // V58.0.2 — آیکن‌های AutoMirrored در RTL برعکس رندر می‌شدند؛
                     // نسخهٔ غیرآینه‌ای: قبلی = فلش رو به راست، بعدی = رو به چپ.
@@ -307,7 +341,7 @@ fun StudentExamContent(
                     }
                 }
             }
-            item {
+            if (!primary) item {
                 Text("سؤال ${state.questionIndex + 1} از ${exam.questions.size} · بارم ${question.score}")
             }
             item {
@@ -399,9 +433,24 @@ fun StudentExamContent(
                             if (keypad) MathKeypad(numeric = true, onKey = { k -> onAnswer(TextAnswer(question.id, MathKeys.apply(current, k, numeric = true))) })
                         }
                     }
-                    is MultipleChoiceQuestion -> Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    is MultipleChoiceQuestion -> Column(verticalArrangement = Arrangement.spacedBy(if (primary) 12.dp else 8.dp)) {
                         question.options.forEachIndexed { displayIndex, option ->
                             val originalIndex = question.optionOriginalIndices.getOrElse(displayIndex) { displayIndex }
+                            val chosen = (state.answers[question.id] as? ChoiceAnswer)?.selectedIndex == originalIndex
+                            if (primary) {
+                                // V301 — ابتدایی: کارت بزرگ لمسی با نشان حرفی؛ انتخاب‌شده = حاشیهٔ رنگی و تیک
+                                PrimaryOptionCard(
+                                    label = listOf("الف", "ب", "ج", "د", "هـ", "و").getOrElse(displayIndex) { (displayIndex + 1).toString() },
+                                    selected = chosen,
+                                    onClick = { onAnswer(ChoiceAnswer(question.id, originalIndex)) }
+                                ) {
+                                    NativeMathText(option, zoomableFigures = true, fontSize = 18.sp)
+                                    question.optionImages.getOrNull(displayIndex)?.let { img ->
+                                        StudentCachedImage(img, "تصویر گزینه", Modifier.fillMaxWidth().heightIn(max = 220.dp))
+                                    }
+                                }
+                                return@forEachIndexed
+                            }
                             Card(Modifier.fillMaxWidth()) {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     RadioButton(
@@ -423,7 +472,12 @@ fun StudentExamContent(
                             }
                         }
                     }
-                    is TrueFalseQuestion -> Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    is TrueFalseQuestion -> if (primary) Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        // V301 — ابتدایی: دو کارت بزرگ «درست ✅» / «نادرست ❌»
+                        val current = (state.answers[question.id] as? BooleanAnswer)?.value
+                        PrimaryOptionCard(label = "✅", selected = current == true, onClick = { onAnswer(BooleanAnswer(question.id, true)) }, modifier = Modifier.weight(1f)) { Text("درست", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold) }
+                        PrimaryOptionCard(label = "❌", selected = current == false, onClick = { onAnswer(BooleanAnswer(question.id, false)) }, modifier = Modifier.weight(1f)) { Text("نادرست", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold) }
+                    } else Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         val current = (state.answers[question.id] as? BooleanAnswer)?.value
                         FilterChip(selected = current == true, onClick = { onAnswer(BooleanAnswer(question.id, true)) }, label = { Text("صحیح") })
                         FilterChip(selected = current == false, onClick = { onAnswer(BooleanAnswer(question.id, false)) }, label = { Text("غلط") })
@@ -465,6 +519,7 @@ fun StudentExamContent(
             }
             state.error?.let { item { Text(it, color = MaterialTheme.colorScheme.error) } }
         }
+        }
     }
     if(state.showSubmitReview){
         val unanswered=exam.questions.mapIndexedNotNull { i,q ->
@@ -472,8 +527,8 @@ fun StudentExamContent(
             val answered=when(answer){is TextAnswer->answer.value.isNotBlank();is ChoiceAnswer,is BooleanAnswer->true;is MatchingAnswer->answer.pairs.isNotEmpty();else->false}
             if(!answered)i+1 else null
         }
-        AlertDialog(onDismissRequest=onDismissSubmit,title={Text("مرور پیش از ارسال")},text={Column(verticalArrangement=Arrangement.spacedBy(6.dp)){
-            Text("پاسخ‌داده‌شده: ${exam.questions.size-unanswered.size} از ${exam.questions.size}")
+        AlertDialog(onDismissRequest=onDismissSubmit,title={Text(if (primary) "تمام شد؟" else "مرور پیش از ارسال")},text={Column(verticalArrangement=Arrangement.spacedBy(6.dp)){
+            Text(if (primary) "به ${PersianDigits.convert(exam.questions.size-unanswered.size)} سؤال از ${PersianDigits.convert(exam.questions.size)} سؤال جواب دادی." else "پاسخ‌داده‌شده: ${exam.questions.size-unanswered.size} از ${exam.questions.size}")
             Text(if(unanswered.isEmpty())"همه سؤال‌ها پاسخ دارند." else "بدون پاسخ: ${unanswered.joinToString("، ")}")
             val flags=exam.questions.mapIndexedNotNull{i,q->if(q.id in state.flaggedQuestionIds)i+1 else null}
             if(flags.isNotEmpty())Text("علامت‌گذاری‌شده برای مرور: ${flags.joinToString("، ")}")
@@ -499,6 +554,34 @@ fun StudentExamContent(
             },
             confirmButton = { Button(onClick = onDismissExamChanges) { Text("متوجه شدم") } }
         )
+    }
+}
+
+/** V301 — کارت گزینهٔ بزرگ حالت ابتدایی: کل کارت لمسی، نشان حرفی/نماد در راست، حاشیهٔ رنگی و پس‌زمینهٔ روشن وقتی انتخاب شده. */
+@Composable
+private fun PrimaryOptionCard(
+    label: String,
+    selected: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    content: @Composable ColumnScope.() -> Unit
+) {
+    val scheme = MaterialTheme.colorScheme
+    Card(
+        modifier = modifier.fillMaxWidth().clickable(onClick = onClick),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = if (selected) scheme.primaryContainer else scheme.surface),
+        border = androidx.compose.foundation.BorderStroke(if (selected) 3.dp else 1.dp, if (selected) scheme.primary else scheme.outlineVariant)
+    ) {
+        Row(Modifier.fillMaxWidth().padding(14.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            Box(
+                Modifier.size(44.dp).background(if (selected) scheme.primary else scheme.secondaryContainer, CircleShape),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(if (selected && label.length <= 2 && label.all { it.isLetter() }) "✓" else label, color = if (selected) scheme.onPrimary else scheme.onSecondaryContainer, fontWeight = FontWeight.Bold, fontSize = 18.sp)
+            }
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp), content = content)
+        }
     }
 }
 

@@ -15,7 +15,9 @@ data class Exam(
     val attemptsAllowed: Int = 1,
     val attemptNumber: Int? = null,
     val attemptsRemaining: Int? = null,
-    val questionPresentation: Map<String, QuestionPresentation> = emptyMap()
+    val questionPresentation: Map<String, QuestionPresentation> = emptyMap(),
+    /** V301 — «حالت ابتدایی»: نمای درشت و ساده برای پایهٔ اول تا ششم (exams.options.primary). */
+    val primaryMode: Boolean = false
 )
 
 data class QuestionPresentation(

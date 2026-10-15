@@ -101,7 +101,9 @@ internal object StudentExamPayloadCodec {
             attemptsAllowed = (raw.int("attempts_allowed") ?: 1).coerceIn(1, 5),
             attemptNumber = raw.int("attempt_no") ?: raw.int("attempt_number"),
             attemptsRemaining = raw.int("attempts_remaining"),
-            questionPresentation = presentations
+            questionPresentation = presentations,
+            // V301 — options.primary (سرور بدون SQL V301 این کلید را نمی‌فرستد → false)
+            primaryMode = (raw["options"] as? JsonObject)?.boolean("primary") == true
         )
     }
 

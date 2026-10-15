@@ -330,7 +330,17 @@ data class QuestionDraft(
     val rawAnswer: JsonObject = JsonObject(emptyMap())
 )
 
-data class AudienceClassOption(val id: String, val name: String)
+data class AudienceClassOption(val id: String, val name: String, val grade: String? = null)
+
+/** V301 — پایه‌های ابتدایی (اول تا ششم + پیش‌دبستانی): کلاس با این پایه، آزمون را به‌طور پیش‌فرض «ابتدایی» می‌کند. */
+object PrimaryGrades {
+    val names = setOf("پیش‌دبستانی", "اول", "دوم", "سوم", "چهارم", "پنجم", "ششم")
+    fun isPrimary(grade: String?): Boolean {
+        val g = grade.orEmpty().trim().replace("ي", "ی").replace("ك", "ک")
+        if (g.isEmpty()) return false
+        return names.any { it == g || g.startsWith("$it ") || g.startsWith("$it ابتدایی") } || g.contains("ابتدایی") || g.contains("دبستان")
+    }
+}
 data class AudienceStudentOption(val id: String, val name: String, val classNames: String? = null)
 data class AudienceSchoolOption(val id: String, val name: String, val city: String? = null)
 data class BankCategoryOption(val id: Long, val name: String, val count: Int = 0)
@@ -377,6 +387,8 @@ data class ExamBuilderState(
     val pickCount: String = "",
     // V272 — قاعده‌های بخش‌بندی‌شده: نوع سؤال (essay/multiple/…) → چند تا تصادفی؛ نوع بدون قاعده = همه. بر pickCount مقدم است.
     val pickRules: Map<String, Int> = emptyMap(),
+    // V301 — «حالت ابتدایی» (پایهٔ اول تا ششم): نمای درشت و سادهٔ دانش‌آموز؛ ذخیره در exams.options.primary
+    val primaryMode: Boolean = false,
     val audienceMode: String = "all",
     val audienceClasses: Set<String> = emptySet(),
     val audienceStudents: Set<String> = emptySet(),

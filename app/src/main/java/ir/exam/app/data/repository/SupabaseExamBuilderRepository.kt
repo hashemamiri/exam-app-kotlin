@@ -45,7 +45,7 @@ class SupabaseExamBuilderRepository(context: Context) {
             val classesDeferred = async {
                 SupabaseProvider.client.postgrest.rpc("my_classes")
                     .decodeList<SchoolClassDto>()
-                    .map { AudienceClassOption(it.id, it.name) }
+                    .map { AudienceClassOption(it.id, it.name, it.grade) } // V301 — پایه برای پیش‌فرض «ابتدایی»
             }
             val studentsDeferred = async {
                 SupabaseProvider.client.postgrest.rpc("my_students_for_pick")
@@ -114,6 +114,7 @@ class SupabaseExamBuilderRepository(context: Context) {
                 attemptCooldown = exam.attemptCooldown.toString(),
                 pickCount = exam.pickCount.takeIf { it > 0 }?.toString().orEmpty(),
                 pickRules = exam.pickRules.filterValues { it > 0 }, // V272
+                primaryMode = exam.options?.get("primary")?.let { (it as? kotlinx.serialization.json.JsonPrimitive)?.content == "true" } ?: false, // V301
                 audienceMode = if (audienceSchools.isNotEmpty()) "schools" else audience.mode,
                 audienceClasses = audience.classes,
                 audienceStudents = if (audienceSchools.isNotEmpty()) emptySet() else audience.students,
@@ -177,6 +178,8 @@ class SupabaseExamBuilderRepository(context: Context) {
             put("pick_count", state.pickCount.toIntOrNull()?.coerceIn(0, 9999) ?: 0)
             // V272 — قاعده‌های نوع سؤال؛ سرور فقط مقدارهای عددی مثبت را نگه می‌دارد.
             put("pick_rules", buildJsonObject { state.pickRules.forEach { (k, v) -> if (v > 0) put(k, v) } })
+            // V301 — تنظیمات نمایشی؛ سرور (SQL V301) آن را در exams.options نگه می‌دارد و به دانش‌آموز می‌دهد.
+            put("options", buildJsonObject { put("primary", state.primaryMode) })
             put("questions", encoded.publicQuestions)
             put("answer_key", encoded.answerKey)
             put("audience", state.audienceMode)
