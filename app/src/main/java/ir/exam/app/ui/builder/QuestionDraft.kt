@@ -335,6 +335,9 @@ data class QuestionDraft(
      * "hotspot" (چندگزینه‌ای → انتخاب روی تصویر؛ هر گزینه یک ناحیه در hotspots). کلید سیمی: mode / items / hotspots.
      */
     val mode: String = "",
+    // V308 / ۱۴ — برچسب پایه (۱ تا ۶؛ ۰ = بدون پایه) و درس؛ برای فیلتر بانک حالت ابتدایی
+    val grade: Int = 0,
+    val subject: String = "",
     val orderItems: List<String> = emptyList(),
     val hotspots: List<HotspotRect> = emptyList(),
     val rawPublic: JsonObject = JsonObject(emptyMap()),

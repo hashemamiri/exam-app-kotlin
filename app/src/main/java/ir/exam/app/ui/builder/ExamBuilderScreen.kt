@@ -1005,7 +1005,12 @@ private fun BuilderQuestionBankDialog(
     onAdd: (List<Long>) -> Unit
 ) {
     val query = state.bankQuery.trim().lowercase()
+    // V308 / ۱۴ — فیلتر پایه و درس فقط در حالت ابتدایی
+    var tagGrade by remember { mutableIntStateOf(0) }
+    var tagSubject by remember { mutableStateOf("") }
     val visible = state.bankQuestions.filter { item ->
+        (!state.primaryMode || tagGrade == 0 || item.question.grade == tagGrade) &&
+        (!state.primaryMode || tagSubject.isEmpty() || item.question.subject == tagSubject) &&
         (state.selectedBankCategory == null || state.selectedBankCategory in item.categoryIds) &&
             (query.isBlank() || item.question.text.lowercase().contains(query) ||
                 item.subject.orEmpty().lowercase().contains(query) ||
@@ -1039,6 +1044,14 @@ private fun BuilderQuestionBankDialog(
                 if (state.primaryMode) {
                     OutlinedButton(onClick = { primaryBankOpen = true }, modifier = Modifier.fillMaxWidth()) { Text("🏫 بانک آمادهٔ ابتدایی") }
                     if (primaryBankOpen) PrimaryBankDialog(viewModel = viewModel, onDismiss = { primaryBankOpen = false })
+                    Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        FilterChip(selected = tagGrade == 0, onClick = { tagGrade = 0 }, label = { Text("همه پایه‌ها") })
+                        (1..6).forEach { g -> FilterChip(selected = tagGrade == g, onClick = { tagGrade = g }, label = { Text("پایهٔ ${PersianDigits.convert(g)}") }) }
+                    }
+                    Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        FilterChip(selected = tagSubject.isEmpty(), onClick = { tagSubject = "" }, label = { Text("همه درس‌ها") })
+                        ir.exam.app.ui.builder.PrimaryBank.SUBJECTS.forEach { sub -> FilterChip(selected = tagSubject == sub, onClick = { tagSubject = sub }, label = { Text(sub) }) }
+                    }
                 }
                 OutlinedTextField(
                     state.bankQuery,
@@ -1545,6 +1558,8 @@ private fun QuestionEditor(
             if (primary && !printMode && (question.type == QuestionType.FILL_BLANK || question.type == QuestionType.MULTIPLE_CHOICE || question.type == QuestionType.ESSAY)) {
                 PrimaryModeChooser(question, viewModel)
             }
+            // V308 / ۱۴ — برچسب پایه و درس روی هر سؤال (فقط حالت ابتدایی)
+            if (primary && !printMode) PrimaryTagEditor(question, viewModel)
             when (question.type) {
                 QuestionType.MULTIPLE_CHOICE -> {
                     if (primary && !printMode && question.mode == "hotspot") PrimaryHotspotEditor(question, viewModel)
@@ -2208,6 +2223,26 @@ private fun QuestionType.faLabel(): String = when (this) {
  * ============================================================ */
 
 /** انتخاب نوع ویژهٔ سؤال: جای‌خالی → مرتب‌سازی؛ چندگزینه‌ای → انتخاب روی تصویر. */
+/** V308 / ۱۴ — برچسب پایه و درس سؤال؛ فیلتر بانک حالت ابتدایی از همین برچسب‌ها استفاده می‌کند. */
+@Composable
+private fun PrimaryTagEditor(question: QuestionDraft, viewModel: ExamBuilderViewModel) {
+    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Text("برچسب ابتدایی (برای فیلتر بانک)", style = MaterialTheme.typography.labelMedium)
+        Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            FilterChip(selected = question.grade == 0, onClick = { viewModel.setQuestionTags(question.id, 0, question.subject) }, label = { Text("بدون پایه") })
+            (1..6).forEach { g ->
+                FilterChip(selected = question.grade == g, onClick = { viewModel.setQuestionTags(question.id, g, question.subject) }, label = { Text("پایهٔ ${PersianDigits.convert(g)}") })
+            }
+        }
+        Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            FilterChip(selected = question.subject.isEmpty(), onClick = { viewModel.setQuestionTags(question.id, question.grade, "") }, label = { Text("بدون درس") })
+            ir.exam.app.ui.builder.PrimaryBank.SUBJECTS.forEach { sub ->
+                FilterChip(selected = question.subject == sub, onClick = { viewModel.setQuestionTags(question.id, question.grade, sub) }, label = { Text(sub) })
+            }
+        }
+    }
+}
+
 @Composable
 private fun PrimaryModeChooser(question: QuestionDraft, viewModel: ExamBuilderViewModel) {
     val choices = when (question.type) {

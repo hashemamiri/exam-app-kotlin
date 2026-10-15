@@ -25,6 +25,9 @@ data class PrimaryBankItem(
 object PrimaryBank {
     const val ASSET = "primary_bank.json"
 
+    /** V308 / ۱۴ — درس‌های ثابت حالت ابتدایی (برچسب سؤال و فیلتر بانک). */
+    val SUBJECTS = listOf("ریاضی", "فارسی", "علوم", "هدیه‌های آسمان", "مطالعات اجتماعی")
+
     fun parse(raw: String): List<PrimaryBankItem> {
         val root = Json.parseToJsonElement(raw).jsonObject
         val list = root["items"] as? JsonArray ?: return emptyList()
@@ -48,7 +51,10 @@ object PrimaryBank {
     }
 
     /** نوع ناشناخته یا گزینه‌ای با پاسخ نامعتبر → null (سؤال افزوده نمی‌شود). */
-    fun toDraft(item: PrimaryBankItem): QuestionDraft? = when (item.type) {
+    /** V308 / ۱۴ — پیش‌نویس با برچسب پایه و درس همان سؤال بانک. */
+    fun toDraft(item: PrimaryBankItem): QuestionDraft? = buildDraft(item)?.copy(grade = item.grade, subject = item.subject)
+
+    private fun buildDraft(item: PrimaryBankItem): QuestionDraft? = when (item.type) {
         "multiple" -> {
             val c = item.correct
             if (item.options.size < 2 || c == null || c !in item.options.indices) null

@@ -19430,6 +19430,14 @@ CI: `compileDebugUnitTestKotlin` به‌خاطر `assertFalse` بدون import �
 - باگ V202.5: `var LANDING_TILES` داخل `paintAuth` بعد از خطی که `landing()` را صدا می‌زد تعریف شده بود → به‌خاطر hoisting مقدارش undefined و `.map` خطا می‌داد → صفحهٔ اول خالی. حالا کنار `authActive` در سطح ماژول است (تست ترتیب را پین می‌کند).
 - دروازهٔ صفحهٔ اول: mobile.js `entered()/enter()` با `sessionStorage['m-entered']`، `gateActive() = MQ && user && !entered`؛ app.js `render()` پیش از m-mode اگر gateActive → paintAuth (landing حتی با user). دکمه: user ⇒ `enter(); S.render()`؛ وگرنه `goA('login')`؛ پیوند ثبت‌نام فقط بدون user. `afterLogin()` → `SiteMobile.enter()`.
 
+### V308 — ابتدایی: برچسب پایه و درس روی سؤال + فیلتر بانک (۱۴) (اپ 1.02.13 + سایت؛ مقصد: اصلی)
+- **پیش‌نیاز:** نصب V307 (5cd0b603). بسته روی پایهٔ 5cd0b603 ساخته شده است. **SQL:** لازم نیست.
+- **داده:** کلیدهای اختیاری `grade` (۱ تا ۶) و `subject` در JSON سؤال. فقط وقتی پر باشند نوشته می‌شوند. `QuestionDraft.grade/subject`؛ رمزگذار `ExamQuestionCodec` هر دو طرف را انجام می‌دهد؛ بانک سؤال از همان رمزگذار استفاده می‌کند.
+- **اپ:** `PrimaryTagEditor` در ویرایشگر (حالت ابتدایی، همهٔ نوع‌ها)؛ `setQuestionTags`؛ فیلتر پایه/درس در `BuilderQuestionBankDialog` (فقط حالت ابتدایی)؛ `PrimaryBank.SUBJECTS`؛ `PrimaryBank.toDraft` برچسب سؤال بانک ابتدایی را کپی می‌کند.
+- **سایت:** `decodeQuestion`/`encodeQuestions` برچسب‌ها را می‌خوانند و می‌نویسند؛ `primaryTagEditor` در ویرایشگر؛ `openBank` دو فیلتر پایه/درس (حالت ابتدایی).
+- **تست:** `V308_GradeSubjectTagTest` (رفت‌وبرگشت، نوشته‌نشدن برچسب خالی، برچسب بانک ابتدایی)؛ `V308_Site_GradeSubjectTest` (پین‌های اپ و سایت).
+- **هنوز انجام نشده از فهرست ابتدایی:** ۱۰ (پاسخ صوتی؛ نیاز به نصب دستی تابع `media-upload` توسط شما، چون workflow ای تابع‌ها را دیپلوی نمی‌کند) و ۱۳ (منتظر انتخاب روش الف/ب در `atlas_choice/atlas_image_choice_fa.html`). ۱۵، ۱۶، ۱۷ به درخواست کاربر حذف شدند.
+
 ### V307 — ابتدایی: بانک آمادهٔ سؤال‌های ابتدایی (۱۲) (اپ 1.02.12 + سایت؛ مقصد: اصلی)
 - **پیش‌نیاز:** اول V306 (cbd3931e) و بعد V307 نصب شود. بسته روی پایهٔ cbd3931e ساخته شده است.
 - **SQL:** لازم نیست.

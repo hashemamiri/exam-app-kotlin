@@ -190,6 +190,9 @@ class ExamBuilderViewModel(
             else -> q.copy(mode = "")
         }
     }
+
+    /** V308 / ۱۴ — برچسب پایه/درس سؤال (حالت ابتدایی). */
+    fun setQuestionTags(id: String, grade: Int, subject: String) = update(id) { q -> q.copy(grade = grade, subject = subject) }
     fun updateOrderItem(id: String, index: Int, value: String) = update(id) { q ->
         // ویرگول جداکنندهٔ پاسخ است؛ داخل مورد مجاز نیست.
         val clean = value.replace(',', ' ').replace('،', ' ')

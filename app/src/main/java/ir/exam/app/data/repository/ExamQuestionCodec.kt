@@ -122,6 +122,8 @@ internal object ExamQuestionCodec {
                 type = type,
                 text = obj["text"]?.asString().orEmpty(),
                 score = obj["score"]?.asDouble() ?: 1.0,
+                grade = obj["grade"]?.asInt()?.coerceIn(0, 6) ?: 0,
+                subject = obj["subject"]?.asString().orEmpty(),
                 options = obj["options"].asArrayOrEmpty().map { it.asString().orEmpty() },
                 optionIds = List(obj["options"].asArrayOrEmpty().size) { UUID.randomUUID().toString() },
                 optionImages = obj["optionImages"].asArrayOrEmpty().map { it.asString()?.takeIf(String::isNotBlank) },
@@ -203,6 +205,9 @@ internal object ExamQuestionCodec {
             values["type"] = JsonPrimitive(typeValue(question.type))
             values["text"] = JsonPrimitive(question.text.trim())
             values["score"] = JsonPrimitive(question.score)
+            // V308 / ۱۴ — برچسب پایه/درس فقط وقتی پر است نوشته می‌شود
+            if (question.grade in 1..6) values["grade"] = JsonPrimitive(question.grade)
+            if (question.subject.isNotBlank()) values["subject"] = JsonPrimitive(question.subject.trim())
             values["images"] = JsonArray(question.images.map { JsonPrimitive(it.uri) })
             values["image"] = question.images.firstOrNull()?.let { JsonPrimitive(it.uri) } ?: JsonNull
             values["imgFreePositions"] = JsonArray(question.images.map { image ->
