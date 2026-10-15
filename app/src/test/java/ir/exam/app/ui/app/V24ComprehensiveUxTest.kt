@@ -114,7 +114,7 @@ class V24ComprehensiveUxTest {
         // (تنظیماتِ کاغذ آنجا معنا نداشت) و همان کنترل‌ها اکنون در
         // آزمون‌سازِ چاپی بومی‌اند.
         assertFalse("print layout returned to the online card", "visible = styleExpanded" in editor)
-        assertTrue("حساس به حروف بزرگ و کوچک" in editor)
+        assertTrue("حساس به بزرگی/کوچکی حروف" in editor)
         assertTrue("fontWeight = if (selected) FontWeight.Bold" in builder)
         assertFalse("question reorder arrows returned", "Text(\"↑\")" in editor || "Text(\"↓\")" in editor)
     }

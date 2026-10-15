@@ -1668,10 +1668,10 @@ private fun QuestionEditor(
                 // V110 — در آزمونِ چاپی «پاسخ‌های قابل قبول / حساس به حروف» و
                 // «پاسخ عددی / تلورانس» معنایی ندارند (تصحیح خودکار آنلاین است).
                 QuestionType.FILL_BLANK -> if (primary && !printMode && question.mode == "order") PrimaryOrderEditor(question, viewModel) else if (!printMode) Column(verticalArrangement=Arrangement.spacedBy(6.dp)) {
-                    OutlinedTextField(question.expectedText, { viewModel.updateExpectedText(question.id, it) }, label = { Text("پاسخ‌های قابل قبول با |") })
+                    OutlinedTextField(question.expectedText, { viewModel.updateExpectedText(question.id, it) }, label = { Text("پاسخ‌های قابل‌قبول (با | جدا کنید)") })
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
                         BoldToggleChip(
-                            label = "حساس به حروف بزرگ و کوچک",
+                            label = "حساس به بزرگی/کوچکی حروف",
                             selected = question.caseSensitive,
                             onClick = {
                                 viewModel.setCaseSensitive(question.id, !question.caseSensitive)
