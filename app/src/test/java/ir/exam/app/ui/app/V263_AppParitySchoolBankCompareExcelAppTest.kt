@@ -71,7 +71,7 @@ class V263_AppParitySchoolBankCompareExcelAppTest {
         assertTrue("StatChip(\"پراکندگی\"" in manager)
         val school = src("app/src/main/java/ir/exam/app/ui/classes/SchoolManagementScreen.kt")
         assertTrue("SpreadsheetImport.toStudents" in school)
-        assertTrue("{ Text(\"اکسل\") }" in school)
+        assertTrue("{ Text(\"اکسل\", maxLines = 1, softWrap = false) }" in school) // V291
         assertTrue("\"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet\"" in school)
     }
 }

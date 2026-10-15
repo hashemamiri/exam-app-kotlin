@@ -19425,7 +19425,14 @@ CI: `compileDebugUnitTestKotlin` به‌خاطر `assertFalse` بدون import �
 - باگ V202.5: `var LANDING_TILES` داخل `paintAuth` بعد از خطی که `landing()` را صدا می‌زد تعریف شده بود → به‌خاطر hoisting مقدارش undefined و `.map` خطا می‌داد → صفحهٔ اول خالی. حالا کنار `authActive` در سطح ماژول است (تست ترتیب را پین می‌کند).
 - دروازهٔ صفحهٔ اول: mobile.js `entered()/enter()` با `sessionStorage['m-entered']`، `gateActive() = MQ && user && !entered`؛ app.js `render()` پیش از m-mode اگر gateActive → paintAuth (landing حتی با user). دکمه: user ⇒ `enter(); S.render()`؛ وگرنه `goA('login')`؛ پیوند ثبت‌نام فقط بدون user. `afterLogin()` → `SiteMobile.enter()`.
 
-### V291 — آیکن Word واضح + فونت صفحه‌های ثابت + دکمه‌های افزودن دانش‌آموز (اپ 1.01.90)
+### V291.2 — رفع CI 1.01.90 (اپ 1.01.91)
+- `V263_AppParitySchoolBankCompareExcelAppTest:74` پین `{ Text("اکسل") }` → با `maxLines/softWrap` به‌روز شد. درس: grep تست‌ها با الگوی escape‌شده (`اکسل\\"`) انجام شود، نه با نقل‌قول ساده.
+
+## V291.1 — قالب نصب‌کننده داخل مخزن (فقط docs؛ بدون bump و بدون CI اپ)
+- `docs/tools/installer_template.py`: قالب مرجع `apply_vXX.py` (استخراج tar.gz-base64، حذف REMOVE، verify_native_final، `git diff --cached --check`، حذف خودش، commit با هویت Hashem Amiri، `git push origin HEAD`).
+- `docs/tools/make_installer.py VER BASE OUT`: ساخت بستهٔ نصب از `git diff BASE..HEAD` با همان قالب (جایگزین دست‌نویسی regex در هر جلسه). قبل از تحویل، همیشه نصب آزمایشی روی clone با پایهٔ BASE و `git diff --quiet HEAD_اصلی HEAD` → IDENTICAL.
+
+## V291 — آیکن Word واضح + فونت صفحه‌های ثابت + دکمه‌های افزودن دانش‌آموز (اپ 1.01.90)
 - `Design69Icons.Word` (برگه + W با stroke 2.7) جایگزین `Icons.Outlined.Description` در `TeacherDashboardScreen` (۲ جا) و `ExamPrintCenterScreen`؛ سایت `WORD_ICON_HTML` همان مسیرها. پین‌های `V285_WordExportTest` به‌روز شد.
 - `site/src/legal_fa.py` (منبع terms/privacy؛ build_site آن‌ها را بازتولید می‌کند — مستقیم ویرایش نشوند) و `site/status.html`: سه `@font-face` وزیرمتن (`/fonts/Vazirmatn-*.woff2` که در Pages هست) اضافه شد.
 - `SchoolManagementScreen` (افزودن گروهی): «ایجاد» weight 2→1.4 با contentPadding 10/8، «اکسل» weight 1→1.3 با contentPadding 8/8، هر دو `maxLines=1, softWrap=false`؛ import `PaddingValues`.
