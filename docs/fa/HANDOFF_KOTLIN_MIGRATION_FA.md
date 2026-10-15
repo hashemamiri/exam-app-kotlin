@@ -19430,6 +19430,9 @@ CI: `compileDebugUnitTestKotlin` به‌خاطر `assertFalse` بدون import �
 - باگ V202.5: `var LANDING_TILES` داخل `paintAuth` بعد از خطی که `landing()` را صدا می‌زد تعریف شده بود → به‌خاطر hoisting مقدارش undefined و `.map` خطا می‌داد → صفحهٔ اول خالی. حالا کنار `authActive` در سطح ماژول است (تست ترتیب را پین می‌کند).
 - دروازهٔ صفحهٔ اول: mobile.js `entered()/enter()` با `sessionStorage['m-entered']`، `gateActive() = MQ && user && !entered`؛ app.js `render()` پیش از m-mode اگر gateActive → paintAuth (landing حتی با user). دکمه: user ⇒ `enter(); S.render()`؛ وگرنه `goA('login')`؛ پیوند ثبت‌نام فقط بدون user. `afterLogin()` → `SiteMobile.enter()`.
 
+### V304.1 — رفع CI 1.02.07 (اپ 1.02.08؛ مقصد: اصلی)
+- `V247_WalletTariffAxisParityTest` تعداد `FigureTemplate("ax…")` را ۲۷ می‌خواست؛ به ۳۴ (۲۷+۷) به‌روز شد. درس: هر افزودن به AXIS_FIGURES این تست را هم می‌خواهد.
+
 ### V304 — شکل‌های آمادهٔ ریاضی ابتدایی (اپ 1.02.07 + سایت؛ مقصد: اصلی)
 - معماری: به‌جای دستهٔ تازهٔ شکل، هفت نوع با پیشوند `ax` به انتهای `AXIS_FIGURES` اضافه شد (ثابت `PRIMARY_MATH_FIRST_ID = "axtally"` مرز بخش). به این ترتیب همهٔ مسیرهای موجود (`isAxisType=/^ax/`، تشخیص kind در ExamBuilderScreen/ExamHtmlPrintDialog/FigurePickerDialog، `AXIS_EXT` برای پل بومی WebView) بدون تغییر کار می‌کنند.
 - شناسه‌ها و پارامترها (X): `axtally` (n) · `axbase10` (n ≤ 999) · `axplace` (n, cols, blank) · `axclock` (h, m, nums, label) · `axruler` (len, a, b) · `axfrac` (num, den, shape=circle|bar, label) · `axmoney` (notes, coins, unit, sum). بوم 360×280، عنوان مثل محورها.

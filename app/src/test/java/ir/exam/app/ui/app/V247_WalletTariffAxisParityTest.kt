@@ -32,11 +32,11 @@ class V247_WalletTariffAxisParityTest {
     }
 
     @Test
-    fun `web graph engine renders all 27 axis types without the native bridge`() {
+    fun `web graph engine renders all axis and primary math types without the native bridge`() {
         val g = source("app/src/main/assets/print/web/graph_fig.js")
         val gallery = source("app/src/main/java/ir/exam/app/core/figure/FigureGallery.kt")
         val ids = Regex("FigureTemplate\\(\"(ax[a-z0-9]+)\"").findAll(gallery).map { it.groupValues[1] }.toSet()
-        assertTrue(ids.size == 27)
+        assertTrue(ids.size == 34) // V304: ۲۷ محور + ۷ ابزار ریاضی ابتدایی
         assertTrue("function axisExSvg(t, X, title)" in g && "var exSvg = axisExSvg(t, X, title); if (exSvg) return exSvg;" in g)
         for (id in ids) {
             assertTrue(id, "{ id: '$id'," in g)
