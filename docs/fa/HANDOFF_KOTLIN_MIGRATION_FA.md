@@ -19425,7 +19425,12 @@ CI: `compileDebugUnitTestKotlin` به‌خاطر `assertFalse` بدون import �
 - باگ V202.5: `var LANDING_TILES` داخل `paintAuth` بعد از خطی که `landing()` را صدا می‌زد تعریف شده بود → به‌خاطر hoisting مقدارش undefined و `.map` خطا می‌داد → صفحهٔ اول خالی. حالا کنار `authActive` در سطح ماژول است (تست ترتیب را پین می‌کند).
 - دروازهٔ صفحهٔ اول: mobile.js `entered()/enter()` با `sessionStorage['m-entered']`، `gateActive() = MQ && user && !entered`؛ app.js `render()` پیش از m-mode اگر gateActive → paintAuth (landing حتی با user). دکمه: user ⇒ `enter(); S.render()`؛ وگرنه `goA('login')`؛ پیوند ثبت‌نام فقط بدون user. `afterLogin()` → `SiteMobile.enter()`.
 
-### V292.1 — اینماد (فقط سایت؛ بدون bump)
+### V293 — کتابخانهٔ «رشته‌های دانشگاهی» مرحلهٔ ۲ (اپ 1.01.93 + سایت)
+- `qa/tools/gen_majors.py`: `NEW2` با ۱۶ بلوک `n-med/pharm/nurs/bio/agri/econ/acc/mgmt/psy/cheme/mat/ie/arch/pet/aero/geo` (۶۵۸ فرمول)؛ `MAJORS` = ۲۴ رشته (ترکیب بلوک‌های n-* و uni-*). رشته‌های موقت maj-earth/maj-chemeng حذف و در maj-geo/maj-pet/maj-cheme/maj-mat ادغام شدند.
+- UI: `wrapOnce()` دور `mbGroupLibrary`/`mbShowSymbolCategory`؛ برای گروه `uni` کلاس آمادهٔ `word-cats` (شبکهٔ چندستونه، CSS از قبل موجود در formula.html) + سرفصل‌های `.mbv-sec` از `SECTIONS`؛ پس از انتخاب رشته کلاس برداشته می‌شود.
+- برچسب‌های آیتم نباید `\\` داشته باشند (رشتهٔ غیر-raw در پایتون → `\b` = backspace). QA: ۲۴۶۳ آیتم با `renderMathText` بدون خطا؛ اسکرین‌شات‌ها `qa/shots/v293_*.png`. تست: `V292_MajorsLibraryTest` به‌روز شد.
+
+## V292.1 — اینماد (فقط سایت؛ بدون bump)
 - `app.js`: `ENAMAD_ID/ENAMAD_CODE`, `enamadBadge()` (a+img با `referrerpolicy=origin` و صفت `code`، روی خطای بارگذاری مخفی می‌شود)، در `ExamSite.enamadBadge`؛ دسکتاپ: `.lp-badges` زیر کاشی‌های `lp-l`. `mobile.js`: `.ice-badges` بعد از «ساخت حساب جدید» و ردیف «نماد اعتماد» در کارت تماس. CSS: `.enamad`, `.lp-badges`, `.ice-badges`.
 - نکته: trustseal.enamad.ir از سندباکس در دسترس نیست؛ چیدمان با تصویر جایگزین (route) بررسی شد (`qa/shots/v292_1_*.png`). تست: `V292_1_SiteEnamadTest` (paths-ignore).
 

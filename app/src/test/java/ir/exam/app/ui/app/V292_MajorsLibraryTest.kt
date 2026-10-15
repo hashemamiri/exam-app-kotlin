@@ -15,10 +15,10 @@ class V292_MajorsLibraryTest {
         assertTrue("/* V292 — کتابخانهٔ «رشته‌های دانشگاهی»" in f)
         assertTrue("/* V288 — کتابخانهٔ «دانشگاه و تحصیلات تکمیلی»" !in f)
         assertTrue("b.textContent = '🎓 رشته‌های دانشگاهی';" in f)
-        for (m in listOf("maj-math", "maj-phys", "maj-chem", "maj-stat", "maj-cs", "maj-ee", "maj-me", "maj-ce", "maj-econ", "maj-bio", "maj-earth", "maj-chemeng")) {
+        for (m in listOf("maj-math", "maj-phys", "maj-chem", "maj-stat", "maj-cs", "maj-ee", "maj-me", "maj-ce", "maj-cheme", "maj-mat", "maj-ie", "maj-aero", "maj-pet", "maj-arch", "maj-geo", "maj-med", "maj-pharm", "maj-nurs", "maj-bio", "maj-agri", "maj-econ", "maj-acc", "maj-mgmt", "maj-psy")) { // V293: ۲۴ رشته
             assertTrue(m, "[\"$m\", \"" in f)
         }
-        for (b in listOf("n-math", "n-phys", "n-chem", "n-stat", "n-cs", "n-ee", "n-me", "n-ce")) {
+        for (b in listOf("n-math", "n-phys", "n-chem", "n-stat", "n-cs", "n-ee", "n-me", "n-ce", "n-med", "n-pharm", "n-nurs", "n-bio", "n-agri", "n-econ", "n-acc", "n-mgmt", "n-psy", "n-cheme", "n-mat", "n-ie", "n-arch", "n-pet", "n-aero", "n-geo")) {
             assertTrue(b, "    \"$b\": [ /* " in f)
         }
         // هر رشته فهرست یکپارچه است؛ تکراری‌ها بین بلوک‌ها حذف می‌شوند
@@ -26,6 +26,10 @@ class V292_MajorsLibraryTest {
         assertTrue("\"تنش فون‌میزس\"" in f && "\"معادلهٔ نرنست\"" in f && "\"توجه (Attention)\"" in f && "\"ظرفیت باربری ترزاقی\"" in f)
         assertTrue("\\\\bmod" !in f.substring(f.indexOf("/* V292")))
         assertTrue("\\\\Big|" !in f)
+        // V293: شبکهٔ چندستونه با سرفصل گروه‌های آزمایشی؛ کلاس پس از انتخاب رشته برداشته می‌شود
+        assertTrue("function decorateUniPopover() {" in f && "pop.classList.add('word-cats');" in f)
+        assertTrue("W.mbShowSymbolCategory = function () { var pop = document.getElementById('mbVar'); if (pop) pop.classList.remove('word-cats');" in f)
+        assertTrue("\"کلیرانس کراتینین (کاکرافت-گالت)\"" in f && "\"معادلهٔ موشک تسیولکوفسکی\"" in f && "\"آلفای کرونباخ\"" in f && "\"معادلهٔ آرچی\"" in f)
     }
 
     @Test
