@@ -73,7 +73,7 @@ class V20InteractionPolishTest {
         val root = root()
         val manifest = File(root, "app/src/main/AndroidManifest.xml").readText()
         val dashboard = File(root, "app/src/main/java/ir/exam/app/ui/dashboard/TeacherDashboardScreen.kt").readText()
-        assertTrue("android:label=\"آزمون آنلاین\"" in manifest)
+        assertTrue("android:label=\"@string/app_label\"" in manifest) // V298: نام از resValue (آزمون آنلاین / آزمون (آزمایشی))
         assertTrue("MaterialTheme.typography.titleSmall" in dashboard)
         assertTrue("maxLines = 1" in dashboard)
         assertFalse("old multi-row subject label remains", "Text(\"درس:" in dashboard)

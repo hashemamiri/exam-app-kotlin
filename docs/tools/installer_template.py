@@ -55,8 +55,11 @@ def main():
         pass
     run(["git", "-c", "user.name=Hashem Amiri", "-c", "user.email=hashemamiri@users.noreply.github.com",
          "commit", "-m", COMMIT_MSG])
-    run(["git", "push", "origin", "HEAD"])
-    print("\n✅ " + VERSION + " نصب و ارسال شد. GitHub Actions به‌زودی APK/سایت را می‌سازد.")
+    # V298 — ابتدا به شاخهٔ آزمایشی (staging) می‌رود؛ پس از دیدن و تأیید: python3 scripts/promote.py
+    run(["git", "push", "origin", "HEAD:refs/heads/staging"])
+    print("\n✅ " + VERSION + " نصب و به شاخهٔ آزمایشی (staging) ارسال شد.")
+    print("   GitHub Actions نسخهٔ آزمایشی را می‌سازد: اپ «آزمون (آزمایشی)» + سایت https://staging.onlineexam.pages.dev")
+    print("   پس از بررسی و تأیید:  python3 scripts/promote.py      (انصراف:  python3 scripts/promote.py --cancel)")
 
 
 if __name__ == "__main__":

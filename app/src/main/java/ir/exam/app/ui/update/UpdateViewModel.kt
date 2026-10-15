@@ -1,5 +1,6 @@
 package ir.exam.app.ui.update
 
+import ir.exam.app.BuildConfig
 import ir.exam.app.core.network.NetworkFailureClassifier
 import ir.exam.app.core.network.UserFacingError
 import androidx.lifecycle.ViewModel
@@ -48,6 +49,10 @@ class UpdateViewModel(
 
     fun check(installedCode: Int) {
         if (state.value.checking || state.value.downloading) return
+        if (BuildConfig.IS_BETA) { // V298 — نسخهٔ آزمایشی هرگز APK اصلی را پیشنهاد نمی‌دهد
+            _state.value = UpdateState(message = "این نسخهٔ آزمایشی است؛ به‌روزرسانی خودکار در آن غیرفعال است.")
+            return
+        }
         viewModelScope.launch {
             _state.value = UpdateState(checking = true)
             useCase.check(installedCode)

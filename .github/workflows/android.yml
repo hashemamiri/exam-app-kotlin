@@ -4,7 +4,8 @@ name: آزمون آنلاین
 # اجرای دستی همیشه: GitHub → Actions → این workflow → Run workflow.
 on:
   push:
-    branches: [main]
+    # V298 — شاخهٔ staging = نسخهٔ آزمایشی: APK با بستهٔ «ir.exam.app.beta» کنار اپ اصلی، بدون ثبت در app_version
+    branches: [main, staging]
     # V261.2 — text/APP_VERSION.txt دیگر نادیده گرفته نمی‌شود: هر bump نسخه حتماً CI اپ را اجرا می‌کند (V261.1 فقط فایل‌های نادیده را تغییر داده بود و APK ساخته نشد)
     # V189 — تغییرات فقط-سایت (منبع سایت، تست‌های آینهٔ سایت، پل پرداخت، توابع Supabase، مستندات) CI اپ را اجرا نمی‌کنند
     paths-ignore: ['site/**', 'docs/**', 'text/CHANGELOG_FA.txt', 'text/*.md', 'relay/**', 'supabase/**', '.github/workflows/site.yml', 'app/src/test/**/V1*_Site*Test.kt', 'app/src/test/**/V1*_Pay*Test.kt', 'app/src/test/**/V1*_Print*Test.kt', 'app/src/test/**/V*_Site*Test.kt']
@@ -14,7 +15,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: android-release-publisher
+  group: android-release-publisher-${{ github.ref_name }}
   cancel-in-progress: false
 
 jobs:
@@ -86,6 +87,8 @@ jobs:
           printf 'SUPABASE_URL=%s\nSUPABASE_ANON_KEY=%s\nAPP_VERSION_CODE=%s\nAPP_VERSION_NAME=%s\n' \
             "$SUPABASE_URL" "$SUPABASE_ANON_KEY" "$APP_VERSION_CODE" "$APP_VERSION_NAME" \
             > local.properties
+          # V298 — روی شاخهٔ staging نسخهٔ آزمایشی ساخته می‌شود
+          if [ "$GITHUB_REF_NAME" = "staging" ]; then printf 'APP_BETA=1\n' >> local.properties; echo "BETA build (staging)"; fi
           # V60.0.1 — کلید وب گوگل برای دکمهٔ «ثبت‌نام با گوگل»؛ نبودنش build را نمی‌شکند.
           if [ -n "$GOOGLE_WEB_CLIENT_ID" ]; then
             printf 'GOOGLE_WEB_CLIENT_ID=%s\n' "$GOOGLE_WEB_CLIENT_ID" >> local.properties
@@ -111,7 +114,7 @@ jobs:
             "$SUPABASE_URL/rest/v1/app_version?select=version_code&version_code=eq.$APP_VERSION_CODE&limit=1" \
             -H "apikey: $SUPABASE_ANON_KEY" \
             -H "Authorization: Bearer $SUPABASE_ANON_KEY")
-          if [ "$EXISTING" != "[]" ]; then
+          if [ "$EXISTING" != "[]" ] && [ "$GITHUB_REF_NAME" != "staging" ]; then
             echo "نسخهٔ $APP_VERSION_NAME (کد $APP_VERSION_CODE) قبلاً منتشر شده است؛ شماره را در text/APP_VERSION.txt یکی زیاد کنید."
             exit 1
           fi
@@ -215,7 +218,38 @@ jobs:
           path: release/
           if-no-files-found: error
           retention-days: 1
+      # V298 — نسخهٔ آزمایشی: فقط در Storage (پوشهٔ beta) بارگذاری می‌شود؛ هیچ رکوردی در app_version ثبت نمی‌شود
+      - name: بارگذاری APK آزمایشی (staging)
+        if: github.ref_name == 'staging'
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_RELEASE_KEY: ${{ secrets.SUPABASE_RELEASE_KEY }}
+        run: |
+          set -Eeuo pipefail
+          test -n "$SUPABASE_URL"; test -n "$SUPABASE_RELEASE_KEY"
+          SUPABASE_URL="${SUPABASE_URL%/}"
+          H=(-H "apikey: $SUPABASE_RELEASE_KEY")
+          case "$SUPABASE_RELEASE_KEY" in sb_secret_*) ;; *) H+=(-H "Authorization: Bearer $SUPABASE_RELEASE_KEY") ;; esac
+          source release/update-metadata.txt
+          for NAME in "beta/exam-app-beta-$APP_VERSION_NAME.apk" "beta/exam-app-beta.apk"; do
+            ST="$(curl -sS --connect-timeout 20 --max-time 600 --retry 3 --retry-all-errors -o /tmp/beta-up.json -w '%{http_code}' \
+              -X POST "$SUPABASE_URL/storage/v1/object/app-updates/$NAME" "${H[@]}" \
+              -H "Content-Type: application/vnd.android.package-archive" -H "x-upsert: true" -H "cache-control: max-age=0" \
+              --data-binary "@release/$APK_FILE")"
+            case "$ST" in 200|201) echo "upload $NAME: $ST" ;; *) echo "upload $NAME failed: $ST"; sed -E 's/eyJ[A-Za-z0-9_.-]+/[TOKEN]/g' /tmp/beta-up.json | head -c 400; echo; exit 1 ;; esac
+          done
+          URL="$SUPABASE_URL/storage/v1/object/public/app-updates/beta/exam-app-beta-$APP_VERSION_NAME.apk"
+          curl -fsS --range 0-0 -o /dev/null "$URL"
+          {
+            echo "## 🧪 نسخهٔ آزمایشی $APP_VERSION_NAME-beta"
+            echo ""
+            echo "- دانلود APK (کنار اپ اصلی نصب می‌شود، نام «آزمون (آزمایشی)»): $URL"
+            echo "- پیوند ثابت آخرین نسخهٔ آزمایشی: $SUPABASE_URL/storage/v1/object/public/app-updates/beta/exam-app-beta.apk"
+            echo "- سایت آزمایشی: https://staging.onlineexam.pages.dev"
+            echo "- پس از تأیید: \`python3 scripts/promote.py\` در WSL"
+          } >> "$GITHUB_STEP_SUMMARY"
       - name: انتشار خودکار APK در Supabase
+        if: github.ref_name != 'staging'
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_RELEASE_KEY: ${{ secrets.SUPABASE_RELEASE_KEY }}

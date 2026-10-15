@@ -17,14 +17,16 @@ if (hasGoogleServices) apply(plugin = "com.google.gms.google-services")
 // خاموش می‌شود و PUSH_ENABLED همان variant false است (به‌جای شکست build با «No matching client found»).
 val googleServicesPackages: Set<String> = if (hasGoogleServices)
     Regex("\"package_name\"\\s*:\\s*\"([^\"]+)\"").findAll(file("google-services.json").readText()).map { it.groupValues[1] }.toSet() else emptySet()
-val pushEnabledRelease = "ir.exam.app" in googleServicesPackages
-val pushEnabledDebug = "ir.exam.app.native" in googleServicesPackages
-
 val localProperties = Properties()
 val localPropertiesFile = rootProject.file("local.properties")
 if (localPropertiesFile.exists()) {
     localPropertiesFile.inputStream().use { localProperties.load(it) }
 }
+// V298 — نسخهٔ آزمایشی (شاخهٔ staging): APP_BETA=1 در local.properties → بستهٔ «ir.exam.app.beta» کنار اپ اصلی نصب می‌شود،
+// نام «آزمون (آزمایشی)»، پسوند نسخه «-beta»، بدون به‌روزرسانی خودکار. اعلان‌ها فقط اگر آن بسته در google-services.json باشد.
+val isBetaBuild = localProperties.getProperty("APP_BETA", "0").trim() == "1"
+val pushEnabledRelease = (if (isBetaBuild) "ir.exam.app.beta" else "ir.exam.app") in googleServicesPackages
+val pushEnabledDebug = "ir.exam.app.native" in googleServicesPackages
 val supabaseUrl = localProperties.getProperty("SUPABASE_URL", "")
 val supabaseAnonKey = localProperties.getProperty("SUPABASE_ANON_KEY", "")
 val googleWebClientId = localProperties.getProperty("GOOGLE_WEB_CLIENT_ID", "")
@@ -58,6 +60,9 @@ android {
         buildConfigField("String", "SUPABASE_ANON_KEY", "\"$supabaseAnonKey\"")
         buildConfigField("String", "GOOGLE_WEB_CLIENT_ID", "\"$googleWebClientId\"")
         buildConfigField("Boolean", "PUSH_ENABLED", "false") // V232 — در buildTypes بر اساس google-services.json مقدار می‌گیرد
+        buildConfigField("Boolean", "IS_BETA", "$isBetaBuild") // V298
+        resValue("string", "app_label", if (isBetaBuild) "آزمون (آزمایشی)" else "آزمون آنلاین") // V298
+        if (isBetaBuild) { applicationIdSuffix = ".beta"; versionNameSuffix = "-beta" } // V298
 
         // V78.2 — کتابخانهٔ بومیِ OCR برای هر چهار ABI ساخته می‌شود و ~۱۲٫۲MB
         // به APK اضافه می‌کرد. گوشی‌های واقعی همگی ARM هستند؛ x86/x86_64 فقط

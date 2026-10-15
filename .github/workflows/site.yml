@@ -3,13 +3,14 @@
 # ساخته، کلید anon از Secret تزریق و روی پروژهٔ Pages «onlineexam» منتشر می‌شود.
 # Secrets لازم: SUPABASE_ANON_KEY (از قبل هست)، CLOUDFLARE_API_TOKEN، CLOUDFLARE_ACCOUNT_ID
 name: site
+# V298 — شاخهٔ staging روی همان پروژهٔ Pages با نام شاخه منتشر می‌شود: https://staging.onlineexam.pages.dev (دامنهٔ اصلی فقط از main)
 on:
   push:
-    branches: [main]
+    branches: [main, staging]
     paths: ['site/**', '.github/workflows/site.yml']
   workflow_dispatch:
 concurrency:
-  group: site-deploy
+  group: site-deploy-${{ github.ref_name }}
   cancel-in-progress: true
 jobs:
   deploy:
@@ -75,7 +76,7 @@ jobs:
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: pages deploy site_out --project-name=onlineexam --branch=main --commit-dirty=true
+          command: pages deploy site_out --project-name=onlineexam --branch=${{ github.ref_name }} --commit-dirty=true
       - name: Deploy to Cloudflare Pages (retry 1)
         id: deploy2
         if: steps.deploy1.outcome == 'failure'
@@ -85,7 +86,11 @@ jobs:
           preCommands: sleep 45
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: pages deploy site_out --project-name=onlineexam --branch=main --commit-dirty=true
+          command: pages deploy site_out --project-name=onlineexam --branch=${{ github.ref_name }} --commit-dirty=true
+      - name: نشانی سایت آزمایشی
+        if: github.ref_name == 'staging'
+        run: |
+          printf '## 🧪 سایت آزمایشی\n\nhttps://staging.onlineexam.pages.dev\n\nپس از تأیید: `python3 scripts/promote.py`\n' >> "$GITHUB_STEP_SUMMARY"
       - name: Deploy to Cloudflare Pages (retry 2)
         if: steps.deploy1.outcome == 'failure' && steps.deploy2.outcome == 'failure'
         uses: cloudflare/wrangler-action@v3
@@ -93,4 +98,4 @@ jobs:
           preCommands: sleep 90
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: pages deploy site_out --project-name=onlineexam --branch=main --commit-dirty=true
+          command: pages deploy site_out --project-name=onlineexam --branch=${{ github.ref_name }} --commit-dirty=true
