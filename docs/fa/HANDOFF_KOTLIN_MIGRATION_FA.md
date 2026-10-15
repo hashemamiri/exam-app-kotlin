@@ -19430,6 +19430,9 @@ CI: `compileDebugUnitTestKotlin` به‌خاطر `assertFalse` بدون import �
 - باگ V202.5: `var LANDING_TILES` داخل `paintAuth` بعد از خطی که `landing()` را صدا می‌زد تعریف شده بود → به‌خاطر hoisting مقدارش undefined و `.map` خطا می‌داد → صفحهٔ اول خالی. حالا کنار `authActive` در سطح ماژول است (تست ترتیب را پین می‌کند).
 - دروازهٔ صفحهٔ اول: mobile.js `entered()/enter()` با `sessionStorage['m-entered']`، `gateActive() = MQ && user && !entered`؛ app.js `render()` پیش از m-mode اگر gateActive → paintAuth (landing حتی با user). دکمه: user ⇒ `enter(); S.render()`؛ وگرنه `goA('login')`؛ پیوند ثبت‌نام فقط بدون user. `afterLogin()` → `SiteMobile.enter()`.
 
+### V300.1 — رفع CI (اپ 1.02.01)
+- `V199_PrintPayTest.v202_5…` و `V168_SiteDesktopMenuTest.v226…` هنوز `tiles`/`LANDING_TILES` شش‌تایی قدیمی را پین می‌کردند (V299 فقط-سایت بود و CI اپ اجرا نشد → تا V300 دیده نشد). به ۸ کاشی به‌روز شدند. درس: بعد از تغییر سایتِ بدون CI، `grep` روی کل `app/src/test` برای رشته‌های تغییر‌یافته.
+
 ### V300 — آیکن‌های رنگی صفحهٔ ورود، معرفی تیتروار، اعلان بروزرسانی، پیام خطای کیف پول (اپ 1.02.00 + سایت؛ مقصد: اصلی)
 - **سایت**: `app.js` سطح بالا `window.LP_FLAT_ICONS` = ۸ تصویرسازی تخت رنگی SVG (viewBox 48، کلیدهای bank/live/report/print/formula/figure/board/school؛ منبع طراحی: `qa/icons/flat8.js`، نمونهٔ «۵ — تخت رنگی با سایهٔ نرم» انتخاب کاربر پس از رد ۸۰+ نمونهٔ خطی/دوتونه). `renderLanding`: `LP_ICO = window.LP_FLAT_ICONS`؛ `<svg viewBox="0 0 48 48">` بدون stroke/currentColor؛ css `.lp.lp-sky .tile i svg{filter:drop-shadow(...)}`. موبایل: `LANDING_TILES` عنصر سوم = کلید آیکن؛ `i.ico48` (پس‌زمینهٔ شفاف، شامل `:nth-child(even)`)؛ ایموجی فقط fallback.
 - `p.lp-more` → `ul.lp-list` چهار مورد «عنوان: توضیح» (ساخت سؤال / برگزاری / تصحیح و کارنامه / بانک سؤال)؛ css `.lp-list` (گرید auto 1fr، نقطهٔ آبی، `b::after{content:':'}`، نسخهٔ تاریک).

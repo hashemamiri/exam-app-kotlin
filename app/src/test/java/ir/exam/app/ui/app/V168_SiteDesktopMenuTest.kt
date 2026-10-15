@@ -139,7 +139,7 @@ class V223_SiteDesktopPrintButtonsTest {
         assertFalse(app.contains("dk-qa-bg"))
         // صفحهٔ ورود طرح ۲۶ «آسمانی و ابری»
         assertTrue(app.contains("class: 'lp lp-sky'") && app.contains("class: 'cloud c1'"))
-        assertTrue(app.contains("var tiles = [['report', 'کارنامهٔ خودکار'], ['print', 'چاپ رسمی'], ['formula', 'ویرایشگر فرمول'], ['periodic', 'جدول تناوبی'], ['board', 'تختهٔ سفید'], ['school', 'مدیریت مدرسه']];"))
+        assertTrue(app.contains("var tiles = [['bank', 'آزمون‌ساز و بانک سؤال'], ['live', 'برگزاری آنلاین'], ['report', 'کارنامهٔ خودکار'], ['print', 'چاپ رسمی و Word']")) // V299/V300 — ۸ کاشی
         assertTrue(css.contains(".lp.lp-sky{") && css.contains(".lp.lp-sky .card{background:rgba(255,255,255,.42)") && css.contains(".m-dark .lp.lp-sky{"))
     }
 
