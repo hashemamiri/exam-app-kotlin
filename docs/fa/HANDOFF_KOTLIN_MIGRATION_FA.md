@@ -19425,6 +19425,10 @@ CI: `compileDebugUnitTestKotlin` به‌خاطر `assertFalse` بدون import �
 - باگ V202.5: `var LANDING_TILES` داخل `paintAuth` بعد از خطی که `landing()` را صدا می‌زد تعریف شده بود → به‌خاطر hoisting مقدارش undefined و `.map` خطا می‌داد → صفحهٔ اول خالی. حالا کنار `authActive` در سطح ماژول است (تست ترتیب را پین می‌کند).
 - دروازهٔ صفحهٔ اول: mobile.js `entered()/enter()` با `sessionStorage['m-entered']`، `gateActive() = MQ && user && !entered`؛ app.js `render()` پیش از m-mode اگر gateActive → paintAuth (landing حتی با user). دکمه: user ⇒ `enter(); S.render()`؛ وگرنه `goA('login')`؛ پیوند ثبت‌نام فقط بدون user. `afterLogin()` → `SiteMobile.enter()`.
 
+### V298.2 — ورود با گوگل در اپ آزمایشی (اپ 1.01.99)
+- علت «خطا در سرور» در beta: Credential Manager/GetGoogleIdOption فقط برای بسته‌هایی اعتبارنامه می‌دهد که به‌صورت OAuth client از نوع Android (نام بسته + SHA-1 امضا) در همان پروژهٔ Google Cloud ثبت شده باشند؛ `ir.exam.app.beta` ثبت نیست → GetCredentialException → پیام عمومی. `SignInScreen` در `IS_BETA` پیام روشن می‌دهد. راه فعال‌کردن: Google Cloud Console → APIs & Services → Credentials → Create OAuth client ID → Android → package `ir.exam.app.beta` + همان SHA-1 کلید release (کاربر انجام می‌دهد؛ کد تغییر نمی‌خواهد).
+- نشانی واقعی Pages: `https://staging.onlineexam-1q1.pages.dev` (در android.yml و قالب نصب‌کننده جایگزین شد).
+
 ### V298.1 — نشانی واقعی سایت آزمایشی (فقط site.yml + قالب نصب‌کننده؛ بدون bump)
 - `https://onlineexam.pages.dev` خالی (404) برمی‌گردد → زیردامنهٔ pages.dev پروژهٔ Pages «onlineexam» چیز دیگری است (Cloudflare پسوند تصادفی می‌دهد). site.yml مرحلهٔ «نشانی سایت آزمایشی» را از `steps.deployN.outputs.pages-deployment-alias-url` / `deployment-url` می‌سازد (پیام‌های hardcode در android.yml خط «سایت آزمایشی» و قالب نصب‌کننده هم باید بعد از دانستن نشانی واقعی اصلاح شوند؛ android.yml را به‌خاطر bump دست نزدیم).
 

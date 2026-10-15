@@ -245,7 +245,7 @@ jobs:
             echo ""
             echo "- دانلود APK (کنار اپ اصلی نصب می‌شود، نام «آزمون (آزمایشی)»): $URL"
             echo "- پیوند ثابت آخرین نسخهٔ آزمایشی: $SUPABASE_URL/storage/v1/object/public/app-updates/beta/exam-app-beta.apk"
-            echo "- سایت آزمایشی: https://staging.onlineexam.pages.dev"
+            echo "- سایت آزمایشی: https://staging.onlineexam-1q1.pages.dev"
             echo "- پس از تأیید: \`python3 scripts/promote.py\` در WSL"
           } >> "$GITHUB_STEP_SUMMARY"
       - name: انتشار خودکار APK در Supabase

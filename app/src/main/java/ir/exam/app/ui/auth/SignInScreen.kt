@@ -696,7 +696,12 @@ private fun GoogleAuthButton(
                 } catch (cancel: androidx.credentials.exceptions.GetCredentialCancellationException) {
                     // بستن پنجره توسط کاربر خطا نیست.
                 } catch (error: Throwable) {
-                    viewModel.reportGoogleError(UserFacingError.of(error, "ورود گوگل ناموفق بود."))
+                    // V298.2 — نسخهٔ آزمایشی بستهٔ دیگری است (ir.exam.app.beta)؛ تا در Google Cloud ثبت نشود، گوگل اعتبارنامه نمی‌دهد
+                    if (ir.exam.app.BuildConfig.IS_BETA) {
+                        viewModel.reportGoogleError("ورود با گوگل در نسخهٔ آزمایشی فعال نیست (بستهٔ آزمایشی در گوگل ثبت نشده)؛ با نام کاربری و رمز وارد شوید.")
+                    } else {
+                        viewModel.reportGoogleError(UserFacingError.of(error, "ورود گوگل ناموفق بود."))
+                    }
                 }
             }
         },

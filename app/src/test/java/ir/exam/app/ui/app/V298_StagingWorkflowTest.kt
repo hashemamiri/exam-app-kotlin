@@ -20,6 +20,10 @@ class V298_StagingWorkflowTest {
         assertTrue("android:label=\"@string/app_label\"" in src("app/src/main/AndroidManifest.xml"))
         val vm = src("app/src/main/java/ir/exam/app/ui/update/UpdateViewModel.kt")
         assertTrue("if (BuildConfig.IS_BETA) {" in vm && "به‌روزرسانی خودکار در آن غیرفعال است" in vm)
+        // V298.2 — ورود با گوگل در beta پیام روشن می‌دهد (بستهٔ ir.exam.app.beta در Google Cloud ثبت نیست)
+        val si = src("app/src/main/java/ir/exam/app/ui/auth/SignInScreen.kt")
+        assertTrue("if (ir.exam.app.BuildConfig.IS_BETA) {" in si && "ورود با گوگل در نسخهٔ آزمایشی فعال نیست" in si)
+        assertTrue("https://staging.onlineexam-1q1.pages.dev" in src(".github/workflows/android.yml"))
     }
 
     @Test
