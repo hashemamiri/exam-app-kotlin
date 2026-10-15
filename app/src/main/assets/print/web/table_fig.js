@@ -84,8 +84,9 @@
     var rows = C.length, cols = (C[0] || []).length;
     var h = '<div class="tbx tbx-' + t + (editable ? ' tb-ed' : '') + '" dir="rtl">';
     if (title) h += '<div class="tbx-cap">' + esc(title) + '</div>';
-    if (t === 'matrix') h += '<div class="tbx-wrap"><span class="tbx-br l"></span>';
-    h += '<table class="tbx-t"><tbody>';
+    /* V310.4 — ماتریس: اندازه از محتوا (نه از کادر)؛ براکت‌ها کنار جدول می‌مانند؛ سازگار با هر CSS میزبان */
+    if (t === 'matrix') h += '<div class="tbx-wrap" style="display:flex;align-items:stretch;justify-content:center;gap:7px;width:max-content;max-width:100%;margin:0 auto"><span class="tbx-br l"></span>';
+    h += '<table class="tbx-t"' + (t === 'matrix' ? ' style="width:auto;max-width:100%;table-layout:auto;margin:0"' : '') + '><tbody>';
     var r, c;
     for (r = 0; r < rows; r++) {
       h += '<tr>';

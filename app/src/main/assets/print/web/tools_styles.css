@@ -422,7 +422,7 @@
 .tbx-exam .tbx-t th{background:#1d4ed8;color:#fff;border-color:#1e40af}
 .tbx-exam .tbx-t tr>:first-child{background:#eff6ff;color:#1e3a8a;font-weight:800;width:2.6em}
 .tbx-exam .tbx-t tr:first-child>:first-child{background:#1e40af;color:#fff}
-.tbx-wrap{display:flex;align-items:stretch;justify-content:center;gap:7px;width:100%}
+.tbx-wrap{display:flex;align-items:stretch;justify-content:center;gap:7px;width:max-content;max-width:100%;margin:0 auto}
 .tbx-matrix .tbx-t{width:auto;max-width:100%;table-layout:auto;margin:0}
 .tbx-br{flex:0 0 12px;width:12px;min-height:48px;border:3px solid #334155}
 .tbx-br.l{border-right:0;border-radius:12px 0 0 12px}
@@ -468,6 +468,10 @@
   min-width:48px;min-height:36px;box-sizing:border-box;outline:none;
 }
 .tb-edit .tbx-t input:focus{background:rgba(108,99,245,.12)}
+/* V310.4 — ماتریس در ویرایشگر: خانه‌ها به اندازهٔ محتوا؛ جدول از کادر بیرون نزند */
+.tb-edit .tbx-matrix .tbx-t input{width:auto;min-width:44px;max-width:120px}
+.tb-edit .tbx-matrix .tbx-wrap{max-width:100%}
+@media (max-width:600px){.tb-edit .tbx-matrix .tbx-t input{min-width:36px;max-width:88px}}
 .gf-overlay{
   position:fixed;inset:0;z-index:120100;display:none;
   align-items:center;justify-content:center;

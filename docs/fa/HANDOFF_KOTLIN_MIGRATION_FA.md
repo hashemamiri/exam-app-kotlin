@@ -19430,6 +19430,11 @@ CI: `compileDebugUnitTestKotlin` به‌خاطر `assertFalse` بدون import �
 - باگ V202.5: `var LANDING_TILES` داخل `paintAuth` بعد از خطی که `landing()` را صدا می‌زد تعریف شده بود → به‌خاطر hoisting مقدارش undefined و `.map` خطا می‌داد → صفحهٔ اول خالی. حالا کنار `authActive` در سطح ماژول است (تست ترتیب را پین می‌کند).
 - دروازهٔ صفحهٔ اول: mobile.js `entered()/enter()` با `sessionStorage['m-entered']`، `gateActive() = MQ && user && !entered`؛ app.js `render()` پیش از m-mode اگر gateActive → paintAuth (landing حتی با user). دکمه: user ⇒ `enter(); S.render()`؛ وگرنه `goA('login')`؛ پیوند ثبت‌نام فقط بدون user. `afterLogin()` → `SiteMobile.enter()`.
 
+### V310.4 — جدول ماتریسی: اندازه از محتوا (ویرایشگر، کادر سؤال، پیش‌نمایش؛ اپ 1.02.20 + سایت)
+- علت: `.tbx-wrap` عرض کامل کادر را می‌گرفت و جدول ماتریسی به‌خاطر `table-layout:fixed` و `width:100%` ستون‌های هم‌عرض و براکت‌های دور می‌ساخت (دسکتاپ).
+- اصلاح: استایل درون‌خطی در `table_fig.js` + `tools_styles.css`؛ ورودی‌های ماتریس در ویرایشگر محدود شد؛ سایت با `site/build_site.py` بازسازی شد (engines.8ffeccf54cba.js).
+- تست: `V310_4_MatrixLayoutTest`.
+
 ### V310.1 — املا در چاپ؛ کنترل‌های ابتدایی در چاپ مثل سایت (اپ 1.02.19 + سایت)
 - **اجرای CI:** کامیت‌های فقط با `text/CHANGELOG_FA.txt` در `paths-ignore` اپ هستند؛ برای اجرای CI، نسخه به ۱.۰۲.۱۹ رفت (`text/APP_VERSION.txt`).
 - علت گزارش «املا در اپ نیست»: گیت `!printMode` در `ExamBuilderScreen.kt` (نوع ابتدایی، برچسب، ترتیب، تصویر انتخابی) و کادر متن املا. سایت در هر دو حالت نشان می‌دهد.
