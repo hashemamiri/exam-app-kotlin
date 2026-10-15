@@ -16,6 +16,8 @@ import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.heightIn
@@ -441,7 +443,29 @@ fun StudentExamContent(
                             if (keypad) MathKeypad(numeric = true, onKey = { k -> onAnswer(TextAnswer(question.id, MathKeys.apply(current, k, numeric = true))) })
                         }
                     }
-                    is MultipleChoiceQuestion -> Column(verticalArrangement = Arrangement.spacedBy(if (primary) 12.dp else 8.dp)) {
+                    // V303 — ابتدایی: وقتی همهٔ گزینه‌ها تصویر (یا متن خیلی کوتاه/ایموجی) هستند → شبکهٔ ۲×۲ کارت‌های تصویری بزرگ
+                    is MultipleChoiceQuestion -> if (primary && isPictureOptionSet(question)) {
+                        val labels = listOf("الف", "ب", "ج", "د", "هـ", "و")
+                        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                            question.options.indices.chunked(2).forEach { rowIdx ->
+                                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                                    rowIdx.forEach { displayIndex ->
+                                        val originalIndex = question.optionOriginalIndices.getOrElse(displayIndex) { displayIndex }
+                                        val chosen = (state.answers[question.id] as? ChoiceAnswer)?.selectedIndex == originalIndex
+                                        PrimaryPictureOptionCard(
+                                            label = labels.getOrElse(displayIndex) { (displayIndex + 1).toString() },
+                                            text = question.options[displayIndex],
+                                            image = question.optionImages.getOrNull(displayIndex),
+                                            selected = chosen,
+                                            onClick = { onAnswer(ChoiceAnswer(question.id, originalIndex)) },
+                                            modifier = Modifier.weight(1f)
+                                        )
+                                    }
+                                    if (rowIdx.size == 1) Spacer(Modifier.weight(1f))
+                                }
+                            }
+                        }
+                    } else Column(verticalArrangement = Arrangement.spacedBy(if (primary) 12.dp else 8.dp)) {
                         question.options.forEachIndexed { displayIndex, option ->
                             val originalIndex = question.optionOriginalIndices.getOrElse(displayIndex) { displayIndex }
                             val chosen = (state.answers[question.id] as? ChoiceAnswer)?.selectedIndex == originalIndex
@@ -562,6 +586,52 @@ fun StudentExamContent(
             },
             confirmButton = { Button(onClick = onDismissExamChanges) { Text("متوجه شدم") } }
         )
+    }
+}
+
+/** V303 — آیا همهٔ گزینه‌ها «تصویری»اند؟ (هر گزینه تصویر دارد، یا متنش بدون فرمول و حداکثر ۴ نویسه مثل ایموجی/عدد/حرف است) */
+private fun isPictureOptionSet(q: MultipleChoiceQuestion): Boolean {
+    if (q.options.size < 2 || q.options.size > 6) return false
+    return q.options.indices.all { i ->
+        val img = q.optionImages.getOrNull(i)
+        val t = q.options[i].trim()
+        !img.isNullOrBlank() || (t.isNotEmpty() && !t.contains('$') && !t.contains("%%") && t.codePointCount(0, t.length) <= 4)
+    }
+}
+
+/** V303 — کارت تصویری بزرگ (شبکهٔ ۲×۲): تصویر مربعی، نشان حرفی گوشهٔ بالا، متن کوتاه زیر تصویر درشت. */
+@Composable
+private fun PrimaryPictureOptionCard(
+    label: String,
+    text: String,
+    image: String?,
+    selected: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val scheme = MaterialTheme.colorScheme
+    Card(
+        modifier = modifier.clickable(onClick = onClick),
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(containerColor = if (selected) scheme.primaryContainer else scheme.surface),
+        border = androidx.compose.foundation.BorderStroke(if (selected) 4.dp else 1.dp, if (selected) scheme.primary else scheme.outlineVariant)
+    ) {
+        Column(Modifier.fillMaxWidth().padding(12.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Box(
+                    Modifier.size(36.dp).background(if (selected) scheme.primary else scheme.secondaryContainer, CircleShape),
+                    contentAlignment = Alignment.Center
+                ) { Text(if (selected) "✓" else label, color = if (selected) scheme.onPrimary else scheme.onSecondaryContainer, fontWeight = FontWeight.Bold) }
+            }
+            if (!image.isNullOrBlank()) {
+                StudentCachedImage(image, "تصویر گزینه", Modifier.fillMaxWidth().aspectRatio(1f))
+                if (text.isNotBlank()) Text(text, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
+            } else {
+                Box(Modifier.fillMaxWidth().aspectRatio(1f), contentAlignment = Alignment.Center) {
+                    Text(text, fontSize = 56.sp, textAlign = TextAlign.Center, lineHeight = 64.sp)
+                }
+            }
+        }
     }
 }
 

@@ -271,6 +271,15 @@ code.k{background:#f1f3f8;border-radius:6px;padding:1px 6px;font-size:13px;direc
 .st-exam.primary .st-opt.on .st-optlabel{background:var(--brand);color:#fff}
 .st-exam.primary .st-tf .btn{flex:1;min-height:64px;font-size:1.2em;border-radius:20px}
 .st-exam.primary .st-timer{opacity:.55;font-size:14px}
+/* V303 — شبکهٔ ۲×۲ گزینه‌های تصویری حالت ابتدایی */
+.st-picgrid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-top:6px}
+.st-pic{display:flex;flex-direction:column;align-items:center;gap:8px;padding:12px;border:1px solid var(--line);border-radius:24px;background:var(--card);cursor:pointer;font:inherit;color:inherit;text-align:center}
+.st-pic.on{border:4px solid var(--brand);background:var(--brand-soft)}
+.st-piclabel{align-self:flex-start;width:36px;height:36px;border-radius:50%;background:var(--brand-soft);color:#173d9c;display:inline-flex;align-items:center;justify-content:center;font-weight:700}
+.st-pic.on .st-piclabel{background:var(--brand);color:#fff}
+.st-pic img{width:100%;aspect-ratio:1/1;object-fit:contain;border-radius:14px;background:var(--card)}
+.st-picemoji{width:100%;aspect-ratio:1/1;display:flex;align-items:center;justify-content:center;font-size:56px;line-height:1}
+.st-pictext{font-weight:700;font-size:1.1em}
 .st-exam.primary .st-read{width:100%;min-height:56px;font-size:1.15em;border-radius:18px;margin:6px 0 10px;background:var(--ok-soft);color:#1b5e3a;border:1px solid #bfe6cd} /* V302 */
 .st-exam.primary .st-timer.danger{opacity:.9}
 .st-exam.primary .st-input,.st-exam.primary textarea{font-size:1.15em;min-height:52px}

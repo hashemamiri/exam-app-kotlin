@@ -279,6 +279,11 @@
     });
     return b;
   }
+  /* V303 — همهٔ گزینه‌ها «تصویری»اند؟ (تصویر دارند یا متن کوتاه ≤۴ نویسه بدون فرمول) */
+  function isPictureOptionSet(q) {
+    if (!q.options || q.options.length < 2 || q.options.length > 6) return false;
+    return q.options.every(function (o, i) { var img = q.optionImages && q.optionImages[i]; var t = String(o || '').trim(); return !!img || (t && t.indexOf('$') < 0 && t.indexOf('%%') < 0 && Array.from(t).length <= 4); });
+  }
   function startExam(c, exam, resumed) {
     var d = draftGet(exam.id);
     run = {exam: exam, index: 0, answers: d.answers || {}, images: d.images || {}, started: true, finished: false, submitting: false, enteredAt: Date.now(), qEnter: {}, qTime: {}, qVisits: {}, events: {}, timer: null, monitorTimer: null};
@@ -383,7 +388,20 @@
       var box = el('div', {class: 'st-answer'});
       var a = run.answers[q.id];
       function set(v) { if (v === null || v === undefined || v === '') delete run.answers[q.id]; else run.answers[q.id] = v; saveDraft(); drawNav(); }
-      if (q.type === 'multiple') {
+      if (q.type === 'multiple' && ex.primary && isPictureOptionSet(q)) {
+        /* V303 — ابتدایی: همهٔ گزینه‌ها تصویر/ایموجی → شبکهٔ ۲×۲ کارت‌های بزرگ */
+        var grid = el('div', {class: 'st-picgrid'}), L3 = ['الف', 'ب', 'ج', 'د', 'ه', 'و'];
+        q.options.forEach(function (o, di) {
+          var oi = q.optionOriginalIndices[di] != null ? q.optionOriginalIndices[di] : di, on = a === oi, img = q.optionImages[di];
+          var card = el('button', {type: 'button', class: 'st-pic' + (on ? ' on' : ''), 'aria-pressed': on ? 'true' : 'false', onclick: function () { set(oi); box.replaceWith(answerArea(q)); }}, [
+            el('span', {class: 'st-piclabel', text: on ? '✓' : (L3[di] || fa(di + 1))}),
+            img ? el('img', {src: img, alt: ''}) : el('span', {class: 'st-picemoji', text: o}),
+            img && String(o).trim() ? el('span', {class: 'st-pictext', text: o}) : null
+          ]);
+          grid.appendChild(card);
+        });
+        box.appendChild(grid);
+      } else if (q.type === 'multiple') {
         q.options.forEach(function (o, di) {
           var oi = q.optionOriginalIndices[di] != null ? q.optionOriginalIndices[di] : di;
           var r = el('input', {type: 'radio', name: 'st_' + q.id}); r.checked = a === oi; r.addEventListener('change', function () { set(oi); });
