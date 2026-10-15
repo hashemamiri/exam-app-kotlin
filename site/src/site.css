@@ -692,7 +692,7 @@ img,video,canvas,iframe{max-width:100%}
 .ice-landing .ice-sub{margin-bottom:26px}
 .ice-landing .ice-btn+.ice-btn{margin-top:10px}
 /* V202.5 — کاشی‌های معرفی در صفحهٔ اول گوشی (همان ۶ کاشی دسکتاپ) */
-.ice-tiles{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;width:100%;margin-top:22px}
+.ice-tiles{display:grid;grid-template-columns:repeat(2,1fr);/* V299: ۸ بلوک */gap:10px;width:100%;margin-top:22px}
 .ice-tile{padding:12px 6px;border-radius:14px;background:var(--fbg);border:1px solid var(--stroke);font-size:11.5px;font-weight:800;color:var(--ink);text-align:center}
 .ice-tile i{display:grid;place-items:center;width:40px;height:40px;border-radius:12px;margin:0 auto 8px;font-style:normal;font-size:20px;background:linear-gradient(135deg,var(--acc),var(--accl));color:#fff}
 .ice-tile:nth-child(even) i{background:linear-gradient(135deg,var(--accl),var(--acc))}
@@ -871,6 +871,15 @@ img,video,canvas,iframe{max-width:100%}
 .lp .tile:hover{transform:translateY(-3px)}
 .lp .tile i{display:grid;place-items:center;width:46px;height:46px;border-radius:14px;margin:0 auto 10px;font-style:normal;font-size:22px;background:linear-gradient(135deg,var(--brand1),var(--brand2));color:#fff}
 .lp .tile:nth-child(even) i{background:linear-gradient(135deg,var(--brand2),var(--brand1))}
+/* V299 — ۸ بلوک معرفی: دو ستون وسط‌چین، آیکن راست + عنوان و توضیح */
+.lp .tiles.tiles8{grid-template-columns:repeat(2,minmax(0,340px));justify-content:center;gap:14px;margin:30px auto 0;width:100%}
+.lp .tile.t8{display:flex;align-items:flex-start;gap:12px;text-align:right;padding:14px 14px 14px 16px}
+.lp .tile.t8 i{margin:0;flex:none}
+.lp .tile.t8 .t8-txt{min-width:0;flex:1}
+.lp .tile.t8 b{display:block;font-size:14px;font-weight:900;margin:2px 0 4px}
+.lp .tile.t8 small{display:block;font-size:11.5px;font-weight:600;line-height:1.75;color:var(--muted)}
+.lp.lp-sky .tile.t8 small{color:#4A6A86}
+.lp.lp-sky .tile.t8 i{width:46px;height:46px;margin-top:2px}.lp.lp-sky .tile.t8 i svg{width:38px;height:38px}
 .lp .demos{display:flex;gap:10px;margin-top:36px;flex-wrap:wrap;align-items:center;color:var(--muted);font-size:13px}
 .lp .demos button{height:40px;padding:0 16px;border:0;border-radius:12px;background:var(--bg);box-shadow:3px 3px 7px var(--dark),-3px -3px 7px var(--light);color:var(--ink);font:inherit;font-size:13px;font-weight:800;cursor:pointer}
 .lp .demos button:active{box-shadow:inset 4px 4px 8px var(--dark),inset -4px -4px 8px var(--light)}
@@ -919,6 +928,7 @@ img,video,canvas,iframe{max-width:100%}
   .lp{grid-template-columns:1fr 400px}
   .lp-l{padding:40px 32px}.lp-r{padding:30px 18px}
   .lp .tiles{grid-template-columns:repeat(3,1fr);gap:12px;margin-top:28px}
+  .lp .tiles.tiles8{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
   .lp h1{font-size:34px}
 }
 @media (max-width:860px) and (pointer:coarse){
@@ -929,6 +939,7 @@ img,video,canvas,iframe{max-width:100%}
   .lp h1{margin:22px 0 12px}.lp-l>p{margin-inline:auto;font-size:15px}
   .lp .logo{justify-content:center}
   .lp .tiles{grid-template-columns:repeat(2,1fr);gap:14px;margin-top:26px;width:100%;max-width:520px;margin-inline:auto}
+  .lp .tiles.tiles8{grid-template-columns:1fr;max-width:420px}
   .lp .demos{justify-content:center;margin-top:26px}
   .lp .foot{position:static;order:3;margin-top:26px;padding:0 0 6px}
 }
@@ -1924,6 +1935,7 @@ table.rp-single td.num,table.rp-single th.num{text-align:center;white-space:nowr
 /* V292.1 — نماد اعتماد الکترونیکی */
 .enamad{display:inline-flex;align-items:center;justify-content:center;padding:6px;border-radius:12px;background:var(--card,#fff);line-height:0}
 .enamad img{height:72px;width:auto;display:block}
-.lp-badges{margin-top:18px;display:flex;gap:12px;align-items:center}
+.lp-badges{margin-top:30px;display:flex;gap:12px;align-items:center;justify-content:center}/* V299 — زیر بلوک‌ها، وسط، با فاصله */
+.enamad.enamad-txt{padding:8px 14px;font-size:12px;font-weight:800;color:var(--link,#2B8FD6);line-height:1.6;text-decoration:none}
 .ice-badges{display:flex;justify-content:center;margin-top:10px}
 .m-lv .enamad img{height:56px}

@@ -1310,20 +1310,37 @@
     document.body.classList.add('lp-body');
     var keyWarn = KEY_READY ? null : el('div', {class: 'warn-key', html: '⚠️ کلید اتصال (<code class="k">SUPABASE_ANON_KEY</code>) هنوز در بالای فایل <code class="k">index.html</code> وارد نشده است؛ تا آن زمان ورود و ثبت‌نام کار نمی‌کند.'});
     /* V226 — طرح ۲۶ «آسمانی و ابری»: کاشی‌های شیشه‌ای با آیکن خطی آبی (ترتیب تصویر مرجع) */
+    /* V299 — ۸ بلوک معرفی، دو ستونِ وسط‌چین، با عنوان و توضیح دقیق؛ آیکن‌های خطی آبی */
     var LP_ICO = {
+      bank: '<path d="M4 7h16v13H4z"/><path d="M4 7l2-3h12l2 3"/><path d="M9 11h6M9 14.5h6"/><path d="M12 4v3"/>',
+      live: '<circle cx="12" cy="13" r="7"/><path d="M12 9v4l2.5 2"/><path d="M9 3h6"/><path d="M12 3v3"/><path d="M18.5 6.5l1.5-1.5"/>',
       report: '<path d="M4 20h16"/><rect x="6" y="11" width="3" height="7" rx="1"/><rect x="11" y="7" width="3" height="11" rx="1"/><rect x="16" y="13" width="3" height="5" rx="1"/><circle cx="17.5" cy="6.5" r="3"/><path d="M16.3 7.7l2.4-2.4"/>',
       print: '<path d="M7 3h8l4 4v8H7z"/><path d="M15 3v4h4"/><path d="M9 10h5M9 13h5"/><rect x="5" y="17" width="10" height="4" rx="1"/><path d="M8 17v-2M12 17v-2"/>',
       formula: '<path d="M4 4v16h16"/><path d="M8 7h5M10.5 7l-3 10"/><path d="M13 9.5l3 3M16 9.5l-3 3"/><path d="M12 15h5"/>',
-      periodic: '<path d="M4 20h16"/><path d="M5 20V9h3v11M8 13h3v7M11 11h3v9M14 13h3v7M17 9h3v11"/><path d="M5 9V5h2v4M18 9V5h2v4"/>',
+      figure: '<path d="M3 21h18"/><path d="M5 21V5"/><path d="M5 17l5-6 4 3 5-7"/><circle cx="10" cy="11" r="1.2"/><circle cx="14" cy="14" r="1.2"/><circle cx="19" cy="7" r="1.2"/>',
       board: '<path d="M4 6l12-2v12L4 18z"/><path d="M4 18l4 3M16 16l4 2"/><path d="M8 12l4-1.2"/>',
       school: '<path d="M3 21h18"/><path d="M5 21V10l7-5 7 5v11"/><path d="M12 5V3M12 3h3"/><rect x="10" y="15" width="4" height="6"/><path d="M8 12h2M14 12h2"/>'
     };
-    var tiles = [['report', 'کارنامهٔ خودکار'], ['print', 'چاپ رسمی'], ['formula', 'ویرایشگر فرمول'], ['periodic', 'جدول تناوبی'], ['board', 'تختهٔ سفید'], ['school', 'مدیریت مدرسه']];
+    var tiles = [
+      ['bank', 'آزمون‌ساز و بانک سؤال', 'تستی، تشریحی، جای‌خالی، جورکردنی و عددی؛ با تصویر، فایل و گفتار. سؤال‌ها در بانک شخصی ذخیره و در آزمون‌های بعدی دوباره استفاده می‌شوند.'],
+      ['live', 'برگزاری آنلاین', 'آزمون با کد ورود و زمان‌بندی، ادامهٔ آزمون نیمه‌تمام، نظارت لحظه‌ای معلم و ثبت پاسخ‌ها حتی با قطع‌ووصل اینترنت.'],
+      ['report', 'کارنامهٔ خودکار', 'تصحیح فوری تستی و عددی، نمره‌دهی تشریحی توسط معلم، کارنامهٔ فردی و گزارش کلاس با نمودار و خروجی اکسل.'],
+      ['print', 'چاپ رسمی و Word', 'برگهٔ A4 با سربرگ مدرسه، پیش‌نمایش دقیقاً مثل چاپ، پاسخ‌نامه و فایل Word قابل ویرایش.'],
+      ['formula', 'ویرایشگر فرمول و جدول تناوبی', 'نوشتن کسر، ریشه، توان، انتگرال و ماتریس با صفحه‌کلید ریاضی؛ کتابخانهٔ هزاران فرمول درسی و دانشگاهی و جدول تناوبی تعاملی.'],
+      ['figure', 'شکل، نمودار و محور', 'محور اعداد، دستگاه مختصات، شبکه، قطبی و سه‌بعدی؛ ترسیم شکل هندسی و درج آن کنار سؤال و گزینه‌ها.'],
+      ['board', 'تختهٔ سفید', 'پاسخ دست‌نویس دانش‌آموز روی تخته با قلم و پاک‌کن؛ طرح به‌صورت تصویر پاسخ ثبت و برای معلم نمایش داده می‌شود.'],
+      ['school', 'مدیریت مدرسه و کلاس‌ها', 'تعریف مدرسه، کلاس و دانش‌آموزان (ورود گروهی از اکسل)، اختصاص آزمون به کلاس و دسترسی مدیر به گزارش‌ها.']
+    ];
     var left = el('div', {class: 'lp-l'}, [
       brandEl('آزمون آنلاین'), /* V222.2 — نام در صفحهٔ ورود دسکتاپ */
       el('h1', {html: 'آزمون بسازید،<br><span>هوشمند برگزار کنید.</span>'}),
       el('p', {text: 'فرمول ریاضی، شکل هندسی، تختهٔ سفید و چاپ رسمی A4 — یک حساب برای اپ اندروید و وب.'}),
-      el('div', {class: 'tiles'}, tiles.map(function (t) { return el('div', {class: 'tile neo'}, [el('i', {'aria-hidden': 'true', html: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">' + LP_ICO[t[0]] + '</svg>'}), el('span', {text: t[1]})]); })),
+      el('div', {class: 'tiles tiles8'}, tiles.map(function (t) {
+        return el('div', {class: 'tile neo t8'}, [
+          el('i', {'aria-hidden': 'true', html: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">' + LP_ICO[t[0]] + '</svg>'}),
+          el('div', {class: 't8-txt'}, [el('b', {text: t[1]}), el('small', {text: t[2]})])
+        ]);
+      })),
       el('div', {class: 'lp-badges'}, [enamadBadge()]) /* V292.1 */
     ]);
     var card = el('div', {class: 'card neo'});
@@ -1348,7 +1365,8 @@
     img.setAttribute('alt', 'نماد اعتماد الکترونیکی');
     img.setAttribute('code', ENAMAD_CODE);
     img.style.cursor = 'pointer';
-    img.addEventListener('error', function () { a.style.display = 'none'; }); /* اگر سرور اینماد در دسترس نبود، کادر خالی نماند */
+    /* V299 — اگر تصویر از سرور اینماد نیامد (دامنهٔ غیرثبت‌شده مثل سایت آزمایشی، یا قطعی)، به‌جای مخفی‌شدن، پیوند متنی نمایش داده شود */
+    img.addEventListener('error', function () { a.classList.add('enamad-txt'); img.remove(); a.textContent = 'نماد اعتماد الکترونیکی'; });
     a.appendChild(img);
     return a;
   }

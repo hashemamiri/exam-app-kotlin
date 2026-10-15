@@ -749,7 +749,7 @@
   function entered() { try { return sessionStorage.getItem('m-entered') === '1'; } catch (e) { return true; } }
   function enter() { try { sessionStorage.setItem('m-entered', '1'); } catch (e) {} }
   function gateActive() { return MQ.matches && !!S.user() && !entered(); }
-  var LANDING_TILES = [['🧮', 'ویرایشگر فرمول'], ['🖨', 'چاپ رسمی'], ['📊', 'کارنامهٔ خودکار'], ['🏫', 'مدیریت مدرسه'], ['🎨', 'تختهٔ سفید'], ['⚗️', 'جدول تناوبی']]; /* = tiles صفحهٔ دسکتاپ (app.js renderLanding) — V202.5 (قبلاً داخل paintAuth بعد از فراخوانی landing() تعریف شده بود → undefined → صفحهٔ خالی) */
+  var LANDING_TILES = [['🗂️', 'آزمون‌ساز و بانک سؤال'], ['⏱️', 'برگزاری آنلاین'], ['📊', 'کارنامهٔ خودکار'], ['🖨', 'چاپ رسمی و Word'], ['🧮', 'فرمول و جدول تناوبی'], ['📐', 'شکل و محور'], ['🎨', 'تختهٔ سفید'], ['🏫', 'مدیریت مدرسه']]; /* V299: ۸ بلوک */ /* = tiles صفحهٔ دسکتاپ (app.js renderLanding) — V202.5 (قبلاً داخل paintAuth بعد از فراخوانی landing() تعریف شده بود → undefined → صفحهٔ خالی) */
   var A = {screen: 'landing', tab: 1, regTab: 0, email: '', step: 'form', fullName: '', username: null};
   function paintAuth(root) {
     var recovery = A.screen === 'recovery' || (A.screen === 'otp' && A.otpKind === 'recovery');

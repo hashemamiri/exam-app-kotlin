@@ -19430,6 +19430,11 @@ CI: `compileDebugUnitTestKotlin` به‌خاطر `assertFalse` بدون import �
 - باگ V202.5: `var LANDING_TILES` داخل `paintAuth` بعد از خطی که `landing()` را صدا می‌زد تعریف شده بود → به‌خاطر hoisting مقدارش undefined و `.map` خطا می‌داد → صفحهٔ اول خالی. حالا کنار `authActive` در سطح ماژول است (تست ترتیب را پین می‌کند).
 - دروازهٔ صفحهٔ اول: mobile.js `entered()/enter()` با `sessionStorage['m-entered']`، `gateActive() = MQ && user && !entered`؛ app.js `render()` پیش از m-mode اگر gateActive → paintAuth (landing حتی با user). دکمه: user ⇒ `enter(); S.render()`؛ وگرنه `goA('login')`؛ پیوند ثبت‌نام فقط بدون user. `afterLogin()` → `SiteMobile.enter()`.
 
+### V299 — صفحهٔ ورود سایت: ۸ بلوک معرفی (فقط سایت؛ بدون bump)
+- `app.js renderLanding`: `LP_ICO` ۸ آیکن (bank/live/report/print/formula/figure/board/school)، `tiles` = [key, عنوان, توضیح]؛ `.tiles.tiles8` + `.tile.t8` (آیکن راست، `.t8-txt` با `b`/`small`). CSS: دو ستون `repeat(2,minmax(0,340px))` وسط‌چین؛ در ≤ عرض متوسط `1fr 1fr`، در موبایل‌چین یک ستون. `.lp-badges` وسط‌چین با `margin-top:30px`.
+- اینماد: `trustseal.enamad.ir` از خارج ایران در دسترس نیست (timeout) → قابل آزمایش در sandbox نیست. قبلاً رویداد `error` کل نشان را مخفی می‌کرد (احتمال علت «نمایش داده نمی‌شود»: دامنهٔ آزمایشی/غیرثبت‌شده یا قطعی سرور اینماد). حالا fallback = پیوند متنی `.enamad-txt`. اگر روی onlineexam.ir هم تصویر نیاید، باید وضعیت نماد در پنل اینماد (تأیید/انتشار) بررسی شود — کد embed همان کد رسمی است.
+- موبایل: `LANDING_TILES` ۸ آیتم، `.ice-tiles` دو ستون. تست: `V299_SiteLandingTilesTest` (Site*). تصاویر `qa/shots/v299_*.png`.
+
 ### V298.3 — مقصد انتخابی در نصب‌کننده + قاعدهٔ «هر بار بپرس» (فقط docs؛ بدون bump)
 - `docs/tools/installer_template.py`: ثابت `TARGET` («staging» پیش‌فرض / «main» = اصلی + همگام‌سازی staging). `make_installer.py VER BASE OUT [staging|main]`.
 - قاعدهٔ دائمی در §۱۱ ثبت شد: پیش از هر بسته، از کاربر بپرس: آزمایشی / اصلی / هر دو.
