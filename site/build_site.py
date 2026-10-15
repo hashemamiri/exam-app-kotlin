@@ -134,6 +134,10 @@ def main():
     # V157 — همان header_settings_schema.json اپ برای پنجرهٔ «تنظیمات سربرگ» سایت (HeaderSettingsDialog)
     inline = "window.__ENGINES_URL = %s;" % json.dumps("/" + engines_name)
     inline += "\nwindow.__HEADER_SCHEMA = %s;" % read(os.path.join(ASSETS, "print", "header_settings_schema.json")).strip()
+    # V307 / ۱۲ — بانک آمادهٔ ابتدایی: همان فایل اپ (assets) در سایت تعبیه می‌شود تا دو نسخه جدا نشوند
+    with open(os.path.join(ASSETS, "primary_bank.json"), encoding="utf-8") as bf:
+        bank_json = json.dumps(json.loads(bf.read()), ensure_ascii=False, separators=(",", ":"))
+    site_js = site_js.replace("/*__PRIMARY_BANK__*/", bank_json)
     out = (tpl.replace("/*__SUPABASE_URL__*/", SUPABASE_URL)
               .replace("/*__VAZIR_CSS__*/", vazir)
               .replace("/*__SITE_CSS__*/", min_css(site_css))

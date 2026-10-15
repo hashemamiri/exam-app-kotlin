@@ -720,6 +720,12 @@ class ExamBuilderViewModel(
         }
     }
 
+    /** V306 / ۱۲ — بانک آمادهٔ ابتدایی: پیش‌نویس‌ها با شناسهٔ تازه به انتهای آزمون اضافه می‌شوند. */
+    fun addPrimaryBankDrafts(drafts: List<QuestionDraft>) {
+        if (drafts.isEmpty()) return
+        _state.update { it.copy(questions = it.questions + drafts.map { d -> d.copy(id = UUID.randomUUID().toString()).ensureEditorIds() }) }
+    }
+
     fun addFromBank(id: Long) {
         val item = state.value.bankQuestions.firstOrNull { it.id == id } ?: return
         _state.update {

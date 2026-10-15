@@ -60,6 +60,67 @@
   }
   function orderAnswerText(items) { return (items || []).map(function (x) { return String(x).trim().replace(/،/g, ','); }).filter(Boolean).join(','); }
 
+  /* V307 / ۱۲ — بانک آمادهٔ ابتدایی (فقط خواندنی؛ داده هنگام ساخت سایت از app/src/main/assets/primary_bank.json تزریق می‌شود) */
+  var PRIMARY_BANK = /*__PRIMARY_BANK__*/{"items": []};
+  var PRI_LETTERS_BANK = ['الف', 'ب', 'ج', 'د', 'ه', 'و'];
+  function primaryBankDraft(item) {
+    if (['multiple', 'fill', 'numeric', 'truefalse'].indexOf(item.type) < 0) return null;
+    if (item.type === 'multiple' && (!item.options || item.options.length < 2 || item.correct == null || item.correct < 0 || item.correct >= item.options.length)) return null;
+    if (item.type !== 'multiple' && !item.answer) return null;
+    var q = newQuestion(item.type);
+    q.text = item.text;
+    if (item.type === 'multiple') {
+      q.options = item.options.slice();
+      q.optionImages = q.options.map(function () { return null; });
+      q.correctIndex = item.correct;
+    } else if (item.type === 'numeric') {
+      q.expectedNumber = item.answer;
+    } else {
+      q.expectedText = item.answer;
+    }
+    return q;
+  }
+  function openPrimaryBank() {
+    var grade = 0, subject = '';
+    var subjects = [];
+    PRIMARY_BANK.items.forEach(function (it) { if (subjects.indexOf(it.subject) < 0) subjects.push(it.subject); });
+    var modal = el('div', {class: 'modal-bg', onclick: function (e) { if (e.target === modal) modal.remove(); }});
+    var card = el('div', {class: 'card', style: 'max-width:720px;width:94vw;max-height:88vh;overflow:auto'});
+    modal.appendChild(card);
+    function paint() {
+      card.innerHTML = '';
+      card.appendChild(el('div', {class: 'row'}, [
+        el('b', {class: 'grow', text: '🏫 بانک آمادهٔ ابتدایی'}),
+        el('button', {class: 'btn light sm', text: 'بستن', onclick: function () { modal.remove(); }})
+      ]));
+      var chips = el('div', {class: 'row', style: 'gap:6px;flex-wrap:wrap;margin:8px 0'});
+      chips.appendChild(el('button', {class: 'btn sm ' + (grade === 0 ? '' : 'light'), text: 'همه پایه‌ها', onclick: function () { grade = 0; paint(); }}));
+      for (var g = 1; g <= 6; g++) {
+        (function (gg) { chips.appendChild(el('button', {class: 'btn sm ' + (grade === gg ? '' : 'light'), text: 'پایهٔ ' + fa(gg), onclick: function () { grade = gg; paint(); }})); })(g);
+      }
+      card.appendChild(chips);
+      var sc = el('div', {class: 'row', style: 'gap:6px;flex-wrap:wrap;margin-bottom:8px'});
+      sc.appendChild(el('button', {class: 'btn sm ' + (subject === '' ? '' : 'light'), text: 'همه درس‌ها', onclick: function () { subject = ''; paint(); }}));
+      subjects.forEach(function (s) { sc.appendChild(el('button', {class: 'btn sm ' + (subject === s ? '' : 'light'), text: s, onclick: function () { subject = s; paint(); }})); });
+      card.appendChild(sc);
+      PRIMARY_BANK.items.filter(function (it) { return (!grade || it.grade === grade) && (!subject || it.subject === subject); }).forEach(function (it) {
+        card.appendChild(el('div', {class: 'card', style: 'margin:8px 0;padding:10px'}, [
+          el('div', {class: 'muted', style: 'font-size:12px', text: it.subject + ' · پایهٔ ' + fa(it.grade)}),
+          el('div', {style: 'margin:4px 0', text: it.text}),
+          (it.options && it.options.length) ? el('div', {class: 'muted', style: 'font-size:13px', text: it.options.map(function (o, i) { return (PRI_LETTERS_BANK[i] || String(i + 1)) + ') ' + o; }).join('   ')}) : null,
+          el('button', {class: 'btn soft sm', text: '➕ افزودن به آزمون', onclick: function () {
+            var q = primaryBankDraft(it);
+            if (!q) { toast('این سؤال قابل افزودن نیست.', 'err'); return; }
+            state.questions.push(q); state.selected = state.questions.length - 1; mark(); drawList(); drawEditor();
+            toast('سؤال به آزمون افزوده شد.');
+          }})
+        ]));
+      });
+    }
+    document.body.appendChild(modal);
+    paint();
+  }
+
   function newQuestion(type) {
     var q = {id: uuid(), type: type || 'multiple', text: '', score: 1, options: ['', '', '', ''], optionImages: [null, null, null, null], correctIndex: null, expectedText: '', expectedNumber: '', tolerance: '0', caseSensitive: false,
       matchingLeft: ['', ''], matchingRight: ['', ''], matchingPairs: {}, images: [], answerImageMode: 'no', allowAnswerGraph: false, maxAnswerImages: 1,
@@ -659,6 +720,7 @@
       TYPES.forEach(function (t) { addRow.appendChild(el('button', {class: 'btn light sm', title: t[1], text: t[2] + ' ' + t[1], onclick: function () { state.questions.push(newQuestion(t[0])); state.selected = state.questions.length - 1; mark(); drawList(); drawEditor(); }})); });
       list.appendChild(addRow);
       if (bankAllowed()) list.appendChild(el('button', {class: 'btn soft sm', style: 'width:100%;margin-top:8px', text: '🏦 از بانک سؤال', onclick: openBank}));
+      if (bankAllowed() && state.primaryMode && !state.bankEdit) list.appendChild(el('button', {class: 'btn soft sm', style: 'width:100%;margin-top:8px', text: '🏫 بانک آمادهٔ ابتدایی', onclick: openPrimaryBank}));
       var ul = el('div', {class: 'b-qs'});
       state.questions.forEach(function (q, i) {
         var row = el('div', {class: 'b-q' + (i === state.selected ? ' on' : ''), onclick: function () { state.selected = i; drawList(); drawEditor(); }}, [

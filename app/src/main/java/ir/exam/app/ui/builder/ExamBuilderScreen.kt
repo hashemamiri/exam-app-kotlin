@@ -1012,6 +1012,7 @@ private fun BuilderQuestionBankDialog(
                 item.examTitle.orEmpty().lowercase().contains(query))
     }
     val selected = remember { mutableStateListOf<Long>() }
+    var primaryBankOpen by remember { mutableStateOf(false) }
     var previewItem by remember { mutableStateOf<BankQuestionOption?>(null) }
     Dialog(
         onDismissRequest = onDismiss,
@@ -1034,6 +1035,11 @@ private fun BuilderQuestionBankDialog(
                     }
                 }
                 HorizontalDivider(Modifier.padding(vertical = 6.dp))
+                // V306 / ۱۲ — بانک آمادهٔ ابتدایی فقط وقتی حالت ابتدایی آزمون روشن است
+                if (state.primaryMode) {
+                    OutlinedButton(onClick = { primaryBankOpen = true }, modifier = Modifier.fillMaxWidth()) { Text("🏫 بانک آمادهٔ ابتدایی") }
+                    if (primaryBankOpen) PrimaryBankDialog(viewModel = viewModel, onDismiss = { primaryBankOpen = false })
+                }
                 OutlinedTextField(
                     state.bankQuery,
                     viewModel::setBankQuery,

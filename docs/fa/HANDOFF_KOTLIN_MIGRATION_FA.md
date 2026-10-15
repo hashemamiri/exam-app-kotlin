@@ -19430,6 +19430,16 @@ CI: `compileDebugUnitTestKotlin` به‌خاطر `assertFalse` بدون import �
 - باگ V202.5: `var LANDING_TILES` داخل `paintAuth` بعد از خطی که `landing()` را صدا می‌زد تعریف شده بود → به‌خاطر hoisting مقدارش undefined و `.map` خطا می‌داد → صفحهٔ اول خالی. حالا کنار `authActive` در سطح ماژول است (تست ترتیب را پین می‌کند).
 - دروازهٔ صفحهٔ اول: mobile.js `entered()/enter()` با `sessionStorage['m-entered']`، `gateActive() = MQ && user && !entered`؛ app.js `render()` پیش از m-mode اگر gateActive → paintAuth (landing حتی با user). دکمه: user ⇒ `enter(); S.render()`؛ وگرنه `goA('login')`؛ پیوند ثبت‌نام فقط بدون user. `afterLogin()` → `SiteMobile.enter()`.
 
+### V307 — ابتدایی: بانک آمادهٔ سؤال‌های ابتدایی (۱۲) (اپ 1.02.12 + سایت؛ مقصد: اصلی)
+- **پیش‌نیاز:** اول V306 (cbd3931e) و بعد V307 نصب شود. بسته روی پایهٔ cbd3931e ساخته شده است.
+- **SQL:** لازم نیست.
+- **داده:** `app/src/main/assets/primary_bank.json` (۳۰ سؤال، ۵ درس × ۶ سؤال، پایهٔ ۱ تا ۶؛ انواع multiple/fill/numeric/truefalse). فقط خواندنی؛ در اپ از assets خوانده می‌شود.
+- **اپ:** `ui/builder/PrimaryBank.kt` (تجزیه و تبدیل به `QuestionDraft`: multiple→MULTIPLE_CHOICE، fill→FILL_BLANK، numeric→NUMERIC با tolerance صفر، truefalse→TRUE_FALSE)؛ `ui/builder/PrimaryBankDialog.kt` (فیلتر پایه و درس، دکمهٔ «➕ افزودن به آزمون» برای هر سؤال)؛ دکمهٔ «🏫 بانک آمادهٔ ابتدایی» فقط وقتی `state.primaryMode` روشن است، بالای جست‌وجوی بانک سؤال. ViewModel: `addPrimaryBankDrafts(drafts)` با شناسهٔ تازه و `ensureEditorIds()`.
+- **سایت:** `site/build_site.py` همان JSON را هنگام ساخت در `builder.js` تزریق می‌کند (`/*__PRIMARY_BANK__*/`)؛ `primaryBankDraft`، `openPrimaryBank`، دکمهٔ «🏫 بانک آمادهٔ ابتدایی» در فهرست سؤال‌ها فقط در حالت ابتدایی. `site/index.html` بازسازی شد.
+- **تست:** `V306_PrimaryBankTest` (۴ تست: ۳۰ سؤال یکتا، ۵ درس، ۶ پایه؛ تبدیل همهٔ سؤال‌ها؛ پاسخ‌های معتبر؛ رد گزینهٔ پاسخ نامعتبر) و `V307_Site_PrimaryBankTest` (۲ تست پین).
+- **تست محلی:** compileDebugKotlin، testDebugUnitTest (۱۰۴۹ تست، صفر خطا، شامل V306 و V307) و lintDebug همگی سبز. CI هنوز اجرا نشده. نمایش بصری روی دستگاه بررسی نشده.
+- **هنوز انجام نشده از فهرست ابتدایی:** ۱۰ (پاسخ صوتی) و ۱۳ (مجموعه‌تصاویر در اطلس).
+
 ### V306 — ابتدایی: پاسخ با نقاشی (۹)، املا (۱۱) (اپ 1.02.11 + سایت؛ مقصد: اصلی)
 - **SQL لازم (کاربر اجرا می‌کند):** `sql_v306.sql` (کپی در `supabase/migrations/20261015_native_dictation_v306.sql` و `sql/manual/SQL_NATIVE_DICTATION_V306.sql`). فقط `native_normalize_text_v1` تغییر کرده: فاصله و ZWNJ حذف، `ة→ه`، `ي/ك→ی/ک`. تصحیح جای خالی (`native_auto_grade_question_v1`) همین نرمال‌ساز را استفاده می‌کند؛ پس بر همهٔ جای خالی‌ها اثر دارد (کمی بخشنده‌تر: «کتاب ها» = «کتابها»). این تغییر عمدی و به درخواست نیم‌فاصله است.
 - **پاسخ با نقاشی:** `EssayQuestion.answerMode` (`text`|`draw`). کلید عمومی `mode:"draw"` در تشریحی. در اپ: بخش تشریحی به‌جای کادر متنی، `StudentWhiteboardEntry(big=true)` را نشان می‌دهد؛ بلوک قدیمی تخته فقط برای غیرِ draw اجرا می‌شود (خط `if (presentation.allowAnswerGraph || questionHasGraph) {` پین V58 حفظ شد). بررسی «پاسخ‌نداده» تصاویر تخته را هم پاسخ می‌شمارد.
