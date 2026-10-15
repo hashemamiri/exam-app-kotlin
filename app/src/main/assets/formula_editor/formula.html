@@ -8139,7 +8139,7 @@ function mEsc(e) {
         const unit = this.readUnit();
         const tag = ch === '^' ? 'sup' : 'sub';
         if (pending && pending.indexOf('data-big=\"1\"') >= 0) pending = this.attachLimit(pending, unit, ch === '^');
-        else pending = (pending || '') + '<' + tag + ' class=\"m' + tag + '\">' + unit + '</' + tag + '>';
+        else pending = this.mergeScript(pending, unit, ch === '^'); /* V297 — توان و اندیسِ هم‌پایه روی هم (ستونی) */
         continue;
       }
       flush();
@@ -8183,7 +8183,7 @@ function mEsc(e) {
         const unit = this.readUnit();
         const tag = ch === '^' ? 'sup' : 'sub';
         if (pending && pending.indexOf('data-big="1"') >= 0) pending = this.attachLimit(pending, unit, ch === '^');
-        else pending = (pending || '') + '<' + tag + ' class="m' + tag + '">' + unit + '</' + tag + '>';
+        else pending = this.mergeScript(pending, unit, ch === '^'); /* V297 — توان و اندیسِ هم‌پایه روی هم (ستونی) */
         continue;
       }
       flush();
@@ -8223,6 +8223,7 @@ function mEsc(e) {
   MathParser.prototype.atomText = function (c) {
     if (MB_BIG_SYM.test(c)) return '<span class="mbigch">' + mEsc(c) + '</span>';
     if (/^['\u2032\u2033\u2034\u2057\u02b9\u00b4\u2035]$/.test(c)) return '<i class="mprime">' + mEsc(c) + '</i>';
+    if (c === '-') return '−'; /* V297 — منهای ریاضی، هم‌خوان با رندر بومی اپ */
     return /[a-zA-Z]/.test(c) ? '<i class="mvar">' + mEsc(c) + '</i>' : mEsc(c);
   };
   MathParser.prototype.readUnit = function () {
@@ -8255,7 +8256,7 @@ function mEsc(e) {
         const unit = this.readUnit();
         const tag = ch === '^' ? 'sup' : 'sub';
         if (pending && pending.indexOf('data-big="1"') >= 0) pending = this.attachLimit(pending, unit, ch === '^');
-        else pending = (pending || '') + '<' + tag + ' class="m' + tag + '">' + unit + '</' + tag + '>';
+        else pending = this.mergeScript(pending, unit, ch === '^'); /* V297 — توان و اندیسِ هم‌پایه روی هم (ستونی) */
         continue;
       }
       flush();
@@ -8281,6 +8282,21 @@ function mEsc(e) {
     }
     flush();
     return out;
+  };
+  /* V297 — اگر بلافاصله پس از توان، اندیس (یا برعکس) برای همان پایه بیاید، به‌صورت ستونی (.mssup) چیده می‌شود
+     تا مثل ویرایشگر و رندر بومی اپ باشد؛ در غیر این صورت sup/sub معمولی. */
+  MathParser.prototype.mergeScript = function (pending, unit, isSup) {
+    const last = this._lastSc;
+    if (last && pending === last.result && last.isSup !== isSup) {
+      const top = isSup ? unit : last.unit, bot = isSup ? last.unit : unit;
+      const merged = last.base + '<span class="mssup"><span class="mss-t">' + top + '</span><span class="mss-b">' + bot + '</span></span>';
+      this._lastSc = null;
+      return merged;
+    }
+    const tag = isSup ? 'sup' : 'sub';
+    const result = (pending || '') + '<' + tag + ' class="m' + tag + '">' + unit + '</' + tag + '>';
+    this._lastSc = { base: pending || '', unit: unit, isSup: isSup, result: result };
+    return result;
   };
   MathParser.prototype.attachLimit = function (str, arg, isSup) {
     const re = new RegExp('(<span class="' + (isSup ? 'mover' : 'munder') + '">)(.*?)(</span>)');
@@ -8395,7 +8411,8 @@ function mEsc(e) {
       }
       return '<span class="msym">¬</span>';
     }
-    if (cmd === 'text' || cmd === 'mathrm' || cmd === 'mbox') return '<span class="mtext">' + this.readUnit() + '</span>';
+    if (cmd === 'text' || cmd === 'mbox') return '<span class="mtext">' + this.readUnit().replace(/\u2212/g, '-') + '</span>'; /* V297 — داخل متن، خط تیره همان خط تیره می‌ماند */
+    if (cmd === 'mathrm') return '<span class="mtext">' + this.readUnit() + '</span>';
     if (cmd === 'mathbf' || cmd === 'bold') return '<b>' + this.readUnit() + '</b>';
     if (M_BIG[cmd])
       return '<span class="mbigop" data-big="1"><span class="mover"></span><span class="mbigsym' +
@@ -9000,7 +9017,7 @@ function mEsc(e) {
         if (MB_RTL_L.test(node.v))
           return '<span class="mb-c mfa" dir="rtl" style="unicode-bidi:isolate" data-p="' + parentIdx + '">' + mEsc(node.v) + '</span>';
         return '<span class="mb-c" data-p="' + parentIdx + '">' +
-          (/[a-zA-Z]/.test(node.v) ? '<i class="mvar">' + mEsc(node.v) + '</i>' : mEsc(node.v)) + '</span>';
+          (/[a-zA-Z]/.test(node.v) ? '<i class="mvar">' + mEsc(node.v) + '</i>' : (node.v === '-' ? '−' : mEsc(node.v))) + '</span>'; /* V297 — خط تیره = منهای واقعی (مثل رندر بومی) */
       case 'sym': return '<span class="mb-c msym' + (MB_BIG_SYM.test(node.v) ? ' mbigch' : '') +
         '" dir="ltr" style="unicode-bidi:isolate" data-p="' + parentIdx + '">' +
         (MB_PRIME_RE.test(node.v) ? '<i class="mprime">' + mEsc(node.v) + '</i>' : mEsc(node.v)) + '</span>';
@@ -9523,14 +9540,20 @@ function mEsc(e) {
   }
 
   /** ابتدای «عدد/حرف» قبل از مکان نما — برای تبدیل / به کسر */
+  const MB_ATOM_OPSYM = /^[×÷±∓→←↔⇒⇐⇔≤≥≠≈≡∼≃≅∝∈∉∋⊂⊃⊆⊇∪∩∧∨¬∀∃∅∴∵∣∥⋅∘∗⊕⊗⊙∑∏∐∫∬∭∮,;:=+\-<>\/\s]+$/; /* V297 */
   function mbAtomStart(arr, i) {
     if (i <= 0) return i;
     const prev = arr[i - 1];
     if (!prev) return i;
-    if (prev.t === 'sym' || prev.t === 'fn' || prev.t === 'op') return i;
+    /* V297 — توان/اندیس/فاکتوریل همراه پایهٔ خود یک اتم‌اند (x^2/3 → کسرِ x^2 روی 3) */
+    if (prev.t === 'sup' || prev.t === 'sub' || prev.t === 'ssup' || prev.t === 'fact') return mbAtomStart(arr, i - 1);
+    if (prev.t === 'fn' || prev.t === 'op') return i;
+    /* V297 — نمادهای عملگر (×، ±، →، …) اتم نیستند ولی π، ∞، α و… هستند */
+    if (prev.t === 'sym') return MB_ATOM_OPSYM.test(String(prev.v || '')) ? i : i - 1;
     if (prev.t === 'c' && /[\s+\-=<>,;:*×÷]/.test(prev.v)) return i;
     if (prev.t !== 'c') return i - 1;
-    const isAtom = c => /[0-9\u06F0-\u06F9\u0660-\u0669a-zA-Z.\u066B\u066C]/.test(c);
+    /* V297 — حروف یونانی/∞ که به‌صورت نویسهٔ ساده تایپ شده‌اند هم اتم‌اند (π/2) */
+    const isAtom = c => /[0-9\u06F0-\u06F9\u0660-\u0669a-zA-Z.\u066B\u066C\u0370-\u03FF\u221E]/.test(c);
     if (!isAtom(prev.v)) return i;
     let j = i - 1;
     while (j > 0 && arr[j - 1].t === 'c' && isAtom(arr[j - 1].v)) j--;
@@ -9563,10 +9586,32 @@ function mEsc(e) {
       mbDraw();
       return;
     }
+    /* V297 — «=»، «<»، «>» و فاصله داخل توان/اندیس نمی‌مانند: از جعبه بیرون می‌آیند (توان خالی حذف می‌شود)
+       تا «x^2=4» به‌جای «x^{2=4}» ساخته شود. */
+    if (ch === '=' || ch === '<' || ch === '>' || ch === ' ') {
+      const sidS = mbFindSlot(arr), infS = sidS && MB.info[sidS];
+      const own = infS && infS.node;
+      if (own && (own.t === 'sup' || own.t === 'sub' || own.t === 'ssup') && infS.parentArr && infS.parentArr[infS.parentIdx] === own) {
+        mbPush();
+        if (mbNodeIsEmpty(own)) { infS.parentArr.splice(infS.parentIdx, 1); MB.cur = { arr: infS.parentArr, i: infS.parentIdx }; }
+        else MB.cur = { arr: infS.parentArr, i: infS.parentIdx + 1 };
+        if (ch === ' ') { mbDraw(); return; }
+        return mbType(ch);
+      }
+    }
     if (ch === '^') return mbInsert('sup');
     if (ch === '_') return mbInsert('sub');
     if (ch === '(') return mbInsert('par');
-    if (ch === ')') return mbOut(1);
+    if (ch === ')') { /* V297 — تا نزدیک‌ترین پرانتزِ دربرگیرنده بیرون می‌رود، نه فقط یک خانه */
+      let a2 = arr, guard = 0;
+      while (a2 && guard++ < 50) {
+        const sid2 = mbFindSlot(a2), inf2 = sid2 && MB.info[sid2];
+        if (!inf2) break;
+        if (inf2.node && inf2.node.t === 'par') { MB.cur = { arr: inf2.parentArr, i: inf2.parentIdx + 1 }; mbDraw(); return; }
+        a2 = inf2.parentArr;
+      }
+      return mbOut(1);
+    }
     /* ---------- تایپِ فارسی/عربی: یک «کلمه» = یک گرهٔ متنی ----------
        اگر بلافاصله قبل از مکان‌نما یک واژهٔ فارسی باشد، نویسهٔ تازه به
        همان واژه چسبانده می‌شود تا حروف به هم بپیوندند و ترتیبِ
@@ -9932,7 +9977,10 @@ window.mbCloseSymbolLibrary = mbCloseSymbolLibrary;
     const { arr, i } = MB.cur;
     const n = mbSup(); n.a = [mbChar(ch)];
     arr.splice(i, 0, n);
-    MB.cur = { arr: arr, i: i }; // مکان‌نما می‌ماند تا پایه را بنویسید؛ بعد با Tab داخل توان بروید
+    /* V297 — اگر پایه‌ای پشت مکان‌نما هست (x سپس x²)، مکان‌نما بعد از توان می‌رود تا «x²+1» ساخته شود؛
+       وگرنه (ابتدای عبارت یا بعد از عملگر) می‌ماند تا اول پایه نوشته شود. */
+    const hasBase = (i > 0) && (mbAtomStart(arr, i) < i);
+    MB.cur = { arr: arr, i: hasBase ? i + 1 : i };
     mbDraw(); mbFocus();
   }
 
@@ -9942,7 +9990,7 @@ window.mbCloseSymbolLibrary = mbCloseSymbolLibrary;
     const { arr, i } = MB.cur;
     const n = mbSqrt(true); n.n = [mbChar(ch)];
     arr.splice(i, 0, n);
-    MB.cur = { arr: arr, i: i };
+    MB.cur = { arr: n.a, i: 0 }; /* V297 — مکان‌نما زیر رادیکال، آمادهٔ نوشتن عدد */
     mbDraw(); mbFocus();
   }
 
@@ -10010,6 +10058,13 @@ window.mbCloseSymbolLibrary = mbCloseSymbolLibrary;
     if (!sid) return;
     const info = MB.info[sid];
     if (!info) return;
+    /* V297 — اگر کل گره خالی است (کسر/توان/پرانتز/رادیکال/ماتریس بدون محتوا)، خودِ گره حذف می‌شود */
+    if (info.node && info.parentArr && info.parentArr[info.parentIdx] === info.node && mbNodeIsEmpty(info.node)) {
+      info.parentArr.splice(info.parentIdx, 1);
+      MB.cur = { arr: info.parentArr, i: info.parentIdx };
+      mbDraw();
+      return;
+    }
     MB.cur = { arr: info.parentArr, i: info.parentIdx };
     mbDraw();
   }
@@ -10044,7 +10099,26 @@ window.mbCloseSymbolLibrary = mbCloseSymbolLibrary;
       mbDraw();
       return;
     }
+    /* V297 — در لبهٔ یک خانه، اول به خانهٔ همسایهٔ همان گره برو (صورت→مخرج، خانهٔ بعدی ماتریس، از→تا) */
+    const sidM = mbFindSlot(arr);
+    const infM = sidM && MB.info[sidM];
+    if (infM && infM.node) {
+      const all = mbAllSlotsOf(infM.node);
+      const k = all.indexOf(arr);
+      const nxt = (k >= 0) ? all[k + dir] : null;
+      if (nxt) { MB.cur = { arr: nxt, i: dir > 0 ? 0 : nxt.length }; mbDraw(); return; }
+    }
     mbOut(dir);
+  }
+  /* V297 — همهٔ خانه‌های یک گره به ترتیبِ طبیعی (شامل خانه‌های ماتریس سطر‌به‌سطر) */
+  function mbAllSlotsOf(node) {
+    const out = mbSlotsOf(node).slice();
+    if (node && node.cells && node.cells.length)
+      for (const row of node.cells) if (row && row.length) for (const cell of row) if (cell && cell.splice) out.push(cell);
+    return out;
+  }
+  function mbNodeIsEmpty(node) {
+    return mbAllSlotsOf(node).every(function (sl) { return !sl || !sl.length; });
   }
 
   function mbOut(dir) {
@@ -10155,18 +10229,29 @@ window.mbCloseSymbolLibrary = mbCloseSymbolLibrary;
     function isWord(c) { return /[a-zA-Z\u0600-\u06FF\u200c]/.test(c); }
     function assemble(toks) {
       let arr = toks.slice();
-      for (let e = arr.length - 1; e >= 0; e--) {
+      /* V297 — توان/اندیس از چپ به راست و فقط روی یک اتم: «x_i^2» → x_{i}^{2} (نه x_{i^{2}})،
+         «e^-x» → e^{-x}، «int_0^1» → \\int_{0}^{1} */
+      for (let e = 0; e < arr.length; e++) {
         if (!arr[e] || (!arr[e].pow && !arr[e].low)) continue;
         let a = e - 1;
         while (a >= 0 && arr[a] && arr[a].sp) a--;
         let b = e + 1;
         while (b < arr.length && arr[b] && arr[b].sp) b++;
         const left = (a >= 0 && arr[a]) ? arr[a] : { x: '' };
-        const right = (b < arr.length && arr[b]) ? arr[b] : { x: '' };
+        let right = (b < arr.length && arr[b]) ? arr[b] : { x: '' };
+        let bEnd = Math.min(b, arr.length - 1);
+        if (right && (right.x === '-' || right.x === '+') && !right.pow && !right.low) {
+          let b2 = b + 1;
+          while (b2 < arr.length && arr[b2] && arr[b2].sp) b2++;
+          if (b2 < arr.length && arr[b2] && !arr[b2].pow && !arr[b2].low && !arr[b2].div) {
+            right = { x: right.x + (arr[b2].grp != null ? arr[b2].grp : arr[b2].x) };
+            bEnd = b2;
+          }
+        }
         const op = arr[e].pow ? '^' : '_';
-        const rep = { x: (left.grp, left.x + op + '{' + (right.grp != null ? right.grp : right.x) + '}'), atom: true };
+        const rep = { x: left.x + op + '{' + (right.grp != null ? right.grp : right.x) + '}', atom: true };
         const from = a >= 0 ? a : e;
-        arr.splice(from, b - from + 1, rep);
+        arr.splice(from, bEnd - from + 1, rep);
         e = from;
       }
       for (let e = 0; e < arr.length; e++) {
@@ -10198,7 +10283,15 @@ window.mbCloseSymbolLibrary = mbCloseSymbolLibrary;
           toks.push({ x: '\\left( ' + s + ' \\right)', grp: s, atom: true });
           continue;
         }
-        if (c === ')' || c === ']') break;
+        if (c === '{') { /* V297 — آکولاد: گروه بدون پرانتز (sum_{i=1}) */
+          n++;
+          const innerB = parse('}');
+          if (t[n] === '}') n++;
+          const sB = assemble(innerB);
+          toks.push({ x: '{' + sB + '}', grp: sB, atom: true });
+          continue;
+        }
+        if (c === ')' || c === ']' || c === '}') break;
         if (isNum(c)) {
           let s = '';
           while (n < t.length && isNum(t[n])) s += t[n++];
@@ -10235,7 +10328,8 @@ window.mbCloseSymbolLibrary = mbCloseSymbolLibrary;
             toks.push({ x: rep + ' ', atom: true });
             continue;
           }
-          toks.push({ x: w.length > 1 ? '\\text{' + w + '}' : w, atom: true });
+          /* V297 — واژهٔ لاتینِ ناشناخته (ij، dx، xy) = حروفِ ریاضی کنار هم؛ فقط واژهٔ فارسی \\text می‌شود */
+          toks.push({ x: (w.length > 1 && !/^[a-zA-Z]+$/.test(w)) ? '\\text{' + w + '}' : w, atom: true });
           continue;
         }
         const two = t.substr(n, 2);
@@ -11956,8 +12050,42 @@ window.mbCloseSymbolLibrary = mbCloseSymbolLibrary;
   }
 
   function mfCurrentTex() {
-    return MF_MODE === 'type' ? natToTex(el('mfNat').value) : mbTex(MB.root);
+    return MF_MODE === 'type' ? natToTex(el('mfNat').value) : mbTex(mbCleanEmpty(MB.root));
   }
+  /* V297 — پاک‌سازی جعبه‌های خالی هنگام درج: توان/اندیس/آکسان خالی حذف می‌شود؛
+     صورت/مخرج/زیر رادیکال خالی با □ پر می‌شود تا فرمول نهایی به‌هم نریزد. */
+  let MB_CLEAN_NOTE = 0;
+  function mbCleanEmpty(nodes) {
+    MB_CLEAN_NOTE = 0;
+    const src = mbClone(nodes || []);
+    const fill = function (sl) { if (sl && !sl.length) { sl.push(mbSym('□')); MB_CLEAN_NOTE++; } return sl; };
+    const walk = function (arr) {
+      if (!arr || !arr.length) return;
+      for (let i = arr.length - 1; i >= 0; i--) {
+        const nd = arr[i]; if (!nd || typeof nd !== 'object') continue;
+        if (nd.t === 'sup' || nd.t === 'sub') { if (!nd.a || !nd.a.length) { arr.splice(i, 1); MB_CLEAN_NOTE++; continue; } }
+        else if (nd.t === 'ssup') {
+          const ea = !nd.a || !nd.a.length, eb = !nd.b || !nd.b.length;
+          if (ea && eb) { arr.splice(i, 1); MB_CLEAN_NOTE++; continue; }
+          if (ea) { arr[i] = Object.assign(mbSub(), { a: nd.b }); MB_CLEAN_NOTE++; }
+          else if (eb) { arr[i] = Object.assign(mbSup(), { a: nd.a }); MB_CLEAN_NOTE++; }
+        }
+        else if (['vec', 'bar', 'ubl', 'hat', 'tilde', 'dot', 'ddot', 'dddot', 'ovec', 'ovecL', 'ovecB', 'oacc', 'cal', 'box', 'phantom', 'fact'].indexOf(nd.t) >= 0) {
+          if (!nd.a || !nd.a.length) { arr.splice(i, 1); MB_CLEAN_NOTE++; continue; }
+        }
+        else if (nd.t === 'frac' || nd.t === 'bin') { fill(nd.a); fill(nd.b); }
+        else if (nd.t === 'sqrt') { fill(nd.a); if (nd.n && !nd.n.length) { nd.n = null; MB_CLEAN_NOTE++; } }
+        else if (nd.t === 'mixed') { fill(nd.w); fill(nd.a); fill(nd.b); }
+        /* خانهٔ خالی ماتریس مجاز است (ماتریس تنک) — دست‌نخورده می‌ماند */
+        const cur = arr[i];
+        ['n', 'w', 'a', 'b', 'from', 'to'].forEach(function (f) { if (cur && cur[f] && cur[f].splice) walk(cur[f]); });
+        if (cur && cur.cells) cur.cells.forEach(function (row) { (row || []).forEach(function (c) { if (c && c.splice) walk(c); }); });
+      }
+    };
+    walk(src);
+    return src;
+  }
+  window.mbCleanEmpty = mbCleanEmpty;
 
   function mfSyncTex() {
     const code = el('mfTex');
@@ -11967,6 +12095,8 @@ window.mbCloseSymbolLibrary = mbCloseSymbolLibrary;
   function mfApply() {
     const tex = (mfCurrentTex() || '').trim();
     if (!tex) { closeMath(); return; }
+    /* V297 — اطلاع کوتاه اگر جعبه‌های خالی هنگام درج پاک‌سازی شدند */
+    if (MF_MODE !== 'type' && MB_CLEAN_NOTE > 0) { try { notify('جعبه‌های خالی فرمول مرتب شدند (توان/اندیس خالی حذف و جای خالی با □ پر شد)', 'info', 2600); } catch (e) {} }
     if (!MF_TARGET) { closeMath(); return; }
     const t = MF_TARGET;
     const a = (typeof window.MF_SEL_START === 'number') ? window.MF_SEL_START : ((t.selectionStart != null) ? t.selectionStart : t.value.length);
@@ -12046,7 +12176,7 @@ window.mbCloseSymbolLibrary = mbCloseSymbolLibrary;
 
   function mbTex(nodes) {
     const grp = a => mbTex(a).trim(); // داخل آکولاد: فاصله‌های اضافه را حذف کن
-    return (nodes || []).map(node => {
+    return (nodes || []).map((node, idx) => {
       switch (node.t) {
         case 'br': return '\\\\';
         case 'c': { const c = node.v;
@@ -12063,9 +12193,9 @@ window.mbCloseSymbolLibrary = mbCloseSymbolLibrary;
         case 'hsp': return '\\hspace{' + (node.v || ((node.px || 16) + 'px')) + '}';
         case 'frac': return '\\frac{' + grp(node.a) + '}{' + grp(node.b) + '}';
         case 'bin': return '\\binom{' + grp(node.a) + '}{' + grp(node.b) + '}';
-        case 'ssup': return '^{' + grp(node.a) + '}_{' + grp(node.b) + '}';
-        case 'sup': return '^{' + grp(node.a) + '}';
-        case 'sub': return '_{' + grp(node.a) + '}';
+        case 'ssup': return (idx === 0 ? '{}' : '') + '^{' + grp(node.a) + '}_{' + grp(node.b) + '}';
+        case 'sup': return (idx === 0 ? '{}' : '') + '^{' + grp(node.a) + '}'; /* V297 — بدون پایه: {}^{…} */
+        case 'sub': return (idx === 0 ? '{}' : '') + '_{' + grp(node.a) + '}';
         case 'sqrt': return node.n ? '\\sqrt[' + grp(node.n) + ']{' + grp(node.a) + '}' : '\\sqrt{' + grp(node.a) + '}';
         case 'par':
           if (node.k === 'floor') return '\\lfloor ' + grp(node.a) + ' \\rfloor';
@@ -12189,12 +12319,13 @@ window.mbCloseSymbolLibrary = mbCloseSymbolLibrary;
       if (/[{}\\\\$%&#_ ]/.test(t[n] || '')) return [mbChar(t[n++])];
       let name = '';
       while (n < t.length && /[a-zA-Z]/.test(t[n])) name += t[n++];
-      if (t[n] === ',' || t[n] === ';' || t[n] === ':') { n++; return [mbChar(' ')]; }
+      /* V297 — فقط «\\;» و «\\:» (بدون نام) فاصله‌اند؛ «\\alpha,» نباید حذف شود */
+      if (!name && (t[n] === ',' || t[n] === ';' || t[n] === ':')) { n++; return [mbChar(' ')]; }
       if (name === 'quad' || name === 'qquad') return [mbChar(' '), mbChar(' ')];
       if (name === 'displaystyle' || name === 'textstyle' || name === 'scriptstyle' ||
           name === 'scriptscriptstyle' || name === 'limits' || name === 'nolimits' ||
           name === 'relax' || name === 'allowbreak' || name === 'notag' || name === 'nonumber') return [];
-      if (name === 'pmod') { const u2 = readUnit(); return [mbText(' (mod ' + (typeof mbTex === 'function' ? mbTex(u2) : '') + ')')]; }
+      if (name === 'pmod') { const u2 = readUnit(); return [mbChar(' '), mbText('(mod ' + (typeof mbTex === 'function' ? mbTex(u2) : '') + ')')]; } /* V297 — فاصلهٔ جدا تا در بازخوانی حذف نشود */
       if (name === 'frac' || name === 'dfrac' || name === 'tfrac' || name === 'cfrac') {
         const f = mbFrac();
         f.a = readUnit();
@@ -12363,9 +12494,13 @@ window.mbCloseSymbolLibrary = mbCloseSymbolLibrary;
       }
       if (name === 'text' || name === 'mathrm' || name === 'mbox' || name === 'mathbf' || name === 'bold') {
         const inner = readUnit();
-        let s = '';
-        inner.forEach(x => { s += (x.t === 'c' || x.t === 'text') ? x.v : mbTex([x]); });
-        return [mbText(s)];
+        /* V297 — \\mathrm{m/s^{2}} یا \\mathrm{HCO_3^{-}}: حروف → متنِ ایستاده، توان/اندیس → گرهٔ واقعی
+           (قبلاً کل محتوا به یک رشتهٔ \\text با آکولادهای خام تبدیل و در بازخوانی خراب می‌شد) */
+        const out = []; let run = '';
+        const flush = () => { if (run) { out.push(mbText(run)); run = ''; } };
+        inner.forEach(x => { if (x.t === 'c' || x.t === 'text') run += x.v; else { flush(); out.push(x); } });
+        flush();
+        return out.length ? out : [mbText('')];
       }
       if (name === 'left' || name === 'right') {
         skipWs();

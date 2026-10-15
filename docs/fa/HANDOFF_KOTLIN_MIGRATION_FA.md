@@ -19425,6 +19425,17 @@ CI: `compileDebugUnitTestKotlin` به‌خاطر `assertFalse` بدون import �
 - باگ V202.5: `var LANDING_TILES` داخل `paintAuth` بعد از خطی که `landing()` را صدا می‌زد تعریف شده بود → به‌خاطر hoisting مقدارش undefined و `.map` خطا می‌داد → صفحهٔ اول خالی. حالا کنار `authActive` در سطح ماژول است (تست ترتیب را پین می‌کند).
 - دروازهٔ صفحهٔ اول: mobile.js `entered()/enter()` با `sessionStorage['m-entered']`، `gateActive() = MQ && user && !entered`؛ app.js `render()` پیش از m-mode اگر gateActive → paintAuth (landing حتی با user). دکمه: user ⇒ `enter(); S.render()`؛ وگرنه `goA('login')`؛ پیوند ثبت‌نام فقط بدون user. `afterLogin()` → `SiteMobile.enter()`.
 
+### V297 — بازبینی ویرایشگر جعبه‌ای فرمول (اپ 1.01.97 + سایت)
+- همهٔ تغییرها در `app/src/main/assets/formula_editor/formula.html` با نشان `V297` (سایت از همین فایل در باندل engines ساخته می‌شود؛ `python3 site/build_site.py`).
+- `mbAtomStart`: sup/sub/ssup/fact پیش از مکان‌نما همراه پایه یک اتم‌اند؛ `MB_ATOM_OPSYM` نمادهای عملگر را از π/∞/α جدا می‌کند؛ نویسه‌های یونانی (`\u0370-\u03FF`, `\u221E`) اتم‌اند.
+- `mbMove`: در لبهٔ خانه به خانهٔ همسایهٔ همان گره می‌رود (`mbAllSlotsOf`, `mbNodeIsEmpty`) و فقط بعد `mbOut`. `mbBack` در i=0 گرهٔ کاملاً خالی را حذف می‌کند. `mbType(')')` تا نزدیک‌ترین گرهٔ `par` بالا می‌رود (قبلاً فقط یک خانه). `mbType` «=»/«<»/«>»/فاصله داخل sup/sub/ssup → خروج از اسکریپت (sup خالی حذف).
+- `mbInsPrefillSup`: اگر پایه پشت مکان‌نما باشد (`mbAtomStart < i`) مکان‌نما بعد از توان؛ `mbInsPrefillSqrtN`: مکان‌نما در `n.a`.
+- `mbTex`: اسکریپت در idx 0 با پیشوند `{}`. `mfCurrentTex` در مسیر درج `mbCleanEmpty` (□ / `\square`، شمارندهٔ `MB_CLEAN_NOTE`) و `mfApply` در صورت پاک‌سازی `notify` می‌دهد.
+- رندر (`mathToHtml`): `MathParser.prototype.mergeScript(pending, unit, isSup)` جایگزین شاخهٔ else در سه حلقهٔ readUntilCloseCmd/readLeftRight/parseSeq → `x^{2}_{i}` به `.mssup`. `atomText` و `mbDraw case 'c'`: `-` → `−` (داخل `\text{}`/`\mbox{}` برمی‌گردد).
+- `natToTex`: اسکریپت‌ها چپ→راست روی یک اتم با جذب علامت؛ `{…}` گروه؛ واژهٔ لاتینِ ناشناخته دیگر `\text` نمی‌شود (فقط فارسی).
+- `mbParse.readCmd`: فاصلهٔ `\,`/`\;`/`\:` فقط وقتی نام خالی است (قبلاً `\alpha,` حذف می‌شد!)؛ `\mathrm/\text{…}` با توان/اندیس داخل → متن‌های ایستاده + گره‌های واقعی (قبلاً `\text{m\{\}^\{2\}}` خراب)؛ `\pmod` → `[' ', text('(mod m)')]`.
+- QA: `qa/tools/mb_harness.py` + `qa/tools/v297_scenarios.py` (۲۳ سناریو؛ سرور `python3 -m http.server 8765` در پوشهٔ کپی formula.html)، `qa/tools/chk_uni.py` → `[5008, []]`، بازخوانی همهٔ ۱۱۰۰۲ قالب کتابخانه بدون خطا (ناهمسانی‌های باقی‌مانده فقط فاصلهٔ خام). تصاویر `qa/shots/v297_*.png`. تست: `V297_BoxEditorTest`.
+
 ### V296 — جستجو در رشته‌های دانشگاهی (اپ 1.01.96 + سایت)
 - در قالب مولد `qa/tools/gen_majors.py`: `uniNorm()` (نرمال‌سازی ی/ک، نیم‌فاصله، حرکات، حذف علائم)، `uniAllItems()` (ایندکس یک‌بارهٔ همهٔ آیتم‌های گروه uni با حذف تکراری بر اساس TeX و فهرست رشته‌های دارنده)، `uniSearch(q)` (امتیاز: برابر ۱۰۰ / پیشوند ۸۰ / شامل ۶۰ / همهٔ واژه‌ها ۴۰ / متن TeX ۲۰؛ حداکثر ۶۰ نتیجه)، `installUniSearch(pop, lib)` (کادر `.uni-search` + `.uni-results` پیش از `.mbv-library`؛ CSS در `#uniSearchCss`). از `decorateUniPopover()` فراخوانی می‌شود.
 - رویدادهای کلید/اشاره‌گر روی کادر `stopPropagation` می‌شوند تا ویرایشگر حروف را نگیرد و شنوندهٔ کلیک سراسری پنجره را نبندد؛ Escape در کادر خودش مدیریت می‌شود. کلیک نتیجه → `mbVarClose()` + `mbSelectLibraryItem(it)` (آیتم‌های دارای حالت‌ها → `mbOpenItemLibrary([it])`).
