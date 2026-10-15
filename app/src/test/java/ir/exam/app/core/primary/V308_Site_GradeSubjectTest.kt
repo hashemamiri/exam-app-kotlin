@@ -15,7 +15,7 @@ class V308_Site_GradeSubjectTest {
     @Test
     fun `app editor and bank filter use grade and subject tags`() {
         val screen = File(root(), "app/src/main/java/ir/exam/app/ui/builder/ExamBuilderScreen.kt").readText()
-        assertTrue(screen.contains("if (primary && !printMode) PrimaryTagEditor(question, viewModel)"))
+        assertTrue(screen.contains("if (primary) PrimaryTagEditor(question, viewModel)"))
         assertTrue(screen.contains("item.question.grade == tagGrade"))
         assertTrue(screen.contains("item.question.subject == tagSubject"))
         val codec = File(root(), "app/src/main/java/ir/exam/app/data/repository/ExamQuestionCodec.kt").readText()

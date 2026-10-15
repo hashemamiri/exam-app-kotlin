@@ -1561,14 +1561,15 @@ private fun QuestionEditor(
             }
             }
             // V305 — حالت ابتدایی: نوع ویژهٔ سؤال (فقط وقتی کلید «حالت ابتدایی» آزمون روشن است)
-            if (primary && !printMode && (question.type == QuestionType.FILL_BLANK || question.type == QuestionType.MULTIPLE_CHOICE || question.type == QuestionType.ESSAY)) {
+            // V310.1 — در آزمون چاپی هم مثل سایت نمایش داده می‌شود (قبلاً `!printMode` بود و املا در چاپ دیده نمی‌شد).
+            if (primary && (question.type == QuestionType.FILL_BLANK || question.type == QuestionType.MULTIPLE_CHOICE || question.type == QuestionType.ESSAY)) {
                 PrimaryModeChooser(question, viewModel)
             }
             // V308 / ۱۴ — برچسب پایه و درس روی هر سؤال (فقط حالت ابتدایی)
-            if (primary && !printMode) PrimaryTagEditor(question, viewModel)
+            if (primary) PrimaryTagEditor(question, viewModel) // V310.1 — مثل سایت، در چاپ هم
             when (question.type) {
                 QuestionType.MULTIPLE_CHOICE -> {
-                    if (primary && !printMode && question.mode == "hotspot") PrimaryHotspotEditor(question, viewModel)
+                    if (primary && question.mode == "hotspot") PrimaryHotspotEditor(question, viewModel) // V310.1 — مثل سایت، در چاپ هم
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         Text("تعداد گزینه: ${question.options.size}")
                         OutlinedButton(onClick={viewModel.setOptionCount(question.id,question.options.size-1)},enabled=question.options.size>2){Text("−")}
@@ -1667,7 +1668,8 @@ private fun QuestionEditor(
                 }
                 // V110 — در آزمونِ چاپی «پاسخ‌های قابل قبول / حساس به حروف» و
                 // «پاسخ عددی / تلورانس» معنایی ندارند (تصحیح خودکار آنلاین است).
-                QuestionType.FILL_BLANK -> if (primary && !printMode && question.mode == "order") PrimaryOrderEditor(question, viewModel) else if (!printMode) Column(verticalArrangement=Arrangement.spacedBy(6.dp)) {
+                // V310.1 — املا (گوش بده و بنویس) در چاپ هم متن املا را می‌خواهد؛ ترتیب هم مثل سایت در چاپ دیده می‌شود.
+                QuestionType.FILL_BLANK -> if (primary && question.mode == "order") PrimaryOrderEditor(question, viewModel) else if (!printMode || (primary && question.mode == "dictation")) Column(verticalArrangement=Arrangement.spacedBy(6.dp)) {
                     OutlinedTextField(question.expectedText, { viewModel.updateExpectedText(question.id, it) }, label = { Text("پاسخ‌های قابل‌قبول (با | جدا کنید)") })
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
                         BoldToggleChip(
