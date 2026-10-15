@@ -67,7 +67,9 @@ class SupabaseNotificationRepository {
             "آزمون‌ها" to setOf("exam_open", "exam_soon", "exam_closing", "submit"),
             "نمره‌ها" to setOf("grade"),
             "تقویم" to setOf("calendar", "calendar_reminder"),
-            "کلاس و درخواست‌ها" to setOf("class_added", "manager_request", "request_decided", "student_delete_request")
+            "کلاس و درخواست‌ها" to setOf("class_added", "manager_request", "request_decided", "student_delete_request"),
+            // V300 — اعلان محلی «نسخهٔ جدید برنامه» (UpdateNotice)
+            "برنامه" to setOf("app_update")
         )
         const val OTHER = "سایر"
         fun categoryOf(kind: String): String = CATEGORIES.firstOrNull { kind in it.second }?.first ?: OTHER

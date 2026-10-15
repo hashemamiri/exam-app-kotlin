@@ -350,19 +350,28 @@ jobs:
           payload_notes = []
           changelog_path = Path("text/CHANGELOG_FA.txt")
           if changelog_path.is_file():
-              # V208 — سطرها خام می‌مانند (عنوان «Vxxx — …» و تیترهای «- …») تا اپ خودش بلوک‌های نسخه را بسازد؛
-              # تا سه نسخهٔ آخر (حداکثر ۴۰ سطر).
+              # V208 — سطرها خام می‌مانند (عنوان «Vxxx — …» و تیترهای «- …») تا اپ خودش بلوک‌های نسخه را بسازد.
+              # V300 — فقط نسخه‌هایی که اپ را تغییر داده‌اند (پرانتز عنوان شامل «اپ» یا بدون پرانتز)؛ بلوک‌های
+              # «فقط سایت/مستندات/SQL» حذف می‌شوند؛ تا سه نسخهٔ اپ (حداکثر ۶۰ سطر).
               payload_notes = []
               headers = 0
+              skipping = False
               for line in changelog_path.read_text(encoding="utf-8").splitlines():
                   if not line.strip():
                       continue
-                  if re.match(r"^V\d", line.strip()):
+                  m = re.match(r"^V\d+(?:\.\d+)*\s*(?:\(([^)]*)\))?", line.strip())
+                  if m:
+                      scope = (m.group(1) or "").strip()
+                      skipping = bool(scope) and ("اپ" not in scope)
+                      if skipping:
+                          continue
                       headers += 1
                       if headers > 3:
                           break
+                  elif skipping:
+                      continue
                   payload_notes.append(line.strip())
-                  if len(payload_notes) >= 40:
+                  if len(payload_notes) >= 60:
                       break
           if not payload_notes:
               payload_notes = [

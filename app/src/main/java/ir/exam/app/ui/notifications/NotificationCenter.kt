@@ -42,6 +42,8 @@ import ir.exam.app.core.calendar.PersianDigits
 import ir.exam.app.data.repository.AppNotification
 import ir.exam.app.data.repository.NotificationFeed
 import ir.exam.app.data.repository.SupabaseNotificationRepository
+import androidx.compose.runtime.collectAsState
+import ir.exam.app.core.update.UpdateNotice
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -64,7 +66,16 @@ fun NotificationBell(userId: String, tint: Color, onOpen: (page: String?, code: 
             delay(90_000L)
         }
     }
-    val unread = feed?.unread ?: 0
+    // V300 — اعلان محلی «نسخهٔ جدید برنامه» (دستهٔ «برنامه»)؛ فقط تیترهای مربوط به اپ، بدون Vxxx
+    val updateInfo by UpdateNotice.info.collectAsState()
+    val updateSeen by UpdateNotice.seen.collectAsState()
+    val updateItem = updateInfo?.let { i ->
+        AppNotification(
+            id = UpdateNotice.LOCAL_ID, kind = UpdateNotice.KIND, title = UpdateNotice.TITLE,
+            body = UpdateNotice.body(i), page = null, code = null, createdAt = i.createdAt, read = updateSeen
+        )
+    }
+    val unread = (feed?.unread ?: 0) + (if (updateItem != null && !updateSeen) 1 else 0)
     IconButton(onClick = {
         open = true
         loading = true
@@ -80,7 +91,7 @@ fun NotificationBell(userId: String, tint: Color, onOpen: (page: String?, code: 
             loading = false
         }
         var tab by remember(open) { mutableStateOf("همه") }
-        val all = feed?.items.orEmpty()
+        val all = listOfNotNull(updateItem) + feed?.items.orEmpty()
         val tabs = listOf("همه") + (SupabaseNotificationRepository.CATEGORIES.map { it.first } + SupabaseNotificationRepository.OTHER)
             .filter { c -> all.any { SupabaseNotificationRepository.categoryOf(it.kind) == c } }
         val shown = if (tab == "همه") all else all.filter { SupabaseNotificationRepository.categoryOf(it.kind) == tab }
@@ -112,6 +123,13 @@ fun NotificationBell(userId: String, tint: Color, onOpen: (page: String?, code: 
                                 }
                             items(list, key = { it.id }) { n ->
                                 NotificationRow(n) {
+                                    if (n.id == UpdateNotice.LOCAL_ID) {
+                                        // V300 — اعلان محلی بروزرسانی: پنجرهٔ دریافت نسخه دوباره باز می‌شود
+                                        UpdateNotice.seen.value = true
+                                        open = false
+                                        UpdateNotice.onOpen?.invoke()
+                                        return@NotificationRow
+                                    }
                                     // فقط همین اعلان خوانده‌شده می‌شود
                                     feed = feed?.let { f -> f.copy(unread = (f.unread - (if (n.read) 0 else 1)).coerceAtLeast(0), items = f.items.map { if (it.id == n.id) it.copy(read = true) else it }) }
                                     scope.launch { repo.markRead(listOf(n.id)) }
@@ -128,6 +146,7 @@ fun NotificationBell(userId: String, tint: Color, onOpen: (page: String?, code: 
             dismissButton = {
                 if (unread > 0) TextButton(onClick = {
                     feed = feed?.let { f -> f.copy(unread = 0, items = f.items.map { it.copy(read = true) }) }
+                    UpdateNotice.seen.value = true
                     scope.launch { repo.markAllRead() }
                 }) { Text("همه خوانده شد") }
             },

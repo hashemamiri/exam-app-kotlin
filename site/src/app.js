@@ -1306,31 +1306,39 @@
   }
 
   /* ---------------- لندینگ (V164: صفحهٔ ورود به سبک اپ؛ فرم داخل کارت، بدون پنجرهٔ بازشو) ---------------- */
+  /* V300 — آیکن‌های تصویری تمام‌رنگی با معنای روشن (نمونهٔ ۵ انتخاب کاربر: تخت رنگی با سایهٔ نرم)؛ viewBox 48؛ مشترک با موبایل (window.LP_FLAT_ICONS) */
+  window.LP_FLAT_ICONS = {
+    bank: '<path d="M6 14a3 3 0 0 1 3-3h10l3 3h17a3 3 0 0 1 3 3v21a3 3 0 0 1-3 3H9a3 3 0 0 1-3-3z" fill="#F6B73C"/><path d="M6 20h36v17a3 3 0 0 1-3 3H9a3 3 0 0 1-3-3z" fill="#FFD166"/><rect x="13" y="8" width="22" height="26" rx="2" fill="#fff" stroke="#D9DEE7"/><text x="24" y="26" text-anchor="middle" font-size="16" font-weight="900" fill="#5B52E8" font-family="Arial">?</text><circle cx="35" cy="33" r="6" fill="#19B37A"/><path d="M32 33l2 2 4-4" stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>',
+    live: '<rect x="21" y="4" width="6" height="4" rx="1" fill="#6B7A90"/><circle cx="24" cy="27" r="16" fill="#2B8FD6"/><circle cx="24" cy="27" r="12" fill="#fff"/><path d="M24 27V18" stroke="#1F3B57" stroke-width="2.5" stroke-linecap="round"/><path d="M24 27l6 4" stroke="#E8554E" stroke-width="2.5" stroke-linecap="round"/><circle cx="24" cy="27" r="1.8" fill="#1F3B57"/><circle cx="39" cy="12" r="6" fill="#19B37A"/><path d="M37 9v6l5-3z" fill="#fff"/>',
+    report: '<rect x="9" y="4" width="30" height="38" rx="3" fill="#fff" stroke="#C9D3E0"/><rect x="9" y="4" width="30" height="8" rx="3" fill="#5B52E8"/><rect x="14" y="26" width="4" height="10" fill="#7CC0EE"/><rect x="20" y="20" width="4" height="16" fill="#2B8FD6"/><rect x="26" y="23" width="4" height="13" fill="#7CC0EE"/><path d="M14 17h12" stroke="#C9D3E0" stroke-width="2" stroke-linecap="round"/><circle cx="37" cy="34" r="8" fill="#F6B73C"/><circle cx="37" cy="34" r="6" fill="#FFD166"/><text x="37" y="37.5" text-anchor="middle" font-size="8" font-weight="900" fill="#B4571B" font-family="Arial">A+</text><path d="M33 41l2 5 2-3 2 3 2-5" fill="#E8554E"/>',
+    print: '<rect x="14" y="4" width="20" height="14" rx="1" fill="#fff" stroke="#C9D3E0"/><path d="M18 9h12M18 13h8" stroke="#9AA8BC" stroke-width="1.6" stroke-linecap="round"/><rect x="6" y="17" width="36" height="16" rx="3" fill="#3B4A60"/><rect x="6" y="17" width="36" height="5" rx="3" fill="#56687F"/><circle cx="37" cy="26" r="1.8" fill="#19B37A"/><rect x="13" y="28" width="22" height="15" rx="1" fill="#fff" stroke="#C9D3E0"/><rect x="24" y="30" width="14" height="14" rx="2" fill="#2B5EB8"/><text x="31" y="41" text-anchor="middle" font-size="11" font-weight="900" fill="#fff" font-family="Arial">W</text>',
+    formula: '<rect x="5" y="7" width="26" height="34" rx="4" fill="#5B52E8"/><rect x="9" y="11" width="18" height="9" rx="2" fill="#E9E7FF"/><text x="18" y="18.5" text-anchor="middle" font-size="8.5" font-weight="900" fill="#5B52E8" font-family="Arial">∑ √ π</text><g fill="#fff"><rect x="9" y="24" width="5" height="5" rx="1"/><rect x="16" y="24" width="5" height="5" rx="1"/><rect x="23" y="24" width="5" height="5" rx="1"/><rect x="9" y="31" width="5" height="5" rx="1"/><rect x="16" y="31" width="5" height="5" rx="1"/><rect x="23" y="31" width="5" height="5" rx="1" fill="#FFD166"/></g><rect x="27" y="22" width="16" height="18" rx="2" fill="#19B37A"/><text x="35" y="31" text-anchor="middle" font-size="9" font-weight="900" fill="#fff" font-family="Arial">He</text><text x="35" y="37.5" text-anchor="middle" font-size="5" fill="#E6FFF4" font-family="Arial">2</text>',
+    figure: '<path d="M8 40V8M8 40h32" stroke="#1F3B57" stroke-width="2.5" stroke-linecap="round"/><path d="M8 8l-3 4M8 8l3 4M40 40l-4-3M40 40l-4 3" stroke="#1F3B57" stroke-width="2" stroke-linecap="round" fill="none"/><path d="M10 36c8-2 10-20 18-18s6 10 11 10" stroke="#E8554E" stroke-width="2.6" fill="none" stroke-linecap="round"/><path d="M14 16h16l-8 14z" fill="#FFD166" stroke="#F6B73C"/><circle cx="22" cy="22" r="3.5" fill="#2B8FD6"/>',
+    board: '<rect x="5" y="7" width="38" height="26" rx="2" fill="#fff" stroke="#9AA8BC" stroke-width="2"/><rect x="5" y="7" width="38" height="4" fill="#56687F"/><path d="M11 24c4-8 7 2 11-4s6 2 9 0 4 0 6 0" stroke="#E8554E" stroke-width="2.4" fill="none" stroke-linecap="round"/><path d="M12 29h12" stroke="#2B8FD6" stroke-width="2.4" stroke-linecap="round"/><path d="M24 33v9M18 42l6-9 6 9" stroke="#56687F" stroke-width="2.4" fill="none" stroke-linecap="round"/><rect x="30" y="38" width="12" height="4" rx="2" fill="#19B37A" transform="rotate(-30 36 40)"/>',
+    school: '<path d="M6 42V20l18-12 18 12v22z" fill="#F6B73C"/><path d="M6 42V20l18-12 18 12v22z" fill="none" stroke="#B4571B" stroke-width="1.5"/><rect x="19" y="28" width="10" height="14" rx="1" fill="#5B3A1E"/><rect x="10" y="24" width="6" height="7" rx="1" fill="#7CC0EE"/><rect x="32" y="24" width="6" height="7" rx="1" fill="#7CC0EE"/><path d="M24 8V2" stroke="#1F3B57" stroke-width="2"/><path d="M24 2h7l-2 2.5 2 2.5h-7z" fill="#E8554E"/><path d="M14 14l10-5 10 5-10 5z" fill="#1F3B57"/><path d="M18 16v4c0 1.5 2.7 3 6 3s6-1.5 6-3v-4" fill="none" stroke="#1F3B57" stroke-width="1.8"/>'
+  };
   function renderLanding(mode) {
     document.body.classList.add('lp-body');
     var keyWarn = KEY_READY ? null : el('div', {class: 'warn-key', html: '⚠️ کلید اتصال (<code class="k">SUPABASE_ANON_KEY</code>) هنوز در بالای فایل <code class="k">index.html</code> وارد نشده است؛ تا آن زمان ورود و ثبت‌نام کار نمی‌کند.'});
     /* V226 — طرح ۲۶ «آسمانی و ابری»: کاشی‌های شیشه‌ای با آیکن خطی آبی (ترتیب تصویر مرجع) */
-    /* V299 — ۸ بلوک معرفی، دو ستونِ وسط‌چین، با عنوان و توضیح دقیق؛ آیکن‌های خطی آبی */
-    var LP_ICO = {
-      bank: '<path d="M4 7h16v13H4z"/><path d="M4 7l2-3h12l2 3"/><path d="M9 11h6M9 14.5h6"/><path d="M12 4v3"/>',
-      live: '<circle cx="12" cy="13" r="7"/><path d="M12 9v4l2.5 2"/><path d="M9 3h6"/><path d="M12 3v3"/><path d="M18.5 6.5l1.5-1.5"/>',
-      report: '<path d="M4 20h16"/><rect x="6" y="11" width="3" height="7" rx="1"/><rect x="11" y="7" width="3" height="11" rx="1"/><rect x="16" y="13" width="3" height="5" rx="1"/><circle cx="17.5" cy="6.5" r="3"/><path d="M16.3 7.7l2.4-2.4"/>',
-      print: '<path d="M7 3h8l4 4v8H7z"/><path d="M15 3v4h4"/><path d="M9 10h5M9 13h5"/><rect x="5" y="17" width="10" height="4" rx="1"/><path d="M8 17v-2M12 17v-2"/>',
-      formula: '<path d="M4 4v16h16"/><path d="M8 7h5M10.5 7l-3 10"/><path d="M13 9.5l3 3M16 9.5l-3 3"/><path d="M12 15h5"/>',
-      figure: '<path d="M3 21h18"/><path d="M5 21V5"/><path d="M5 17l5-6 4 3 5-7"/><circle cx="10" cy="11" r="1.2"/><circle cx="14" cy="14" r="1.2"/><circle cx="19" cy="7" r="1.2"/>',
-      board: '<path d="M4 6l12-2v12L4 18z"/><path d="M4 18l4 3M16 16l4 2"/><path d="M8 12l4-1.2"/>',
-      school: '<path d="M3 21h18"/><path d="M5 21V10l7-5 7 5v11"/><path d="M12 5V3M12 3h3"/><rect x="10" y="15" width="4" height="6"/><path d="M8 12h2M14 12h2"/>'
-    };
+    /* V299 — ۸ بلوک معرفی، دو ستونِ وسط‌چین، با عنوان و توضیح دقیق */
+    var LP_ICO = window.LP_FLAT_ICONS;
     var tiles = [['bank', 'آزمون‌ساز و بانک سؤال'], ['live', 'برگزاری آنلاین'], ['report', 'کارنامهٔ خودکار'], ['print', 'چاپ رسمی و Word'], ['formula', 'فرمول و جدول تناوبی'], ['figure', 'شکل، نمودار و محور'], ['board', 'تختهٔ سفید'], ['school', 'مدیریت مدرسه']];
     /* V299.1 — چیدمان سه‌بخشی: متن معرفی (راست) | ۸ کاشی دو ستون (وسط) | کارت ورود (چپ)؛ توضیح کامل‌تر زیر عنوان و اینماد زیر توضیح */
     var intro = el('div', {class: 'lp-intro'}, [
       brandEl('آزمون آنلاین'), /* V222.2 — نام در صفحهٔ ورود دسکتاپ */
       el('h1', {html: 'آزمون بسازید،<br><span>هوشمند برگزار کنید.</span>'}),
       el('p', {text: 'سامانهٔ یکپارچهٔ ساخت، برگزاری و تصحیح آزمون برای معلم، مدیر و دانش‌آموز — یک حساب برای اپ اندروید و وب.'}),
-      el('p', {class: 'lp-more', text: 'سؤال تستی، تشریحی، جای‌خالی، جورکردنی و عددی با فرمول ریاضی، شکل هندسی، نمودار و تصویر بسازید؛ آزمون را با کد ورود و زمان‌بندی به‌صورت آنلاین برگزار کنید یا برگهٔ رسمی A4 و فایل Word آن را چاپ بگیرید. تصحیح تستی و عددی خودکار است، کارنامهٔ فردی و گزارش کلاس بلافاصله آماده می‌شود و سؤال‌ها در بانک شخصی شما برای آزمون‌های بعدی می‌مانند.'}),
+      /* V300 — توضیح تیتروار و مورد به مورد (کاربر: «پاراگراف نامرتب است») */
+      el('ul', {class: 'lp-list'}, [
+        ['ساخت سؤال', 'تستی، تشریحی، جای‌خالی، جورکردنی و عددی؛ با فرمول ریاضی، جدول تناوبی، شکل هندسی، نمودار و تصویر.'],
+        ['برگزاری', 'آنلاین با کد ورود و زمان‌بندی، یا چاپ برگهٔ رسمی A4 و فایل Word.'],
+        ['تصحیح و کارنامه', 'تصحیح خودکار تستی و عددی؛ کارنامهٔ فردی و گزارش کلاس بلافاصله آماده می‌شود.'],
+        ['بانک سؤال', 'سؤال‌ها در بانک شخصی شما می‌مانند و در آزمون‌های بعدی دوباره استفاده می‌شوند.']
+      ].map(function (r) { return el('li', {}, [el('b', {text: r[0]}), el('span', {text: r[1]})]); })),
       el('div', {class: 'lp-badges'}, [enamadBadge()]) /* V292.1 — زیر توضیحات */
     ]);
-    var tilesEl = el('div', {class: 'tiles tiles8'}, tiles.map(function (t) { return el('div', {class: 'tile neo'}, [el('i', {'aria-hidden': 'true', html: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">' + LP_ICO[t[0]] + '</svg>'}), el('span', {text: t[1]})]); }));
+    var tilesEl = el('div', {class: 'tiles tiles8'}, tiles.map(function (t) { return el('div', {class: 'tile neo'}, [el('i', {'aria-hidden': 'true', html: '<svg viewBox="0 0 48 48" aria-hidden="true">' + LP_ICO[t[0]] + '</svg>'}), el('span', {text: t[1]})]); }));
     var left = el('div', {class: 'lp-l lp3'}, [intro, tilesEl]);
     var card = el('div', {class: 'card neo'});
     drawAuthInto(card, mode || 'login');

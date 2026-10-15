@@ -48,6 +48,6 @@ class V208_ReleaseNotesTest {
         assertTrue("ReleaseNotes.latestBullets(remote.notesFa)" in src("app/src/main/java/ir/exam/app/ui/app/ExamApp.kt"))
         assertTrue("ReleaseNotes.lastVersions(remote.notesFa, 3)" in src("app/src/main/java/ir/exam/app/ui/update/AboutScreen.kt"))
         val ci = src(".github/workflows/android.yml")
-        assertTrue("if headers > 3:" in ci && "if len(payload_notes) >= 40:" in ci && "removeprefix(\"-\")" !in ci)
+        assertTrue("if headers > 3:" in ci && "if len(payload_notes) >= 60:" in ci && "removeprefix(\"-\")" !in ci)
     }
 }

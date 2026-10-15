@@ -46,6 +46,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import coil.compose.LocalImageLoader
 import ir.exam.app.ui.image.PrivateImageLoader
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -802,6 +803,16 @@ private fun AuthenticatedExamApp(
     val updateState by updateViewModel.state.collectAsState()
     var updatePromptDismissed by rememberSaveable(user.id) { mutableStateOf(false) }
     LaunchedEffect(user.id) { updateViewModel.check(BuildConfig.VERSION_CODE) }
+    // V300 — نسخهٔ جدید → اعلان «برنامه» در زنگوله (فقط تیترهای اپ)؛ لمس اعلان پنجرهٔ دریافت را دوباره باز می‌کند
+    LaunchedEffect(updateState.update?.code, updateState.update?.notesFa) {
+        val remote = updateState.update
+        if (remote == null) ir.exam.app.core.update.UpdateNotice.clear()
+        else ir.exam.app.core.update.UpdateNotice.publish(remote.name, remote.notesFa)
+    }
+    DisposableEffect(user.id) {
+        ir.exam.app.core.update.UpdateNotice.onOpen = { updatePromptDismissed = false }
+        onDispose { ir.exam.app.core.update.UpdateNotice.onOpen = null }
+    }
     // V232 — اعلان‌ها: ثبت توکن FCM برای این کاربر + درخواست مجوز اعلان (اندروید ۱۳+) فقط یک بار
     val pushContext = LocalContext.current
     val notificationPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { }

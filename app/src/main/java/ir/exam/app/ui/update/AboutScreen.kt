@@ -164,7 +164,9 @@ fun AboutScreen(
                 item { ChangeListCard("تغییرات نسخه ${remote.name}", remote.notesFa) }
             } else {
                 blocks.forEachIndexed { index, block ->
-                    val title = if (block.version.isBlank()) "تغییرات نسخه ${remote.name}" else if (index == 0) "تغییرات نسخه ${block.version} (جدید)" else "نسخه ${block.version}"
+                    // V300 — شمارهٔ داخلی Vxxx نمایش داده نمی‌شود؛ شمارهٔ اپ (از پرانتز عنوان) یا نسخهٔ سرور
+                    val label = block.appVersion.ifBlank { if (index == 0) remote.name else "" }
+                    val title = if (index == 0) "تغییرات نسخه $label (جدید)" else if (label.isNotBlank()) "نسخه $label" else "نسخهٔ قبلی"
                     item { ChangeListCard(title, block.bullets) }
                 }
             }

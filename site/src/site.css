@@ -695,6 +695,7 @@ img,video,canvas,iframe{max-width:100%}
 .ice-tiles{display:grid;grid-template-columns:repeat(2,1fr);/* V299: ۸ بلوک */gap:10px;width:100%;margin-top:22px}
 .ice-tile{padding:12px 6px;border-radius:14px;background:var(--fbg);border:1px solid var(--stroke);font-size:11.5px;font-weight:800;color:var(--ink);text-align:center}
 .ice-tile i{display:grid;place-items:center;width:40px;height:40px;border-radius:12px;margin:0 auto 8px;font-style:normal;font-size:20px;background:linear-gradient(135deg,var(--acc),var(--accl));color:#fff}
+.ice-tile i.ico48,.ice-tile:nth-child(even) i.ico48{background:transparent;width:44px;height:44px}.ice-tile i.ico48 svg{width:40px;height:40px;filter:drop-shadow(0 3px 5px rgba(43,111,168,.3))} /* V300 — همان آیکن‌های رنگی دسکتاپ */
 .ice-tile:nth-child(even) i{background:linear-gradient(135deg,var(--accl),var(--acc))}
 .ice-landing .ice-link{margin-top:8px}
 .ice-note{font-size:11.5px;color:var(--sec);text-align:center;line-height:20px;margin:18px 0 0}
@@ -876,6 +877,13 @@ img,video,canvas,iframe{max-width:100%}
 .lp-l.lp3 .lp-intro{flex:1 1 380px;max-width:520px;min-width:0}
 .lp-l.lp3 .lp-intro>p{color:var(--muted);font-size:16px;line-height:1.9;margin:0}
 .lp-l.lp3 .lp-intro>p.lp-more{font-size:13.5px;line-height:1.95;margin-top:14px;color:var(--muted)}
+/* V300 — فهرست تیتروار معرفی */
+.lp-l.lp3 .lp-intro .lp-list{list-style:none;margin:16px 0 0;padding:0;display:grid;gap:9px}
+.lp-l.lp3 .lp-intro .lp-list li{display:grid;grid-template-columns:auto 1fr;gap:8px;align-items:baseline;font-size:13.5px;line-height:1.85;color:#2E4D6B;padding-inline-start:14px;position:relative}
+.lp-l.lp3 .lp-intro .lp-list li::before{content:'';position:absolute;inset-inline-start:0;top:.75em;width:6px;height:6px;border-radius:50%;background:#2B6FA8}
+.lp-l.lp3 .lp-intro .lp-list b{color:#1C4F7A;font-weight:800;white-space:nowrap}
+.lp-l.lp3 .lp-intro .lp-list b::after{content:':'}
+.m-dark .lp-l.lp3 .lp-intro .lp-list li{color:#C9DCEC}.m-dark .lp-l.lp3 .lp-intro .lp-list b{color:#8CC8F0}.m-dark .lp-l.lp3 .lp-intro .lp-list li::before{background:#8CC8F0}
 .lp.lp-sky .lp-intro>p{color:#2E4D6B}
 .lp .tiles.tiles8{grid-template-columns:repeat(2,150px);gap:14px;margin:0;flex:none}
 .lp .tiles.tiles8 .tile{padding:16px 10px 14px;font-size:13px}
@@ -1532,7 +1540,7 @@ body.lp-body{background:#D6ECFC}
 .lp.lp-sky .lp-l>p{color:#2E4D6B}
 .lp.lp-sky .tile{background:rgba(255,255,255,.72);border:1px solid rgba(255,255,255,.9);box-shadow:0 10px 30px rgba(60,120,170,.12);color:#1F3B57;border-radius:22px}/* V237 — بدون backdrop-filter (۶ کاشی × blur = کندی بار اول) */
 .lp.lp-sky .tile i,.lp.lp-sky .tile:nth-child(even) i{width:52px;height:52px;background:transparent;box-shadow:none;color:#2B6FA8;margin-bottom:8px}
-.lp.lp-sky .tile i svg{width:44px;height:44px}
+.lp.lp-sky .tile i svg{width:44px;height:44px;filter:drop-shadow(0 4px 6px rgba(43,111,168,.3))} /* V300 — آیکن تصویری رنگی با سایهٔ نرم (نمونهٔ ۵) */
 .lp.lp-sky .card{background:rgba(255,255,255,.42);border:1px solid rgba(255,255,255,.95);box-shadow:0 20px 60px rgba(60,120,170,.18);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border-radius:28px}
 .lp.lp-sky .card h2{color:#2B8FD6}.lp.lp-sky .card p.s{color:#2E4D6B}
 .lp.lp-sky .tabs{background:rgba(255,250,240,.9);box-shadow:inset 0 1px 3px rgba(0,0,0,.06)}

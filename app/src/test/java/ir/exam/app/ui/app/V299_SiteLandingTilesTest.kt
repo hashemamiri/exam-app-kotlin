@@ -12,11 +12,11 @@ class V299_SiteLandingTilesTest {
     @Test
     fun eightTilesTwoColumnsAndEnamadFallback() {
         val app = src("site/src/app.js")
-        for (k in listOf("bank", "live", "report", "print", "formula", "figure", "board", "school")) assertTrue(k, "      $k: '<" in app)
+        for (k in listOf("bank", "live", "report", "print", "formula", "figure", "board", "school")) assertTrue(k, "    $k: '<" in app) /* V300: window.LP_FLAT_ICONS سطح بالا */
         // V299.1 — کاشی‌ها مثل قبل (آیکن + عنوان)؛ توضیح کامل در متن معرفی؛ چیدمان: معرفی | کاشی‌ها | کارت ورود
         for (t in listOf("آزمون‌ساز و بانک سؤال", "برگزاری آنلاین", "کارنامهٔ خودکار", "چاپ رسمی و Word", "فرمول و جدول تناوبی", "شکل، نمودار و محور", "تختهٔ سفید", "مدیریت مدرسه")) assertTrue(t, "'$t']" in app)
         assertTrue("var tilesEl = el('div', {class: 'tiles tiles8'}, tiles.map(" in app && "var left = el('div', {class: 'lp-l lp3'}, [intro, tilesEl]);" in app)
-        assertTrue("el('p', {class: 'lp-more', text: 'سؤال تستی، تشریحی، جای‌خالی، جورکردنی و عددی" in app)
+        assertTrue("el('ul', {class: 'lp-list'}, [" in app && "['ساخت سؤال', 'تستی، تشریحی، جای‌خالی، جورکردنی و عددی" in app) /* V300: تیتروار */
         assertTrue("el('div', {class: 'lp-badges'}, [enamadBadge()]) /* V292.1 — زیر توضیحات */\n    ]);" in app)
         assertTrue("img.addEventListener('error', function () { a.classList.add('enamad-txt'); img.remove(); a.textContent = 'نماد اعتماد الکترونیکی'; });" in app)
         assertTrue("a.style.display = 'none'" !in app)
@@ -24,7 +24,7 @@ class V299_SiteLandingTilesTest {
         assertTrue(".lp-l.lp3{flex-direction:row;align-items:center;justify-content:center;" in css && ".lp .tiles.tiles8{grid-template-columns:repeat(2,150px);" in css)
         assertTrue(".lp-badges{margin-top:22px;display:flex;gap:12px;align-items:center}" in css && ".enamad.enamad-txt{" in css)
         val mob = src("site/src/mobile.js")
-        assertTrue("['🗂️', 'آزمون‌ساز و بانک سؤال'], ['⏱️', 'برگزاری آنلاین']" in mob && "['🏫', 'مدیریت مدرسه']]; /* V299" in mob)
+        assertTrue("['🗂️', 'آزمون‌ساز و بانک سؤال', 'bank'], ['⏱️', 'برگزاری آنلاین', 'live']" in mob && "['🏫', 'مدیریت مدرسه', 'school']]; /* V300" in mob)
         assertTrue(".ice-tiles{display:grid;grid-template-columns:repeat(2,1fr);" in css)
     }
 }

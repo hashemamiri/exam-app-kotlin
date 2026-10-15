@@ -21,6 +21,9 @@ import kotlinx.serialization.json.longOrNull
 import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.intOrNull
 import java.net.URI
+import io.github.jan.supabase.exceptions.RestException
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 
@@ -46,10 +49,19 @@ class SupabaseBillingRepository : BillingRepository {
 
     override suspend fun requestTopUp(amountToman: Long, currentBalanceToman: Long): Result<PaymentLaunch> = runCatching {
         WalletRules.validateTopUp(amountToman, currentBalanceToman)
-        val dto = SupabaseProvider.client.functions.invoke(
-            "wallet-payment",
-            body = buildJsonObject { put("amount_toman", amountToman) }
-        ).body<PaymentLaunchDto>()
+        // V300 — تابع wallet-payment خطاها را با کد HTTP 400/401/403/409 و بدنهٔ {error, code} برمی‌گرداند؛
+        // کتابخانه در این حالت استثنا می‌اندازد و پیام فارسیِ سرور (مثل «درگاه پرداخت هنوز پیکربندی نشده است»)
+        // به کاربر نمی‌رسید و فقط «خطا در سرور» دیده می‌شد (سایت همان پیام را نشان می‌داد).
+        val dto = try {
+            SupabaseProvider.client.functions.invoke(
+                "wallet-payment",
+                body = buildJsonObject { put("amount_toman", amountToman) }
+            ).body<PaymentLaunchDto>()
+        } catch (e: RestException) {
+            val serverMessage = walletServerMessage(e.error) ?: walletServerMessage(e.message)
+            if (serverMessage != null) throw IllegalStateException(serverMessage)
+            throw e
+        }
         dto.error?.takeIf(String::isNotBlank)?.let { message ->
             error(dto.code?.takeIf(String::isNotBlank)?.let { "$it: $message" } ?: message)
         }
@@ -128,4 +140,16 @@ class SupabaseBillingRepository : BillingRepository {
         val allowed = host == "payment.zarinpal.com" || host.endsWith(".idpay.ir") || host == "idpay.ir" || host == supabaseHost
         require(allowed) { "نشانی درگاه در فهرست مجاز نیست." }
     }
+}
+
+/** V300 — استخراج پیام فارسیِ {error, code} از بدنهٔ خطای تابع wallet-payment؛ null اگر بدنه JSON معتبر نبود. */
+internal fun walletServerMessage(raw: String?): String? {
+    val text = raw.orEmpty()
+    val start = text.indexOf('{')
+    val end = text.lastIndexOf('}')
+    if (start < 0 || end <= start) return null
+    val obj = runCatching { Json.parseToJsonElement(text.substring(start, end + 1)).jsonObject }.getOrNull() ?: return null
+    val message = obj["error"]?.jsonPrimitive?.contentOrNull?.trim().orEmpty()
+    if (message.isBlank() || !message.any { it in '\u0600'..'\u06FF' }) return null
+    return message
 }
