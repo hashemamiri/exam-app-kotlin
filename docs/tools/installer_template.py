@@ -6,6 +6,7 @@ cd /mnt/c/Users/Hashem/Downloads/exam-app-kotlin && python3 /mnt/c/Users/Hashem/
 import base64, gzip, io, os, subprocess, sys, tarfile
 
 VERSION = "VXX"
+TARGET = "staging"  # V298.3 — «staging» = فقط نسخهٔ آزمایشی؛ «main» = اصلی (و آزمایشی هم همگام می‌شود)
 COMMIT_MSG = "..."
 FILES = []
 REMOVE = []
@@ -55,11 +56,16 @@ def main():
         pass
     run(["git", "-c", "user.name=Hashem Amiri", "-c", "user.email=hashemamiri@users.noreply.github.com",
          "commit", "-m", COMMIT_MSG])
-    # V298 — ابتدا به شاخهٔ آزمایشی (staging) می‌رود؛ پس از دیدن و تأیید: python3 scripts/promote.py
-    run(["git", "push", "origin", "HEAD:refs/heads/staging"])
-    print("\n✅ " + VERSION + " نصب و به شاخهٔ آزمایشی (staging) ارسال شد.")
-    print("   GitHub Actions نسخهٔ آزمایشی را می‌سازد: اپ «آزمون (آزمایشی)» + سایت آزمایشی https://staging.onlineexam-1q1.pages.dev")
-    print("   پس از بررسی و تأیید:  python3 scripts/promote.py      (انصراف:  python3 scripts/promote.py --cancel)")
+    # V298 — مقصد طبق انتخاب کاربر در گفتگو (قاعده: هر بار پرسیده می‌شود: آزمایشی / اصلی / هر دو)
+    if TARGET == "main":
+        run(["git", "push", "origin", "HEAD:refs/heads/main"])
+        run(["git", "push", "origin", "HEAD:refs/heads/staging"], check=False)  # آزمایشی هم همگام می‌شود
+        print("\n✅ " + VERSION + " نصب و روی نسخهٔ اصلی (و آزمایشی) اعمال شد. GitHub Actions اپ اصلی/سایت onlineexam.ir را به‌روز می‌کند.")
+    else:
+        run(["git", "push", "origin", "HEAD:refs/heads/staging"])
+        print("\n✅ " + VERSION + " نصب و به شاخهٔ آزمایشی (staging) ارسال شد.")
+        print("   GitHub Actions نسخهٔ آزمایشی را می‌سازد: اپ «آزمون (آزمایشی)» + سایت آزمایشی https://staging.onlineexam-1q1.pages.dev")
+        print("   پس از بررسی و تأیید:  python3 scripts/promote.py      (انصراف:  python3 scripts/promote.py --cancel)")
 
 
 if __name__ == "__main__":

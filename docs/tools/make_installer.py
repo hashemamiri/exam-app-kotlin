@@ -1,13 +1,16 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """ساخت بستهٔ نصب apply_vXX.py از آخرین commit(ها).
-استفاده (در ریشهٔ مخزن):  python3 docs/tools/make_installer.py V291 <commit_پایه> /مسیر/خروجی/apply_v291.py
+استفاده (در ریشهٔ مخزن):  python3 docs/tools/make_installer.py V291 <commit_پایه> /مسیر/خروجی/apply_v291.py [staging|main]
+مقصد (آرگومان چهارم، پیش‌فرض staging) را هر بار از کاربر بپرسید: آزمایشی / اصلی / هر دو (= main).
 FILES = فایل‌های افزوده/تغییریافته بین پایه و HEAD؛ REMOVE = فایل‌های حذف‌شده.
 """
 import base64, gzip, io, os, re, subprocess, sys, tarfile
 
 def main():
     ver, base, out = sys.argv[1], sys.argv[2], sys.argv[3]
+    target = sys.argv[4] if len(sys.argv) > 4 else "staging"
+    assert target in ("staging", "main"), target
     files = subprocess.check_output(["git", "diff", "--no-renames", "--name-only", "--diff-filter=AM", base, "HEAD"], text=True).split()
     rem = subprocess.check_output(["git", "diff", "--no-renames", "--name-only", "--diff-filter=D", base, "HEAD"], text=True).split()
     msg = subprocess.check_output(["git", "log", "-1", "--format=%s"], text=True).strip()
@@ -24,6 +27,7 @@ def main():
         assert n == 1, pat
     sub(r"^VERSION.*$", "VERSION = " + repr(ver))
     sub(r"^COMMIT_MSG.*$", "COMMIT_MSG = " + repr(msg))
+    sub(r"^TARGET = .*$", "TARGET = " + repr(target))
     sub(r"^FILES = .*?\]", "FILES = " + repr(files), re.M | re.S)
     sub(r"^REMOVE = .*$", "REMOVE = " + repr(rem))
     sub(r'^PAYLOAD = """.*?"""', 'PAYLOAD = """' + payload + '"""', re.M | re.S)

@@ -1,6 +1,6 @@
 # هندآف جامع مهاجرت سامانه آزمون از WebView به Native Kotlin
 
-**آخرین به‌روزرسانی:** ۲۰۲۶-۰۹-۰۸ — V115 هدر واقعاً ثابت + پیش‌نمایش چندبرگی A4
+**آخرین به‌روزرسانی:** ۲۰۲۶-۱۰-۱۵ — V298.3 گردش کار آزمایشی/اصلی (staging → promote) و قاعدهٔ «هر بار مقصد را بپرس»
 **زبان همکاری:** فارسی
 **کاربر:** غیر‌برنامه‌نویس؛ دستورها باید ساده، مرحله‌ای و قابل کپی در WSL باشند.
 
@@ -731,6 +731,11 @@ SHA-256 آرشیو حتماً تطبیق داده شود
 ---
 
 ## ۱۱) قانون دائمی تحویل نسخه‌ها: اسکریپت خودکار و مستقل پایتون (`apply_vXX.py`)
+
+> **قاعدهٔ دائمی از V298.3 (دستور صریح کاربر):** پیش از ساخت هر بستهٔ apply، **همیشه** از کاربر بپرس تغییرات روی **آزمایشی**، **اصلی** یا **هر دو** اعمال شود (ابزار ask_user). پاسخ → آرگومان چهارم `make_installer.py`:
+> - «آزمایشی» → `staging` (پیش‌فرض): push به `origin/staging`؛ اپ «آزمون (آزمایشی)» (`ir.exam.app.beta`) + سایت `https://staging.onlineexam-1q1.pages.dev`؛ اعمال روی اصلی بعداً با `python3 scripts/promote.py`.
+> - «اصلی» یا «هر دو» → `main`: push به `origin/main` و همگام‌سازی `origin/staging`.
+> هرگز بدون پرسیدن مقصد بسته نساز. در گزارش پایانی مقصد را صریح بنویس.
 
 از نسخهٔ V98 به بعد، به دستور صریح کاربر و برای جلوگیری از خطاهای متداول `git apply` (نظیر تفاوت کامیت مبدأ، تعارض‌های متنی، تفاوت سطرها و وجود فایل‌های untracked محلی)، **روش استاندارد و قطعی تحویل تمام نسخه‌ها استفاده از اسکریپت خودکار، مستقل و خود-استخراج‌گر پایتون (`apply_vXX.py`) است.**
 
@@ -19424,6 +19429,11 @@ CI: `compileDebugUnitTestKotlin` به‌خاطر `assertFalse` بدون import �
 ## §V202.6
 - باگ V202.5: `var LANDING_TILES` داخل `paintAuth` بعد از خطی که `landing()` را صدا می‌زد تعریف شده بود → به‌خاطر hoisting مقدارش undefined و `.map` خطا می‌داد → صفحهٔ اول خالی. حالا کنار `authActive` در سطح ماژول است (تست ترتیب را پین می‌کند).
 - دروازهٔ صفحهٔ اول: mobile.js `entered()/enter()` با `sessionStorage['m-entered']`، `gateActive() = MQ && user && !entered`؛ app.js `render()` پیش از m-mode اگر gateActive → paintAuth (landing حتی با user). دکمه: user ⇒ `enter(); S.render()`؛ وگرنه `goA('login')`؛ پیوند ثبت‌نام فقط بدون user. `afterLogin()` → `SiteMobile.enter()`.
+
+### V298.3 — مقصد انتخابی در نصب‌کننده + قاعدهٔ «هر بار بپرس» (فقط docs؛ بدون bump)
+- `docs/tools/installer_template.py`: ثابت `TARGET` («staging» پیش‌فرض / «main» = اصلی + همگام‌سازی staging). `make_installer.py VER BASE OUT [staging|main]`.
+- قاعدهٔ دائمی در §۱۱ ثبت شد: پیش از هر بسته، از کاربر بپرس: آزمایشی / اصلی / هر دو.
+- خلاصهٔ گردش کار برای مدل بعدی: apply → (staging | main) ؛ `promote.py` (status/cancel) ؛ اپ beta ورود گوگل ندارد مگر ثبت بستهٔ beta در Google Cloud ؛ سایت آزمایشی `staging.onlineexam-1q1.pages.dev` ؛ `onlineexam.pages.dev` وجود ندارد.
 
 ### V298.2 — ورود با گوگل در اپ آزمایشی (اپ 1.01.99)
 - علت «خطا در سرور» در beta: Credential Manager/GetGoogleIdOption فقط برای بسته‌هایی اعتبارنامه می‌دهد که به‌صورت OAuth client از نوع Android (نام بسته + SHA-1 امضا) در همان پروژهٔ Google Cloud ثبت شده باشند؛ `ir.exam.app.beta` ثبت نیست → GetCredentialException → پیام عمومی. `SignInScreen` در `IS_BETA` پیام روشن می‌دهد. راه فعال‌کردن: Google Cloud Console → APIs & Services → Credentials → Create OAuth client ID → Android → package `ir.exam.app.beta` + همان SHA-1 کلید release (کاربر انجام می‌دهد؛ کد تغییر نمی‌خواهد).
