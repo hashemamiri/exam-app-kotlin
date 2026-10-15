@@ -29,6 +29,10 @@ class V292_MajorsLibraryTest {
         // V293: شبکهٔ چندستونه با سرفصل گروه‌های آزمایشی؛ کلاس پس از انتخاب رشته برداشته می‌شود
         assertTrue("function decorateUniPopover() {" in f && "pop.classList.add('word-cats');" in f)
         assertTrue("W.mbShowSymbolCategory = function () { var pop = document.getElementById('mbVar'); if (pop) pop.classList.remove('word-cats');" in f)
+        // V296: جستجوی متنی در همهٔ رشته‌ها (نام یا TeX)؛ ارقام نتیجه تابع تنظیم «اعداد فارسی»
+        assertTrue("function installUniSearch(pop, lib) {" in f && "class=\"uni-search-in\"" in f && "function uniSearch(q) {" in f)
+        assertTrue("window.mbGetDigitsFa = function () { return !!MB_DIGIT_FA; };" in f && "mbGetDigitsFa() && typeof mbDigitMap === 'function'" in f)
+        assertTrue("if (e.key === 'Escape') { e.preventDefault(); if (inp.value)" in f)
         // V295: مرحلهٔ ۴ (۱۲ رشتهٔ جدید)
         assertTrue("\"فرمول شش عاملی\"" in f && "\"ارتفاع متاسنتریک\"" in f && "\"هدف PPO\"" in f && "\"زمان واخنش سابین\"" in f)
         // V294: مرحلهٔ ۳ (۱۲ رشتهٔ جدید) + جادادن دوبارهٔ پنجره در موبایل؛ بدون \\AA و \\mathring

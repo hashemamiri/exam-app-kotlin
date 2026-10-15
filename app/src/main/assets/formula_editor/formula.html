@@ -9892,6 +9892,7 @@ window.mbCloseSymbolLibrary = mbCloseSymbolLibrary;
   /* V287 — تنظیم «اعداد فارسی» میزبان (اپ/سایت) پیش از هر جلسه اعمال می‌شود */
   function mbSetDigitsFa(v) { MB_DIGIT_FA = !!v; mbSyncDigitBtn(); }
   window.mbSetDigitsFa = mbSetDigitsFa;
+  window.mbGetDigitsFa = function () { return !!MB_DIGIT_FA; }; /* V296 — برای جستجوی رشته‌ها */
   try {
     window.mbToggleDigits = mbToggleDigits;
     window.mbDigitMap = mbDigitMap;
@@ -28582,6 +28583,77 @@ window.mbHwState = function () { return state; };
     ['🛠 فنی و مهندسی', ['maj-cs', 'maj-ee', 'maj-me', 'maj-ce', 'maj-cheme', 'maj-mat', 'maj-ie', 'maj-aero', 'maj-pet', 'maj-arch', 'maj-bme', 'maj-robot', 'maj-poly', 'maj-env', 'maj-marine', 'maj-trans', 'maj-crypto', 'maj-ai']],
     ['🩺 علوم پزشکی', ['maj-med', 'maj-pharm', 'maj-nurs', 'maj-dent', 'maj-vet', 'maj-nutr', 'maj-radiol', 'maj-sport', 'maj-epid', 'maj-physio', 'maj-audio']],
     ['📚 علوم انسانی و کشاورزی', ['maj-econ', 'maj-acc', 'maj-mgmt', 'maj-psy', 'maj-agri', 'maj-act', 'maj-gis', 'maj-soc', 'maj-food', 'maj-music']]];
+  /* V296 — جستجو در همهٔ رشته‌ها */
+  function uniNorm(t) { return String(t || '').toLowerCase().replace(/[\u200c\u200f\u202b\u202c]/g, ' ').replace(/[يى]/g, 'ی').replace(/ك/g, 'ک').replace(/[\u064b-\u0652]/g, '').replace(/[ۀة]/g, 'ه').replace(/[^\p{L}\p{N}]+/gu, ' ').replace(/\s+/g, ' ').trim(); }
+  function uniAllItems() {
+    if (W.__uniSearchIdx) return W.__uniSearchIdx;
+    var g = (typeof MB_GROUPS !== 'undefined') && MB_GROUPS.find(function (x) { return x && x.key === 'uni'; });
+    var out = [], seen = {};
+    if (g) g.cats.forEach(function (c) {
+      var pad = MB_PAD.find(function (p) { return p && p.id === c[1]; }); if (!pad) return;
+      var major = String(c[0]).replace(/^\S+\s/, '');
+      (pad.items || []).forEach(function (it) {
+        var key = it[1]; if (seen[key]) { seen[key].m.push(major); return; }
+        var rec = { it: it, m: [major], l: uniNorm(it[0]), t: String(it[1] || '').toLowerCase() };
+        seen[key] = rec; out.push(rec);
+      });
+    });
+    W.__uniSearchIdx = out; return out;
+  }
+  function uniSearch(q) {
+    var nq = uniNorm(q); if (nq.length < 2) return [];
+    var words = nq.split(' '), raw = String(q).toLowerCase().trim();
+    var res = [];
+    uniAllItems().forEach(function (r) {
+      var score = 0;
+      if (r.l === nq) score = 100; else if (r.l.indexOf(nq) === 0) score = 80; else if (r.l.indexOf(nq) >= 0) score = 60;
+      else if (words.every(function (w) { return r.l.indexOf(w) >= 0; })) score = 40;
+      else if (raw.length >= 2 && r.t.indexOf(raw) >= 0) score = 20;
+      if (score) res.push([score, r]);
+    });
+    res.sort(function (a, b) { return b[0] - a[0]; });
+    return res.slice(0, 60).map(function (x) { return x[1]; });
+  }
+  function installUniSearch(pop, lib) {
+    if (pop.querySelector('.uni-search')) return;
+    var box = document.createElement('div'); box.className = 'uni-search';
+    box.innerHTML = '<input type="search" class="uni-search-in" placeholder="جستجو در همهٔ رشته‌ها… (مثلاً لاپلاس)" autocomplete="off" dir="auto"><button type="button" class="uni-search-x" aria-label="پاک کردن">✕</button>';
+    lib.parentNode.insertBefore(box, lib);
+    var res = document.createElement('div'); res.className = 'uni-results'; res.style.display = 'none';
+    lib.parentNode.insertBefore(res, lib);
+    var inp = box.querySelector('input'), clr = box.querySelector('.uni-search-x');
+    ['keydown', 'keyup', 'keypress', 'input'].forEach(function (ev) { inp.addEventListener(ev, function (e) { e.stopPropagation(); }); });
+    function esc2(t) { return String(t).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+    function render() {
+      var q = inp.value; var list = uniSearch(q);
+      if (uniNorm(q).length < 2) { res.style.display = 'none'; res.innerHTML = ''; lib.style.display = ''; return; }
+      lib.style.display = 'none'; res.style.display = '';
+      if (!list.length) { res.innerHTML = '<div class="uni-res-empty">چیزی پیدا نشد.</div>'; return; }
+      var fa = function (n) { try { return (typeof mbGetDigitsFa === 'function' && mbGetDigitsFa() && typeof mbDigitMap === 'function') ? mbDigitMap(String(n), true) : String(n); } catch (e) { return String(n); } };
+      res.innerHTML = '<div class="uni-res-head">' + fa(list.length) + ' نتیجه' + (list.length === 60 ? ' (اولین ' + fa(60) + ' مورد)' : '') + '</div>' +
+        list.map(function (r, i) { return '<button type="button" class="uni-res" data-i="' + i + '"><span class="uni-res-f">' + (r.it[4] ? esc2(r.it[1]) : mathToHtml(r.it[1])) + '</span><span class="uni-res-n">' + esc2(r.it[0]) + '</span><span class="uni-res-m">' + esc2(r.m.join('، ')) + '</span></button>'; }).join('');
+      res.__list = list;
+    }
+    inp.addEventListener('input', render);
+    inp.addEventListener('keydown', function (e) { if (e.key === 'Escape') { e.preventDefault(); if (inp.value) { inp.value = ''; render(); } else if (typeof mbVarClose === 'function') { mbVarClose(); pop.classList.remove('word-cats'); } } });
+    ['mousedown', 'pointerdown', 'touchstart', 'click'].forEach(function (ev) { box.addEventListener(ev, function (e) { e.stopPropagation(); }); });
+    clr.addEventListener('click', function (e) { e.preventDefault(); inp.value = ''; render(); setTimeout(function () { try { inp.focus(); } catch (x) {} }, 30); });
+    res.addEventListener('click', function (e) {
+      var b = e.target.closest && e.target.closest('.uni-res'); if (!b || !res.__list) return;
+      e.stopPropagation();
+      var r = res.__list[+b.getAttribute('data-i')]; if (!r) return;
+      if (typeof mbVarClose === 'function') mbVarClose();
+      pop.classList.remove('word-cats');
+      if (r.it[3] && typeof mbVarShow === 'function') { if (typeof mbOpenItemLibrary === 'function') mbOpenItemLibrary([r.it]); }
+      else if (typeof mbSelectLibraryItem === 'function') mbSelectLibraryItem(r.it);
+    });
+    if (!document.getElementById('uniSearchCss')) {
+      var st = document.createElement('style'); st.id = 'uniSearchCss';
+      st.textContent = '.uni-search{display:flex;gap:6px;align-items:center;margin:4px 0 6px}.uni-search-in{flex:1;min-width:0;font:inherit;font-size:.78rem;padding:6px 9px;border-radius:9px;border:1px solid rgba(255,255,255,.25);background:rgba(255,255,255,.08);color:inherit;outline:none}.uni-search-in:focus{border-color:#7dd3fc}.uni-search-x{flex:0 0 auto;border:0;background:rgba(255,255,255,.1);color:inherit;border-radius:8px;width:28px;height:28px;cursor:pointer;font-size:.8rem}.uni-results{display:flex;flex-direction:column;gap:3px;max-height:min(60vh,520px);overflow:auto}.uni-res-head,.uni-res-empty{font-size:.66rem;opacity:.75;padding:2px 4px}.uni-res{display:grid;grid-template-columns:1fr auto;grid-template-areas:"f n" "f m";gap:0 8px;align-items:center;text-align:right;width:100%;border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.05);color:inherit;border-radius:9px;padding:5px 8px;cursor:pointer;font:inherit}.uni-res:hover{background:rgba(125,211,252,.15)}.uni-res-f{grid-area:f;direction:ltr;text-align:left;overflow:hidden;font-size:.9rem}.uni-res-n{grid-area:n;font-size:.7rem;font-weight:700;max-width:170px}.uni-res-m{grid-area:m;font-size:.6rem;opacity:.7;max-width:170px}@media (max-width:520px){.uni-res-n,.uni-res-m{max-width:120px}.uni-res-f{font-size:.8rem}}';
+      document.head.appendChild(st);
+    }
+    if (!(window.matchMedia && window.matchMedia('(pointer: coarse)').matches)) { setTimeout(function () { try { if (pop.classList.contains('open')) inp.focus(); } catch (e) {} }, 60); }
+  }
   function decorateUniPopover() {
     var pop = document.getElementById('mbVar'); if (!pop) return;
     var lib = pop.querySelector('.mbv-library'); if (!lib) return;
@@ -28594,6 +28666,8 @@ window.mbHwState = function () { return state; };
       sec[1].forEach(function (id) { if (btns[id]) { lib.appendChild(btns[id]); delete btns[id]; } });
     });
     Object.keys(btns).forEach(function (id) { lib.appendChild(btns[id]); });
+    /* V296: جستجوی متنی در همهٔ رشته‌ها (نام فرمول یا متن TeX) */
+    try { installUniSearch(pop, lib); } catch (e) {}
     /* V294: پس از پهن‌شدنِ پنجره، دوباره در صفحه جا داده می‌شود (موبایل) */
     try {
       var w = pop.offsetWidth, h = pop.offsetHeight;
