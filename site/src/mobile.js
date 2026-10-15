@@ -798,6 +798,7 @@
         stag(4, outline(S.user() ? 'ورود به سامانه' : 'ورود / ثبت‌نام', function () { if (S.user()) { enter(); S.render(); } else goA('login', {tab: 1}); })),
         stag(5, el('div', {class: 'ice-tiles'}, LANDING_TILES.map(function (t) { return el('div', {class: 'ice-tile'}, [el('i', {'aria-hidden': 'true', text: t[0]}), el('span', {text: t[1]})]); }))),
         stag(6, S.user() ? null : link('ساخت حساب جدید (معلم / مدیر)', function () { goA('register', {regTab: 0, step: 'form'}); })),
+        stag(7, el('div', {class: 'ice-badges'}, [S.enamadBadge()])), /* V292.1 — اینماد */
         stag(7, el('p', {class: 'ice-note', text: 'حساب دانش‌آموز را معلم می‌سازد؛ نام کاربری و رمز را از معلم خود دریافت کنید.'}))
       ]);
     }
@@ -1012,6 +1013,7 @@
       el('div', {class: 'm-lv'}, [el('span', {text: 'وضعیت سرویس'}), el('a', {href: '/status.html', target: '_blank', rel: 'noopener', text: 'onlineexam.ir/status.html', style: 'direction:ltr;font-weight:800'})]), /* V228 */
       el('div', {class: 'm-lv'}, [el('span', {text: 'شرایط استفاده'}), el('a', {href: '/terms.html', target: '_blank', rel: 'noopener', text: 'onlineexam.ir/terms.html', style: 'direction:ltr;font-weight:800'})]), /* V282 */
       el('div', {class: 'm-lv'}, [el('span', {text: 'حریم خصوصی'}), el('a', {href: '/privacy.html', target: '_blank', rel: 'noopener', text: 'onlineexam.ir/privacy.html', style: 'direction:ltr;font-weight:800'})]),
+      el('div', {class: 'm-lv'}, [el('span', {text: 'نماد اعتماد'}), S.enamadBadge()]), /* V292.1 */
       el('div', {class: 'row', style: 'gap:8px;margin-top:8px'}, [
         el('button', {class: 'btn', style: 'flex:1', text: 'ارسال ایمیل', onclick: function () { location.href = 'mailto:' + mail + '?subject=' + encodeURIComponent('نظر دربارهٔ آزمون آنلاین'); }}),
         el('button', {class: 'btn light', style: 'flex:1', text: 'کپی نشانی', onclick: function () { (navigator.clipboard ? navigator.clipboard.writeText(mail) : Promise.reject()).then(function () { toast('نشانی ایمیل کپی شد.', 'ok'); }, function () { toast(mail, 'info'); }); }})])]));

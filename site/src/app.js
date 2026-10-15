@@ -1323,7 +1323,8 @@
       brandEl('آزمون آنلاین'), /* V222.2 — نام در صفحهٔ ورود دسکتاپ */
       el('h1', {html: 'آزمون بسازید،<br><span>هوشمند برگزار کنید.</span>'}),
       el('p', {text: 'فرمول ریاضی، شکل هندسی، تختهٔ سفید و چاپ رسمی A4 — یک حساب برای اپ اندروید و وب.'}),
-      el('div', {class: 'tiles'}, tiles.map(function (t) { return el('div', {class: 'tile neo'}, [el('i', {'aria-hidden': 'true', html: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">' + LP_ICO[t[0]] + '</svg>'}), el('span', {text: t[1]})]); }))
+      el('div', {class: 'tiles'}, tiles.map(function (t) { return el('div', {class: 'tile neo'}, [el('i', {'aria-hidden': 'true', html: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">' + LP_ICO[t[0]] + '</svg>'}), el('span', {text: t[1]})]); })),
+      el('div', {class: 'lp-badges'}, [enamadBadge()]) /* V292.1 */
     ]);
     var card = el('div', {class: 'card neo'});
     drawAuthInto(card, mode || 'login');
@@ -1336,6 +1337,21 @@
     root.appendChild(page);
   }
   var APP_MARK_SVG = '<svg viewBox="0 0 108 108" width="100%" height="100%" aria-hidden="true"><rect x="0" y="0" width="108" height="108" rx="22" fill="#fff"/><image href="/pwa/v3/mark-256.png" x="10" y="10" width="88" height="88"/></svg>'; /* V253 — لوگوی جدید «آزمون» (همان آیکون اپ اندروید) */
+  /* V292.1 — نماد اعتماد الکترونیکی (اینماد): کد رسمی، فقط نمایش؛ کلیک = صفحهٔ تأیید در trustseal.enamad.ir */
+  var ENAMAD_ID = '7284073', ENAMAD_CODE = 'jMyKBK6rprs9sP21KAmyzz1gB7ZuPySb';
+  function enamadBadge() {
+    var a = el('a', {class: 'enamad', href: 'https://trustseal.enamad.ir/?id=' + ENAMAD_ID + '&Code=' + ENAMAD_CODE, target: '_blank', rel: 'noopener', 'aria-label': 'نماد اعتماد الکترونیکی'});
+    a.setAttribute('referrerpolicy', 'origin');
+    var img = document.createElement('img');
+    img.setAttribute('referrerpolicy', 'origin');
+    img.setAttribute('src', 'https://trustseal.enamad.ir/logo.aspx?id=' + ENAMAD_ID + '&Code=' + ENAMAD_CODE);
+    img.setAttribute('alt', 'نماد اعتماد الکترونیکی');
+    img.setAttribute('code', ENAMAD_CODE);
+    img.style.cursor = 'pointer';
+    img.addEventListener('error', function () { a.style.display = 'none'; }); /* اگر سرور اینماد در دسترس نبود، کادر خالی نماند */
+    a.appendChild(img);
+    return a;
+  }
   function brandEl(label) { return el('div', {class: 'logo'}, [el('span', {class: 'mark', html: APP_MARK_SVG}), el('span', {text: label || 'آزمون آنلاین'})]); }
 
   function demoPrint() {
@@ -2371,7 +2387,7 @@
     return SUPABASE_URL + '/storage/v1/object/public/' + MEDIA_BUCKET + '/' + path;
   }
   window.ExamSite = {emojiSvg: function (k) { return emojiSvg(k, false) || ''; }, headerFingerprint: headerFingerprint, printHeaderFp: printHeaderFp, ensurePrintPaid: ensurePrintPaid, jalaliPicker: jalaliPicker, jalaliDisplay: jalaliDisplay, openFormulaEditor: openFormulaEditor, openHeaderSettings: openHeaderSettings, headerSettingsForm: headerSettingsForm, readPrintHeader: readPrintHeader, faReason: faReason, uploadMedia: uploadMedia, openPrintPreview: openPrintPreview, buildPrintPayload: buildPrintPayload, api: api, demoPrint: demoPrint,
-    el: el, esc: esc, fa: fa, en: en, gradeLabel: gradeLabel, toast: toast, confirmDlg: confirmDlg, infoDlg: infoDlg, costDoneDlg: costDoneDlg, promptDlg: promptDlg, mediaBlobUrl: mediaBlobUrl, isOwnStorageUrl: isOwnStorageUrl, deleteMedia: deleteMedia, mediaUrlsIn: mediaUrlsIn, isOwnedMediaUrl: isOwnedMediaUrl, rpc: rpc, rpcObj: rpcObj, select: select, http: http, uuid: uuid, fmtScore: fmtScore, fmtDate: fmtDate, money: money, errMsg: errMsg,
+    enamadBadge: enamadBadge, el: el, esc: esc, fa: fa, en: en, gradeLabel: gradeLabel, toast: toast, confirmDlg: confirmDlg, infoDlg: infoDlg, costDoneDlg: costDoneDlg, promptDlg: promptDlg, mediaBlobUrl: mediaBlobUrl, isOwnStorageUrl: isOwnStorageUrl, deleteMedia: deleteMedia, mediaUrlsIn: mediaUrlsIn, isOwnedMediaUrl: isOwnedMediaUrl, rpc: rpc, rpcObj: rpcObj, select: select, http: http, uuid: uuid, fmtScore: fmtScore, fmtDate: fmtDate, money: money, errMsg: errMsg,
     localState: localState, setLocalState: setLocalState, loading: loading, showErr: showErr, emptyBox: emptyBox, qType: qType, engineHtml: engineHtml, loadEngines: loadEngines,
     user: function () { return user; }, session: function () { return session; }, config: {url: SUPABASE_URL, anon: ANON},
     go: function (panel, arg) { view.panel = panel; view.arg = arg; render(); }, navBack: navBack, view: view, examActions: examActions,
