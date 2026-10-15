@@ -1859,7 +1859,8 @@
   }
   /* V186 — دسکتاپ: دکمه‌های عملیات آزمون با متن (نه آیکن)؛ گوشی همان آیکن‌ها */
   /* V286 — آیکن Word (سند با W) روی کارت آزمون */
-  var WORD_ICON_HTML = '<i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="M8 12l1.3 6 1.7-4.5 1.7 4.5 1.3-6"/></svg></i>';
+  /* V291 — آیکن Word واضح‌تر: برگه با گوشهٔ تاشده و «W» درشت و ضخیم (همان طرح در اپ: Design69Icons.Word) */
+  var WORD_ICON_HTML = '<i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M13.5 2.5H7a2 2 0 0 0-2 2v15a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M13.5 2.5V8H19"/><path stroke-width="2.7" d="M6.8 11l1.9 7.8 3.3-6 3.3 6 1.9-7.8"/></svg></i>';
   function examActions(x, refresh) {
     var wrap = el('div', {class: 'acts acts-text'});
     wrap.appendChild(el('button', {class: 'icon-btn', title: 'ویرایش', html: '<i>✎</i><span>ویرایش</span>', onclick: function () { view.panel = 'builder'; view.arg = {examId: x.id}; render(); }}));

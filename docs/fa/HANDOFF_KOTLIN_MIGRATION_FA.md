@@ -19425,7 +19425,13 @@ CI: `compileDebugUnitTestKotlin` به‌خاطر `assertFalse` بدون import �
 - باگ V202.5: `var LANDING_TILES` داخل `paintAuth` بعد از خطی که `landing()` را صدا می‌زد تعریف شده بود → به‌خاطر hoisting مقدارش undefined و `.map` خطا می‌داد → صفحهٔ اول خالی. حالا کنار `authActive` در سطح ماژول است (تست ترتیب را پین می‌کند).
 - دروازهٔ صفحهٔ اول: mobile.js `entered()/enter()` با `sessionStorage['m-entered']`، `gateActive() = MQ && user && !entered`؛ app.js `render()` پیش از m-mode اگر gateActive → paintAuth (landing حتی با user). دکمه: user ⇒ `enter(); S.render()`؛ وگرنه `goA('login')`؛ پیوند ثبت‌نام فقط بدون user. `afterLogin()` → `SiteMobile.enter()`.
 
-### V290 — سایت: خطای «عنوان خالی» هنگام ذخیره در دسکتاپ دیده شود (فقط site/**)
+### V291 — آیکن Word واضح + فونت صفحه‌های ثابت + دکمه‌های افزودن دانش‌آموز (اپ 1.01.90)
+- `Design69Icons.Word` (برگه + W با stroke 2.7) جایگزین `Icons.Outlined.Description` در `TeacherDashboardScreen` (۲ جا) و `ExamPrintCenterScreen`؛ سایت `WORD_ICON_HTML` همان مسیرها. پین‌های `V285_WordExportTest` به‌روز شد.
+- `site/src/legal_fa.py` (منبع terms/privacy؛ build_site آن‌ها را بازتولید می‌کند — مستقیم ویرایش نشوند) و `site/status.html`: سه `@font-face` وزیرمتن (`/fonts/Vazirmatn-*.woff2` که در Pages هست) اضافه شد.
+- `SchoolManagementScreen` (افزودن گروهی): «ایجاد» weight 2→1.4 با contentPadding 10/8، «اکسل» weight 1→1.3 با contentPadding 8/8، هر دو `maxLines=1, softWrap=false`؛ import `PaddingValues`.
+- تست: `V291_WordIconFontsButtonsTest`.
+
+## V290 — سایت: خطای «عنوان خالی» هنگام ذخیره در دسکتاپ دیده شود (فقط site/**)
 - علت: `save()` خطا را در `msg` داخل `.b-top` می‌گذاشت و `.dk .builder .b-top{display:none}`. حالا در `catch` همیشه `toast(errMsg(e),'err')` + برای `e.needTitle` تابع `focusTitleField()` (ستون `settings` در دسکتاپ؛ در موبایل `openSettings()`) با کلاس `need-title` (site.css). تست: `V290_SiteSaveTitleTest` (paths-ignore).
 
 ## V289.1 — رفع CI 1.01.88 (اپ 1.01.89)

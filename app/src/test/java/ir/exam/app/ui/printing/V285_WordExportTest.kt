@@ -56,7 +56,7 @@ class V285_WordExportTest {
         assertTrue("\"word-teacher\"" !in kt && "rawMode.startsWith(\"word-\")" !in kt)
         // کارت‌ها: آزمون آنلاین و آزمون چاپی
         val dash = src("app/src/main/java/ir/exam/app/ui/dashboard/TeacherDashboardScreen.kt")
-        assertTrue("ExamCardAction(Icons.Outlined.Description, \"Word\")" in dash)
+        assertTrue("ExamCardAction(ir.exam.app.ui.app.Design69Icons.Word, \"Word\")" in dash) // V291
         assertTrue("WordExportRequest(exam.id, exam.title)" in dash && "WordExportRequest(rec.id, rec.title)" in dash)
         assertTrue("printableExam(exam.id, includeAnswerKey = false)" in dash)
         // تعرفه‌ها
@@ -99,7 +99,7 @@ class V285_WordExportTest {
         assertTrue("var vcont = function () {" in js)
         val pc = src("app/src/main/java/ir/exam/app/ui/printing/ExamPrintCenterScreen.kt")
         assertTrue("WordExportFlow(wordRequest) { wordRequest = null }" in pc)
-        assertTrue("Icon(Icons.Outlined.Description, contentDescription = \"فایل Word\"" in pc)
+        assertTrue("Icon(ir.exam.app.ui.app.Design69Icons.Word, contentDescription = \"فایل Word\"" in pc) // V291
         assertTrue("(جدا از چاپ)" !in src("site/src/admin.js").substringAfter("var rows = [").substringBefore("]];"))
         assertTrue("\"فایل Word آزمون: هر فایل\" to" in src("app/src/main/java/ir/exam/app/ui/billing/WalletScreen.kt"))
     }

@@ -22,6 +22,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -2113,15 +2114,18 @@ private fun BulkStudentDialog(
                                 .weight(1f)
                                 .semantics { contentDescription = "ردیف جدید" }
                         ) { Text("+", style = MaterialTheme.typography.titleLarge) }
+                        // V291 — «ایجاد» کوچک‌تر (۱٫۴ به‌جای ۲) و «اکسل» کمی پهن‌تر با حاشیهٔ کم تا متنش عمودی/شکسته نشود
                         Button(
                             onClick = ::submitBulk,
-                            modifier = Modifier.weight(2f)
-                        ) { Text("ایجاد") }
+                            contentPadding = PaddingValues(horizontal = 10.dp, vertical = 8.dp),
+                            modifier = Modifier.weight(1.4f)
+                        ) { Text("ایجاد", maxLines = 1, softWrap = false) }
                         // V263 — ورود از اکسل/CSV
                         OutlinedButton(
                             onClick = { importLauncher.launch(arrayOf("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "text/csv", "text/comma-separated-values", "text/tab-separated-values", "text/plain", "application/octet-stream")) },
-                            modifier = Modifier.weight(1f).semantics { contentDescription = "ورود از اکسل" }
-                        ) { Text("اکسل") }
+                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 8.dp),
+                            modifier = Modifier.weight(1.3f).semantics { contentDescription = "ورود از اکسل" }
+                        ) { Text("اکسل", maxLines = 1, softWrap = false) }
                         Button(
                             onClick = onDismiss,
                             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFE5484D)),

@@ -34,7 +34,7 @@ class V21StudentBuilderPolishTest {
         assertFalse("table/title button remains", "Text(\"▦\"" in bulk)
         assertFalse("old bulk title remains", "افزودن گروهی دانش‌آموز" in bulk)
         val plus = bulk.indexOf("contentDescription = \"ردیف جدید\"")
-        val create = bulk.indexOf("Text(\"ایجاد\")")
+        val create = bulk.indexOf("Text(\"ایجاد\"") // V291: maxLines افزوده شد
         val cancel = bulk.indexOf("contentDescription = \"انصراف\"")
         val cards = bulk.indexOf("rememberLazyListState()")
         // زیر دکمه‌ها فقط لیست شمارهٔ کارت‌ها می‌آید؛ کلاس‌ها حذف شده‌اند.

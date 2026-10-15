@@ -14,7 +14,6 @@ import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.AccountBalanceWallet
 import androidx.compose.material.icons.outlined.Print
-import androidx.compose.material.icons.outlined.Description
 import androidx.compose.material3.Button
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.AlertDialog
@@ -338,7 +337,7 @@ fun ExamPrintCenterScreen(
                                     )
                                 }
                             }) {
-                                Icon(Icons.Outlined.Description, contentDescription = "فایل Word", tint = MaterialTheme.colorScheme.primary)
+                                Icon(ir.exam.app.ui.app.Design69Icons.Word, contentDescription = "فایل Word", tint = MaterialTheme.colorScheme.primary)
                             }
                             // V129 — حذف فقط بعد از تأیید کاربر (پنجرهٔ پرسش).
                             IconButton(onClick = { pendingDelete = rec.id to rec.title }) {

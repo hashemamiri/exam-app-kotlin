@@ -26,7 +26,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.Delete
-import androidx.compose.material.icons.outlined.Description
 import androidx.compose.material.icons.outlined.Print
 import androidx.compose.material.icons.outlined.IosShare
 import androidx.compose.material.icons.outlined.ContentCopy
@@ -266,7 +265,7 @@ fun TeacherDashboardScreen(
                                     ) { viewModel.setOpen(exam) }
                                     ExamCardAction(Icons.Outlined.ContentCopy, "تکثیر") { duplicateCandidate = exam }
                                     ExamCardAction(Icons.Outlined.IosShare, "صادرکردن") { exportCandidate = exam }
-                                    ExamCardAction(Icons.Outlined.Description, "Word") {
+                                    ExamCardAction(ir.exam.app.ui.app.Design69Icons.Word, "Word") {
                                         wordRequest = ir.exam.app.ui.printing.WordExportRequest(exam.id, exam.title) {
                                             ir.exam.app.data.repository.SupabasePortabilityRepository().printableExam(exam.id, includeAnswerKey = false).getOrThrow()
                                         }
@@ -425,7 +424,7 @@ private fun PrintExamCards(
                         Text("${rec.subject.ifBlank { "بدون درس" }} · ${rec.questionCount} سؤال", style = MaterialTheme.typography.bodySmall)
                     }
                     // V286 — فایل Word این آزمون چاپی (هزینهٔ جداگانه)
-                    IconButton(onClick = { onWord(rec) }) { Icon(Icons.Outlined.Description, contentDescription = "فایل Word", tint = MaterialTheme.colorScheme.primary) }
+                    IconButton(onClick = { onWord(rec) }) { Icon(ir.exam.app.ui.app.Design69Icons.Word, contentDescription = "فایل Word", tint = MaterialTheme.colorScheme.primary) }
                 }
             }
         }

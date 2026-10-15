@@ -35,6 +35,22 @@ object Design69Icons {
         }
     }
 
+    /** V291 — آیکن Word (کارت‌های آزمون): برگه با گوشهٔ تاشده و «W» درشت و ضخیم؛ همان SVG سایت (WORD_ICON_HTML). */
+    val Word: ImageVector by lazy {
+        vector("Design69Word") {
+            strokePath(1.7f) {
+                moveTo(13.5f, 2.5f); lineTo(7f, 2.5f); curveTo(5.9f, 2.5f, 5f, 3.4f, 5f, 4.5f)
+                lineTo(5f, 19.5f); curveTo(5f, 20.6f, 5.9f, 21.5f, 7f, 21.5f)
+                lineTo(17f, 21.5f); curveTo(18.1f, 21.5f, 19f, 20.6f, 19f, 19.5f)
+                lineTo(19f, 8f); close()
+                moveTo(13.5f, 2.5f); lineTo(13.5f, 8f); lineTo(19f, 8f)
+            }
+            strokePath(2.7f) {
+                moveTo(6.8f, 11f); lineTo(8.7f, 18.8f); lineTo(12f, 12.8f); lineTo(15.3f, 18.8f); lineTo(17.2f, 11f)
+            }
+        }
+    }
+
     val Add: ImageVector by lazy {
         vector("Design69Add") { strokePath(1.8f) { moveTo(12f, 5f); lineTo(12f, 19f); moveTo(5f, 12f); lineTo(19f, 12f) } }
     }
