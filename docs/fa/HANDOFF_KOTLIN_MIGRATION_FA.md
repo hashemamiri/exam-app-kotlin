@@ -19430,6 +19430,15 @@ CI: `compileDebugUnitTestKotlin` به‌خاطر `assertFalse` بدون import �
 - باگ V202.5: `var LANDING_TILES` داخل `paintAuth` بعد از خطی که `landing()` را صدا می‌زد تعریف شده بود → به‌خاطر hoisting مقدارش undefined و `.map` خطا می‌داد → صفحهٔ اول خالی. حالا کنار `authActive` در سطح ماژول است (تست ترتیب را پین می‌کند).
 - دروازهٔ صفحهٔ اول: mobile.js `entered()/enter()` با `sessionStorage['m-entered']`، `gateActive() = MQ && user && !entered`؛ app.js `render()` پیش از m-mode اگر gateActive → paintAuth (landing حتی با user). دکمه: user ⇒ `enter(); S.render()`؛ وگرنه `goA('login')`؛ پیوند ثبت‌نام فقط بدون user. `afterLogin()` → `SiteMobile.enter()`.
 
+### V309.1 — اصلاح تست‌های CI پس از V309 (اپ 1.02.15 + سایت؛ مقصد: اصلی)
+- **علت:** CI پس از نصب V309 سه تست را ناموفق گزارش کرد؛ کامپایل کاتلین موفق بود (لاگ CI).
+  1. `V306_DrawDictationTest` (payload): الگوی `obj.text("mode") == "draw"` در `StudentExamPayloadCodec` عوض شده بود → حالا `if … == "draw" … else if … == "voice"`.
+  2. `V306_DrawDictationTest` (student screen): `drawAnswer` به `in setOf(…)` تغییر کرده بود → حالا `== "draw" || == "voice"`.
+  3. `V208_ReleaseNotesTest.changelogTopBlockHasHeadlineBullets`: یک بولت بلوک بالای CHANGELOG بیش از ۲۰۰ کاراکتر بود → بلوک V309.1 با ۵ بولت (حداکثر ۱۲۱ کاراکتر) جایگزین شد؛ `MAX_BULLETS` = ۶.
+- **نسخه:** 1.02.15 (`text/APP_VERSION.txt`).
+- **نکتهٔ CI:** در همان لاگ، مرحلهٔ `lintDebug` اجرا نشده بود (شکست `testDebugUnitTest` کار را متوقف کرد). بعد از این نصاب، CI دوباره اجرا می‌شود و باید نتیجهٔ lint هم دیده شود.
+- **نصاب:** `apply_v309_1.py` فایل‌های تغییریافته را کامل جایگزین می‌کند؛ روی پایهٔ V309 (هر هشی که GitHub دارد) اجرا می‌شود. ترتیب: اول `apply_v309.py` (که قبلاً اجرا شده)، بعد `apply_v309_1.py`.
+
 ### V309 — ابتدایی: پاسخ صوتی دانش‌آموز؛ ضبط با سقف مدت معلم (۱۰) (اپ 1.02.14 + سایت؛ مقصد: اصلی)
 - **پیش‌نیاز:** نصب V308.1 (3a2c0c44). بسته روی پایهٔ 3a2c0c44 ساخته شده است. **SQL لازم است:** `sql/manual/SQL_NATIVE_VOICE_ANSWER_V309.sql` (idempotent؛ نوع‌های `audio/webm`، `audio/ogg`، `audio/x-m4a`، `audio/mp4` را به `exam-images` اضافه می‌کند). **Edge function دیپلوی نمی‌شود:** مسیر پاسخ‌ها (`answers/…`) از `media-upload` رد نمی‌شود و مستقیم در Storage ذخیره می‌شود.
 - **داده:** `EssayQuestion.voiceMaxSeconds` (`QuestionDraft.voiceMaxSeconds`)؛ JSON سؤال: `mode:"voice"` و `voice_max_seconds` (۱۰ تا ۳۰۰، پیش‌فرض ۶۰). رمزگذار `ExamQuestionCodec` و `StudentExamPayloadCodec` هر دو طرف را انجام می‌دهند.

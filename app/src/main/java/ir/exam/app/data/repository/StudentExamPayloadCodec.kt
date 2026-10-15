@@ -189,7 +189,7 @@ internal object StudentExamPayloadCodec {
             else -> EssayQuestion(
                 id, text, score, images, maxAnswerImages, answerImagesRequired, originalIndex,
                 // V306 — پاسخ با تخته (حالت ابتدایی)
-                answerMode = when (obj.text("mode")) { "draw" -> "draw"; "voice" -> "voice"; else -> "text" },
+                answerMode = if (obj.text("mode") == "draw") "draw" else if (obj.text("mode") == "voice") "voice" else "text",
                 // V309 — سقف ضبط پاسخ صوتی
                 voiceMaxSeconds = obj.int("voice_max_seconds") ?: 0
             )

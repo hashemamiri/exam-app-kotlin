@@ -596,7 +596,7 @@ fun StudentExamContent(
             // رسم آزاد می‌کند و نتیجه به‌عنوان تصویر پاسخ ثبت می‌شود.
             // V137 — «نمودار پاسخ دانش‌آموز» به‌کلی حذف شد؛ سؤالی که خودش نمودار دارد
             // (questionHasGraph) هم فقط تختهٔ وایت‌برد می‌گیرد.
-            val drawAnswer = (question as? EssayQuestion)?.answerMode in setOf("draw", "voice")
+            val drawAnswer = (question as? EssayQuestion)?.answerMode == "draw" || (question as? EssayQuestion)?.answerMode == "voice"
             if (!drawAnswer) if (presentation.allowAnswerGraph || questionHasGraph) {
                 item {
                     StudentWhiteboardEntry(
