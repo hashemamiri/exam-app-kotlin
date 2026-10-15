@@ -238,6 +238,18 @@ class SupabaseGradingRepository {
         SupabaseProvider.client.postgrest.rpc("my_grades").decodeList()
     }
 
+    /** V305 — سطح ۴گانهٔ آزمون‌های ابتدایی: exam_id → (نام سطح، ستاره‌ها). خطا = خالی (کارنامه عادی می‌ماند). */
+    suspend fun myLevels(): Result<Map<String, Pair<String, String>>> = runCatching {
+        val raw = SupabaseProvider.client.postgrest.rpc("native_my_levels_v1").decodeAs<JsonObject>().throwRpcError()
+        (raw["items"] as? JsonArray).orEmpty().mapNotNull { item ->
+            val row = item as? JsonObject ?: return@mapNotNull null
+            val examId = row.text("exam_id") ?: return@mapNotNull null
+            val name = row.text("level_name") ?: return@mapNotNull null
+            val rank = (row["level_rank"]?.jsonPrimitive?.intOrNull ?: 0).coerceIn(0, 4)
+            examId to (name to ("★".repeat(rank) + "☆".repeat(4 - rank)))
+        }.toMap()
+    }
+
     suspend fun myAnswerSummaries(): Result<List<StudentAnswerSummary>> = runCatching {
         val raw = SupabaseProvider.client.postgrest.rpc("native_my_answers_v1")
             .decodeAs<JsonObject>()

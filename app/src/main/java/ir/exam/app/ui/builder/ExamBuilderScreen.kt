@@ -23,6 +23,16 @@ import androidx.compose.foundation.gestures.scrollBy
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.matchParentSize
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.border
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.unit.IntSize
+import androidx.compose.runtime.mutableIntStateOf
+import coil.compose.AsyncImage
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.Column
@@ -502,6 +512,7 @@ fun ExamBuilderScreen(
                     index = index,
                     expanded = expandedQuestionId == question.id,
                     printMode = printMode,
+                    primary = state.primaryMode, // V305
                     onToggle = {
                         if (expandedQuestionId == question.id) {
                             expandedQuestionId = null
@@ -849,6 +860,18 @@ private fun ExamSettingsCard(state: ExamBuilderState, viewModel: ExamBuilderView
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
+                // V305 — آستانه‌های کارنامهٔ ۴ سطحی (درصد)؛ خالی یا نامعتبر = ۸۵، ۷۰، ۵۰
+                if (state.primaryMode) {
+                    OutlinedTextField(
+                        value = state.levelThresholds,
+                        onValueChange = { viewModel.setLevelThresholds(it) },
+                        label = { Text("آستانهٔ سطح‌ها (٪): خیلی خوب، خوب، قابل قبول") },
+                        placeholder = { Text("85,70,50") },
+                        supportingText = { Text("نیاز به تلاش بیشتر: زیر آخرین عدد. خالی = پیش‌فرض ۸۵، ۷۰، ۵۰.") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
             }
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
                 BoldToggleChip(
@@ -1187,6 +1210,7 @@ private fun QuestionEditor(
     index: Int,
     expanded: Boolean,
     printMode: Boolean = false,
+    primary: Boolean = false, // V305 — حالت ابتدایی آزمون: حالت‌های ویژهٔ سؤال
     onToggle: () -> Unit,
     onExpand: () -> Unit,
     onMove: (Int) -> Unit,
@@ -1512,8 +1536,13 @@ private fun QuestionEditor(
                 )
             }
             }
+            // V305 — حالت ابتدایی: نوع ویژهٔ سؤال (فقط وقتی کلید «حالت ابتدایی» آزمون روشن است)
+            if (primary && !printMode && (question.type == QuestionType.FILL_BLANK || question.type == QuestionType.MULTIPLE_CHOICE)) {
+                PrimaryModeChooser(question, viewModel)
+            }
             when (question.type) {
                 QuestionType.MULTIPLE_CHOICE -> {
+                    if (primary && !printMode && question.mode == "hotspot") PrimaryHotspotEditor(question, viewModel)
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         Text("تعداد گزینه: ${question.options.size}")
                         OutlinedButton(onClick={viewModel.setOptionCount(question.id,question.options.size-1)},enabled=question.options.size>2){Text("−")}
@@ -1612,7 +1641,7 @@ private fun QuestionEditor(
                 }
                 // V110 — در آزمونِ چاپی «پاسخ‌های قابل قبول / حساس به حروف» و
                 // «پاسخ عددی / تلورانس» معنایی ندارند (تصحیح خودکار آنلاین است).
-                QuestionType.FILL_BLANK -> if (!printMode) Column(verticalArrangement=Arrangement.spacedBy(6.dp)) {
+                QuestionType.FILL_BLANK -> if (primary && !printMode && question.mode == "order") PrimaryOrderEditor(question, viewModel) else if (!printMode) Column(verticalArrangement=Arrangement.spacedBy(6.dp)) {
                     OutlinedTextField(question.expectedText, { viewModel.updateExpectedText(question.id, it) }, label = { Text("پاسخ‌های قابل قبول با |") })
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
                         BoldToggleChip(
@@ -2166,4 +2195,115 @@ private fun QuestionType.faLabel(): String = when (this) {
     QuestionType.FILL_BLANK -> "جای خالی"
     QuestionType.NUMERIC -> "عددی"
     QuestionType.MATCHING -> "جورکردنی"
+}
+
+
+/* ============================================================
+ * V305 — ابزارهای ویرایش حالت ابتدایی
+ * ============================================================ */
+
+/** انتخاب نوع ویژهٔ سؤال: جای‌خالی → مرتب‌سازی؛ چندگزینه‌ای → انتخاب روی تصویر. */
+@Composable
+private fun PrimaryModeChooser(question: QuestionDraft, viewModel: ExamBuilderViewModel) {
+    val choices = if (question.type == QuestionType.FILL_BLANK) {
+        listOf("" to "جای خالی معمولی", "order" to "مرتب‌سازی با کشیدن")
+    } else {
+        listOf("" to "گزینه‌ای معمولی", "hotspot" to "انتخاب روی تصویر")
+    }
+    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text("نوع ابتدایی:")
+        choices.forEach { (value, label) ->
+            FilterChip(
+                selected = question.mode == value,
+                onClick = { viewModel.setQuestionMode(question.id, value) },
+                label = { Text(label) }
+            )
+        }
+    }
+}
+
+/** مرتب‌سازی: موارد به ترتیب درست نوشته می‌شوند؛ در آزمون به‌هم‌ریخته نشان داده می‌شوند. */
+@Composable
+private fun PrimaryOrderEditor(question: QuestionDraft, viewModel: ExamBuilderViewModel) {
+    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Text("موارد را به ترتیب درست بنویسید (ویرگول مجاز نیست). در آزمون، ترتیب به‌هم‌ریخته نمایش داده می‌شود.", style = MaterialTheme.typography.bodySmall)
+        question.orderItems.forEachIndexed { index, item ->
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text("${index + 1}.")
+                OutlinedTextField(
+                    value = item,
+                    onValueChange = { viewModel.updateOrderItem(question.id, index, it) },
+                    label = { Text("مورد ${index + 1}") },
+                    singleLine = true,
+                    modifier = Modifier.weight(1f)
+                )
+                TextButton(enabled = question.orderItems.size > 2, onClick = { viewModel.removeOrderItem(question.id, index) }) { Text("✕") }
+            }
+        }
+        OutlinedButton(enabled = question.orderItems.size < 10, onClick = { viewModel.addOrderItem(question.id) }) { Text("➕ مورد") }
+    }
+}
+
+/**
+ * انتخاب روی تصویر: گزینهٔ هدف را انتخاب و روی محل درست تصویر بزنید؛ یک ناحیهٔ ۱۸٪ در همان نقطه ساخته می‌شود.
+ * ناحیه‌های صفر (ساخته‌نشده) در آزمون نمایش داده نمی‌شوند.
+ */
+@Composable
+private fun PrimaryHotspotEditor(question: QuestionDraft, viewModel: ExamBuilderViewModel) {
+    val img = question.images.firstOrNull()?.uri
+    var target by remember(question.id) { mutableIntStateOf(0) }
+    if (img.isNullOrBlank()) {
+        Text("برای انتخاب روی تصویر، ابتدا تصویر این سؤال را از بخش تصاویر اضافه کنید.", color = MaterialTheme.colorScheme.error)
+        return
+    }
+    val zones = if (question.hotspots.size == question.options.size) question.hotspots
+        else List(question.options.size) { HotspotRect(0f, 0f, 0f, 0f) }
+    var boxSize by remember { mutableStateOf(IntSize.Zero) }
+    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Text("۱) گزینهٔ هدف را انتخاب کنید  ۲) روی محل درست تصویر بزنید.", style = MaterialTheme.typography.bodySmall)
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            question.options.indices.forEach { i ->
+                val has = zones.getOrNull(i)?.let { it.w > 0f && it.h > 0f } == true
+                FilterChip(
+                    selected = target == i,
+                    onClick = { target = i },
+                    label = { Text(ir.exam.app.ui.student.primaryLetter(i) + if (has) " ✓" else "") }
+                )
+            }
+        }
+        Box(
+            Modifier
+                .fillMaxWidth()
+                .onSizeChanged { boxSize = it }
+                .pointerInput(question.id, target, zones) {
+                    detectTapGestures { o: Offset ->
+                        if (boxSize.width <= 0 || boxSize.height <= 0) return@detectTapGestures
+                        val w = 18f
+                        val h = 18f
+                        val cx = o.x / boxSize.width * 100f
+                        val cy = o.y / boxSize.height * 100f
+                        val rect = HotspotRect((cx - w / 2).coerceIn(0f, 100f - w), (cy - h / 2).coerceIn(0f, 100f - h), w, h)
+                        viewModel.setHotspots(question.id, zones.toMutableList().also { it[target] = rect })
+                    }
+                }
+        ) {
+            AsyncImage(model = img, contentDescription = "تصویر سؤال", modifier = Modifier.fillMaxWidth())
+            BoxWithConstraints(Modifier.matchParentSize()) {
+                zones.forEachIndexed { i, z ->
+                    if (z.w > 0f && z.h > 0f) {
+                        Box(
+                            Modifier
+                                .offset(maxWidth * (z.x / 100f), maxHeight * (z.y / 100f))
+                                .size(maxWidth * (z.w / 100f), maxHeight * (z.h / 100f))
+                                .border(if (i == target) 4.dp else 2.dp, MaterialTheme.colorScheme.primary),
+                            contentAlignment = Alignment.TopStart
+                        ) { Text(ir.exam.app.ui.student.primaryLetter(i), fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary) }
+                    }
+                }
+            }
+        }
+        TextButton(onClick = {
+            viewModel.setHotspots(question.id, zones.toMutableList().also { it[target] = HotspotRect(0f, 0f, 0f, 0f) })
+        }) { Text("حذف ناحیهٔ گزینهٔ انتخاب‌شده") }
+    }
 }

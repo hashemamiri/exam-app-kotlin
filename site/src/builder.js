@@ -30,10 +30,40 @@
   var TYPE_LABEL = {}; TYPES.forEach(function (t) { TYPE_LABEL[t[0]] = t[1]; });
 
   /* ================================================================ مدل سؤال (آینهٔ QuestionDraft) */
+  /* V305 — ابتدایی: آستانهٔ کارنامهٔ ۴ سطحی، بُرخوردن موارد عمومی، پاسخ مرتب‌سازی، حرف ناحیه‌ها (همان فهرست اپ) */
+  var PRI_LETTERS = ['الف', 'ب', 'ج', 'د', 'ه', 'و', 'ز', 'ح'];
+  function priLetter(i) { return PRI_LETTERS[i] || String(i + 1); }
+  function parseLevelsText(text) {
+    var parts = String(text || '').replace(/،/g, ',').replace(/٫/g, '.').split(',').map(function (x) { return x.trim(); }).filter(Boolean);
+    if (parts.length !== 3) return null;
+    var nums = parts.map(function (p) { return parseFloat(en(p)); });
+    if (nums.some(function (n) { return !isFinite(n) || n <= 0 || n > 100; })) return null;
+    if (!(nums[0] > nums[1] && nums[1] > nums[2])) return null;
+    if (nums[0] === 85 && nums[1] === 70 && nums[2] === 50) return null;
+    return nums;
+  }
+  function examOptionsPayload(state) {
+    var o = {primary: !!state.primaryMode};
+    var lv = state.primaryMode ? parseLevelsText(state.levelThresholds) : null;
+    if (lv) o.levels = lv;
+    return o;
+  }
+  function shuffledPublicOrder(items) {
+    var clean = (items || []).map(function (x) { return String(x).trim(); }).filter(Boolean);
+    if (clean.length < 2) return clean;
+    for (var t = 0; t < 20; t++) {
+      var out = clean.slice();
+      for (var i = out.length - 1; i > 0; i--) { var j = Math.floor(Math.random() * (i + 1)); var tmp = out[i]; out[i] = out[j]; out[j] = tmp; }
+      if (out.join('\u0001') !== clean.join('\u0001')) return out;
+    }
+    return clean.slice(1).concat(clean.slice(0, 1));
+  }
+  function orderAnswerText(items) { return (items || []).map(function (x) { return String(x).trim().replace(/،/g, ','); }).filter(Boolean).join(','); }
+
   function newQuestion(type) {
     var q = {id: uuid(), type: type || 'multiple', text: '', score: 1, options: ['', '', '', ''], optionImages: [null, null, null, null], correctIndex: null, expectedText: '', expectedNumber: '', tolerance: '0', caseSensitive: false,
       matchingLeft: ['', ''], matchingRight: ['', ''], matchingPairs: {}, images: [], answerImageMode: 'no', allowAnswerGraph: false, maxAnswerImages: 1,
-      textAlign: 'right', imagePosition: 'below', fontFamily: 'default', fontSizeSp: 16, bold: false, italic: false, answerLines: type === 'essay' ? 5 : 2, answerLineStyle: 'lined', optionsLayout: '', answerLineSpacingCm: 1.0, spans: [], alignSpans: [], raw: {}, rawKey: {}};
+      textAlign: 'right', imagePosition: 'below', fontFamily: 'default', fontSizeSp: 16, bold: false, italic: false, answerLines: type === 'essay' ? 5 : 2, answerLineStyle: 'lined', optionsLayout: '', answerLineSpacingCm: 1.0, spans: [], alignSpans: [], raw: {}, rawKey: {}, mode: '', orderItems: [], hotspots: []};
     if (type === 'truefalse') { q.options = []; q.optionImages = []; q.expectedText = 'true'; }
     if (type === 'fill' || type === 'numeric' || type === 'essay') { q.options = []; q.optionImages = []; }
     return q;
@@ -48,6 +78,10 @@
     q.optionImages = q.options.map(function (_, i) { var v = (obj.optionImages || [])[i]; return v ? String(v) : null; });
     q.optionStyles = obj.optionStyles || null; q.leftStyles = obj.leftStyles || null; q.rightStyles = obj.rightStyles || null;
     q.spans = obj.spans || []; q.alignSpans = obj.alignSpans || [];
+    /* V305 — حالت ابتدایی سؤال: ترتیب درست فقط در کلید (accept[0]) است */
+    q.mode = (obj.mode === 'order' && type === 'fill') || (obj.mode === 'hotspot' && type === 'multiple') ? obj.mode : '';
+    q.orderItems = q.mode === 'order' ? ((key.accept && key.accept[0]) ? String(key.accept[0]).split(',').map(function (x) { return x.trim(); }).filter(Boolean) : (obj.items || []).map(String)) : [];
+    q.hotspots = q.mode === 'hotspot' ? (Array.isArray(obj.hotspots) ? obj.hotspots.map(function (h) { return {x: Number(h.x) || 0, y: Number(h.y) || 0, w: Number(h.w) || 0, h: Number(h.h) || 0}; }) : []) : [];
     q.correctIndex = key.correctOption != null ? Number(key.correctOption) : (obj.correctIndex != null ? Number(obj.correctIndex) : null);
     if (type === 'truefalse') q.expectedText = String(key.correctAnswer === true || key.correctAnswer === 'true');
     else if (type === 'fill') q.expectedText = (key.accept || []).join('|');
@@ -88,6 +122,11 @@
       if (q.optionsLayout) v.optionsLayout = q.optionsLayout; else delete v.optionsLayout; /* V208 — خالی = پیش‌فرض آزمون */
       if (q.spans && q.spans.length) v.spans = q.spans; else delete v.spans;
       if (q.alignSpans && q.alignSpans.length) v.alignSpans = q.alignSpans; else delete v.alignSpans;
+      /* V305 — امنیت: موارد عمومی بُرخورده‌اند (ترتیب درست فقط در کلید) */
+      var isOrd = q.type === 'fill' && q.mode === 'order', isHot = q.type === 'multiple' && q.mode === 'hotspot';
+      if (isOrd) { v.mode = 'order'; v.items = shuffledPublicOrder(q.orderItems); } else { delete v.items; }
+      if (isHot) { v.mode = 'hotspot'; v.hotspots = q.options.map(function (_, i) { var z = (q.hotspots || [])[i] || {}; return {x: Number(z.x) || 0, y: Number(z.y) || 0, w: Number(z.w) || 0, h: Number(z.h) || 0}; }); } else { delete v.hotspots; }
+      if (!isOrd && !isHot) delete v.mode;
       if (q.type === 'multiple') { v.options = q.options.slice(); v.optionImages = q.options.map(function (_, i) { return q.optionImages[i] || ''; }); if (q.optionStyles) v.optionStyles = q.optionStyles; }
       if (q.type === 'matching') {
         v.leftItems = q.matchingLeft.slice(); v.rightItems = q.matchingRight.slice();
@@ -98,6 +137,7 @@
       var k = {}; Object.keys(q.rawKey || {}).forEach(function (x) { k[x] = q.rawKey[x]; }); k.i = index;
       if (q.type === 'multiple') k.correctOption = q.correctIndex != null ? q.correctIndex : 0;
       else if (q.type === 'truefalse') k.correctAnswer = q.expectedText === 'true';
+      else if (q.type === 'fill' && q.mode === 'order') k.accept = [orderAnswerText(q.orderItems)];
       else if (q.type === 'fill') { k.accept = q.expectedText.split('|').map(function (x) { return x.trim(); }).filter(Boolean); k.caseSensitive = !!q.caseSensitive; }
       else if (q.type === 'numeric') { var n = parseFloat(en(q.expectedNumber)); k.answer = isFinite(n) ? n : null; var t = parseFloat(en(q.tolerance)); k.tolerance = isFinite(t) ? t : 0; }
       else if (q.type === 'matching') { k.matchAnswer = {}; Object.keys(q.matchingPairs).forEach(function (l) { k.matchAnswer[String(l)] = q.matchingPairs[l]; }); }
@@ -263,7 +303,7 @@
     var keys = {}; (Array.isArray(exam.__answers) ? exam.__answers : []).forEach(function (k, i) { if (k && typeof k === 'object') keys[k.i != null ? k.i : i] = k; });
     st.examId = exam.id; st.code = exam.code; st.title = exam.title || ''; st.subject = exam.subject || ''; st.duration = exam.duration != null ? String(exam.duration) : ''; st.opensAt = isoToLocal(exam.opens_at); st.closesAt = isoToLocal(exam.closes_at);
     st.questions = (Array.isArray(exam.questions) ? exam.questions : []).map(function (q, i) { return decodeQuestion(q, keys[i]); });
-    st.shuffleQuestions = !!exam.shuffle_q; st.shuffleOptions = !!exam.shuffle_opt; st.primaryMode = !!(exam.options && exam.options.primary); /* V301 */ st.negativeMarking = exam.neg_marking ? String(exam.neg_marking) : ''; st.teacherMessage = exam.teacher_message || '';
+    st.shuffleQuestions = !!exam.shuffle_q; st.shuffleOptions = !!exam.shuffle_opt; st.primaryMode = !!(exam.options && exam.options.primary); /* V301 */ st.levelThresholds = (exam.options && Array.isArray(exam.options.levels)) ? exam.options.levels.join(',') : ''; /* V305 */ st.negativeMarking = exam.neg_marking ? String(exam.neg_marking) : ''; st.teacherMessage = exam.teacher_message || '';
     st.attemptsAllowed = Math.max(1, Math.min(5, Number(exam.attempts_allowed) || 1)); st.attemptOnTimeout = !!exam.attempt_on_timeout; st.gradePolicy = exam.grade_policy || 'last'; st.attemptCooldown = exam.attempt_cooldown ? String(exam.attempt_cooldown) : ''; st.pickCount = exam.pick_count ? String(exam.pick_count) : ''; st.pickRules = (exam.pick_rules && typeof exam.pick_rules === 'object') ? Object.assign({}, exam.pick_rules) : {}; /* V272 */ /* V255 */
     await loadOptions(st);
     try { var a = await S.rpcObj('get_exam_audience', {p_exam: examId}); st.audienceMode = a.mode || 'all'; st.audienceClasses = a.classes || []; st.audienceStudents = a.students || []; } catch (e) {}
@@ -826,9 +866,71 @@
       });
     }
     function swap(a, b) { var t = state.questions[a]; state.questions[a] = state.questions[b]; state.questions[b] = t; state.selected = b; mark(); drawList(); drawEditor(); }
-    function typeSection(q) {
-      var box = el('div', {class: 'b-type'});
+    /* V305 — ابتدایی: چیپ نوع ویژهٔ سؤال */
+    function primaryModeChooser(q, redraw) {
+      var choices = q.type === 'fill' ? [['', 'جای خالی معمولی'], ['order', 'مرتب‌سازی با کشیدن']] : [['', 'گزینه‌ای معمولی'], ['hotspot', 'انتخاب روی تصویر']];
+      return el('div', {class: 'row', style: 'gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px'}, [el('b', {text: 'نوع ابتدایی:'})].concat(choices.map(function (c) {
+        return el('button', {type: 'button', class: 'btn sm ' + (q.mode === c[0] ? '' : 'light'), text: c[1], onclick: function () {
+          q.mode = c[0];
+          if (c[0] === 'order' && q.orderItems.length < 2) q.orderItems = ['', '', ''];
+          if (c[0] === 'hotspot' && q.hotspots.length !== q.options.length) q.hotspots = q.options.map(function () { return {x: 0, y: 0, w: 0, h: 0}; });
+          mark(); redraw();
+        }});
+      })));
+    }
+    /* V305 — مرتب‌سازی: موارد به ترتیب درست نوشته می‌شوند؛ در آزمون به‌هم‌ریخته نشان داده می‌شوند */
+    function orderEditor(q, redraw) {
+      var box = el('div', {class: 'b-order'});
+      box.appendChild(el('div', {class: 'muted', style: 'font-size:12px;margin-bottom:6px', text: 'موارد را به ترتیب درست بنویسید (ویرگول مجاز نیست). در آزمون، ترتیب به‌هم‌ریخته نمایش داده می‌شود.'}));
+      q.orderItems.forEach(function (item, i) {
+        var inpt = el('input', {type: 'text', value: item, placeholder: 'مورد ' + fa(i + 1), style: 'flex:1;min-width:0'});
+        inpt.addEventListener('input', function () { q.orderItems[i] = inpt.value.replace(/[,،]/g, ' '); inpt.value = q.orderItems[i]; mark(); });
+        var rm = el('button', {type: 'button', class: 'btn light sm', text: '✕', onclick: function () { q.orderItems.splice(i, 1); mark(); redraw(); }});
+        if (q.orderItems.length <= 2) rm.disabled = true;
+        box.appendChild(el('div', {class: 'row', style: 'gap:6px;align-items:center;margin-bottom:6px'}, [el('span', {text: fa(i + 1) + '.'}), inpt, rm]));
+      });
+      var add = el('button', {type: 'button', class: 'btn light sm', text: '➕ مورد', onclick: function () { q.orderItems.push(''); mark(); redraw(); }});
+      if (q.orderItems.length >= 10) add.disabled = true;
+      box.appendChild(add);
+      return box;
+    }
+    /* V305 — انتخاب روی تصویر: گزینهٔ هدف را انتخاب و روی تصویر بزنید؛ ناحیهٔ ۱۸٪ ساخته می‌شود */
+    function hotspotEditor(q, redraw) {
+      var img = q.images && q.images[0] && q.images[0].uri;
+      if (!img) return el('div', {class: 'muted', style: 'color:#b00020;font-size:13px', text: 'برای انتخاب روی تصویر، ابتدا تصویر این سؤال را از بخش تصاویر اضافه کنید.'});
+      if (!q.hotspots || q.hotspots.length !== q.options.length) q.hotspots = q.options.map(function () { return {x: 0, y: 0, w: 0, h: 0}; });
+      var target = q.hsTarget || 0;
+      var box = el('div', {class: 'b-hot', style: 'margin-top:10px'});
+      box.appendChild(el('div', {class: 'muted', style: 'font-size:12px;margin-bottom:6px', text: '۱) گزینهٔ هدف را انتخاب کنید  ۲) روی محل درست تصویر بزنید.'}));
+      box.appendChild(el('div', {class: 'row', style: 'gap:6px;flex-wrap:wrap;margin-bottom:8px'}, q.options.map(function (_, i) {
+        var has = q.hotspots[i].w > 0 && q.hotspots[i].h > 0;
+        return el('button', {type: 'button', class: 'btn sm ' + (target === i ? '' : 'light'), text: priLetter(i) + (has ? ' ✓' : ''), onclick: function () { q.hsTarget = i; redraw(); }});
+      })));
+      var wrap = el('div', {style: 'position:relative;display:inline-block;max-width:100%;cursor:crosshair;user-select:none'});
+      wrap.appendChild(el('img', {src: img, alt: 'تصویر سؤال', draggable: 'false', style: 'display:block;max-width:100%;height:auto'}));
+      q.hotspots.forEach(function (z, i) {
+        if (!(z.w > 0 && z.h > 0)) return;
+        wrap.appendChild(el('div', {style: 'position:absolute;pointer-events:none;border:' + (target === i ? '4px' : '2px') + ' solid #0a7a50;border-radius:8px;left:' + z.x + '%;top:' + z.y + '%;width:' + z.w + '%;height:' + z.h + '%;color:#fff;font-weight:800;background:rgba(0,0,0,.2)', text: priLetter(i)}));
+      });
+      wrap.addEventListener('click', function (e) {
+        var r = wrap.getBoundingClientRect();
+        if (!r.width || !r.height) return;
+        var w = 18, h = 18;
+        var cx = (e.clientX - r.left) / r.width * 100, cy = (e.clientY - r.top) / r.height * 100;
+        var x = Math.max(0, Math.min(100 - w, cx - w / 2)), y = Math.max(0, Math.min(100 - h, cy - h / 2));
+        q.hotspots[target] = {x: Math.round(x * 10) / 10, y: Math.round(y * 10) / 10, w: w, h: h};
+        mark(); redraw();
+      });
+      box.appendChild(wrap);
+      box.appendChild(el('button', {type: 'button', class: 'btn light sm', style: 'margin-top:6px', text: 'حذف ناحیهٔ گزینهٔ انتخاب‌شده', onclick: function () { q.hotspots[target] = {x: 0, y: 0, w: 0, h: 0}; mark(); redraw(); }}));
+      return box;
+    }
+
+    function typeSection(q) {      var box = el('div', {class: 'b-type'});
       function redraw() { var n = typeSection(q); box.replaceWith(n); }
+      /* V305 — ابتدایی: نوع ویژهٔ سؤال (فقط وقتی حالت ابتدایی آزمون روشن است) */
+      if (state.primaryMode && (q.type === 'fill' || q.type === 'multiple')) box.appendChild(primaryModeChooser(q, redraw));
+      if (state.primaryMode && q.type === 'fill' && q.mode === 'order') { box.appendChild(orderEditor(q, redraw)); return box; }
       if (q.type === 'multiple') {
         box.appendChild(el('h4', {text: 'گزینه‌ها (پاسخ درست را علامت بزنید)'}));
         q.options.forEach(function (o, k) {
@@ -875,6 +977,8 @@
       } else {
         box.appendChild(el('p', {class: 'muted', style: 'font-size:13px', text: 'سؤال تشریحی به‌صورت دستی تصحیح می‌شود.'}));
       }
+      /* V305 — ابتدایی: ویرایش ناحیه‌های انتخاب روی تصویر (بعد از گزینه‌ها) */
+      if (state.primaryMode && q.type === 'multiple' && q.mode === 'hotspot') box.appendChild(hotspotEditor(q, redraw));
       return box;
     }
     /* --- مشخصات آزمون (آنلاین) --- */
@@ -954,6 +1058,7 @@
       m_.appendChild(el('div', {class: 'row', style: 'margin-bottom:12px'}, [chk('به‌هم‌ریختن سؤال‌ها', state.shuffleQuestions, function (v) { state.shuffleQuestions = v; mark(); }), chk('به‌هم‌ریختن گزینه‌ها', state.shuffleOptions, function (v) { state.shuffleOptions = v; mark(); }), chk('ثبت خودکار با پایان زمان', state.attemptOnTimeout, function (v) { state.attemptOnTimeout = v; mark(); })]));
       /* V301 — حالت ابتدایی (اول تا ششم): با انتخاب کلاس ابتدایی خودکار روشن می‌شود؛ معلم می‌تواند تغییر دهد. */
       m_.appendChild(el('div', {class: 'row', style: 'margin-bottom:12px;flex-wrap:wrap;gap:8px'}, [chk('حالت ابتدایی (اول تا ششم)', state.primaryMode, function (v) { state.primaryMode = v; mark(); }), el('span', {class: 'muted', style: 'font-size:12px', text: 'متن درشت، گزینه‌های بزرگ و لمسی، یک سؤال در هر صفحه، زمان‌سنج کم‌رنگ و پایان دوستانه.'})]));
+      if (state.primaryMode) m_.appendChild(el('div', {class: 'field'}, [el('label', {text: 'آستانهٔ سطح‌ها (٪): خیلی خوب، خوب، قابل قبول'}), (function () { var ti = el('input', {type: 'text', value: state.levelThresholds || '', placeholder: '85,70,50'}); ti.addEventListener('input', function () { state.levelThresholds = ti.value; mark(); }); return ti; })(), el('span', {class: 'muted', style: 'font-size:12px', text: 'زیر آخرین عدد: نیاز به تلاش بیشتر. خالی = ۸۵، ۷۰، ۵۰.'})])); /* V305 */
       var tm = el('textarea', {rows: 2, style: 'width:100%;border:1px solid var(--line);border-radius:10px;padding:8px'}); tm.value = state.teacherMessage; tm.addEventListener('input', function () { state.teacherMessage = tm.value; mark(); });
       m_.appendChild(el('div', {class: 'field'}, [el('label', {text: 'پیام معلم به دانش‌آموز (اختیاری)'}), tm]));
       /* مخاطبان */
@@ -1096,7 +1201,7 @@
         var enc = encodeQuestions(state.questions);
         var code = state.code || genCode();
         var payload = {operation_id: uuid(), id: examId, code: code, title: state.title.trim(), subject: state.subject.trim(), duration: Math.max(0, Math.min(1440, parseInt(state.duration, 10) || 0)), opens_at: opens, closes_at: closes,
-          total_score: state.questions.reduce(function (s, q) { return s + (Number(q.score) || 0); }, 0), shuffle_q: !!state.shuffleQuestions, shuffle_opt: !!state.shuffleOptions, options: {primary: !!state.primaryMode}, /* V301 */ neg_marking: parseFloat(state.negativeMarking) || 0,
+          total_score: state.questions.reduce(function (s, q) { return s + (Number(q.score) || 0); }, 0), shuffle_q: !!state.shuffleQuestions, shuffle_opt: !!state.shuffleOptions, options: examOptionsPayload(state), /* V301 + V305 (levels) */ neg_marking: parseFloat(state.negativeMarking) || 0,
           teacher_message: state.teacherMessage.trim() || null, attempts_allowed: Math.max(1, Math.min(5, state.attemptsAllowed)), attempt_on_timeout: !!state.attemptOnTimeout, grade_policy: state.gradePolicy, attempt_cooldown: Math.max(0, Math.min(1440, parseInt(state.attemptCooldown, 10) || 0)), pick_count: Math.max(0, Math.min(9999, parseInt(state.pickCount, 10) || 0)), pick_rules: pickRulesClean(state), /* V272 */
           questions: enc.publicQuestions, answer_key: enc.answerKey, audience: state.audienceMode, classes: state.audienceClasses.slice().sort(), students: state.audienceStudents.slice().sort(), schools: state.audienceSchools.slice().sort()};
         var n = state.questions.length;

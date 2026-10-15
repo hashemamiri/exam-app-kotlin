@@ -650,6 +650,8 @@
     // دانش‌آموز
     myGrades: function () { return rpc('my_grades', {}); },
     myAnswers: async function () { var d = await rpcObj('native_my_answers_v1', {}); return d.items || []; },
+    /* V305 — سطح ۴گانهٔ آزمون‌های ابتدایی (سرور محاسبه می‌کند؛ خطا = بدون سطح) */
+    myLevels: async function () { try { var d = await rpcObj('native_my_levels_v1', {}); return (d && d.items) || []; } catch (e) { return []; } },
     // مدیر
     managerSummary: function () { return rpcObj('native_manager_school_summary_v36', {}); },
     managerTeachers: async function () { var d = await rpcObj('native_manager_teachers_v37', {}); return d.items || []; },
@@ -1793,6 +1795,9 @@
   function emptyBox(icon, text) { return el('div', {class: 'empty'}, [el('div', {class: 'big', text: icon}), el('div', {text: text})]); }
   /* V186 — کارت آمار: هم‌اندازه (min-height در CSS) و در صورت داشتن مقصد، کلیک‌پذیر (button) */
   /* V255 — پیک تصادفی: «از N» کارنامه از native_my_answers_v1 (meta.max_score) گرفته می‌شود؛ my_grades قدیمی بارم کل آزمون را می‌دهد. */
+  /* V305 — سطح ۴گانه را به کارنامه‌ها می‌چسباند (exam_id) */
+  function mergeLevels(grades, levels) { var map = {}; (levels || []).forEach(function (x) { if (x && x.exam_id) map[x.exam_id] = x; }); return grades.map(function (g) { var l = map[g.exam_id]; return l ? Object.assign({}, g, {level_name: l.level_name, level_rank: l.level_rank}) : g; }); }
+  function levelStarsText(n) { n = Math.max(0, Math.min(4, Number(n) || 0)); return '★'.repeat(n) + '☆'.repeat(4 - n); }
   function mergeAnswerMax(grades, answers) {
     var byId = {}, byKey = {};
     (answers || []).forEach(function (a) { if (a.id) byId[String(a.id)] = a; byKey[String(a.exam_id) + '|' + String(Date.parse(a.submitted_at) || '')] = a; });
@@ -2281,6 +2286,7 @@
       /* V251 — خطای نمرات به کاربر گفته می‌شود (نه «هنوز نمره‌ای ثبت نشده»)؛ پاسخ‌ها اختیاری می‌مانند */
       var r = await Promise.all([api.myGrades(), api.myAnswers().catch(function () { return []; })]);
       var grades = mergeAnswerMax(r[0] || [], r[1] || []), answers = r[1] || [];
+      grades = mergeLevels(grades, await api.myLevels()); /* V305 */
       c.innerHTML = '';
       /* V264 — «ذخیرهٔ PDF» کارنامهٔ دانش‌آموز (printSection؛ گزینهٔ «ذخیره به‌صورت PDF» مرورگر) کنار Excel */
       var card = el('div', {class: 'card'}, [el('div', {class: 'row'}, [el('h3', {class: 'grow', text: '📊 نمرات'}), window.SiteExtras && grades.length ? window.SiteExtras.gradesExcelButton(grades) : null,
@@ -2288,7 +2294,7 @@
       if (!grades.length) card.appendChild(emptyBox('📊', 'هنوز نمره‌ای ثبت نشده است.'));
       else card.appendChild(el('table', {class: 'tbl'}, [
         el('thead', {}, [el('tr', {}, ['آزمون', 'درس', 'ارسال', 'نمره', 'درصد', 'بازخورد'].map(function (h) { return el('th', {text: h}); }))]),
-        el('tbody', {}, grades.map(function (g) { var ts = Number(g.total_score) || 0, tg = Number(g.total_grade) || 0; var pct = ts ? Math.round(tg / ts * 100) : 0; return el('tr', {}, [el('td', {html: '<b>' + esc(g.title || 'آزمون') + '</b>'}), el('td', {text: g.subject || '—'}), el('td', {class: 'muted', style: 'font-size:12px', text: fmtDate(g.submitted_at)}), el('td', {text: g.graded_at ? fa(fmtScore(tg)) + ' از ' + fa(fmtScore(ts)) : 'در انتظار تصحیح'}), el('td', {}, [g.graded_at ? el('span', {class: 'chip ' + (pct >= 50 ? 'ok' : 'off'), text: fa(pct) + '٪'}) : el('span', {class: 'chip off', text: '—'})]), el('td', {class: 'muted', text: g.feedback || '—'})]); }))
+        el('tbody', {}, grades.map(function (g) { var ts = Number(g.total_score) || 0, tg = Number(g.total_grade) || 0; var pct = ts ? Math.round(tg / ts * 100) : 0; return el('tr', {}, [el('td', {html: '<b>' + esc(g.title || 'آزمون') + '</b>' + (g.level_name ? '<div class="muted" style="font-size:12px">سطح: ' + esc(g.level_name) + ' ' + levelStarsText(g.level_rank) + '</div>' : '')}), el('td', {text: g.subject || '—'}), el('td', {class: 'muted', style: 'font-size:12px', text: fmtDate(g.submitted_at)}), el('td', {text: g.graded_at ? fa(fmtScore(tg)) + ' از ' + fa(fmtScore(ts)) : 'در انتظار تصحیح'}), el('td', {}, [g.graded_at ? el('span', {class: 'chip ' + (pct >= 50 ? 'ok' : 'off'), text: fa(pct) + '٪'}) : el('span', {class: 'chip off', text: '—'})]), el('td', {class: 'muted', text: g.feedback || '—'})]); }))
       ]));
       c.appendChild(card);
       if (answers.length) {

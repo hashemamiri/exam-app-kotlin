@@ -140,6 +140,7 @@ class ExamBuilderViewModel(
                 pickCount = draft.pickCount,
                 pickRules = draft.pickRules, // V272
                 primaryMode = draft.primaryMode, // V301
+                levelThresholds = draft.levelThresholds, // V305
                 audienceMode = draft.audienceMode,
                 audienceClasses = draft.audienceClasses,
                 audienceStudents = draft.audienceStudents,
@@ -178,6 +179,28 @@ class ExamBuilderViewModel(
     fun setShuffleOptions(value: Boolean) { _state.update { it.copy(shuffleOptions = value) } }
     // V301 — «حالت ابتدایی»؛ معلم هر وقت بخواهد دستی تغییر می‌دهد.
     fun setPrimaryMode(value: Boolean) { _state.update { it.copy(primaryMode = value) } }
+    /** V305 — آستانه‌های کارنامهٔ ۴ سطحی (متن «۸۵,۷۰,۵۰»). */
+    fun setLevelThresholds(value: String) { _state.update { it.copy(levelThresholds = value) } }
+    /** V305 — حالت ویژهٔ سؤال: "" / "order" / "hotspot". */
+    fun setQuestionMode(id: String, mode: String) = update(id) { q ->
+        when (mode) {
+            "order" -> q.copy(mode = mode, orderItems = q.orderItems.ifEmpty { listOf("", "", "") })
+            "hotspot" -> q.copy(mode = mode, hotspots = q.hotspots.takeIf { it.size == q.options.size } ?: List(q.options.size) { ir.exam.app.ui.builder.HotspotRect(0f, 0f, 0f, 0f) })
+            else -> q.copy(mode = "")
+        }
+    }
+    fun updateOrderItem(id: String, index: Int, value: String) = update(id) { q ->
+        // ویرگول جداکنندهٔ پاسخ است؛ داخل مورد مجاز نیست.
+        val clean = value.replace(',', ' ').replace('،', ' ')
+        q.copy(orderItems = q.orderItems.toMutableList().also { if (index in it.indices) it[index] = clean })
+    }
+    fun addOrderItem(id: String) = update(id) { q -> if (q.orderItems.size >= 10) q else q.copy(orderItems = q.orderItems + "") }
+    fun removeOrderItem(id: String, index: Int) = update(id) { q -> if (q.orderItems.size <= 2) q else q.copy(orderItems = q.orderItems.toMutableList().also { if (index in it.indices) it.removeAt(index) }) }
+    fun setOrderItemCount(id: String, count: Int) = update(id) { q ->
+        val n = count.coerceIn(2, 10)
+        q.copy(orderItems = List(n) { q.orderItems.getOrElse(it) { "" } })
+    }
+    fun setHotspots(id: String, rects: List<ir.exam.app.ui.builder.HotspotRect>) = update(id) { it.copy(hotspots = rects) }
     fun setAttempts(value: Int) { _state.update { it.copy(attemptsAllowed = value.coerceIn(1, 5)) } }
     fun setAttemptOnTimeout(value: Boolean) { _state.update { it.copy(attemptOnTimeout = value) } }
     fun setGradePolicy(value: String) { if (value in setOf("last", "best", "all")) _state.update { it.copy(gradePolicy = value) } }
@@ -835,6 +858,7 @@ private fun draftFingerprint(state: ExamBuilderState): Int = listOf(
     state.pickCount,
     state.pickRules,
     state.primaryMode, // V301
+    state.levelThresholds, // V305
     state.audienceMode,
     state.audienceClasses,
     state.audienceStudents,

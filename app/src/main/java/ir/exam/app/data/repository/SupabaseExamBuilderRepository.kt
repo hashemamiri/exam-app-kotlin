@@ -115,6 +115,10 @@ class SupabaseExamBuilderRepository(context: Context) {
                 pickCount = exam.pickCount.takeIf { it > 0 }?.toString().orEmpty(),
                 pickRules = exam.pickRules.filterValues { it > 0 }, // V272
                 primaryMode = exam.options?.get("primary")?.let { (it as? kotlinx.serialization.json.JsonPrimitive)?.content == "true" } ?: false, // V301
+                // V305 — آستانه‌های کارنامهٔ ۴ سطحی ([85,70,50] → "85,70,50")
+                levelThresholds = (exam.options?.get("levels") as? kotlinx.serialization.json.JsonArray)
+                    ?.mapNotNull { (it as? kotlinx.serialization.json.JsonPrimitive)?.content?.toDoubleOrNull()?.let { d -> if (d == d.toLong().toDouble()) d.toLong().toString() else d.toString() } }
+                    ?.joinToString(",").orEmpty(),
                 audienceMode = if (audienceSchools.isNotEmpty()) "schools" else audience.mode,
                 audienceClasses = audience.classes,
                 audienceStudents = if (audienceSchools.isNotEmpty()) emptySet() else audience.students,
@@ -179,7 +183,13 @@ class SupabaseExamBuilderRepository(context: Context) {
             // V272 — قاعده‌های نوع سؤال؛ سرور فقط مقدارهای عددی مثبت را نگه می‌دارد.
             put("pick_rules", buildJsonObject { state.pickRules.forEach { (k, v) -> if (v > 0) put(k, v) } })
             // V301 — تنظیمات نمایشی؛ سرور (SQL V301) آن را در exams.options نگه می‌دارد و به دانش‌آموز می‌دهد.
-            put("options", buildJsonObject { put("primary", state.primaryMode) })
+            put("options", buildJsonObject {
+                put("primary", state.primaryMode)
+                // V305 — آستانه‌های کارنامهٔ ۴ سطحی؛ فقط وقتی معتبر و غیرپیش‌فرض
+                ir.exam.app.core.report.PrimaryLevels.parseThresholds(state.levelThresholds)?.let { t ->
+                    put("levels", kotlinx.serialization.json.JsonArray(t.map { kotlinx.serialization.json.JsonPrimitive(it) }))
+                }
+            })
             put("questions", encoded.publicQuestions)
             put("answer_key", encoded.answerKey)
             put("audience", state.audienceMode)

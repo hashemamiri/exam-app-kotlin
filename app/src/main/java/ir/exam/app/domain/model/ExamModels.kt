@@ -75,8 +75,13 @@ data class MultipleChoiceQuestion(
     override val answerImagesRequired: Boolean = false,
     override val originalIndex: Int = 0,
     /** هر گزینه نمایشی به کدام اندیس اصلی سرور اشاره می‌کند. */
-    val optionOriginalIndices: List<Int> = options.indices.toList()
+    val optionOriginalIndices: List<Int> = options.indices.toList(),
+    /** V305 — انتخاب روی تصویر: ناحیهٔ هر گزینه به «اندیس اصلی» (درصد x,y,w,h)؛ خالی = حالت عادی. */
+    val hotspots: List<HotspotZone> = emptyList()
 ) : Question
+
+/** V305 — ناحیهٔ Hotspot (درصد نسبت به تصویر). */
+data class HotspotZone(val x: Float, val y: Float, val w: Float, val h: Float)
 
 data class TrueFalseQuestion(
     override val id: String,
@@ -95,7 +100,9 @@ data class FillBlankQuestion(
     override val images: List<String> = emptyList(),
     override val maxAnswerImages: Int = 0,
     override val answerImagesRequired: Boolean = false,
-    override val originalIndex: Int = 0
+    override val originalIndex: Int = 0,
+    /** V305 — مرتب‌سازی با کشیدن: موارد (به ترتیب نمایش بُرخورده)؛ خالی = جای خالی عادی. پاسخ = ترتیب با «,». */
+    val orderItems: List<String> = emptyList()
 ) : Question
 
 data class NumericQuestion(

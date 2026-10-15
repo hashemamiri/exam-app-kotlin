@@ -3,6 +3,7 @@ package ir.exam.app.data.repository
 import ir.exam.app.domain.model.EssayQuestion
 import ir.exam.app.domain.model.Exam
 import ir.exam.app.domain.model.FillBlankQuestion
+import ir.exam.app.domain.model.HotspotZone
 import ir.exam.app.domain.model.MatchingQuestion
 import ir.exam.app.domain.model.MultipleChoiceQuestion
 import ir.exam.app.domain.model.NumericQuestion
@@ -142,14 +143,22 @@ internal object StudentExamPayloadCodec {
                     maxAnswerImages = maxAnswerImages,
                     answerImagesRequired = answerImagesRequired,
                     originalIndex = originalIndex,
-                    optionOriginalIndices = order
+                    optionOriginalIndices = order,
+                    // V305 — انتخاب روی تصویر: ناحیه‌ها به اندیس اصلی (بدون بُرخوردن)
+                    hotspots = if (obj.text("mode") == "hotspot") obj["hotspots"].arrayOrEmpty().mapNotNull { h ->
+                        (h as? JsonObject)?.let { o ->
+                            HotspotZone(o.double("x")?.toFloat() ?: 0f, o.double("y")?.toFloat() ?: 0f, o.double("w")?.toFloat() ?: 0f, o.double("h")?.toFloat() ?: 0f)
+                        }
+                    } else emptyList()
                 )
             }
             "truefalse", "true_false" -> TrueFalseQuestion(
                 id, text, score, images, maxAnswerImages, answerImagesRequired, originalIndex
             )
             "fill", "fill_blank" -> FillBlankQuestion(
-                id, text, score, images, maxAnswerImages, answerImagesRequired, originalIndex
+                id, text, score, images, maxAnswerImages, answerImagesRequired, originalIndex,
+                // V305 — مرتب‌سازی: موارد همیشه با ترتیب پایدار بُر می‌خورند (مستقل از shuffle_opt)
+                orderItems = if (obj.text("mode") == "order") shuffledOrderItems(obj["items"].arrayStrings().filter { it.isNotBlank() }, "$optionSeed:$originalIndex:order") else emptyList()
             )
             "numeric", "number" -> NumericQuestion(
                 id, text, score, images, maxAnswerImages, answerImagesRequired, originalIndex
@@ -243,6 +252,13 @@ internal object StableExamShuffle {
 
     private const val UINT_MASK = 0xffff_ffffL
     private const val UINT_RANGE = 4_294_967_296.0
+}
+
+/** V305 — بُرخوردن پایدار موارد مرتب‌سازی؛ اگر نتیجه همان ترتیب درست شد، یک جابه‌جایی چرخشی تا پاسخ لو نرود. */
+private fun shuffledOrderItems(items: List<String>, seed: String): List<String> {
+    if (items.size < 2) return items
+    val sh = StableExamShuffle.shuffled(items, seed)
+    return if (sh == items) sh.drop(1) + sh.first() else sh
 }
 
 private fun JsonObject.text(key: String): String? = this[key]?.jsonPrimitive?.contentOrNull

@@ -25,7 +25,10 @@ data class StudentGradeCard(
     val grade: Double,
     val total: Double,
     val feedback: String,
-    val submittedAt: String?
+    val submittedAt: String?,
+    /** V305 — سطح توصیفی (فقط آزمون ابتدایی)؛ null = کارنامهٔ عادی. */
+    val levelName: String? = null,
+    val levelStars: String? = null
 ) {
     val percent: Double get() = if (total > 0) grade * 100.0 / total else 0.0
 }
@@ -58,7 +61,9 @@ class StudentResultsViewModel(
             coroutineScope {
                 val grades = async { repository.myGrades().getOrThrow().mapNotNull(::parseGrade) }
                 val answers = async { repository.myAnswerSummaries().getOrThrow() }
-                grades.await() to answers.await()
+                val levels = async { repository.myLevels().getOrDefault(emptyMap()) } // V305
+                val levelMap = levels.await()
+                grades.await().map { g -> levelMap[g.examId]?.let { g.copy(levelName = it.first, levelStars = it.second) } ?: g } to answers.await()
             }
         }.onSuccess { (grades, answers) ->
             SessionCache.put(CACHE_KEY, StudentResultsCache(grades, answers))

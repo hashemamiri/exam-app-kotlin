@@ -21,6 +21,17 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.matchParentSize
+import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.border
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.zIndex
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.ui.platform.LocalDensity as StudentLocalDensity
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CardDefaults
@@ -81,6 +92,7 @@ import ir.exam.app.domain.model.BooleanAnswer
 import ir.exam.app.domain.model.ChoiceAnswer
 import ir.exam.app.domain.model.EssayQuestion
 import ir.exam.app.domain.model.FillBlankQuestion
+import ir.exam.app.domain.model.HotspotZone
 import ir.exam.app.domain.model.MatchingAnswer
 import ir.exam.app.domain.model.MatchingQuestion
 import ir.exam.app.domain.model.MultipleChoiceQuestion
@@ -407,7 +419,12 @@ fun StudentExamContent(
                         )
                     }
                     // V264 — صفحه‌کلید ریاضی (آیتم ۱۲) کنار کادر پاسخ جای خالی/عددی؛ با دکمهٔ ماشین‌حساب باز/بسته می‌شود
-                    is FillBlankQuestion -> {
+                    is FillBlankQuestion -> if (primary && question.orderItems.isNotEmpty()) {
+                        // V305 — ابتدایی: مرتب‌سازی با کشیدن؛ پاسخ = ترتیب فعلی موارد با «,»
+                        val saved = (state.answers[question.id] as? TextAnswer)?.value.orEmpty()
+                        val order = orderFromAnswer(saved, question.orderItems)
+                        PrimaryOrderAnswer(order, onChange = { onAnswer(TextAnswer(question.id, it.joinToString(","))) })
+                    } else {
                         val current = (state.answers[question.id] as? TextAnswer)?.value.orEmpty()
                         var keypad by remember(question.id) { mutableStateOf(false) }
                         Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -425,7 +442,20 @@ fun StudentExamContent(
                             if (keypad) MathKeypad(numeric = false, onKey = { k -> onAnswer(TextAnswer(question.id, MathKeys.apply(current, k, numeric = false))) })
                         }
                     }
-                    is NumericQuestion -> {
+                    is NumericQuestion -> if (primary) {
+                        // V305 — ابتدایی: کادر پاسخ + پد عددی بزرگ ۰–۹ (لمسی)
+                        val current = (state.answers[question.id] as? TextAnswer)?.value.orEmpty()
+                        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                            OutlinedTextField(
+                                value = current,
+                                onValueChange = { value -> onAnswer(TextAnswer(question.id, value.filter { it.isDigit() || it in ".-" })) },
+                                label = { Text("پاسخ عددی") },
+                                textStyle = MaterialTheme.typography.headlineSmall.copy(textAlign = TextAlign.Center),
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                            BigNumberPad(onKey = { k -> onAnswer(TextAnswer(question.id, MathKeys.apply(current, k, numeric = true))) })
+                        }
+                    } else {
                         val current = (state.answers[question.id] as? TextAnswer)?.value.orEmpty()
                         var keypad by remember(question.id) { mutableStateOf(false) }
                         Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -444,7 +474,14 @@ fun StudentExamContent(
                         }
                     }
                     // V303 — ابتدایی: وقتی همهٔ گزینه‌ها تصویر (یا متن خیلی کوتاه/ایموجی) هستند → شبکهٔ ۲×۲ کارت‌های تصویری بزرگ
-                    is MultipleChoiceQuestion -> if (primary && isPictureOptionSet(question)) {
+                    is MultipleChoiceQuestion -> if (primary && question.hotspots.isNotEmpty() && question.images.isNotEmpty()) {
+                        // V305 — ابتدایی: انتخاب روی تصویر؛ روی ناحیهٔ درست بزنید
+                        PrimaryHotspotAnswer(
+                            question = question,
+                            selectedOriginal = (state.answers[question.id] as? ChoiceAnswer)?.selectedIndex,
+                            onPick = { onAnswer(ChoiceAnswer(question.id, it)) }
+                        )
+                    } else if (primary && isPictureOptionSet(question)) {
                         val labels = listOf("الف", "ب", "ج", "د", "هـ", "و")
                         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                             question.options.indices.chunked(2).forEach { rowIdx ->
@@ -929,5 +966,132 @@ private fun ConnectionBanner(online: Boolean, savedAtMs: Long) {
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
+    }
+}
+
+
+/* ============================================================
+ * V305 — ابزارهای ابتدایی: مرتب‌سازی با کشیدن، انتخاب روی تصویر، پد عددی بزرگ
+ * ============================================================ */
+
+/** V305 — حرف گزینه (الف، ب، …) بدون وابستگی به بستهٔ builder. */
+internal fun primaryLetter(index: Int): String = listOf("الف", "ب", "ج", "د", "ه", "و", "ز", "ح").getOrElse(index) { PersianDigits.convert(index + 1) }
+
+/** ترتیب نمایش از پاسخ ذخیره‌شده؛ اگر پاسخ معتبر نبود (موارد جور نیست) = ترتیب اولیهٔ آزمون. */
+internal fun orderFromAnswer(saved: String, items: List<String>): List<String> {
+    if (saved.isBlank()) return items
+    val parts = saved.split(",").map { it.trim() }
+    return if (parts.size == items.size && parts.sorted() == items.sorted()) parts else items
+}
+
+@Composable
+private fun PrimaryOrderAnswer(order: List<String>, onChange: (List<String>) -> Unit) {
+    val rowPx = with(StudentLocalDensity.current) { 68.dp.toPx() }
+    var dragIndex by remember(order.size) { mutableIntStateOf(-1) }
+    var dragOffset by remember(order.size) { mutableFloatStateOf(0f) }
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Text("موارد را با گرفتن دستگیرهٔ ☰ به ترتیب درست بکشید.", style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold)
+        order.forEachIndexed { index, item ->
+            val dragging = dragIndex == index
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(64.dp)
+                    .zIndex(if (dragging) 1f else 0f)
+                    .graphicsLayer { translationY = if (dragging) dragOffset else 0f },
+                colors = CardDefaults.cardColors(containerColor = if (dragging) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface)
+            ) {
+                Row(Modifier.fillMaxWidth().padding(horizontal = 10.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text("☰", fontSize = 26.sp, modifier = Modifier
+                        .size(48.dp)
+                        .pointerInput(order) {
+                            detectDragGestures(
+                                onDragStart = { dragIndex = index; dragOffset = 0f },
+                                onDrag = { change, amount -> change.consume(); dragOffset += amount.y },
+                                onDragEnd = {
+                                    val target = (index + Math.round(dragOffset / rowPx)).coerceIn(0, order.lastIndex)
+                                    if (target != index) onChange(order.toMutableList().also { it.add(target, it.removeAt(index)) })
+                                    dragIndex = -1; dragOffset = 0f
+                                },
+                                onDragCancel = { dragIndex = -1; dragOffset = 0f }
+                            )
+                        }
+                        .padding(4.dp))
+                    Text("${PersianDigits.convert(index + 1)}.", fontWeight = FontWeight.Bold)
+                    Text(item, modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyLarge)
+                    // دکمه‌های ▲▼ برای کسانی که کشیدن برایشان سخت است
+                    IconButton(enabled = index > 0, onClick = { onChange(order.toMutableList().also { it.add(index - 1, it.removeAt(index)) }) }) { Text("▲", fontSize = 18.sp) }
+                    IconButton(enabled = index < order.lastIndex, onClick = { onChange(order.toMutableList().also { it.add(index + 1, it.removeAt(index)) }) }) { Text("▼", fontSize = 18.sp) }
+                }
+            }
+            Spacer(Modifier.height(4.dp))
+        }
+    }
+}
+
+@Composable
+private fun PrimaryHotspotAnswer(question: MultipleChoiceQuestion, selectedOriginal: Int?, onPick: (Int) -> Unit) {
+    val img = question.images.firstOrNull()
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text("روی ناحیهٔ درست تصویر بزنید:", style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold)
+        Box(Modifier.fillMaxWidth()) {
+            if (img != null) StudentCachedImage(img, "تصویر سؤال", Modifier.fillMaxWidth())
+            BoxWithConstraints(Modifier.matchParentSize()) {
+                question.options.indices.forEach { displayIndex ->
+                    val original = question.optionOriginalIndices.getOrElse(displayIndex) { displayIndex }
+                    val zone: HotspotZone = question.hotspots.getOrNull(original) ?: return@forEach
+                    if (zone.w <= 0f || zone.h <= 0f) return@forEach
+                    val on = selectedOriginal == original
+                    Box(
+                        Modifier
+                            .offset(maxWidth * (zone.x / 100f), maxHeight * (zone.y / 100f))
+                            .size(maxWidth * (zone.w / 100f), maxHeight * (zone.h / 100f))
+                            .border(if (on) 4.dp else 2.dp, if (on) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.tertiary, RoundedCornerShape(8.dp))
+                            .background(if (on) MaterialTheme.colorScheme.primary.copy(alpha = 0.25f) else Color.Transparent, RoundedCornerShape(8.dp))
+                            .clickable { onPick(original) },
+                        contentAlignment = Alignment.TopStart
+                    ) {
+                        Text(
+                            if (on) "✓ " + primaryLetter(displayIndex) else primaryLetter(displayIndex),
+                            modifier = Modifier.padding(4.dp),
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                    }
+                }
+            }
+        }
+        // گزینه‌ها به‌صورت متن هم فهرست می‌شوند تا معنی هر ناحیه روشن باشد
+        question.options.forEachIndexed { displayIndex, option ->
+            val original = question.optionOriginalIndices.getOrElse(displayIndex) { displayIndex }
+            val on = selectedOriginal == original
+            Text(
+                "${primaryLetter(displayIndex)}) $option",
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = if (on) FontWeight.Bold else FontWeight.Normal,
+                color = if (on) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+            )
+        }
+    }
+}
+
+/** V305 — پد عددی بزرگ ۰–۹ برای ابتدایی؛ منطق کلیدها همان MathKeys (تست‌شده) است. */
+@Composable
+private fun BigNumberPad(onKey: (String) -> Unit) {
+    val rows = listOf(listOf("1", "2", "3"), listOf("4", "5", "6"), listOf("7", "8", "9"), listOf(".", "0", MathKeys.BACKSPACE))
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        rows.forEach { row ->
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                row.forEach { key ->
+                    OutlinedButton(
+                        onClick = { onKey(key) },
+                        modifier = Modifier.weight(1f).heightIn(min = 68.dp),
+                        shape = RoundedCornerShape(14.dp)
+                    ) {
+                        Text(if (key == MathKeys.BACKSPACE) "⌫ پاک" else PersianDigits.convert(key), fontSize = 26.sp, fontWeight = FontWeight.Bold)
+                    }
+                }
+            }
+        }
     }
 }

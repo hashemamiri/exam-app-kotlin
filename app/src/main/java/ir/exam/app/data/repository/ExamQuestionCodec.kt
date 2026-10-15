@@ -1,6 +1,7 @@
 package ir.exam.app.data.repository
 
 import ir.exam.app.ui.builder.AlignSpan
+import ir.exam.app.ui.builder.HotspotRect
 import ir.exam.app.ui.builder.MediaDraft
 import ir.exam.app.ui.builder.OptionStyle
 import ir.exam.app.ui.builder.QuestionDraft
@@ -177,6 +178,17 @@ internal object ExamQuestionCodec {
                 audioUri = obj["audio"]?.asString()?.takeIf(String::isNotBlank),
                 audioBytes = (obj["audioBytes"] as? JsonPrimitive)?.longOrNull ?: 0L,
                 audioMs = (obj["audioMs"] as? JsonPrimitive)?.longOrNull ?: 0L,
+                // V305 — حالت ویژهٔ ابتدایی (مرتب‌سازی / انتخاب روی تصویر)
+                mode = obj["mode"]?.asString()?.takeIf { it in setOf("order", "hotspot") }.orEmpty(),
+                // ترتیب درست فقط در کلید پاسخ (accept[0]) است؛ public items بُرخورده است.
+                orderItems = key["accept"].asArrayOrEmpty().firstOrNull()?.asString()
+                    ?.split(',')?.map { it.trim() }?.filter { it.isNotBlank() }
+                    ?: obj["items"].asArrayOrEmpty().map { it.asString().orEmpty() },
+                hotspots = obj["hotspots"].asArrayOrEmpty().mapNotNull { h ->
+                    (h as? JsonObject)?.let { o ->
+                        HotspotRect(o["x"]?.asFloat() ?: return@let null, o["y"]?.asFloat() ?: return@let null, o["w"]?.asFloat() ?: return@let null, o["h"]?.asFloat() ?: return@let null)
+                    }
+                },
                 rawPublic = obj,
                 rawAnswer = key
             )
@@ -238,6 +250,20 @@ internal object ExamQuestionCodec {
                     values["optionStyles"] = it
                 }
             }
+            // V305 — حالت ویژه: mode/items/hotspots فقط وقتی فعال است نوشته می‌شود
+            values.remove("mode"); values.remove("items"); values.remove("hotspots")
+            if (question.type == QuestionType.FILL_BLANK && question.mode == "order") {
+                values["mode"] = JsonPrimitive("order")
+                // V305 — امنیت: موارد عمومی همیشه بُرخورده‌اند تا ترتیب درست در پاسخ عمومی لو نرود.
+                values["items"] = JsonArray(shuffledOrderPublic(question.orderItems).map { JsonPrimitive(it) })
+            }
+            if (question.type == QuestionType.MULTIPLE_CHOICE && question.mode == "hotspot") {
+                values["mode"] = JsonPrimitive("hotspot")
+                values["hotspots"] = JsonArray(question.options.indices.map { i ->
+                    val r = question.hotspots.getOrNull(i)
+                    JsonObject(mapOf("x" to JsonPrimitive(r?.x ?: 0f), "y" to JsonPrimitive(r?.y ?: 0f), "w" to JsonPrimitive(r?.w ?: 0f), "h" to JsonPrimitive(r?.h ?: 0f)))
+                })
+            }
             if (question.type == QuestionType.MATCHING) {
                 values["leftItems"] = JsonArray(question.matchingLeft.map(::JsonPrimitive))
                 values["rightItems"] = JsonArray(question.matchingRight.map(::JsonPrimitive))
@@ -265,7 +291,9 @@ internal object ExamQuestionCodec {
                 QuestionType.MULTIPLE_CHOICE -> values["correctOption"] = JsonPrimitive(question.correctIndex ?: 0)
                 QuestionType.TRUE_FALSE -> values["correctAnswer"] = JsonPrimitive(question.expectedText.toBooleanStrictOrNull() ?: false)
                 QuestionType.FILL_BLANK -> {
-                    values["accept"] = JsonArray(
+                    // V305 — مرتب‌سازی: پاسخ درست = ترتیب واردشدهٔ items با «,» (همان قراردادی که دانش‌آموز می‌فرستد)
+                    values["accept"] = if (question.mode == "order") JsonArray(listOf(JsonPrimitive(orderAnswerOf(question.orderItems))))
+                    else JsonArray(
                         question.expectedText.split('|').map(String::trim).filter(String::isNotBlank).map(::JsonPrimitive)
                     )
                     values["caseSensitive"] = JsonPrimitive(question.caseSensitive)
@@ -284,6 +312,20 @@ internal object ExamQuestionCodec {
         }
         return EncodedQuestions(JsonArray(publicRows), JsonArray(answerRows))
     }
+
+    /** V305 — بُرخوردن موارد برای نمایش عمومی (با تلاش برای این‌که با ترتیب درست فرق داشته باشد). */
+    fun shuffledOrderPublic(items: List<String>): List<String> {
+        val clean = items.map { it.trim() }.filter { it.isNotBlank() }
+        if (clean.size < 2) return clean
+        var out = clean.shuffled()
+        var tries = 0
+        while (out == clean && tries < 20) { out = clean.shuffled(); tries++ }
+        if (out == clean) out = clean.drop(1) + clean.first()
+        return out
+    }
+
+    /** V305 — رشتهٔ پاسخ مرتب‌سازی: موارد با «,» (سرور «،» را هم به «,» نرمال می‌کند؛ فاصله‌های اطراف حذف). */
+    fun orderAnswerOf(items: List<String>): String = items.map { it.trim().replace("،", ",") }.filter { it.isNotBlank() }.joinToString(",")
 
     private fun parseType(value: String?): QuestionType = when (value?.lowercase()) {
         "multiple", "multiple_choice", "multiplechoice" -> QuestionType.MULTIPLE_CHOICE

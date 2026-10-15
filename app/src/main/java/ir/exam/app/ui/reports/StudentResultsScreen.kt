@@ -101,6 +101,8 @@ fun StudentResultsScreen(viewModel: StudentResultsViewModel = remember { Student
                     Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
                         Text(grade.title, style = MaterialTheme.typography.titleMedium)
                         Text("${grade.subject} · ${grade.grade} از ${grade.total} · %.1f%%".format(grade.percent))
+                        // V305 — سطح ۴گانهٔ ابتدایی (ستاره تزئینی) — معلم فقط عدد را می‌بیند.
+                        grade.levelName?.let { Text("سطح: $it  ${grade.levelStars.orEmpty()}", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary) }
                         if (grade.feedback.isNotBlank()) Text("بازخورد: ${grade.feedback}")
                     }
                 }

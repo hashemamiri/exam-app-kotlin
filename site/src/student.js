@@ -61,6 +61,9 @@
         var rorder = sho ? stableShuffle(ridx, seed + ':' + oi + ':matching') : ridx;
         q.leftItems = strs(obj.leftItems); q.leftImages = nstrs(obj.leftImages); q.rightItems = rorder.map(function (i) { return right[i]; }); q.rightImages = rorder.map(function (i) { return rimg[i] || null; }); q.rightOriginalIndices = rorder;
       }
+      /* V305 — ابتدایی: مرتب‌سازی (موارد بُرخورده) و انتخاب روی تصویر (ناحیه‌ها به اندیس اصلی گزینه) */
+      if (obj.mode === 'order' && type === 'fill') { q.mode = 'order'; q.orderItems = strs(obj.items).map(function (x) { return x.trim(); }).filter(Boolean); }
+      if (obj.mode === 'hotspot' && type === 'multiple') { q.mode = 'hotspot'; q.hotspots = (Array.isArray(obj.hotspots) ? obj.hotspots : []).map(function (h) { return {x: Number(h.x) || 0, y: Number(h.y) || 0, w: Number(h.w) || 0, h: Number(h.h) || 0}; }); }
       return q;
     });
     var ordered = shq ? stableShuffle(parsed, studentId + ':' + examId + ':questions') : parsed;
@@ -384,11 +387,97 @@
       if (q.images.length) body.appendChild(el('div', {class: 'st-imgs'}, q.images.map(function (u) { return el('img', {src: u, onclick: function () { lightbox(u); }}); })));
       body.appendChild(answerArea(q));
     }
+    /* ===== V305 — ابزارهای ابتدایی: انتخاب روی تصویر، مرتب‌سازی با کشیدن، پد عددی بزرگ (همان قراردادهای اپ) ===== */
+    var PRI_L = ['الف', 'ب', 'ج', 'د', 'ه', 'و', 'ز', 'ح'];
+    function priL(i) { return PRI_L[i] || fa(i + 1); }
+    function hasZone(z) { return !!z && z.w > 0 && z.h > 0; }
+    function hotspotAnswer(q, a, onPick) {
+      var wrap = el('div', {class: 'st-hs'});
+      wrap.appendChild(el('div', {style: 'font-weight:700;margin-bottom:8px', text: 'روی ناحیهٔ درست تصویر بزنید:'}));
+      var pic = el('div', {style: 'position:relative;display:inline-block;max-width:100%'});
+      if (q.images && q.images[0]) pic.appendChild(el('img', {src: q.images[0], alt: '', style: 'display:block;max-width:100%;height:auto'}));
+      q.options.forEach(function (o, di) {
+        var oi = q.optionOriginalIndices && q.optionOriginalIndices[di] != null ? q.optionOriginalIndices[di] : di;
+        var z = (q.hotspots || [])[oi];
+        if (!hasZone(z)) return;
+        var on = a === oi;
+        pic.appendChild(el('button', {type: 'button', 'aria-label': 'گزینهٔ ' + priL(di), style: 'position:absolute;left:' + z.x + '%;top:' + z.y + '%;width:' + z.w + '%;height:' + z.h + '%;border:' + (on ? '4px' : '2px') + ' solid ' + (on ? '#0a7a50' : '#e8a33d') + ';border-radius:10px;background:' + (on ? 'rgba(10,122,80,.3)' : 'rgba(0,0,0,.12)') + ';cursor:pointer;font-weight:800;color:#fff;text-shadow:0 1px 2px #000;font-size:18px', text: (on ? '✓ ' : '') + priL(di), onclick: function () { onPick(oi); }}));
+      });
+      wrap.appendChild(pic);
+      q.options.forEach(function (o, di) {
+        var oi = q.optionOriginalIndices && q.optionOriginalIndices[di] != null ? q.optionOriginalIndices[di] : di;
+        var on = a === oi;
+        wrap.appendChild(el('div', {style: 'margin-top:6px;font-size:17px;font-weight:' + (on ? '800' : '400') + ';color:' + (on ? '#0a7a50' : 'inherit'), html: priL(di) + ') ' + esc(o)}));
+      });
+      return wrap;
+    }
+    /* مرتب‌سازی: ترتیب فعلی از پاسخ ذخیره‌شده (اگر موارد جور باشند) وگرنه ترتیب اولیه؛ کشیدن با دستگیرهٔ ☰ یا ▲▼ */
+    function orderFromAnswerJs(saved, items) {
+      if (!saved) return items.slice();
+      var parts = String(saved).split(',').map(function (x) { return x.trim(); });
+      var a = parts.slice().sort().join('\u0001'), b = items.slice().sort().join('\u0001');
+      return (parts.length === items.length && a === b) ? parts : items.slice();
+    }
+    function orderAnswer(q, a, onChange) {
+      var cur = orderFromAnswerJs(a, q.orderItems);
+      var box = el('div', {class: 'st-order'});
+      box.appendChild(el('div', {style: 'font-weight:700;margin-bottom:6px', text: 'موارد را به ترتیب درست بچینید (با ☰ بکشید یا ▲ ▼):'}));
+      cur.forEach(function (item, i) {
+        var handle = el('span', {class: 'st-handle', text: '☰', style: 'cursor:grab;font-size:24px;padding:4px 8px;touch-action:none;user-select:none'});
+        var up = el('button', {type: 'button', class: 'btn light sm', text: '▲', onclick: function () { var n = cur.slice(); var t = n[i - 1]; n[i - 1] = n[i]; n[i] = t; onChange(n); }});
+        var dn = el('button', {type: 'button', class: 'btn light sm', text: '▼', onclick: function () { var n = cur.slice(); var t = n[i + 1]; n[i + 1] = n[i]; n[i] = t; onChange(n); }});
+        if (i === 0) up.disabled = true;
+        if (i === cur.length - 1) dn.disabled = true;
+        var row = el('div', {class: 'st-orow', style: 'display:flex;align-items:center;gap:8px;padding:10px;margin:6px 0;border:2px solid var(--line,#ccc);border-radius:12px;background:var(--card,#fff)'}, [handle, el('b', {text: fa(i + 1) + '.'}), el('span', {style: 'flex:1;font-size:17px', text: item}), up, dn]);
+        handle.addEventListener('pointerdown', function (e) {
+          e.preventDefault();
+          if (handle.setPointerCapture) { try { handle.setPointerCapture(e.pointerId); } catch (err) {} }
+          var rows = box.querySelectorAll('.st-orow'), from = i, to = i;
+          row.style.opacity = '.55';
+          function mv(ev) {
+            var t = 0;
+            for (var k = 0; k < rows.length; k++) { var r = rows[k].getBoundingClientRect(); if (ev.clientY > r.top + r.height / 2) t = k; }
+            to = t;
+            for (var m = 0; m < rows.length; m++) rows[m].style.borderColor = m === to ? '#0a7a50' : 'var(--line,#ccc)';
+          }
+          function up2() {
+            handle.removeEventListener('pointermove', mv); handle.removeEventListener('pointerup', up2); handle.removeEventListener('pointercancel', up2);
+            if (to !== from) { var n = cur.slice(); n.splice(to, 0, n.splice(from, 1)[0]); onChange(n); }
+            else row.style.opacity = '';
+          }
+          handle.addEventListener('pointermove', mv); handle.addEventListener('pointerup', up2); handle.addEventListener('pointercancel', up2);
+        });
+        box.appendChild(row);
+      });
+      return box;
+    }
+    /* پد عددی بزرگ ۰–۹ برای ابتدایی؛ کادر ورودی هم کار می‌کند */
+    function numericBigPad(q, a, set) {
+      var wrap = el('div', {class: 'st-numpad'});
+      var inp = el('input', {type: 'text', class: 'st-input', inputmode: 'decimal', placeholder: 'پاسخ عددی', value: a != null ? String(a) : '', style: 'direction:ltr;text-align:center;font-size:26px;font-weight:700;width:100%'});
+      inp.addEventListener('input', function () { var v = en(inp.value).replace(/[^0-9.\-]/g, ''); inp.value = v; set(v); });
+      wrap.appendChild(inp);
+      var grid = el('div', {style: 'display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:10px;max-width:420px'});
+      ['1', '2', '3', '4', '5', '6', '7', '8', '9', '.', '0', '⌫'].forEach(function (k) {
+        grid.appendChild(el('button', {type: 'button', class: 'btn light', style: 'font-size:26px;font-weight:700;min-height:68px;border-radius:14px', text: k === '⌫' ? '⌫ پاک' : (k === '.' ? '.' : fa(k)), 'aria-label': k === '⌫' ? 'پاک کردن' : 'کلید ' + k, onclick: function () {
+          var st = inp.selectionStart == null ? inp.value.length : inp.selectionStart, end = inp.selectionEnd == null ? st : inp.selectionEnd;
+          if (k === '⌫') { if (st === end && st > 0) st -= 1; inp.setRangeText('', st, end, 'end'); }
+          else if (k === '.' && inp.value.indexOf('.') >= 0) { inp.focus(); return; }
+          else inp.setRangeText(k, st, end, 'end');
+          inp.dispatchEvent(new Event('input')); inp.focus();
+        }}));
+      });
+      wrap.appendChild(grid);
+      return wrap;
+    }
     function answerArea(q) {
       var box = el('div', {class: 'st-answer'});
       var a = run.answers[q.id];
       function set(v) { if (v === null || v === undefined || v === '') delete run.answers[q.id]; else run.answers[q.id] = v; saveDraft(); drawNav(); }
-      if (q.type === 'multiple' && ex.primary && isPictureOptionSet(q)) {
+      if (ex.primary && q.type === 'multiple' && q.hotspots && q.hotspots.some(hasZone) && q.images && q.images.length) {
+        /* V305 — ابتدایی: انتخاب روی تصویر */
+        box.appendChild(hotspotAnswer(q, a, function (oi) { set(oi); box.replaceWith(answerArea(q)); }));
+      } else if (q.type === 'multiple' && ex.primary && isPictureOptionSet(q)) {
         /* V303 — ابتدایی: همهٔ گزینه‌ها تصویر/ایموجی → شبکهٔ ۲×۲ کارت‌های بزرگ */
         var grid = el('div', {class: 'st-picgrid'}), L3 = ['الف', 'ب', 'ج', 'د', 'ه', 'و'];
         q.options.forEach(function (o, di) {
@@ -412,6 +501,12 @@
         });
       } else if (q.type === 'truefalse') {
         box.appendChild(el('div', {class: 'row st-tf'}, [[true, ex.primary ? '✅ درست' : '✓ صحیح'], [false, ex.primary ? '❌ نادرست' : '✗ غلط']].map(function (o) { return el('button', {class: 'btn ' + (a === o[0] ? '' : 'light'), text: o[1], onclick: function () { set(o[0]); box.replaceWith(answerArea(q)); }}); })));
+      } else if (ex.primary && q.type === 'fill' && q.mode === 'order') {
+        /* V305 — ابتدایی: مرتب‌سازی با کشیدن؛ پاسخ = ترتیب فعلی با «,» */
+        box.appendChild(orderAnswer(q, a, function (arr) { set(arr.join(',')); box.replaceWith(answerArea(q)); }));
+      } else if (ex.primary && q.type === 'numeric') {
+        /* V305 — ابتدایی: کادر پاسخ + پد عددی بزرگ */
+        box.appendChild(numericBigPad(q, a, set));
       } else if (q.type === 'fill' || q.type === 'numeric') {
         var i = el('input', {type: 'text', class: 'st-input', placeholder: q.type === 'numeric' ? 'پاسخ عددی' : 'پاسخ جای خالی', value: a != null ? String(a) : '', style: (q.type === 'numeric' ? 'direction:ltr;text-align:left;' : '') + 'flex:1;min-width:0'});
         i.addEventListener('input', function () { var v = i.value; if (q.type === 'numeric') { v = en(v).replace(/[^0-9.\-]/g, ''); i.value = v; } set(v); });

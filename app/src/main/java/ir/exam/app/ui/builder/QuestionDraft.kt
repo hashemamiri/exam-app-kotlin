@@ -81,6 +81,10 @@ data class StyleSpan(
  * آخرین AlignSpanی که رویش همپوشانی دارد ترازبندی می‌شود؛ اگر هیچ‌کدام
  * همپوشانی نداشت، تراز پیش‌فرضِ کل سؤال (textAlign) اعمال می‌شود.
  */
+/** V305 — ناحیهٔ انتخاب روی تصویر (Hotspot): درصد نسبت به عرض/ارتفاع تصویر (۰ تا ۱۰۰). */
+@Serializable
+data class HotspotRect(val x: Float, val y: Float, val w: Float, val h: Float)
+
 @Serializable
 data class AlignSpan(
     val start: Int,
@@ -326,6 +330,13 @@ data class QuestionDraft(
      * فرمتِ پیش‌نمایشِ چاپی می‌آید (مشابهِ textSpans که از همان‌جا می‌آید).
      */
     val alignSpans: List<AlignSpan> = emptyList(),
+    /**
+     * V305 — حالت ویژهٔ ابتدایی: "" = عادی؛ "order" (جای خالی → مرتب‌سازی با کشیدن؛ پاسخ = ترتیب درست items با «,»)؛
+     * "hotspot" (چندگزینه‌ای → انتخاب روی تصویر؛ هر گزینه یک ناحیه در hotspots). کلید سیمی: mode / items / hotspots.
+     */
+    val mode: String = "",
+    val orderItems: List<String> = emptyList(),
+    val hotspots: List<HotspotRect> = emptyList(),
     val rawPublic: JsonObject = JsonObject(emptyMap()),
     val rawAnswer: JsonObject = JsonObject(emptyMap())
 )
@@ -389,6 +400,8 @@ data class ExamBuilderState(
     val pickRules: Map<String, Int> = emptyMap(),
     // V301 — «حالت ابتدایی» (پایهٔ اول تا ششم): نمای درشت و سادهٔ دانش‌آموز؛ ذخیره در exams.options.primary
     val primaryMode: Boolean = false,
+    // V305 — آستانه‌های کارنامهٔ توصیفی ۴ سطحی (درصد؛ «خیلی خوب,خوب,قابل قبول»)؛ خالی = پیش‌فرض ۸۵,۷۰,۵۰؛ ذخیره در exams.options.levels
+    val levelThresholds: String = "",
     val audienceMode: String = "all",
     val audienceClasses: Set<String> = emptySet(),
     val audienceStudents: Set<String> = emptySet(),
