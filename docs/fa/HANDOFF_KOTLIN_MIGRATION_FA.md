@@ -19430,6 +19430,9 @@ CI: `compileDebugUnitTestKotlin` به‌خاطر `assertFalse` بدون import �
 - باگ V202.5: `var LANDING_TILES` داخل `paintAuth` بعد از خطی که `landing()` را صدا می‌زد تعریف شده بود → به‌خاطر hoisting مقدارش undefined و `.map` خطا می‌داد → صفحهٔ اول خالی. حالا کنار `authActive` در سطح ماژول است (تست ترتیب را پین می‌کند).
 - دروازهٔ صفحهٔ اول: mobile.js `entered()/enter()` با `sessionStorage['m-entered']`، `gateActive() = MQ && user && !entered`؛ app.js `render()` پیش از m-mode اگر gateActive → paintAuth (landing حتی با user). دکمه: user ⇒ `enter(); S.render()`؛ وگرنه `goA('login')`؛ پیوند ثبت‌نام فقط بدون user. `afterLogin()` → `SiteMobile.enter()`.
 
+### V300.2 — رفع CI (اپ 1.02.02)
+- همان تست `V199_PrintPayTest.v202_5…` سطر ۱۸۰: `.ice-tiles … repeat(3,1fr)` → `repeat(2,1fr)` (V299). این بار همهٔ رشته‌های `assertTrue("…" in …)` تست‌ها با اسکریپت موقت علیه `site/src/*` + `app/src/main` چک شد؛ مورد دیگری نبود.
+
 ### V300.1 — رفع CI (اپ 1.02.01)
 - `V199_PrintPayTest.v202_5…` و `V168_SiteDesktopMenuTest.v226…` هنوز `tiles`/`LANDING_TILES` شش‌تایی قدیمی را پین می‌کردند (V299 فقط-سایت بود و CI اپ اجرا نشد → تا V300 دیده نشد). به ۸ کاشی به‌روز شدند. درس: بعد از تغییر سایتِ بدون CI، `grep` روی کل `app/src/test` برای رشته‌های تغییر‌یافته.
 

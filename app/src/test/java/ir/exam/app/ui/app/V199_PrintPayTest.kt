@@ -177,6 +177,6 @@ class V199_PrintPayTest {
         val a = source("site/src/app.js")
         assertTrue("window.SiteMobile.gateActive()) { document.body.classList.remove('m-mode'); closeAuth(); root.innerHTML = ''; window.SiteMobile.paintAuth(root); return; }" in a)
         assertTrue("if (window.SiteMobile && window.SiteMobile.enter) window.SiteMobile.enter();" in a)
-        assertTrue(".ice-tiles{display:grid;grid-template-columns:repeat(3,1fr)" in source("site/src/site.css"))
+        assertTrue(".ice-tiles{display:grid;grid-template-columns:repeat(2,1fr)" in source("site/src/site.css")) // V299: دو ستون
     }
 }
