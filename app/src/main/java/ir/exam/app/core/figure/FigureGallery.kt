@@ -76,8 +76,20 @@ val AXIS_FIGURES: List<FigureTemplate> = listOf(
     FigureTemplate("axloglog", "تمام‌لگاریتمی", """{"k":"g","t":"axloglog","X":{"xmax":3,"ymax":3}}"""),
     FigureTemplate("axtime", "محور زمان", """{"k":"g","t":"axtime","X":{"labs":"۸:۰۰,۹:۰۰,۱۰:۰۰,۱۱:۰۰,۱۲:۰۰","s1":"t"}}"""),
     FigureTemplate("axpolpts", "قطبی با نقطه‌ها", """{"k":"g","t":"axpolpts","X":{"xmax":4,"pts":"2,30;3,120"}}"""),
-    FigureTemplate("ax3dpt", "سه‌بعدی با نقطه", """{"k":"g","t":"ax3dpt","X":{"xmax":4,"step":1,"x1":3,"y1":2,"z1":2}}""")
+    FigureTemplate("ax3dpt", "سه‌بعدی با نقطه", """{"k":"g","t":"ax3dpt","X":{"xmax":4,"step":1,"x1":3,"y1":2,"z1":2}}"""),
+    // V304 — ابزار ریاضی ابتدایی (PrimaryMathSvgRenderer)؛ در همین فهرست «محور» می‌آیند (بخش جدا در انتخابگر،
+    // از PRIMARY_MATH_FIRST_ID به بعد) تا همهٔ مسیرهای تشخیص نوع/چاپ/سایت بدون تغییر بمانند.
+    FigureTemplate("axtally", "چوب‌خط", """{"k":"g","t":"axtally","X":{"n":7}}"""),
+    FigureTemplate("axbase10", "دسته‌های ده‌تایی", """{"k":"g","t":"axbase10","X":{"n":134}}"""),
+    FigureTemplate("axplace", "جدول ارزش مکانی", """{"k":"g","t":"axplace","X":{"n":2457,"blank":0}}"""),
+    FigureTemplate("axclock", "ساعت عقربه‌ای", """{"k":"g","t":"axclock","X":{"h":3,"m":0,"nums":1}}"""),
+    FigureTemplate("axruler", "خط‌کش", """{"k":"g","t":"axruler","X":{"len":10}}"""),
+    FigureTemplate("axfrac", "کسر شکلی", """{"k":"g","t":"axfrac","X":{"num":1,"den":4,"shape":"circle"}}"""),
+    FigureTemplate("axmoney", "سکه و اسکناس", """{"k":"g","t":"axmoney","X":{"notes":"1000,2000,5000,10000","coins":"500,1000","unit":"تومان"}}""")
 )
+
+/** V304 — اولین شناسهٔ بخش «ابزار ریاضی ابتدایی» در AXIS_FIGURES (برای سرتیتر جدا در انتخابگر). */
+const val PRIMARY_MATH_FIRST_ID = "axtally"
 
 /** نمودارهای پرکاربرد (شناسه‌ها دقیقاً مطابق وب‌اپ). */
 val GRAPH_FIGURES: List<FigureTemplate> = listOf(

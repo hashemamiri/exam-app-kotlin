@@ -117,6 +117,8 @@ object FigureSvgRenderer {
         "line", "quad", "sine", "exp", "bar", "col" -> renderGraph(spec)
         // V54.1 — ۲۰ نوع نمودار جدید Native با کلیدهای X مرجع.
         in ChartSvgRenderer.SUPPORTED -> ChartSvgRenderer.body(spec)
+        // V304 — ابزار ریاضی ابتدایی (چوب‌خط، دسته‌های ده‌تایی، ارزش مکانی، ساعت، خط‌کش، کسر، پول).
+        in PrimaryMathSvgRenderer.SUPPORTED -> PrimaryMathSvgRenderer.body(spec)
         // V136 — محورها (محور اعداد/مختصات/ربع اول/شطرنجی/قطبی/سه‌بعدی).
         in AxisSvgRenderer.SUPPORTED -> AxisSvgRenderer.body(spec)
         else -> renderGeometry(spec)

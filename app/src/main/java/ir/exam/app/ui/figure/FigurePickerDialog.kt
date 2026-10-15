@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.material3.Button
@@ -41,6 +42,7 @@ import ir.exam.app.core.ui.LocalTabletLayout
 import ir.exam.app.core.figure.GEOMETRY_FIGURES
 import ir.exam.app.core.figure.GRAPH_FIGURES
 import ir.exam.app.core.figure.AXIS_FIGURES
+import ir.exam.app.core.figure.PRIMARY_MATH_FIRST_ID
 import ir.exam.app.ui.figure.FigureKind.GEOMETRY
 import ir.exam.app.ui.figure.FigureKind.GRAPH
 import kotlinx.serialization.json.JsonObject
@@ -104,8 +106,26 @@ fun FigureTypePickerDialog(
                         verticalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
                         // V136 — محورها همان سلول نمودار را دارند.
-                        items(if (axis) AXIS_FIGURES else GRAPH_FIGURES, key = { it.id }) { template ->
+                        // V304 — بخش «ابزار ریاضی ابتدایی» با سرتیتر جدا در انتهای فهرست محورها.
+                        val all = if (axis) AXIS_FIGURES else GRAPH_FIGURES
+                        val split = if (axis) AXIS_FIGURES.indexOfFirst { it.id == PRIMARY_MATH_FIRST_ID } else -1
+                        val mainList = if (split > 0) all.subList(0, split) else all
+                        val primaryList = if (split > 0) all.subList(split, all.size) else emptyList()
+                        items(mainList, key = { it.id }) { template ->
                             GraphTypeCell(template) { onTypeSelected(template.toSpec()) }
+                        }
+                        if (primaryList.isNotEmpty()) {
+                            item(key = "v304-head", span = { GridItemSpan(maxLineSpan) }) {
+                                Text(
+                                    "ابزار ریاضی ابتدایی",
+                                    style = MaterialTheme.typography.titleSmall,
+                                    color = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.padding(top = 8.dp, bottom = 2.dp)
+                                )
+                            }
+                            items(primaryList, key = { it.id }) { template ->
+                                GraphTypeCell(template) { onTypeSelected(template.toSpec()) }
+                            }
                         }
                     }
                 }
@@ -456,6 +476,14 @@ private fun paramFields(type: String): List<Pair<String, String>> = when (type) 
     "axlog" -> listOf("xmax" to "x max", "ymax" to "تعداد دههٔ y")
     "axloglog" -> listOf("xmax" to "تعداد دههٔ x", "ymax" to "تعداد دههٔ y")
     "axtime" -> listOf("labs" to "زمان‌ها (با ویرگول)", "s1" to "نام محور")
+    // V304 — ابزار ریاضی ابتدایی
+    "axtally" -> listOf("n" to "تعداد (۰ تا ۶۰)")
+    "axbase10" -> listOf("n" to "عدد (۰ تا ۹۹۹)")
+    "axplace" -> listOf("n" to "عدد", "cols" to "تعداد ستون (خالی=خودکار)", "blank" to "خانه‌ها خالی؟ (۱=بله)")
+    "axclock" -> listOf("h" to "ساعت (۰ تا ۱۲)", "m" to "دقیقه (۰ تا ۵۹)", "nums" to "نمایش عددها (۱/۰)", "label" to "نوشتن ساعت زیر شکل (۱/۰)")
+    "axruler" -> listOf("len" to "طول خط‌کش (سانتی‌متر)", "a" to "ابتدای اندازه‌گیری (اختیاری)", "b" to "انتهای اندازه‌گیری (اختیاری)")
+    "axfrac" -> listOf("num" to "صورت", "den" to "مخرج", "shape" to "شکل (circle یا bar)", "label" to "نوشتن کسر زیر شکل (۱/۰)")
+    "axmoney" -> listOf("notes" to "اسکناس‌ها (با ویرگول)", "coins" to "سکه‌ها (با ویرگول)", "unit" to "واحد", "sum" to "نوشتن جمع (۱/۰)")
     "axpolpts" -> listOf("xmax" to "تعداد حلقه", "pts" to "نقطه‌ها (r,θ;r,θ)", "labs" to "نام نقطه‌ها")
     "ax3dpt" -> listOf("xmax" to "تعداد تیک", "step" to "گام", "x1" to "x نقطه", "y1" to "y نقطه", "z1" to "z نقطه", "labs" to "نام نقطه")
     "flow" -> listOf("labs" to "مراحل (با ویرگول)")
@@ -492,6 +520,7 @@ private fun paramFields(type: String): List<Pair<String, String>> = when (type) 
 
 /** کلیدهایی که مقدار متنی (فهرست با ویرگول یا نام سری) دارند نه عدد. */
 private val TEXT_PARAM_KEYS = setOf(
+    "shape", "unit", "notes", "coins", // V304
     "labs", "labs2", "vals", "vals2", "vals3", "xs", "ys", "zs", "s1", "s2", "s3",
     // V54.2 — فهرست‌های عددی چندتایی و مقادیر آزاد مرحلهٔ دوم متنی ذخیره می‌شوند
     // (همان قرارداد رشته‌ای مرجع).

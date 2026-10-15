@@ -19430,6 +19430,16 @@ CI: `compileDebugUnitTestKotlin` به‌خاطر `assertFalse` بدون import �
 - باگ V202.5: `var LANDING_TILES` داخل `paintAuth` بعد از خطی که `landing()` را صدا می‌زد تعریف شده بود → به‌خاطر hoisting مقدارش undefined و `.map` خطا می‌داد → صفحهٔ اول خالی. حالا کنار `authActive` در سطح ماژول است (تست ترتیب را پین می‌کند).
 - دروازهٔ صفحهٔ اول: mobile.js `entered()/enter()` با `sessionStorage['m-entered']`، `gateActive() = MQ && user && !entered`؛ app.js `render()` پیش از m-mode اگر gateActive → paintAuth (landing حتی با user). دکمه: user ⇒ `enter(); S.render()`؛ وگرنه `goA('login')`؛ پیوند ثبت‌نام فقط بدون user. `afterLogin()` → `SiteMobile.enter()`.
 
+### V304 — شکل‌های آمادهٔ ریاضی ابتدایی (اپ 1.02.07 + سایت؛ مقصد: اصلی)
+- معماری: به‌جای دستهٔ تازهٔ شکل، هفت نوع با پیشوند `ax` به انتهای `AXIS_FIGURES` اضافه شد (ثابت `PRIMARY_MATH_FIRST_ID = "axtally"` مرز بخش). به این ترتیب همهٔ مسیرهای موجود (`isAxisType=/^ax/`، تشخیص kind در ExamBuilderScreen/ExamHtmlPrintDialog/FigurePickerDialog، `AXIS_EXT` برای پل بومی WebView) بدون تغییر کار می‌کنند.
+- شناسه‌ها و پارامترها (X): `axtally` (n) · `axbase10` (n ≤ 999) · `axplace` (n, cols, blank) · `axclock` (h, m, nums, label) · `axruler` (len, a, b) · `axfrac` (num, den, shape=circle|bar, label) · `axmoney` (notes, coins, unit, sum). بوم 360×280، عنوان مثل محورها.
+- اپ: `core/figure/PrimaryMathSvgRenderer.kt` (SUPPORTED/body؛ متن‌ها با `FigureDigits.apply`)؛ `FigureSvgRenderer.renderBody` پیش از شاخهٔ Axis به آن می‌رود؛ `FigurePickerDialog`: `paramFields` + کلیدهای متنی `shape/unit/notes/coins` در `TEXT_PARAM_KEYS` + سرتیتر تمام‌عرض «ابزار ریاضی ابتدایی» در گرید محور.
+- نکته: ویرایشگر اپ مقادیر غیرمتنی را Float ذخیره می‌کند (`2457.0`)؛ `axplace` اول عدد را parse می‌کند، سپس رشتهٔ رقمی (فارسی/لاتین).
+- وب (`graph_fig.js`): ids در `AXIS_EXT` و `AXIS_TYPES`، آیکن‌ها در `AXI`، فیلدها در `AXF`، رندر یک‌به‌یک در انتهای `axisExSvg` (کمک‌تابع‌های `rc/lnr/grp/ilist`)، سرتیتر در `fillShapes`. اعداد فارسی در وب با پس‌پردازش `__figPersianDigits` انجام می‌شود (خروجی JS لاتین است).
+- آزمایش: رندر هر هفت نوع با Node + Playwright (اسکرین‌شات) بررسی شد؛ `verify_native_final.py` سبز.
+- بدون گیت «ابتدایی»: بخش برای همهٔ مقاطع دیده می‌شود (به کاربر گفته شد).
+- باقی‌ماندهٔ ۱۷ مورد: ۴ تا ۱۷ (دستهٔ ۱: ۴، ۵+SQL، ۶+SQL).
+
 ### V303.1 — کروشه‌های ماتریس به‌شکل میلهٔ سیاه در پیش‌نمایش دانش‌آموز/کادر متن دسکتاپ (اپ 1.02.06 + سایت؛ مقصد: اصلی)
 - **ریشه (با Playwright روی سایت زنده بازتولید شد)**: `webhost.js` تابع `window.__hostDelimHtml = delimHtml` (دلیمترهای SVG) را فقط داخل `install()` می‌گذاشت که با `setTimeout(install,0)` پس از DOMContentLoaded اجرا می‌شود؛ ولی `student.js ensureMathFrame` و `builder.js ensurePreviewFrame` به‌محض `w.renderRichText && w.GeoFig` resolve می‌کردند (پیش از install). در آن لحظه `math_host.js:377` به مسیر جایگزین می‌رفت: `<span class="mdelim"><span class="mdelim-glyph">[</span></span>` با `transform:scaleY(--mds≈4.6)` → کروشهٔ متنیِ کشیده = میلهٔ سیاه. چون نتیجهٔ اولین رندر کش نمی‌شود ولی هر فریم تازه همین مسابقه را دارد → «گاهی».
 - **اصلاح**: `webhost.js` → `window.__hostDelimHtml = delimHtml;` در سطح IIFE (قبل از `installDelimOverride`)؛ `student.js`/`builder.js` شرط آماده‌بودن فریم: `+ typeof w.__hostDelimHtml === 'function'`. engines rebuild (هش جدید؛ قدیمی‌ها طبق engines_keep.txt).

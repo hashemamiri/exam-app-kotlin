@@ -208,7 +208,10 @@
   // V137.2 — شناسه‌های محورهای تازه (هم‌نام با AxisSvgRenderer.SUPPORTED).
   var AXIS_EXT = ['axnumpts', 'axnumint', 'axnumineq', 'axnumfrac', 'axnumdec', 'axnumblank', 'axnumlog', 'axnumtwo',
     'axxypts', 'axxyline', 'axxyvec', 'axxycirc', 'axxynogrid', 'axxyquads', 'axxyblank', 'axdual',
-    'axlog', 'axloglog', 'axtime', 'axpolpts', 'ax3dpt'];
+    'axlog', 'axloglog', 'axtime', 'axpolpts', 'ax3dpt',
+    // V304 — ابزار ریاضی ابتدایی (PrimaryMathSvgRenderer.kt)
+    'axtally', 'axbase10', 'axplace', 'axclock', 'axruler', 'axfrac', 'axmoney'];
+  var PRIMARY_MATH_FIRST_ID = 'axtally';
   // V206 — حالت «درج محور» در ویرایشگر وب (سایت): همان ۶ محور پایهٔ AXIS_FIGURES اپ (FigureGallery.kt)
   // با پیش‌فرض‌های یکسان. در اپ، انتخاب محور بومی است و این فهرست فقط وقتی open(…,'axis') یا
   // توکنی با نوع محور باز شود نمایش داده می‌شود؛ فهرست «نوع نمودار» دست‌نخورده می‌ماند.
@@ -240,7 +243,15 @@
     { id: 'axloglog', name: 'تمام‌لگاریتمی', X: { xmax: '3', ymax: '3' } },
     { id: 'axtime', name: 'محور زمان', X: { labs: '۸:۰۰,۹:۰۰,۱۰:۰۰,۱۱:۰۰,۱۲:۰۰', s1: 't' } },
     { id: 'axpolpts', name: 'قطبی با نقطه‌ها', X: { xmax: '4', pts: '2,30;3,120' } },
-    { id: 'ax3dpt', name: 'سه‌بعدی با نقطه', X: { xmax: '4', step: '1', x1: '3', y1: '2', z1: '2' } }
+    { id: 'ax3dpt', name: 'سه‌بعدی با نقطه', X: { xmax: '4', step: '1', x1: '3', y1: '2', z1: '2' } },
+    // V304 — ابزار ریاضی ابتدایی (همان FigureGallery.kt؛ از axtally به بعد با سرتیتر جدا)
+    { id: 'axtally', name: 'چوب‌خط', X: { n: '7' } },
+    { id: 'axbase10', name: 'دسته‌های ده‌تایی', X: { n: '134' } },
+    { id: 'axplace', name: 'جدول ارزش مکانی', X: { n: '2457', blank: '0' } },
+    { id: 'axclock', name: 'ساعت عقربه‌ای', X: { h: '3', m: '0', nums: '1' } },
+    { id: 'axruler', name: 'خط‌کش', X: { len: '10' } },
+    { id: 'axfrac', name: 'کسر شکلی', X: { num: '1', den: '4', shape: 'circle' } },
+    { id: 'axmoney', name: 'سکه و اسکناس', X: { notes: '1000,2000,5000,10000', coins: '500,1000', unit: 'تومان' } }
   ];
   function isAxisType(t) { return /^ax/.test(String(t || '')); }
   // V247 — پورت یک‌به‌یک ۲۱ محور تازهٔ AxisSvgRenderer.kt (V137.2) برای سایت (بدون پل بومی).
@@ -371,6 +382,104 @@
       var unit = len / (n3 + 0.6) / st3, p3x = num(X.x1, 3) * unit, p3y = num(X.y1, 2) * unit, p3z = num(X.z1, 2) * unit, b3x = cx + p3x - p3z * 0.62, b3y = cy + p3z * 0.62, q3x = b3x, q3y = b3y - p3y;
       s += ln(cx + p3x, cy, b3x, b3y, PT, 1, true) + ln(cx - p3z * 0.62, cy + p3z * 0.62, b3x, b3y, PT, 1, true) + ln(b3x, b3y, q3x, q3y, PT, 1, true) + ln(cx, cy - p3y, q3x, q3y, PT, 1, true) + ln(cx, cy, q3x, q3y, PT, 1.6) + dot(q3x, q3y);
       s += tx(q3x + 7, q3y - 6, xs('labs') || ('P(' + nm(num(X.x1, 3)) + ', ' + nm(num(X.y1, 2)) + ', ' + nm(num(X.z1, 2)) + ')'), PT, 'start', true, 10);
+      return wrap(s);
+    }
+    // ---------------------------------------------------------------- V304 — ابزار ریاضی ابتدایی
+    // پورت یک‌به‌یک PrimaryMathSvgRenderer.kt (همان مختصات/رنگ‌ها).
+    var ACC = '#6c63f5', ACCS = 'rgba(108,99,245,.18)', GRN = '#27c4a8', GLD = '#f0a202';
+    function rc(x, y, w, h, fill, st, sw, rx) { return '<rect x="' + f2(x) + '" y="' + f2(y) + '" width="' + f2(w) + '" height="' + f2(h) + '"' + (rx ? ' rx="' + f2(rx) + '"' : '') + ' fill="' + fill + '" stroke="' + st + '" stroke-width="' + f2(sw) + '"/>'; }
+    function lnr(x1, y1, x2, y2, c, w) { return '<line x1="' + f2(x1) + '" y1="' + f2(y1) + '" x2="' + f2(x2) + '" y2="' + f2(y2) + '" stroke="' + c + '" stroke-width="' + f2(w) + '" stroke-linecap="round"/>'; }
+    function grp(v) { var str = String(v), out = '', j; for (j = 0; j < str.length; j++) { var idx = str.length - j; out += str[j]; if (idx > 1 && (idx - 1) % 3 === 0) out += '،'; } return out; }
+    function ilist(k, fb) { return xs(k, fb).split(/[,،;؛\n]+/).map(function (q) { return parseInt(q.trim(), 10); }).filter(function (q) { return !isNaN(q); }).slice(0, 8); }
+    if (t === 'axtally') {
+      var n = clamp(Math.floor(num(X.n, 7)), 0, 60), groups = Math.floor((n + 4) / 5), g;
+      for (g = 0; g < groups; g++) {
+        var gx = 32 + (g % 5) * 64, gy = 44 + Math.floor(g / 5) * 74, cnt = Math.min(5, n - g * 5);
+        for (i = 0; i < Math.min(cnt, 4); i++) s += lnr(gx + i * 11, gy, gx + i * 11, gy + 40, ST, 3);
+        if (cnt === 5) s += lnr(gx - 6, gy + 34, gx + 40, gy + 6, PT, 3);
+      }
+      s += tx(180, 262, 'تعداد: ' + n, MU, 'middle', false, 13);
+      return wrap(s);
+    }
+    if (t === 'axbase10') {
+      var nb = clamp(Math.floor(num(X.n, 134)), 0, 999), hh = Math.floor(nb / 100), tt = Math.floor(nb / 10) % 10, oo = nb % 10, bx = 16;
+      for (i = 0; i < hh; i++) {
+        var hx = bx + (i % 3) * 66, hy = 36 + Math.floor(i / 3) * 66;
+        s += rc(hx, hy, 60, 60, ACCS, ACC, 1.4);
+        for (k = 1; k < 10; k++) s += lnr(hx + k * 6, hy, hx + k * 6, hy + 60, ACC, 0.6) + lnr(hx, hy + k * 6, hx + 60, hy + k * 6, ACC, 0.6);
+      }
+      if (hh > 0) bx += 3 * 66 + 8;
+      for (i = 0; i < tt; i++) {
+        var txx = bx + i * 16;
+        s += rc(txx, 36, 12, 60, 'rgba(39,196,168,.25)', GRN, 1.4);
+        for (k = 1; k < 10; k++) s += lnr(txx, 36 + k * 6, txx + 12, 36 + k * 6, GRN, 0.8);
+      }
+      if (tt > 0) bx += tt * 16 + 10;
+      for (i = 0; i < oo; i++) s += rc(bx + Math.floor(i / 5) * 16, 36 + (i % 5) * 16, 12, 12, 'rgba(240,162,2,.3)', GLD, 1.4);
+      s += tx(60, 258, 'صدگان: ' + hh, MU, 'middle', false, 12) + tx(180, 258, 'دهگان: ' + tt, MU, 'middle', false, 12) + tx(300, 258, 'یکان: ' + oo, MU, 'middle', false, 12);
+      s += tx(180, 276, 'عدد: ' + nb, ST, 'middle', true, 13);
+      return wrap(s);
+    }
+    if (t === 'axplace') {
+      var s0 = xs('n', '2457').trim(), rawN = isNaN(parseFloat(s0)) || !/^-?\d+(\.\d+)?$/.test(s0) ? s0.replace(/[۰-۹]/g, function (ch) { return String('۰۱۲۳۴۵۶۷۸۹'.indexOf(ch)); }).replace(/\D/g, '') : String(Math.trunc(parseFloat(s0)));
+      var blank = xs('blank', '0') === '1', names = ['یکان', 'دهگان', 'صدگان', 'هزارگان', 'ده‌هزارگان', 'صدهزارگان', 'میلیون'];
+      var cols = Math.max(3, Math.min(7, Math.max(rawN.length, Math.floor(num(X.cols, 0))))), cw = 328 / cols, c;
+      for (c = 0; c < cols; c++) {
+        var px0 = 16 + (cols - 1 - c) * cw;
+        s += rc(px0, 40, cw, 44, ACCS, ACC, 1.4) + tx(px0 + cw / 2, 67, names[c], ST, 'middle', true, cols > 5 ? 10 : 12) + rc(px0, 84, cw, 60, '#fff', ACC, 1.4);
+        var dg = rawN.length - 1 - c >= 0 ? rawN[rawN.length - 1 - c] : null;
+        if (!blank && dg != null) s += tx(px0 + cw / 2, 124, dg, PT, 'middle', true, 26);
+      }
+      if (!blank && rawN) s += tx(180, 190, 'عدد: ' + rawN, MU, 'middle', false, 13);
+      return wrap(s);
+    }
+    if (t === 'axclock') {
+      var ch0 = ((Math.floor(num(X.h, 3)) % 12) + 12) % 12, cm = clamp(Math.floor(num(X.m, 0)), 0, 59), showN = xs('nums', '1') !== '0', ccx = 180, ccy = 150, cr = 104, a;
+      s += '<circle cx="180" cy="150" r="104" fill="#fff" stroke="' + ST + '" stroke-width="3"/>';
+      for (i = 0; i < 60; i++) { a = i * 6 * Math.PI / 180; var big = i % 5 === 0, r1 = big ? cr - 12 : cr - 6; s += lnr(ccx + r1 * Math.sin(a), ccy - r1 * Math.cos(a), ccx + (cr - 2) * Math.sin(a), ccy - (cr - 2) * Math.cos(a), ST, big ? 2.2 : 1); }
+      if (showN) for (i = 1; i <= 12; i++) { a = i * 30 * Math.PI / 180; s += tx(ccx + (cr - 26) * Math.sin(a), ccy - (cr - 26) * Math.cos(a) + 5, String(i), ST, 'middle', true, 14); }
+      var ah = ((ch0 % 12) * 30 + cm * 0.5) * Math.PI / 180, am = cm * 6 * Math.PI / 180;
+      s += lnr(ccx, ccy, ccx + cr * 0.5 * Math.sin(ah), ccy - cr * 0.5 * Math.cos(ah), ST, 6) + lnr(ccx, ccy, ccx + cr * 0.78 * Math.sin(am), ccy - cr * 0.78 * Math.cos(am), PT, 3.5);
+      s += '<circle cx="180" cy="150" r="5" fill="' + ST + '"/>';
+      if (xs('label', '0') === '1') s += tx(ccx, 272, (ch0 === 0 ? 12 : ch0) + ':' + (cm < 10 ? '0' : '') + cm, MU, 'middle', false, 13);
+      return wrap(s);
+    }
+    if (t === 'axruler') {
+      var len = clamp(Math.floor(num(X.len, 10)), 2, 30), ra = parseFloat(xs('a')), rb = parseFloat(xs('b')), rx0 = 24, rx1 = 336, ry0 = 110, unit = (rx1 - rx0) / len, showMm = len <= 15;
+      s += rc(rx0 - 10, ry0, rx1 - rx0 + 20, 70, 'rgba(240,162,2,.16)', GLD, 1.6);
+      for (i = 0; i <= len; i++) {
+        x = rx0 + i * unit; s += lnr(x, ry0, x, ry0 + 26, ST, 1.8) + tx(x, ry0 + 46, String(i), ST, 'middle', false, 12);
+        if (showMm && i < len) for (k = 1; k < 10; k++) s += lnr(x + k * unit / 10, ry0, x + k * unit / 10, ry0 + (k === 5 ? 17 : 10), ST, k === 5 ? 1.2 : 0.8);
+      }
+      s += tx(rx1 + 4, ry0 + 62, 'cm', MU, 'end', false, 11);
+      if (!isNaN(ra) && !isNaN(rb)) { var xa = rx0 + clamp(ra, 0, len) * unit, xb = rx0 + clamp(rb, 0, len) * unit; s += lnr(xa, ry0 - 22, xb, ry0 - 22, PT, 4) + lnr(xa, ry0 - 32, xa, ry0 - 12, PT, 2) + lnr(xb, ry0 - 32, xb, ry0 - 12, PT, 2); }
+      return wrap(s);
+    }
+    if (t === 'axfrac') {
+      var den = clamp(Math.floor(num(X.den, 4)), 1, 24), nu = clamp(Math.floor(num(X.num, 1)), 0, den), shape = xs('shape', 'circle');
+      if (shape === 'bar') { var bw = 300 / den; for (i = 0; i < den; i++) s += rc(30 + i * bw, 100, bw, 70, i < nu ? ACC : '#fff', ST, 1.6); }
+      else if (den === 1) s += '<circle cx="180" cy="140" r="96" fill="' + (nu === 1 ? ACC : '#fff') + '" stroke="' + ST + '" stroke-width="1.8"/>';
+      else for (i = 0; i < den; i++) {
+        var a0 = (i * 360 / den - 90) * Math.PI / 180, a1 = ((i + 1) * 360 / den - 90) * Math.PI / 180, lg = 360 / den > 180 ? 1 : 0;
+        s += '<path d="M 180 140 L ' + f2(180 + 96 * Math.cos(a0)) + ' ' + f2(140 + 96 * Math.sin(a0)) + ' A 96 96 0 ' + lg + ' 1 ' + f2(180 + 96 * Math.cos(a1)) + ' ' + f2(140 + 96 * Math.sin(a1)) + ' Z" fill="' + (i < nu ? ACC : '#fff') + '" stroke="' + ST + '" stroke-width="1.8"/>';
+      }
+      if (xs('label', '1') !== '0') s += tx(180, 250, String(nu), ST, 'middle', true, 20) + lnr(166, 256, 194, 256, ST, 2) + tx(180, 276, String(den), ST, 'middle', true, 20);
+      return wrap(s);
+    }
+    if (t === 'axmoney') {
+      var notes = ilist('notes', '1000,2000,5000,10000'), coins = ilist('coins', '500,1000'), un = xs('unit', 'تومان'), mx = 18, my = 36, total = 0;
+      for (i = 0; i < notes.length; i++) {
+        if (i > 0 && i % 3 === 0) { mx = 18; my += 64; }
+        s += rc(mx, my, 100, 50, 'rgba(39,196,168,.18)', GRN, 1.6, 8) + rc(mx + 6, my + 6, 88, 38, 'none', GRN, 0.8, 5) + tx(mx + 50, my + 24, grp(notes[i]), ST, 'middle', true, 14) + tx(mx + 50, my + 40, un, MU, 'middle', false, 10);
+        mx += 112; total += notes[i];
+      }
+      my = notes.length ? my + 74 : 50; mx = 18;
+      for (i = 0; i < coins.length; i++) {
+        if (mx + 50 > 350) { mx = 18; my += 60; }
+        s += '<circle cx="' + f2(mx + 24) + '" cy="' + f2(my + 24) + '" r="24" fill="rgba(240,162,2,.28)" stroke="' + GLD + '" stroke-width="2"/><circle cx="' + f2(mx + 24) + '" cy="' + f2(my + 24) + '" r="18" fill="none" stroke="' + GLD + '" stroke-width="0.8"/>' + tx(mx + 24, my + 28, grp(coins[i]), ST, 'middle', true, 11);
+        mx += 60; total += coins[i];
+      }
+      if (xs('sum', '0') === '1') s += tx(180, 272, 'جمع: ' + grp(total) + ' ' + un, PT, 'middle', true, 13);
       return wrap(s);
     }
     return null;
@@ -2041,7 +2150,15 @@
       axdual: '<path d="M6,26 H30 M6,26 V3 M3,6 L6,3 L9,6 M30,26 V3 M27,6 L30,3 L33,6" stroke="currentColor" stroke-width="1.6" fill="none"/>',
       axlog: m.axgrid + '<path d="M4,22 H32 M4,24 H32" stroke="currentColor" stroke-width="0.8"/>', axloglog: m.axgrid + '<path d="M4,22 H32 M4,24 H32 M28,4 V26 M30,4 V26" stroke="currentColor" stroke-width="0.8"/>',
       axtime: m.axnum + '<circle cx="8" cy="8" r="3" fill="none" stroke="currentColor" stroke-width="1.2"/><path d="M8,6 V8 H10" stroke="currentColor" stroke-width="1" fill="none"/>',
-      axpolpts: m.axpol + DOT, ax3dpt: m.ax3d + DOT
+      axpolpts: m.axpol + DOT, ax3dpt: m.ax3d + DOT,
+      // V304 — ابزار ریاضی ابتدایی
+      axtally: '<path d="M8,6 V24 M13,6 V24 M18,6 V24 M23,6 V24 M5,21 L27,8" stroke="currentColor" stroke-width="1.8" fill="none" stroke-linecap="round"/>',
+      axbase10: '<rect x="3" y="5" width="14" height="20" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M3,10 H17 M3,15 H17 M3,20 H17 M8,5 V25 M12,5 V25" stroke="currentColor" stroke-width="0.8"/><rect x="21" y="5" width="4" height="20" fill="none" stroke="currentColor" stroke-width="1.4"/><rect x="28" y="21" width="4" height="4" fill="currentColor"/><rect x="28" y="15" width="4" height="4" fill="currentColor"/>',
+      axplace: '<rect x="3" y="6" width="30" height="18" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M3,13 H33 M13,6 V24 M23,6 V24" stroke="currentColor" stroke-width="1.2"/><text x="8" y="21" font-size="7" fill="currentColor" style="font:700 7px sans-serif" text-anchor="middle">2</text><text x="18" y="21" font-size="7" fill="currentColor" style="font:700 7px sans-serif" text-anchor="middle">4</text><text x="28" y="21" font-size="7" fill="currentColor" style="font:700 7px sans-serif" text-anchor="middle">5</text>',
+      axclock: '<circle cx="18" cy="15" r="11" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M18,15 V8 M18,15 L24,17" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><circle cx="18" cy="15" r="1.4" fill="currentColor"/>',
+      axruler: '<rect x="3" y="10" width="30" height="10" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M8,10 V15 M13,10 V13 M18,10 V15 M23,10 V13 M28,10 V15" stroke="currentColor" stroke-width="1.2"/>',
+      axfrac: '<circle cx="18" cy="15" r="11" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M18,15 V4 A11,11 0 0 1 29,15 Z" fill="currentColor"/><path d="M18,15 H29 M18,15 V26 M18,15 L7,15" stroke="currentColor" stroke-width="1"/>',
+      axmoney: '<rect x="2" y="8" width="20" height="12" rx="2" fill="none" stroke="currentColor" stroke-width="1.4"/><circle cx="12" cy="14" r="2.5" fill="none" stroke="currentColor" stroke-width="1"/><circle cx="27" cy="19" r="6" fill="none" stroke="currentColor" stroke-width="1.6"/><circle cx="27" cy="19" r="3" fill="none" stroke="currentColor" stroke-width="0.8"/>'
     };
     return '<svg viewBox="0 0 36 30" aria-hidden="true">' + (m[id] || AXI[id] || m.plot) + '</svg>';
   }
@@ -2076,7 +2193,15 @@
       axloglog: [['xmax', 'تعداد دههٔ x'], ['ymax', 'تعداد دههٔ y']],
       axtime: [['labs', 'زمان‌ها (با ویرگول)'], ['s1', 'نام محور']],
       axpolpts: [['xmax', 'تعداد حلقه'], ['pts', 'نقطه‌ها (r,θ;r,θ)'], ['labs', 'نام نقطه‌ها']],
-      ax3dpt: [['xmax', 'تعداد تیک'], ['step', 'گام'], ['x1', 'x نقطه'], ['y1', 'y نقطه'], ['z1', 'z نقطه'], ['labs', 'نام نقطه']]
+      ax3dpt: [['xmax', 'تعداد تیک'], ['step', 'گام'], ['x1', 'x نقطه'], ['y1', 'y نقطه'], ['z1', 'z نقطه'], ['labs', 'نام نقطه']],
+      // V304 — ابزار ریاضی ابتدایی (عیناً FigurePickerDialog.kt)
+      axtally: [['n', 'تعداد (۰ تا ۶۰)']],
+      axbase10: [['n', 'عدد (۰ تا ۹۹۹)']],
+      axplace: [['n', 'عدد'], ['cols', 'تعداد ستون (خالی=خودکار)'], ['blank', 'خانه‌ها خالی؟ (۱=بله)']],
+      axclock: [['h', 'ساعت (۰ تا ۱۲)'], ['m', 'دقیقه (۰ تا ۵۹)'], ['nums', 'نمایش عددها (۱/۰)'], ['label', 'نوشتن ساعت زیر شکل (۱/۰)']],
+      axruler: [['len', 'طول خط‌کش (سانتی‌متر)'], ['a', 'ابتدای اندازه‌گیری (اختیاری)'], ['b', 'انتهای اندازه‌گیری (اختیاری)']],
+      axfrac: [['num', 'صورت'], ['den', 'مخرج'], ['shape', 'شکل (circle یا bar)'], ['label', 'نوشتن کسر زیر شکل (۱/۰)']],
+      axmoney: [['notes', 'اسکناس‌ها (با ویرگول)'], ['coins', 'سکه‌ها (با ویرگول)'], ['unit', 'واحد'], ['sum', 'نوشتن جمع (۱/۰)']]
     };
     if (AXF[t]) return [['X.title', 'عنوان']].concat(AXF[t].map(function (f) { return ['X.' + f[0], f[1]]; }));
     if (isAxisType(t)) return [['X.title', 'عنوان']];
@@ -2220,6 +2345,13 @@
     var host = $('grShapes'); if (!host) return;
     host.innerHTML = '';
     (axis ? AXIS_TYPES : TYPES).forEach(function (s) {
+      if (axis && s.id === PRIMARY_MATH_FIRST_ID) {
+        // V304 — سرتیتر بخش «ابزار ریاضی ابتدایی» (تمام‌عرض)
+        var hd = document.createElement('div');
+        hd.className = 'gf-shape-head'; hd.textContent = 'ابزار ریاضی ابتدایی';
+        hd.setAttribute('style', 'grid-column:1/-1;flex-basis:100%;width:100%;font-weight:700;font-size:12px;color:#6c63f5;padding:8px 4px 2px;border-top:1px dashed #cfd6e2;margin-top:4px');
+        host.appendChild(hd);
+      }
       var b = document.createElement('button');
       b.type = 'button'; b.className = 'gf-shape'; b.setAttribute('data-t', s.id);
       b.innerHTML = iconOf(s.id) + '<span>' + s.name + '</span>';
