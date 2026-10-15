@@ -19425,6 +19425,11 @@ CI: `compileDebugUnitTestKotlin` به‌خاطر `assertFalse` بدون import �
 - باگ V202.5: `var LANDING_TILES` داخل `paintAuth` بعد از خطی که `landing()` را صدا می‌زد تعریف شده بود → به‌خاطر hoisting مقدارش undefined و `.map` خطا می‌داد → صفحهٔ اول خالی. حالا کنار `authActive` در سطح ماژول است (تست ترتیب را پین می‌کند).
 - دروازهٔ صفحهٔ اول: mobile.js `entered()/enter()` با `sessionStorage['m-entered']`، `gateActive() = MQ && user && !entered`؛ app.js `render()` پیش از m-mode اگر gateActive → paintAuth (landing حتی با user). دکمه: user ⇒ `enter(); S.render()`؛ وگرنه `goA('login')`؛ پیوند ثبت‌نام فقط بدون user. `afterLogin()` → `SiteMobile.enter()`.
 
+### V295 — کتابخانهٔ «رشته‌های دانشگاهی» مرحلهٔ ۴ (اپ 1.01.95 + سایت)
+- `qa/tools/gen_majors.py`: `NEW4` با ۱۲ بلوک `n-nuc/marine/trans/optic/crypto/ai/epid/physio/audio/soc/food/music` (۴۶۸ فرمول)؛ `MAJORS` = ۴۸ رشته؛ `SECTIONS` گسترش یافت. جمع ۲۴۰۵ یکتا / ۵۰۸۴ کل. (بلوک `uni-fluid` وجود ندارد؛ سیالات = `uni-engmech`.)
+- نکته‌های TeX: `\\bmod` و `\\S` (از `\\\\S` در cases) ممنوع؛ `\\|` بعد از فرمان یونانی داخل `\\left(` با `munk` رندر می‌شود → از `\\lVert…\\rVert` استفاده شود.
+- QA: ابزار جدید `qa/tools/chk_uni.py` (رندر همهٔ آیتم‌های گروه uni؛ شکست = کلاس `munk`/خطا) → ۵۰۰۸ آیتم بدون خطا؛ `qa/shots/v295_*.png`. در موبایل ۳۹۰×۷۸۰ فهرست ۴۸ رشته با اسکرول کوتاه جا می‌شود. تست: `V292_MajorsLibraryTest` (۴۸ رشته، پین‌های V295).
+
 ### V294 — کتابخانهٔ «رشته‌های دانشگاهی» مرحلهٔ ۳ (اپ 1.01.94 + سایت)
 - `qa/tools/gen_majors.py`: `NEW3` با ۱۲ بلوک `n-bme/dent/vet/nutr/sport/radiol/poly/env/robot/act/astro/gis` (۴۹۹ فرمول)؛ `MAJORS` = ۳۶ رشته؛ `SECTIONS` گسترش یافت. جمع ۱۹۳۷ فرمول یکتا / ۳۷۵۴ کل.
 - فرمان‌های ممنوع جدید (در `NativeMathAst.kt` نیستند): `\\AA` (→ `\\text{Å}`)، `\\mathring` (→ `\\overset{\\circ}{e}_x`).
