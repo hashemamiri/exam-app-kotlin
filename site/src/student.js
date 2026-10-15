@@ -242,6 +242,43 @@
   }
 
   /* ================================================================ اجرای آزمون */
+  /* V302 — خواندن سؤال با SpeechSynthesis مرورگر (فارسی اگر صدایی باشد). فرمول‌ها به گفتار ساده تبدیل می‌شوند. */
+  function spokenTex(t) {
+    var i; for (i = 0; i < 3; i++) { t = t.replace(/\\[dt]?frac\{([^{}]*)\}\{([^{}]*)\}/g, ' $1 تقسیم بر $2 ').replace(/\\sqrt\{([^{}]*)\}/g, ' جذر $1 ').replace(/\^\{([^{}]*)\}/g, ' به توان $1 ').replace(/\^(\w)/g, ' به توان $1 ').replace(/_\{([^{}]*)\}/g, ' اندیس $1 '); }
+    var W = [['\\times', ' ضرب در '], ['\\cdot', ' ضرب در '], ['\\div', ' تقسیم بر '], ['\\pm', ' مثبت یا منفی '], ['\\leq', ' کوچکتر یا مساوی '], ['\\geq', ' بزرگتر یا مساوی '], ['\\neq', ' مخالف '], ['\\approx', ' تقریباً '], ['\\le', ' کوچکتر یا مساوی '], ['\\ge', ' بزرگتر یا مساوی '], ['\\ne', ' مخالف '], ['\\pi', ' پی '], ['\\infty', ' بی‌نهایت '], ['\\degree', ' درجه '], ['\\%', ' درصد '], ['\\left', ''], ['\\right', ''], ['\\text', ''], ['\\mathrm', ''], ['\\Box', ' جای خالی '], ['\\square', ' جای خالی '], ['=', ' مساوی '], ['+', ' به‌علاوهٔ '], ['-', ' منهای '], ['−', ' منهای '], ['×', ' ضرب در '], ['÷', ' تقسیم بر '], ['<', ' کوچکتر از '], ['>', ' بزرگتر از '], ['*', ' ضرب در '], ['/', ' تقسیم بر ']];
+    W.forEach(function (w) { t = t.split(w[0]).join(w[1]); });
+    return t.replace(/\\[a-zA-Z]+/g, ' ').replace(/[{}\\]/g, ' ').replace(/ +/g, ' ').trim();
+  }
+  function speechPlain(src) {
+    src = String(src || '').replace(/%%FIG:[\s\S]*?%%/g, ' شکل ').replace(/%%[\s\S]*?%%/g, ' ');
+    src = src.replace(/\$\$([\s\S]*?)\$\$/g, function (m, t) { return ' ' + spokenTex(t) + ' '; }).replace(/\$([^$\n]*?)\$/g, function (m, t) { return ' ' + spokenTex(t) + ' '; });
+    return src.replace(/<[^>]+>/g, ' ').replace(/[ \t]+/g, ' ').trim();
+  }
+  function speechForQuestion(q) {
+    var s = speechPlain(q.text), L = ['الف', 'ب', 'ج', 'د', 'ه', 'و'];
+    if (q.type === 'multiple') (q.options || []).forEach(function (o, i) { var p = speechPlain(o); if (p) s += '. گزینهٔ ' + (L[i] || String(i + 1)) + ': ' + p; });
+    else if (q.type === 'truefalse') s += '. درست یا نادرست؟';
+    return s;
+  }
+  var speechState = {speaking: false, btn: null};
+  function speechStop() { try { if (window.speechSynthesis) window.speechSynthesis.cancel(); } catch (e) {} speechState.speaking = false; if (speechState.btn) speechState.btn.textContent = '🔊 سؤال را برایم بخوان'; }
+  function readAloudButton(q) {
+    if (!window.speechSynthesis || !window.SpeechSynthesisUtterance) return el('span');
+    speechStop();
+    var b = el('button', {class: 'btn st-read', text: '🔊 سؤال را برایم بخوان'});
+    speechState.btn = b;
+    b.addEventListener('click', function () {
+      if (speechState.speaking) { speechStop(); return; }
+      var text = speechForQuestion(q); if (!text) return;
+      var u = new SpeechSynthesisUtterance(text); u.lang = 'fa-IR'; u.rate = 0.85;
+      var voices = window.speechSynthesis.getVoices() || [];
+      var v = voices.filter(function (x) { return /^fa/i.test(x.lang); })[0]; if (v) u.voice = v;
+      u.onend = u.onerror = function () { speechStop(); };
+      speechState.speaking = true; b.textContent = '⏹ بس است';
+      window.speechSynthesis.cancel(); window.speechSynthesis.speak(u);
+    });
+    return b;
+  }
   function startExam(c, exam, resumed) {
     var d = draftGet(exam.id);
     run = {exam: exam, index: 0, answers: d.answers || {}, images: d.images || {}, started: true, finished: false, submitting: false, enteredAt: Date.now(), qEnter: {}, qTime: {}, qVisits: {}, events: {}, timer: null, monitorTimer: null};
@@ -290,6 +327,7 @@
     return S.rpcObj('native_monitor_upsert_v1', {p_exam: run.exam.id, p_report: monitorReport(final)}).catch(function () {});
   }
   function goTo(i) {
+    speechStop(); /* V302 */
     var now = Date.now(), q = run.exam.questions[run.index], ent = run.qEnter[run.index];
     if (q && ent != null) { run.qTime[q.id] = (run.qTime[q.id] || 0) + (now - ent); }
     run.index = Math.max(0, Math.min(run.exam.questions.length - 1, i));
@@ -337,6 +375,7 @@
       body.appendChild(txt);
       richHtml(q.text).then(function (h) { if (ex.questions[run.index] === q) { txt.innerHTML = h; fitMath(txt); } });
       if (p.audio) body.appendChild(el('audio', {controls: 'controls', src: p.audio, style: 'width:100%;margin:8px 0'}));
+      else if (ex.primary) body.appendChild(readAloudButton(q)); /* V302 — ابتدایی: «بخوان» با صدای مرورگر وقتی معلم صدا نگذاشته */
       if (q.images.length) body.appendChild(el('div', {class: 'st-imgs'}, q.images.map(function (u) { return el('img', {src: u, onclick: function () { lightbox(u); }}); })));
       body.appendChild(answerArea(q));
     }

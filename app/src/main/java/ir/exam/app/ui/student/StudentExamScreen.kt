@@ -354,6 +354,14 @@ fun StudentExamContent(
                     presentation.audioUrl?.let { audio ->
                         ir.exam.app.ui.audio.QuestionAudioPlayer(url = audio, durationMs = presentation.audioMs, modifier = Modifier.fillMaxWidth())
                     }
+                    // V302 — ابتدایی: اگر معلم صدا ضبط نکرده، دکمهٔ بزرگ «بخوان» با TTS دستگاه
+                    if (primary && presentation.audioUrl == null) {
+                        ir.exam.app.ui.audio.ReadAloudButton(
+                            text = remember(question.id) { ir.exam.app.core.speech.ReadAloudText.forQuestion(question) },
+                            modifier = Modifier.fillMaxWidth(),
+                            key = question.id
+                        )
+                    }
                     if(presentation.imagePosition=="above") question.images.forEach { img ->
                         StudentCachedImage(img, "تصویر سؤال", Modifier.fillMaxWidth().clickable { zoomImage = img })
                     }

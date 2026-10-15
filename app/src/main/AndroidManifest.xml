@@ -12,6 +12,10 @@
     <uses-feature android:name="android.hardware.camera" android:required="false" />
     <!-- V132 — فهرست مرورگرهای نصب‌شده برای کارت «سایت» (Android 11+ بدون این، queryIntentActivities خالی برمی‌گرداند) -->
     <queries>
+        <!-- V302 — اتصال به موتور متن‌به‌گفتار دستگاه (اندروید ۱۱+ بدون این اعلان TTS را نمی‌بیند) -->
+        <intent>
+            <action android:name="android.intent.action.TTS_SERVICE" />
+        </intent>
         <intent>
             <action android:name="android.intent.action.VIEW" />
             <data android:scheme="https" />
