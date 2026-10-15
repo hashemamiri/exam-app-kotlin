@@ -46,6 +46,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
+import ir.exam.app.ui.audio.AnswerAudioPlayer
+import ir.exam.app.ui.audio.isAnswerAudioUrl
 import ir.exam.app.domain.model.AttendanceRow
 import ir.exam.app.domain.model.GradingQuestion
 import ir.exam.app.domain.model.GradingSubmission
@@ -559,7 +561,7 @@ private fun AnswerImagesRow(urls: List<String>) {
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         urls.forEach { url ->
-            AsyncImage(
+            if (isAnswerAudioUrl(url)) AnswerAudioPlayer(url) else AsyncImage(
                 url, "تصویر پاسخ",
                 Modifier.size(220.dp).clickable { viewing = url },
                 contentScale = androidx.compose.ui.layout.ContentScale.Fit

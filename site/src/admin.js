@@ -5,6 +5,8 @@
   'use strict';
   var S = window.ExamSite;
   var el = S.el, esc = S.esc, fa = S.fa, en = S.en, toast = S.toast, errMsg = S.errMsg, uuid = S.uuid;
+  /* V309 — پاسخ صوتی دانش‌آموز با پخش‌کنندهٔ صوت؛ بقیه همان تصویر */
+  function answerMedia(u) { return /\.(m4a|webm|ogg|mp3|aac|wav)(\?|$)/i.test(String(u)) ? el('audio', {src: u, controls: 'controls', preload: 'none'}) : el('img', {src: u, onclick: function () { lightbox(u); }}); }
   /* V259.5 — مورد ستون راست جورکردنی با حرف (الف، ب…) مثل صفحهٔ دانش‌آموز و اپ */
   function ABL(i) { return ['الف', 'ب', 'ج', 'د', 'ه', 'و', 'ز', 'ح', 'ط', 'ی'][i] || fa(i + 1); }
   var TYPE_LABEL = {multiple: 'چندگزینه‌ای', truefalse: 'صحیح/غلط', fill: 'جای‌خالی', numeric: 'عددی', matching: 'جورکردنی', essay: 'تشریحی', long: 'تشریحی'};
@@ -135,7 +137,7 @@
           richEl('div', 'g-qtext', q.text),
           el('div', {class: 'g-resp'}, [el('span', {class: 'muted', text: 'پاسخ دانش‌آموز: '}), rt != null ? richEl('span', auto == null ? '' : (auto >= num(q.score) ? 'ok-t' : (auto > 0 ? 'warn-t' : 'err-t')), rt) : el('i', {class: 'muted', text: 'بدون پاسخ'})]),
           ct ? el('div', {class: 'g-resp muted', style: 'font-size:13px'}, [el('span', {text: 'پاسخ درست: '}), richEl('span', '', ct)]) : null,
-          qi.length ? el('div', {class: 'st-imgs'}, qi.map(function (u) { return el('img', {src: u, onclick: function () { lightbox(u); }}); })) : null
+          qi.length ? el('div', {class: 'st-imgs'}, qi.map(function (u) { return answerMedia(u); })) : null
         ]);
         detail.appendChild(box);
       });
@@ -259,7 +261,7 @@
           el('div', {class: 'g-resp'}, [el('span', {class: 'muted', text: 'پاسخ شما: '}), rt != null ? richEl('span', '', rt) : el('i', {class: 'muted', text: 'بدون پاسخ'})]),
           ct ? el('div', {class: 'g-resp muted', style: 'font-size:13px'}, [el('span', {text: 'پاسخ درست: '}), richEl('span', '', ct)]) : null,
           raw.graded && q.explanation ? el('div', {class: 'alert info', style: 'font-size:13px', text: 'توضیح: ' + q.explanation}) : null,
-          (imgs[q.id] || imgs[String(i)] || []).length ? el('div', {class: 'st-imgs'}, (imgs[q.id] || imgs[String(i)]).map(function (u) { return el('img', {src: u, onclick: function () { lightbox(u); }}); })) : null]));
+          (imgs[q.id] || imgs[String(i)] || []).length ? el('div', {class: 'st-imgs'}, (imgs[q.id] || imgs[String(i)]).map(function (u) { return answerMedia(u); })) : null]));
       });
     } catch (e) { S.showErr(body, e); }
   }

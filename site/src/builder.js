@@ -142,7 +142,7 @@
     q.optionStyles = obj.optionStyles || null; q.leftStyles = obj.leftStyles || null; q.rightStyles = obj.rightStyles || null;
     q.spans = obj.spans || []; q.alignSpans = obj.alignSpans || [];
     /* V305 — حالت ابتدایی سؤال: ترتیب درست فقط در کلید (accept[0]) است */
-    q.mode = (obj.mode === 'order' && type === 'fill') || (obj.mode === 'hotspot' && type === 'multiple') || (obj.mode === 'draw' && type === 'essay') || (obj.mode === 'dictation' && type === 'fill') ? obj.mode : '';
+    q.mode = (obj.mode === 'order' && type === 'fill') || (obj.mode === 'hotspot' && type === 'multiple') || (obj.mode === 'draw' && type === 'essay') || (obj.mode === 'voice' && type === 'essay') || (obj.mode === 'dictation' && type === 'fill') ? obj.mode : '';
     q.orderItems = q.mode === 'order' ? ((key.accept && key.accept[0]) ? String(key.accept[0]).split(',').map(function (x) { return x.trim(); }).filter(Boolean) : (obj.items || []).map(String)) : [];
     q.hotspots = q.mode === 'hotspot' ? (Array.isArray(obj.hotspots) ? obj.hotspots.map(function (h) { return {x: Number(h.x) || 0, y: Number(h.y) || 0, w: Number(h.w) || 0, h: Number(h.h) || 0}; }) : []) : [];
     q.correctIndex = key.correctOption != null ? Number(key.correctOption) : (obj.correctIndex != null ? Number(obj.correctIndex) : null);
@@ -166,6 +166,7 @@
     q.optionsLayout = ['1row', '2rows', '4rows'].indexOf(obj.optionsLayout) >= 0 ? obj.optionsLayout : ''; /* V208 */
     q.grade = Math.max(0, Math.min(6, Number(obj.grade) || 0)); q.subject = obj.subject ? String(obj.subject) : ''; /* V308 */
     q.audio = obj.audio || null; q.audioBytes = obj.audioBytes; q.audioMs = obj.audioMs;
+    q.voiceMaxSeconds = Number(obj.voice_max_seconds) || 0; /* V309 */
     q.raw = obj; q.rawKey = key;
     return q;
   }
@@ -194,6 +195,8 @@
       /* V306 — پاسخ با تخته و املا: متن املا (speak) فقط وقتی صدای معلم نیست */
       var isDraw = q.type === 'essay' && q.mode === 'draw', isDict = q.type === 'fill' && q.mode === 'dictation';
       if (isDraw) v.mode = 'draw';
+      /* V309 — پاسخ صوتی: حالت و سقف ضبط */
+      if (q.type === 'essay' && q.mode === 'voice') { v.mode = 'voice'; v.voice_max_seconds = Math.max(10, Math.min(300, Number(q.voiceMaxSeconds) || 60)); } else delete v.voice_max_seconds;
       if (isDict) { v.mode = 'dictation'; if (!q.audio) v.speak = String(q.expectedText || '').split('|')[0].trim(); else delete v.speak; } else delete v.speak;
       if (!isOrd && !isHot && !isDraw && !isDict) delete v.mode;
       if (q.type === 'multiple') { v.options = q.options.slice(); v.optionImages = q.options.map(function (_, i) { return q.optionImages[i] || ''; }); if (q.optionStyles) v.optionStyles = q.optionStyles; }
@@ -937,6 +940,17 @@
     }
     function swap(a, b) { var t = state.questions[a]; state.questions[a] = state.questions[b]; state.questions[b] = t; state.selected = b; mark(); drawList(); drawEditor(); }
     /* V305 — ابتدایی: چیپ نوع ویژهٔ سؤال */
+    /* V309 — پاسخ صوتی: سقف مدت ضبط (ثانیه) برای این سؤال */
+    function voiceSecondsEditor(q, redraw) {
+      var box = el('div', {class: 'field', style: 'margin-top:8px'});
+      box.appendChild(el('div', {class: 'muted', style: 'font-size:13px', text: 'سقف ضبط پاسخ صوتی'}));
+      var row = el('div', {class: 'row', style: 'gap:6px;flex-wrap:wrap;margin:6px 0'});
+      [30, 60, 90, 120, 180].forEach(function (sec) {
+        row.appendChild(el('button', {class: 'btn sm ' + ((Number(q.voiceMaxSeconds) || 60) === sec ? '' : 'light'), text: fa(sec) + ' ثانیه', onclick: function () { q.voiceMaxSeconds = sec; mark(); redraw(); }}));
+      });
+      box.appendChild(row);
+      return box;
+    }
     /* V308 / ۱۴ — برچسب پایه و درس سؤال؛ فیلتر بانک حالت ابتدایی از همین برچسب‌ها استفاده می‌کند */
     function primaryTagEditor(q, redraw) {
       var box = el('div', {class: 'field', style: 'margin-top:8px'});
@@ -951,7 +965,7 @@
       return box;
     }
     function primaryModeChooser(q, redraw) {
-      var choices = q.type === 'fill' ? [['', 'جای خالی معمولی'], ['order', 'مرتب‌سازی با کشیدن'], ['dictation', 'املا (گوش بده و بنویس)']] : q.type === 'essay' ? [['', 'پاسخ متنی'], ['draw', 'پاسخ با نقاشی (تخته بزرگ)']] : [['', 'گزینه‌ای معمولی'], ['hotspot', 'انتخاب روی تصویر']];
+      var choices = q.type === 'fill' ? [['', 'جای خالی معمولی'], ['order', 'مرتب‌سازی با کشیدن'], ['dictation', 'املا (گوش بده و بنویس)']] : q.type === 'essay' ? [['', 'پاسخ متنی'], ['draw', 'پاسخ با نقاشی (تخته بزرگ)'], ['voice', 'پاسخ صوتی (ضبط)']] : [['', 'گزینه‌ای معمولی'], ['hotspot', 'انتخاب روی تصویر']];
       return el('div', {class: 'row', style: 'gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px'}, [el('b', {text: 'نوع ابتدایی:'})].concat(choices.map(function (c) {
         return el('button', {type: 'button', class: 'btn sm ' + (q.mode === c[0] ? '' : 'light'), text: c[1], onclick: function () {
           q.mode = c[0];
@@ -1013,6 +1027,7 @@
       function redraw() { var n = typeSection(q); box.replaceWith(n); }
       /* V305 — ابتدایی: نوع ویژهٔ سؤال (فقط وقتی حالت ابتدایی آزمون روشن است) */
       if (state.primaryMode && (q.type === 'fill' || q.type === 'multiple' || q.type === 'essay')) box.appendChild(primaryModeChooser(q, redraw));
+      if (state.primaryMode && q.type === 'essay' && q.mode === 'voice') box.appendChild(voiceSecondsEditor(q, redraw)); /* V309 */
       if (state.primaryMode) box.appendChild(primaryTagEditor(q, redraw)); /* V308 / ۱۴ */
       if (state.primaryMode && q.type === 'fill' && q.mode === 'dictation') box.appendChild(el('p', {class: 'muted', style: 'font-size:13px', text: 'متن املا همان «پاسخ درست» است. اگر صدای معلم نباشد، دستگاه همین متن را می‌خواند و متن در داده‌های عمومی سؤال قرار می‌گیرد.'}));
       if (state.primaryMode && q.type === 'fill' && q.mode === 'order') { box.appendChild(orderEditor(q, redraw)); return box; }

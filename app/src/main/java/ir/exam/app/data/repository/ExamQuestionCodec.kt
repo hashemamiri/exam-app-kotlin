@@ -124,6 +124,7 @@ internal object ExamQuestionCodec {
                 score = obj["score"]?.asDouble() ?: 1.0,
                 grade = obj["grade"]?.asInt()?.coerceIn(0, 6) ?: 0,
                 subject = obj["subject"]?.asString().orEmpty(),
+                voiceMaxSeconds = obj["voice_max_seconds"]?.asInt()?.coerceIn(10, 300) ?: 0,
                 options = obj["options"].asArrayOrEmpty().map { it.asString().orEmpty() },
                 optionIds = List(obj["options"].asArrayOrEmpty().size) { UUID.randomUUID().toString() },
                 optionImages = obj["optionImages"].asArrayOrEmpty().map { it.asString()?.takeIf(String::isNotBlank) },
@@ -181,7 +182,7 @@ internal object ExamQuestionCodec {
                 audioBytes = (obj["audioBytes"] as? JsonPrimitive)?.longOrNull ?: 0L,
                 audioMs = (obj["audioMs"] as? JsonPrimitive)?.longOrNull ?: 0L,
                 // V305 — حالت ویژهٔ ابتدایی (مرتب‌سازی / انتخاب روی تصویر)
-                mode = obj["mode"]?.asString()?.takeIf { it in setOf("order", "hotspot", "draw", "dictation") }.orEmpty(),
+                mode = obj["mode"]?.asString()?.takeIf { it in setOf("order", "hotspot", "draw", "dictation", "voice") }.orEmpty(),
                 // ترتیب درست فقط در کلید پاسخ (accept[0]) است؛ public items بُرخورده است.
                 orderItems = if (obj["mode"]?.asString() != "order") emptyList() else key["accept"].asArrayOrEmpty().firstOrNull()?.asString()
                     ?.split(',')?.map { it.trim() }?.filter { it.isNotBlank() }
@@ -259,6 +260,11 @@ internal object ExamQuestionCodec {
             values.remove("mode"); values.remove("items"); values.remove("hotspots"); values.remove("speak")
             // V306 — پاسخ با تخته: فقط نشانهٔ حالت؛ پاسخ دانش‌آموز تصویر تخته است.
             if (question.type == QuestionType.ESSAY && question.mode == "draw") values["mode"] = JsonPrimitive("draw")
+            // V309 — پاسخ صوتی: حالت و سقف ضبط (ثانیه) نوشته می‌شود
+            if (question.type == QuestionType.ESSAY && question.mode == "voice") {
+                values["mode"] = JsonPrimitive("voice")
+                values["voice_max_seconds"] = JsonPrimitive(question.voiceMaxSeconds.takeIf { it > 0 }?.coerceIn(10, 300) ?: 60)
+            }
             // V306 — املا: صدای معلم اولویت دارد؛ اگر صدا نباشد، متن املا برای «بخوان» (TTS دستگاه) در سؤال عمومی می‌آید.
             if (question.type == QuestionType.FILL_BLANK && question.mode == "dictation") {
                 values["mode"] = JsonPrimitive("dictation")

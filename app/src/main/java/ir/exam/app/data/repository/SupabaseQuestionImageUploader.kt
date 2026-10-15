@@ -97,7 +97,10 @@ class SupabaseQuestionImageUploader(context: Context) {
         uri: String
     ): String {
         if (uri.isRemoteUrl()) return uri
-        return uploadAt("answers/$studentId/$examId/$questionId", Uri.parse(uri))
+        val prefix = "answers/$studentId/$examId/$questionId"
+        // V309 — پاسخ صوتی (m4a) همان مسیر پاسخ‌ها را می‌رود اما بدون پردازش تصویر
+        if (uri.substringBefore('?').endsWith(".m4a", true)) return uploadAnswerAudio(prefix, Uri.parse(uri))
+        return uploadAt(prefix, Uri.parse(uri))
     }
 
     /** آواتار با مسیر مالک‌محور و برش مرکزی مربع ذخیره می‌شود. */
@@ -342,6 +345,14 @@ class SupabaseQuestionImageUploader(context: Context) {
             this.contentType = ContentType(contentType.substring(0, slash), contentType.substring(slash + 1))
         }
         return bucket.publicUrl(path)
+    }
+
+    /** V309 — پاسخ صوتی دانش‌آموز: فایل AAC در ظرف m4a (کمتر از سقف صوت). */
+    private suspend fun uploadAnswerAudio(prefix: String, uri: Uri): String = withContext(Dispatchers.IO) {
+        val bytes = openInput(uri)?.use { it.readBytes() } ?: error("فایل پاسخ صوتی قابل خواندن نیست.")
+        check(bytes.isNotEmpty()) { "پاسخ صوتی خالی است." }
+        check(bytes.size <= MAX_AUDIO_BYTES) { "حجم پاسخ صوتی بیش از حد مجاز است؛ مدت ضبط را کوتاه‌تر کنید." }
+        uploadBytes(prefix, bytes, "m4a", "audio/mp4", "audio")
     }
 
     private fun openInput(uri: Uri): InputStream? = if (uri.scheme.equals("file", true)) {

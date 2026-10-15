@@ -338,6 +338,8 @@ data class QuestionDraft(
     // V308 / ۱۴ — برچسب پایه (۱ تا ۶؛ ۰ = بدون پایه) و درس؛ برای فیلتر بانک حالت ابتدایی
     val grade: Int = 0,
     val subject: String = "",
+    // V309 — سقف ضبط پاسخ صوتی (ثانیه؛ ۰ = پیش‌فرض ۶۰)
+    val voiceMaxSeconds: Int = 0,
     val orderItems: List<String> = emptyList(),
     val hotspots: List<HotspotRect> = emptyList(),
     val rawPublic: JsonObject = JsonObject(emptyMap()),

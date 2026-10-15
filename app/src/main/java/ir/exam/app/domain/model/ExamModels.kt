@@ -63,7 +63,9 @@ data class EssayQuestion(
     override val answerImagesRequired: Boolean = false,
     override val originalIndex: Int = 0,
     /** V306 — حالت پاسخ: "text" (پیش‌فرض) یا "draw" (پاسخ با تخته/نقاشی بزرگ، حالت ابتدایی). */
-    val answerMode: String = "text"
+    val answerMode: String = "text",
+    /** V309 — سقف مدت ضبط پاسخ صوتی (ثانیه)؛ فقط وقتی answerMode = "voice" است. */
+    val voiceMaxSeconds: Int = 0
 ) : Question
 
 data class MultipleChoiceQuestion(

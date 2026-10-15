@@ -41,7 +41,8 @@ tests = subprocess.run(['bash', '-lc', 'grep -rhoE "(source|src)\\(\\"[^\\"]+\\"
 for m in re.finditer(r'\("([^"]+)"\)', tests):
     path = m.group(1)
     if '$' in path or '/' not in path: continue  # قالب کاتلین یا نام نسبی کمکی (site/<name>.js)
-    if not os.path.exists(path): ok = False; print('❌ تست به فایل ناموجود اشاره می‌کند:', path)
+    # V309 — تست‌های قدیمی با کمک src("…") از پوشهٔ app/src/main/java/ir/exam/app می‌خوانند
+    if not (os.path.exists(path) or os.path.exists(os.path.join('app/src/main/java/ir/exam/app', path))): ok = False; print('❌ تست به فایل ناموجود اشاره می‌کند:', path)
 # V232.2 — همان اسکن Secret گردش‌کار android.yml، محلی (الگوها با الحاق ساخته می‌شوند تا خودِ این فایل گیر نیفتد)
 _pem = 'BEGIN ' + '(?:RSA |EC |OPENSSH )?' + 'PRIVATE' + ' KEY'
 _pats = {'private_key': re.compile(_pem), 'jwt': re.compile(r'eyJ[A-Za-z0-9_-]{20,}[.]eyJ[A-Za-z0-9_-]{20,}[.][A-Za-z0-9_-]{10,}'), 'supabase_secret': re.compile('sb_' + 'secret_[A-Za-z0-9_-]{16,}')}

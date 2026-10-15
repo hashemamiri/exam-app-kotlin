@@ -406,7 +406,16 @@ fun StudentExamContent(
             }
             item {
                 when (question) {
-                    is EssayQuestion -> if (question.answerMode == "draw") {
+                    is EssayQuestion -> if (question.answerMode == "voice") {
+                        // V309 — پاسخ صوتی: ضبط با سقف مدت تعیین‌شدهٔ معلم؛ فایل مثل نقاشی ذخیره می‌شود
+                        StudentVoiceAnswerEntry(
+                            questionId = question.id,
+                            current = state.responseImages[question.id].orEmpty(),
+                            maxSeconds = question.voiceMaxSeconds.takeIf { it > 0 } ?: 60,
+                            onAdd = onAddImages,
+                            onRemove = onRemoveImage
+                        )
+                    } else if (question.answerMode == "draw") {
                         // V306 — ابتدایی: پاسخ با تخته؛ کادر متنی نشان داده نمی‌شود
                         Text("پاسخ را روی تخته بکشید و ذخیره کنید؛ با دکمهٔ بزرگ زیر باز کنید.", style = MaterialTheme.typography.bodyLarge)
                         StudentWhiteboardEntry(
@@ -587,7 +596,7 @@ fun StudentExamContent(
             // رسم آزاد می‌کند و نتیجه به‌عنوان تصویر پاسخ ثبت می‌شود.
             // V137 — «نمودار پاسخ دانش‌آموز» به‌کلی حذف شد؛ سؤالی که خودش نمودار دارد
             // (questionHasGraph) هم فقط تختهٔ وایت‌برد می‌گیرد.
-            val drawAnswer = (question as? EssayQuestion)?.answerMode == "draw"
+            val drawAnswer = (question as? EssayQuestion)?.answerMode in setOf("draw", "voice")
             if (!drawAnswer) if (presentation.allowAnswerGraph || questionHasGraph) {
                 item {
                     StudentWhiteboardEntry(

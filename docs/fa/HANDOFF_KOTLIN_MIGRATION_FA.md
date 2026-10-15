@@ -19430,6 +19430,17 @@ CI: `compileDebugUnitTestKotlin` به‌خاطر `assertFalse` بدون import �
 - باگ V202.5: `var LANDING_TILES` داخل `paintAuth` بعد از خطی که `landing()` را صدا می‌زد تعریف شده بود → به‌خاطر hoisting مقدارش undefined و `.map` خطا می‌داد → صفحهٔ اول خالی. حالا کنار `authActive` در سطح ماژول است (تست ترتیب را پین می‌کند).
 - دروازهٔ صفحهٔ اول: mobile.js `entered()/enter()` با `sessionStorage['m-entered']`، `gateActive() = MQ && user && !entered`؛ app.js `render()` پیش از m-mode اگر gateActive → paintAuth (landing حتی با user). دکمه: user ⇒ `enter(); S.render()`؛ وگرنه `goA('login')`؛ پیوند ثبت‌نام فقط بدون user. `afterLogin()` → `SiteMobile.enter()`.
 
+### V309 — ابتدایی: پاسخ صوتی دانش‌آموز؛ ضبط با سقف مدت معلم (۱۰) (اپ 1.02.14 + سایت؛ مقصد: اصلی)
+- **پیش‌نیاز:** نصب V308.1 (3a2c0c44). بسته روی پایهٔ 3a2c0c44 ساخته شده است. **SQL لازم است:** `sql/manual/SQL_NATIVE_VOICE_ANSWER_V309.sql` (idempotent؛ نوع‌های `audio/webm`، `audio/ogg`، `audio/x-m4a`، `audio/mp4` را به `exam-images` اضافه می‌کند). **Edge function دیپلوی نمی‌شود:** مسیر پاسخ‌ها (`answers/…`) از `media-upload` رد نمی‌شود و مستقیم در Storage ذخیره می‌شود.
+- **داده:** `EssayQuestion.voiceMaxSeconds` (`QuestionDraft.voiceMaxSeconds`)؛ JSON سؤال: `mode:"voice"` و `voice_max_seconds` (۱۰ تا ۳۰۰، پیش‌فرض ۶۰). رمزگذار `ExamQuestionCodec` و `StudentExamPayloadCodec` هر دو طرف را انجام می‌دهند.
+- **اپ (دانش‌آموز):** `ui/student/StudentVoiceAnswer.kt` — `MediaRecorder` با AAC/m4a، مونو، ۳۲ kbps، ۲۲٫۰۵ kHz؛ پایان خودکار در سقف؛ «حذف و ضبط دوباره»؛ اجازهٔ میکروفون. فایل موقت `cacheDir/voice_*.m4a` و به‌عنوان پاسخ سؤال در `responseImages` ثبت می‌شود.
+- **اپ (آپلود):** `PendingMediaStore` پسوند `.m4a` را نگه می‌دارد؛ `SupabaseQuestionImageUploader.uploadAnswerAudio` فایل `.m4a` را با `audio/mp4` به `answers/<student>/<exam>/<question>/` می‌فرستد؛ سقف ۳ مگابایت.
+- **اپ (تصحیح/نتایج):** `ui/audio/AnswerAudioPlayer.kt` (`MediaPlayer` با `prepareAsync`) و `isAnswerAudioUrl()`؛ در `GradingScreen` و `StudentResultsScreen` به‌جای تصویر نشان داده می‌شود.
+- **سایت:** `builder.js` (حالت «پاسخ صوتی» + دکمه‌های سقف ۳۰/۶۰/۹۰/۱۲۰/۱۸۰ ثانیه)؛ `student.js` (`voiceAnswerBlock` با MediaRecorder؛ پسوند فایل از نوع blob: webm/ogg/m4a؛ `Content-Type` بدون پارامتر codecs)؛ `admin.js` (`answerMedia()` پخش‌کنندهٔ `<audio>` برای پاسخ‌های صوتی در تصحیح).
+- **تست:** `V309_VoiceAnswerTest` (رفت‌وبرگشت حالت و سقف، پیش‌فرض ۶۰، تشخیص نشانی صوتی) و `V309_Site_VoiceAnswerTest` (پین‌های سایت). `check_test_pins` ۰ خطا.
+- **فرایند:** `scripts/preflight.py` خطای کاذب «فایل ناموجود» را برای تست‌های `src("…")` (پوشهٔ پایه `app/src/main/java/ir/exam/app`) گزارش می‌کرد؛ اکنون هر دو مسیر را بررسی می‌کند.
+- **محدودیت‌ها:** ضبط فقط روی دستگاه واقعی آزموده می‌شود. در سایت، پیش‌نویس صوتی در localStorage ذخیره می‌شود (حدود ۱ مگابایت برای ۱۸۰ ثانیه)؛ چند پاسخ طولانی هم‌زمان ممکن است به سقف مرورگر نزدیک شوند.
+
 ### V308.1 — رفع خرابی بارگذاری سایت (سایت فقط؛ بدون تغییر نسخهٔ اپ؛ مقصد: اصلی)
 - **علت (تأیید شده):** در V307 و V308 نوشتهٔ داخلی بانک ابتدایی در bundle سایت دو بار نوشته می‌شد: `var PRIMARY_BANK={…JSON…}{"items":[]};`. این خطای نحوی باعث می‌شد کل اسکریپت اصلی سایت اجرا نشود (`SyntaxError: Unexpected token '{'`). دسکتاپ و بقیهٔ سایت بالا نمی‌آمدند.
 - **رفع:** مقدار پیش‌فرض در `site/src/builder.js` به `null` تغییر کرد؛ `site/build_site.py` فقط `/*__PRIMARY_BANK__*/null` را جایگزین می‌کند. `site/index.html` بازسازی شد.

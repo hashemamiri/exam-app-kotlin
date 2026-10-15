@@ -37,7 +37,9 @@ class PendingMediaStore(context: Context) {
 
     private fun copyOne(uri: Uri, directory: File, questionId: String, index: Int): String {
         val safeQuestion = questionId.replace(Regex("[^A-Za-z0-9_-]"), "_").take(60)
-        val target = File(directory, "$safeQuestion-$index-${UUID.randomUUID()}.bin")
+        // V309 — پاسخ صوتی پسوند m4a را نگه می‌دارد تا در آپلود به‌عنوان صوت شناخته شود
+        val ext = if (uri.path.orEmpty().endsWith(".m4a", true)) "m4a" else "bin"
+        val target = File(directory, "$safeQuestion-$index-${UUID.randomUUID()}.$ext")
         try {
             appContext.contentResolver.openInputStream(uri)?.use { input ->
                 target.outputStream().use { output ->

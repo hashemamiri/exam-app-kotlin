@@ -32,6 +32,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
+import ir.exam.app.ui.audio.AnswerAudioPlayer
+import ir.exam.app.ui.audio.isAnswerAudioUrl
 import ir.exam.app.core.export.XlsxSheet
 import ir.exam.app.core.export.XlsxWorkbook
 import ir.exam.app.domain.model.StudentAnswerReview
@@ -169,7 +171,7 @@ private fun AnswerQuestionCard(question: StudentAnswerReviewQuestion, graded: Bo
             NativeMathText(question.text)
             Text("پاسخ شما: ${question.displayResponse()}")
             question.responseImages.forEach { url ->
-                AsyncImage(
+                if (isAnswerAudioUrl(url)) AnswerAudioPlayer(url) else AsyncImage(
                     model = url,
                     contentDescription = "تصویر پاسخ سؤال ${question.index + 1}",
                     modifier = Modifier.size(180.dp)

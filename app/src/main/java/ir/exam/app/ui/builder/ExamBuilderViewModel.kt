@@ -185,7 +185,7 @@ class ExamBuilderViewModel(
     fun setQuestionMode(id: String, mode: String) = update(id) { q ->
         when (mode) {
             "order" -> q.copy(mode = mode, orderItems = q.orderItems.ifEmpty { listOf("", "", "") })
-            "draw", "dictation" -> q.copy(mode = mode)
+            "draw", "dictation", "voice" -> q.copy(mode = mode)
             "hotspot" -> q.copy(mode = mode, hotspots = q.hotspots.takeIf { it.size == q.options.size } ?: List(q.options.size) { ir.exam.app.ui.builder.HotspotRect(0f, 0f, 0f, 0f) })
             else -> q.copy(mode = "")
         }
@@ -193,6 +193,9 @@ class ExamBuilderViewModel(
 
     /** V308 / ۱۴ — برچسب پایه/درس سؤال (حالت ابتدایی). */
     fun setQuestionTags(id: String, grade: Int, subject: String) = update(id) { q -> q.copy(grade = grade, subject = subject) }
+
+    /** V309 — سقف مدت ضبط پاسخ صوتی (ثانیه) برای سؤال. */
+    fun setVoiceMaxSeconds(id: String, seconds: Int) = update(id) { q -> q.copy(voiceMaxSeconds = seconds.coerceIn(10, 300)) }
     fun updateOrderItem(id: String, index: Int, value: String) = update(id) { q ->
         // ویرگول جداکنندهٔ پاسخ است؛ داخل مورد مجاز نیست.
         val clean = value.replace(',', ' ').replace('،', ' ')

@@ -2248,7 +2248,7 @@ private fun PrimaryModeChooser(question: QuestionDraft, viewModel: ExamBuilderVi
     val choices = when (question.type) {
         QuestionType.FILL_BLANK -> listOf("" to "جای خالی معمولی", "order" to "مرتب‌سازی با کشیدن", "dictation" to "املا (گوش بده و بنویس)")
         // V306 — پاسخ تشریحی: متنی یا نقاشی روی تخته
-        QuestionType.ESSAY -> listOf("" to "پاسخ متنی", "draw" to "پاسخ با نقاشی (تخته بزرگ)")
+        QuestionType.ESSAY -> listOf("" to "پاسخ متنی", "draw" to "پاسخ با نقاشی (تخته بزرگ)", "voice" to "پاسخ صوتی (ضبط)")
         else -> listOf("" to "گزینه‌ای معمولی", "hotspot" to "انتخاب روی تصویر")
     }
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -2259,6 +2259,19 @@ private fun PrimaryModeChooser(question: QuestionDraft, viewModel: ExamBuilderVi
                 onClick = { viewModel.setQuestionMode(question.id, value) },
                 label = { Text(label) }
             )
+        }
+    }
+    // V309 — پاسخ صوتی: سقف مدت ضبط (ثانیه) برای این سؤال
+    if (question.mode == "voice") {
+        Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text("سقف ضبط:")
+            listOf(30, 60, 90, 120, 180).forEach { sec ->
+                FilterChip(
+                    selected = question.voiceMaxSeconds == sec || (question.voiceMaxSeconds == 0 && sec == 60),
+                    onClick = { viewModel.setVoiceMaxSeconds(question.id, sec) },
+                    label = { Text("${PersianDigits.convert(sec)} ثانیه") }
+                )
+            }
         }
     }
     // V306 — راهنمای املا: متن املا همان «پاسخ درست» است و در داده‌های عمومی سؤال می‌آید (اگر صدای معلم نباشد).

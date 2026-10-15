@@ -65,6 +65,8 @@
       if (obj.mode === 'order' && type === 'fill') { q.mode = 'order'; q.orderItems = strs(obj.items).map(function (x) { return x.trim(); }).filter(Boolean); }
       /* V306 — پاسخ با تخته (تشریحی ابتدایی) و املا (جای خالی + متن «بخوان») */
       if (obj.mode === 'draw' && type === 'essay') q.mode = 'draw';
+      /* V309 — پاسخ صوتی با سقف مدت معلم */
+      if (obj.mode === 'voice' && type === 'essay') { q.mode = 'voice'; q.voiceMaxSeconds = Math.max(10, Math.min(300, Number(obj.voice_max_seconds) || 60)); }
       if (obj.mode === 'dictation' && type === 'fill') { q.mode = 'dictation'; q.dictationText = obj.speak ? String(obj.speak) : ''; }
       if (obj.mode === 'hotspot' && type === 'multiple') { q.mode = 'hotspot'; q.hotspots = (Array.isArray(obj.hotspots) ? obj.hotspots : []).map(function (h) { return {x: Number(h.x) || 0, y: Number(h.y) || 0, w: Number(h.w) || 0, h: Number(h.h) || 0}; }); }
       return q;
@@ -537,6 +539,9 @@
           richHtml(l).then(function (h) { var g = row.querySelector('.grow'); g.innerHTML = '<b>' + fa(li + 1) + '.</b> ' + h; fitMath(g); });
           box.appendChild(row);
         });
+      } else if (ex.primary && q.type === 'essay' && q.mode === 'voice') {
+        /* V309 — پاسخ صوتی: ضبط با سقف مدت معلم */
+        box.appendChild(voiceAnswerBlock(q, box));
       } else if (ex.primary && q.type === 'essay' && q.mode === 'draw') {
         /* V306 — ابتدایی: پاسخ با تخته؛ کادر متنی نیست */
         box.appendChild(el('p', {class: 'st-hint', text: 'پاسخ را روی تخته بکشید و ذخیره کنید؛ با دکمهٔ تخته زیر باز کنید.'}));
@@ -559,6 +564,53 @@
         box.appendChild(sec);
       }
       return box;
+    }
+    /* V309 — پاسخ صوتی: ضبط با MediaRecorder؛ پایان خودکار در سقف مدت. فایل به‌صورت dataURL در پیش‌نویس می‌ماند و هنگام ارسال آپلود می‌شود */
+    function voiceAnswerBlock(q, box) {
+      var wrap = el('div', {class: 'st-voice'});
+      var max = Math.max(10, Math.min(300, Number(q.voiceMaxSeconds) || 60));
+      var cur = run.images[q.id] || [];
+      wrap.appendChild(el('p', {class: 'st-hint', text: 'پاسخ صوتی — سقف ضبط: ' + fa(max) + ' ثانیه'}));
+      if (cur.length) {
+        wrap.appendChild(el('audio', {src: cur[0], controls: 'controls', preload: 'metadata'}));
+        wrap.appendChild(el('button', {class: 'btn light sm', text: '🗑 حذف و ضبط دوباره', onclick: function () { run.images[q.id] = []; saveDraft(); box.replaceWith(answerArea(q)); }}));
+        return wrap;
+      }
+      var status = el('div', {class: 'muted', style: 'font-size:13px', text: ''});
+      var rec = el('button', {class: 'btn soft sm', text: '🎙 شروع ضبط'});
+      var mediaRec = null, chunks = [], timer = null, startedAt = 0;
+      function stopNow() { if (mediaRec && mediaRec.state !== 'inactive') mediaRec.stop(); }
+      rec.addEventListener('click', async function () {
+        if (mediaRec) { stopNow(); return; }
+        if (!navigator.mediaDevices || !window.MediaRecorder) { S.toast('مرورگر شما ضبط صدا را پشتیبانی نمی‌کند.', 'err'); return; }
+        try {
+          var stream = await navigator.mediaDevices.getUserMedia({audio: true});
+          var type = ['audio/mp4', 'audio/webm;codecs=opus', 'audio/webm', 'audio/ogg;codecs=opus'].filter(function (t) { return MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(t); })[0] || '';
+          chunks = [];
+          var opts = type ? {mimeType: type, audioBitsPerSecond: 32000} : {audioBitsPerSecond: 32000};
+          var active = new MediaRecorder(stream, opts);
+          mediaRec = active;
+          active.ondataavailable = function (e) { if (e.data && e.data.size) chunks.push(e.data); };
+          active.onstop = function () {
+            clearInterval(timer); stream.getTracks().forEach(function (t) { t.stop(); });
+            var blob = new Blob(chunks, {type: active.mimeType || type || 'audio/webm'});
+            mediaRec = null;
+            if (blob.size === 0) { S.toast('ضبط خیلی کوتاه بود؛ دوباره ضبط کنید.', 'err'); box.replaceWith(answerArea(q)); return; }
+            if (blob.size > 3 * 1024 * 1024) { S.toast('حجم پاسخ صوتی بیش از حد است؛ مدت ضبط را کوتاه‌تر کنید.', 'err'); box.replaceWith(answerArea(q)); return; }
+            var reader = new FileReader();
+            reader.onload = function () { run.images[q.id] = [String(reader.result)]; saveDraft(); box.replaceWith(answerArea(q)); };
+            reader.readAsDataURL(blob);
+          };
+          active.start(1000); startedAt = Date.now(); rec.textContent = '⏹ پایان ضبط';
+          timer = setInterval(function () {
+            var passed = Math.floor((Date.now() - startedAt) / 1000);
+            status.textContent = '● در حال ضبط: ' + fa(Math.min(passed, max)) + ' از ' + fa(max) + ' ثانیه';
+            if (passed >= max) stopNow();
+          }, 250);
+        } catch (err) { mediaRec = null; S.toast('اجازهٔ میکروفون داده نشد یا ضبط شروع نشد.', 'err'); }
+      });
+      wrap.appendChild(rec); wrap.appendChild(status);
+      return wrap;
     }
     function addImages(q, uris, fromBoard) {
       var whiteboardOnly = (fromBoard || q.pres.allowAnswerGraph) && q.maxAnswerImages <= 0;
@@ -595,12 +647,14 @@
       el('div', {class: 'row'}, [el('button', {class: 'btn', text: 'ارسال نهایی', onclick: function () { bg.remove(); submit(c, false); }}), el('button', {class: 'btn light', text: 'بازگشت', onclick: function () { bg.remove(); }})])]);
     bg.appendChild(m); document.body.appendChild(bg);
   }
+  function audioExtOf(t) { t = String(t || '').toLowerCase(); return t.indexOf('mp4') >= 0 ? 'm4a' : t.indexOf('ogg') >= 0 ? 'ogg' : 'webm'; }
   async function uploadAnswerImage(dataUrl, examId, questionId) {
     if (/^https:\/\//i.test(dataUrl)) return dataUrl;
     var blob = await (await fetch(dataUrl)).blob();
-    var path = 'answers/' + S.user().id + '/' + examId + '/' + questionId + '/' + uuid() + '.webp';
+    var isAudio = /^data:audio\//i.test(dataUrl); /* V309 — پاسخ صوتی با پسوند و نوع خودش */
+    var path = 'answers/' + S.user().id + '/' + examId + '/' + questionId + '/' + uuid() + (isAudio ? '.' + audioExtOf(blob.type) : '.webp');
     var sess = S.session();
-    var res = await fetch(S.config.url + '/storage/v1/object/' + BUCKET + '/' + path, {method: 'POST', headers: {'apikey': S.config.anon, 'Authorization': 'Bearer ' + (sess ? sess.access_token : S.config.anon), 'Content-Type': blob.type || 'image/webp', 'x-upsert': 'false'}, body: blob});
+    var res = await fetch(S.config.url + '/storage/v1/object/' + BUCKET + '/' + path, {method: 'POST', headers: {'apikey': S.config.anon, 'Authorization': 'Bearer ' + (sess ? sess.access_token : S.config.anon), 'Content-Type': (blob.type || 'image/webp').split(';')[0], 'x-upsert': 'false'}, body: blob});
     if (!res.ok) throw new Error('آپلود تصویر پاسخ ناموفق بود: ' + (await res.text()).slice(0, 120));
     return S.config.url + '/storage/v1/object/public/' + BUCKET + '/' + path;
   }
