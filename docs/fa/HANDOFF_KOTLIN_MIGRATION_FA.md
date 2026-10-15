@@ -19430,7 +19430,8 @@ CI: `compileDebugUnitTestKotlin` به‌خاطر `assertFalse` بدون import �
 - باگ V202.5: `var LANDING_TILES` داخل `paintAuth` بعد از خطی که `landing()` را صدا می‌زد تعریف شده بود → به‌خاطر hoisting مقدارش undefined و `.map` خطا می‌داد → صفحهٔ اول خالی. حالا کنار `authActive` در سطح ماژول است (تست ترتیب را پین می‌کند).
 - دروازهٔ صفحهٔ اول: mobile.js `entered()/enter()` با `sessionStorage['m-entered']`، `gateActive() = MQ && user && !entered`؛ app.js `render()` پیش از m-mode اگر gateActive → paintAuth (landing حتی با user). دکمه: user ⇒ `enter(); S.render()`؛ وگرنه `goA('login')`؛ پیوند ثبت‌نام فقط بدون user. `afterLogin()` → `SiteMobile.enter()`.
 
-### V310.1 — املا در چاپ؛ کنترل‌های ابتدایی در چاپ مثل سایت (اپ 1.02.18 + سایت)
+### V310.1 — املا در چاپ؛ کنترل‌های ابتدایی در چاپ مثل سایت (اپ 1.02.19 + سایت)
+- **اجرای CI:** کامیت‌های فقط با `text/CHANGELOG_FA.txt` در `paths-ignore` اپ هستند؛ برای اجرای CI، نسخه به ۱.۰۲.۱۹ رفت (`text/APP_VERSION.txt`).
 - علت گزارش «املا در اپ نیست»: گیت `!printMode` در `ExamBuilderScreen.kt` (نوع ابتدایی، برچسب، ترتیب، تصویر انتخابی) و کادر متن املا. سایت در هر دو حالت نشان می‌دهد.
 - اصلاح: گیت‌ها در چاپ هم باز شد؛ کادر پاسخ/متن املا برای `dictation` در چاپ هم دیده می‌شود (بقیهٔ فیلدهای پاسخ جای‌خالی در چاپ مثل قبل پنهان است، طبق V110).
 - تست: `V310_1_PrintPrimaryParityTest`؛ پین `V308_Site_GradeSubjectTest` به‌روز شد.
