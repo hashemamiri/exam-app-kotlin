@@ -26,7 +26,7 @@ as $$
     ), p as (
         select
             g.exam_id,
-            round(g.grade * 100.0 / nullif(g.max_score, 0), 2) as pct,
+            round(g.grade::numeric * 100.0 / nullif(g.max_score::numeric, 0), 2) as pct,
             coalesce(nullif(g.options -> 'levels' ->> 0, '')::numeric, 85) as t1,
             coalesce(nullif(g.options -> 'levels' ->> 1, '')::numeric, 70) as t2,
             coalesce(nullif(g.options -> 'levels' ->> 2, '')::numeric, 50) as t3

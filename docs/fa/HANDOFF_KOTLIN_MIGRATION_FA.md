@@ -19430,6 +19430,11 @@ CI: `compileDebugUnitTestKotlin` به‌خاطر `assertFalse` بدون import �
 - باگ V202.5: `var LANDING_TILES` داخل `paintAuth` بعد از خطی که `landing()` را صدا می‌زد تعریف شده بود → به‌خاطر hoisting مقدارش undefined و `.map` خطا می‌داد → صفحهٔ اول خالی. حالا کنار `authActive` در سطح ماژول است (تست ترتیب را پین می‌کند).
 - دروازهٔ صفحهٔ اول: mobile.js `entered()/enter()` با `sessionStorage['m-entered']`، `gateActive() = MQ && user && !entered`؛ app.js `render()` پیش از m-mode اگر gateActive → paintAuth (landing حتی با user). دکمه: user ⇒ `enter(); S.render()`؛ وگرنه `goA('login')`؛ پیوند ثبت‌نام فقط بدون user. `afterLogin()` → `SiteMobile.enter()`.
 
+### V305.1 — رفع CI V305 (کامپایل + SQL کارنامه) (اپ 1.02.10 + سایت؛ مقصد: اصلی)
+- **علت خطای CI (لاگ واقعی):** `e: ExamBuilderScreen.kt:27 Unresolved reference 'matchParentSize'` و `StudentExamScreen.kt:26` همان؛ `StudentExamScreen.kt:999 / 1027 Unresolved reference 'height'`. `matchParentSize` عضو `BoxScope` است و import جدا نمی‌خواهد (حذف شد). `height` در فایل صفحهٔ آزمون import نشده بود (اضافه شد).
+- **SQL:** `round(double precision, integer)` در PostgreSQL وجود ندارد (خطای 42883). در هر سه فایل (`sql_v305.sql`، migration، manual) به `round(g.grade::numeric * 100.0 / nullif(g.max_score::numeric, 0), 2)` تغییر کرد. کاربر باید `sql_v305.sql` را دوباره کامل اجرا کند.
+- **کامپایل نشده در sandbox:** Gradle در sandbox نیست؛ فقط با CI تأیید می‌شود. لاگ CI تأیید نشد، پس اگر خطای کامپایل دیگری آمد، همان را بفرستید.
+
 ### V305 — ابتدایی: کارنامهٔ ۴ سطحی، مرتب‌سازی با کشیدن، انتخاب روی تصویر، پد عددی بزرگ (اپ 1.02.09 + سایت؛ مقصد: اصلی)
 - موارد ۵ تا ۸ برنامهٔ ابتدایی با هم. فقط در حالت ابتدایی آزمون فعال می‌شوند؛ متوسطه/دانشگاه دست‌نخورده.
 - **SQL لازم (کاربر اجرا می‌کند):** `sql/manual/SQL_NATIVE_LEVELS_V305.sql` (کپی در `supabase/migrations/20261015_native_levels_v305.sql`). فقط تابع `native_my_levels_v1()` جدید است (خواندن، `security definer`، `revoke` از anon). بدون آن، `myLevels` خطا می‌دهد و اپ/سایت بی‌سروصدا کارنامهٔ بدون سطح نشان می‌دهند.
