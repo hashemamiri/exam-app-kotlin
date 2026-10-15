@@ -1184,6 +1184,8 @@ button.stat:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
 .dk .b-editor .tool-btn.is-fig{background:#ecfdf5;color:#0f766e}
 .dk .b-editor .tool-btn.is-gra{background:#eff6ff;color:#2563eb}
 .dk .b-editor .tool-btn.is-axis{background:#f0f9ff;color:#0369a1}
+/* V310 — ابزار ریاضی ابتدایی: آیکن جدا */
+.dk .b-editor .tool-btn.is-math{background:#f0fdf4;color:#15803d}
 .dk .b-editor .tool-btn.is-tab{background:#fff7ed;color:#c2410c}
 .dk .b-editor .tool-btn.is-pt{background:#fdf4ff;color:#a21caf}
 .dk .b-editor .tool-btn.is-ana{background:#fff1f2;color:#be123c}
@@ -1455,6 +1457,7 @@ table.rp-grades td.num .chip{min-width:64px;justify-content:center}
 .m-dark .dk .b-editor .tool-btn.is-fig{background:var(--card)}
 .m-dark .dk .b-editor .tool-btn.is-gra{background:var(--card)}
 .m-dark .dk .b-editor .tool-btn.is-axis{background:var(--card)}
+.m-dark .dk .b-editor .tool-btn.is-math{background:var(--card)}
 .m-dark .dk .b-editor .tool-btn.is-tab{background:var(--card)}
 .m-dark .dk .b-editor .tool-btn.is-pt{background:var(--card)}
 .m-dark .dk .b-editor .tool-btn.is-ana{background:var(--card)}

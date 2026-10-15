@@ -1,6 +1,6 @@
 # هندآف جامع مهاجرت سامانه آزمون از WebView به Native Kotlin
 
-**آخرین به‌روزرسانی:** ۲۰۲۶-۱۰-۱۵ — V298.3 گردش کار آزمایشی/اصلی (staging → promote) و قاعدهٔ «هر بار مقصد را بپرس»
+**آخرین به‌روزرسانی:** ۲۰۲۶-۱۰-۱۵ — V310 ابزار ریاضی آیکن جدا + مخاطبان سایت مثل اپ + ممیزی ۱۴ مورد ابتدایی (پیش از آن V298.3 گردش کار آزمایشی/اصلی)
 **زبان همکاری:** فارسی
 **کاربر:** غیر‌برنامه‌نویس؛ دستورها باید ساده، مرحله‌ای و قابل کپی در WSL باشند.
 
@@ -19429,6 +19429,33 @@ CI: `compileDebugUnitTestKotlin` به‌خاطر `assertFalse` بدون import �
 ## §V202.6
 - باگ V202.5: `var LANDING_TILES` داخل `paintAuth` بعد از خطی که `landing()` را صدا می‌زد تعریف شده بود → به‌خاطر hoisting مقدارش undefined و `.map` خطا می‌داد → صفحهٔ اول خالی. حالا کنار `authActive` در سطح ماژول است (تست ترتیب را پین می‌کند).
 - دروازهٔ صفحهٔ اول: mobile.js `entered()/enter()` با `sessionStorage['m-entered']`، `gateActive() = MQ && user && !entered`؛ app.js `render()` پیش از m-mode اگر gateActive → paintAuth (landing حتی با user). دکمه: user ⇒ `enter(); S.render()`؛ وگرنه `goA('login')`؛ پیوند ثبت‌نام فقط بدون user. `afterLogin()` → `SiteMobile.enter()`.
+
+### V310 — ابزار ریاضی آیکن جدا؛ مخاطبان آزمون سایت مثل اپ؛ ممیزی ۱۴ مورد ابتدایی (اپ 1.02.16 + سایت؛ مقصد: پرسیده شد)
+- **پایه:** `daa0814a` (V309.1 محلی). نصاب `apply_v310.py` روی `84bc5581` (V309) ساخته می‌شود تا V309.1 هم داخلش باشد.
+- **ممیزی ۱۴ مورد فعال طرح (۱–۱۴؛ ۱۵–۱۷ لغو):** هر مورد در کد اپ و سایت جست‌وجو شد.
+  | # | مورد | اپ | سایت | وضعیت |
+  |---|---|---|---|---|
+  | 1 | حالت ابتدایی | `ExamBuilderScreen`، `StudentExamScreen` (V301) | `builder.js` `primaryMode` | ✅ |
+  | 2 | خواندن با صدا | `ui/audio/ReadAloudButton.kt`، `core/speech/ReadAloudText.kt` | `student.js` (speechSynthesis) | ✅ |
+  | 3 | گزینه‌های تصویری ۲×۲ | `StudentExamScreen.kt` (V303) | `student.js`، `site.css` | ✅ |
+  | 4 | ابزار ریاضی ابتدایی | `core/figure/PrimaryMathSvgRenderer.kt`، `FigureGallery.kt` | `graph_fig.js` (همان موتور) | ✅ (V310: آیکن جدا) |
+  | 5 | کارنامهٔ ۴ سطحی | `core/report/PrimaryLevels.kt`، `StudentResultsScreen.kt` | `app.js` (`mergeLevels`، `levelStarsText`) | ✅ |
+  | 6 | مرتب‌سازی با کشیدن | `StudentExamScreen.kt` (V305) | `student.js` (V305) | ✅ |
+  | 7 | انتخاب روی تصویر | `ExamModels.kt`، `StudentExamPayloadCodec.kt`، `StudentExamScreen.kt` | `student.js` (`hotspotAnswer`) | ✅ |
+  | 8 | پد عددی بزرگ | `ui/student/MathKeypad.kt`، `StudentExamScreen.kt` | `student.js` (`st-numpad`) | ✅ |
+  | 9 | پاسخ با تخته بزرگ | `StudentExamScreen.kt` (V306) | `student.js` (V306) | ✅ |
+  | 10 | پاسخ صوتی | `ui/student/StudentVoiceAnswer.kt` (V309) | `student.js` (V309) | ✅ |
+  | 11 | املا (صدای معلم / «بخوان») | `ExamQuestionCodec.kt`، `StudentExamPayloadCodec.kt` | `student.js` (V306) | ✅ |
+  | 12 | بانک ابتدایی | `ui/builder/PrimaryBank.kt`، `PrimaryBankDialog.kt`، `assets/primary_bank.json` | `builder.js` از همان JSON (`build_site.py`) | ✅ |
+  | 13 | تصاویر کتاب‌های ابتدایی (اطلس) | — | — | ⏳ در اپ نیست؛ مجموعهٔ ۵۰۰ تصویر ایرانی هنوز ساخته/وارد نشده |
+  | 14 | برچسب پایه و درس + فیلتر بانک | `ExamQuestionCodec.kt`، `PrimaryBank.kt`، `QuestionDraft.kt` (V308) | `builder.js` (V308) | ✅ |
+- **مخاطبان آزمون (درخواست کاربر):** اپ سه گزینه دارد: «همه» / «مدارس» / «کلاس‌ها» (`ExamBuilderScreen.AudienceCard`). سایت چهار گزینه داشت («همهٔ دانش‌آموزان من»، «کلاس‌های خاص»، «دانش‌آموزان خاص»، «مدرسه‌ها») و با اپ فرق داشت. اکنون `site/src/builder.js` فقط همان سه گزینه و برچسب‌های اپ را دارد. آزمون‌های قدیمی با مخاطب `students` ذخیره‌شان دست‌نخورده می‌ماند (مثل اپ، بدون چیپ).
+- **ابزار ریاضی آیکن جدا (درخواست کاربر):** قبلاً ابزارهای ریاضی ابتدایی داخل پنجرهٔ «محور» بودند. حالا:
+  - اپ: `QuestionToolIcons.MathTools` (گونیای مدرّج) در نوار ابزار سؤال (`QuestionTextWebSection`) و در `OptionInsertTool.MATH` (دکمهٔ + گزینه‌ها). `FigureTypePickerDialog(mathOnly = true)` فقط بخش ابتدایی را نشان می‌دهد؛ `AXIS` فقط محورهای پایه.
+  - سایت: دکمهٔ `tool-btn is-math` در `builder.js` و منوی درج گزینه؛ `graph_fig.js` حالت `'math'` (`isMathType`، `fillShapes(mode)`). کلاس‌های داده (`AXIS_FIGURES`، `PRIMARY_MATH_FIRST_ID`) بدون تغییر ماندند، پس چاپ و تشخیص نوع شکل‌ها هم بدون تغییر است.
+- **تست‌ها:** `V310_PrimaryMathIconAndAudienceParityTest` (۴ تست، پین‌های اپ و سایت). پین‌های `V206` و `V188` به خط‌های جدید به‌روز شد. `check_test_pins` ۰ خطا (۲۶۰۴ پین). `node --check` روی `graph_fig.js`، `builder.js`، `app.js` و اسکریپت‌های داخلی `index.html` موفق بود.
+- **محدودیت این محیط:** Gradle/Android SDK و JDK ۱۷ در این محیط نیست، پس `testDebugUnitTest` و کامپایل کاتلین اینجا اجرا نشد؛ CI در پوش بعدی باید اجرا شود. تغییرات کاتلین فقط با بازبینی کد تأیید شده‌اند.
+- **نصاب:** `apply_v310.py` با `docs/tools/make_installer.py V310 84bc5581 … <مقصد>`؛ مقصد (آزمایشی/اصلی/هر دو) از کاربر پرسیده شد.
 
 ### V309.1 — اصلاح تست‌های CI پس از V309 (اپ 1.02.15 + سایت؛ مقصد: اصلی)
 - **علت:** CI پس از نصب V309 سه تست را ناموفق گزارش کرد؛ کامپایل کاتلین موفق بود (لاگ CI).

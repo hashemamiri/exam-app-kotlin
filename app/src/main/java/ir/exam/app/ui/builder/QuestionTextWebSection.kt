@@ -84,6 +84,8 @@ fun QuestionTextWebSection(
     onInsertGraph: (insertOffset: Int) -> Unit,
     /** V136 — درج محور (اعداد/مختصات/قطبی/سه‌بعدی). */
     onInsertAxis: (insertOffset: Int) -> Unit = {},
+    // V310 — آیکن جدا «ابزار ریاضی ابتدایی».
+    onInsertMath: (insertOffset: Int) -> Unit = {},
     onInsertTable: (insertOffset: Int) -> Unit,
     onInsertPeriodic: (insertOffset: Int) -> Unit,
     // V134 — یک آیکنِ «گالری» به‌جای سه آیکنِ آناتومی/فیزیک/شیمی؛ پنجرهٔ انتخاب
@@ -386,12 +388,13 @@ fun QuestionTextWebSection(
         }
         Row(
             modifier = Modifier.fillMaxWidth().padding(top = 2.dp),
-            horizontalArrangement = Arrangement.spacedBy(2.dp)
+            horizontalArrangement = Arrangement.SpaceEvenly
         ) {
             NativeToolButton(QuestionToolIcons.Formula, "درج فرمول") { controller.openTool("formula") }
             NativeToolButton(QuestionToolIcons.Figure, "درج شکل") { onInsertFigure(insertAtOffset) }
             NativeToolButton(QuestionToolIcons.Graph, "درج نمودار") { onInsertGraph(insertAtOffset) }
             NativeToolButton(QuestionToolIcons.Axis, "درج محور") { onInsertAxis(insertAtOffset) }
+            NativeToolButton(QuestionToolIcons.MathTools, "درج ابزار ریاضی ابتدایی") { onInsertMath(insertAtOffset) }
             NativeToolButton(QuestionToolIcons.Table, "درج جدول") { onInsertTable(insertAtOffset) }
             NativeToolButton(QuestionToolIcons.Gallery, "گالری شکل‌ها") { onInsertGallery(insertAtOffset) }
             NativeToolButton(QuestionToolIcons.Periodic, "درج جدول تناوبی") { onInsertPeriodic(insertAtOffset) }
@@ -405,7 +408,7 @@ private fun NativeToolButton(
     label: String,
     onClick: () -> Unit
 ) {
-    IconButton(onClick = onClick, modifier = Modifier.size(40.dp)) {
+    IconButton(onClick = onClick, modifier = Modifier.size(36.dp)) {
         Icon(
             icon,
             contentDescription = label,

@@ -2336,31 +2336,31 @@
       if (onG && onG.scrollIntoView) onG.scrollIntoView({ block: 'nearest' });
     } catch (e) {}
   }
-  // V206 — فهرست نوع‌ها: نمودارها یا (در حالت محور) ۶ محور پایه؛ عنوان پنجره هم عوض می‌شود.
+  // V206 — فهرست نوع‌ها: نمودارها یا (در حالت محور) ۶ محور پایه.
+  // V310 — «ابزار ریاضی ابتدایی» آیکن جدا دارد (حالت math)؛ فهرست محور فقط محورهای پایه را نشان می‌دهد.
+  function mathSplit() { for (var i = 0; i < AXIS_TYPES.length; i++) if (AXIS_TYPES[i].id === PRIMARY_MATH_FIRST_ID) return i; return AXIS_TYPES.length; }
+  function isMathType(t) { var sp = mathSplit(); for (var i = 0; i < AXIS_TYPES.length; i++) if (AXIS_TYPES[i].id === t) return i >= sp; return false; }
   var shapesMode = null;
-  function fillShapes(axis) {
-    axis = !!axis;
-    if (shapesMode === axis) return;
-    shapesMode = axis;
+  function fillShapes(mode) {
+    /* mode: 'graph' | 'axis' | 'math' */
+    if (mode !== 'axis' && mode !== 'math') mode = 'graph';
+    if (shapesMode === mode) return;
+    shapesMode = mode;
     var host = $('grShapes'); if (!host) return;
     host.innerHTML = '';
-    (axis ? AXIS_TYPES : TYPES).forEach(function (s) {
-      if (axis && s.id === PRIMARY_MATH_FIRST_ID) {
-        // V304 — سرتیتر بخش «ابزار ریاضی ابتدایی» (تمام‌عرض)
-        var hd = document.createElement('div');
-        hd.className = 'gf-shape-head'; hd.textContent = 'ابزار ریاضی ابتدایی';
-        hd.setAttribute('style', 'grid-column:1/-1;flex-basis:100%;width:100%;font-weight:700;font-size:12px;color:#6c63f5;padding:8px 4px 2px;border-top:1px dashed #cfd6e2;margin-top:4px');
-        host.appendChild(hd);
-      }
+    var axis = mode !== 'graph', math = mode === 'math', sp = mathSplit();
+    var list = !axis ? TYPES : math ? AXIS_TYPES.slice(sp) : AXIS_TYPES.slice(0, sp);
+    list.forEach(function (s) {
       var b = document.createElement('button');
       b.type = 'button'; b.className = 'gf-shape'; b.setAttribute('data-t', s.id);
       b.innerHTML = iconOf(s.id) + '<span>' + s.name + '</span>';
       b.addEventListener('click', function () { setType(s.id); });
       host.appendChild(b);
     });
-    var h3 = document.querySelector('#grOverlay .gf-head h3'); if (h3) h3.textContent = axis ? 'درج محور' : 'درج نمودار';
-    var th = document.querySelector('#grOverlay .gf-types-h'); if (th) th.textContent = axis ? 'نوع محور' : 'نوع نمودار';
-    var md = document.querySelector('#grOverlay .gf-modal'); if (md) md.setAttribute('aria-label', axis ? 'درج محور' : 'درج نمودار');
+    var title = math ? 'درج ابزار ریاضی ابتدایی' : axis ? 'درج محور' : 'درج نمودار';
+    var h3 = document.querySelector('#grOverlay .gf-head h3'); if (h3) h3.textContent = title;
+    var th = document.querySelector('#grOverlay .gf-types-h'); if (th) th.textContent = math ? 'نوع ابزار ریاضی' : axis ? 'نوع محور' : 'نوع نمودار';
+    var md = document.querySelector('#grOverlay .gf-modal'); if (md) md.setAttribute('aria-label', title);
   }
   function ensureModal() {
     if ($('grOverlay')) return;
@@ -2379,7 +2379,7 @@
         '<button type="button" class="gf-btn ok" id="grApply">درج در سؤال</button></div>' +
       '</div>';
     document.body.appendChild(ov);
-    fillShapes(false);
+    fillShapes('graph');
     ov.addEventListener('click', function (e) { if (e.target === ov) close(); });
     $('grClose').onclick = close;
     $('grCancel').onclick = close;
@@ -2422,14 +2422,16 @@
   }
   function open(spec, el, mode) {
     replaceEl = el || null;
-    var axis = mode === 'axis' || !!(spec && isAxisType(spec.t));
-    try { state = spec ? JSON.parse(JSON.stringify(spec)) : (axis ? defAxis('axnum') : def('col')); }
-    catch (e) { state = axis ? defAxis('axnum') : def('col'); }
+    var math = mode === 'math' || !!(spec && isMathType(spec.t)); /* V310 */
+    var axis = mode === 'axis' || math || !!(spec && isAxisType(spec.t));
+    var t0 = math ? PRIMARY_MATH_FIRST_ID : 'axnum';
+    try { state = spec ? JSON.parse(JSON.stringify(spec)) : (axis ? defAxis(t0) : def('col')); }
+    catch (e) { state = axis ? defAxis(t0) : def('col'); }
     state.k = 'g';
-    if (!state.t) state.t = axis ? 'axnum' : 'col';
+    if (!state.t) state.t = axis ? t0 : 'col';
     if (!state.X) state.X = (isAxisType(state.t) ? defAxis(state.t) : def(state.t)).X;
     ensureModal();
-    fillShapes(axis);
+    fillShapes(math ? 'math' : axis ? 'axis' : 'graph');
     $('grOverlay').classList.add('open');
     var ok = $('grApply');
     if (ok) ok.textContent = replaceEl ? 'اعمال تغییرات' : 'درج در سؤال';

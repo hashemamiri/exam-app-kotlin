@@ -39,6 +39,8 @@ enum class OptionInsertTool(val label: String) {
     GRAPH("نمودار"),
     // V136 — محور (اعداد/مختصات/قطبی/سه‌بعدی).
     AXIS("محور"),
+    // V310 — ابزار ریاضی ابتدایی آیکن جدا دارد (جدا از محور).
+    MATH("ابزار ریاضی"),
     TABLE("جدول"),
     // V134 — آناتومی/فیزیک/شیمی/تصویر زیر یک «گالری» جمع شدند.
     GALLERY("گالری"),
@@ -50,6 +52,7 @@ private fun toolIcon(tool: OptionInsertTool): ImageVector = when (tool) {
     OptionInsertTool.FIGURE -> QuestionToolIcons.Figure
     OptionInsertTool.GRAPH -> QuestionToolIcons.Graph
     OptionInsertTool.AXIS -> QuestionToolIcons.Axis
+    OptionInsertTool.MATH -> QuestionToolIcons.MathTools
     OptionInsertTool.TABLE -> QuestionToolIcons.Table
     OptionInsertTool.GALLERY -> QuestionToolIcons.Gallery
     OptionInsertTool.PERIODIC -> QuestionToolIcons.Periodic
@@ -67,7 +70,7 @@ fun OptionInsertButton(label: String, onClick: () -> Unit) {
     }
 }
 
-/** پنجرهٔ ۸ ابزار درج؛ با انتخاب هر ابزار بسته می‌شود و ابزار انتخابی را برمی‌گرداند. */
+/** پنجرهٔ ابزارهای درج (فرمول تا ابزار ریاضی)؛ با انتخاب هر ابزار بسته می‌شود و ابزار انتخابی را برمی‌گرداند. */
 @Composable
 fun OptionInsertToolsDialog(
     fieldLabel: String,

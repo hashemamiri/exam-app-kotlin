@@ -13,7 +13,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.material3.Button
@@ -58,10 +57,13 @@ enum class FigureKind { GEOMETRY, GRAPH, AXIS }
 fun FigureTypePickerDialog(
     kind: FigureKind,
     onDismiss: () -> Unit,
-    onTypeSelected: (FigureSpec) -> Unit
+    onTypeSelected: (FigureSpec) -> Unit,
+    // V310 — «ابزار ریاضی ابتدایی» آیکن جدا دارد: فقط همان بخش از فهرست محورها نشان داده می‌شود.
+    mathOnly: Boolean = false
 ) {
     val geometry = kind == GEOMETRY
     val axis = kind == FigureKind.AXIS
+    val math = axis && mathOnly
     Dialog(
         onDismissRequest = onDismiss,
         properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)
@@ -70,7 +72,7 @@ fun FigureTypePickerDialog(
             Column(Modifier.fillMaxSize().systemBarsPadding().imePadding().padding(10.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) { // V247 — زیر نوار وضعیت نرود
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                     Text(
-                        if (geometry) "📐 درج شکل" else if (axis) "📏 درج محور" else "📈 درج نمودار",
+                        if (geometry) "📐 درج شکل" else if (math) "🧮 ابزار ریاضی ابتدایی" else if (axis) "📏 درج محور" else "📈 درج نمودار",
                         style = MaterialTheme.typography.titleLarge,
                         modifier = Modifier.weight(1f)
                     )
@@ -78,6 +80,7 @@ fun FigureTypePickerDialog(
                 }
                 Text(
                     if (geometry) "ابتدا نوع شکل هندسی را انتخاب کنید."
+                    else if (math) "نوع ابزار ریاضی را انتخاب کنید."
                     else if (axis) "نوع محور را انتخاب کنید."
                     else "ابتدا نوع نمودار را انتخاب کنید.",
                     style = MaterialTheme.typography.bodyMedium
@@ -106,26 +109,18 @@ fun FigureTypePickerDialog(
                         verticalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
                         // V136 — محورها همان سلول نمودار را دارند.
-                        // V304 — بخش «ابزار ریاضی ابتدایی» با سرتیتر جدا در انتهای فهرست محورها.
+                        // V304 — ابزار ریاضی ابتدایی در انتهای فهرست AXIS_FIGURES است.
+                        // V310 — آیکن جدا: پنجرهٔ «محور» فقط محورهای پایه را نشان می‌دهد و
+                        //        پنجرهٔ «ابزار ریاضی» (mathOnly) فقط بخش ابتدایی را.
                         val all = if (axis) AXIS_FIGURES else GRAPH_FIGURES
                         val split = if (axis) AXIS_FIGURES.indexOfFirst { it.id == PRIMARY_MATH_FIRST_ID } else -1
-                        val mainList = if (split > 0) all.subList(0, split) else all
-                        val primaryList = if (split > 0) all.subList(split, all.size) else emptyList()
-                        items(mainList, key = { it.id }) { template ->
-                            GraphTypeCell(template) { onTypeSelected(template.toSpec()) }
+                        val shown = when {
+                            split <= 0 -> all
+                            math -> all.subList(split, all.size)
+                            else -> all.subList(0, split)
                         }
-                        if (primaryList.isNotEmpty()) {
-                            item(key = "v304-head", span = { GridItemSpan(maxLineSpan) }) {
-                                Text(
-                                    "ابزار ریاضی ابتدایی",
-                                    style = MaterialTheme.typography.titleSmall,
-                                    color = MaterialTheme.colorScheme.primary,
-                                    modifier = Modifier.padding(top = 8.dp, bottom = 2.dp)
-                                )
-                            }
-                            items(primaryList, key = { it.id }) { template ->
-                                GraphTypeCell(template) { onTypeSelected(template.toSpec()) }
-                            }
+                        items(shown, key = { it.id }) { template ->
+                            GraphTypeCell(template) { onTypeSelected(template.toSpec()) }
                         }
                     }
                 }

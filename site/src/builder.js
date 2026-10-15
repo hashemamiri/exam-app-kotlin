@@ -16,6 +16,7 @@
       fig: '<rect ' + S_ + ' x="2.6" y="12.2" width="8.2" height="8.2" rx="1.3"/><circle ' + S_ + ' cx="16.8" cy="16.3" r="4.15"/><path ' + S_ + ' d="M12 2.8 7.35 11.1h9.3z"/>',
       graph: '<path ' + S_ + ' d="M4.2 19.4V5.2M4.2 19.4h15.6"/><path fill="currentColor" d="M6.4 11.2h3v6.4h-3zM10.8 7.4h3v10.2h-3zM15.2 9.4h3v8.2h-3z"/>',
       axis: '<path ' + S_ + ' d="M3 17h18M18.5 14.5 21 17l-2.5 2.5M7 21V3M4.5 5.5 7 3l2.5 2.5M11 15.8v2.4M15 15.8v2.4M5.8 13h2.4M5.8 9h2.4"/>',
+      math: '<path ' + S_ + ' d="M4 4v16h16zM8 20v-3M12 20v-4M16 20v-2"/>', /* V310 — گونیای مدرّج */
       table: '<path ' + S_ + ' d="M3.4 4.2h17.2v15.6H3.4zM3.4 9.2h17.2M3.4 14.2h17.2M10 4.2v15.6"/>',
       gallery: '<path ' + S_ + ' d="M3.5 5.5h17v13h-17zM3.5 16.5 9 11l4 4 2.5-2.5 5 5"/><circle ' + S_ + ' cx="16" cy="9" r="1.6"/>',
       periodic: '<path fill="currentColor" d="' + [[2,2.2],[18.9,2.2],[2,6],[5.4,6],[15.5,6],[18.9,6],[2,9.8],[5.4,9.8],[8.8,9.8],[12.2,9.8],[15.5,9.8],[18.9,9.8],[2,13.6],[5.4,13.6],[8.8,13.6],[12.2,13.6],[15.5,13.6],[18.9,13.6]].map(function (c) { return 'M' + c[0] + ' ' + c[1] + 'h3.1v3.1h-3.1z'; }).join('') + 'M8.8 18.4h13.2v2.4H8.8z"/>',
@@ -765,6 +766,8 @@
         el('button', {class: 'tool-btn is-gra', title: 'نمودار', 'aria-label': 'نمودار', html: toolSvg('graph'), onclick: function () { insertFigure('graph', ta, q); }}),
         /* V206 — آیکن محور کنار نمودار (مثل اپ، V136): ویرایشگر نمودار در حالت «درج محور» با ۶ محور پایه */
         el('button', {class: 'tool-btn is-axis', title: 'محور', 'aria-label': 'محور', html: toolSvg('axis'), onclick: function () { insertFigure('axis', ta, q); }}),
+        /* V310 — آیکن جدا «ابزار ریاضی ابتدایی» (مثل اپ: همان فهرست بخش ابتدایی، جدا از محور) */
+        el('button', {class: 'tool-btn is-math', title: 'ابزار ریاضی ابتدایی', 'aria-label': 'ابزار ریاضی ابتدایی', html: toolSvg('math'), onclick: function () { insertFigure('math', ta, q); }}),
         el('button', {class: 'tool-btn is-tab', title: 'جدول', 'aria-label': 'جدول', html: toolSvg('table'), onclick: function () { insertFigure('table', ta, q); }}),
         el('button', {class: 'tool-btn is-pt', title: 'جدول تناوبی', 'aria-label': 'جدول تناوبی', html: toolSvg('periodic'), onclick: function () { insertFigure('periodic', ta, q); }}),
         el('button', {class: 'tool-btn is-ana', title: 'اطلس تصویری: آناتومی، فیزیک، شیمی، تصویر خودم با فلش‌گذاری', 'aria-label': 'اطلس تصویری', html: toolSvg('gallery'), onclick: function (e) { atlasMenu(e.currentTarget, ta, q); }}),
@@ -1166,9 +1169,10 @@
       var aud = el('div');
       function drawAud() {
         aud.innerHTML = '';
-        aud.appendChild(el('div', {class: 'tabs'}, [['all', 'همهٔ دانش‌آموزان من'], ['classes', 'کلاس‌های خاص'], ['students', 'دانش‌آموزان خاص'], ['schools', 'مدرسه‌ها']].map(function (o) { return el('button', {class: state.audienceMode === o[0] ? 'on' : '', text: o[1], onclick: function () { state.audienceMode = o[0]; mark(); drawAud(); }}); })));
-        var src = state.audienceMode === 'classes' ? state.availableClasses : state.audienceMode === 'students' ? state.availableStudents : state.audienceMode === 'schools' ? state.availableSchools : null;
-        var sel_ = state.audienceMode === 'classes' ? state.audienceClasses : state.audienceMode === 'students' ? state.audienceStudents : state.audienceSchools;
+        /* V310 — مثل اپ (AudienceCard): فقط سه گزینه «همه / مدارس / کلاس‌ها». آزمون قدیمی با مخاطب «دانش‌آموزان» فهرست ندارد (مثل اپ) ولی ذخیره‌اش دست‌نخورده می‌ماند. */
+        aud.appendChild(el('div', {class: 'tabs'}, [['all', 'همه'], ['schools', 'مدارس'], ['classes', 'کلاس‌ها']].map(function (o) { return el('button', {class: state.audienceMode === o[0] ? 'on' : '', text: o[1], onclick: function () { state.audienceMode = o[0]; mark(); drawAud(); }}); })));
+        var src = state.audienceMode === 'classes' ? state.availableClasses : state.audienceMode === 'schools' ? state.availableSchools : null;
+        var sel_ = state.audienceMode === 'classes' ? state.audienceClasses : state.audienceSchools;
         if (!src) return;
         if (!src.length) { aud.appendChild(el('div', {class: 'alert warn', text: 'موردی برای انتخاب وجود ندارد.'})); return; }
         var box = el('div', {class: 'b-aud'});
@@ -1360,6 +1364,7 @@
       item('fig', 'شکل', 'is-fig', function () { insertFigure('geo', ta, null); }),
       item('graph', 'نمودار', 'is-gra', function () { insertFigure('graph', ta, null); }),
       item('axis', 'محور', 'is-axis', function () { insertFigure('axis', ta, null); }),
+      item('math', 'ابزار ریاضی', 'is-math', function () { insertFigure('math', ta, null); }),
       item('table', 'جدول', 'is-tab', function () { insertFigure('table', ta, null); }),
       item('periodic', 'جدول تناوبی', 'is-pt', function () { insertFigure('periodic', ta, null); }),
       item('gallery', 'گالری', 'is-ana', function () { atlasMenu(anchor, ta, null); }),
@@ -1417,7 +1422,7 @@
   }
   function insertFigure(kind, ta, q, editTok, presetSpec) {
     var overlay = el('div', {class: 'engine-bg'});
-    var bar = el('div', {class: 'engine-bar'}, [el('span', {text: editTok ? '✏️ ویرایش شیء درج‌شده' : kind === 'axis' ? '📐 درج محور در سؤال' : presetSpec ? '🖼 تصویر خودم — روی تصویر بکشید (کلیک و کشیدن) تا فلش و شماره اضافه شود؛ نام هر شماره را در ستون کنار بنویسید' : '📐 درج شکل در سؤال'}), el('span', {class: 'grow'}), el('button', {class: 'btn light sm', text: '✕ بستن', onclick: close})]);
+    var bar = el('div', {class: 'engine-bar'}, [el('span', {text: editTok ? '✏️ ویرایش شیء درج‌شده' : kind === 'math' ? '🧮 درج ابزار ریاضی ابتدایی در سؤال' : kind === 'axis' ? '📐 درج محور در سؤال' : presetSpec ? '🖼 تصویر خودم — روی تصویر بکشید (کلیک و کشیدن) تا فلش و شماره اضافه شود؛ نام هر شماره را در ستون کنار بنویسید' : '📐 درج شکل در سؤال'}), el('span', {class: 'grow'}), el('button', {class: 'btn light sm', text: '✕ بستن', onclick: close})]);
     var iframe = el('iframe', {class: 'with-bar'});
     overlay.appendChild(bar); overlay.appendChild(iframe); document.body.appendChild(overlay);
     document.body.style.overflow = 'hidden';
@@ -1426,7 +1431,7 @@
       var w = iframe.contentWindow, d = iframe.contentDocument, tries = 0;
       (function go() {
         tries++;
-        var api = {geo: w.GeoFig, graph: w.GraphFig, axis: w.GraphFig, table: w.TableFig, periodic: w.PeriodicFig, anatomy: w.AnatomyFig, science: w.ScienceFig, physics: w.ScienceFig, chemistry: w.ScienceFig}[kind];
+        var api = {geo: w.GeoFig, graph: w.GraphFig, axis: w.GraphFig, math: w.GraphFig, table: w.TableFig, periodic: w.PeriodicFig, anatomy: w.AnatomyFig, science: w.ScienceFig, physics: w.ScienceFig, chemistry: w.ScienceFig}[kind];
         var sciDom = kind === 'physics' ? 'phys' : kind === 'chemistry' ? 'chem' : null; /* V195 — ScienceFig.open(spec, el, dom) */
         if (!api || typeof api.open !== 'function' || !w.renderPreview) { if (tries < 100) return setTimeout(go, 60); toast('ویرایشگر شکل آماده نشد.', 'err'); return close(); }
         /* textarea هدفِ ویرایشگرهای وب: یک textarea مخفی که متنِ سؤال ما را دارد */
@@ -1453,10 +1458,10 @@
           var st2 = d.createElement('style'); st2.textContent = '#anCats,#anShapes,.an-split>.gf-types{display:none!important}'; d.head.appendChild(st2);
           api.open(presetSpec, null);
           var h3 = d.querySelector('#anOverlay h3'); if (h3) h3.textContent = 'تصویر خودم — فلش‌گذاری برای نام‌گذاری';
-        } else api.open(null, null, kind === 'axis' ? 'axis' : sciDom); /* V206 — 'axis' → GraphFig در حالت محور */
+        } else api.open(null, null, kind === 'math' ? 'math' : kind === 'axis' ? 'axis' : sciDom); /* V206 — 'axis' → GraphFig در حالت محور؛ V310 — 'math' → ابزار ریاضی ابتدایی */
         if (editTok && /"t":"photo"/.test(editTok)) { var st3 = d.createElement('style'); st3.textContent = '#anCats,#anShapes,.an-split>.gf-types{display:none!important}'; d.head.appendChild(st3); }
         /* بستن روکش وب بدون درج → بستن ما */
-        var ovId = {geo: 'gfOverlay', graph: 'grOverlay', axis: 'grOverlay', table: 'tbOverlay'}[kind];
+        var ovId = {geo: 'gfOverlay', graph: 'grOverlay', axis: 'grOverlay', math: 'grOverlay', table: 'tbOverlay'}[kind];
         var poll = setInterval(function () { var anyOpen = Array.prototype.some.call(d.querySelectorAll('[id$="Overlay"], .gf-overlay'), function (o) { return o.classList.contains('open'); }); if (!anyOpen && tries > 1) { clearInterval(poll); if (document.body.contains(overlay)) close(); } tries++; }, 300);
       })();
     });

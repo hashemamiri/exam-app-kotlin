@@ -81,6 +81,18 @@ object QuestionToolIcons {
         }.build()
     }
 
+    /** V310 — ابزار ریاضی ابتدایی: گونیای مثلثی با تیک‌های مدرّج (آیکن جدا از «محور»). */
+    val MathTools: ImageVector by lazy {
+        ImageVector.Builder("QTool.MathTools", 24.dp, 24.dp, 24f, 24f).apply {
+            path(stroke = stroke, strokeLineWidth = 1.8f, strokeLineCap = StrokeCap.Round, strokeLineJoin = StrokeJoin.Round, fill = null) {
+                moveTo(4f, 4f); verticalLineTo(20f); horizontalLineTo(20f); close()
+                moveTo(8f, 20f); verticalLineTo(17f)
+                moveTo(12f, 20f); verticalLineTo(16f)
+                moveTo(16f, 20f); verticalLineTo(18f)
+            }
+        }.build()
+    }
+
     /** جدول: قاب + دو خط افقی + یک خط عمودی مرجع. */
     val Table: ImageVector by lazy {
         ImageVector.Builder("QTool.Table", 24.dp, 24.dp, 24f, 24f).apply {

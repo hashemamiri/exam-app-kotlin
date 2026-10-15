@@ -1186,7 +1186,9 @@ private data class FigureTarget(
     val occurrenceIndex: Int? = null,
     val initialSpec: FigureSpec? = null,
     val kind: FigureKind = FigureKind.GEOMETRY,
-    val chooseType: Boolean = false
+    val chooseType: Boolean = false,
+    // V310 — ابزار ریاضی ابتدایی: فقط بخش ابتدایی فهرست محورها.
+    val mathOnly: Boolean = false
 )
 
 /** V53.1 — هدف ویرایشگر Native جدول؛ occurrence null یعنی درج جدید. */
@@ -1445,6 +1447,10 @@ private fun QuestionEditor(
                 // V136 — آیکن محور کنار نمودار.
                 onInsertAxis = {
                     figureTarget = FigureTarget(kind = FigureKind.AXIS, chooseType = true)
+                },
+                // V310 — آیکن جدا «ابزار ریاضی ابتدایی» (همان فهرست بخش ابتدایی محورها).
+                onInsertMath = {
+                    figureTarget = FigureTarget(kind = FigureKind.AXIS, chooseType = true, mathOnly = true)
                 },
                 onInsertTable = { tableTarget = TableTarget() },
                 onInsertPeriodic = { periodicTarget = TableTarget() },
@@ -1736,6 +1742,10 @@ private fun QuestionEditor(
                         fieldInsertTarget = ref
                         figureTarget = FigureTarget(kind = FigureKind.AXIS, chooseType = true)
                     }
+                    OptionInsertTool.MATH -> {
+                        fieldInsertTarget = ref
+                        figureTarget = FigureTarget(kind = FigureKind.AXIS, chooseType = true, mathOnly = true)
+                    }
                     OptionInsertTool.TABLE -> {
                         fieldInsertTarget = ref
                         tableTarget = TableTarget()
@@ -1842,7 +1852,8 @@ private fun QuestionEditor(
                 onDismiss = { fieldInsertTarget = null; figureTarget = null },
                 onTypeSelected = { spec ->
                     figureTarget = target.copy(initialSpec = spec, chooseType = false)
-                }
+                },
+                mathOnly = target.mathOnly
             )
         } else {
             FigurePickerDialog(
