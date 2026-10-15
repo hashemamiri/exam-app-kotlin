@@ -153,7 +153,7 @@
       document.body.appendChild(f); mathFrame = f;
       f.addEventListener('load', function () {
         var w = f.contentWindow, tries = 0;
-        (function go() { tries++; if (w.renderRichText && w.GeoFig) return resolve(w); if (tries < 200) setTimeout(go, 50); else resolve(null); })();
+        (function go() { tries++; if (w.renderRichText && w.GeoFig && typeof w.__hostDelimHtml === 'function') return resolve(w); /* V303.1 — تا دلیمترهای SVG هم نصب شوند */ if (tries < 200) setTimeout(go, 50); else resolve(null); })();
       });
       S.engineHtml('print').then(function (h) { if (h) f.srcdoc = h; else resolve(null); });
     });

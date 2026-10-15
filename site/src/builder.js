@@ -288,7 +288,7 @@
     previewReady = new Promise(function (resolve) {
       var f = el('iframe', {style: 'position:fixed;width:0;height:0;border:0;opacity:0;pointer-events:none', title: 'builder-math'});
       document.body.appendChild(f); previewFrame = f;
-      f.addEventListener('load', function () { var w = f.contentWindow, tries = 0; (function go() { tries++; if (w.renderRichText && w.GeoFig) return resolve(w); if (tries < 200) setTimeout(go, 50); else resolve(null); })(); });
+      f.addEventListener('load', function () { var w = f.contentWindow, tries = 0; (function go() { tries++; if (w.renderRichText && w.GeoFig && typeof w.__hostDelimHtml === 'function') return resolve(w); /* V303.1 */ if (tries < 200) setTimeout(go, 50); else resolve(null); })(); });
       S.engineHtml('print').then(function (h) { if (h) f.srcdoc = h; else resolve(null); });
     });
     return previewReady;

@@ -917,6 +917,9 @@
     if (DELIM_MAP[c0]) return '<span class="mdelim mdx-host" data-dl="' + esc(c0) + '">' + delimSvg(c0) + '<span class="mdelim-glyph"></span></span>';
     return '<span class="mdelim" data-delim="' + esc(c0) + '"><span class="mdelim-glyph">' + esc(c0) + '</span></span>';
   }
+  /* V303.1 — دلیمترهای SVG باید از همان اولین رندر در دسترس باشند: install() با setTimeout پس از DOMContentLoaded اجرا می‌شد و
+     سایت (student.js/builder.js) به‌محض دیده‌شدن renderRichText رندر می‌کرد → ماتریس با کروشهٔ متنیِ scaleY (میلهٔ سیاه) می‌آمد. */
+  window.__hostDelimHtml = delimHtml;
   function installDelimOverride() {
     /* V133 — ماتریس‌ها (pmatrix/bmatrix/…) هم از همین دلیمترهای SVGِ ویرایشگر استفاده می‌کنند (math_host.js) */
     window.__hostDelimHtml = delimHtml;
