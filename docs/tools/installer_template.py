@@ -58,7 +58,7 @@ def main():
     # V298 — ابتدا به شاخهٔ آزمایشی (staging) می‌رود؛ پس از دیدن و تأیید: python3 scripts/promote.py
     run(["git", "push", "origin", "HEAD:refs/heads/staging"])
     print("\n✅ " + VERSION + " نصب و به شاخهٔ آزمایشی (staging) ارسال شد.")
-    print("   GitHub Actions نسخهٔ آزمایشی را می‌سازد: اپ «آزمون (آزمایشی)» + سایت https://staging.onlineexam.pages.dev")
+    print("   GitHub Actions نسخهٔ آزمایشی را می‌سازد: اپ «آزمون (آزمایشی)» + سایت آزمایشی (نشانی در Summary اجرای «site» شاخهٔ staging)")
     print("   پس از بررسی و تأیید:  python3 scripts/promote.py      (انصراف:  python3 scripts/promote.py --cancel)")
 
 

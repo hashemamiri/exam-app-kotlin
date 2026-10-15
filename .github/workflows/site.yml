@@ -87,10 +87,18 @@ jobs:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           command: pages deploy site_out --project-name=onlineexam --branch=${{ github.ref_name }} --commit-dirty=true
+      # V298.1 — نشانی واقعی از خروجی wrangler (زیردامنهٔ pages.dev پروژه لزوماً «onlineexam» نیست)
       - name: نشانی سایت آزمایشی
-        if: github.ref_name == 'staging'
+        if: github.ref_name == 'staging' && (steps.deploy1.outcome == 'success' || steps.deploy2.outcome == 'success')
+        env:
+          ALIAS1: ${{ steps.deploy1.outputs.pages-deployment-alias-url }}
+          URL1: ${{ steps.deploy1.outputs.deployment-url }}
+          ALIAS2: ${{ steps.deploy2.outputs.pages-deployment-alias-url }}
+          URL2: ${{ steps.deploy2.outputs.deployment-url }}
         run: |
-          printf '## 🧪 سایت آزمایشی\n\nhttps://staging.onlineexam.pages.dev\n\nپس از تأیید: `python3 scripts/promote.py`\n' >> "$GITHUB_STEP_SUMMARY"
+          A="${ALIAS1:-$ALIAS2}"; U="${URL1:-$URL2}"
+          { echo "## 🧪 سایت آزمایشی"; echo; echo "- نشانی ثابت شاخهٔ آزمایشی: ${A:-نامشخص}"; echo "- نشانی همین انتشار: ${U:-نامشخص}"; echo; echo 'پس از تأیید: `python3 scripts/promote.py`'; } >> "$GITHUB_STEP_SUMMARY"
+          echo "STAGING SITE: ${A:-?}  (this deploy: ${U:-?})"
       - name: Deploy to Cloudflare Pages (retry 2)
         if: steps.deploy1.outcome == 'failure' && steps.deploy2.outcome == 'failure'
         uses: cloudflare/wrangler-action@v3
