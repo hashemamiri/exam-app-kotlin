@@ -29,6 +29,6 @@ class V307_Site_PrimaryBankTest {
         assertTrue(builder.contains("'🏫 بانک آمادهٔ ابتدایی'"))
         val build = File(root(), "site/build_site.py").readText()
         assertTrue(build.contains("primary_bank.json"))
-        assertTrue(build.contains("site_js.replace(\"/*__PRIMARY_BANK__*/\", bank_json)"))
+        assertTrue(build.contains("site_js.replace(\"/*__PRIMARY_BANK__*/null\", bank_json)"))
     }
 }

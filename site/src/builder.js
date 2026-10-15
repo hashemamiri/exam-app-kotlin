@@ -61,7 +61,7 @@
   function orderAnswerText(items) { return (items || []).map(function (x) { return String(x).trim().replace(/،/g, ','); }).filter(Boolean).join(','); }
 
   /* V307 / ۱۲ — بانک آمادهٔ ابتدایی (فقط خواندنی؛ داده هنگام ساخت سایت از app/src/main/assets/primary_bank.json تزریق می‌شود) */
-  var PRIMARY_BANK = /*__PRIMARY_BANK__*/{"items": []};
+  var PRIMARY_BANK = /*__PRIMARY_BANK__*/null;
   var PRI_LETTERS_BANK = ['الف', 'ب', 'ج', 'د', 'ه', 'و'];
   var PRI_SUBJECTS = ['ریاضی', 'فارسی', 'علوم', 'هدیه‌های آسمان', 'مطالعات اجتماعی']; /* V308 */
   function primaryBankDraft(item) {

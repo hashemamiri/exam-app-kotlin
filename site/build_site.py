@@ -137,7 +137,7 @@ def main():
     # V307 / ۱۲ — بانک آمادهٔ ابتدایی: همان فایل اپ (assets) در سایت تعبیه می‌شود تا دو نسخه جدا نشوند
     with open(os.path.join(ASSETS, "primary_bank.json"), encoding="utf-8") as bf:
         bank_json = json.dumps(json.loads(bf.read()), ensure_ascii=False, separators=(",", ":"))
-    site_js = site_js.replace("/*__PRIMARY_BANK__*/", bank_json)
+    site_js = site_js.replace("/*__PRIMARY_BANK__*/null", bank_json)
     out = (tpl.replace("/*__SUPABASE_URL__*/", SUPABASE_URL)
               .replace("/*__VAZIR_CSS__*/", vazir)
               .replace("/*__SITE_CSS__*/", min_css(site_css))

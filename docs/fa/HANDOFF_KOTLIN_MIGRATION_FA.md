@@ -19430,6 +19430,13 @@ CI: `compileDebugUnitTestKotlin` به‌خاطر `assertFalse` بدون import �
 - باگ V202.5: `var LANDING_TILES` داخل `paintAuth` بعد از خطی که `landing()` را صدا می‌زد تعریف شده بود → به‌خاطر hoisting مقدارش undefined و `.map` خطا می‌داد → صفحهٔ اول خالی. حالا کنار `authActive` در سطح ماژول است (تست ترتیب را پین می‌کند).
 - دروازهٔ صفحهٔ اول: mobile.js `entered()/enter()` با `sessionStorage['m-entered']`، `gateActive() = MQ && user && !entered`؛ app.js `render()` پیش از m-mode اگر gateActive → paintAuth (landing حتی با user). دکمه: user ⇒ `enter(); S.render()`؛ وگرنه `goA('login')`؛ پیوند ثبت‌نام فقط بدون user. `afterLogin()` → `SiteMobile.enter()`.
 
+### V308.1 — رفع خرابی بارگذاری سایت (سایت فقط؛ بدون تغییر نسخهٔ اپ؛ مقصد: اصلی)
+- **علت (تأیید شده):** در V307 و V308 نوشتهٔ داخلی بانک ابتدایی در bundle سایت دو بار نوشته می‌شد: `var PRIMARY_BANK={…JSON…}{"items":[]};`. این خطای نحوی باعث می‌شد کل اسکریپت اصلی سایت اجرا نشود (`SyntaxError: Unexpected token '{'`). دسکتاپ و بقیهٔ سایت بالا نمی‌آمدند.
+- **رفع:** مقدار پیش‌فرض در `site/src/builder.js` به `null` تغییر کرد؛ `site/build_site.py` فقط `/*__PRIMARY_BANK__*/null` را جایگزین می‌کند. `site/index.html` بازسازی شد.
+- **تأیید:** `node --check` روی اسکریپت اصلی سایت OK؛ بارگذاری `index.html` با jsdom بدون هیچ خطایی؛ نسخهٔ خراب‌شده با همان آزمون خطای SyntaxError را نشان داد (آزمون معتبر است).
+- **نکتهٔ فرایند:** در V307/V308 فقط خود `builder.js` با `new Function` بررسی شده بود، نه فایل ساخته‌شدهٔ سایت. از این به بعد پیش از هر بسته، `index.html` ساخته‌شده هم بررسی می‌شود.
+- **ترتیب نصب:** اگر `apply_v308.py` هنوز اجرا نشده، اول آن و بعد `apply_v308_1.py`. اگر V308 قبلاً اجرا شده، فقط `apply_v308_1.py`.
+
 ### V308 — ابتدایی: برچسب پایه و درس روی سؤال + فیلتر بانک (۱۴) (اپ 1.02.13 + سایت؛ مقصد: اصلی)
 - **پیش‌نیاز:** نصب V307 (5cd0b603). بسته روی پایهٔ 5cd0b603 ساخته شده است. **SQL:** لازم نیست.
 - **داده:** کلیدهای اختیاری `grade` (۱ تا ۶) و `subject` در JSON سؤال. فقط وقتی پر باشند نوشته می‌شوند. `QuestionDraft.grade/subject`؛ رمزگذار `ExamQuestionCodec` هر دو طرف را انجام می‌دهد؛ بانک سؤال از همان رمزگذار استفاده می‌کند.
