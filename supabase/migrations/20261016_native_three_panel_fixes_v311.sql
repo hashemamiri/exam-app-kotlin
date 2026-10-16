@@ -1,7 +1,7 @@
 -- V311.0 — رفع اشکالات تعامل سه پنل (مدیر، معلم و دانش‌آموز):
 -- ۱) رفع خطای ۵۰۰ (21000: more than one row returned by a subquery) در native_manager_teacher_classes_v40c هنگام عضویت معلم در چند مدرسهٔ یک مدیر.
 -- ۲) پشتیبانی از پارامتر اختیاری p_school در native_manager_save_teacher_class_v40c و native_manager_remove_teacher_v40b برای مدیر چندمدرسه‌ای.
--- ۳) رفع خطای «کلاس یا دانش‌آموز در مدرسه یافت نشد» در native_manager_set_class_student_v40c برای دانش‌آموزان ساخته‌شده توسط مدیر یا اعضای کلاس‌های اشتراکی، و تنظیم خودکار shared_with_manager=true در native_attach_created_student_v37 برای مدیر.
+-- ۳) رفع خطای «کلاس یا دانش‌آموز معتبر نیست» در native_manager_set_class_student_v40c برای دانش‌آموزان ساخته‌شده توسط مدیر یا اعضای کلاس‌های اشتراکی، و تنظیم خودکار shared_with_manager=true در native_attach_created_student_v37 برای مدیر.
 -- ۴) پشتیبانی از نقش مدیر در native_add_student_to_classes_v22 برای افزودن دانش‌آموز به کلاس‌های مدرسه از صفحهٔ دانش‌آموزان.
 -- ۵) اجرای خودکار ویرایش/حذف دانش‌آموز پس از تأیید معلم در native_teacher_decide_manager_request_v41 و تکمیل فیلدهای پایه/رشته/نام پدر در native_save_student_extra_v28 برای درخواست‌های مدیر.
 -- ۶) هم‌ترازسازی شمارش دانش‌آموزان در native_manager_school_summary_v36 با دانش‌آموزان قابل‌مشاهدهٔ مدیر و امکان حذف مدرسهٔ بدون کلاس/دانش‌آموز در native_manager_delete_school_v1.
@@ -16,66 +16,29 @@ update public.school_students ss
  where coalesce(ss.shared_with_manager, false) = false
    and (
        exists (select 1 from public.profiles p where p.id = ss.created_by and p.role = 'manager')
-       or exists (select 1 from public.school_memberships m where m.school_id = ss.school_id and m.user_id = ss.created_by and coalesce(m.staff_role, m.role) = 'manager')
+       or exists (select 1 from public.school_memberships m where m.school_id = ss.school_id and m.user_id = ss.created_by and m.staff_role = 'manager')
        or exists (select 1 from public.profiles sp join public.profiles mp on mp.id = sp.teacher_id where sp.id = ss.student_id and mp.role = 'manager')
    );
 
 -- ۲) اتصال دانش‌آموز جدید به مدرسه: اگر سازنده مدیر است، shared_with_manager = true ثبت شود.
-create or replace function public.native_attach_created_student_v37(
-    p_actor uuid,
-    p_student uuid,
-    p_class uuid default null
-)
-returns jsonb
-language plpgsql
+drop function if exists public.native_attach_created_student_v37(uuid, uuid, uuid);
+create or replace function public.native_attach_created_student_v37(p_actor uuid, p_student uuid)
+returns void
+language sql
 security definer
 set search_path = public, pg_temp
 as $$
-declare
-    v_role text;
-    v_school uuid;
-    v_class_teacher uuid;
-    v_is_mgr boolean := false;
-begin
-    if p_actor is null or p_student is null then
-        return jsonb_build_object('error', 'ورودی ناقص است');
-    end if;
-    select role into v_role from public.profiles where id = p_actor;
-    if v_role not in ('teacher', 'manager') then
-        return jsonb_build_object('error', 'نقش مجاز نیست');
-    end if;
-    v_is_mgr := (v_role = 'manager');
-
-    if p_class is not null then
-        select school_id, teacher_id into v_school, v_class_teacher
-        from public.classes where id = p_class;
-    end if;
-    if v_school is null then
-        v_school := public.native_user_school_id_v36(p_actor);
-    end if;
-
-    if v_school is not null then
-        insert into public.school_students(school_id, student_id, created_by, shared_with_manager)
-        values (v_school, p_student, p_actor, v_is_mgr)
-        on conflict (school_id, student_id) do update
-            set shared_with_manager = (public.school_students.shared_with_manager or excluded.shared_with_manager);
-    end if;
-
-    if v_class_teacher is not null then
-        insert into public.teacher_student_links(teacher_id, student_id, school_id, source)
-        values (v_class_teacher, p_student, v_school, 'class')
-        on conflict (teacher_id, student_id) do nothing;
-    elsif v_role = 'teacher' then
-        insert into public.teacher_student_links(teacher_id, student_id, school_id, source)
-        values (p_actor, p_student, v_school, 'created')
-        on conflict (teacher_id, student_id) do nothing;
-    end if;
-
-    return jsonb_build_object('ok', true, 'school_id', v_school, 'shared_with_manager', v_is_mgr);
-end;
+    insert into public.school_students(school_id, student_id, created_by, shared_with_manager)
+    select m.school_id, p_student, p_actor, (m.staff_role = 'manager')
+    from public.school_memberships m
+    where m.user_id = p_actor
+      and m.staff_role in ('teacher', 'manager')
+      and m.status = 'active'
+    on conflict (school_id, student_id) do update
+        set shared_with_manager = (public.school_students.shared_with_manager or excluded.shared_with_manager);
 $$;
-revoke all on function public.native_attach_created_student_v37(uuid, uuid, uuid) from public, anon, authenticated;
-grant execute on function public.native_attach_created_student_v37(uuid, uuid, uuid) to service_role;
+revoke all on function public.native_attach_created_student_v37(uuid, uuid) from public, anon, authenticated;
+grant execute on function public.native_attach_created_student_v37(uuid, uuid) to service_role;
 
 -- ۳) افزودن/حذف دانش‌آموز در کلاس توسط مدیر (شامل دانش‌آموزان ساخته‌شده توسط مدیر و اعضای کلاس‌های اشتراکی)
 create or replace function public.native_manager_set_class_student_v40c(
@@ -95,7 +58,15 @@ declare
     v_class_school uuid;
 begin
     if v_uid is null then return jsonb_build_object('error', 'ابتدا وارد شوید'); end if;
-    v_schools := public.native_manager_school_ids_v62(v_uid);
+
+    select array_agg( distinct s_id ) into v_schools
+    from (
+        select m.school_id as s_id from public.school_memberships m
+        where m.user_id = v_uid and m.staff_role = 'manager' and m.status = 'active'
+        union
+        select s.id as s_id from public.schools s where s.created_by = v_uid
+    ) u;
+
     if coalesce(array_length(v_schools, 1), 0) = 0 then
         return jsonb_build_object('error', 'مدرسه یافت نشد');
     end if;
@@ -107,8 +78,8 @@ begin
            coalesce(c.school_id, (
                select m.school_id from public.school_memberships m
                where m.school_id = any(v_schools) and m.user_id = c.teacher_id
-                 and coalesce(m.staff_role, m.role) = 'teacher' and m.status = 'active'
-               order by m.created_at asc limit 1
+                 and m.staff_role = 'teacher' and m.status = 'active'
+               order by m.joined_at asc limit 1
            ))
     into v_teacher, v_class_school
     from public.classes c
@@ -119,7 +90,7 @@ begin
           or (c.school_id is null and exists (
               select 1 from public.school_memberships m
               where m.school_id = any(v_schools) and m.user_id = c.teacher_id
-                and coalesce(m.staff_role, m.role) = 'teacher' and m.status = 'active'
+                and m.staff_role = 'teacher' and m.status = 'active'
           ))
       );
 
@@ -138,7 +109,7 @@ begin
                   or exists (
                       select 1 from public.school_memberships mm
                       where mm.user_id = ss.created_by and mm.school_id = ss.school_id
-                        and coalesce(mm.staff_role, mm.role) = 'manager' and mm.status <> 'removed'
+                        and mm.staff_role = 'manager' and mm.status <> 'removed'
                   )
               )
         )
@@ -166,8 +137,8 @@ begin
         values (p_class, p_student)
         on conflict (class_id, student_id) do nothing;
 
-        insert into public.teacher_student_links(teacher_id, student_id, school_id, source)
-        values (v_teacher, p_student, v_class_school, 'class')
+        insert into public.teacher_student_links(teacher_id, student_id, source_class_id)
+        values (v_teacher, p_student, p_class)
         on conflict (teacher_id, student_id) do nothing;
     else
         delete from public.class_members
@@ -180,10 +151,11 @@ $$;
 revoke all on function public.native_manager_set_class_student_v40c(uuid, uuid, boolean) from public, anon;
 grant execute on function public.native_manager_set_class_student_v40c(uuid, uuid, boolean) to authenticated;
 
--- ۴) افزودن دانش‌آموز به چند کلاس (پشتیبانی از هر دو نقش معلم و مدیر)
+-- ۴) افزودن دانش‌آموز به چند کلاس (پشتیبانی از هر دو نقش معلم و مدیر، با امضای واحد uuid[])
+drop function if exists public.native_add_student_to_classes_v22(uuid, jsonb);
 create or replace function public.native_add_student_to_classes_v22(
     p_student uuid,
-    p_classes jsonb
+    p_classes uuid[]
 )
 returns jsonb
 language plpgsql
@@ -197,27 +169,35 @@ declare
     v_added integer := 0;
 begin
     if v_uid is null then return jsonb_build_object('error', 'ابتدا وارد شوید'); end if;
-    if p_student is null or p_classes is null or jsonb_typeof(p_classes) <> 'array' then
+    if p_student is null or p_classes is null then
         return jsonb_build_object('error', 'ورودی نامعتبر است');
     end if;
     select role into v_role from public.profiles where id = v_uid;
 
     if v_role = 'manager' then
-        v_schools := public.native_manager_school_ids_v62(v_uid);
+        select array_agg(distinct s_id) into v_schools
+        from (
+            select m.school_id as s_id from public.school_memberships m
+            where m.user_id = v_uid and m.staff_role = 'manager' and m.status = 'active'
+            union
+            select s.id as s_id from public.schools s where s.created_by = v_uid
+        ) u;
+
         if coalesce(array_length(v_schools, 1), 0) = 0 then
             return jsonb_build_object('error', 'مدرسه یافت نشد');
         end if;
+
         with target_classes as (
-            select c.id, c.teacher_id, coalesce(c.school_id, v_schools[1]) as school_id
+            select distinct c.id, c.teacher_id, coalesce(c.school_id, v_schools[1]) as school_id
             from public.classes c
-            join (select distinct value::uuid as id from jsonb_array_elements_text(p_classes) where value ~* '^[0-9a-f-]{36}$') w on w.id = c.id
-            where (c.shared_with_manager = true or coalesce(c.created_by, c.teacher_id) = v_uid)
+            where c.id = any(p_classes)
+              and (c.shared_with_manager = true or coalesce(c.created_by, c.teacher_id) = v_uid)
               and (
                   c.school_id = any(v_schools)
                   or (c.school_id is null and exists (
                       select 1 from public.school_memberships m
                       where m.school_id = any(v_schools) and m.user_id = c.teacher_id
-                        and coalesce(m.staff_role, m.role) = 'teacher' and m.status = 'active'
+                        and m.staff_role = 'teacher' and m.status = 'active'
                   ))
               )
         ), ins_cm as (
@@ -230,40 +210,42 @@ begin
             select distinct tc.school_id, p_student, v_uid, true from target_classes tc where tc.school_id is not null
             on conflict (school_id, student_id) do nothing
         ), ins_tsl as (
-            insert into public.teacher_student_links(teacher_id, student_id, school_id, source)
-            select distinct tc.teacher_id, p_student, tc.school_id, 'class' from target_classes tc where tc.teacher_id is not null
+            insert into public.teacher_student_links(teacher_id, student_id, source_class_id)
+            select distinct on (tc.teacher_id) tc.teacher_id, p_student, tc.id
+            from target_classes tc where tc.teacher_id is not null
             on conflict (teacher_id, student_id) do nothing
         )
         select count(*) into v_added from ins_cm;
+
         return jsonb_build_object('ok', true, 'added', v_added);
     end if;
 
-    if not public.native_teacher_can_see_student_v40c(v_uid, p_student) then
-        return jsonb_build_object('error', 'دانش‌آموز یافت نشد یا دسترسی ندارید');
+    if not exists (
+        select 1 from public.school_memberships me
+        join public.school_students ss on ss.school_id = me.school_id and ss.student_id = p_student
+        where me.user_id = v_uid and me.status = 'active'
+    ) and not exists (
+        select 1 from public.profiles where id = p_student and teacher_id = v_uid
+    ) and not exists (
+        select 1 from public.teacher_student_links l where l.teacher_id = v_uid and l.student_id = p_student
+    ) then
+        return jsonb_build_object('error', 'دانش‌آموز در دسترس نیست');
     end if;
 
-    with inserted as (
-        insert into public.class_members(class_id, student_id)
-        select c.id, p_student
-        from public.classes c
-        join (
-            select distinct value::uuid as id
-            from jsonb_array_elements_text(p_classes)
-            where value ~* '^[0-9a-f-]{36}$'
-        ) wanted on wanted.id = c.id
-        where c.teacher_id = v_uid
-        on conflict (class_id, student_id) do nothing
-        returning 1
-    )
-    select count(*) into v_added from inserted;
+    insert into public.class_members(class_id, student_id)
+    select distinct c.id, p_student
+    from public.classes c
+    where c.id = any(p_classes) and c.teacher_id = v_uid
+    on conflict (class_id, student_id) do nothing;
+    get diagnostics v_added = row_count;
 
     return jsonb_build_object('ok', true, 'added', v_added);
 end;
 $$;
-revoke all on function public.native_add_student_to_classes_v22(uuid, jsonb) from public, anon;
-grant execute on function public.native_add_student_to_classes_v22(uuid, jsonb) to authenticated;
+revoke all on function public.native_add_student_to_classes_v22(uuid, uuid[]) from public, anon;
+grant execute on function public.native_add_student_to_classes_v22(uuid, uuid[]) to authenticated;
 
--- ۵) فهرست کلاس‌های معلم برای مدیر (رفع خطای 21000 در چندمدرسه‌ای با limit 1)
+-- ۵) فهرست کلاس‌های معلم برای مدیر (رفع خطای 21000 در چندمدرسه‌ای با order by m.joined_at asc limit 1)
 create or replace function public.native_manager_teacher_classes_v40c(p_teacher uuid)
 returns jsonb
 language plpgsql
@@ -277,19 +259,27 @@ declare
     v_teacher_name text;
 begin
     if v_uid is null then return jsonb_build_object('error', 'ابتدا وارد شوید'); end if;
-    v_schools := public.native_manager_school_ids_v62(v_uid);
+
+    select array_agg(distinct s_id) into v_schools
+    from (
+        select m.school_id as s_id from public.school_memberships m
+        where m.user_id = v_uid and m.staff_role = 'manager' and m.status = 'active'
+        union
+        select s.id as s_id from public.schools s where s.created_by = v_uid
+    ) u;
+
     if coalesce(array_length(v_schools, 1), 0) = 0 then
         return jsonb_build_object('error', 'مدرسه یافت نشد');
     end if;
     if p_teacher is null or not exists (
         select 1 from public.school_memberships m
         where m.school_id = any(v_schools) and m.user_id = p_teacher
-          and coalesce(m.staff_role, m.role) = 'teacher' and m.status = 'active'
+          and m.staff_role = 'teacher' and m.status <> 'removed'
     ) then
-        return jsonb_build_object('error', 'معلم در این مدرسه فعال نیست');
+        return jsonb_build_object('error', 'معلم در مدرسه یافت نشد');
     end if;
 
-    select coalesce(p.full_name, p.display_name, p.username, '') into v_teacher_name
+    select coalesce(p.full_name, p.username, '') into v_teacher_name
     from public.profiles p where p.id = p_teacher;
 
     return jsonb_build_object(
@@ -302,33 +292,34 @@ begin
                 'name', c.name,
                 'grade', coalesce(c.grade, ''),
                 'field', coalesce(c.field_of_study, ''),
+                'field_of_study', coalesce(c.field_of_study, ''),
                 'school_id', coalesce(c.school_id, (
                     select m.school_id from public.school_memberships m
                     where m.school_id = any(v_schools) and m.user_id = p_teacher
-                      and coalesce(m.staff_role, m.role) = 'teacher' and m.status = 'active'
-                    order by m.created_at asc limit 1
+                      and m.staff_role = 'teacher' and m.status = 'active'
+                    order by m.joined_at asc limit 1
                 )),
                 'school_name', coalesce((
                     select s.name from public.schools s
                     where s.id = coalesce(c.school_id, (
                         select m.school_id from public.school_memberships m
                         where m.school_id = any(v_schools) and m.user_id = p_teacher
-                          and coalesce(m.staff_role, m.role) = 'teacher' and m.status = 'active'
-                        order by m.created_at asc limit 1
+                          and m.staff_role = 'teacher' and m.status = 'active'
+                        order by m.joined_at asc limit 1
                     ))
                 ), ''),
                 'total', (select count(*) from public.class_members cm where cm.class_id = c.id),
                 'manager_created', coalesce(c.created_by, c.teacher_id) = v_uid
-            ) order by c.created_at desc)
+            ) order by c.created_at desc nulls last, c.name)
             from public.classes c
             where c.teacher_id = p_teacher
-              and (c.shared_with_manager = true or coalesce(c.created_by, c.teacher_id) = v_uid)
+              and (c.shared_with_manager = true or coalesce(c.created_by, c.teacher_id) <> c.teacher_id)
               and (
                   c.school_id = any(v_schools)
                   or (c.school_id is null and exists (
                       select 1 from public.school_memberships m
                       where m.school_id = any(v_schools) and m.user_id = p_teacher
-                        and coalesce(m.staff_role, m.role) = 'teacher' and m.status = 'active'
+                        and m.staff_role = 'teacher' and m.status = 'active'
                   ))
               )
         ), '[]'::jsonb)
@@ -360,7 +351,15 @@ declare
     v_id uuid;
 begin
     if v_uid is null then return jsonb_build_object('error', 'ابتدا وارد شوید'); end if;
-    v_schools := public.native_manager_school_ids_v62(v_uid);
+
+    select array_agg(distinct s_id) into v_schools
+    from (
+        select m.school_id as s_id from public.school_memberships m
+        where m.user_id = v_uid and m.staff_role = 'manager' and m.status = 'active'
+        union
+        select s.id as s_id from public.schools s where s.created_by = v_uid
+    ) u;
+
     if coalesce(array_length(v_schools, 1), 0) = 0 then
         return jsonb_build_object('error', 'مدرسه یافت نشد');
     end if;
@@ -375,7 +374,7 @@ begin
         if not exists (
             select 1 from public.school_memberships m
             where m.school_id = p_school and m.user_id = p_teacher
-              and coalesce(m.staff_role, m.role) = 'teacher' and m.status = 'active'
+              and m.staff_role = 'teacher' and m.status = 'active'
         ) then
             return jsonb_build_object('error', 'معلم در مدرسهٔ انتخابی عضو نیست');
         end if;
@@ -386,7 +385,7 @@ begin
         from public.school_memberships m
         where m.school_id = any(v_schools)
           and m.user_id = p_teacher
-          and coalesce(m.staff_role, m.role) = 'teacher'
+          and m.staff_role = 'teacher'
           and m.status = 'active';
 
         if coalesce(v_common_count, 0) = 0 then
@@ -436,10 +435,19 @@ as $$
 declare
     v_uid uuid := auth.uid();
     v_schools uuid[];
+    v_audit_school uuid;
     v_count integer;
 begin
     if v_uid is null then return jsonb_build_object('error', 'ابتدا وارد شوید'); end if;
-    v_schools := public.native_manager_school_ids_v62(v_uid);
+
+    select array_agg(distinct s_id) into v_schools
+    from (
+        select m.school_id as s_id from public.school_memberships m
+        where m.user_id = v_uid and m.staff_role = 'manager' and m.status = 'active'
+        union
+        select s.id as s_id from public.schools s where s.created_by = v_uid
+    ) u;
+
     if coalesce(array_length(v_schools, 1), 0) = 0 then
         return jsonb_build_object('error', 'مدرسه یافت نشد');
     end if;
@@ -448,15 +456,32 @@ begin
         return jsonb_build_object('error', 'این مدرسه متعلق به شما نیست');
     end if;
 
-    delete from public.school_memberships
+    select m.school_id into v_audit_school
+    from public.school_memberships m
+    where m.user_id = p_teacher
+      and m.staff_role = 'teacher'
+      and m.status <> 'removed'
+      and (p_school is null or m.school_id = p_school)
+      and m.school_id = any(v_schools)
+    limit 1;
+
+    update public.school_memberships
+    set status = 'removed'
     where user_id = p_teacher
-      and coalesce(staff_role, role) = 'teacher'
+      and staff_role = 'teacher'
+      and status <> 'removed'
       and (p_school is null or school_id = p_school)
       and school_id = any(v_schools);
     get diagnostics v_count = row_count;
     if v_count = 0 then
-        return jsonb_build_object('error', 'معلم در این مدرسه یافت نشد');
+        return jsonb_build_object('error', 'معلم پیدا نشد');
     end if;
+
+    if v_audit_school is not null then
+        insert into public.school_admin_audit_v37(school_id, actor_id, target_id, action)
+        values (v_audit_school, v_uid, p_teacher, 'teacher_membership_removed');
+    end if;
+
     return jsonb_build_object('ok', true, 'removed', v_count);
 end;
 $$;
@@ -469,11 +494,11 @@ declare v_uid uuid := auth.uid(); v_classes int; v_exams int; v_students int; v_
 begin
   if v_uid is null then return jsonb_build_object('error','ابتدا وارد شوید'); end if;
   if not exists (select 1 from public.schools s where s.id=p_school and (s.created_by=v_uid
-       or exists (select 1 from public.school_memberships m where m.school_id=s.id and m.user_id=v_uid and coalesce(m.staff_role, m.role)='manager' and m.status='active'))) then
+       or exists (select 1 from public.school_memberships m where m.school_id=s.id and m.user_id=v_uid and m.staff_role='manager' and m.status='active'))) then
     return jsonb_build_object('error','این مدرسه متعلق به شما نیست');
   end if;
   select count(*) into v_mine from public.schools s where s.created_by=v_uid
-     or exists (select 1 from public.school_memberships m where m.school_id=s.id and m.user_id=v_uid and coalesce(m.staff_role, m.role)='manager' and m.status='active');
+     or exists (select 1 from public.school_memberships m where m.school_id=s.id and m.user_id=v_uid and m.staff_role='manager' and m.status='active');
   if v_mine <= 1 then return jsonb_build_object('error','آخرین مدرسهٔ شما حذف نمی‌شود؛ می‌توانید نام آن را ویرایش کنید'); end if;
   select count(*) into v_classes from public.classes where school_id=p_school;
   select count(*) into v_exams from public.exams where school_id=p_school;
@@ -491,14 +516,14 @@ grant execute on function public.native_manager_delete_school_v1(uuid) to authen
 -- ۸) هم‌ترازسازی شمارش دانش‌آموزان قابل‌مشاهدهٔ مدیر در native_manager_school_summary_v36
 create or replace function public.native_manager_school_summary_v36()
 returns jsonb language sql stable security definer set search_path=public,pg_temp as $$
-with mine as(select school_id from public.school_memberships where user_id=auth.uid() and coalesce(staff_role,role)='manager' and status='active'
+with mine as(select school_id from public.school_memberships where user_id=auth.uid() and staff_role='manager' and status='active'
              union select id from public.schools where created_by=auth.uid()),
-teachers as(select distinct sm.user_id from public.school_memberships sm where sm.school_id in(select school_id from mine) and coalesce(sm.staff_role,sm.role)='teacher' and sm.status='active'),
+teachers as(select distinct sm.user_id from public.school_memberships sm where sm.school_id in(select school_id from mine) and sm.staff_role='teacher' and sm.status='active'),
 vis_students as(
     select ss.student_id
     from public.school_students ss join mine on mine.school_id=ss.school_id
     where ss.shared_with_manager or ss.created_by=auth.uid()
-       or exists(select 1 from public.school_memberships mm where mm.user_id=ss.created_by and mm.school_id=ss.school_id and coalesce(mm.staff_role,mm.role)='manager' and mm.status<>'removed')
+       or exists(select 1 from public.school_memberships mm where mm.user_id=ss.created_by and mm.school_id=ss.school_id and mm.staff_role='manager' and mm.status<>'removed')
        or exists(select 1 from public.class_members cm2 join public.classes c2 on c2.id=cm2.class_id where cm2.student_id=ss.student_id and c2.school_id=ss.school_id and (c2.shared_with_manager or coalesce(c2.created_by,c2.teacher_id)<>c2.teacher_id))
     union
     select cm.student_id
@@ -516,7 +541,7 @@ select case when not exists(select 1 from mine) then jsonb_build_object('error',
  'city',(select min(coalesce(s.city,'')) from public.schools s where s.id in(select school_id from mine)),
  'teachers',(select count(*) from teachers),
  'students',(select count(distinct v.student_id) from vis_students v join public.profiles p on p.id=v.student_id where p.role='student'),
- 'classes',(select count(*) from public.classes c where c.school_id in(select school_id from mine) and (c.shared_with_manager or coalesce(c.created_by,c.teacher_id)=auth.uid())),
+ 'classes',(select count(*) from public.classes c where c.school_id in(select school_id from mine) and (c.shared_with_manager or coalesce(c.created_by,c.teacher_id)<>c.teacher_id)),
  'exams',(select count(*) from examset),
  'answers',(select answers from answer_stats),
  'average_percent',(select round(average_percent::numeric,1) from answer_stats),
@@ -700,7 +725,6 @@ begin
             set first_name = coalesce(v_fn, first_name),
                 last_name = coalesce(v_ln, last_name),
                 full_name = coalesce(v_full, full_name),
-                display_name = coalesce(v_full, display_name),
                 username = coalesce(v_un, username),
                 gender = coalesce(v_gen, gender),
                 father_name = case when r.payload ? 'father_name' then nullif(btrim(coalesce(r.payload->>'father_name', '')), '') else father_name end,
@@ -849,12 +873,13 @@ begin
     )
     select
         p.id as student_id,
-        coalesce(p.full_name, p.display_name, p.username, '')::text as full_name,
+        coalesce(p.full_name, p.username, '')::text as full_name,
         coalesce(p.first_name, '')::text as first_name,
         coalesce(p.last_name, '')::text as last_name,
         p.username::text as username,
         p.gender::text as gender,
         case
+            when ans.student_id is not null and ans.graded then 'graded'
             when ans.student_id is not null then 'submitted'
             when coalesce(att.has_open, false) and (att.open_expires is null or att.open_expires > now()) then 'in_progress'
             when coalesce(att.has_open, false) and att.open_expires <= now() then 'expired'
@@ -905,14 +930,10 @@ begin
         count(*)::integer,
         count(*) filter (where a.status = 'submitted')::integer,
         count(*) filter (where a.status in ('in_progress', 'started'))::integer,
-        count(*) filter (where a.status in ('absent', 'not_started', 'expired'))::integer
-    into v_roster, v_submitted, v_started, v_absent
+        count(*) filter (where a.status in ('absent', 'not_started', 'expired'))::integer,
+        count(*) filter (where a.status = 'graded')::integer
+    into v_roster, v_submitted, v_started, v_absent, v_graded
     from public.exam_attendance(p_exam) a;
-
-    select count(*)::integer into v_graded
-    from public.answers ans
-    join public.exams e on e.id = ans.exam_id
-    where ans.exam_id = p_exam and e.teacher_id = auth.uid() and coalesce(ans.graded, false);
 
     return jsonb_build_object(
         'roster', v_roster,
@@ -936,11 +957,11 @@ select jsonb_build_object('ok',true,'items',coalesce((
         'classes',(select count(*) from public.classes c
                    where c.school_id=s.id and (
                        c.teacher_id=auth.uid()
-                       or ((c.shared_with_manager or coalesce(c.created_by,c.teacher_id)=auth.uid())
+                       or ((c.shared_with_manager or coalesce(c.created_by,c.teacher_id)<>c.teacher_id)
                            and (s.created_by=auth.uid() or exists(
                                select 1 from public.school_memberships mm
                                where mm.school_id=s.id and mm.user_id=auth.uid()
-                                 and coalesce(mm.staff_role,mm.role)='manager' and mm.status='active'
+                                 and mm.staff_role='manager' and mm.status='active'
                            )))
                    ))
     ) order by s.name)
@@ -991,7 +1012,13 @@ begin
     if v_mode not in ('all', 'classes', 'students', 'schools') then return jsonb_build_object('error', 'نوع مخاطب نامعتبر است'); end if;
 
     if v_role = 'manager' then
-        v_mgr_schools := public.native_manager_school_ids_v62(v_uid);
+        select array_agg(distinct s_id) into v_mgr_schools
+        from (
+            select m.school_id as s_id from public.school_memberships m
+            where m.user_id = v_uid and m.staff_role = 'manager' and m.status = 'active'
+            union
+            select s.id as s_id from public.schools s where s.created_by = v_uid
+        ) u;
     end if;
 
     if v_mode = 'classes' then
@@ -1140,7 +1167,7 @@ begin
                               and (sc.created_by = n.teacher_id or exists (
                                   select 1 from public.school_memberships sm
                                   where sm.school_id = ss.school_id and sm.user_id = n.teacher_id
-                                    and coalesce(sm.staff_role, sm.role) = 'manager' and sm.status = 'active'
+                                    and sm.staff_role = 'manager' and sm.status = 'active'
                               ))
                         )
                     )
@@ -1219,7 +1246,7 @@ begin
                       and (sc.created_by = n.teacher_id or exists (
                           select 1 from public.school_memberships sm
                           where sm.school_id = ss.school_id and sm.user_id = n.teacher_id
-                            and coalesce(sm.staff_role, sm.role) = 'manager' and sm.status = 'active'
+                            and sm.staff_role = 'manager' and sm.status = 'active'
                       ))
                 )
             )
@@ -1229,11 +1256,13 @@ begin
                     select 1 from public.calendar_note_students s
                     where s.note_id = n.id and s.student_id = v_uid
                 ))
-                or (n.audience = 'classes' and exists (
-                    select 1 from public.calendar_note_classes c
-                    join public.class_members m on m.class_id = c.class_id
-                    where c.note_id = n.id and m.student_id = v_uid
-                ))
+                or (
+                    n.audience = 'classes' and exists (
+                        select 1 from public.calendar_note_classes c
+                        join public.class_members m on m.class_id = c.class_id
+                        where c.note_id = n.id and m.student_id = v_uid
+                    )
+                )
             )
         )
       );

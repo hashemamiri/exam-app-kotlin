@@ -16,7 +16,7 @@ class V311_ThreePanelFixesTest {
         assertTrue("native_manager_set_class_student_v40c" in sql)
         assertTrue("native_add_student_to_classes_v22" in sql)
         assertTrue("native_manager_teacher_classes_v40c" in sql)
-        assertTrue("order by m.created_at asc limit 1" in sql)
+        assertTrue("order by m.joined_at asc limit 1" in sql)
         assertTrue("native_manager_save_teacher_class_v40c" in sql)
         assertTrue("p_school uuid default null" in sql)
         assertTrue("native_manager_remove_teacher_v40b" in sql)
