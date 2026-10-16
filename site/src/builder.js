@@ -957,7 +957,7 @@
     /* V308 / ۱۴ — برچسب پایه و درس سؤال؛ فیلتر بانک حالت ابتدایی از همین برچسب‌ها استفاده می‌کند */
     function primaryTagEditor(q, redraw) {
       var box = el('div', {class: 'field', style: 'margin-top:8px'});
-      box.appendChild(el('div', {class: 'muted', style: 'font-size:13px', text: 'برچسب ابتدایی (برای فیلتر بانک)'}));
+      box.appendChild(el('div', {class: 'muted', style: 'font-size:13px', text: 'برچسب ابتدایی (برای فیلتر بانک سوال)'}));
       var g = el('div', {class: 'row', style: 'gap:6px;flex-wrap:wrap;margin:6px 0'});
       g.appendChild(el('button', {class: 'btn sm ' + (!q.grade ? '' : 'light'), text: 'بدون پایه', onclick: function () { q.grade = 0; mark(); redraw(); }}));
       for (var gi = 1; gi <= 6; gi++) (function (n) { g.appendChild(el('button', {class: 'btn sm ' + (q.grade === n ? '' : 'light'), text: 'پایهٔ ' + fa(n), onclick: function () { q.grade = n; mark(); redraw(); }})); })(gi);
@@ -1160,7 +1160,7 @@
       var prw = el('div', {class: 'b-pr-wrap'}); var prb = pickRulesBox(state); if (prb) prw.appendChild(prb); m_.appendChild(prw); /* V272 — V275: ظرف ثابت تا با افزودن/حذف سؤال تازه شود */
       m_.appendChild(el('div', {class: 'row', style: 'margin-bottom:12px'}, [chk('به‌هم‌ریختن سؤال‌ها', state.shuffleQuestions, function (v) { state.shuffleQuestions = v; mark(); }), chk('به‌هم‌ریختن گزینه‌ها', state.shuffleOptions, function (v) { state.shuffleOptions = v; mark(); }), chk('ثبت خودکار با پایان زمان', state.attemptOnTimeout, function (v) { state.attemptOnTimeout = v; mark(); })]));
       /* V301 — حالت ابتدایی (اول تا ششم): با انتخاب کلاس ابتدایی خودکار روشن می‌شود؛ معلم می‌تواند تغییر دهد. */
-      m_.appendChild(el('div', {class: 'row', style: 'margin-bottom:12px;flex-wrap:wrap;gap:8px'}, [chk('حالت ابتدایی (اول تا ششم)', state.primaryMode, function (v) { state.primaryMode = v; mark(); }), el('span', {class: 'muted', style: 'font-size:12px', text: 'متن درشت، گزینه‌های بزرگ و لمسی، یک سؤال در هر صفحه، زمان‌سنج کم‌رنگ و پایان دوستانه.'})]));
+      m_.appendChild(el('div', {class: 'row', style: 'margin-bottom:12px;flex-wrap:wrap;gap:8px'}, [chk('حالت ابتدایی (اول تا ششم)', state.primaryMode, function (v) { state.primaryMode = v; mark(); if (typeof drawList === 'function') drawList(); if (typeof drawEditor === 'function') drawEditor(); }), el('span', {class: 'muted', style: 'font-size:12px', text: 'متن درشت، گزینه‌های بزرگ و لمسی، یک سؤال در هر صفحه، زمان‌سنج کم‌رنگ و پایان دوستانه.'})]));
       if (state.primaryMode) m_.appendChild(el('div', {class: 'field'}, [el('label', {text: 'آستانهٔ سطح‌ها (٪): خیلی خوب، خوب، قابل قبول'}), (function () { var ti = el('input', {type: 'text', value: state.levelThresholds || '', placeholder: '85,70,50'}); ti.addEventListener('input', function () { state.levelThresholds = ti.value; mark(); }); return ti; })(), el('span', {class: 'muted', style: 'font-size:12px', text: 'زیر آخرین عدد: نیاز به تلاش بیشتر. خالی = ۸۵، ۷۰، ۵۰.'})])); /* V305 */
       var tm = el('textarea', {rows: 2, style: 'width:100%;border:1px solid var(--line);border-radius:10px;padding:8px'}); tm.value = state.teacherMessage; tm.addEventListener('input', function () { state.teacherMessage = tm.value; mark(); });
       m_.appendChild(el('div', {class: 'field'}, [el('label', {text: 'پیام معلم به دانش‌آموز (اختیاری)'}), tm]));

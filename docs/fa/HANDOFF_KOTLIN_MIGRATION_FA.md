@@ -19430,6 +19430,12 @@ CI: `compileDebugUnitTestKotlin` به‌خاطر `assertFalse` بدون import �
 - باگ V202.5: `var LANDING_TILES` داخل `paintAuth` بعد از خطی که `landing()` را صدا می‌زد تعریف شده بود → به‌خاطر hoisting مقدارش undefined و `.map` خطا می‌داد → صفحهٔ اول خالی. حالا کنار `authActive` در سطح ماژول است (تست ترتیب را پین می‌کند).
 - دروازهٔ صفحهٔ اول: mobile.js `entered()/enter()` با `sessionStorage['m-entered']`، `gateActive() = MQ && user && !entered`؛ app.js `render()` پیش از m-mode اگر gateActive → paintAuth (landing حتی با user). دکمه: user ⇒ `enter(); S.render()`؛ وگرنه `goA('login')`؛ پیوند ثبت‌نام فقط بدون user. `afterLogin()` → `SiteMobile.enter()`.
 
+### V310.6 — منوی کشویی نوع/برچسب ابتدایی در اپ؛ بازسازی فوری ویرایشگر سایت (اپ 1.02.21 + سایت)
+- سایت: chk حالت ابتدایی حالا drawList() و drawEditor() را صدا می‌زند.
+- اپ: PrimaryDropdown جای چیپ‌های «نوع ابتدایی» و «برچسب ابتدایی» (پایه/درس) نشست.
+- باز: «ابزار ریاضی در اپ به درستی کار نمی‌کند» (نمایش شکل/مقدار ابزارهای ابتدایی). وب (GraphFig.svg) برای هر ۷ نوع ریاضی در Chromium headless بدون خطا رندر شد؛ پس مشکل احتمالاً در مسیر بومی/WebView اپ است و نیاز به بررسی دستگاه با جزئیات دارد.
+- تست: V310_5_PrimaryDropdownTest.
+
 ### V310.4 — جدول ماتریسی: اندازه از محتوا (ویرایشگر، کادر سؤال، پیش‌نمایش؛ اپ 1.02.20 + سایت)
 - علت: `.tbx-wrap` عرض کامل کادر را می‌گرفت و جدول ماتریسی به‌خاطر `table-layout:fixed` و `width:100%` ستون‌های هم‌عرض و براکت‌های دور می‌ساخت (دسکتاپ).
 - اصلاح: استایل درون‌خطی در `table_fig.js` + `tools_styles.css`؛ ورودی‌های ماتریس در ویرایشگر محدود شد؛ سایت با `site/build_site.py` بازسازی شد (engines.8ffeccf54cba.js).

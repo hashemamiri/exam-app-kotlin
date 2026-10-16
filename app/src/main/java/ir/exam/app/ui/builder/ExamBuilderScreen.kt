@@ -2238,20 +2238,58 @@ private fun QuestionType.faLabel(): String = when (this) {
 /** انتخاب نوع ویژهٔ سؤال: جای‌خالی → مرتب‌سازی؛ چندگزینه‌ای → انتخاب روی تصویر. */
 /** V308 / ۱۴ — برچسب پایه و درس سؤال؛ فیلتر بانک حالت ابتدایی از همین برچسب‌ها استفاده می‌کند. */
 @Composable
-private fun PrimaryTagEditor(question: QuestionDraft, viewModel: ExamBuilderViewModel) {
-    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        Text("برچسب ابتدایی (برای فیلتر بانک)", style = MaterialTheme.typography.labelMedium)
-        Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            FilterChip(selected = question.grade == 0, onClick = { viewModel.setQuestionTags(question.id, 0, question.subject) }, label = { Text("بدون پایه") })
-            (1..6).forEach { g ->
-                FilterChip(selected = question.grade == g, onClick = { viewModel.setQuestionTags(question.id, g, question.subject) }, label = { Text("پایهٔ ${PersianDigits.convert(g)}") })
+private fun PrimaryDropdown(
+    selectedValue: String,
+    options: List<Pair<String, String>>,
+    onSelect: (String) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    // V310.5 — منوی کشویی حالت ابتدایی (جای چیپ‌های ردیفی)
+    var open by remember { mutableStateOf(false) }
+    val selectedLabel = options.firstOrNull { it.first == selectedValue }?.second ?: options.first().second
+    Box(modifier) {
+        OutlinedButton(onClick = { open = true }, modifier = Modifier.fillMaxWidth()) {
+            Text(selectedLabel, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Start)
+            Text("▼")
+        }
+        DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
+            options.forEach { (value, label) ->
+                DropdownMenuItem(
+                    text = { Text(label) },
+                    onClick = {
+                        open = false
+                        onSelect(value)
+                    }
+                )
             }
         }
-        Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            FilterChip(selected = question.subject.isEmpty(), onClick = { viewModel.setQuestionTags(question.id, question.grade, "") }, label = { Text("بدون درس") })
-            ir.exam.app.ui.builder.PrimaryBank.SUBJECTS.forEach { sub ->
-                FilterChip(selected = question.subject == sub, onClick = { viewModel.setQuestionTags(question.id, question.grade, sub) }, label = { Text(sub) })
-            }
+    }
+}
+
+@Composable
+private fun PrimaryTagEditor(question: QuestionDraft, viewModel: ExamBuilderViewModel) {
+    // V310.5 — برچسب ابتدایی به‌صورت منوی کشویی؛ این برچسب‌ها فیلتر بانک سؤال را می‌سازند
+    val gradeOptions = listOf("0" to "بدون پایه") + (1..6).map { g -> g.toString() to "پایهٔ ${PersianDigits.convert(g)}" }
+    val subjectOptions = listOf("" to "بدون درس") + ir.exam.app.ui.builder.PrimaryBank.SUBJECTS.map { it to it }
+    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Text("برچسب ابتدایی (برای فیلتر بانک سوال)", style = MaterialTheme.typography.labelMedium)
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text("پایه:")
+            PrimaryDropdown(
+                selectedValue = question.grade.toString(),
+                options = gradeOptions,
+                onSelect = { viewModel.setQuestionTags(question.id, it.toInt(), question.subject) },
+                modifier = Modifier.weight(1f)
+            )
+        }
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text("درس:")
+            PrimaryDropdown(
+                selectedValue = question.subject,
+                options = subjectOptions,
+                onSelect = { viewModel.setQuestionTags(question.id, question.grade, it) },
+                modifier = Modifier.weight(1f)
+            )
         }
     }
 }
@@ -2264,15 +2302,15 @@ private fun PrimaryModeChooser(question: QuestionDraft, viewModel: ExamBuilderVi
         QuestionType.ESSAY -> listOf("" to "پاسخ متنی", "draw" to "پاسخ با نقاشی (تخته بزرگ)", "voice" to "پاسخ صوتی (ضبط)")
         else -> listOf("" to "گزینه‌ای معمولی", "hotspot" to "انتخاب روی تصویر")
     }
+    // V310.5 — نوع ابتدایی به‌صورت منوی کشویی
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         Text("نوع ابتدایی:")
-        choices.forEach { (value, label) ->
-            FilterChip(
-                selected = question.mode == value,
-                onClick = { viewModel.setQuestionMode(question.id, value) },
-                label = { Text(label) }
-            )
-        }
+        PrimaryDropdown(
+            selectedValue = question.mode,
+            options = choices,
+            onSelect = { viewModel.setQuestionMode(question.id, it) },
+            modifier = Modifier.weight(1f)
+        )
     }
     // V309 — پاسخ صوتی: سقف مدت ضبط (ثانیه) برای این سؤال
     if (question.mode == "voice") {
