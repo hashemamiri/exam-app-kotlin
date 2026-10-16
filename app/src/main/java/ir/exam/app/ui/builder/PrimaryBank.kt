@@ -26,7 +26,19 @@ object PrimaryBank {
     const val ASSET = "primary_bank.json"
 
     /** V308 / ۱۴ — درس‌های ثابت حالت ابتدایی (برچسب سؤال و فیلتر بانک). */
-    val SUBJECTS = listOf("ریاضی", "فارسی", "علوم", "هدیه‌های آسمان", "مطالعات اجتماعی")
+    /** V310.9 — دروس هر پایهٔ ابتدایی (فهرست رسمی). */
+    val GRADE_SUBJECTS: Map<Int, List<String>> = run {
+        val p1 = listOf("آموزش قرآن", "فارسی", "نگارش فارسی", "ریاضی", "علوم تجربی")
+        val p2 = listOf("آموزش قرآن", "هدیه‌های آسمان", "فارسی", "نگارش فارسی", "ریاضی", "علوم تجربی")
+        val p3 = p2 + "مطالعات اجتماعی"
+        mapOf(1 to p1, 2 to p2, 3 to p3, 4 to p3, 5 to p3, 6 to p3 + listOf("تفکر و پژوهش", "کار و فناوری"))
+    }
+
+    /** همهٔ دروس (برای «همه پایه‌ها» / «بدون پایه»)؛ بدون تکرار. */
+    val SUBJECTS: List<String> = GRADE_SUBJECTS.values.flatten().distinct()
+
+    /** دروس مجاز برای یک پایه؛ پایهٔ نامعتبر (۰) → همهٔ دروس. */
+    fun subjectsFor(grade: Int): List<String> = if (grade in 1..6) GRADE_SUBJECTS[grade].orEmpty() else SUBJECTS
 
     fun parse(raw: String): List<PrimaryBankItem> {
         val root = Json.parseToJsonElement(raw).jsonObject

@@ -38,6 +38,6 @@ class V308_GradeSubjectTagTest {
         assertNotNull(draft)
         assertEquals(4, draft!!.grade)
         assertEquals("علوم", draft.subject)
-        assertEquals(listOf("ریاضی", "فارسی", "علوم", "هدیه‌های آسمان", "مطالعات اجتماعی"), PrimaryBank.SUBJECTS)
+        assertEquals(listOf("آموزش قرآن", "فارسی", "نگارش فارسی", "ریاضی", "علوم تجربی"), PrimaryBank.subjectsFor(1))
     }
 }

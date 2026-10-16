@@ -2338,6 +2338,7 @@
     st.textContent = '.gf-dd-wrap{display:block;position:relative;width:100%}' +
       '.gf-shape.gf-dd-native{position:absolute;opacity:0;pointer-events:none;width:1px;height:1px;left:0;top:0;overflow:hidden}' +
       '.gf-dd-btn{font:inherit;color:#1d2935;width:100%;min-width:120px;box-sizing:border-box;text-align:right;border-radius:999px;border:1px solid #d9e1e6;background-color:#fff;padding:9px 16px 9px 38px;min-height:40px;line-height:1.4;cursor:pointer;box-shadow:0 2px 8px rgba(60,120,170,.08);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;background-image:url("data:image/svg+xml;utf8,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%2716%27 height=%2716%27 viewBox=%270 0 24 24%27 fill=%27none%27 stroke=%27%2339758a%27 stroke-width=%272.2%27 stroke-linecap=%27round%27 stroke-linejoin=%27round%27%3E%3Cpath d=%27M6 9l6 6 6-6%27/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:left 14px center;background-size:16px}' +
+      '.gf-dd-btn{background-repeat:no-repeat;background-position:left 14px center}' +
       '.gf-dd-btn:hover,.gf-dd-btn.open{border-color:#39758a}.gf-dd-btn.open{box-shadow:0 0 0 3px #e6f0f3}' +
       '.gf-dd-menu{position:fixed;z-index:9999;display:flex;flex-direction:column;gap:4px;padding:8px;box-sizing:border-box;border-radius:18px;background:#fff;border:1px solid #d9e1e6;box-shadow:0 16px 40px rgba(60,120,170,.18);max-height:360px;overflow-y:auto}' +
       '.gf-dd-item{font:inherit;color:#1d2935;text-align:right;border:1px solid transparent;border-radius:999px;padding:8px 14px;background:transparent;cursor:pointer;white-space:nowrap}' +
@@ -2352,6 +2353,7 @@
     if (sel.dataset.gfdd) return;
     sel.dataset.gfdd = '1';
     gfDdCss();
+    sel.classList.add('gf-dd-native'); /* V310.9 — منوی بومی پنهان؛ فقط دکمهٔ هم‌شکل منوی تعداد دفعات مجاز دیده شود */
     var wrapEl = document.createElement('span');
     wrapEl.className = 'gf-dd-wrap';
     sel.parentNode.insertBefore(wrapEl, sel);

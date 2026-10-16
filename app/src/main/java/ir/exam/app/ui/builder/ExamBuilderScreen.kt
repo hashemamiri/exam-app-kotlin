@@ -1049,12 +1049,12 @@ private fun BuilderQuestionBankDialog(
                         PrimaryDropdown(
                             selectedValue = tagGrade.toString(),
                             options = listOf("0" to "همه پایه‌ها") + (1..6).map { g -> g.toString() to "پایهٔ ${PersianDigits.convert(g)}" },
-                            onSelect = { tagGrade = it.toIntOrNull() ?: 0 },
+                            onSelect = { tagGrade = it.toIntOrNull() ?: 0; if (tagSubject !in ir.exam.app.ui.builder.PrimaryBank.subjectsFor(tagGrade)) tagSubject = "" },
                             modifier = Modifier.weight(1f)
                         )
                         PrimaryDropdown(
                             selectedValue = tagSubject,
-                            options = listOf("" to "همه درس‌ها") + ir.exam.app.ui.builder.PrimaryBank.SUBJECTS.map { it to it },
+                            options = listOf("" to "همه درس‌ها") + ir.exam.app.ui.builder.PrimaryBank.subjectsFor(tagGrade).map { it to it },
                             onSelect = { tagSubject = it },
                             modifier = Modifier.weight(1f)
                         )
@@ -2277,7 +2277,7 @@ private fun QuestionType.faLabel(): String = when (this) {
 private fun PrimaryTagEditor(question: QuestionDraft, viewModel: ExamBuilderViewModel) {
     // V310.5 — برچسب ابتدایی به‌صورت منوی کشویی؛ این برچسب‌ها فیلتر بانک سؤال را می‌سازند
     val gradeOptions = listOf("0" to "بدون پایه") + (1..6).map { g -> g.toString() to "پایهٔ ${PersianDigits.convert(g)}" }
-    val subjectOptions = listOf("" to "بدون درس") + ir.exam.app.ui.builder.PrimaryBank.SUBJECTS.map { it to it }
+    val subjectOptions = listOf("" to "بدون درس") + ir.exam.app.ui.builder.PrimaryBank.subjectsFor(question.grade).map { it to it }
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Text("برچسب ابتدایی (برای فیلتر بانک سوال)", style = MaterialTheme.typography.labelMedium)
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -2285,7 +2285,7 @@ private fun PrimaryTagEditor(question: QuestionDraft, viewModel: ExamBuilderView
             PrimaryDropdown(
                 selectedValue = question.grade.toString(),
                 options = gradeOptions,
-                onSelect = { viewModel.setQuestionTags(question.id, it.toInt(), question.subject) },
+                onSelect = { val g = it.toInt(); viewModel.setQuestionTags(question.id, g, if (question.subject in ir.exam.app.ui.builder.PrimaryBank.subjectsFor(g)) question.subject else "") },
                 modifier = Modifier.weight(1f)
             )
         }

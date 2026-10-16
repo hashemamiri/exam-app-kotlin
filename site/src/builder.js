@@ -64,7 +64,17 @@
   /* V307 / ۱۲ — بانک آمادهٔ ابتدایی (فقط خواندنی؛ داده هنگام ساخت سایت از app/src/main/assets/primary_bank.json تزریق می‌شود) */
   var PRIMARY_BANK = /*__PRIMARY_BANK__*/null;
   var PRI_LETTERS_BANK = ['الف', 'ب', 'ج', 'د', 'ه', 'و'];
-  var PRI_SUBJECTS = ['ریاضی', 'فارسی', 'علوم', 'هدیه‌های آسمان', 'مطالعات اجتماعی']; /* V308 */
+  /* V310.9 — دروس هر پایهٔ ابتدایی (فهرست رسمی). «همه پایه‌ها» و «بدون پایه» همهٔ دروس را نشان می‌دهند. */
+  var PRI_GRADE_SUBJECTS = {
+    1: ['آموزش قرآن', 'فارسی', 'نگارش فارسی', 'ریاضی', 'علوم تجربی'],
+    2: ['آموزش قرآن', 'هدیه‌های آسمان', 'فارسی', 'نگارش فارسی', 'ریاضی', 'علوم تجربی'],
+    3: ['آموزش قرآن', 'هدیه‌های آسمان', 'فارسی', 'نگارش فارسی', 'ریاضی', 'علوم تجربی', 'مطالعات اجتماعی'],
+    4: ['آموزش قرآن', 'هدیه‌های آسمان', 'فارسی', 'نگارش فارسی', 'ریاضی', 'علوم تجربی', 'مطالعات اجتماعی'],
+    5: ['آموزش قرآن', 'هدیه‌های آسمان', 'فارسی', 'نگارش فارسی', 'ریاضی', 'علوم تجربی', 'مطالعات اجتماعی'],
+    6: ['آموزش قرآن', 'هدیه‌های آسمان', 'فارسی', 'نگارش فارسی', 'ریاضی', 'علوم تجربی', 'مطالعات اجتماعی', 'تفکر و پژوهش', 'کار و فناوری']
+  };
+  var PRI_SUBJECTS = ['آموزش قرآن', 'هدیه‌های آسمان', 'فارسی', 'نگارش فارسی', 'ریاضی', 'علوم تجربی', 'مطالعات اجتماعی', 'تفکر و پژوهش', 'کار و فناوری']; /* V310.9 — همهٔ دروس */
+  function priSubjectsFor(g) { return (g >= 1 && g <= 6 && PRI_GRADE_SUBJECTS[g]) ? PRI_GRADE_SUBJECTS[g] : PRI_SUBJECTS; } /* V310.9 */
   function primaryBankDraft(item) {
     if (['multiple', 'fill', 'numeric', 'truefalse'].indexOf(item.type) < 0) return null;
     if (item.type === 'multiple' && (!item.options || item.options.length < 2 || item.correct == null || item.correct < 0 || item.correct >= item.options.length)) return null;
@@ -85,13 +95,12 @@
   }
   function openPrimaryBank() {
     var grade = 0, subject = '';
-    var subjects = [];
-    PRIMARY_BANK.items.forEach(function (it) { if (subjects.indexOf(it.subject) < 0) subjects.push(it.subject); });
     var modal = el('div', {class: 'modal-bg', onclick: function (e) { if (e.target === modal) modal.remove(); }});
     var card = el('div', {class: 'card', style: 'max-width:720px;width:94vw;max-height:88vh;overflow:auto'});
     modal.appendChild(card);
     function paint() {
       card.innerHTML = '';
+      var subjects = priSubjectsFor(grade); if (subject && subjects.indexOf(subject) < 0) subject = ''; /* V310.9 */
       card.appendChild(el('div', {class: 'row'}, [
         el('b', {class: 'grow', text: '🏫 بانک آمادهٔ ابتدایی'}),
         el('button', {class: 'btn light sm', text: 'بستن', onclick: function () { modal.remove(); }})
@@ -960,10 +969,10 @@
       box.appendChild(el('div', {class: 'muted', style: 'font-size:13px', text: 'برچسب ابتدایی (برای فیلتر بانک سوال)'}));
       var g = el('div', {class: 'row', style: 'gap:6px;flex-wrap:wrap;margin:6px 0'});
       g.appendChild(el('button', {class: 'btn sm ' + (!q.grade ? '' : 'light'), text: 'بدون پایه', onclick: function () { q.grade = 0; mark(); redraw(); }}));
-      for (var gi = 1; gi <= 6; gi++) (function (n) { g.appendChild(el('button', {class: 'btn sm ' + (q.grade === n ? '' : 'light'), text: 'پایهٔ ' + fa(n), onclick: function () { q.grade = n; mark(); redraw(); }})); })(gi);
+      for (var gi = 1; gi <= 6; gi++) (function (n) { g.appendChild(el('button', {class: 'btn sm ' + (q.grade === n ? '' : 'light'), text: 'پایهٔ ' + fa(n), onclick: function () { q.grade = n; if (q.subject && priSubjectsFor(n).indexOf(q.subject) < 0) q.subject = ''; mark(); redraw(); }})); })(gi);
       var sj = el('div', {class: 'row', style: 'gap:6px;flex-wrap:wrap'});
       sj.appendChild(el('button', {class: 'btn sm ' + (!q.subject ? '' : 'light'), text: 'بدون درس', onclick: function () { q.subject = ''; mark(); redraw(); }}));
-      PRI_SUBJECTS.forEach(function (sb) { sj.appendChild(el('button', {class: 'btn sm ' + (q.subject === sb ? '' : 'light'), text: sb, onclick: function () { q.subject = sb; mark(); redraw(); }})); });
+      priSubjectsFor(q.grade).forEach(function (sb) { sj.appendChild(el('button', {class: 'btn sm ' + (q.subject === sb ? '' : 'light'), text: sb, onclick: function () { q.subject = sb; mark(); redraw(); }})); });
       box.appendChild(g); box.appendChild(sj);
       return box;
     }
@@ -1206,7 +1215,7 @@
         var gs = el('select', {style: 'border:1px solid var(--line);border-radius:10px;padding:8px'}); gs.appendChild(el('option', {value: '', text: 'همه پایه‌ها'}));
         for (var gi = 1; gi <= 6; gi++) gs.appendChild(el('option', {value: String(gi), text: 'پایهٔ ' + fa(gi)}));
         var ss = el('select', {style: 'border:1px solid var(--line);border-radius:10px;padding:8px'}); ss.appendChild(el('option', {value: '', text: 'همه درس‌ها'}));
-        PRI_SUBJECTS.forEach(function (sb) { ss.appendChild(el('option', {value: sb, text: sb})); });
+var fillSubj = function () { var cur = ss.value; ss.innerHTML = ''; ss.appendChild(el('option', {value: '', text: 'همه درس‌ها'})); priSubjectsFor(Number(gs.value)).forEach(function (sb) { ss.appendChild(el('option', {value: sb, text: sb})); }); if (cur && priSubjectsFor(Number(gs.value)).indexOf(cur) >= 0) ss.value = cur; }; fillSubj(); gs.addEventListener('change', fillSubj); /* V310.9 */
         var lst = el('div', {class: 'b-bank bank-grid b-bank-grid'});
         /* V254 — انتخاب چندتایی: تیک بزنید و «افزودن انتخاب‌شده‌ها»؛ یا دکمهٔ «افزودن» هر ردیف برای یکی */
         var picked = [];
