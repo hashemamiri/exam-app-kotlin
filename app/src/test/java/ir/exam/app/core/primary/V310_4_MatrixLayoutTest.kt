@@ -20,7 +20,7 @@ class V310_4_MatrixLayoutTest {
     fun `matrix markup sizes to content with inline styles`() {
         val js = File(root(), web + "table_fig.js").readText()
         assertTrue(js.contains("width:max-content;max-width:100%;margin:0 auto"))
-        assertTrue(js.contains("style=\\\"width:auto;max-width:100%;table-layout:auto;margin:0\\\""))
+        assertTrue(js.contains("style=\"width:auto;max-width:100%;table-layout:auto;margin:0\""))
     }
 
     @Test
