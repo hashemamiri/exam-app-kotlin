@@ -162,7 +162,8 @@ class ClassesViewModel(
         grade: String,
         fieldOfStudy: String = "",
         teacherId: String? = null,
-        shareWithManager: Boolean = false // V270 — اشتراک با مدیر هنگام ساخت
+        shareWithManager: Boolean = false, // V270 — اشتراک با مدیر هنگام ساخت
+        schoolId: String? = null // V311.0 — انتخاب مدرسهٔ مقصد برای مدیر چندمدرسه‌ای
     ) = action(
         successMessage = if (id == null) (if (shareWithManager) "کلاس ساخته و با مدیر به اشتراک گذاشته شد." else "کلاس ساخته شد.") else "کلاس ویرایش شد."
     ) {
@@ -176,6 +177,7 @@ class ClassesViewModel(
                         put("p_name", kotlinx.serialization.json.JsonPrimitive(name.trim()))
                         put("p_grade", kotlinx.serialization.json.JsonPrimitive(grade.trim()))
                         put("p_field", kotlinx.serialization.json.JsonPrimitive(fieldOfStudy.trim()))
+                        if (!schoolId.isNullOrBlank()) put("p_school", kotlinx.serialization.json.JsonPrimitive(schoolId))
                     }
                 ).decodeAs<kotlinx.serialization.json.JsonObject>()
                 (raw["error"] as? kotlinx.serialization.json.JsonPrimitive)?.content

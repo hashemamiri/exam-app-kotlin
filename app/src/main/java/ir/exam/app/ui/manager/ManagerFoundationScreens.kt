@@ -329,14 +329,43 @@ fun ManagerTeachersScreen(
         )
     }
     removeTarget?.let { teacher ->
+        var removeSchoolId by remember(teacher.id) { mutableStateOf<String?>(null) }
+        LaunchedEffect(teacher.id) {
+            if (inviteSchools.isEmpty()) {
+                repository.managerSchools().onSuccess { inviteSchools = it }.onFailure {}
+            }
+        }
         androidx.compose.material3.AlertDialog(
             onDismissRequest = { removeTarget = null },
             title = { Text("حذف معلم از مدرسه") },
-            text = { Text("عضویت ${teacher.fullName} حذف شود؟ حساب Auth و آزمون‌های شخصی او باقی می‌مانند.") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("عضویت ${teacher.fullName} حذف شود؟ حساب Auth و آزمون‌های شخصی او باقی می‌مانند.")
+                    if (inviteSchools.size > 1) {
+                        androidx.compose.foundation.layout.FlowRow(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally)
+                        ) {
+                            androidx.compose.material3.FilterChip(
+                                selected = removeSchoolId == null,
+                                onClick = { removeSchoolId = null },
+                                label = { Text("همهٔ مدارس") }
+                            )
+                            inviteSchools.forEach { school ->
+                                androidx.compose.material3.FilterChip(
+                                    selected = removeSchoolId == school.id,
+                                    onClick = { removeSchoolId = school.id },
+                                    label = { Text(school.name.ifBlank { "مدرسه" }) }
+                                )
+                            }
+                        }
+                    }
+                }
+            },
             confirmButton = {
                 androidx.compose.material3.Button(onClick = {
                     scope.launch {
-                        repository.removeTeacher(teacher.id).onSuccess { removeTarget = null; reloadTeachers() }
+                        repository.removeTeacher(teacher.id, removeSchoolId).onSuccess { removeTarget = null; reloadTeachers() }
                             .onFailure { error = safeManagerError(it); removeTarget = null }
                     }
                 }) { Text("حذف عضویت") }

@@ -32,7 +32,8 @@ internal data class ManagerInviteItem(
     val usedAt: String = ""
 )
 internal data class ManagerTeacherClass(
-    val id: String, val name: String, val grade: String, val field: String, val total: Int
+    val id: String, val name: String, val grade: String, val field: String, val total: Int,
+    val schoolName: String = ""
 )
 internal data class ManagerStudentItem(val id: String, val fullName: String, val username: String)
 // V62.6 — مدرسهٔ قابل انتخاب برای مقصد کد دعوت.
@@ -44,7 +45,7 @@ internal data class ManagerReportExam(val id: String, val title: String, val tot
 internal data class ManagerReportGrade(val grade: Double, val max: Double, val graded: Boolean)
 internal data class ManagerReportStudent(val id: String, val fullName: String, val username: String, val grades: Map<String, ManagerReportGrade>)
 internal data class ManagerClassReport(val className: String, val exams: List<ManagerReportExam>, val students: List<ManagerReportStudent>)
-internal data class ManagerMyRequest(val id: String, val targetType: String, val targetName: String, val action: String, val status: String, val teacherName: String, val changeSummary: String, val createdAt: String)
+internal data class ManagerMyRequest(val id: String, val targetType: String, val targetName: String, val action: String, val status: String, val teacherName: String, val changeSummary: String, val createdAt: String, val targetId: String = "", val kind: String = "")
 /** V261 — نتیجهٔ تغییر کلاس معلم: اجرا شد یا به‌صورت درخواست برای معلم ثبت شد (خطا نیست). */
 internal data class ManagerChangeResult(val requested: Boolean, val message: String)
 internal data class WalletTransferResult(
@@ -151,11 +152,11 @@ internal class SupabaseManagerRepository {
         val raw = SupabaseProvider.client.postgrest.rpc("native_manager_teacher_classes_v40c", buildJsonObject { put("p_teacher", teacherId) }).decodeAs<JsonObject>().checked()
         ManagerTeacherClasses(raw.text("teacher_name"), (raw["items"] as? JsonArray).orEmpty().mapNotNull { e ->
             val i=e as? JsonObject ?: return@mapNotNull null
-            ManagerTeacherClass(i.text("id"),i.text("name"),i.text("grade"),i.text("field_of_study"),i["total"]?.jsonPrimitive?.intOrNull?:0)
+            ManagerTeacherClass(i.text("id"),i.text("name"),i.text("grade"),i.text("field_of_study"),i["total"]?.jsonPrimitive?.intOrNull?:0,i.text("school_name"))
         })
     }
-    suspend fun createTeacherClass(teacherId:String,name:String,grade:String,field:String):Result<Unit> = runCatching {
-        SupabaseProvider.client.postgrest.rpc("native_manager_save_teacher_class_v40c",buildJsonObject{put("p_teacher",teacherId);put("p_name",name);put("p_grade",grade);put("p_field",field)}).decodeAs<JsonObject>().checked();Unit
+    suspend fun createTeacherClass(teacherId:String,name:String,grade:String,field:String,schoolId:String?=null):Result<Unit> = runCatching {
+        SupabaseProvider.client.postgrest.rpc("native_manager_save_teacher_class_v40c",buildJsonObject{put("p_teacher",teacherId);put("p_name",name);put("p_grade",grade);put("p_field",field);if(!schoolId.isNullOrBlank())put("p_school",schoolId)}).decodeAs<JsonObject>().checked();Unit
     }
     suspend fun editTeacherClass(classId:String,name:String,grade:String,field:String):Result<ManagerChangeResult> = runCatching {
         val raw=SupabaseProvider.client.postgrest.rpc("native_manager_change_teacher_class_v41",buildJsonObject{put("p_class",classId);put("p_action","edit");put("p_payload",buildJsonObject{put("name",name);put("grade",grade);put("field",field)})}).decodeAs<JsonObject>().checked()
@@ -199,9 +200,10 @@ internal class SupabaseManagerRepository {
                 i.text("action") == "delete" -> "حذف"
                 p("kind") == "reset_password" -> "رمز جدید"
                 p("name").isNotBlank() -> "ویرایش → «${p("name")}»"
+                p("full_name").isNotBlank() -> "ویرایش → «${p("full_name")}»"
                 else -> "ویرایش"
             }
-            ManagerMyRequest(i.text("id"), i.text("target_type"), i.text("target_name"), i.text("action"), i.text("status"), i.text("teacher_name"), summary, i.text("decided_at").ifBlank { i.text("created_at") })
+            ManagerMyRequest(i.text("id"), i.text("target_type"), i.text("target_name"), i.text("action"), i.text("status"), i.text("teacher_name"), summary, i.text("decided_at").ifBlank { i.text("created_at") }, i.text("target_id"), p("kind"))
         }
     }
     suspend fun classRoster(classId:String):Result<ManagerClassRoster> = runCatching {
@@ -222,9 +224,10 @@ internal class SupabaseManagerRepository {
         ).decodeAs<JsonObject>().checked(); Unit
     }
 
-    suspend fun removeTeacher(id: String): Result<Unit> = runCatching {
+    suspend fun removeTeacher(id: String, schoolId: String? = null): Result<Unit> = runCatching {
         SupabaseProvider.client.postgrest.rpc(
-            "native_manager_remove_teacher_v40b", buildJsonObject { put("p_teacher", id) }
+            "native_manager_remove_teacher_v40b",
+            buildJsonObject { put("p_teacher", id); if (!schoolId.isNullOrBlank()) put("p_school", schoolId) }
         ).decodeAs<JsonObject>().checked(); Unit
     }
 

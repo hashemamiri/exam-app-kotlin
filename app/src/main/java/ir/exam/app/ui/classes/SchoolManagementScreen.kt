@@ -440,11 +440,11 @@ fun SchoolManagementScreen(
         )
     }
     deletingSchool?.let { sch ->
-        // V262 — حذف مدرسه با تأیید؛ سرور فقط مدرسهٔ خالی را حذف می‌کند و آخرین مدرسه حذف نمی‌شود
+        // V262 — حذف مدرسه با تأیید؛ سرور فقط مدرسهٔ بدون کلاس/آزمون/دانش‌آموز را حذف می‌کند و آخرین مدرسه حذف نمی‌شود
         AlertDialog(
             onDismissRequest = { deletingSchool = null },
             title = { Text("حذف مدرسه") },
-            text = { Text("مدرسهٔ «${sch.name}» حذف می‌شود. فقط مدرسهٔ خالی (بدون کلاس، آزمون، دانش‌آموز و معلم) قابل حذف است و آخرین مدرسه حذف نمی‌شود.") },
+            text = { Text("مدرسهٔ «${sch.name}» حذف می‌شود. فقط مدرسهٔ بدون کلاس، آزمون و دانش‌آموز قابل حذف است و آخرین مدرسه حذف نمی‌شود.") },
             confirmButton = { Button(onClick = { viewModel.deleteSchool(sch.id); deletingSchool = null }) { Text("حذف") } },
             dismissButton = { TextButton(onClick = { deletingSchool = null }) { Text("انصراف") } }
         )
@@ -505,14 +505,18 @@ fun SchoolManagementScreen(
     if (creatingClass || classEditor != null) {
         // V61.0 — مدیر: پیش از باز شدن پنجره، معلم‌های مدرسه بارگیری می‌شوند.
         LaunchedEffect(creatingClass, managerTeacherPicker) {
-            if (creatingClass && managerTeacherPicker) viewModel.loadSchoolTeachers()
+            if (creatingClass && managerTeacherPicker) {
+                viewModel.loadSchoolTeachers()
+                viewModel.refreshSchoolList()
+            }
         }
         ClassEditorDialog(
             item = classEditor,
             teachers = if (creatingClass && managerTeacherPicker) state.schoolTeachers else emptyList(),
+            schools = if (creatingClass && managerTeacherPicker) state.schools else emptyList(),
             onDismiss = { creatingClass = false; classEditor = null },
-            onSave = { name, grade, field, teacherId, share ->
-                viewModel.saveClass(classEditor?.id, name, grade, field, teacherId, share)
+            onSave = { name, grade, field, teacherId, share, schoolId ->
+                viewModel.saveClass(classEditor?.id, name, grade, field, teacherId, share, schoolId)
                 creatingClass = false
                 classEditor = null
             }
@@ -1120,18 +1124,56 @@ private fun StudentsContent(
             )
         }
         if (students.isEmpty()) Text("دانش‌آموزی یافت نشد.")
-        else LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            items(students, key = StudentProfile::id) { student ->
-                StudentCard(
-                    student = student,
-                    onToggle = onToggle,
-                    onEdit = { onEdit(student) },
-                    onDelete = { onDelete(student) },
-                    classes = classes,
-                    onAddToClasses = { classIds -> onAddToClasses(student.id, classIds) },
-                    knownPasswordOf = knownPasswordOf,
-                    onShareChanged = onStudentShareChanged
-                )
+        else {
+            var myRequests by remember { mutableStateOf<List<ir.exam.app.data.repository.ManagerMyRequest>>(emptyList()) }
+            var myRequestsOpen by remember { mutableStateOf(false) }
+            LaunchedEffect(showTeacherFilter, students.size) {
+                if (showTeacherFilter) {
+                    ir.exam.app.data.repository.SupabaseManagerRepository().myRequests()
+                        .onSuccess { myRequests = it }
+                        .onFailure {}
+                }
+            }
+            if (showTeacherFilter && myRequests.isNotEmpty()) {
+                val pending = myRequests.count { it.status == "pending" }
+                Card(Modifier.fillMaxWidth()) {
+                    Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text("درخواست‌های من" + (if (pending > 0) " ($pending در انتظار)" else ""), Modifier.weight(1f), style = MaterialTheme.typography.titleMedium)
+                            TextButton(onClick = { myRequestsOpen = !myRequestsOpen }) { Text(if (myRequestsOpen) "بستن" else "نمایش") }
+                        }
+                        if (myRequestsOpen) myRequests.take(30).forEach { r ->
+                            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Column(Modifier.weight(1f)) {
+                                    Text((if (r.targetType == "class") "کلاس " else "دانش‌آموز ") + r.targetName + " · " + r.changeSummary, style = MaterialTheme.typography.bodyMedium)
+                                    Text("معلم: ${r.teacherName.ifBlank { "—" }} · وضعیت: ${r.status}", style = MaterialTheme.typography.bodySmall)
+                                }
+                                if (r.status == "approved" && r.targetType == "student") {
+                                    val st = students.firstOrNull { it.id == r.targetId }
+                                    if (st != null && r.kind == "reset_password") {
+                                        OutlinedButton(onClick = { onEdit(st) }) { Text("ثبت رمز جدید") }
+                                    } else if (st != null && r.action == "delete") {
+                                        OutlinedButton(onClick = { onDelete(st) }) { Text("حذف نهایی حساب") }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                items(students, key = StudentProfile::id) { student ->
+                    StudentCard(
+                        student = student,
+                        onToggle = onToggle,
+                        onEdit = { onEdit(student) },
+                        onDelete = { onDelete(student) },
+                        classes = classes,
+                        onAddToClasses = { classIds -> onAddToClasses(student.id, classIds) },
+                        knownPasswordOf = knownPasswordOf,
+                        onShareChanged = onStudentShareChanged
+                    )
+                }
             }
         }
     }
@@ -1550,8 +1592,9 @@ private fun StudentCard(
 private fun ClassEditorDialog(
     item: SchoolClass?,
     teachers: List<SchoolTeacherPick> = emptyList(),
+    schools: List<TeacherSchoolItem> = emptyList(),
     onDismiss: () -> Unit,
-    onSave: (String, String, String, String?, Boolean) -> Unit
+    onSave: (String, String, String, String?, Boolean, String?) -> Unit
 ) {
     var name by remember(item?.id) { mutableStateOf(item?.name.orEmpty()) }
     // V270 — «اشتراک با مدیر مدرسه» فقط هنگام ساخت کلاس توسط معلم
@@ -1561,12 +1604,24 @@ private fun ClassEditorDialog(
     // V61.0 — انتخاب معلم (فقط مدیر هنگام ساخت کلاس).
     var teacherId by remember(item?.id) { mutableStateOf<String?>(null) }
     var teacherPickerOpen by remember { mutableStateOf(false) }
+    var schoolId by remember(item?.id, schools.size) { mutableStateOf(schools.firstOrNull()?.id) }
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(if (item == null) "کلاس جدید" else "ویرایش کلاس") },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedTextField(name, { name = it }, label = { Text("نام کلاس") })
+                if (schools.size > 1) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        schools.forEach { sch ->
+                            FilterChip(
+                                selected = schoolId == sch.id,
+                                onClick = { schoolId = sch.id },
+                                label = { Text(sch.name.ifBlank { "مدرسه" }) }
+                            )
+                        }
+                    }
+                }
                 if (teachers.isNotEmpty()) {
                     // کادر وسط‌چین «معلم»: لمس آن لیست معلم‌های عضو مدرسه را باز می‌کند.
                     Card(
@@ -1611,7 +1666,7 @@ private fun ClassEditorDialog(
         },
         confirmButton = {
             Button(
-                onClick = { onSave(name, grade, field, teacherId, shareWithManager) },
+                onClick = { onSave(name, grade, field, teacherId, shareWithManager, schoolId) },
                 enabled = name.isNotBlank() && (teachers.isEmpty() || teacherId != null)
             ) { Text("ذخیره") }
         },

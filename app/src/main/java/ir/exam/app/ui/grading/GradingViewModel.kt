@@ -120,7 +120,7 @@ class GradingViewModel(
                         val byStudent = answers.filter { it.studentId != null }.distinctBy { it.studentId }.size
                         val stats = ExamCardStats(
                             totalStudents = roster.size,
-                            answered = if (roster.isNotEmpty()) roster.count { it.status == "submitted" || it.submittedAt != null }.coerceAtLeast(byStudent.coerceAtMost(roster.size)) else byStudent,
+                            answered = if (roster.isNotEmpty()) roster.count { it.status == "submitted" || it.status == "graded" || it.submittedAt != null }.coerceAtLeast(byStudent.coerceAtMost(roster.size)) else byStudent,
                             graded = answers.count { it.graded },
                             pending = answers.count { !it.graded }
                         )

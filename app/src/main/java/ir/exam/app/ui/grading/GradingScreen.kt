@@ -383,8 +383,10 @@ private fun JsonElement?.displayText(): String = when (this) {
 
 private fun String.faStatus(): String = when (lowercase()) {
     "submitted" -> "ارسال‌شده"
-    "started", "active" -> "در حال پاسخ"
+    "started", "active", "in_progress" -> "در حال پاسخ"
     "graded" -> "تصحیح‌شده"
+    "expired" -> "منقضی"
+    "not_started" -> "شروع‌نشده"
     "absent" -> "غایب"
     else -> this
 }
