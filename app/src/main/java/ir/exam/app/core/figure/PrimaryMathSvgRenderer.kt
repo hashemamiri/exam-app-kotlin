@@ -329,8 +329,8 @@ object PrimaryMathSvgRenderer {
 
     // --------------------------------------------------------- سکه/اسکناس
     private fun money(spec: FigureSpec): String {
-        val notes = spec.xList("notes", "1000,2000,5000,10000").mapNotNull { it.trim().toLongOrNull() }.take(8)
-        val coins = spec.xList("coins", "500,1000").mapNotNull { it.trim().toLongOrNull() }.take(8)
+        val notes = spec.xList("notes", "1000,2000,5000,10000").mapNotNull { faEnDigits(it.trim()).toLongOrNull() }.take(8)
+        val coins = spec.xList("coins", "500,1000").mapNotNull { faEnDigits(it.trim()).toLongOrNull() }.take(8)
         val unit = spec.xStr("unit", "تومان")
         val sb = StringBuilder()
         var x = 18f

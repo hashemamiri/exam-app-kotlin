@@ -54,5 +54,10 @@ class V310_7_MathToolsTest {
         val picker = File(root(), "app/src/main/java/ir/exam/app/ui/figure/FigurePickerDialog.kt").readText()
         assertTrue(picker.contains("FigureShapeDropdown("))
         assertTrue(picker.contains("AdjustableFigure("))
+        assertTrue(picker.contains("faEnDigits(value)"))
+        val js = File(root(), web).readText()
+        assertTrue(js.contains("z-index:200000"))
+        assertTrue(js.contains("gf-field gf-span"))
+        assertTrue(js.contains("select data-k=\"X.shape\" class=\"gf-sel\""))
     }
 }

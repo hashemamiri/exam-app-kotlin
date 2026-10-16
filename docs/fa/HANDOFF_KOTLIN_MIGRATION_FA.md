@@ -20378,3 +20378,10 @@ check_test_pins بهبودیافته (assertTrue/assertFalse/contains/!contains/
 - ارقام فارسی: `faEn()` (سایت) و `faEnDigits()` (اپ). سقف چوب‌خط ۷۵، خط‌کش ۲–۵۰، جدول ارزش مکانی چهار دوره (میلیارد تا یکی)، دسته‌های ده‌تایی سه‌بعدی تا یک میلیون.
 - کسر شکلی: `circle | ring | bar | square` با منوی کشویی. ساعت: دست‌ساعت/دقیقه با ماوس یا لمس (سایت: پیش‌نمایش ویرایشگر؛ اپ: پیش‌نمایش و شکل‌های سؤال).
 - باز: پاسخ دانش‌آموز به ساعت (ذخیره و نمره‌دهی) هنوز پیاده نشده است؛ تست کامپایل اندروید در محیط بدون SDK انجام نشده است.
+
+## V310.9 — رفع باگ منوی انتخاب شکل کسر در ابزار ریاضی ابتدایی (اپ 1.02.26 + سایت؛ مقصد: هر دو)
+- ریشه‌های باگ در `app/src/main/assets/print/web/graph_fig.js`:
+  1. `.gf-dd-menu` روی `document.body` با `z-index:9999` ساخته می‌شد در حالی که `#grOverlay.gf-overlay` در `tools_styles.css` دارای `z-index:120100` است؛ در نتیجه منو کامل پشت لایهٔ مودال پنهان می‌شد (`z-index:200000` شد).
+  2. `<select>` و `<button class="gf-dd-btn">` هر دو داخل تگ `<label>` قرار داشتند؛ کلیک روی برچسب یا دکمه در مرورگر رویداد کلیک مصنوعی روی `<select>` ایجاد می‌کرد که تا `document` حباب می‌زد و `gfDdClose` بلافاصله منو را می‌بست (به `<div class="gf-field gf-span"><span class="gf-lbl">…</span><select class="gf-sel">…</select></div>` تغییر کرد).
+  3. تداخل کلاس `.gf-shape` (دکمه‌های ۶۸ پیکسلی شبکهٔ شکل‌ها) و `min-height:40px !important` روی `<select>` برطرف شد و فیلد شکل با `gf-span` تمام‌عرض ستون تنظیمات شد.
+- اپ (`FigurePickerDialog.kt` و `PrimaryMathSvgRenderer.kt`): تبدیل ارقام فارسی با `faEnDigits(value)` در `buildGraphSpec` برای همهٔ فیلدهای عددی و افزودن `n2`/`n3` به `TEXT_PARAM_KEYS`.

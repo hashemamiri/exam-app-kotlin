@@ -40,6 +40,7 @@ import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.layout.imePadding
 import ir.exam.app.core.figure.FigureSpec
 import ir.exam.app.core.figure.FigureTemplate
+import ir.exam.app.core.figure.faEnDigits
 import ir.exam.app.core.ui.LocalTabletLayout
 import ir.exam.app.core.figure.GEOMETRY_FIGURES
 import ir.exam.app.core.figure.GRAPH_FIGURES
@@ -536,7 +537,7 @@ private fun paramFields(type: String): List<Pair<String, String>> = when (type) 
 
 /** کلیدهایی که مقدار متنی (فهرست با ویرگول یا نام سری) دارند نه عدد. */
 private val TEXT_PARAM_KEYS = setOf(
-    "shape", "unit", "notes", "coins", "op2", "op3", // V304 — V310.8: علامت‌های ارزش مکانی
+    "shape", "unit", "notes", "coins", "op2", "op3", "n2", "n3", // V304 — V310.8/V310.9: علامت‌ها و ردیف‌های ارزش مکانی
     "labs", "labs2", "vals", "vals2", "vals3", "xs", "ys", "zs", "s1", "s2", "s3",
     // V54.2 — فهرست‌های عددی چندتایی و مقادیر آزاد مرحلهٔ دوم متنی ذخیره می‌شوند
     // (همان قرارداد رشته‌ای مرجع).
@@ -585,7 +586,7 @@ private fun buildGraphSpec(
         } else if (key in TEXT_PARAM_KEYS) {
             extra[key] = JsonPrimitive(value)
         } else {
-            value.toFloatOrNull()?.let { extra[key] = JsonPrimitive(it) }
+            faEnDigits(value).replace('،', '.').toFloatOrNull()?.let { extra[key] = JsonPrimitive(it) }
                 ?: extra.remove(key)
         }
     }
@@ -603,18 +604,20 @@ private fun templateLabel(kind: FigureKind, type: String): String =
 private fun trimNum(value: Float): String =
     if (value == value.toInt().toFloat()) value.toInt().toString() else value.toString()
 
-/** V310.7 — منوی کشویی شکل کسر شکلی (دایره‌ای، حلقه‌ای، نواری، مربعی). */
+/** V310.7 / V310.9 — منوی کشویی شکل کسر شکلی (دایره‌ای، حلقه‌ای، نواری، مربعی). */
 @Composable
 private fun FigureShapeDropdown(label: String, value: String, onSelect: (String) -> Unit) {
     val options = listOf("circle" to "دایره‌ای (قطاع)", "ring" to "حلقه‌ای", "bar" to "نواری", "square" to "مربعی (شبکه)")
     var open by remember { mutableStateOf(false) }
+    val currentLabel = options.firstOrNull { it.first == value }?.second ?: options.first().second
     Box(Modifier.fillMaxWidth()) {
         OutlinedButton(onClick = { open = true }, modifier = Modifier.fillMaxWidth()) {
-            Text("$label: ${options.firstOrNull { it.first == value }?.second ?: value}")
+            Text("$label: $currentLabel", modifier = Modifier.weight(1f))
+            Text("▼")
         }
         DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
             options.forEach { (id, name) ->
-                DropdownMenuItem(text = { Text(name) }, onClick = { onSelect(id); open = false })
+                DropdownMenuItem(text = { Text(name) }, onClick = { open = false; onSelect(id) })
             }
         }
     }
