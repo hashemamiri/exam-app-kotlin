@@ -411,8 +411,8 @@
       var nb = clamp(Math.floor(num(X.n, 134)), 0, 999999999), bd = [], bq = nb, bk;
       for (bk = 0; bk < 9; bk++) { bd.push(bq % 10); bq = Math.floor(bq / 10); }
       // (a,b,h) واحد؛ نمایش سه‌بعدی؛ مقیاس رتبه‌های بالاتر نمایشی است
-      var BSHP = [[1, 1, 1, '#ffd54f', 'یکان', 6], [1, 10, 1, '#66bb6a', 'دهگان', 3], [10, 10, 1, '#42a5f5', 'صدگان', 2.4], [10, 10, 10, '#ab47bc', 'هزارگان', 1.8], [1, 10, 10, '#ef5350', 'ده‌هزارگان', 2], [10, 10, 10, '#26a69a', 'صدهزارگان', 1.8], [10, 10, 10, '#ff7043', 'میلیون', 1.8], [10, 10, 10, '#8d6e63', 'ده‌میلیون', 1.8], [10, 10, 10, '#5c6bc0', 'صدمیلیون', 1.8]];
-      var BAVAIL = 286, bp, bn, bj;
+      var BSHP = [[1, 1, 1, '#ffd54f', 'یکان', 6], [1, 10, 1, '#66bb6a', 'دهگان', 3], [10, 10, 1, '#42a5f5', 'صدگان', 2.4], [10, 10, 10, '#ab47bc', 'یکان هزار', 1.8], [1, 10, 10, '#ef5350', 'دهگان هزار', 2], [10, 10, 10, '#26a69a', 'صدگان هزار', 1.8], [10, 10, 10, '#ff7043', 'یکان میلیون', 1.8], [10, 10, 10, '#8d6e63', 'دهگان میلیون', 1.8], [10, 10, 10, '#5c6bc0', 'صدگان میلیون', 1.8]];
+      var BAVAIL = 262, bp, bn, bj; /* V310.9 — جای برچسب‌های رتبه (تا x≈90) */
       function bshade(hex, f) { var r = parseInt(hex.substr(1, 2), 16) * f, g = parseInt(hex.substr(3, 2), 16) * f, b2 = parseInt(hex.substr(5, 2), 16) * f; return 'rgb(' + Math.round(Math.min(255, r)) + ',' + Math.round(Math.min(255, g)) + ',' + Math.round(Math.min(255, b2)) + ')'; }
       function isoBox(L, bot, a, b, h, k, col) {
         var ox = L + b * 0.866 * k, oy = bot - (a + b) * 0.5 * k;
@@ -423,12 +423,14 @@
         out += poly(P(0, 0, h) + ' ' + P(a, 0, h) + ' ' + P(a, b, h) + ' ' + P(0, b, h), col);
         return out;
       }
+      // V310.9 — برچسب‌های رتبه و تعداد: جهت ltr تا در بیدی RTL از کادر بیرون نزنند
+      function ltx(x, y, s, c, sz) { return '<text x="' + f2(x) + '" y="' + f2(y) + '" direction="ltr" font-family="sans-serif" font-size="' + sz + '" font-weight="700" fill="' + c + '" text-anchor="start">' + esc(s) + '</text>'; }
       for (bp = 0; bp < 9; bp++) {
         var ptop = 4 + (8 - bp) * 36, pbot = ptop + 33, shp = BSHP[bp], pa = shp[0], pb = shp[1], ph = shp[2], pcol = shp[3];
         bn = bd[bp];
-        s += tx(4, ptop + 14, shp[4], ST, 'start', true, 10) + tx(4, ptop + 28, bn === 0 ? '' : '× ' + bn, MU, 'start', true, 11);
+        s += ltx(4, ptop + 14, shp[4], ST, 10) + (bn === 0 ? '' : ltx(4, ptop + 28, '× ' + bn, MU, 11));
         if (bn === 0) continue;
-        var kh = 32 / ((pa + pb) * 0.5 + ph), kw = (BAVAIL - 4 * bn) / (bn * (pa + pb) * 0.866), kk = Math.min(shp[5], kh, kw), slot = 70;
+        var kh = 32 / ((pa + pb) * 0.5 + ph), kw = (BAVAIL - 4 * bn) / (bn * (pa + pb) * 0.866), kk = Math.min(shp[5], kh, kw), slot = 92;
         for (bj = 0; bj < bn; bj++) {
           s += isoBox(slot, pbot, pa, pb, ph, kk, pcol);
           slot += (pa + pb) * 0.866 * kk + 4;
@@ -442,24 +444,24 @@
       var pRowsN = clamp(Math.floor(num(X.rows, 3)), 1, 6), pBlank = xs('blank', '0') === '1';
       var pVals = [pClean('n') || '0', pClean('n2'), pClean('n3')], pOps = [xs('op2', ''), xs('op3', '')];
       var pPer = [['میلیارد', '#d62828'], ['میلیون', '#e0a800'], ['هزار', '#2e9e44'], ['یکی', '#7b3fbf']];
-      var pCw = 326 / 12, pX0 = 30, pPw = 3 * pCw, pRh = 40, pTop = 56, pBot = pTop + pRh * pRowsN, pq, pj, pr;
+      var pCw = 326 / 12, pX0 = 30, pPw = 3 * pCw, pRh = 40, pTop = 80, pBot = pTop + pRh * pRowsN, pq, pj, pr;
       var pH = Math.max(280, pBot + 60);
       s += rc(pX0, 22, 12 * pCw, pBot - 22 + 4, '#f7f9fc', ST, 1.2);
       for (pq = 0; pq < 4; pq++) {
         var ppx = pX0 + pq * pPw, pgrp = 3 - pq;
-        s += tx(ppx + pPw / 2, 18, pPer[pq][0], pPer[pq][1], 'middle', true, 13);
-        s += rc(ppx, 30, pPw, 26, ACCS, pPer[pq][1], 1.6);
+        s += tx(ppx + pPw / 2, 40, pPer[pq][0], pPer[pq][1], 'middle', true, 13);
+        s += rc(ppx, 48, pPw, 26, ACCS, pPer[pq][1], 1.6);
         for (pj = 0; pj < 3; pj++) {
           var pcx = ppx + pj * pCw;
-          s += tx(pcx + pCw / 2, 48, ['ص', 'د', 'ی'][pj], ST, 'middle', true, 11);
-          if (pj > 0) s += lnr(pcx, 30, pcx, pBot, '#8fa3c7', 0.8);
+          s += tx(pcx + pCw / 2, 66, ['ص', 'د', 'ی'][pj], ST, 'middle', true, 11);
+          if (pj > 0) s += lnr(pcx, 48, pcx, pBot, '#8fa3c7', 0.8);
           for (pr = 0; pr < pRowsN; pr++) {
             s += rc(pcx, pTop + pr * pRh, pCw, pRh, '#fff', '#8fa3c7', 0.8);
             var pStr = pr < 3 ? pVals[pr] : '', pIdx = pStr.length - 1 - (pgrp * 3 + (2 - pj)), pDg = pIdx >= 0 ? pStr[pIdx] : null;
             if (!(pr === 0 && pBlank) && pDg != null) s += tx(pcx + pCw / 2, pTop + pr * pRh + 27, pDg, PT, 'middle', true, 22);
           }
         }
-        s += rc(ppx, 30, pPw, pBot - 30, 'none', pPer[pq][1], 2);
+        s += rc(ppx, 48, pPw, pBot - 48, 'none', pPer[pq][1], 2);
       }
       for (pr = 1; pr < pRowsN && pr < 3; pr++) {
         var pOp = pOps[pr - 1] === '-' ? '−' : pOps[pr - 1];
@@ -2386,10 +2388,16 @@
         menu.appendChild(it);
       });
       document.body.appendChild(menu);
+      /* V310.9 — منو بالا باز می‌شود اگر پایین جا نیست؛ ارتفاع با جای واقعی تنظیم می‌شود (مثل منوی سایت) */
       var r = btn.getBoundingClientRect();
-      menu.style.left = Math.max(8, r.left) + 'px';
-      menu.style.minWidth = r.width + 'px';
-      menu.style.top = (r.bottom + 6) + 'px';
+      var below = window.innerHeight - r.bottom - 12, above = r.top - 12;
+      var maxH = Math.max(120, Math.min(360, Math.max(below, above)));
+      menu.style.maxHeight = maxH + 'px';
+      menu.style.minWidth = Math.max(r.width, 140) + 'px';
+      menu.style.left = Math.max(8, Math.min(r.left, window.innerWidth - Math.max(r.width, 160) - 8)) + 'px';
+      var mh = Math.min(menu.scrollHeight, maxH);
+      if (below < mh && above > below) menu.style.top = Math.max(8, r.top - mh - 6) + 'px';
+      else menu.style.top = (r.bottom + 6) + 'px';
       btn.classList.add('open');
     });
   }

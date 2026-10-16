@@ -75,12 +75,12 @@ object PrimaryMathSvgRenderer {
         Block(1f, 1f, 1f, "#ffd54f", "یکان", 6f),
         Block(1f, 10f, 1f, "#66bb6a", "دهگان", 3f),
         Block(10f, 10f, 1f, "#42a5f5", "صدگان", 2.4f),
-        Block(10f, 10f, 10f, "#ab47bc", "هزارگان", 1.8f),
-        Block(1f, 10f, 10f, "#ef5350", "ده‌هزارگان", 2f),
-        Block(10f, 10f, 10f, "#26a69a", "صدهزارگان", 1.8f),
-        Block(10f, 10f, 10f, "#ff7043", "میلیون", 1.8f),
-        Block(10f, 10f, 10f, "#8d6e63", "ده‌میلیون", 1.8f),
-        Block(10f, 10f, 10f, "#5c6bc0", "صدمیلیون", 1.8f)
+        Block(10f, 10f, 10f, "#ab47bc", "یکان هزار", 1.8f),
+        Block(1f, 10f, 10f, "#ef5350", "دهگان هزار", 2f),
+        Block(10f, 10f, 10f, "#26a69a", "صدگان هزار", 1.8f),
+        Block(10f, 10f, 10f, "#ff7043", "یکان میلیون", 1.8f),
+        Block(10f, 10f, 10f, "#8d6e63", "دهگان میلیون", 1.8f),
+        Block(10f, 10f, 10f, "#5c6bc0", "صدگان میلیون", 1.8f)
     )
 
     private fun shade(hex: String, k: Float): String {
@@ -98,6 +98,10 @@ object PrimaryMathSvgRenderer {
             poly("${p(0f, 0f, h)} ${p(a, 0f, h)} ${p(a, b, h)} ${p(0f, b, h)}", col)
     }
 
+    /** V310.9 — برچسب ltr: در بیدی RTL، برچسب‌های «start» به چپ کادر بیرون می‌زدند. */
+    private fun ltrLabel(x: Float, y: Float, s: String, color: String, size: Int): String =
+        "<text x=\"${f(x)}\" y=\"${f(y)}\" direction=\"ltr\" font-family=\"sans-serif\" font-size=\"$size\" font-weight=\"700\" fill=\"$color\" text-anchor=\"start\">$s</text>"
+
     private fun base10(spec: FigureSpec): String {
         val nb = spec.xNum("n", 134f).toInt().coerceIn(0, 999999999)
         val digits = IntArray(9)
@@ -109,13 +113,13 @@ object PrimaryMathSvgRenderer {
             val top = 4f + (8 - bp) * 36f
             val bot = top + 33f
             val n = digits[bp]
-            sb.append(text(4f, top + 14f, blk.label, ST, "start", bold = true, size = 10))
+            sb.append(ltrLabel(4f, top + 14f, blk.label, ST, 10))
             if (n == 0) continue
-            sb.append(text(4f, top + 28f, "× $n", MU, "start", bold = true, size = 11))
+            sb.append(ltrLabel(4f, top + 28f, "× $n", MU, 11))
             val kh = 32f / ((blk.a + blk.b) * 0.5f + blk.h)
-            val kw = (286f - 4f * n) / (n * (blk.a + blk.b) * 0.866f)
+            val kw = (262f - 4f * n) / (n * (blk.a + blk.b) * 0.866f)
             val k = min(blk.cap, min(kh, kw))
-            var slot = 70f
+            var slot = 92f
             repeat(n) {
                 sb.append(isoBox(slot, bot, blk.a, blk.b, blk.h, k, blk.color))
                 slot += (blk.a + blk.b) * 0.866f * k + 4f
@@ -129,7 +133,7 @@ object PrimaryMathSvgRenderer {
     /** ارتفاع بوم (۳۶۰ عرض ثابت): دسته‌های ده‌تایی و جدول ارزش مکانی بسته به تعداد ردیف‌ها بلندتر می‌شوند. */
     fun canvasHeight(spec: FigureSpec): Float = when (spec.type) {
         "axbase10" -> 370f
-        "axplace" -> max(280f, 56f + 40f * placeRows(spec) + 60f)
+        "axplace" -> max(280f, 80f + 40f * placeRows(spec) + 60f)
         else -> 280f
     }
 
@@ -156,19 +160,19 @@ object PrimaryMathSvgRenderer {
         val x0 = 30f
         val pw = 3 * cw
         val rh = 40f
-        val top = 56f
+        val top = 80f
         val bot = top + rh * rowsN
         val sb = StringBuilder()
         sb.append(rect(x0, 22f, 12 * cw, bot - 22f + 4f, "#f7f9fc", ST, 1.2f))
         for (pq in 0 until 4) {
             val ppx = x0 + pq * pw
             val pgrp = 3 - pq
-            sb.append(text(ppx + pw / 2, 18f, per[pq].first, per[pq].second, "middle", bold = true, size = 13))
-            sb.append(rect(ppx, 30f, pw, 26f, ACC_SOFT, per[pq].second, 1.6f))
+            sb.append(text(ppx + pw / 2, 40f, per[pq].first, per[pq].second, "middle", bold = true, size = 13))
+            sb.append(rect(ppx, 48f, pw, 26f, ACC_SOFT, per[pq].second, 1.6f))
             for (pj in 0 until 3) {
                 val pcx = ppx + pj * cw
-                sb.append(text(pcx + cw / 2, 48f, labels[pj], ST, "middle", bold = true, size = 11))
-                if (pj > 0) sb.append(line(pcx, 30f, pcx, bot, "#8fa3c7", 0.8f))
+                sb.append(text(pcx + cw / 2, 66f, labels[pj], ST, "middle", bold = true, size = 11))
+                if (pj > 0) sb.append(line(pcx, 48f, pcx, bot, "#8fa3c7", 0.8f))
                 for (pr in 0 until rowsN) {
                     sb.append(rect(pcx, top + pr * rh, cw, rh, "#fff", "#8fa3c7", 0.8f))
                     val str = if (pr < 3) vals[pr] else ""
@@ -179,7 +183,7 @@ object PrimaryMathSvgRenderer {
                     }
                 }
             }
-            sb.append(rect(ppx, 30f, pw, bot - 30f, "none", per[pq].second, 2f))
+            sb.append(rect(ppx, 48f, pw, bot - 48f, "none", per[pq].second, 2f))
         }
         for (pr in 1 until min(rowsN, 3)) {
             val op = ops[pr - 1].replace('-', '−')
