@@ -1224,6 +1224,35 @@ private data class InsertMenuRef(
 )
 
 @Composable
+private fun PrimaryDropdown(
+    selectedValue: String,
+    options: List<Pair<String, String>>,
+    onSelect: (String) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    // V310.5 — منوی کشویی حالت ابتدایی (جای چیپ‌های ردیفی)
+    var open by remember { mutableStateOf(false) }
+    val selectedLabel = options.firstOrNull { it.first == selectedValue }?.second ?: options.first().second
+    Box(modifier) {
+        OutlinedButton(onClick = { open = true }, modifier = Modifier.fillMaxWidth()) {
+            Text(selectedLabel, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Start)
+            Text("▼")
+        }
+        DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
+            options.forEach { (value, label) ->
+                DropdownMenuItem(
+                    text = { Text(label) },
+                    onClick = {
+                        open = false
+                        onSelect(value)
+                    }
+                )
+            }
+        }
+    }
+}
+
+@Composable
 private fun QuestionEditor(
     modifier: Modifier = Modifier,
     question: QuestionDraft,
@@ -2237,35 +2266,6 @@ private fun QuestionType.faLabel(): String = when (this) {
 
 /** انتخاب نوع ویژهٔ سؤال: جای‌خالی → مرتب‌سازی؛ چندگزینه‌ای → انتخاب روی تصویر. */
 /** V308 / ۱۴ — برچسب پایه و درس سؤال؛ فیلتر بانک حالت ابتدایی از همین برچسب‌ها استفاده می‌کند. */
-@Composable
-private fun PrimaryDropdown(
-    selectedValue: String,
-    options: List<Pair<String, String>>,
-    onSelect: (String) -> Unit,
-    modifier: Modifier = Modifier
-) {
-    // V310.5 — منوی کشویی حالت ابتدایی (جای چیپ‌های ردیفی)
-    var open by remember { mutableStateOf(false) }
-    val selectedLabel = options.firstOrNull { it.first == selectedValue }?.second ?: options.first().second
-    Box(modifier) {
-        OutlinedButton(onClick = { open = true }, modifier = Modifier.fillMaxWidth()) {
-            Text(selectedLabel, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Start)
-            Text("▼")
-        }
-        DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
-            options.forEach { (value, label) ->
-                DropdownMenuItem(
-                    text = { Text(label) },
-                    onClick = {
-                        open = false
-                        onSelect(value)
-                    }
-                )
-            }
-        }
-    }
-}
-
 @Composable
 private fun PrimaryTagEditor(question: QuestionDraft, viewModel: ExamBuilderViewModel) {
     // V310.5 — برچسب ابتدایی به‌صورت منوی کشویی؛ این برچسب‌ها فیلتر بانک سؤال را می‌سازند
