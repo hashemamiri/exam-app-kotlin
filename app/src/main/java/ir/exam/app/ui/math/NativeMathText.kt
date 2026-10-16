@@ -31,6 +31,7 @@ import ir.exam.app.core.figure.FigureSpec
 import ir.exam.app.core.text.RichSegment
 import ir.exam.app.core.text.RichTextSplitter
 import ir.exam.app.ui.figure.AtlasFigureView
+import ir.exam.app.ui.figure.AdjustableFigure
 import ir.exam.app.ui.figure.InlineFigureView
 import ir.exam.app.ui.figure.ZoomableFigureDialog
 
@@ -127,7 +128,7 @@ fun NativeMathText(
                         .height(150.dp),
                     contentAlignment = Alignment.CenterStart
                 ) {
-                    InlineFigureView(
+                    AdjustableFigure(
                         spec = figure.spec,
                         modifier = Modifier.fillMaxWidth(),
                         contentDescription = "شکل"

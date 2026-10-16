@@ -1044,13 +1044,20 @@ private fun BuilderQuestionBankDialog(
                 if (state.primaryMode) {
                     OutlinedButton(onClick = { primaryBankOpen = true }, modifier = Modifier.fillMaxWidth()) { Text("🏫 بانک آمادهٔ ابتدایی") }
                     if (primaryBankOpen) PrimaryBankDialog(viewModel = viewModel, onDismiss = { primaryBankOpen = false })
-                    Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        FilterChip(selected = tagGrade == 0, onClick = { tagGrade = 0 }, label = { Text("همه پایه‌ها") })
-                        (1..6).forEach { g -> FilterChip(selected = tagGrade == g, onClick = { tagGrade = g }, label = { Text("پایهٔ ${PersianDigits.convert(g)}") }) }
-                    }
-                    Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        FilterChip(selected = tagSubject.isEmpty(), onClick = { tagSubject = "" }, label = { Text("همه درس‌ها") })
-                        ir.exam.app.ui.builder.PrimaryBank.SUBJECTS.forEach { sub -> FilterChip(selected = tagSubject == sub, onClick = { tagSubject = sub }, label = { Text(sub) }) }
+                    // V310.7 — پایه و درس در یک ردیف، هر دو منوی کشویی
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                        PrimaryDropdown(
+                            selectedValue = tagGrade.toString(),
+                            options = listOf("0" to "همه پایه‌ها") + (1..6).map { g -> g.toString() to "پایهٔ ${PersianDigits.convert(g)}" },
+                            onSelect = { tagGrade = it.toIntOrNull() ?: 0 },
+                            modifier = Modifier.weight(1f)
+                        )
+                        PrimaryDropdown(
+                            selectedValue = tagSubject,
+                            options = listOf("" to "همه درس‌ها") + ir.exam.app.ui.builder.PrimaryBank.SUBJECTS.map { it to it },
+                            onSelect = { tagSubject = it },
+                            modifier = Modifier.weight(1f)
+                        )
                     }
                 }
                 OutlinedTextField(
@@ -2314,15 +2321,15 @@ private fun PrimaryModeChooser(question: QuestionDraft, viewModel: ExamBuilderVi
     }
     // V309 — پاسخ صوتی: سقف مدت ضبط (ثانیه) برای این سؤال
     if (question.mode == "voice") {
-        Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+        // V310.7 — سقف ضبط به‌صورت منوی کشویی
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
             Text("سقف ضبط:")
-            listOf(30, 60, 90, 120, 180).forEach { sec ->
-                FilterChip(
-                    selected = question.voiceMaxSeconds == sec || (question.voiceMaxSeconds == 0 && sec == 60),
-                    onClick = { viewModel.setVoiceMaxSeconds(question.id, sec) },
-                    label = { Text("${PersianDigits.convert(sec)} ثانیه") }
-                )
-            }
+            PrimaryDropdown(
+                selectedValue = (if (question.voiceMaxSeconds == 0) 60 else question.voiceMaxSeconds).toString(),
+                options = listOf(30, 60, 90, 120, 180).map { sec -> sec.toString() to "${PersianDigits.convert(sec)} ثانیه" },
+                onSelect = { viewModel.setVoiceMaxSeconds(question.id, it.toInt()) },
+                modifier = Modifier.weight(1f)
+            )
         }
     }
     // V306 — راهنمای املا: متن املا همان «پاسخ درست» است و در داده‌های عمومی سؤال می‌آید (اگر صدای معلم نباشد).

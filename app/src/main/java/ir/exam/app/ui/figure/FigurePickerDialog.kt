@@ -16,6 +16,9 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.material3.Button
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Card
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
@@ -46,6 +49,7 @@ import ir.exam.app.ui.figure.FigureKind.GEOMETRY
 import ir.exam.app.ui.figure.FigureKind.GRAPH
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.contentOrNull
 
 enum class FigureKind { GEOMETRY, GRAPH, AXIS }
 
@@ -72,7 +76,7 @@ fun FigureTypePickerDialog(
             Column(Modifier.fillMaxSize().systemBarsPadding().imePadding().padding(10.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) { // V247 — زیر نوار وضعیت نرود
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                     Text(
-                        if (geometry) "📐 درج شکل" else if (math) "🧮 ابزار ریاضی ابتدایی" else if (axis) "📏 درج محور" else "📈 درج نمودار",
+                        if (geometry) "📐 درج شکل" else if (math) "🧮 ابزار ریاضی ابتدایی (پایهٔ اول تا ششم)" else if (axis) "📏 درج محور" else "📈 درج نمودار",
                         style = MaterialTheme.typography.titleLarge,
                         modifier = Modifier.weight(1f)
                     )
@@ -358,22 +362,39 @@ private fun GraphEditorPane(initialSpec: FigureSpec, onInsert: (FigureSpec) -> U
             )
         }
         items(paramKeys(graphType), key = { it }) { key ->
-            OutlinedTextField(
-                value = params[key] ?: "",
-                onValueChange = { value -> params = params + (key to value) },
-                label = { Text(paramLabel(graphType, key)) },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true
-            )
+            if (graphType == "axfrac" && key == "shape") {
+                FigureShapeDropdown(
+                    label = paramLabel(graphType, key),
+                    value = params[key].orEmpty().ifBlank { "circle" },
+                    onSelect = { v -> params = params + (key to v) }
+                )
+            } else {
+                OutlinedTextField(
+                    value = params[key] ?: "",
+                    onValueChange = { value -> params = params + (key to value) },
+                    label = { Text(paramLabel(graphType, key)) },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true
+                )
+            }
         }
         item {
             Card(Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                     Text("پیش‌نمایش", style = MaterialTheme.typography.labelLarge)
-                    InlineFigureView(
+                    // V310.7 — ساعت با دست در پیش‌نمایش قابل تنظیم است و مقدار h/m را به فرم برمی‌گرداند
+                    AdjustableFigure(
                         draft,
                         Modifier.fillMaxWidth().height(180.dp),
-                        contentDescription = "پیش‌نمایش نمودار"
+                        contentDescription = "پیش‌نمایش نمودار",
+                        onChanged = { s ->
+                            val xo = s.raw["X"] as? JsonObject
+                            if (xo != null) {
+                                params = params + listOf("h", "m").mapNotNull { k ->
+                                    (xo[k] as? JsonPrimitive)?.contentOrNull?.let { k to it }
+                                }
+                            }
+                        }
                     )
                 }
             }
@@ -472,12 +493,12 @@ private fun paramFields(type: String): List<Pair<String, String>> = when (type) 
     "axloglog" -> listOf("xmax" to "تعداد دههٔ x", "ymax" to "تعداد دههٔ y")
     "axtime" -> listOf("labs" to "زمان‌ها (با ویرگول)", "s1" to "نام محور")
     // V304 — ابزار ریاضی ابتدایی
-    "axtally" -> listOf("n" to "تعداد (۰ تا ۶۰)")
-    "axbase10" -> listOf("n" to "عدد (۰ تا ۹۹۹)")
-    "axplace" -> listOf("n" to "عدد", "cols" to "تعداد ستون (خالی=خودکار)", "blank" to "خانه‌ها خالی؟ (۱=بله)")
+    "axtally" -> listOf("n" to "تعداد (۰ تا ۷۵)")
+    "axbase10" -> listOf("n" to "عدد (۰ تا ۱٬۰۰۰٬۰۰۰)")
+    "axplace" -> listOf("n" to "عدد (تا ۹۹۹٬۹۹۹٬۹۹۹٬۹۹۹)", "blank" to "خانه‌ها خالی؟ (۱=بله)")
     "axclock" -> listOf("h" to "ساعت (۰ تا ۱۲)", "m" to "دقیقه (۰ تا ۵۹)", "nums" to "نمایش عددها (۱/۰)", "label" to "نوشتن ساعت زیر شکل (۱/۰)")
-    "axruler" -> listOf("len" to "طول خط‌کش (سانتی‌متر)", "a" to "ابتدای اندازه‌گیری (اختیاری)", "b" to "انتهای اندازه‌گیری (اختیاری)")
-    "axfrac" -> listOf("num" to "صورت", "den" to "مخرج", "shape" to "شکل (circle یا bar)", "label" to "نوشتن کسر زیر شکل (۱/۰)")
+    "axruler" -> listOf("len" to "طول خط‌کش (۲ تا ۵۰ سانتی‌متر)", "a" to "ابتدای اندازه‌گیری (اختیاری)", "b" to "انتهای اندازه‌گیری (اختیاری)")
+    "axfrac" -> listOf("num" to "صورت", "den" to "مخرج", "shape" to "شکل", "label" to "نوشتن کسر زیر شکل (۱/۰)")
     "axmoney" -> listOf("notes" to "اسکناس‌ها (با ویرگول)", "coins" to "سکه‌ها (با ویرگول)", "unit" to "واحد", "sum" to "نوشتن جمع (۱/۰)")
     "axpolpts" -> listOf("xmax" to "تعداد حلقه", "pts" to "نقطه‌ها (r,θ;r,θ)", "labs" to "نام نقطه‌ها")
     "ax3dpt" -> listOf("xmax" to "تعداد تیک", "step" to "گام", "x1" to "x نقطه", "y1" to "y نقطه", "z1" to "z نقطه", "labs" to "نام نقطه")
@@ -581,3 +602,20 @@ private fun templateLabel(kind: FigureKind, type: String): String =
 
 private fun trimNum(value: Float): String =
     if (value == value.toInt().toFloat()) value.toInt().toString() else value.toString()
+
+/** V310.7 — منوی کشویی شکل کسر شکلی (دایره‌ای، حلقه‌ای، نواری، مربعی). */
+@Composable
+private fun FigureShapeDropdown(label: String, value: String, onSelect: (String) -> Unit) {
+    val options = listOf("circle" to "دایره‌ای (قطاع)", "ring" to "حلقه‌ای", "bar" to "نواری", "square" to "مربعی (شبکه)")
+    var open by remember { mutableStateOf(false) }
+    Box(Modifier.fillMaxWidth()) {
+        OutlinedButton(onClick = { open = true }, modifier = Modifier.fillMaxWidth()) {
+            Text("$label: ${options.firstOrNull { it.first == value }?.second ?: value}")
+        }
+        DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
+            options.forEach { (id, name) ->
+                DropdownMenuItem(text = { Text(name) }, onClick = { onSelect(id); open = false })
+            }
+        }
+    }
+}

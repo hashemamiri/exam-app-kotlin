@@ -68,8 +68,13 @@
   function esc(s) {
     return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\"/g, '&quot;');
   }
+  function faEn(v) {
+    if (v == null) return v;
+    return String(v).replace(/[۰-۹]/g, function (c) { return String.fromCharCode(c.charCodeAt(0) - 1728); })
+      .replace(/[٠-٩]/g, function (c) { return String.fromCharCode(c.charCodeAt(0) - 1584); });
+  }
   function num(v, fb) {
-    var n = parseFloat(String(v == null ? '' : v).replace('،', '.'));
+    var n = parseFloat(faEn(String(v == null ? '' : v)).replace('،', '.'));
     return isFinite(n) ? n : fb;
   }
   function wrap(inner) {
@@ -267,7 +272,7 @@
     function nm(v) { return (v === Math.round(v)) ? String(v) : v.toFixed(1); }
     function stepOf(span) { var st = num(X.step, 0); if (st > 0) return st; return span <= 12 ? 1 : span <= 30 ? 2 : span <= 60 ? 5 : 10; }
     function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
-    function xs(k, fb) { var v = X[k]; return (v == null || String(v).trim() === '') ? (fb || '') : String(v); }
+    function xs(k, fb) { var v = faEn(X[k]); return (v == null || String(v).trim() === '') ? (fb || '') : String(v); }
     function xl(k) { return xs(k, '').split(/[,،;؛\n]+/).map(function (s) { return s.trim(); }).filter(Boolean); }
     function pairs(s) { var out = [], re = /(-?\d+(?:\.\d+)?)\s*[,،]\s*(-?\d+(?:\.\d+)?)/g, m; while ((m = re.exec(s))) out.push([parseFloat(m[1]), parseFloat(m[2])]); return out; }
     function dot(x, y, c, r) { return '<circle cx="' + f2(x) + '" cy="' + f2(y) + '" r="' + f2(r || 4) + '" fill="' + (c || PT) + '" stroke="#fff" stroke-width="1.2"/>'; }
@@ -392,7 +397,7 @@
     function grp(v) { var str = String(v), out = '', j; for (j = 0; j < str.length; j++) { var idx = str.length - j; out += str[j]; if (idx > 1 && (idx - 1) % 3 === 0) out += '،'; } return out; }
     function ilist(k, fb) { return xs(k, fb).split(/[,،;؛\n]+/).map(function (q) { return parseInt(q.trim(), 10); }).filter(function (q) { return !isNaN(q); }).slice(0, 8); }
     if (t === 'axtally') {
-      var n = clamp(Math.floor(num(X.n, 7)), 0, 60), groups = Math.floor((n + 4) / 5), g;
+      var n = clamp(Math.floor(num(X.n, 7)), 0, 75), groups = Math.floor((n + 4) / 5), g;
       for (g = 0; g < groups; g++) {
         var gx = 32 + (g % 5) * 64, gy = 44 + Math.floor(g / 5) * 74, cnt = Math.min(5, n - g * 5);
         for (i = 0; i < Math.min(cnt, 4); i++) s += lnr(gx + i * 11, gy, gx + i * 11, gy + 40, ST, 3);
@@ -402,35 +407,56 @@
       return wrap(s);
     }
     if (t === 'axbase10') {
-      var nb = clamp(Math.floor(num(X.n, 134)), 0, 999), hh = Math.floor(nb / 100), tt = Math.floor(nb / 10) % 10, oo = nb % 10, bx = 16;
-      for (i = 0; i < hh; i++) {
-        var hx = bx + (i % 3) * 66, hy = 36 + Math.floor(i / 3) * 66;
-        s += rc(hx, hy, 60, 60, ACCS, ACC, 1.4);
-        for (k = 1; k < 10; k++) s += lnr(hx + k * 6, hy, hx + k * 6, hy + 60, ACC, 0.6) + lnr(hx, hy + k * 6, hx + 60, hy + k * 6, ACC, 0.6);
+      var nb = clamp(Math.floor(num(X.n, 134)), 0, 1000000), bd = [], bq = nb, bk;
+      for (bk = 0; bk < 7; bk++) { bd.push(bq % 10); bq = Math.floor(bq / 10); }
+      // (a,b,h) in units; drawn schematically: place 0=یکان (cube) ... 6=میلیون
+      var BSHP = [[1, 1, 1, '#ffd54f', 'یکان', 6], [1, 10, 1, '#66bb6a', 'دهگان', 3], [10, 10, 1, '#42a5f5', 'صدگان', 2.4], [10, 10, 10, '#ab47bc', 'هزارگان', 1.8], [1, 10, 10, '#ef5350', 'ده‌هزارگان', 2], [10, 10, 10, '#26a69a', 'صدهزارگان', 1.8], [10, 10, 10, '#ff7043', 'میلیون', 1.8]];
+      var BAVAIL = 286, BX = 70, bp, bn, bj;
+      function bshade(hex, f) { var r = parseInt(hex.substr(1, 2), 16) * f, g = parseInt(hex.substr(3, 2), 16) * f, b2 = parseInt(hex.substr(5, 2), 16) * f; return 'rgb(' + Math.round(Math.min(255, r)) + ',' + Math.round(Math.min(255, g)) + ',' + Math.round(Math.min(255, b2)) + ')'; }
+      function isoBox(L, bot, a, b, h, k, col) {
+        var ox = L + b * 0.866 * k, oy = bot - (a + b) * 0.5 * k;
+        function P(x, y, z) { return f2(ox + (x - y) * 0.866 * k) + ',' + f2(oy + (x + y) * 0.5 * k - z * k); }
+        var out = '';
+        out += poly(P(a, 0, 0) + ' ' + P(a, b, 0) + ' ' + P(a, b, h) + ' ' + P(a, 0, h), bshade(col, 0.72));
+        out += poly(P(0, b, 0) + ' ' + P(a, b, 0) + ' ' + P(a, b, h) + ' ' + P(0, b, h), bshade(col, 0.86));
+        out += poly(P(0, 0, h) + ' ' + P(a, 0, h) + ' ' + P(a, b, h) + ' ' + P(0, b, h), col);
+        return out;
       }
-      if (hh > 0) bx += 3 * 66 + 8;
-      for (i = 0; i < tt; i++) {
-        var txx = bx + i * 16;
-        s += rc(txx, 36, 12, 60, 'rgba(39,196,168,.25)', GRN, 1.4);
-        for (k = 1; k < 10; k++) s += lnr(txx, 36 + k * 6, txx + 12, 36 + k * 6, GRN, 0.8);
+      for (bp = 0; bp < 7; bp++) {
+        var ptop = 4 + (6 - bp) * 36, pbot = ptop + 33, shp = BSHP[bp], pa = shp[0], pb = shp[1], ph = shp[2], pcol = shp[3], pk = shp[4] ? 0 : 0;
+        bn = bd[bp];
+        s += tx(4, ptop + 14, shp[4], ST, 'start', true, 10) + tx(4, ptop + 28, bn === 0 ? '' : '× ' + bn, MU, 'start', true, 11);
+        if (bn === 0) continue;
+        var kh = 32 / ((pa + pb) * 0.5 + ph), kw = (BAVAIL - 4 * bn) / (bn * (pa + pb) * 0.866), kk = Math.min(shp[5], kh, kw), slot = BX;
+        for (bj = 0; bj < bn; bj++) {
+          s += isoBox(slot, pbot, pa, pb, ph, kk, pcol);
+          slot += (pa + pb) * 0.866 * kk + 4;
+        }
       }
-      if (tt > 0) bx += tt * 16 + 10;
-      for (i = 0; i < oo; i++) s += rc(bx + Math.floor(i / 5) * 16, 36 + (i % 5) * 16, 12, 12, 'rgba(240,162,2,.3)', GLD, 1.4);
-      s += tx(60, 258, 'صدگان: ' + hh, MU, 'middle', false, 12) + tx(180, 258, 'دهگان: ' + tt, MU, 'middle', false, 12) + tx(300, 258, 'یکان: ' + oo, MU, 'middle', false, 12);
-      s += tx(180, 276, 'عدد: ' + nb, ST, 'middle', true, 13);
+      s += tx(180, 276, 'عدد: ' + grp(nb), ST, 'middle', true, 13);
       return wrap(s);
     }
     if (t === 'axplace') {
-      var s0 = xs('n', '2457').trim(), rawN = isNaN(parseFloat(s0)) || !/^-?\d+(\.\d+)?$/.test(s0) ? s0.replace(/[۰-۹]/g, function (ch) { return String('۰۱۲۳۴۵۶۷۸۹'.indexOf(ch)); }).replace(/\D/g, '') : String(Math.trunc(parseFloat(s0)));
-      var blank = xs('blank', '0') === '1', names = ['یکان', 'دهگان', 'صدگان', 'هزارگان', 'ده‌هزارگان', 'صدهزارگان', 'میلیون'];
-      var cols = Math.max(3, Math.min(7, Math.max(rawN.length, Math.floor(num(X.cols, 0))))), cw = 328 / cols, c;
-      for (c = 0; c < cols; c++) {
-        var px0 = 16 + (cols - 1 - c) * cw;
-        s += rc(px0, 40, cw, 44, ACCS, ACC, 1.4) + tx(px0 + cw / 2, 67, names[c], ST, 'middle', true, cols > 5 ? 10 : 12) + rc(px0, 84, cw, 60, '#fff', ACC, 1.4);
-        var dg = rawN.length - 1 - c >= 0 ? rawN[rawN.length - 1 - c] : null;
-        if (!blank && dg != null) s += tx(px0 + cw / 2, 124, dg, PT, 'middle', true, 26);
+      var pRaw = xs('n', '2457').replace(/\D/g, '').replace(/^0+(?=\d)/, '') || '0';
+      var pBlank = xs('blank', '0') === '1', pOver = pRaw.length > 12;
+      var pNum = pOver ? pRaw.slice(-12) : pRaw, pPer = [['میلیارد', '#d62828'], ['میلیون', '#e0a800'], ['هزار', '#2e9e44'], ['یکی', '#7b3fbf']];
+      var pcw = 344 / 12, px0 = 8, ppw = 3 * pcw, pq, pj;
+      s += rc(px0, 22, 344, 136, '#f7f9fc', ST, 1.2);
+      for (pq = 0; pq < 4; pq++) {
+        var ppx = px0 + pq * ppw, pgrp = 3 - pq;
+        s += tx(ppx + ppw / 2, 18, pPer[pq][0], pPer[pq][1], 'middle', true, 17);
+        s += rc(ppx, 30, ppw, 26, ACCS, pPer[pq][1], 1.6);
+        for (pj = 0; pj < 3; pj++) {
+          var pcx = ppx + pj * pcw, pg = pgrp * 3 + (2 - pj), pdg = pNum.length - 1 - pg >= 0 ? pNum[pNum.length - 1 - pg] : null;
+          s += tx(pcx + pcw / 2, 48, ['ص', 'د', 'ی'][pj], ST, 'middle', true, 11);
+          if (pj > 0) s += lnr(pcx, 30, pcx, 158, '#8fa3c7', 0.8);
+          s += rc(pcx, 56, pcw, 40, '#fff', '#8fa3c7', 0.8) + rc(pcx, 96, pcw, 40, '#fff', '#8fa3c7', 0.8) + rc(pcx, 136, pcw, 40, '#fff', '#8fa3c7', 0.8);
+          if (!pBlank && pdg != null) s += tx(pcx + pcw / 2, 84, pdg, PT, 'middle', true, 22);
+        }
+        s += rc(ppx, 30, ppw, 146, 'none', pPer[pq][1], 2);
       }
-      if (!blank && rawN) s += tx(180, 190, 'عدد: ' + rawN, MU, 'middle', false, 13);
+      if (pOver) s += tx(180, 206, 'بیشتر از ۱۲ رقم: فقط ۱۲ رقم آخر نمایش داده شد', MU, 'middle', false, 11);
+      else if (!pBlank) s += tx(180, 206, 'عدد: ' + pNum, MU, 'middle', false, 13);
       return wrap(s);
     }
     if (t === 'axclock') {
@@ -445,10 +471,12 @@
       return wrap(s);
     }
     if (t === 'axruler') {
-      var len = clamp(Math.floor(num(X.len, 10)), 2, 30), ra = parseFloat(xs('a')), rb = parseFloat(xs('b')), rx0 = 24, rx1 = 336, ry0 = 110, unit = (rx1 - rx0) / len, showMm = len <= 15;
+      var len = clamp(Math.floor(num(X.len, 10)), 2, 50), ra = parseFloat(xs('a')), rb = parseFloat(xs('b')), rx0 = 24, rx1 = 336, ry0 = 110, unit = (rx1 - rx0) / len, showMm = len <= 15;
+      var lstep = len <= 15 ? 1 : (len <= 30 ? 2 : 5);
       s += rc(rx0 - 10, ry0, rx1 - rx0 + 20, 70, 'rgba(240,162,2,.16)', GLD, 1.6);
       for (i = 0; i <= len; i++) {
-        x = rx0 + i * unit; s += lnr(x, ry0, x, ry0 + 26, ST, 1.8) + tx(x, ry0 + 46, String(i), ST, 'middle', false, 12);
+        x = rx0 + i * unit; s += lnr(x, ry0, x, ry0 + (i % lstep === 0 ? 26 : 14), ST, 1.8);
+        if (i % lstep === 0 || i === len) s += tx(x, ry0 + 46, String(i), ST, 'middle', false, len > 30 ? 10 : 12);
         if (showMm && i < len) for (k = 1; k < 10; k++) s += lnr(x + k * unit / 10, ry0, x + k * unit / 10, ry0 + (k === 5 ? 17 : 10), ST, k === 5 ? 1.2 : 0.8);
       }
       s += tx(rx1 + 4, ry0 + 62, 'cm', MU, 'end', false, 11);
@@ -457,7 +485,19 @@
     }
     if (t === 'axfrac') {
       var den = clamp(Math.floor(num(X.den, 4)), 1, 24), nu = clamp(Math.floor(num(X.num, 1)), 0, den), shape = xs('shape', 'circle');
-      if (shape === 'bar') { var bw = 300 / den; for (i = 0; i < den; i++) s += rc(30 + i * bw, 100, bw, 70, i < nu ? ACC : '#fff', ST, 1.6); }
+      var fillF = function (q) { return q < nu ? ACC : '#fff'; };
+      if (shape === 'bar') { var bw = 300 / den; for (i = 0; i < den; i++) s += rc(30 + i * bw, 100, bw, 70, fillF(i), ST, 1.6); }
+      else if (shape === 'square') {
+        var scols = Math.ceil(Math.sqrt(den)), srows = Math.ceil(den / scols), scw = 180 / scols, sch = 180 / srows;
+        for (i = 0; i < den; i++) s += rc(90 + (i % scols) * scw, 50 + Math.floor(i / scols) * sch, scw, sch, fillF(i), ST, 1.6);
+      }
+      else if (shape === 'ring') {
+        if (den === 1) s += '<circle cx="180" cy="140" r="96" fill="' + fillF(0) + '" stroke="' + ST + '" stroke-width="1.8"/><circle cx="180" cy="140" r="48" fill="#fff" stroke="' + ST + '" stroke-width="1.8"/>';
+        else for (i = 0; i < den; i++) {
+          var ra0 = (i * 360 / den - 90) * Math.PI / 180, ra1 = ((i + 1) * 360 / den - 90) * Math.PI / 180, rlg = 360 / den > 180 ? 1 : 0;
+          s += '<path d="M ' + f2(180 + 96 * Math.cos(ra0)) + ' ' + f2(140 + 96 * Math.sin(ra0)) + ' A 96 96 0 ' + rlg + ' 1 ' + f2(180 + 96 * Math.cos(ra1)) + ' ' + f2(140 + 96 * Math.sin(ra1)) + ' L ' + f2(180 + 48 * Math.cos(ra1)) + ' ' + f2(140 + 48 * Math.sin(ra1)) + ' A 48 48 0 ' + rlg + ' 0 ' + f2(180 + 48 * Math.cos(ra0)) + ' ' + f2(140 + 48 * Math.sin(ra0)) + ' Z" fill="' + fillF(i) + '" stroke="' + ST + '" stroke-width="1.8"/>';
+        }
+      }
       else if (den === 1) s += '<circle cx="180" cy="140" r="96" fill="' + (nu === 1 ? ACC : '#fff') + '" stroke="' + ST + '" stroke-width="1.8"/>';
       else for (i = 0; i < den; i++) {
         var a0 = (i * 360 / den - 90) * Math.PI / 180, a1 = ((i + 1) * 360 / den - 90) * Math.PI / 180, lg = 360 / den > 180 ? 1 : 0;
@@ -2195,12 +2235,12 @@
       axpolpts: [['xmax', 'تعداد حلقه'], ['pts', 'نقطه‌ها (r,θ;r,θ)'], ['labs', 'نام نقطه‌ها']],
       ax3dpt: [['xmax', 'تعداد تیک'], ['step', 'گام'], ['x1', 'x نقطه'], ['y1', 'y نقطه'], ['z1', 'z نقطه'], ['labs', 'نام نقطه']],
       // V304 — ابزار ریاضی ابتدایی (عیناً FigurePickerDialog.kt)
-      axtally: [['n', 'تعداد (۰ تا ۶۰)']],
-      axbase10: [['n', 'عدد (۰ تا ۹۹۹)']],
-      axplace: [['n', 'عدد'], ['cols', 'تعداد ستون (خالی=خودکار)'], ['blank', 'خانه‌ها خالی؟ (۱=بله)']],
+      axtally: [['n', 'تعداد (۰ تا ۷۵)']],
+      axbase10: [['n', 'عدد (۰ تا ۱٬۰۰۰٬۰۰۰)']],
+      axplace: [['n', 'عدد (تا ۹۹۹٬۹۹۹٬۹۹۹٬۹۹۹)'], ['blank', 'خانه‌ها خالی؟ (۱=بله)']],
       axclock: [['h', 'ساعت (۰ تا ۱۲)'], ['m', 'دقیقه (۰ تا ۵۹)'], ['nums', 'نمایش عددها (۱/۰)'], ['label', 'نوشتن ساعت زیر شکل (۱/۰)']],
-      axruler: [['len', 'طول خط‌کش (سانتی‌متر)'], ['a', 'ابتدای اندازه‌گیری (اختیاری)'], ['b', 'انتهای اندازه‌گیری (اختیاری)']],
-      axfrac: [['num', 'صورت'], ['den', 'مخرج'], ['shape', 'شکل (circle یا bar)'], ['label', 'نوشتن کسر زیر شکل (۱/۰)']],
+      axruler: [['len', 'طول خط‌کش (۲ تا ۵۰ سانتی‌متر)'], ['a', 'ابتدای اندازه‌گیری (اختیاری)'], ['b', 'انتهای اندازه‌گیری (اختیاری)']],
+      axfrac: [['num', 'صورت'], ['den', 'مخرج'], ['shape', 'شکل'], ['label', 'نوشتن کسر زیر شکل (۱/۰)']],
       axmoney: [['notes', 'اسکناس‌ها (با ویرگول)'], ['coins', 'سکه‌ها (با ویرگول)'], ['unit', 'واحد'], ['sum', 'نوشتن جمع (۱/۰)']]
     };
     if (AXF[t]) return [['X.title', 'عنوان']].concat(AXF[t].map(function (f) { return ['X.' + f[0], f[1]]; }));
@@ -2281,9 +2321,55 @@
   var replaceEl = null;
   function $(id) { return document.getElementById(id); }
 
+  var clockDrag = null;
+  function clockPoint(box, e) {
+    var svg = box.querySelector('svg');
+    if (!svg || !svg.getScreenCTM || !svg.createSVGPoint) return null;
+    var pt = svg.createSVGPoint();
+    pt.x = e.clientX;
+    pt.y = e.clientY;
+    return pt.matrixTransform(svg.getScreenCTM().inverse());
+  }
+  function clockSet(box, e) {
+    var p = clockPoint(box, e);
+    if (!p) return;
+    var dx = p.x - 180, dy = p.y - 150;
+    var deg = (Math.atan2(dx, -dy) * 180 / Math.PI + 360) % 360;
+    if (clockDrag === 'hour') state.X.h = String(Math.round(deg / 30) % 12);
+    else state.X.m = String(Math.round(deg / 6) % 60);
+  }
+  // V310.7 — عقربه‌های ساعت با ماوس/لمس جابه‌جا می‌شوند: نزدیک مرکز = ساعت، بیرون = دقیقه
+  function bindClock(box) {
+    if (state.t !== 'axclock') {
+      box.onpointerdown = box.onpointermove = box.onpointerup = box.onpointercancel = null;
+      box.style.touchAction = '';
+      return;
+    }
+    box.style.touchAction = 'none';
+    box.onpointerdown = function (e) {
+      var p = clockPoint(box, e);
+      if (!p) return;
+      clockDrag = Math.hypot(p.x - 180, p.y - 150) <= 62 ? 'hour' : 'minute';
+      clockSet(box, e);
+      paint();
+      try { box.setPointerCapture(e.pointerId); } catch (_c) {}
+    };
+    box.onpointermove = function (e) {
+      if (!clockDrag) return;
+      clockSet(box, e);
+      paint();
+    };
+    box.onpointerup = box.onpointercancel = function () {
+      if (!clockDrag) return;
+      clockDrag = null;
+      renderFields();
+    };
+  }
   function paint() {
     var box = $('grPreview');
-    if (box) box.innerHTML = svgOf(state);
+    if (!box) return;
+    box.innerHTML = svgOf(state);
+    bindClock(box);
   }
   function getPath(obj, path) {
     return path.split('.').reduce(function (o, k) { return o && o[k]; }, obj);
@@ -2301,12 +2387,20 @@
     if (!host) return;
     host.innerHTML = '<h4>داده‌ها و بازه</h4><div class="gf-grid">' + fieldsFor(state.t).map(function (r) {
       var v = getPath(state, r[0]);
+      if (r[0] === 'X.shape') {
+        // V310.7 — شکل کسر شکلی به‌صورت منوی کشویی
+        var cur = v || 'circle';
+        var opts = [['circle', 'دایره‌ای (قطاع)'], ['ring', 'حلقه‌ای'], ['bar', 'نواری'], ['square', 'مربعی (شبکه)']];
+        return '<label>' + esc(r[1]) + '<select data-k="X.shape">' + opts.map(function (o) {
+          return '<option value="' + o[0] + '"' + (cur === o[0] ? ' selected' : '') + '>' + o[1] + '</option>';
+        }).join('') + '</select></label>';
+      }
       var wide = /labs|vals|title|xs|ys|zs|rows|cols|mins|q1s|meds|q3s|maxs|opens|highs|lows|closes/.test(r[0]);
       return '<label class="' + (wide ? 'gf-span' : '') + '">' + esc(r[1]) +
         '<input data-k="' + r[0] + '" value="' + esc(v == null ? '' : v) + '"></label>';
     }).join('') + '</div>';
-    host.querySelectorAll('input').forEach(function (inp) {
-      inp.addEventListener('input', function () {
+    host.querySelectorAll('input,select').forEach(function (inp) {
+      inp.addEventListener(inp.tagName === 'SELECT' ? 'change' : 'input', function () {
         setPath(state, inp.getAttribute('data-k'), inp.value);
         paint();
       });

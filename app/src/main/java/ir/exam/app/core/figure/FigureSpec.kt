@@ -31,7 +31,7 @@ data class FigureSpec(val raw: JsonObject) {
         strOf((raw["X"] as? JsonObject)?.get(key)).ifBlank { default }
 
     fun xNum(key: String, default: Float): Float =
-        ((raw["X"] as? JsonObject)?.get(key) as? JsonPrimitive)?.contentOrNull?.toFloatOrNull() ?: default
+        ((raw["X"] as? JsonObject)?.get(key) as? JsonPrimitive)?.contentOrNull?.let { faEnDigits(it) }?.toFloatOrNull() ?: default
 
     fun xList(key: String, default: String = ""): List<String> = splitList(xStr(key, default))
 
@@ -290,5 +290,14 @@ object FigureCodec {
             .replace(Regex("[ \\t]{2,}"), " ")
             .replace(Regex(" ?\\n ?"), "\n")
             .trim()
+    }
+}
+
+/** V310.7 — ارقام فارسی/عربی‌هندی به ارقام لاتین تبدیل می‌شوند (برای ورودی‌های عددی ابزار ریاضی). */
+fun faEnDigits(s: String): String = buildString(s.length) {
+    for (c in s) when (c) {
+        in '\u06F0'..'\u06F9' -> append(('0'.code + (c.code - 0x06F0)).toChar())
+        in '\u0660'..'\u0669' -> append(('0'.code + (c.code - 0x0660)).toChar())
+        else -> append(c)
     }
 }

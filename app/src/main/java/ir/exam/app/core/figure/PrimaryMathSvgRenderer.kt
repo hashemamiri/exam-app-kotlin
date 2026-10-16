@@ -1,6 +1,8 @@
 package ir.exam.app.core.figure
 
 import kotlin.math.PI
+import kotlin.math.ceil
+import kotlin.math.sqrt
 import kotlin.math.cos
 import kotlin.math.max
 import kotlin.math.min
@@ -42,7 +44,7 @@ object PrimaryMathSvgRenderer {
 
     // ---------------------------------------------------------------- چوب‌خط
     private fun tally(spec: FigureSpec): String {
-        val n = spec.xNum("n", 7f).toInt().coerceIn(0, 60)
+        val n = spec.xNum("n", 7f).toInt().coerceIn(0, 75)
         val sb = StringBuilder()
         val groups = (n + 4) / 5
         val perRow = 5
@@ -66,72 +68,94 @@ object PrimaryMathSvgRenderer {
         return sb.toString()
     }
 
-    // ------------------------------------------------------ دسته‌های ده‌تایی
+    // ------------------------------------------------------ دسته‌های ده‌تایی (سه‌بعدی تا یک میلیون)
+    private class Block(val a: Float, val b: Float, val h: Float, val color: String, val label: String, val cap: Float)
+
+    private val BLOCKS = listOf(
+        Block(1f, 1f, 1f, "#ffd54f", "یکان", 6f),
+        Block(1f, 10f, 1f, "#66bb6a", "دهگان", 3f),
+        Block(10f, 10f, 1f, "#42a5f5", "صدگان", 2.4f),
+        Block(10f, 10f, 10f, "#ab47bc", "هزارگان", 1.8f),
+        Block(1f, 10f, 10f, "#ef5350", "ده‌هزارگان", 2f),
+        Block(10f, 10f, 10f, "#26a69a", "صدهزارگان", 1.8f),
+        Block(10f, 10f, 10f, "#ff7043", "میلیون", 1.8f)
+    )
+
+    private fun shade(hex: String, k: Float): String {
+        fun ch(o: Int): Int = min(255f, hex.substring(o, o + 2).toInt(16) * k).toInt()
+        return "rgb(${ch(1)},${ch(3)},${ch(5)})"
+    }
+
+    private fun isoBox(left: Float, bottom: Float, a: Float, b: Float, h: Float, k: Float, col: String): String {
+        val ox = left + b * 0.866f * k
+        val oy = bottom - (a + b) * 0.5f * k
+        fun p(x: Float, y: Float, z: Float): String = "${f(ox + (x - y) * 0.866f * k)},${f(oy + (x + y) * 0.5f * k - z * k)}"
+        fun poly(pts: String, c: String): String = "<polygon points=\"$pts\" fill=\"$c\"/>"
+        return poly("${p(a, 0f, 0f)} ${p(a, b, 0f)} ${p(a, b, h)} ${p(a, 0f, h)}", shade(col, 0.72f)) +
+            poly("${p(0f, b, 0f)} ${p(a, b, 0f)} ${p(a, b, h)} ${p(0f, b, h)}", shade(col, 0.86f)) +
+            poly("${p(0f, 0f, h)} ${p(a, 0f, h)} ${p(a, b, h)} ${p(0f, b, h)}", col)
+    }
+
     private fun base10(spec: FigureSpec): String {
-        val n = spec.xNum("n", 134f).toInt().coerceIn(0, 999)
-        val h = n / 100
-        val t = (n / 10) % 10
-        val o = n % 10
+        val nb = spec.xNum("n", 134f).toInt().coerceIn(0, 1000000)
+        val digits = IntArray(7)
+        var q = nb
+        for (k in 0 until 7) { digits[k] = q % 10; q /= 10 }
         val sb = StringBuilder()
-        var x = 16f
-        // صدگان: صفحهٔ ۱۰×۱۰ (۶۰×۶۰)
-        for (i in 0 until h) {
-            val gx = x + (i % 3) * 66f
-            val gy = 36f + (i / 3) * 66f
-            sb.append(rect(gx, gy, 60f, 60f, ACC_SOFT, ACC, 1.4f))
-            for (k in 1 until 10) {
-                sb.append(line(gx + k * 6f, gy, gx + k * 6f, gy + 60f, ACC, 0.6f))
-                sb.append(line(gx, gy + k * 6f, gx + 60f, gy + k * 6f, ACC, 0.6f))
+        for (bp in 0 until 7) {
+            val blk = BLOCKS[bp]
+            val top = 4f + (6 - bp) * 36f
+            val bot = top + 33f
+            val n = digits[bp]
+            sb.append(text(4f, top + 14f, blk.label, ST, "start", bold = true, size = 10))
+            if (n == 0) continue
+            sb.append(text(4f, top + 28f, "× $n", MU, "start", bold = true, size = 11))
+            val kh = 32f / ((blk.a + blk.b) * 0.5f + blk.h)
+            val kw = (286f - 4f * n) / (n * (blk.a + blk.b) * 0.866f)
+            val k = min(blk.cap, min(kh, kw))
+            var slot = 70f
+            repeat(n) {
+                sb.append(isoBox(slot, bot, blk.a, blk.b, blk.h, k, blk.color))
+                slot += (blk.a + blk.b) * 0.866f * k + 4f
             }
         }
-        if (h > 0) x += 3 * 66f + 8f
-        // دهگان: میله‌های ۱۲×۶۰
-        for (i in 0 until t) {
-            val gx = x + i * 16f
-            val gy = 36f
-            sb.append(rect(gx, gy, 12f, 60f, "rgba(39,196,168,.25)", GREEN, 1.4f))
-            for (k in 1 until 10) sb.append(line(gx, gy + k * 6f, gx + 12f, gy + k * 6f, GREEN, 0.8f))
-        }
-        if (t > 0) x += t * 16f + 10f
-        // یکان: مکعب‌های ۱۲×۱۲ در دو ستون
-        for (i in 0 until o) {
-            val gx = x + (i / 5) * 16f
-            val gy = 36f + (i % 5) * 16f
-            sb.append(rect(gx, gy, 12f, 12f, "rgba(240,162,2,.3)", GOLD, 1.4f))
-        }
-        val y = 258f
-        sb.append(text(60f, y, "صدگان: $h", MU, "middle", size = 12))
-        sb.append(text(180f, y, "دهگان: $t", MU, "middle", size = 12))
-        sb.append(text(300f, y, "یکان: $o", MU, "middle", size = 12))
-        sb.append(text(180f, 276f, "عدد: $n", ST, "middle", bold = true, size = 13))
+        sb.append(text(180f, 276f, "عدد: ${group(nb.toLong())}", ST, "middle", bold = true, size = 13))
         return sb.toString()
     }
 
-    // ------------------------------------------------------ جدول ارزش مکانی
+    // ------------------------------------------------------ جدول ارزش مکانی (میلیارد تا یکی)
     private fun placeValue(spec: FigureSpec): String {
-        // ویرایشگر اپ مقدار عددی را Float ذخیره می‌کند (2457.0) → اول عدد، بعد رشتهٔ رقمی
-        val s0 = spec.xStr("n", "2457").trim()
-        val raw = s0.toDoubleOrNull()?.toLong()?.toString()
-            ?: s0.filter { it.isDigit() || it in '۰'..'۹' }.map { if (it in '۰'..'۹') ('0' + (it - '۰')) else it }.joinToString("")
+        // ویرایشگر اپ مقدار عددی را Float ذخیره می‌کند (2457.0) → قسمت صحیح رقمی
+        val base = faEnDigits(spec.xStr("n", "2457")).trim().substringBefore('.').filter { it.isDigit() }.trimStart('0').ifEmpty { "0" }
         val blank = spec.xStr("blank", "0") == "1"
-        val names = listOf("یکان", "دهگان", "صدگان", "هزارگان", "ده‌هزارگان", "صدهزارگان", "میلیون")
-        val cols = max(3, min(7, max(raw.length, spec.xNum("cols", 0f).toInt())))
-        val w = 328f / cols
-        val x0 = 16f
-        val y0 = 40f
-        val hh = 44f
-        val rh = 60f
+        val over = base.length > 12
+        val num = if (over) base.takeLast(12) else base
+        val per = listOf("میلیارد" to "#d62828", "میلیون" to "#e0a800", "هزار" to "#2e9e44", "یکی" to "#7b3fbf")
+        val cw = 344f / 12f
+        val x0 = 8f
+        val pw = 3 * cw
         val sb = StringBuilder()
-        for (c in 0 until cols) {
-            // ستون ۰ = یکان در سمت راست
-            val x = x0 + (cols - 1 - c) * w
-            sb.append(rect(x, y0, w, hh, ACC_SOFT, ACC, 1.4f))
-            sb.append(text(x + w / 2, y0 + 27f, names[c], ST, "middle", bold = true, size = if (cols > 5) 10 else 12))
-            sb.append(rect(x, y0 + hh, w, rh, "#fff", ACC, 1.4f))
-            val digit = raw.getOrNull(raw.length - 1 - c)
-            if (!blank && digit != null) sb.append(text(x + w / 2, y0 + hh + 40f, digit.toString(), PINK, "middle", bold = true, size = 26))
+        sb.append(rect(x0, 22f, 344f, 136f, "#f7f9fc", ST, 1.2f))
+        for (pq in 0 until 4) {
+            val ppx = x0 + pq * pw
+            val pgrp = 3 - pq
+            sb.append(text(ppx + pw / 2, 18f, per[pq].first, per[pq].second, "middle", bold = true, size = 17))
+            sb.append(rect(ppx, 30f, pw, 26f, ACC_SOFT, per[pq].second, 1.6f))
+            for (pj in 0 until 3) {
+                val pcx = ppx + pj * cw
+                val idx = num.length - 1 - (pgrp * 3 + (2 - pj))
+                val dg = if (idx >= 0) num[idx].toString() else null
+                sb.append(text(pcx + cw / 2, 48f, listOf("ص", "د", "ی")[pj], ST, "middle", bold = true, size = 11))
+                if (pj > 0) sb.append(line(pcx, 30f, pcx, 158f, "#8fa3c7", 0.8f))
+                sb.append(rect(pcx, 56f, cw, 40f, "#fff", "#8fa3c7", 0.8f))
+                sb.append(rect(pcx, 96f, cw, 40f, "#fff", "#8fa3c7", 0.8f))
+                sb.append(rect(pcx, 136f, cw, 40f, "#fff", "#8fa3c7", 0.8f))
+                if (!blank && dg != null) sb.append(text(pcx + cw / 2, 84f, dg, PINK, "middle", bold = true, size = 22))
+            }
+            sb.append(rect(ppx, 30f, pw, 146f, "none", per[pq].second, 2f))
         }
-        if (!blank && raw.isNotBlank()) sb.append(text(180f, 190f, "عدد: $raw", MU, "middle", size = 13))
+        if (over) sb.append(text(180f, 206f, "بیشتر از ۱۲ رقم: فقط ۱۲ رقم آخر نمایش داده شد", MU, "middle", size = 11))
+        else if (!blank) sb.append(text(180f, 206f, "عدد: $num", MU, "middle", size = 13))
         return sb.toString()
     }
 
@@ -167,21 +191,22 @@ object PrimaryMathSvgRenderer {
 
     // -------------------------------------------------------------- خط‌کش
     private fun ruler(spec: FigureSpec): String {
-        val len = spec.xNum("len", 10f).toInt().coerceIn(2, 30)
-        val a = spec.xStr("a").toFloatOrNull()
-        val b = spec.xStr("b").toFloatOrNull()
+        val len = spec.xNum("len", 10f).toInt().coerceIn(2, 50)
+        val a = faEnDigits(spec.xStr("a")).toFloatOrNull()
+        val b = faEnDigits(spec.xStr("b")).toFloatOrNull()
         val x0 = 24f
         val x1 = 336f
         val y0 = 110f
         val hgt = 70f
         val unit = (x1 - x0) / len
+        val lstep = if (len <= 15) 1 else if (len <= 30) 2 else 5
         val sb = StringBuilder()
         sb.append(rect(x0 - 10f, y0, x1 - x0 + 20f, hgt, "rgba(240,162,2,.16)", GOLD, 1.6f))
         val showMm = len <= 15
         for (i in 0..len) {
             val x = x0 + i * unit
-            sb.append(line(x, y0, x, y0 + 26f, ST, 1.8f))
-            sb.append(text(x, y0 + 46f, i.toString(), ST, "middle", size = 12))
+            sb.append(line(x, y0, x, y0 + (if (i % lstep == 0) 26f else 14f), ST, 1.8f))
+            if (i % lstep == 0 || i == len) sb.append(text(x, y0 + 46f, i.toString(), ST, "middle", size = if (len > 30) 10 else 12))
             if (showMm && i < len) for (k in 1 until 10) {
                 val xx = x + k * unit / 10f
                 sb.append(line(xx, y0, xx, y0 + (if (k == 5) 17f else 10f), ST, if (k == 5) 1.2f else 0.8f))
@@ -204,28 +229,58 @@ object PrimaryMathSvgRenderer {
         val num = spec.xNum("num", 1f).toInt().coerceIn(0, den)
         val shape = spec.xStr("shape", "circle")
         val sb = StringBuilder()
-        if (shape == "bar") {
-            val x0 = 30f
-            val w = 300f
-            val y0 = 100f
-            val h = 70f
-            val cw = w / den
-            for (i in 0 until den) sb.append(rect(x0 + i * cw, y0, cw, h, if (i < num) ACC else "#fff", ST, 1.6f))
-        } else {
-            val cx = 180f
-            val cy = 140f
-            val r = 96f
-            if (den == 1) {
-                sb.append("<circle cx=\"${f(cx)}\" cy=\"${f(cy)}\" r=\"${f(r)}\" fill=\"${if (num == 1) ACC else "#fff"}\" stroke=\"$ST\" stroke-width=\"1.8\"/>")
-            } else for (i in 0 until den) {
-                val a0 = (i * 360.0 / den - 90.0) * PI / 180.0
-                val a1 = ((i + 1) * 360.0 / den - 90.0) * PI / 180.0
-                val x0 = cx + r * cos(a0)
-                val y0 = cy + r * sin(a0)
-                val x1 = cx + r * cos(a1)
-                val y1 = cy + r * sin(a1)
-                val large = if (360.0 / den > 180.0) 1 else 0
-                sb.append("<path d=\"M ${f(cx)} ${f(cy)} L ${f(x0.toFloat())} ${f(y0.toFloat())} A ${f(r)} ${f(r)} 0 $large 1 ${f(x1.toFloat())} ${f(y1.toFloat())} Z\" fill=\"${if (i < num) ACC else "#fff"}\" stroke=\"$ST\" stroke-width=\"1.8\"/>")
+        fun fillOf(i: Int): String = if (i < num) ACC else "#fff"
+        when (shape) {
+            "bar" -> {
+                val x0 = 30f
+                val w = 300f
+                val y0 = 100f
+                val h = 70f
+                val cw = w / den
+                for (i in 0 until den) sb.append(rect(x0 + i * cw, y0, cw, h, fillOf(i), ST, 1.6f))
+            }
+            "square" -> {
+                val side = 180f
+                val x0 = 90f
+                val y0 = 50f
+                val cols = ceil(sqrt(den.toDouble())).toInt()
+                val rows = ceil(den.toDouble() / cols).toInt()
+                val cwd = side / cols
+                val chd = side / rows
+                for (i in 0 until den) sb.append(rect(x0 + (i % cols) * cwd, y0 + (i / cols) * chd, cwd, chd, fillOf(i), ST, 1.6f))
+            }
+            "ring" -> {
+                val cx = 180f
+                val cy = 140f
+                val ro = 96f
+                val ri = 48f
+                if (den == 1) {
+                    sb.append("<circle cx=\"${f(cx)}\" cy=\"${f(cy)}\" r=\"${f(ro)}\" fill=\"${fillOf(0)}\" stroke=\"$ST\" stroke-width=\"1.8\"/>")
+                    sb.append("<circle cx=\"${f(cx)}\" cy=\"${f(cy)}\" r=\"${f(ri)}\" fill=\"#fff\" stroke=\"$ST\" stroke-width=\"1.8\"/>")
+                } else for (i in 0 until den) {
+                    val a0 = (i * 360.0 / den - 90.0) * PI / 180.0
+                    val a1 = ((i + 1) * 360.0 / den - 90.0) * PI / 180.0
+                    val large = if (360.0 / den > 180.0) 1 else 0
+                    fun px(rad: Float, a: Double): String = "${f(cx + rad * cos(a).toFloat())} ${f(cy + rad * sin(a).toFloat())}"
+                    sb.append("<path d=\"M ${px(ro, a0)} A ${f(ro)} ${f(ro)} 0 $large 1 ${px(ro, a1)} L ${px(ri, a1)} A ${f(ri)} ${f(ri)} 0 $large 0 ${px(ri, a0)} Z\" fill=\"${fillOf(i)}\" stroke=\"$ST\" stroke-width=\"1.8\"/>")
+                }
+            }
+            else -> {
+                val cx = 180f
+                val cy = 140f
+                val rr = 96f
+                if (den == 1) {
+                    sb.append("<circle cx=\"${f(cx)}\" cy=\"${f(cy)}\" r=\"${f(rr)}\" fill=\"${fillOf(0)}\" stroke=\"$ST\" stroke-width=\"1.8\"/>")
+                } else for (i in 0 until den) {
+                    val a0 = (i * 360.0 / den - 90.0) * PI / 180.0
+                    val a1 = ((i + 1) * 360.0 / den - 90.0) * PI / 180.0
+                    val large = if (360.0 / den > 180.0) 1 else 0
+                    val x0 = cx + rr * cos(a0).toFloat()
+                    val y0 = cy + rr * sin(a0).toFloat()
+                    val x1 = cx + rr * cos(a1).toFloat()
+                    val y1 = cy + rr * sin(a1).toFloat()
+                    sb.append("<path d=\"M ${f(cx)} ${f(cy)} L ${f(x0)} ${f(y0)} A ${f(rr)} ${f(rr)} 0 $large 1 ${f(x1)} ${f(y1)} Z\" fill=\"${fillOf(i)}\" stroke=\"$ST\" stroke-width=\"1.8\"/>")
+                }
             }
         }
         if (spec.xStr("label", "1") != "0") {

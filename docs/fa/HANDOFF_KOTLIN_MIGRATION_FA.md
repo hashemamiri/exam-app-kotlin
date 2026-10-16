@@ -20372,3 +20372,9 @@ check_test_pins بهبودیافته (assertTrue/assertFalse/contains/!contains/
 - سایت: علامت √ موتور چاپ یک svg با اندازهٔ صفر است که فقط با `fitMathStretchers` (math_host.js) بعد از درج در DOM اندازه می‌گیرد. `builder.js` (`fitMath(w, root)` بعد از چیپ و پیش‌نمایش زنده) و `student.js` (`fitMath(root)`، در `SiteStudent.fitMath` هم هست و پیش‌نمایش دانش‌آموزِ سازنده آن را صدا می‌زند). regex `keep` در هر دو فایل همهٔ کلاس‌های CSS ریاضی موتور (msurd, surd-svg, root-line, mrad, mdelim, …) را نگه می‌دارد.
 - `site.css`: همهٔ `background:#fff` → `var(--card)`؛ بلوک `:root.m-dark{…}` در انتها (کلاس `m-dark` را mobile.js از تنظیمات ظاهر/`prefers-color-scheme` روی `<html>` می‌گذارد؛ قبلاً فقط `.m-mode` موبایل و `.lp` ورود تیره می‌شدند).
 - تست نگهبان: `V218_MathRenderDarkTest`.
+
+## V310.7 — ابزار ریاضی ابتدایی (ادامه)
+- نسخهٔ برنامه: 1.02.22. فایل‌های اصلی: `app/src/main/assets/print/web/graph_fig.js` (سایت) و `core/figure/PrimaryMathSvgRenderer.kt` + `ui/figure/AdjustableFigure.kt` (اپ).
+- ارقام فارسی: `faEn()` (سایت) و `faEnDigits()` (اپ). سقف چوب‌خط ۷۵، خط‌کش ۲–۵۰، جدول ارزش مکانی چهار دوره (میلیارد تا یکی)، دسته‌های ده‌تایی سه‌بعدی تا یک میلیون.
+- کسر شکلی: `circle | ring | bar | square` با منوی کشویی. ساعت: دست‌ساعت/دقیقه با ماوس یا لمس (سایت: پیش‌نمایش ویرایشگر؛ اپ: پیش‌نمایش و شکل‌های سؤال).
+- باز: پاسخ دانش‌آموز به ساعت (ذخیره و نمره‌دهی) هنوز پیاده نشده است؛ تست کامپایل اندروید در محیط بدون SDK انجام نشده است.
