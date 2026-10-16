@@ -3,6 +3,7 @@ package ir.exam.app.ui.math
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -31,6 +32,7 @@ import ir.exam.app.core.figure.FigureSpec
 import ir.exam.app.core.text.RichSegment
 import ir.exam.app.core.text.RichTextSplitter
 import ir.exam.app.ui.figure.AtlasFigureView
+import ir.exam.app.core.figure.PrimaryMathSvgRenderer
 import ir.exam.app.ui.figure.AdjustableFigure
 import ir.exam.app.ui.figure.InlineFigureView
 import ir.exam.app.ui.figure.ZoomableFigureDialog
@@ -125,7 +127,12 @@ fun NativeMathText(
                             if (zoomableFigures) Modifier.clickable { zoomSpec = figure.spec }
                             else Modifier
                         )
-                        .height(150.dp),
+                        .then(
+                            // V310.8 — دسته‌های ده‌تایی کادر بلندتر (نسبت ۳۶۰×۳۷۰) تا همهٔ رتبه‌ها دیده شوند
+                            if (figure.spec.type == "axbase10" || figure.spec.type == "axplace")
+                                Modifier.aspectRatio(360f / PrimaryMathSvgRenderer.canvasHeight(figure.spec))
+                            else Modifier.height(150.dp)
+                        ),
                     contentAlignment = Alignment.CenterStart
                 ) {
                     AdjustableFigure(

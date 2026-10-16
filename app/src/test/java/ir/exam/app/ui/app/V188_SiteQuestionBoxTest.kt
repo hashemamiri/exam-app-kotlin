@@ -17,7 +17,7 @@ class V188_SiteQuestionBoxTest {
     @Test
     fun `question box styled like reference and tools tinted`() {
         val b = source("site/src/builder.js")
-        assertTrue("placeholder: 'متن سؤال را بنویسید؛ برای فرمول از دکمهٔ ∑ استفاده کنید'" in b)
+        assertTrue("placeholder: 'متن سؤال را بنویسید؛'" in b)
         assertTrue("class: 'tool-btn is-fx'" in b && "class: 'tool-btn is-fig'" in b && "class: 'tool-btn is-mic'" in b)
         val css = source("site/src/site.css")
         assertTrue(".dk .b-editor .b-rich{min-height:9.5em;max-height:none;height:9.5em" in css && "resize:vertical" in css)

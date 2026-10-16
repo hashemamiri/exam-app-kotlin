@@ -77,8 +77,9 @@
     var n = parseFloat(faEn(String(v == null ? '' : v)).replace('،', '.'));
     return isFinite(n) ? n : fb;
   }
-  function wrap(inner) {
-    return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 280" width="320" height="250" overflow="hidden">' +
+  function wrap(inner, vh) {
+    vh = vh || 280;
+    return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 ' + vh + '" width="320" height="' + Math.round(250 * vh / 280) + '" overflow="hidden">' +
       '<style>text{font:700 12px Vazirmatn,Tahoma,sans-serif;fill:#243044}.tk{font:600 11px Vazirmatn,Tahoma,sans-serif;fill:#4a5870}.ttl{font:800 13px Vazirmatn,Tahoma,sans-serif;fill:#1a2433}.fa{font:700 11px Vazirmatn,Tahoma,sans-serif;fill:#1a2433}.lg{font:700 11px Vazirmatn,Tahoma,sans-serif;fill:#1a2433}.onf{font:800 11px Vazirmatn,Tahoma,sans-serif;fill:#fff;paint-order:stroke;stroke:#1a2433;stroke-width:2.6;stroke-linejoin:round}</style>' +
       inner + '</svg>';
   }
@@ -407,11 +408,11 @@
       return wrap(s);
     }
     if (t === 'axbase10') {
-      var nb = clamp(Math.floor(num(X.n, 134)), 0, 1000000), bd = [], bq = nb, bk;
-      for (bk = 0; bk < 7; bk++) { bd.push(bq % 10); bq = Math.floor(bq / 10); }
-      // (a,b,h) in units; drawn schematically: place 0=یکان (cube) ... 6=میلیون
-      var BSHP = [[1, 1, 1, '#ffd54f', 'یکان', 6], [1, 10, 1, '#66bb6a', 'دهگان', 3], [10, 10, 1, '#42a5f5', 'صدگان', 2.4], [10, 10, 10, '#ab47bc', 'هزارگان', 1.8], [1, 10, 10, '#ef5350', 'ده‌هزارگان', 2], [10, 10, 10, '#26a69a', 'صدهزارگان', 1.8], [10, 10, 10, '#ff7043', 'میلیون', 1.8]];
-      var BAVAIL = 286, BX = 70, bp, bn, bj;
+      var nb = clamp(Math.floor(num(X.n, 134)), 0, 999999999), bd = [], bq = nb, bk;
+      for (bk = 0; bk < 9; bk++) { bd.push(bq % 10); bq = Math.floor(bq / 10); }
+      // (a,b,h) واحد؛ نمایش سه‌بعدی؛ مقیاس رتبه‌های بالاتر نمایشی است
+      var BSHP = [[1, 1, 1, '#ffd54f', 'یکان', 6], [1, 10, 1, '#66bb6a', 'دهگان', 3], [10, 10, 1, '#42a5f5', 'صدگان', 2.4], [10, 10, 10, '#ab47bc', 'هزارگان', 1.8], [1, 10, 10, '#ef5350', 'ده‌هزارگان', 2], [10, 10, 10, '#26a69a', 'صدهزارگان', 1.8], [10, 10, 10, '#ff7043', 'میلیون', 1.8], [10, 10, 10, '#8d6e63', 'ده‌میلیون', 1.8], [10, 10, 10, '#5c6bc0', 'صدمیلیون', 1.8]];
+      var BAVAIL = 286, bp, bn, bj;
       function bshade(hex, f) { var r = parseInt(hex.substr(1, 2), 16) * f, g = parseInt(hex.substr(3, 2), 16) * f, b2 = parseInt(hex.substr(5, 2), 16) * f; return 'rgb(' + Math.round(Math.min(255, r)) + ',' + Math.round(Math.min(255, g)) + ',' + Math.round(Math.min(255, b2)) + ')'; }
       function isoBox(L, bot, a, b, h, k, col) {
         var ox = L + b * 0.866 * k, oy = bot - (a + b) * 0.5 * k;
@@ -422,42 +423,50 @@
         out += poly(P(0, 0, h) + ' ' + P(a, 0, h) + ' ' + P(a, b, h) + ' ' + P(0, b, h), col);
         return out;
       }
-      for (bp = 0; bp < 7; bp++) {
-        var ptop = 4 + (6 - bp) * 36, pbot = ptop + 33, shp = BSHP[bp], pa = shp[0], pb = shp[1], ph = shp[2], pcol = shp[3], pk = shp[4] ? 0 : 0;
+      for (bp = 0; bp < 9; bp++) {
+        var ptop = 4 + (8 - bp) * 36, pbot = ptop + 33, shp = BSHP[bp], pa = shp[0], pb = shp[1], ph = shp[2], pcol = shp[3];
         bn = bd[bp];
         s += tx(4, ptop + 14, shp[4], ST, 'start', true, 10) + tx(4, ptop + 28, bn === 0 ? '' : '× ' + bn, MU, 'start', true, 11);
         if (bn === 0) continue;
-        var kh = 32 / ((pa + pb) * 0.5 + ph), kw = (BAVAIL - 4 * bn) / (bn * (pa + pb) * 0.866), kk = Math.min(shp[5], kh, kw), slot = BX;
+        var kh = 32 / ((pa + pb) * 0.5 + ph), kw = (BAVAIL - 4 * bn) / (bn * (pa + pb) * 0.866), kk = Math.min(shp[5], kh, kw), slot = 70;
         for (bj = 0; bj < bn; bj++) {
           s += isoBox(slot, pbot, pa, pb, ph, kk, pcol);
           slot += (pa + pb) * 0.866 * kk + 4;
         }
       }
-      s += tx(180, 276, 'عدد: ' + grp(nb), ST, 'middle', true, 13);
-      return wrap(s);
+      s += tx(180, 362, 'عدد: ' + grp(nb), ST, 'middle', true, 13);
+      return wrap(s, 370);
     }
     if (t === 'axplace') {
-      var pRaw = xs('n', '2457').replace(/\D/g, '').replace(/^0+(?=\d)/, '') || '0';
-      var pBlank = xs('blank', '0') === '1', pOver = pRaw.length > 12;
-      var pNum = pOver ? pRaw.slice(-12) : pRaw, pPer = [['میلیارد', '#d62828'], ['میلیون', '#e0a800'], ['هزار', '#2e9e44'], ['یکی', '#7b3fbf']];
-      var pcw = 344 / 12, px0 = 8, ppw = 3 * pcw, pq, pj;
-      s += rc(px0, 22, 344, 136, '#f7f9fc', ST, 1.2);
+      var pClean = function (v) { return String(xs(v, '')).replace(/\D/g, '').replace(/^0+(?=\d)/, ''); };
+      var pRowsN = clamp(Math.floor(num(X.rows, 3)), 1, 6), pBlank = xs('blank', '0') === '1';
+      var pVals = [pClean('n') || '0', pClean('n2'), pClean('n3')], pOps = [xs('op2', ''), xs('op3', '')];
+      var pPer = [['میلیارد', '#d62828'], ['میلیون', '#e0a800'], ['هزار', '#2e9e44'], ['یکی', '#7b3fbf']];
+      var pCw = 326 / 12, pX0 = 30, pPw = 3 * pCw, pRh = 40, pTop = 56, pBot = pTop + pRh * pRowsN, pq, pj, pr;
+      var pH = Math.max(280, pBot + 60);
+      s += rc(pX0, 22, 12 * pCw, pBot - 22 + 4, '#f7f9fc', ST, 1.2);
       for (pq = 0; pq < 4; pq++) {
-        var ppx = px0 + pq * ppw, pgrp = 3 - pq;
-        s += tx(ppx + ppw / 2, 18, pPer[pq][0], pPer[pq][1], 'middle', true, 17);
-        s += rc(ppx, 30, ppw, 26, ACCS, pPer[pq][1], 1.6);
+        var ppx = pX0 + pq * pPw, pgrp = 3 - pq;
+        s += tx(ppx + pPw / 2, 18, pPer[pq][0], pPer[pq][1], 'middle', true, 13);
+        s += rc(ppx, 30, pPw, 26, ACCS, pPer[pq][1], 1.6);
         for (pj = 0; pj < 3; pj++) {
-          var pcx = ppx + pj * pcw, pg = pgrp * 3 + (2 - pj), pdg = pNum.length - 1 - pg >= 0 ? pNum[pNum.length - 1 - pg] : null;
-          s += tx(pcx + pcw / 2, 48, ['ص', 'د', 'ی'][pj], ST, 'middle', true, 11);
-          if (pj > 0) s += lnr(pcx, 30, pcx, 158, '#8fa3c7', 0.8);
-          s += rc(pcx, 56, pcw, 40, '#fff', '#8fa3c7', 0.8) + rc(pcx, 96, pcw, 40, '#fff', '#8fa3c7', 0.8) + rc(pcx, 136, pcw, 40, '#fff', '#8fa3c7', 0.8);
-          if (!pBlank && pdg != null) s += tx(pcx + pcw / 2, 84, pdg, PT, 'middle', true, 22);
+          var pcx = ppx + pj * pCw;
+          s += tx(pcx + pCw / 2, 48, ['ص', 'د', 'ی'][pj], ST, 'middle', true, 11);
+          if (pj > 0) s += lnr(pcx, 30, pcx, pBot, '#8fa3c7', 0.8);
+          for (pr = 0; pr < pRowsN; pr++) {
+            s += rc(pcx, pTop + pr * pRh, pCw, pRh, '#fff', '#8fa3c7', 0.8);
+            var pStr = pr < 3 ? pVals[pr] : '', pIdx = pStr.length - 1 - (pgrp * 3 + (2 - pj)), pDg = pIdx >= 0 ? pStr[pIdx] : null;
+            if (!(pr === 0 && pBlank) && pDg != null) s += tx(pcx + pCw / 2, pTop + pr * pRh + 27, pDg, PT, 'middle', true, 22);
+          }
         }
-        s += rc(ppx, 30, ppw, 146, 'none', pPer[pq][1], 2);
+        s += rc(ppx, 30, pPw, pBot - 30, 'none', pPer[pq][1], 2);
       }
-      if (pOver) s += tx(180, 206, 'بیشتر از ۱۲ رقم: فقط ۱۲ رقم آخر نمایش داده شد', MU, 'middle', false, 11);
-      else if (!pBlank) s += tx(180, 206, 'عدد: ' + pNum, MU, 'middle', false, 13);
-      return wrap(s);
+      for (pr = 1; pr < pRowsN && pr < 3; pr++) {
+        var pOp = pOps[pr - 1] === '-' ? '−' : pOps[pr - 1];
+        if (pOp === '+' || pOp === '−') s += tx(16, pTop + pr * pRh + 27, pOp, ST, 'middle', true, 22);
+      }
+      if (pVals[0].length > 12 || pVals[1].length > 12 || pVals[2].length > 12) s += tx(180, pBot + 22, 'بیشتر از ۱۲ رقم: فقط ۱۲ رقم آخر نمایش داده می‌شود', MU, 'middle', false, 11);
+      return wrap(s, pH);
     }
     if (t === 'axclock') {
       var ch0 = ((Math.floor(num(X.h, 3)) % 12) + 12) % 12, cm = clamp(Math.floor(num(X.m, 0)), 0, 59), showN = xs('nums', '1') !== '0', ccx = 180, ccy = 150, cr = 104, a;
@@ -2237,7 +2246,7 @@
       // V304 — ابزار ریاضی ابتدایی (عیناً FigurePickerDialog.kt)
       axtally: [['n', 'تعداد (۰ تا ۷۵)']],
       axbase10: [['n', 'عدد (۰ تا ۱٬۰۰۰٬۰۰۰)']],
-      axplace: [['n', 'عدد (تا ۹۹۹٬۹۹۹٬۹۹۹٬۹۹۹)'], ['blank', 'خانه‌ها خالی؟ (۱=بله)']],
+      axplace: [['n', 'ردیف ۱ (عدد)'], ['n2', 'ردیف ۲ (خالی = ندارد)'], ['op2', 'علامت ردیف ۲ (+ یا −)'], ['n3', 'ردیف ۳ (خالی = ندارد)'], ['op3', 'علامت ردیف ۳ (+ یا −)'], ['rows', 'تعداد ردیف‌ها (۱ تا ۶)'], ['blank', 'خانه‌ها خالی؟ (۱=بله)']],
       axclock: [['h', 'ساعت (۰ تا ۱۲)'], ['m', 'دقیقه (۰ تا ۵۹)'], ['nums', 'نمایش عددها (۱/۰)'], ['label', 'نوشتن ساعت زیر شکل (۱/۰)']],
       axruler: [['len', 'طول خط‌کش (۲ تا ۵۰ سانتی‌متر)'], ['a', 'ابتدای اندازه‌گیری (اختیاری)'], ['b', 'انتهای اندازه‌گیری (اختیاری)']],
       axfrac: [['num', 'صورت'], ['den', 'مخرج'], ['shape', 'شکل'], ['label', 'نوشتن کسر زیر شکل (۱/۰)']],
@@ -2321,6 +2330,68 @@
   var replaceEl = null;
   function $(id) { return document.getElementById(id); }
 
+  // V310.8 — منوی کشویی شبیه دسکتاپ سایت (دکمهٔ گرد + فهرست گرد). این صفحه در iframe است و site.css ندارد، پس استایل آن این‌جا تزریق می‌شود.
+  function gfDdCss() {
+    if (document.getElementById('gfDdCss')) return;
+    var st = document.createElement('style');
+    st.id = 'gfDdCss';
+    st.textContent = '.gf-dd-wrap{display:block;position:relative;width:100%}' +
+      '.gf-shape.gf-dd-native{position:absolute;opacity:0;pointer-events:none;width:1px;height:1px;left:0;top:0;overflow:hidden}' +
+      '.gf-dd-btn{font:inherit;color:#1d2935;width:100%;min-width:120px;box-sizing:border-box;text-align:right;border-radius:999px;border:1px solid #d9e1e6;background-color:#fff;padding:9px 16px 9px 38px;min-height:40px;line-height:1.4;cursor:pointer;box-shadow:0 2px 8px rgba(60,120,170,.08);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;background-image:url("data:image/svg+xml;utf8,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%2716%27 height=%2716%27 viewBox=%270 0 24 24%27 fill=%27none%27 stroke=%27%2339758a%27 stroke-width=%272.2%27 stroke-linecap=%27round%27 stroke-linejoin=%27round%27%3E%3Cpath d=%27M6 9l6 6 6-6%27/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:left 14px center;background-size:16px}' +
+      '.gf-dd-btn:hover,.gf-dd-btn.open{border-color:#39758a}.gf-dd-btn.open{box-shadow:0 0 0 3px #e6f0f3}' +
+      '.gf-dd-menu{position:fixed;z-index:9999;display:flex;flex-direction:column;gap:4px;padding:8px;box-sizing:border-box;border-radius:18px;background:#fff;border:1px solid #d9e1e6;box-shadow:0 16px 40px rgba(60,120,170,.18);max-height:360px;overflow-y:auto}' +
+      '.gf-dd-item{font:inherit;color:#1d2935;text-align:right;border:1px solid transparent;border-radius:999px;padding:8px 14px;background:transparent;cursor:pointer;white-space:nowrap}' +
+      '.gf-dd-item:hover{background:#eef1f6}.gf-dd-item.on{background:#e6f0f3;color:#39758a;border-color:#39758a;font-weight:700}';
+    document.head.appendChild(st);
+  }
+  function gfDdClose() {
+    Array.prototype.forEach.call(document.querySelectorAll('.gf-dd-menu'), function (m) { m.parentNode.removeChild(m); });
+    Array.prototype.forEach.call(document.querySelectorAll('.gf-dd-btn.open'), function (b) { b.classList.remove('open'); });
+  }
+  function gfDdAttach(sel) {
+    if (sel.dataset.gfdd) return;
+    sel.dataset.gfdd = '1';
+    gfDdCss();
+    var wrapEl = document.createElement('span');
+    wrapEl.className = 'gf-dd-wrap';
+    sel.parentNode.insertBefore(wrapEl, sel);
+    wrapEl.appendChild(sel);
+    var btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'gf-dd-btn';
+    wrapEl.appendChild(btn);
+    function label() { var o = sel.options[sel.selectedIndex]; btn.textContent = o ? o.text : ''; }
+    label();
+    sel.addEventListener('change', label);
+    btn.addEventListener('click', function (e) {
+      e.stopPropagation();
+      if (btn.classList.contains('open')) { gfDdClose(); return; }
+      gfDdClose();
+      var menu = document.createElement('div');
+      menu.className = 'gf-dd-menu';
+      Array.prototype.forEach.call(sel.options, function (o, i) {
+        var it = document.createElement('button');
+        it.type = 'button';
+        it.className = 'gf-dd-item' + (i === sel.selectedIndex ? ' on' : '');
+        it.textContent = o.text;
+        it.addEventListener('click', function (ev) {
+          ev.stopPropagation();
+          sel.selectedIndex = i;
+          sel.dispatchEvent(new Event('change', {bubbles: true}));
+          label();
+          gfDdClose();
+        });
+        menu.appendChild(it);
+      });
+      document.body.appendChild(menu);
+      var r = btn.getBoundingClientRect();
+      menu.style.left = Math.max(8, r.left) + 'px';
+      menu.style.minWidth = r.width + 'px';
+      menu.style.top = (r.bottom + 6) + 'px';
+      btn.classList.add('open');
+    });
+  }
+  document.addEventListener('click', gfDdClose);
   var clockDrag = null;
   function clockPoint(box, e) {
     var svg = box.querySelector('svg');
@@ -2391,7 +2462,7 @@
         // V310.7 — شکل کسر شکلی به‌صورت منوی کشویی
         var cur = v || 'circle';
         var opts = [['circle', 'دایره‌ای (قطاع)'], ['ring', 'حلقه‌ای'], ['bar', 'نواری'], ['square', 'مربعی (شبکه)']];
-        return '<label>' + esc(r[1]) + '<select data-k="X.shape">' + opts.map(function (o) {
+        return '<label>' + esc(r[1]) + '<select data-k="X.shape" class="gf-shape">' + opts.map(function (o) {
           return '<option value="' + o[0] + '"' + (cur === o[0] ? ' selected' : '') + '>' + o[1] + '</option>';
         }).join('') + '</select></label>';
       }
@@ -2405,6 +2476,7 @@
         paint();
       });
     });
+    host.querySelectorAll('select.gf-shape').forEach(gfDdAttach);
   }
   function setType(id) {
     var prev = state;

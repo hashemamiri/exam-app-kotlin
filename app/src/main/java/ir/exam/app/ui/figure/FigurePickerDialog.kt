@@ -76,7 +76,7 @@ fun FigureTypePickerDialog(
             Column(Modifier.fillMaxSize().systemBarsPadding().imePadding().padding(10.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) { // V247 — زیر نوار وضعیت نرود
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                     Text(
-                        if (geometry) "📐 درج شکل" else if (math) "🧮 ابزار ریاضی ابتدایی (پایهٔ اول تا ششم)" else if (axis) "📏 درج محور" else "📈 درج نمودار",
+                        if (geometry) "📐 درج شکل" else if (math) "🧮 ابزار ریاضی ابتدایی" else if (axis) "📏 درج محور" else "📈 درج نمودار",
                         style = MaterialTheme.typography.titleLarge,
                         modifier = Modifier.weight(1f)
                     )
@@ -495,7 +495,7 @@ private fun paramFields(type: String): List<Pair<String, String>> = when (type) 
     // V304 — ابزار ریاضی ابتدایی
     "axtally" -> listOf("n" to "تعداد (۰ تا ۷۵)")
     "axbase10" -> listOf("n" to "عدد (۰ تا ۱٬۰۰۰٬۰۰۰)")
-    "axplace" -> listOf("n" to "عدد (تا ۹۹۹٬۹۹۹٬۹۹۹٬۹۹۹)", "blank" to "خانه‌ها خالی؟ (۱=بله)")
+    "axplace" -> listOf("n" to "ردیف ۱ (عدد)", "n2" to "ردیف ۲ (خالی = ندارد)", "op2" to "علامت ردیف ۲ (+ یا −)", "n3" to "ردیف ۳ (خالی = ندارد)", "op3" to "علامت ردیف ۳ (+ یا −)", "rows" to "تعداد ردیف‌ها (۱ تا ۶)", "blank" to "خانه‌ها خالی؟ (۱=بله)")
     "axclock" -> listOf("h" to "ساعت (۰ تا ۱۲)", "m" to "دقیقه (۰ تا ۵۹)", "nums" to "نمایش عددها (۱/۰)", "label" to "نوشتن ساعت زیر شکل (۱/۰)")
     "axruler" -> listOf("len" to "طول خط‌کش (۲ تا ۵۰ سانتی‌متر)", "a" to "ابتدای اندازه‌گیری (اختیاری)", "b" to "انتهای اندازه‌گیری (اختیاری)")
     "axfrac" -> listOf("num" to "صورت", "den" to "مخرج", "shape" to "شکل", "label" to "نوشتن کسر زیر شکل (۱/۰)")
@@ -536,7 +536,7 @@ private fun paramFields(type: String): List<Pair<String, String>> = when (type) 
 
 /** کلیدهایی که مقدار متنی (فهرست با ویرگول یا نام سری) دارند نه عدد. */
 private val TEXT_PARAM_KEYS = setOf(
-    "shape", "unit", "notes", "coins", // V304
+    "shape", "unit", "notes", "coins", "op2", "op3", // V304 — V310.8: علامت‌های ارزش مکانی
     "labs", "labs2", "vals", "vals2", "vals3", "xs", "ys", "zs", "s1", "s2", "s3",
     // V54.2 — فهرست‌های عددی چندتایی و مقادیر آزاد مرحلهٔ دوم متنی ذخیره می‌شوند
     // (همان قرارداد رشته‌ای مرجع).

@@ -78,7 +78,9 @@ object PrimaryMathSvgRenderer {
         Block(10f, 10f, 10f, "#ab47bc", "هزارگان", 1.8f),
         Block(1f, 10f, 10f, "#ef5350", "ده‌هزارگان", 2f),
         Block(10f, 10f, 10f, "#26a69a", "صدهزارگان", 1.8f),
-        Block(10f, 10f, 10f, "#ff7043", "میلیون", 1.8f)
+        Block(10f, 10f, 10f, "#ff7043", "میلیون", 1.8f),
+        Block(10f, 10f, 10f, "#8d6e63", "ده‌میلیون", 1.8f),
+        Block(10f, 10f, 10f, "#5c6bc0", "صدمیلیون", 1.8f)
     )
 
     private fun shade(hex: String, k: Float): String {
@@ -97,14 +99,14 @@ object PrimaryMathSvgRenderer {
     }
 
     private fun base10(spec: FigureSpec): String {
-        val nb = spec.xNum("n", 134f).toInt().coerceIn(0, 1000000)
-        val digits = IntArray(7)
+        val nb = spec.xNum("n", 134f).toInt().coerceIn(0, 999999999)
+        val digits = IntArray(9)
         var q = nb
-        for (k in 0 until 7) { digits[k] = q % 10; q /= 10 }
+        for (k in 0 until 9) { digits[k] = q % 10; q /= 10 }
         val sb = StringBuilder()
-        for (bp in 0 until 7) {
+        for (bp in 0 until 9) {
             val blk = BLOCKS[bp]
-            val top = 4f + (6 - bp) * 36f
+            val top = 4f + (8 - bp) * 36f
             val bot = top + 33f
             val n = digits[bp]
             sb.append(text(4f, top + 14f, blk.label, ST, "start", bold = true, size = 10))
@@ -119,43 +121,73 @@ object PrimaryMathSvgRenderer {
                 slot += (blk.a + blk.b) * 0.866f * k + 4f
             }
         }
-        sb.append(text(180f, 276f, "عدد: ${group(nb.toLong())}", ST, "middle", bold = true, size = 13))
+        sb.append(text(180f, 362f, "عدد: ${group(nb.toLong())}", ST, "middle", bold = true, size = 13))
         return sb.toString()
     }
 
-    // ------------------------------------------------------ جدول ارزش مکانی (میلیارد تا یکی)
+    // ------------------------------------------------------ ارزش مکانی (میلیارد تا یکی؛ چند ردیف و علامت + / −)
+    /** ارتفاع بوم (۳۶۰ عرض ثابت): دسته‌های ده‌تایی و جدول ارزش مکانی بسته به تعداد ردیف‌ها بلندتر می‌شوند. */
+    fun canvasHeight(spec: FigureSpec): Float = when (spec.type) {
+        "axbase10" -> 370f
+        "axplace" -> max(280f, 56f + 40f * placeRows(spec) + 60f)
+        else -> 280f
+    }
+
+    private fun placeRows(spec: FigureSpec): Int = spec.xNum("rows", 3f).toInt().coerceIn(1, 6)
+
+    private fun rowDigits(raw: String): String {
+        val d = faEnDigits(raw.substringBefore('.')).filter { it.isDigit() }
+        if (d.isEmpty()) return ""
+        return d.trimStart('0').ifEmpty { "0" }
+    }
+
     private fun placeValue(spec: FigureSpec): String {
-        // ویرایشگر اپ مقدار عددی را Float ذخیره می‌کند (2457.0) → قسمت صحیح رقمی
-        val base = faEnDigits(spec.xStr("n", "2457")).trim().substringBefore('.').filter { it.isDigit() }.trimStart('0').ifEmpty { "0" }
+        val rowsN = placeRows(spec)
         val blank = spec.xStr("blank", "0") == "1"
-        val over = base.length > 12
-        val num = if (over) base.takeLast(12) else base
+        val vals = listOf(
+            rowDigits(spec.xStr("n", "2457")).ifEmpty { "0" },
+            rowDigits(spec.xStr("n2")),
+            rowDigits(spec.xStr("n3"))
+        )
+        val ops = listOf(spec.xStr("op2").trim(), spec.xStr("op3").trim())
         val per = listOf("میلیارد" to "#d62828", "میلیون" to "#e0a800", "هزار" to "#2e9e44", "یکی" to "#7b3fbf")
-        val cw = 344f / 12f
-        val x0 = 8f
+        val labels = listOf("ص", "د", "ی")
+        val cw = 326f / 12f
+        val x0 = 30f
         val pw = 3 * cw
+        val rh = 40f
+        val top = 56f
+        val bot = top + rh * rowsN
         val sb = StringBuilder()
-        sb.append(rect(x0, 22f, 344f, 136f, "#f7f9fc", ST, 1.2f))
+        sb.append(rect(x0, 22f, 12 * cw, bot - 22f + 4f, "#f7f9fc", ST, 1.2f))
         for (pq in 0 until 4) {
             val ppx = x0 + pq * pw
             val pgrp = 3 - pq
-            sb.append(text(ppx + pw / 2, 18f, per[pq].first, per[pq].second, "middle", bold = true, size = 17))
+            sb.append(text(ppx + pw / 2, 18f, per[pq].first, per[pq].second, "middle", bold = true, size = 13))
             sb.append(rect(ppx, 30f, pw, 26f, ACC_SOFT, per[pq].second, 1.6f))
             for (pj in 0 until 3) {
                 val pcx = ppx + pj * cw
-                val idx = num.length - 1 - (pgrp * 3 + (2 - pj))
-                val dg = if (idx >= 0) num[idx].toString() else null
-                sb.append(text(pcx + cw / 2, 48f, listOf("ص", "د", "ی")[pj], ST, "middle", bold = true, size = 11))
-                if (pj > 0) sb.append(line(pcx, 30f, pcx, 158f, "#8fa3c7", 0.8f))
-                sb.append(rect(pcx, 56f, cw, 40f, "#fff", "#8fa3c7", 0.8f))
-                sb.append(rect(pcx, 96f, cw, 40f, "#fff", "#8fa3c7", 0.8f))
-                sb.append(rect(pcx, 136f, cw, 40f, "#fff", "#8fa3c7", 0.8f))
-                if (!blank && dg != null) sb.append(text(pcx + cw / 2, 84f, dg, PINK, "middle", bold = true, size = 22))
+                sb.append(text(pcx + cw / 2, 48f, labels[pj], ST, "middle", bold = true, size = 11))
+                if (pj > 0) sb.append(line(pcx, 30f, pcx, bot, "#8fa3c7", 0.8f))
+                for (pr in 0 until rowsN) {
+                    sb.append(rect(pcx, top + pr * rh, cw, rh, "#fff", "#8fa3c7", 0.8f))
+                    val str = if (pr < 3) vals[pr] else ""
+                    val idx = str.length - 1 - (pgrp * 3 + (2 - pj))
+                    val dg = if (idx >= 0) str[idx].toString() else null
+                    if (!(pr == 0 && blank) && dg != null) {
+                        sb.append(text(pcx + cw / 2, top + pr * rh + 27f, dg, PINK, "middle", bold = true, size = 22))
+                    }
+                }
             }
-            sb.append(rect(ppx, 30f, pw, 146f, "none", per[pq].second, 2f))
+            sb.append(rect(ppx, 30f, pw, bot - 30f, "none", per[pq].second, 2f))
         }
-        if (over) sb.append(text(180f, 206f, "بیشتر از ۱۲ رقم: فقط ۱۲ رقم آخر نمایش داده شد", MU, "middle", size = 11))
-        else if (!blank) sb.append(text(180f, 206f, "عدد: $num", MU, "middle", size = 13))
+        for (pr in 1 until min(rowsN, 3)) {
+            val op = ops[pr - 1].replace('-', '−')
+            if (op == "+" || op == "−") sb.append(text(16f, top + pr * rh + 27f, op, ST, "middle", bold = true, size = 22))
+        }
+        if (vals.any { it.length > 12 }) {
+            sb.append(text(180f, bot + 22f, "بیشتر از ۱۲ رقم: فقط ۱۲ رقم آخر نمایش داده می‌شود", MU, "middle", size = 11))
+        }
         return sb.toString()
     }
 

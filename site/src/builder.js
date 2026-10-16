@@ -757,7 +757,7 @@
         el('button', {class: 'icon-btn danger', title: 'حذف', html: QI.trash, onclick: async function () { if (!(await S.confirmDlg('حذف سؤال', 'سؤال ' + fa(i + 1) + ' حذف شود؟', 'حذف', true))) return; state.questions.splice(i, 1); state.selected = Math.max(0, Math.min(i, state.questions.length - 1)); mark(); drawList(); drawEditor(); }})
       ]));
       /* متن سؤال + ابزار درج */
-      var ta = el('textarea', {rows: 4, style: 'width:100%;border:1px solid var(--line);border-radius:10px;padding:10px;font-size:15px', placeholder: 'متن سؤال را بنویسید؛ برای فرمول از دکمهٔ ∑ استفاده کنید'});
+      var ta = el('textarea', {rows: 4, style: 'width:100%;border:1px solid var(--line);border-radius:10px;padding:10px;font-size:15px', placeholder: 'متن سؤال را بنویسید؛'});
       ta.value = q.text;
       ta.addEventListener('input', function () { q.text = ta.value; mark(); drawListSoft(); });
       var tools = el('div', {class: 'b-tools'}, [
