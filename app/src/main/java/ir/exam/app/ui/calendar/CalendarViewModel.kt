@@ -73,13 +73,15 @@ class CalendarViewModel(
         _state.update { it.copy(selectedDate = date, message = null) }
     }
 
+    private val canEditCalendar: Boolean get() = role == UserRole.TEACHER || role == UserRole.MANAGER
+
     fun newNote(date: JalaliDate = state.value.selectedDate) {
-        if (role != UserRole.TEACHER) return
+        if (!canEditCalendar) return
         _state.update { it.copy(editor = CalendarEditor(date = date), error = null, message = null) }
     }
 
     fun edit(note: CalendarNote) {
-        if (role != UserRole.TEACHER) return
+        if (!canEditCalendar) return
         val date = JalaliCalendar.fromGregorian(note.date)
         _state.update {
             it.copy(
@@ -141,7 +143,7 @@ class CalendarViewModel(
 
     fun saveEditor() {
         val editor = state.value.editor ?: return
-        if (role != UserRole.TEACHER || state.value.editorLoading) return
+        if (!canEditCalendar || state.value.editorLoading) return
         viewModelScope.launch {
             _state.update { it.copy(saving = true, error = null, message = null) }
             repository.save(editor)
@@ -156,7 +158,7 @@ class CalendarViewModel(
     }
 
     fun delete(note: CalendarNote) {
-        if (role != UserRole.TEACHER) return
+        if (!canEditCalendar) return
         viewModelScope.launch {
             _state.update { it.copy(saving = true, error = null, message = null) }
             repository.delete(note.id)
@@ -202,7 +204,7 @@ class CalendarViewModel(
     }
 
     private fun loadAudienceOptions() {
-        if (role != UserRole.TEACHER) return
+        if (!canEditCalendar) return
         viewModelScope.launch {
             repository.loadAudienceOptions(role)
                 .onSuccess { (classes, students) ->

@@ -119,7 +119,7 @@ fun CalendarScreen(role: UserRole) {
         item {
             SelectedDayCard(
                 day = selectedDay,
-                isTeacher = role == UserRole.TEACHER,
+                isTeacher = role == UserRole.TEACHER || role == UserRole.MANAGER,
                 busy = state.saving,
                 onNew = { selectedDay?.jalaliDate?.let(viewModel::newNote) },
                 onEdit = viewModel::edit,

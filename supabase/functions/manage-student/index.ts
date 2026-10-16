@@ -79,9 +79,15 @@ Deno.serve(async (request) => {
     const managerSchools = async (): Promise<string[]> => {
       if (teacher?.role !== 'manager') return [];
       if (managerSchoolsCache) return managerSchoolsCache;
-      const { data } = await service.from('school_memberships').select('school_id')
-        .eq('user_id', teacherId).eq('staff_role', 'manager').eq('status', 'active');
-      managerSchoolsCache = (data || []).map((r: { school_id: string }) => r.school_id).filter(Boolean);
+      const [{ data }, { data: own }] = await Promise.all([
+        service.from('school_memberships').select('school_id')
+          .eq('user_id', teacherId).eq('staff_role', 'manager').eq('status', 'active'),
+        service.from('schools').select('id').eq('created_by', teacherId),
+      ]);
+      const ids = new Set<string>();
+      for (const r of (data || []) as { school_id: string }[]) if (r.school_id) ids.add(r.school_id);
+      for (const r of (own || []) as { id: string }[]) if (r.id) ids.add(r.id);
+      managerSchoolsCache = Array.from(ids);
       return managerSchoolsCache;
     };
     // مدرسه‌ای از مدیر که این دانش‌آموز عضو آن است (برای ثبت درخواست تأیید معلم)
@@ -188,7 +194,7 @@ Deno.serve(async (request) => {
           return json({ error: 'عضویت کلاس ثبت نشد و حساب بازگردانی شد' }, 500);
         }
       }
-      await service.rpc('native_attach_created_student_v37', { p_actor: teacherId, p_student: studentId });
+      await service.rpc('native_attach_created_student_v37', { p_actor: teacherId, p_student: studentId, p_class: classId || null });
       await audit('create', studentId, { username, class_id: classId || null });
       return json({ ok: true, id: studentId, username });
     }
@@ -197,15 +203,26 @@ Deno.serve(async (request) => {
       const id = clean(body.id, 64);
       const current = await ownedStudent(id);
       if (!current) return json({ error: 'دانش‌آموز یافت نشد یا دسترسی ندارید' }, 403);
-      const approvalPayload = { kind: 'profile_update', first_name: clean(body.first_name, 100), last_name: clean(body.last_name, 100), gender: clean(body.gender, 12), username: clean(body.username, 20).toLowerCase(), password_changed: !!String(body.password || '') };
+      const approvalPayload: Record<string, unknown> = {
+        kind: 'profile_update',
+        first_name: clean(body.first_name, 100),
+        last_name: clean(body.last_name, 100),
+        full_name: joinName(clean(body.first_name, 100), clean(body.last_name, 100)),
+        gender: clean(body.gender, 12),
+        username: clean(body.username, 20).toLowerCase(),
+        password_changed: !!String(body.password || ''),
+      };
+      if (body.father_name !== undefined) approvalPayload.father_name = clean(body.father_name, 120);
+      if (body.grade !== undefined) approvalPayload.grade = clean(body.grade, 120);
+      if (body.field_of_study !== undefined) approvalPayload.field_of_study = clean(body.field_of_study, 120);
       let approvalId: string | null = null;
       if (teacher?.role === 'manager' && current.teacher_id !== teacherId) {
-        const { data: approved } = await service.from('manager_approval_requests').select('id').eq('manager_id', teacherId).eq('teacher_id', current.teacher_id).eq('target_type', 'student').eq('target_id', id).eq('action', 'edit').contains('payload', approvalPayload).eq('status', 'approved').gt('expires_at', new Date().toISOString()).is('executed_at', null).order('created_at', { ascending: false }).limit(1).maybeSingle();
+        const { data: approved } = await service.from('manager_approval_requests').select('id').eq('manager_id', teacherId).eq('teacher_id', current.teacher_id).eq('target_type', 'student').eq('target_id', id).eq('action', 'edit').contains('payload', { kind: 'profile_update', first_name: approvalPayload.first_name, last_name: approvalPayload.last_name, gender: approvalPayload.gender, username: approvalPayload.username }).eq('status', 'approved').gt('expires_at', new Date().toISOString()).is('executed_at', null).order('created_at', { ascending: false }).limit(1).maybeSingle();
         if (!approved) {
           const schoolId = await managerSchoolFor(id);
           if (!schoolId) return json({ error: 'دسترسی مدیر معتبر نیست' }, 403);
           await service.from('manager_approval_requests').insert({ school_id: schoolId, manager_id: teacherId, teacher_id: current.teacher_id, target_type: 'student', target_id: id, action: 'edit', payload: approvalPayload });
-          return json({ error: 'درخواست ویرایش برای تأیید معلم ارسال شد' });
+          return json({ error: 'درخواست ویرایش برای تأیید معلم ارسال شد', approval_required: true });
         }
         approvalId = approved.id;
       }
@@ -348,7 +365,7 @@ Deno.serve(async (request) => {
             continue;
           }
         }
-        await service.rpc('native_attach_created_student_v37', { p_actor: teacherId, p_student: studentId });
+        await service.rpc('native_attach_created_student_v37', { p_actor: teacherId, p_student: studentId, p_class: classId || null });
         results.push({ id: studentId, username, password, ok: true });
       }
       await audit('bulk_create', null, { count: rows.length, success: results.filter((x) => x.ok).length });

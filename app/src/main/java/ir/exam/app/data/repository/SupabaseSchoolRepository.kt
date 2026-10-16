@@ -200,7 +200,7 @@ class SupabaseSchoolRepository : SchoolRepository {
         require(request.newPassword == null || request.newPassword.length in 8..72) {
             "رمز جدید باید ۸ تا ۷۲ کاراکتر باشد."
         }
-        SupabaseProvider.client.functions.invoke(
+        val raw = SupabaseProvider.client.functions.invoke(
             "manage-student",
             body = buildJsonObject {
                 put("action", "update")
@@ -209,9 +209,27 @@ class SupabaseSchoolRepository : SchoolRepository {
                 put("last_name", request.lastName.trim())
                 put("username", request.username.trim().lowercase())
                 put("gender", request.gender)
+                put("father_name", request.fatherName.trim())
+                put("grade", request.grade.trim())
+                put("field_of_study", request.fieldOfStudy.trim())
                 put("password", request.newPassword.orEmpty())
             }
-        ).body<JsonObject>().throwIfError()
+        ).body<JsonObject>()
+        val err = raw["error"]?.jsonPrimitive?.contentOrNull?.takeIf(String::isNotBlank)
+        if (err != null) {
+            if (err.contains("برای تأیید معلم ارسال شد")) {
+                runCatching {
+                    rpcObject("native_save_student_extra_v28", buildJsonObject {
+                        put("p_student", request.id)
+                        put("p_username", request.username.trim().lowercase())
+                        put("p_father_name", request.fatherName.trim())
+                        put("p_grade", request.grade.trim())
+                        put("p_field", request.fieldOfStudy.trim())
+                    })
+                }
+            }
+            error(err)
+        }
         rpcObject("native_save_student_extra_v28", buildJsonObject {
             put("p_student", request.id)
             put("p_username", request.username.trim().lowercase())

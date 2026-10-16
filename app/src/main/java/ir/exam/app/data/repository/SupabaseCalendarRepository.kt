@@ -99,7 +99,7 @@ class SupabaseCalendarRepository {
 
     suspend fun loadAudienceOptions(role: UserRole): Result<Pair<List<CalendarAudienceOption>, List<CalendarAudienceOption>>> =
         runCatching {
-            if (role != UserRole.TEACHER) return@runCatching emptyList<CalendarAudienceOption>() to emptyList()
+            if (role != UserRole.TEACHER && role != UserRole.MANAGER) return@runCatching emptyList<CalendarAudienceOption>() to emptyList()
             coroutineScope {
                 val classes = async {
                     SupabaseProvider.client.postgrest.rpc("my_classes")

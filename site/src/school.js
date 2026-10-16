@@ -266,12 +266,12 @@
       if (!USERNAME_RE.test(u)) { error = 'نام کاربری باید ۴ تا ۲۰ کاراکتر انگلیسی، عدد یا _ باشد.'; draw(); return; }
       busy = true; draw();
       try {
-        await manageStudent({action: 'update', id: s.id, first_name: st.first.trim(), last_name: st.last.trim(), username: u, gender: st.gender, password: st.newPw || ''});
+        await manageStudent({action: 'update', id: s.id, first_name: st.first.trim(), last_name: st.last.trim(), username: u, gender: st.gender, password: st.newPw || '', father_name: st.father.trim(), grade: st.grade.trim(), field_of_study: st.field.trim()});
         chk(await S.rpcObj('native_save_student_extra_v28', {p_student: s.id, p_username: u, p_father_name: st.father.trim(), p_grade: st.grade.trim(), p_field: st.field.trim()}));
         bg.remove(); toast('ذخیره شد.', 'ok');
         if (st.newPw) { var cr = [{id: s.id, name: (st.first + ' ' + st.last).trim(), username: u, password: st.newPw}]; rememberPw(cr); credentialDlg('رمز جدید دانش‌آموز', cr); }
         done();
-      } catch (e) { if (e && e.requested) { bg.remove(); done(); return; } busy = false; error = errMsg(e); draw(); }
+      } catch (e) { if (e && e.requested) { try { await S.rpcObj('native_save_student_extra_v28', {p_student: s.id, p_username: u, p_father_name: st.father.trim(), p_grade: st.grade.trim(), p_field: st.field.trim()}); } catch (_) {} bg.remove(); done(); return; } busy = false; error = errMsg(e); draw(); }
     }
     function field(label, value, oninput, extra) { var i = el('input', Object.assign({type: 'text', value: value}, extra || {})); i.addEventListener('input', function () { oninput(i.value); }); return el('div', {class: 'field'}, [el('label', {text: label}), i]); }
     function draw() {
