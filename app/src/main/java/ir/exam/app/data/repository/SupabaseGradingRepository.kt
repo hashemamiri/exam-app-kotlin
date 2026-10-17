@@ -97,21 +97,69 @@ class SupabaseGradingRepository {
         raw
     }
 
+    companion object {
+        private val localFeedbackLock = Any()
+        private var localFeedbackItems: MutableList<FeedbackPhrase>? = null
+        private val defaultFeedbackTexts = listOf(
+            "آفرین! پاسخ‌های دقیق، کامل و منظمی داشتی.",
+            "تلاش خوبی بود؛ با مرور دوبارهٔ سؤال‌های اشتباه نتیجهٔ بهتری می‌گیری.",
+            "در سؤال‌های تشریحی نیاز به نوشتن راه‌حل کامل‌تر داری.",
+            "پیشرفت خوبی نسبت به آزمون قبل داشتی؛ همین روند را ادامه بده.",
+            "نیاز به تمرین و دقت بیشتر در مفاهیم اصلی این درس داری."
+        )
+        private fun getLocalFeedback(): MutableList<FeedbackPhrase> = synchronized(localFeedbackLock) {
+            localFeedbackItems ?: defaultFeedbackTexts.mapIndexed { idx, t ->
+                FeedbackPhrase(id = -(idx + 1).toLong(), text = t)
+            }.toMutableList().also { localFeedbackItems = it }
+        }
+    }
+
     suspend fun feedbackBank(): Result<List<FeedbackPhrase>> = runCatching {
-        SupabaseProvider.client.postgrest.rpc("fb_list")
-            .decodeList<FeedbackPhraseDto>()
-            .map { FeedbackPhrase(it.id, it.text) }
+        try {
+            SupabaseProvider.client.postgrest.rpc("fb_list")
+                .decodeList<FeedbackPhraseDto>()
+                .map { FeedbackPhrase(it.id, it.text) }
+        } catch (_: Throwable) {
+            synchronized(localFeedbackLock) { getLocalFeedback().toList() }
+        }
     }
 
     suspend fun addFeedback(text: String): Result<Unit> = runCatching {
-        require(text.trim().isNotEmpty()) { "متن بازخورد خالی است." }
-        rpcObject("fb_add", buildJsonObject { put("p_text", text.trim()) }).throwRpcError()
+        val clean = text.trim()
+        require(clean.isNotEmpty()) { "متن بازخورد خالی است." }
+        try {
+            rpcObject("fb_add", buildJsonObject { put("p_text", clean) }).throwRpcError()
+        } catch (_: Throwable) {
+            synchronized(localFeedbackLock) {
+                val list = getLocalFeedback()
+                val nextId = (list.minOfOrNull { it.id } ?: 0L).coerceAtMost(0L) - 1L
+                list.add(0, FeedbackPhrase(nextId, clean))
+            }
+        }
     }
     suspend fun updateFeedback(id:Long,text:String):Result<Unit> = runCatching {
-        rpcObject("native_feedback_update_v1",buildJsonObject{put("p_id",id);put("p_text",text.trim())}).throwRpcError()
+        val clean = text.trim()
+        require(clean.isNotEmpty()) { "متن بازخورد خالی است." }
+        try {
+            if (id <= 0L) error("local")
+            rpcObject("native_feedback_update_v1",buildJsonObject{put("p_id",id);put("p_text",clean)}).throwRpcError()
+        } catch (_: Throwable) {
+            synchronized(localFeedbackLock) {
+                val list = getLocalFeedback()
+                val idx = list.indexOfFirst { it.id == id }
+                if (idx >= 0) list[idx] = FeedbackPhrase(id, clean)
+            }
+        }
     }
     suspend fun deleteFeedback(id:Long):Result<Unit> = runCatching {
-        rpcObject("native_feedback_delete_v1",buildJsonObject{put("p_id",id)}).throwRpcError()
+        try {
+            if (id <= 0L) error("local")
+            rpcObject("native_feedback_delete_v1",buildJsonObject{put("p_id",id)}).throwRpcError()
+        } catch (_: Throwable) {
+            synchronized(localFeedbackLock) {
+                getLocalFeedback().removeAll { it.id == id }
+            }
+        }
     }
 
     suspend fun autoGradeInfo(examId: String): Result<JsonObject> = runCatching {

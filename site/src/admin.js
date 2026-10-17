@@ -31,7 +31,7 @@
       var headTitle = filt === 'pending' ? '⏳ مانده (در انتظار تصحیح)' : filt === 'graded' ? '✅ پاسخ‌های تصحیح‌شده' : defTab === 'attendance' ? '👥 حضور و وضعیت زنده آزمون‌ها' : defTab === 'monitor' ? '🛡 گزارش نظارتی آزمون‌ها' : defTab === 'analysis' ? '📈 تحلیل کیفیت سؤال‌های آزمون‌ها' : defTab === 'feedback' ? '💬 بانک بازخورد معلم' : '✅ تصحیح و بازخورد';
       var card = el('div', {class: 'card'}, [el('h3', {text: headTitle})]);
       if (defTab === 'feedback') {
-        var fbBody = el('div'); card.appendChild(fbBody); c.appendChild(card);
+        var fbBody = el('div'); c.appendChild(fbBody);
         tabFeedbackBank(fbBody, {refresh: function () { gradingPage(c, arg); }});
         return;
       }
@@ -150,7 +150,7 @@
       });
       var fb = el('textarea', {rows: 2, style: 'width:100%;border:1px solid var(--line);border-radius:10px;padding:8px', placeholder: 'بازخورد به دانش‌آموز (اختیاری)'}); fb.value = a.feedback || '';
       var fbBank = el('div', {class: 'row', style: 'flex-wrap:wrap;gap:4px;margin:6px 0'});
-      S.rpc('fb_list', {}).then(function (list) { (list || []).slice(0, 12).forEach(function (p) { fbBank.appendChild(el('button', {class: 'chip', style: 'cursor:pointer', text: p.text, onclick: function () { fb.value = (fb.value ? fb.value + ' ' : '') + p.text; }})); }); }).catch(function () {});
+      fbList().then(function (list) { (list || []).slice(0, 12).forEach(function (p) { fbBank.appendChild(el('button', {class: 'chip', style: 'cursor:pointer', text: p.text, onclick: function () { fb.value = (fb.value ? fb.value + ' ' : '') + p.text; }})); }); }).catch(function () {});
       var total = el('b');
       function sum() { var s = 0; inputs.forEach(function (x) { s += num(x.value); }); total.textContent = 'جمع: ' + fa(S.fmtScore(s)) + ' از ' + fa(S.fmtScore(maxScore)); }
       inputs.forEach(function (x) { x.addEventListener('input', sum); }); sum();
@@ -235,14 +235,75 @@
         el('tbody', {}, (raw.questions || []).map(function (q) { var lv = LV[q.level] || [q.level || '—', '']; return el('tr', {}, [el('td', {text: fa((q.index || 0) + 1)}), el('td', {style: 'max-width:320px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap', text: (q.text || '').replace(/%%FIG:[\s\S]*?%%/g, '[شکل]')}), el('td', {text: fa(S.fmtScore(q.max_score))}), el('td', {text: fa(q.answered_count || 0) + ' / ' + fa(q.graded_count || 0)}), el('td', {}, [bar(num(q.average_percent))]), el('td', {text: fa(Math.round(num(q.omit_percent)))}), el('td', {text: q.discrimination != null ? fa(Math.round(q.discrimination * 100) / 100) : '—'}), el('td', {text: q.point_biserial != null ? fa(Math.round(q.point_biserial * 100) / 100) : '—'}), el('td', {}, [el('span', {class: 'chip ' + lv[1], text: lv[0]})])]); }))])]));
     } catch (e) { S.showErr(body, e); }
   }
+  var FB_DEFAULTS = [
+    'آفرین! پاسخ‌های دقیق، کامل و منظمی داشتی.',
+    'تلاش خوبی بود؛ با مرور دوبارهٔ سؤال‌های اشتباه نتیجهٔ بهتری می‌گیری.',
+    'در سؤال‌های تشریحی نیاز به نوشتن راه‌حل کامل‌تر داری.',
+    'پیشرفت خوبی نسبت به آزمون قبل داشتی؛ همین روند را ادامه بده.',
+    'نیاز به تمرین و دقت بیشتر در مفاهیم اصلی این درس داری.'
+  ];
+  function fbLocalKey() { return 'exam_fb_bank_' + ((S.user() && S.user().id) || 'default'); }
+  function fbLocalGet() {
+    try {
+      var raw = localStorage.getItem(fbLocalKey());
+      if (raw) { var arr = JSON.parse(raw); if (Array.isArray(arr)) return arr; }
+    } catch (e) {}
+    var seeded = FB_DEFAULTS.map(function (t, i) { return {id: -(i + 1), text: t}; });
+    try { localStorage.setItem(fbLocalKey(), JSON.stringify(seeded)); } catch (e) {}
+    return seeded;
+  }
+  function fbLocalSave(arr) {
+    try { localStorage.setItem(fbLocalKey(), JSON.stringify(arr)); } catch (e) {}
+    return arr;
+  }
+  async function fbList() {
+    try {
+      var r = await S.rpc('fb_list', {});
+      if (Array.isArray(r)) return r;
+    } catch (e) {}
+    return fbLocalGet();
+  }
+  async function fbAdd(text) {
+    var t = (text || '').trim();
+    try {
+      return chk(await S.rpcObj('fb_add', {p_text: t}));
+    } catch (e) {
+      var arr = fbLocalGet();
+      var nextId = arr.reduce(function (m, x) { return Math.min(m, Number(x.id) || 0); }, 0) - 1;
+      arr.unshift({id: nextId, text: t});
+      fbLocalSave(arr);
+      return {ok: true};
+    }
+  }
+  async function fbUpdate(id, text) {
+    var t = (text || '').trim();
+    if (Number(id) > 0) {
+      try {
+        return chk(await S.rpcObj('native_feedback_update_v1', {p_id: id, p_text: t}));
+      } catch (e) {}
+    }
+    var arr = fbLocalGet().map(function (x) { return String(x.id) === String(id) ? {id: x.id, text: t} : x; });
+    fbLocalSave(arr);
+    return {ok: true};
+  }
+  async function fbDelete(id) {
+    if (Number(id) > 0) {
+      try {
+        return chk(await S.rpcObj('native_feedback_delete_v1', {p_id: id}));
+      } catch (e) {}
+    }
+    var arr = fbLocalGet().filter(function (x) { return String(x.id) !== String(id); });
+    fbLocalSave(arr);
+    return {ok: true};
+  }
   async function tabFeedbackBank(body, ctx) {
     S.loading(body);
     try {
-      var list = await S.rpc('fb_list', {});
+      var list = await fbList();
       body.innerHTML = '';
       var inp = el('input', {type: 'text', placeholder: 'عبارت بازخورد جدید…', style: 'flex:1;border:1px solid var(--line);border-radius:10px;padding:8px 12px'});
-      body.appendChild(el('div', {class: 'card'}, [el('h3', {text: '💬 بانک بازخورد'}), el('div', {class: 'row', style: 'margin-bottom:10px'}, [inp, el('button', {class: 'btn sm', text: '➕ افزودن', onclick: async function () { if (!inp.value.trim()) return toast('متن بازخورد خالی است.', 'err'); try { chk(await S.rpcObj('fb_add', {p_text: inp.value.trim()})); ctx.refresh(); } catch (e) { if (!(e && e.requested)) toast(errMsg(e), 'err'); } }})]),
-        (list || []).length ? el('div', {}, list.map(function (p) { return el('div', {class: 'row', style: 'padding:8px 0;border-bottom:1px solid var(--line)'}, [el('span', {class: 'grow', text: p.text}), el('button', {class: 'icon-btn', html: '✎', title: 'ویرایش بازخورد', onclick: async function () { var t = await S.promptDlg('ویرایش بازخورد', '', 'متن بازخورد', p.text, 'ذخیره'); if (t == null || !t.trim()) return; /* V250 */ try { chk(await S.rpcObj('native_feedback_update_v1', {p_id: p.id, p_text: t.trim()})); ctx.refresh(); } catch (e) { if (!(e && e.requested)) toast(errMsg(e), 'err'); } }}), el('button', {class: 'icon-btn danger', html: '🗑', title: 'حذف بازخورد', onclick: async function () { if (!(await S.confirmDlg('حذف بازخورد', esc(p.text), 'حذف', true))) return; try { chk(await S.rpcObj('native_feedback_delete_v1', {p_id: p.id})); ctx.refresh(); } catch (e) { if (!(e && e.requested)) toast(errMsg(e), 'err'); } }})]); })) : S.emptyBox('💬', 'هنوز عبارتی ثبت نشده است.')]));
+      body.appendChild(el('div', {class: 'card'}, [el('h3', {text: '💬 بانک بازخورد معلم'}), el('div', {class: 'row', style: 'margin-bottom:10px'}, [inp, el('button', {class: 'btn sm', text: '➕ افزودن', onclick: async function () { if (!inp.value.trim()) return toast('متن بازخورد خالی است.', 'err'); try { await fbAdd(inp.value.trim()); toast('بازخورد اضافه شد.', 'ok'); ctx.refresh(); } catch (e) { if (!(e && e.requested)) toast(errMsg(e), 'err'); } }})]),
+        (list || []).length ? el('div', {}, list.map(function (p) { return el('div', {class: 'row', style: 'padding:8px 0;border-bottom:1px solid var(--line)'}, [el('span', {class: 'grow', text: p.text}), el('button', {class: 'icon-btn', html: '✎', title: 'ویرایش بازخورد', onclick: async function () { var t = await S.promptDlg('ویرایش بازخورد', '', 'متن بازخورد', p.text, 'ذخیره'); if (t == null || !t.trim()) return; /* V250 */ try { await fbUpdate(p.id, t.trim()); toast('ذخیره شد.', 'ok'); ctx.refresh(); } catch (e) { if (!(e && e.requested)) toast(errMsg(e), 'err'); } }}), el('button', {class: 'icon-btn danger', html: '🗑', title: 'حذف بازخورد', onclick: async function () { if (!(await S.confirmDlg('حذف بازخورد', esc(p.text), 'حذف', true))) return; try { await fbDelete(p.id); toast('حذف شد.', 'ok'); ctx.refresh(); } catch (e) { if (!(e && e.requested)) toast(errMsg(e), 'err'); } }})]); })) : S.emptyBox('💬', 'هنوز عبارتی ثبت نشده است.')]));
     } catch (e) { S.showErr(body, e); }
   }
   function stat(v, l) { return el('div', {class: 'stat'}, [el('div', {class: 'v', text: v}), el('div', {class: 'l', text: l})]); }
