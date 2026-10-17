@@ -395,7 +395,7 @@ private fun evaluatePracticeQuestion(
                 val opt = draft.options.getOrNull(idx).orEmpty()
                 "${PERSIAN_CHOICE_LETTERS.getOrElse(idx) { (idx + 1).toString() }}) $opt"
             } ?: "—"
-            val chosen = (ans as? ChoiceAnswer)?.optionIndex
+            val chosen = (ans as? ChoiceAnswer)?.selectedIndex
             val userStr = chosen?.let { idx ->
                 val opt = draft.options.getOrNull(idx).orEmpty()
                 "${PERSIAN_CHOICE_LETTERS.getOrElse(idx) { (idx + 1).toString() }}) $opt"
@@ -414,7 +414,7 @@ private fun evaluatePracticeQuestion(
         QuestionType.FILL_BLANK -> {
             val accepted = draft.expectedText.split("|").map { it.trim() }.filter { it.isNotEmpty() }
             val correctStr = accepted.joinToString(" یا ").ifBlank { "—" }
-            val rawText = (ans as? TextAnswer)?.text?.trim().orEmpty()
+            val rawText = (ans as? TextAnswer)?.value?.trim().orEmpty()
             val userStr = rawText.ifBlank { "بدون پاسخ" }
             val earned = if (accepted.isEmpty()) null else if (rawText.isEmpty()) 0.0 else {
                 val match = accepted.any { acc ->
@@ -429,7 +429,7 @@ private fun evaluatePracticeQuestion(
             val tol = draft.tolerance.toDoubleOrNull() ?: 0.0
             val correctStr = if (draft.expectedNumber.isBlank()) "—"
             else if (tol > 0.0) "${draft.expectedNumber} ± ${draft.tolerance}" else draft.expectedNumber
-            val rawText = (ans as? TextAnswer)?.text?.trim().orEmpty()
+            val rawText = (ans as? TextAnswer)?.value?.trim().orEmpty()
             val userStr = rawText.ifBlank { "بدون پاسخ" }
             val userVal = PersianDigits.latin(rawText).toDoubleOrNull()
             val earned = if (expected == null) null else if (userVal != null && abs(userVal - expected) <= tol) maxScore else 0.0
@@ -453,7 +453,7 @@ private fun evaluatePracticeQuestion(
             QuestionPracticeEval(earned, maxScore, userStr, correctStr)
         }
         QuestionType.ESSAY -> {
-            val rawText = (ans as? TextAnswer)?.text?.trim().orEmpty()
+            val rawText = (ans as? TextAnswer)?.value?.trim().orEmpty()
             QuestionPracticeEval(
                 earned = null,
                 maxScore = maxScore,
