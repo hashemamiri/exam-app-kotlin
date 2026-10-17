@@ -2003,8 +2003,8 @@ table.rp-single td.num,table.rp-single th.num{text-align:center;white-space:nowr
 .lp-tariff-head h3{font-size:15px;font-weight:800;margin:0;color:#1F3B57;text-align:center;width:100%}
 .lp-tariff-head .btn{width:auto;height:36px;padding:0 14px;font-size:12.5px}
 .lp-tariff-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
-@media (max-width:600px) and (pointer:coarse){.lp-tariff-grid{grid-template-columns:1fr}}
-.lp-tariff-item{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px 14px;border-radius:12px;background:var(--card);border:1px solid rgba(43,143,214,.18);box-shadow:0 2px 8px rgba(60,120,170,.06);font-size:12.5px;color:#2E4D6B;white-space:nowrap}
+@media (max-width:860px) and (pointer:coarse){.lp-tariff-grid{grid-template-columns:minmax(0,1fr)}.lp-tariff-box{padding:14px 12px}.lp-tariff-head h3{font-size:14px}.lp-tariff-item{padding:10px 12px;font-size:12px}}
+.lp-tariff-item{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px 14px;border-radius:12px;background:var(--card);border:1px solid rgba(43,143,214,.18);box-shadow:0 2px 8px rgba(60,120,170,.06);font-size:12.5px;color:#2E4D6B;width:100%;max-width:100%;min-width:0;box-sizing:border-box}
 .lp-tariff-item b{color:#1F3B57;font-weight:800;white-space:nowrap}
 .m-dark .lp-cat-head h2,.m-dark .lp-prod-title,.m-dark .lp-tariff-head h3,.m-dark .lp-tariff-item b{color:#E6F1FA}
 .m-dark .lp-cat-head p,.m-dark .lp-prod-desc,.m-dark .lp-tariff-item{color:#C9DCEC}
