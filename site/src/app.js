@@ -360,6 +360,13 @@
   var RETRY_DELAYS = [700, 1800, 4000];
   var LOGIN_QUEUE_MS = 120000;
   function sleep(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
+  /* V312.0 — مهلت زمانی هوشمند برای جلوگیری از قفل شدن سوکت‌های نیمه‌باز (TCP Blackhole) در اپراتورهای ایران */
+  function fetchWithTimeout(url, init, ms) {
+    if (typeof AbortController === 'undefined') return fetch(url, init);
+    var ctrl = new AbortController(), tid = setTimeout(function () { try { ctrl.abort(); } catch (e) {} }, ms || 12000);
+    var cfg = {}; if (init) Object.keys(init).forEach(function (k) { cfg[k] = init[k]; }); cfg.signal = ctrl.signal;
+    return fetch(url, cfg).finally(function () { clearTimeout(tid); });
+  }
   async function http(path, opts) {
     requireKey();
     opts = opts || {};
@@ -369,13 +376,17 @@
       headers['Authorization'] = 'Bearer ' + (session && session.access_token ? session.access_token : ANON);
     }
     if (opts.headers) Object.keys(opts.headers).forEach(function (k) { headers[k] = opts.headers[k]; });
-    var res, _t0 = performance.now(), text;
+    var res, _t0 = performance.now(), text, method = opts.method || 'GET';
+    var canRetryNet = method === 'GET' || /\/auth\/v1\/token|native_my_registration_state|native_staff_login_email|native_login_gate/.test(path);
     /* V266 — تحمل بار: فقط برای ۴۲۹ (محدودیت نرخ) و ۵۰۳ (سرور شلوغ؛ درخواست اجرا نشده) تا سه بار با تأخیر تصادفی تلاش مجدد می‌کنیم؛
        بقیهٔ خطاها (از جمله ۵۰۴ که ممکن است اجرا شده باشد) بدون تکرار برمی‌گردند. */
     for (var attempt = 0; ; attempt++) {
       try {
-        res = await fetch(SUPABASE_URL + path, {method: opts.method || 'GET', headers: headers, body: opts.body !== undefined ? JSON.stringify(opts.body) : undefined});
-      } catch (e) { perfLog(path, performance.now() - _t0, 'ERR'); throw new Error('اتصال به سرور برقرار نشد. اینترنت را بررسی کنید.'); }
+        res = await fetchWithTimeout(SUPABASE_URL + path, {method: method, headers: headers, body: opts.body !== undefined ? JSON.stringify(opts.body) : undefined}, opts.timeout || 12000);
+      } catch (e) {
+        if (canRetryNet && attempt === 0) { await sleep(600); continue; }
+        perfLog(path, performance.now() - _t0, 'ERR'); throw new Error('اتصال به سرور برقرار نشد. اینترنت را بررسی کنید.');
+      }
       text = await res.text();
       if ((res.status !== 429 && res.status !== 503) || attempt >= RETRY_DELAYS.length) break;
       await sleep(RETRY_DELAYS[attempt] + Math.random() * RETRY_DELAYS[attempt]);
@@ -420,7 +431,7 @@
     if (refreshing) return refreshing;
     refreshing = (async function () {
       try {
-        var res = await fetch(SUPABASE_URL + '/auth/v1/token?grant_type=refresh_token', {method: 'POST', headers: {'apikey': ANON, 'Content-Type': 'application/json'}, body: JSON.stringify({refresh_token: session.refresh_token})});
+        var res = await fetchWithTimeout(SUPABASE_URL + '/auth/v1/token?grant_type=refresh_token', {method: 'POST', headers: {'apikey': ANON, 'Content-Type': 'application/json'}, body: JSON.stringify({refresh_token: session.refresh_token})}, 8000);
         var data = null; try { data = await res.json(); } catch (e) { data = null; }
         if (res.ok && data && data.access_token) { saveSession(data); refreshRetryAt = 0; }
         else if (res.status === 400 || res.status === 401 || res.status === 403) saveSession(null);
@@ -1665,12 +1676,18 @@
   var deferredInstall = null;
   function pwaInit() {
     if (!('serviceWorker' in navigator) || location.protocol !== 'https:') return;
-    navigator.serviceWorker.register('/pwa/sw.js').then(function (reg) {
-      reg.addEventListener('updatefound', function () {
-        var nw = reg.installing; if (!nw) return;
-        nw.addEventListener('statechange', function () { if (nw.state === 'installed' && navigator.serviceWorker.controller) toast('نسخهٔ جدید سایت آماده است؛ صفحه را دوباره باز کنید.', 'ok'); });
-      });
-    }).catch(function (e) { console.warn('sw', e); });
+    /* V312.0 — تأخیر ثبت SW تا پس از بارگذاری اولیهٔ صفحه تا دانلود پس‌زمینهٔ کش با فونت و صفحهٔ اول روی اینترنت سیم‌کارت رقابت نکند */
+    var regSw = function () {
+      setTimeout(function () {
+        navigator.serviceWorker.register('/pwa/sw.js').then(function (reg) {
+          reg.addEventListener('updatefound', function () {
+            var nw = reg.installing; if (!nw) return;
+            nw.addEventListener('statechange', function () { if (nw.state === 'installed' && navigator.serviceWorker.controller) toast('نسخهٔ جدید سایت آماده است؛ صفحه را دوباره باز کنید.', 'ok'); });
+          });
+        }).catch(function (e) { console.warn('sw', e); });
+      }, 2500);
+    };
+    if (document.readyState === 'complete') regSw(); else window.addEventListener('load', regSw, {once: true});
     window.addEventListener('beforeinstallprompt', function (e) { e.preventDefault(); deferredInstall = e; pwaOffer(); });
     window.addEventListener('appinstalled', function () { deferredInstall = null; var b = $('pwa-bar'); if (b) b.remove(); try { localStorage.setItem('pwa.installed', '1'); } catch (x) {} toast('آزمون‌ساز روی دستگاه نصب شد.', 'ok'); });
     var ios = /iphone|ipad|ipod/i.test(navigator.userAgent) && !window.MSStream;

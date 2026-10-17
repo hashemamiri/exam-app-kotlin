@@ -66,8 +66,8 @@ jobs:
           assert '__SW_VERSION__' in s
           open(p, 'w', encoding='utf-8').write(s.replace('__SW_VERSION__', h))
           PY
-          # هدرها: بدون کش برای index و SW تا به‌روزرسانی فوری دیده شود؛ آیکون‌ها کش طولانی
-          printf '/*\n  Cache-Control: no-cache\n/pwa/sw.js\n  Cache-Control: no-cache\n  Service-Worker-Allowed: /\n/pwa/manifest.webmanifest\n  Content-Type: application/manifest+json; charset=utf-8\n/pwa/*.png\n  Cache-Control: public, max-age=604800\n/engines.*.js\n  Cache-Control: public, max-age=31536000, immutable\n/fonts/*\n  Cache-Control: public, max-age=31536000, immutable\n' > site_out/_headers
+          # هدرها: بدون کش برای index و SW تا به‌روزرسانی فوری دیده شود؛ Alt-Svc: clear برای جلوگیری از گیر کردن QUIC/HTTP3 در اپراتورهای ایران؛ آیکون‌ها کش طولانی
+          printf '/*\n  Cache-Control: no-cache\n  Alt-Svc: clear\n  X-Content-Type-Options: nosniff\n  X-Frame-Options: SAMEORIGIN\n  Referrer-Policy: strict-origin-when-cross-origin\n  Strict-Transport-Security: max-age=31536000; includeSubDomains\n/pwa/sw.js\n  Cache-Control: no-cache\n  Service-Worker-Allowed: /\n/pwa/manifest.webmanifest\n  Content-Type: application/manifest+json; charset=utf-8\n/pwa/*.png\n  Cache-Control: public, max-age=604800\n/pwa/v3/*\n  Cache-Control: public, max-age=604800\n/engines.*.js\n  Cache-Control: public, max-age=31536000, immutable\n/fonts/*\n  Cache-Control: public, max-age=31536000, immutable\n' > site_out/_headers
       # V261.3 — Cloudflare گاهی «Failed to publish your Function. Got error: Unknown internal error occurred.» می‌دهد (خطای موقتی سمت Cloudflare)؛ تا ۳ بار با فاصله تلاش می‌کنیم
       - name: Deploy to Cloudflare Pages
         id: deploy1

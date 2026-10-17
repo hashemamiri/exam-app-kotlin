@@ -1,5 +1,6 @@
-# V260.5 — هدرهای امنیتی و کش (Cloudflare Pages)
+# V260.5 / V312.0 — هدرهای امنیتی، ضد قفل QUIC در اپراتورهای ایران و کش (Cloudflare Pages)
 /*
+  Alt-Svc: clear
   X-Content-Type-Options: nosniff
   X-Frame-Options: SAMEORIGIN
   Referrer-Policy: strict-origin-when-cross-origin

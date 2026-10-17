@@ -40,17 +40,34 @@ self.addEventListener('notificationclick', function (e) {
     return self.clients.openWindow('/' + q);
   }));
 });
+function fetchTimed(req, ms) {
+  if (typeof AbortController === 'undefined') return fetch(req);
+  var ctrl = new AbortController(), tid = setTimeout(function () { try { ctrl.abort(); } catch (e) {} }, ms);
+  return fetch(req, {signal: ctrl.signal}).finally(function () { clearTimeout(tid); });
+}
 self.addEventListener('fetch', function (e) {
   var req = e.request;
   if (req.method !== 'GET') return;
   var url = new URL(req.url);
   if (url.origin !== self.location.origin) return; /* Supabase، آروان، فونت‌ها: مستقیم شبکه */
   if (req.mode === 'navigate' || url.pathname === '/' || url.pathname === '/index.html') {
-    /* شبکه اول (تا به‌روزرسانی فوری دیده شود)، در نبود شبکه پوستهٔ کش‌شده */
-    e.respondWith(fetch(req).then(function (r) {
-      if (r.ok) { var copy = r.clone(); caches.open(CACHE).then(function (c) { c.put('/', copy); }); }
-      return r;
-    }).catch(function () { return caches.match('/').then(function (c) { return c || offlinePage(); }); }));
+    /* V312.0 — ضد قفل اپراتورهای ایران: اگر پوسته در کش هست حداکثر ۳٫۵ ثانیه منتظر شبکه می‌ماند و در صورت کندی/قطعی فوراً کش را نشان داده و در پس‌زمینه به‌روز می‌کند؛ اگر کش نبود با مهلت ۱۰ ثانیه و یک تکرار خودکار تلاش می‌کند. */
+    e.respondWith(caches.match('/').then(function (cached) {
+      var bgUpdate = fetch(req).then(function (r) {
+        if (r && r.ok) { var copy = r.clone(); caches.open(CACHE).then(function (c) { c.put('/', copy); }); }
+        return r;
+      });
+      if (cached) {
+        return Promise.race([
+          bgUpdate.catch(function () { return cached; }),
+          new Promise(function (resolve) { setTimeout(function () { resolve(cached); }, 3500); })
+        ]);
+      }
+      return fetchTimed(req, 10000).catch(function () { return fetchTimed(req, 12000); }).then(function (r) {
+        if (r && r.ok) { var copy = r.clone(); caches.open(CACHE).then(function (c) { c.put('/', copy); }); }
+        return r;
+      }).catch(function () { return caches.match('/').then(function (c) { return c || offlinePage(); }); });
+    }));
     return;
   }
   /* V162 — engines.<hash>.js: کش-اول (نام با هش عوض می‌شود)؛ نسخه‌های قدیمی موتور پاک می‌شوند */
