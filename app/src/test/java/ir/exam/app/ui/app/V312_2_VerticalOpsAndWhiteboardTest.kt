@@ -69,8 +69,7 @@ class V312_2_VerticalOpsAndWhiteboardTest {
         for (tex in formulas) {
             assertEquals(emptySet<String>(), NativeMathParser.unsupportedCommands(tex))
             val ast = NativeMathParser.parse(tex)
-            val seq = ast as MathNode.Sequence
-            assertTrue(seq.children.first() is MathNode.Matrix)
+            assertTrue(ast is MathNode.Matrix)
             val svg = NativeMathSvgRenderer.render(tex, fontSizePx = 20f).xml
             assertFalse("□" in svg)
             assertTrue("<line " in svg)
