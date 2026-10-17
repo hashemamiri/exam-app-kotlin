@@ -1397,7 +1397,7 @@
       ].map(function (r) { return el('li', {}, [el('b', {text: r[0]}), el('span', {text: r[1]})]); })),
       el('div', {class: 'lp-badges'}, [enamadBadge()]) /* V292.1 — زیر توضیحات */
     ]);
-    var tilesEl = el('div', {class: 'tiles tiles8'}, tiles.map(function (t) { return el('div', {class: 'tile neo'}, [el('i', {'aria-hidden': 'true', html: '<svg viewBox="0 0 48 48" aria-hidden="true">' + LP_ICO[t[0]] + '</svg>'}), el('span', {text: t[1]})]); }));
+    var tilesEl = el('div', {class: 'tiles tiles8'}, tiles.map(function (t) { return el('div', {class: 'tile neo'}, [el('i', {'aria-hidden': 'true', html: '<svg viewBox="0 0 48 48" aria-hidden="true">' + LP_ICO[t[0]] + '</svg>'}), el('span', {text: t[0] === 'board' ? 'وایت برد' : t[1]})]); }));
     var left = el('div', {class: 'lp-l lp3'}, [intro, tilesEl]);
     var card = el('div', {class: 'card neo'});
     drawAuthInto(card, mode || 'login');

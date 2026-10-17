@@ -391,6 +391,24 @@ function mEsc(e) {
     }
     if (cmd === 'frac' || cmd === 'dfrac' || cmd === 'tfrac')
       return '<span class="mfrac"><span class="mnum">' + this.readUnit() + '</span><span class="mden">' + this.readUnit() + '</span></span>';
+    if (cmd === 'vadd' || cmd === 'vsub' || cmd === 'vmul') {
+      const va = this.readUnit(), vb = this.readUnit();
+      this.skipWs();
+      const vc = (this.peek() === '{') ? this.readUnit() : '';
+      const vop = cmd === 'vsub' ? '−' : (cmd === 'vmul' ? '×' : '+');
+      return '<span class="math-vop"><span class="math-vop-r"><span class="math-vop-op"></span><span class="math-vop-v">' + (va || '&nbsp;') + '</span></span>' +
+        '<span class="math-vop-r math-vop-line"><span class="math-vop-op">' + vop + '</span><span class="math-vop-v">' + (vb || '&nbsp;') + '</span></span>' +
+        '<span class="math-vop-r math-vop-ans"><span class="math-vop-op"></span><span class="math-vop-v">' + (vc || '&nbsp;') + '</span></span></span>';
+    }
+    if (cmd === 'ldiv') {
+      const la = this.readUnit(), lb = this.readUnit();
+      this.skipWs();
+      const lq = (this.peek() === '{') ? this.readUnit() : '';
+      this.skipWs();
+      const lr = (this.peek() === '{') ? this.readUnit() : '';
+      return '<span class="math-ldiv"><span class="math-ldiv-tr"><span class="math-ldiv-a">' + (la || '&nbsp;') + '</span><span class="math-ldiv-b">' + (lb || '&nbsp;') + '</span></span>' +
+        '<span class="math-ldiv-tr"><span class="math-ldiv-r">' + (lr || '&nbsp;') + '</span><span class="math-ldiv-q">' + (lq || '&nbsp;') + '</span></span></span>';
+    }
     if (cmd === 'sfrac' || cmd === 'nicefrac')
       return '<span class="msfrac">' + this.readUnit() + '<span class="mslash">/</span>' + this.readUnit() + '</span>';
     if (cmd === 'sqrt') {
@@ -586,6 +604,20 @@ function mEsc(e) {
     '.mbrk-ceil .mbrk-l::after{left:50%;top:0}\n' +
     '.mbrk-ceil .mbrk-r::after{right:50%;top:0}\n' +
     '.mmixed{display:inline-flex;align-items:center;vertical-align:middle}\n' +
+    '.math-vop{display:inline-table;vertical-align:middle;border-collapse:collapse;direction:ltr;margin:0 .14em;line-height:1.18}\n' +
+    '.math-vop-r{display:table-row}\n' +
+    '.math-vop-op,.math-vop-v{display:table-cell;padding:.05em .16em;white-space:nowrap;vertical-align:middle}\n' +
+    '.math-vop-op{text-align:center;padding-right:.2em;font-weight:700}\n' +
+    '.math-vop-v{text-align:right;font-variant-numeric:tabular-nums}\n' +
+    '.math-vop-line>.math-vop-op,.math-vop-line>.math-vop-v{border-bottom:1.5px solid currentColor;padding-bottom:.14em}\n' +
+    '.math-vop-ans>.math-vop-op,.math-vop-ans>.math-vop-v{padding-top:.14em}\n' +
+    '.math-ldiv{display:inline-table;vertical-align:middle;border-collapse:collapse;direction:ltr;margin:0 .16em;line-height:1.2}\n' +
+    '.math-ldiv-tr{display:table-row}\n' +
+    '.math-ldiv-a,.math-ldiv-b,.math-ldiv-r,.math-ldiv-q{display:table-cell;padding:.1em .32em;white-space:nowrap;vertical-align:middle;text-align:center;font-variant-numeric:tabular-nums}\n' +
+    '.math-ldiv-a{border-right:1.6px solid currentColor;text-align:right}\n' +
+    '.math-ldiv-b{border-bottom:1.6px solid currentColor;text-align:left}\n' +
+    '.math-ldiv-r{border-right:1.6px solid currentColor;text-align:right}\n' +
+    '.math-ldiv-q{text-align:left}\n' +
     '.mmixed>.mm-w{margin-inline-end:.1em}\n' +
     '.mathx sup.msup{font-size:.72em;vertical-align:super;line-height:0}\n' +
     '.mathx sub.msub{font-size:.72em;vertical-align:sub;line-height:0}\n' +

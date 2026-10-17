@@ -104,25 +104,42 @@ class NativeMathCanvasRenderer {
         }
         is MathNode.Matrix -> {
             val all = measure(node, size)
-            if (node.delimiter != ' ') {
+            val isVop = node.delimiter in charArrayOf('+', '-', '*')
+            val isLdiv = node.delimiter == '/'
+            val hasFrame = node.delimiter != ' ' && !isVop && !isLdiv
+            if (hasFrame) {
                 canvas.drawText(node.delimiter.toString(), x, top + size, paint(size * 1.4f, false, color))
             }
             var rowY = top
-            node.rows.forEach { row ->
-                var cellX = x + size * .65f
-                row.forEach { cell ->
-                    cellX += draw(canvas, cell, cellX, rowY, size * .75f, color) + 10f
+            var col0MaxW = 0f
+            node.rows.forEachIndexed { rowIdx, row ->
+                var cellX = x + (if (hasFrame) size * .65f else size * .15f)
+                row.forEachIndexed { colIdx, cell ->
+                    val w = draw(canvas, cell, cellX, rowY, size * .75f, color)
+                    if (colIdx == 0 && w > col0MaxW) col0MaxW = w
+                    cellX += w + 10f
                 }
                 rowY += size * 1.25f
+                if (isVop && rowIdx == 1) {
+                    canvas.drawLine(x + size * .1f, rowY - size * .2f, x + all.width - size * .1f, rowY - size * .2f, paint(1.2f, false, color))
+                }
             }
-            val close = when (node.delimiter) {
-                '(' -> ")"
-                '{', ' ' -> ""
-                '|' -> "|"
-                else -> "]"
-            }
-            if (close.isNotEmpty()) {
-                canvas.drawText(close, x + all.width - size * .3f, top + size, paint(size * 1.4f, false, color))
+            if (isLdiv) {
+                val vX = x + size * .15f + col0MaxW + 5f
+                val hY = top + size * 1.05f
+                val lp = paint(1.2f, false, color)
+                canvas.drawLine(vX, top + size * .1f, vX, rowY - size * .1f, lp)
+                canvas.drawLine(vX, hY, x + all.width - size * .1f, hY, lp)
+            } else if (hasFrame) {
+                val close = when (node.delimiter) {
+                    '(' -> ")"
+                    '{', ' ' -> ""
+                    '|' -> "|"
+                    else -> "]"
+                }
+                if (close.isNotEmpty()) {
+                    canvas.drawText(close, x + all.width - size * .3f, top + size, paint(size * 1.4f, false, color))
+                }
             }
             all.width
         }

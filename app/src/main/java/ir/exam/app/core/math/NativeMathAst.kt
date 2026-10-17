@@ -108,7 +108,8 @@ object NativeMathParser {
         "vec", "dot", "ddot", "tilde", "overbrace", "underbrace",
         "overleftarrow", "overrightarrow", "overleftrightarrow",
         "overset", "underset", "xrightarrow", "binom", "pmod",
-        "left", "right", "begin", "end", "quad", "qquad"
+        "left", "right", "begin", "end", "quad", "qquad",
+        "vadd", "vsub", "vmul", "ldiv"
     )
 
     val supportedCommands: Set<String> =
@@ -200,7 +201,8 @@ object NativeMathParser {
             "underline", "vec", "overrightarrow", "overleftarrow", "overleftrightarrow", "dot", "ddot", "tilde", "widetilde", "left", "right",
             "begin", "end", "quad", "qquad", "big", "Big", "bigg", "Bigg", "bigl", "Bigl", "biggl", "Biggl", "bigr", "Bigr", "biggr", "Biggr",
             "bigm", "Bigm", "limits", "nolimits", "displaystyle", "textstyle", "scriptstyle", "scriptscriptstyle", "sum", "prod", "int", "lim",
-            "binom", "stackrel", "overset", "underset", "underbrace", "overbrace", "cases", "pmatrix", "bmatrix", "vmatrix", "matrix", "not", "cdot"
+            "binom", "stackrel", "overset", "underset", "underbrace", "overbrace", "cases", "pmatrix", "bmatrix", "vmatrix", "matrix", "not", "cdot",
+            "vadd", "vsub", "vmul", "ldiv"
         )
     }
 
@@ -354,6 +356,37 @@ object NativeMathParser {
                     if (index < source.length && source[index] == '\\') { index++; command(slashStart) } else atom()
                 }
                 "frac", "dfrac", "tfrac", "sfrac", "nicefrac" -> MathNode.Fraction(groupOrAtom(), groupOrAtom())
+                "vadd", "vsub", "vmul" -> {
+                    val a = groupOrAtom()
+                    val b = groupOrAtom()
+                    skipWhitespace()
+                    val c = if (index < source.length && source[index] == '{') groupOrAtom() else MathNode.Sequence(emptyList())
+                    val opSym = if (name == "vsub") "−" else if (name == "vmul") "×" else "+"
+                    val delim = if (name == "vsub") '-' else if (name == "vmul") '*' else '+'
+                    MathNode.Matrix(
+                        rows = listOf(
+                            listOf(MathNode.Sequence(emptyList()), a),
+                            listOf(MathNode.Symbol(opSym, editable = false), b),
+                            listOf(MathNode.Sequence(emptyList()), c)
+                        ),
+                        delimiter = delim
+                    )
+                }
+                "ldiv" -> {
+                    val a = groupOrAtom()
+                    val b = groupOrAtom()
+                    skipWhitespace()
+                    val q = if (index < source.length && source[index] == '{') groupOrAtom() else MathNode.Sequence(emptyList())
+                    skipWhitespace()
+                    val r = if (index < source.length && source[index] == '{') groupOrAtom() else MathNode.Sequence(emptyList())
+                    MathNode.Matrix(
+                        rows = listOf(
+                            listOf(a, b),
+                            listOf(r, q)
+                        ),
+                        delimiter = '/'
+                    )
+                }
                 "sqrt" -> parseRadical()
                 "root" -> {
                     val rootIndex = groupOrAtom()

@@ -295,6 +295,25 @@
       out.push('<m:d><m:dPr><m:begChr m:val="' + esc(o.trim()) + '"/><m:endChr m:val="' + esc(c.trim()) + '"/></m:dPr>' + mE(inner) + '</m:d>'); return;
     }
     if (cl.contains('mmatrix')) { var tb2 = n.querySelector('table'); out.push(tb2 ? matrixOmml(tb2) : joinM(mathChildren(n))); return; }
+    if (cl.contains('math-vop')) {
+      var vrows = n.querySelectorAll(':scope > .math-vop-r'), vout = '<m:m><m:mPr><m:mcs><m:mc><m:mcPr><m:count m:val="2"/><m:mcJc m:val="right"/></m:mcPr></m:mc></m:mcs></m:mPr>';
+      for (var vi = 0; vi < vrows.length; vi++) {
+        var vc = vrows[vi].children, vline = vrows[vi].classList.contains('math-vop-line');
+        var v0 = vc[0] ? joinM(mathChildren(vc[0])) : '', v1 = vc[1] ? joinM(mathChildren(vc[1])) : '';
+        if (vline) { v0 = '<m:bar><m:barPr><m:pos m:val="bot"/></m:barPr>' + mE(v0) + '</m:bar>'; v1 = '<m:bar><m:barPr><m:pos m:val="bot"/></m:barPr>' + mE(v1) + '</m:bar>'; }
+        vout += '<m:mr>' + mE(v0) + mE(v1) + '</m:mr>';
+      }
+      out.push(vout + '</m:m>'); return;
+    }
+    if (cl.contains('math-ldiv')) {
+      var lrows = n.querySelectorAll(':scope > .math-ldiv-tr'), lout = '<m:m><m:mPr><m:mcs><m:mc><m:mcPr><m:count m:val="2"/><m:mcJc m:val="center"/></m:mcPr></m:mc></m:mcs></m:mPr>';
+      for (var li = 0; li < lrows.length; li++) {
+        var lc = lrows[li].children, l0 = lc[0] ? joinM(mathChildren(lc[0])) : '', l1 = lc[1] ? joinM(mathChildren(lc[1])) : '';
+        if (li === 0) l1 = '<m:bar><m:barPr><m:pos m:val="bot"/></m:barPr>' + mE(l1) + '</m:bar>';
+        lout += '<m:mr>' + mE(l0) + mE(mT('│') + l1) + '</m:mr>';
+      }
+      out.push(lout + '</m:m>'); return;
+    }
     if (cl.contains('mbigop')) {
       var sym = n.querySelector(':scope > .mbigsym'), over = n.querySelector(':scope > .mover'), under = n.querySelector(':scope > .munder');
       var chr = sym ? sym.textContent.trim() : '∑';
