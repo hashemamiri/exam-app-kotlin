@@ -797,9 +797,37 @@
         stag(3, apkBtn),
         stag(4, outline(S.user() ? 'ورود به سامانه' : 'ورود / ثبت‌نام', function () { if (S.user()) { enter(); S.render(); } else goA('login', {tab: 1}); })),
         stag(5, el('div', {class: 'ice-tiles'}, LANDING_TILES.map(function (t) { return el('div', {class: 'ice-tile'}, [(window.LP_FLAT_ICONS && window.LP_FLAT_ICONS[t[2]]) ? el('i', {class: 'ico48', 'aria-hidden': 'true', html: '<svg viewBox="0 0 48 48">' + window.LP_FLAT_ICONS[t[2]] + '</svg>'}) : el('i', {'aria-hidden': 'true', text: t[0]}), el('span', {text: t[1]})]); }))),
+        stag(6, buildMobileCatalog()),
         stag(6, S.user() ? null : link('ساخت حساب جدید (معلم / مدیر)', function () { goA('register', {regTab: 0, step: 'form'}); })),
         stag(7, el('div', {class: 'ice-badges'}, [S.enamadBadge()])), /* V292.1 — اینماد */
         stag(7, el('p', {class: 'ice-note', text: 'حساب دانش‌آموز را معلم می‌سازد؛ نام کاربری و رمز را از معلم خود دریافت کنید.'}))
+      ]);
+    }
+    function buildMobileCatalog() {
+      var prods = window.LP_PRODUCTS || [];
+      var tariffs = window.LP_TARIFFS || [];
+      return el('div', {class: 'ice-catalog'}, [
+        el('div', {class: 'ice-cat-title', text: '🛒 محصولات، بسته‌ها و تعرفهٔ خدمات (تومان)'}),
+        el('div', {class: 'ice-prod-list'}, prods.map(function (p) {
+          return el('div', {class: 'ice-prod-card'}, [
+            el('div', {class: 'ice-prod-row'}, [
+              el('b', {text: p.title}),
+              el('span', {class: 'ice-prod-price', text: p.price})
+            ]),
+            el('p', {class: 'ice-prod-desc', text: p.desc}),
+            el('button', {type: 'button', class: 'ice-buy-btn', text: 'خرید و شارژ آنلاین', onclick: function () {
+              try { sessionStorage.setItem('lp-selected-pkg', String(p.amount)); sessionStorage.setItem('lp-selected-pkg-title', p.title + ' (' + p.price + ')'); } catch (e) {}
+              if (S.user()) { ui.page = 'wallet'; enter(); S.render(); }
+              else goA('login', {tab: 1});
+            }})
+          ]);
+        })),
+        el('div', {class: 'ice-tariff-box'}, [
+          el('div', {class: 'ice-cat-sub', text: 'تعرفهٔ تک‌خدمت‌ها (کسر از کیف پول)'}),
+          el('div', {class: 'ice-tariff-list'}, tariffs.map(function (r) {
+            return el('div', {class: 'ice-tariff-row'}, [el('span', {text: r[0]}), el('b', {text: r[1]})]);
+          }))
+        ])
       ]);
     }
     function loginPane(card) {

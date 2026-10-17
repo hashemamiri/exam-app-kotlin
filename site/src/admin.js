@@ -278,7 +278,9 @@
     bg.appendChild(m); document.body.appendChild(bg);
   }
   function topUpCard(balance, refresh) {
-    var amt = el('input', {type: 'number', step: STEP, min: MIN_TOP_UP, value: 200000, style: 'direction:ltr'});
+    var initVal = 200000;
+    try { var sp = Number(sessionStorage.getItem('lp-selected-pkg')); if (sp >= MIN_TOP_UP) initVal = sp; sessionStorage.removeItem('lp-selected-pkg'); sessionStorage.removeItem('lp-selected-pkg-title'); } catch (e) {}
+    var amt = el('input', {type: 'number', step: STEP, min: MIN_TOP_UP, value: initVal, style: 'direction:ltr'});
     var msg = el('div');
     var card = el('div', {class: 'card topup-card', style: 'margin-top:16px'}, [el('h3', {text: '💳 شارژ امن کیف پول'}), /* V246 — تعرفه‌ها به پنجرهٔ کارت موجودی رفت */
       /* V243 — چیدمان جمع‌وجور: چیپ‌های مبلغ (انتخاب‌شده رنگی) + فیلد کوتاه + دکمهٔ معمولی در یک ردیف */

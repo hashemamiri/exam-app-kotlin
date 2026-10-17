@@ -1976,3 +1976,46 @@ table.rp-single td.num,table.rp-single th.num{text-align:center;white-space:nowr
 .enamad.enamad-txt{padding:8px 14px;font-size:12px;font-weight:800;color:var(--link,#2B8FD6);line-height:1.6;text-decoration:none}
 .ice-badges{display:flex;justify-content:center;margin-top:10px}
 .m-lv .enamad img{height:56px}
+
+/* V311.2 — بخش محصولات، بسته‌های شارژ و تعرفهٔ خدمات در صفحهٔ اصلی سایت (الزام شاپرک) */
+.lp.lp-sky{overflow-x:hidden;overflow-y:auto}
+.lp .lp-price-jump{width:auto;height:40px;padding:0 16px;font-size:13px;border-radius:12px}
+.lp-catalog{grid-column:1 / -1;position:relative;z-index:1;padding:12px 56px 48px;max-width:1360px;width:100%;margin:0 auto;box-sizing:border-box}
+.lp-cat-head{text-align:center;margin-bottom:20px}
+.lp-cat-head h2{font-size:22px;font-weight:900;margin:0 0 6px;color:#1F3B57}
+.lp-cat-head p{font-size:13.5px;color:#2E4D6B;margin:0}
+.lp-prod-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px;margin-bottom:18px}
+.lp-prod-card{background:rgba(255,255,255,.78);border:1px solid rgba(255,255,255,.92);border-radius:22px;padding:18px 16px;display:flex;flex-direction:column;gap:8px;box-shadow:0 10px 28px rgba(60,120,170,.12)}
+.lp-prod-head{display:flex;align-items:center;justify-content:space-between;gap:6px;flex-wrap:wrap}
+.lp-prod-badge{font-size:11px;font-weight:700;padding:3px 9px;border-radius:999px;background:rgba(43,143,214,.14);color:#1C4F7A}
+.lp-prod-price{font-size:16px;font-weight:900;color:#0A8571}
+.lp-prod-title{font-size:15px;font-weight:800;margin:2px 0 0;color:#1F3B57}
+.lp-prod-desc{font-size:12.5px;line-height:1.75;color:#2E4D6B;margin:0;flex:1}
+.lp .lp-buy-btn{height:40px;font-size:13px;border-radius:12px;margin-top:6px}
+.lp-tariff-box{background:rgba(255,255,255,.72);border:1px solid rgba(255,255,255,.9);border-radius:22px;padding:16px 20px;box-shadow:0 10px 28px rgba(60,120,170,.1)}
+.lp-tariff-head{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:12px}
+.lp-tariff-head h3{font-size:15px;font-weight:800;margin:0;color:#1F3B57}
+.lp-tariff-head .btn{width:auto;height:36px;padding:0 14px;font-size:12.5px}
+.lp-tariff-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:10px}
+.lp-tariff-item{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 14px;border-radius:12px;background:rgba(255,255,255,.82);font-size:13px;color:#2E4D6B}
+.lp-tariff-item b{color:#1F3B57;font-weight:800;white-space:nowrap}
+.m-dark .lp-cat-head h2,.m-dark .lp-prod-title,.m-dark .lp-tariff-head h3,.m-dark .lp-tariff-item b{color:#E6F1FA}
+.m-dark .lp-cat-head p,.m-dark .lp-prod-desc,.m-dark .lp-tariff-item{color:#C9DCEC}
+.m-dark .lp-prod-card,.m-dark .lp-tariff-box{background:rgba(255,255,255,.08);border-color:rgba(255,255,255,.18)}
+.m-dark .lp-tariff-item{background:rgba(255,255,255,.06)}
+.m-dark .lp-prod-badge{background:rgba(140,200,240,.18);color:#8CC8F0}
+.m-dark .lp-prod-price{color:#4FD9B8}
+.ice-catalog{width:100%;margin-top:18px;display:flex;flex-direction:column;gap:10px;text-align:right}
+.ice-cat-title{font-size:14px;font-weight:800;color:var(--ink);text-align:center;margin-bottom:2px}
+.ice-prod-list{display:grid;grid-template-columns:1fr;gap:8px}
+.ice-prod-card{background:var(--fbg);border:1px solid var(--stroke);border-radius:16px;padding:12px;display:flex;flex-direction:column;gap:6px}
+.ice-prod-row{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:13px;color:var(--ink)}
+.ice-prod-price{font-weight:800;color:#0A8571;white-space:nowrap}
+.ice-prod-desc{font-size:11.5px;line-height:1.65;color:var(--sec);margin:0}
+.ice-buy-btn{height:38px;border:0;border-radius:10px;background:var(--acc);color:#fff;font:inherit;font-size:12.5px;font-weight:700;cursor:pointer}
+.ice-tariff-box{background:var(--fbg);border:1px solid var(--stroke);border-radius:16px;padding:12px}
+.ice-cat-sub{font-size:12.5px;font-weight:800;color:var(--ink);margin-bottom:8px;text-align:center}
+.ice-tariff-list{display:flex;flex-direction:column;gap:5px}
+.ice-tariff-row{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:11.5px;color:var(--sec);padding:4px 0;border-bottom:1px dashed var(--stroke)}
+.ice-tariff-row:last-child{border-bottom:0}
+.ice-tariff-row b{color:var(--ink);font-weight:800;white-space:nowrap}

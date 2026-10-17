@@ -1345,12 +1345,70 @@
     var card = el('div', {class: 'card neo'});
     drawAuthInto(card, mode || 'login');
     var right = el('div', {class: 'lp-r'}, [card]);
+    var catalog = buildLandingCatalog(card, mode);
+    var bdg = intro.querySelector('.lp-badges');
+    if (bdg) bdg.appendChild(el('button', {type: 'button', class: 'btn light sm lp-price-jump', text: '💳 محصولات و تعرفه‌ها', onclick: function () { catalog.scrollIntoView({behavior: 'smooth', block: 'start'}); }}));
     var page = el('div', {class: 'lp lp-sky'}, [
       el('div', {class: 'glow g1'}), el('div', {class: 'glow g2'}), el('div', {class: 'cloud c1'}), el('div', {class: 'cloud c2'}), el('div', {class: 'cloud c3'}), el('div', {class: 'cloud c4'}),
-      left, right
+      left, right, catalog
     ]);
     if (keyWarn) page.appendChild(keyWarn);
     root.appendChild(page);
+  }
+  /* V311.2 — فهرست محصولات، بسته‌های شارژ کیف پول و تعرفهٔ خدمات در صفحهٔ اصلی سایت (الزام شاپرک: نمایش محصولات به همراه قیمت در صفحهٔ اصلی) */
+  window.LP_PRODUCTS = [
+    {id: 'pkg-100', amount: 100000, title: 'بستهٔ اعتبار پایه (۱۰۰ سؤالی)', desc: 'شارژ کیف پول جهت ساخت، برگزاری و چاپ تا ۱۰۰ سؤال آزمون آنلاین یا چاپی با تصحیح خودکار', price: '۱۰۰٬۰۰۰ تومان'},
+    {id: 'pkg-200', amount: 200000, title: 'بستهٔ اعتبار استاندارد (۲۰۰ سؤالی)', desc: 'شارژ کیف پول جهت ساخت و برگزاری تا ۲۰۰ سؤال آزمون آنلاین یا ۴ خروجی فایل Word آزمون', price: '۲۰۰٬۰۰۰ تومان'},
+    {id: 'pkg-500', amount: 500000, title: 'بستهٔ اعتبار حرفه‌ای (۵۰۰ سؤالی)', desc: 'ویژهٔ معلمان پرکار و مدارس — تا ۵۰۰ سؤال آزمون آنلاین/چاپی یا ۱۰ خروجی فایل Word با سربرگ', price: '۵۰۰٬۰۰۰ تومان'},
+    {id: 'pkg-1000', amount: 1000000, title: 'بستهٔ اعتبار سازمانی و مدرسه', desc: 'ویژهٔ مدیران مدارس با قابلیت توزیع و انتقال آنی اعتبار به کیف پول معلمان عضو مدرسه', price: '۱٬۰۰۰٬۰۰۰ تومان'}
+  ];
+  window.LP_TARIFFS = [
+    ['هر سؤال آزمون آنلاین', '۱٬۰۰۰ تومان'],
+    ['هر تصویر (در سؤال یا گزینه)', '۱٬۰۰۰ تومان'],
+    ['صوت سؤال (تا ۱ / ۲ / ۳ مگابایت)', '۲٬۰۰۰ تا ۶٬۰۰۰ تومان'],
+    ['چاپ رسمی برگهٔ A4 (هر سؤال / تصویر)', '۱٬۰۰۰ تومان'],
+    ['دریافت فایل Word آزمون (هر فایل)', '۵۰٬۰۰۰ تومان'],
+    ['بازیابی نسخهٔ پشتیبان (هر سؤال)', '۱٬۰۰۰ تومان']
+  ];
+  function selectLandingProduct(p, card, mode) {
+    try { sessionStorage.setItem('lp-selected-pkg', String(p.amount)); sessionStorage.setItem('lp-selected-pkg-title', p.title + ' (' + p.price + ')'); } catch (e) {}
+    if (card) {
+      drawAuthInto(card, mode || 'login');
+      try { card.scrollIntoView({behavior: 'smooth', block: 'center'}); } catch (e) {}
+    }
+    toast('بستهٔ «' + p.title + '» انتخاب شد؛ برای پرداخت وارد حساب خود شوید.', 'ok');
+  }
+  function buildLandingCatalog(card, mode) {
+    var prods = el('div', {class: 'lp-prod-grid'}, window.LP_PRODUCTS.map(function (p) {
+      return el('div', {class: 'lp-prod-card neo'}, [
+        el('div', {class: 'lp-prod-head'}, [
+          el('span', {class: 'lp-prod-badge', text: 'تحویل آنی دیجیتال'}),
+          el('strong', {class: 'lp-prod-price', text: p.price})
+        ]),
+        el('h3', {class: 'lp-prod-title', text: p.title}),
+        el('p', {class: 'lp-prod-desc', text: p.desc}),
+        el('button', {type: 'button', class: 'btn sm lp-buy-btn', text: 'خرید و شارژ آنلاین', onclick: function () { selectLandingProduct(p, card, mode); }})
+      ]);
+    }));
+    var tariffs = el('div', {class: 'lp-tariff-box neo'}, [
+      el('div', {class: 'lp-tariff-head'}, [
+        el('h3', {text: '📋 تعرفهٔ تک‌خدمت‌ها (کسر از کیف پول)'}),
+        el('span', {class: 'muted', style: 'font-size:12.5px', text: 'ثبت‌نام، ساخت کلاس، تعریف دانش‌آموز و کارنامه رایگان است؛ هزینه فقط به ازای مصرف واقعی کسر می‌شود.'}),
+        el('span', {class: 'grow'}),
+        el('button', {type: 'button', class: 'btn light sm', text: 'پنجرهٔ کامل تعرفه‌ها', onclick: function () { if (window.SiteAdmin && window.SiteAdmin.tariffDlg) window.SiteAdmin.tariffDlg(); }})
+      ]),
+      el('div', {class: 'lp-tariff-grid'}, window.LP_TARIFFS.map(function (r) {
+        return el('div', {class: 'lp-tariff-item'}, [el('span', {text: r[0]}), el('b', {text: r[1]})]);
+      }))
+    ]);
+    return el('section', {class: 'lp-catalog', id: 'lp-products', 'aria-label': 'محصولات و تعرفه خدمات'}, [
+      el('div', {class: 'lp-cat-head'}, [
+        el('h2', {text: '🛒 محصولات، بسته‌های شارژ کیف پول و تعرفهٔ خدمات (تومان)'}),
+        el('p', {text: 'کلیهٔ بسته‌ها و خدمات پس از پرداخت آنلاین از طریق درگاه بانکی شاپرک، به‌صورت آنی در کیف پول حساب کاربری (وب و اندروید) فعال می‌شوند.'})
+      ]),
+      prods,
+      tariffs
+    ]);
   }
   var APP_MARK_SVG = '<svg viewBox="0 0 108 108" width="100%" height="100%" aria-hidden="true"><rect x="0" y="0" width="108" height="108" rx="22" fill="#fff"/><image href="/pwa/v3/mark-256.png" x="10" y="10" width="88" height="88"/></svg>'; /* V253 — لوگوی جدید «آزمون» (همان آیکون اپ اندروید) */
   /* V292.1 — نماد اعتماد الکترونیکی (اینماد): کد رسمی، فقط نمایش؛ کلیک = صفحهٔ تأیید در trustseal.enamad.ir */
@@ -1397,6 +1455,8 @@
       var isLogin = state.mode === 'login';
       m.appendChild(el('h2', {text: isLogin ? 'ورود به حساب' : 'ساخت حساب جدید'}));
       m.appendChild(el('p', {class: 's', text: isLogin ? 'معلم، مدیر و دانش‌آموز' : 'برای معلم و مدیر / معاون'}));
+      var selPkg = null; try { selPkg = sessionStorage.getItem('lp-selected-pkg-title'); } catch (e) {}
+      if (selPkg) m.appendChild(el('div', {class: 'alert info lp-order-banner', text: '🛒 بستهٔ انتخابی: ' + selPkg + ' — برای اتصال به درگاه شاپرک وارد حساب معلم/مدیر شوید یا ثبت‌نام کنید.'}));
       if (!isLogin) m.appendChild(el('p', {class: 's', style: 'font-size:11px'}, [el('span', {text: 'با ثبت‌نام، '}), el('a', {href: '/terms.html', target: '_blank', rel: 'noopener', text: 'شرایط استفاده'}), el('span', {text: ' و '}), el('a', {href: '/privacy.html', target: '_blank', rel: 'noopener', text: 'حریم خصوصی'}), el('span', {text: ' را می‌پذیرید.'})])); /* V282 */
       if (!KEY_READY) m.appendChild(el('div', {class: 'alert warn', text: 'کلید SUPABASE_ANON_KEY در فایل وارد نشده؛ ورود ممکن نیست.'}));
       var tabs = el('div', {class: 'tabs neo-in', role: 'tablist'}, [
@@ -1552,7 +1612,9 @@
     if (window.SiteMobile && window.SiteMobile.enter) window.SiteMobile.enter(); /* V202.6 — پس از ورود، دروازهٔ صفحهٔ اول در این نشست بسته است */
     if (user && user.requiresSetup) { renderSetupGate(); return; }
     prefetchEngines();
-    view.panel = 'dashboard';
+    var hasPkg = false; try { hasPkg = !!sessionStorage.getItem('lp-selected-pkg'); } catch (e) {}
+    view.panel = (hasPkg && user && user.role !== 'student') ? 'wallet' : 'dashboard';
+    if (hasPkg && user && user.role !== 'student' && window.SiteMobile && window.SiteMobile.ui) window.SiteMobile.ui.page = 'wallet';
     toast('خوش آمدید، ' + (user.name || ''), 'ok');
     render();
   }
