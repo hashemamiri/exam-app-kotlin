@@ -1,6 +1,6 @@
 # هندآف جامع مهاجرت سامانه آزمون از WebView به Native Kotlin
 
-**آخرین به‌روزرسانی:** ۲۰۲۶-۱۰-۱۷ — V312.3 (اپ 1.02.31 + سایت) جایگزینی دکمهٔ `abc` با دکمهٔ «زیرهم» در ویرایشگر فرمول دسکتاپ و رفع خطای کامپایل تست `V312_2_VerticalOpsAndWhiteboardTest.kt` (پیش از آن V312.2..V311.1)
+**آخرین به‌روزرسانی:** ۲۰۲۶-۱۰-۱۷ — V312.4 (اپ 1.02.32 + سایت) حذف کامل دکمهٔ سطر بعدی (`↵`) در ویرایشگر فرمول دسکتاپ (پیش از آن V312.3..V311.1)
 **زبان همکاری:** فارسی
 **کاربر:** غیر‌برنامه‌نویس؛ دستورها باید ساده، مرحله‌ای و قابل کپی در WSL باشند.
 
@@ -20394,3 +20394,6 @@ check_test_pins بهبودیافته (assertTrue/assertFalse/contains/!contains/
 ## V312.3 — جایگزینی دکمهٔ abc با دکمهٔ «زیرهم» در ویرایشگر فرمول دسکتاپ و رفع خطای کامپایل تست (اپ 1.02.31 + سایت؛ مقصد: هر دو)
 - در `app/src/main/assets/formula_editor/formula.html`، در نوار ابزار اصلی ویرایشگر فرمول دسکتاپ (`@media (min-width:561px)`) دکمهٔ `abc` (`.mb-kt-abc`) پنهان شد و دکمهٔ «زیرهم» (`.mb-kt-vop` با `onclick="mbToolMenu(event,'vop')"`) در جایگاه `order:13` بین «درج» و «کسر» قرار گرفت؛ همچنین دکمهٔ اضافی هفدهم از `.mb-dk-extra` حذف شد تا شبکهٔ ۲×۸ دسکتاپ دست‌نخورده بماند.
 - در `app/src/test/java/ir/exam/app/ui/app/V312_2_VerticalOpsAndWhiteboardTest.kt` فراخوانی `NativeMathSvgRenderer.render(...).xml` جایگزین `.svg` شد تا خطای کامپایل `compileDebugUnitTestKotlin` در GitHub Actions برطرف شود.
+
+## V312.4 — حذف دکمهٔ سطر بعدی (↵) در ویرایشگر فرمول دسکتاپ (اپ 1.02.32 + سایت؛ مقصد: هر دو)
+- در `app/src/main/assets/formula_editor/formula.html` کاراکتر `\n` در سلکتور `.mb-kt-enter` داخل `<style id="hostThemeOverride">` برطرف شد و `.mb-kt-enter` در استایل اصلی `@media (min-width:561px)` نیز با `display:none !important` پنهان شد تا دکمهٔ `↵` در دسکتاپ نمایش داده نشود.
