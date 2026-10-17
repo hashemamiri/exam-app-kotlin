@@ -1,6 +1,6 @@
 # هندآف جامع مهاجرت سامانه آزمون از WebView به Native Kotlin
 
-**آخرین به‌روزرسانی:** ۲۰۲۶-۱۰-۱۷ — V312.7 (اپ 1.02.35) اصلاح قالب عنوان نسخه در `CHANGELOG_FA.txt` و رفع `ClassCastException` در تست واحد `V312_2_VerticalOpsAndWhiteboardTest.kt` (پیش از آن V312.6..V311.1)
+**آخرین به‌روزرسانی:** ۲۰۲۶-۱۰-۱۷ — V312.8 (اپ 1.02.36 + سایت؛ مقصد: آزمایشی) چیدمان جدید ویرایشگر فرمول دسکتاپ با قرارگیری کتابخانه‌ها در ۳ ستون ۷ ردیفه در بالا، دکمه‌های ابزار در زیر آن و کادر درج فرمول در ادامهٔ صفحه (پیش از آن V312.7..V311.1)
 **زبان همکاری:** فارسی
 **کاربر:** غیر‌برنامه‌نویس؛ دستورها باید ساده، مرحله‌ای و قابل کپی در WSL باشند.
 
@@ -20408,3 +20408,7 @@ check_test_pins بهبودیافته (assertTrue/assertFalse/contains/!contains/
 ## V312.7 — اصلاح قالب عنوان نسخه در CHANGELOG_FA و رفع خطای تبدیل نوع در تست واحد (اپ 1.02.35؛ مقصد: هر دو)
 - اصلاح قالب سطر عنوان نسخه‌های `V312.2` تا `V312.7` در `text/CHANGELOG_FA.txt` به فرمت استاندارد `V312.x (اپ 1.02.3x ...)` برای پاس شدن تست `V208_ReleaseNotesTest.changelogTopBlockHasHeadlineBullets`.
 - اصلاح بررسی خروجی `NativeMathParser.parse(tex)` در `V312_2_VerticalOpsAndWhiteboardTest.kt` (`assertTrue(ast is MathNode.Matrix)` به‌جای کست به `MathNode.Sequence`، چون `parseSequence` برای خروجی تک‌گره خود گره را برمی‌گرداند).
+
+## V312.8 — چیدمان ویرایشگر فرمول دسکتاپ: کتابخانه‌ها در ۳ ستون ۷ ردیفه در بالا، زیر آن دکمه‌ها و بقیهٔ صفحه کادر درج فرمول (اپ 1.02.36 + سایت؛ مقصد: آزمایشی)
+- تنظیم `.mb-chip-scroll` در دسکتاپ (`@media (min-width:561px)`) روی `grid-row: 1` با `grid-template-columns: repeat(3, minmax(0, 1fr))` و `grid-template-rows: repeat(7, auto)` (۲۱ کتابخانه در ۳ ستون و ۷ ردیف در بالای صفحه).
+- قرار دادن `.mb-key-section` (۴ ردیف ۸تایی دکمه‌های ابزار) در `grid-row: 2` زیر کتابخانه‌ها، `#mbVopBar` در `grid-row: 3` و `.mb-wrap` (کادر درج فرمول) در `grid-row: 4` با `minmax(140px, 1fr)` برای پوشش بقیهٔ صفحه.
