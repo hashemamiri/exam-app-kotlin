@@ -7583,6 +7583,8 @@ html[data-theme="light"] .q-math-prev { background: #f3f6ff; }
 .math-ldiv-b,.mathx .math-ldiv-b{border-bottom:1.6px solid currentColor;text-align:left}
 .math-ldiv-r,.mathx .math-ldiv-r{border-right:1.6px solid currentColor;text-align:right}
 .math-ldiv-q,.mathx .math-ldiv-q{text-align:left}
+.mb-kt-vop{display:none}
+@media (min-width:561px){#mfModal.box-fullscreen .mb-kt-abc,#mfModal.box-fullscreen .mb-chip-vop{display:none !important}#mfModal.box-fullscreen .mb-kt-vop{display:inline-flex !important;order:13}}
 </style>
 <style>
 
@@ -7658,7 +7660,7 @@ html[data-theme="light"] .q-math-prev { background: #f3f6ff; }
         <div class="mb-chip-scroll" aria-label="ساختارهای فرمول">
           <button type="button" class="mb-chip" style="background: linear-gradient(135deg, #f7971e, var(--warn)); color: #333; border:none;" onclick="event.stopPropagation(); mbShowSymbolCategory('common')">⭐ موارد پرکاربرد</button>
           <button type="button" class="mb-chip" onclick="mbGroupLibrary(event,'num')">🔢 اعداد و محاسبات</button>
-          <button type="button" class="mb-chip" onclick="mbToolMenu(event,'vop')" title="جمع، تفریق و ضرب زیر هم و تقسیم کلنگی">➗ حساب زیر هم و کلنگی</button>
+          <button type="button" class="mb-chip mb-chip-vop" onclick="mbToolMenu(event,'vop')" title="جمع، تفریق و ضرب زیر هم و تقسیم کلنگی">➗ حساب زیر هم و کلنگی</button>
           <button type="button" class="mb-chip" onclick="mbGroupLibrary(event,'an')">∫ آنالیز و توابع</button>
           <button type="button" class="mb-chip" onclick="mbGroupLibrary(event,'alg')">𝑥 جبر و معادلات</button>
           <button type="button" class="mb-chip" onclick="mbGroupLibrary(event,'tri')">∿ مثلثات و یونانی</button>
@@ -7697,7 +7699,8 @@ html[data-theme="light"] .q-math-prev { background: #f3f6ff; }
         <div class="mb-key-tools" aria-label="ابزار درج فرمول"><!-- MF_UX_V964 -->
           <button type="button" class="mb-kt mb-kt-apply" onclick="mfApply()" title="درج فرمول در سوال">درج</button>
           <button type="button" class="mb-kt mb-kt-enter" onclick="mbNewLine()" title="سطر تازه">↵</button>
-          <button type="button" class="mb-kt" onclick="mbOpenAbcPad(event)" title="حروف انگلیسی">abc</button>
+          <button type="button" class="mb-kt mb-kt-abc" onclick="mbOpenAbcPad(event)" title="حروف انگلیسی">abc</button>
+          <button type="button" class="mb-kt mb-kt-vop" onclick="mbToolMenu(event,'vop')" title="جمع، تفریق و ضرب زیر هم و تقسیم کلنگی">زیرهم</button>
           <button type="button" class="mb-kt mb-kt-quick" onclick="mbToolMenu(event,'frac')" title="کسر">
             <span class="mb-kt-ico mb-kt-frac" aria-hidden="true"><i></i></span>
           </button>
@@ -7730,7 +7733,6 @@ html[data-theme="light"] .q-math-prev { background: #f3f6ff; }
           <button type="button" onclick="mbPadDo(['sym','∞'])" title="بی‌نهایت">∞</button>
           <button type="button" onclick="mbPadDo(['sym','°'])" title="درجه">°</button>
           <button type="button" onclick="mbPadDo(['sym','→'])" title="پیکان">→</button>
-          <button type="button" onclick="mbToolMenu(event,'vop')" title="جمع، تفریق و ضرب زیر هم و تقسیم کلنگی">زیرهم▾</button>
         </div>
         <div class="mb-fixed-keypad" aria-label="صفحه‌کلید فرمول">
           <button type="button" class="mb-opkey mb-parkey" onclick="mbParMenu(event)" title="پرانتز/براکت — باز، جفت، بسته">()</button>
@@ -13816,7 +13818,9 @@ window.addEventListener('load', function () {
   #mfModal.box-fullscreen .mb-fixed-keypad button[onclick="mbInsert('sym','+')"],
   #mfModal.box-fullscreen .mb-fixed-keypad button[onclick="mbInsert('sym','−')"],
   #mfModal.box-fullscreen .mb-fixed-keypad button[onclick="mbInsert('sym','=')"],
-  #mfModal.box-fullscreen .mb-kt-enter{display:none !important}
+  #mfModal.box-fullscreen .mb-kt-abc,
+  #mfModal.box-fullscreen .mb-chip-vop,
+#mfModal.box-fullscreen .mb-kt-abc,\n  #mfModal.box-fullscreen .mb-chip-vop,\n  #mfModal.box-fullscreen .mb-kt-enter{display:none !important}
 }
 
 /* ================================================================
@@ -13927,7 +13931,8 @@ window.addEventListener('load', function () {
   #mfModal.box-fullscreen .mb-pencilkey{order:3}
   #mfModal.box-fullscreen .mb-top-six-input{order:5}
   #mfModal.box-fullscreen .mb-kt-apply{order:10}
-  #mfModal.box-fullscreen .mb-key-tools .mb-kt:nth-child(3){order:13}
+#mfModal.box-fullscreen .mb-key-tools .mb-kt:nth-child(3){order:13}\n  #mfModal.box-fullscreen .mb-kt-vop{display:inline-flex !important;order:13}
+  #mfModal.box-fullscreen .mb-kt-vop{display:inline-flex !important;order:13}
   #mfModal.box-fullscreen .mb-kt-quick{order:14}
   #mfModal.box-fullscreen .mb-digitkey{order:17}
   #mfModal.box-fullscreen .mb-spacekey{order:18}

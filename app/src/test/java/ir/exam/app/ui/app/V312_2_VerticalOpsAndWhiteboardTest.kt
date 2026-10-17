@@ -36,7 +36,10 @@ class V312_2_VerticalOpsAndWhiteboardTest {
         assertTrue("['تفریق زیر هم', '\\\\vsub{a}{b}{c}', ['vsub']]" in fh)
         assertTrue("['ضرب زیر هم', '\\\\vmul{a}{b}{c}', ['vmul']]" in fh)
         assertTrue("['تقسیم کلنگی', '\\\\ldiv{a}{b}{q}{r}', ['ldiv']]" in fh)
-        assertTrue("onclick=\"mbToolMenu(event,'vop')\"" in fh)
+        assertTrue("<button type=\"button\" class=\"mb-kt mb-kt-abc\" onclick=\"mbOpenAbcPad(event)\" title=\"حروف انگلیسی\">abc</button>" in fh)
+        assertTrue("<button type=\"button\" class=\"mb-kt mb-kt-vop\" onclick=\"mbToolMenu(event,'vop')\" title=\"جمع، تفریق و ضرب زیر هم و تقسیم کلنگی\">زیرهم</button>" in fh)
+        assertTrue("#mfModal.box-fullscreen .mb-kt-abc" in fh)
+        assertTrue("#mfModal.box-fullscreen .mb-kt-vop{display:inline-flex !important;order:13}" in fh)
         val mh = src("app/src/main/assets/print/web/math_host.js")
         assertTrue("if (cmd === 'vadd' || cmd === 'vsub' || cmd === 'vmul')" in mh)
         assertTrue("if (cmd === 'ldiv')" in mh)
@@ -57,7 +60,7 @@ class V312_2_VerticalOpsAndWhiteboardTest {
             val ast = NativeMathParser.parse(tex)
             val seq = ast as MathNode.Sequence
             assertTrue(seq.children.first() is MathNode.Matrix)
-            val svg = NativeMathSvgRenderer.render(tex, fontSizePx = 20f).svg
+            val svg = NativeMathSvgRenderer.render(tex, fontSizePx = 20f).xml
             assertFalse("□" in svg)
             assertTrue("<line " in svg)
         }
