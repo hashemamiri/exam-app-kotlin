@@ -29,5 +29,6 @@ class V311_2_SiteLandingCatalogTest {
         assertTrue("function openMobileCatalog()" in mob && "function mobileShowcase()" in mob && "ice-price-jump" in mob)
         assertTrue("sessionStorage.getItem('lp-selected-pkg')" in adm && "sessionStorage.getItem('lp-selected-pkg')" in app)
         assertTrue(".lp-cat-modal{" in css && ".lp-tiles-col{" in css && ".ice{overflow-x:hidden;overflow-y:visible;" in css)
+        assertTrue(".lp-tariff-head{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;" in css && "stag(6, S.user() ? null : link('ساخت حساب جدید (معلم / مدیر)'" !in mob)
     }
 }
