@@ -33,5 +33,6 @@ class V311_2_SiteLandingCatalogTest {
         val sw = src("site/pwa/sw.js")
         val hdr = src("site/_headers")
         assertTrue("function fetchTimed(" in sw && "Promise.race([" in sw && "function fetchWithTimeout(" in app && "Alt-Svc: clear" in hdr && "rel=\"preconnect\" href=\"https://eazwuyrymsvdkwckdpco.supabase.co\"" in tpl)
+        assertTrue("function loadPanels()" in app && "function prefetchPanels()" in app && "panels_name = \"panels.%s.js\"" in src("site/build_site.py") && "/panels.*.js" in hdr)
     }
 }

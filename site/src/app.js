@@ -535,6 +535,7 @@
   }
   var api = {
     signInWithPassword: async function (identifier, password) {
+      prefetchPanels();
       if (!String(password || '').trim()) throw new Error('رمز عبور را وارد کنید.');
       var clean = String(identifier || '').trim().toLowerCase(), email, fromCache = false;
       /* V260.6 — نام کاربری→ایمیل روی همین دستگاه به‌خاطر سپرده می‌شود (فقط بعد از ورود موفق): هم یک رفت‌وبرگشت کمتر،
@@ -747,6 +748,50 @@
     if (c.saveData || /(^|-)2g$|^3g$/.test(String(c.effectiveType || ''))) return;
     var idle = window.requestIdleCallback || function (f) { setTimeout(f, 2500); };
     setTimeout(function () { idle(function () { loadEngines().then(function () { prewarmFormula(); /* V216 */ }).catch(function () {}); }); }, 8000);
+  }
+  /* V312.1 — بار اول فقط صفحهٔ اول (لندینگ/ورود دسکتاپ و گوشی) بارگذاری می‌شود؛
+     پنل‌های پس از ورود (SiteAdmin:cal_month، SiteSchool، SiteBuilder، SiteStudent، SiteStudio، SitePush)
+     در فایل کش‌شدهٔ panels.<hash>.js در حین لاگین و پس از لاگین بارگذاری می‌شوند. */
+  var panelsReady = null, panelsAttempt = 0, landingPrefetchScheduled = false;
+  window.__PANELS_MODULES = 'SiteAdmin:cal_month,SiteSchool,SiteBuilder,SiteStudent,SiteStudio,SitePush';
+  function loadPanels() {
+    if (window.__PANELS_LOADED || (window.SiteAdmin && window.SiteSchool && window.SiteBuilder && window.SiteStudent)) { window.__PANELS_LOADED = true; return Promise.resolve(true); }
+    if (panelsReady) return panelsReady;
+    var url = window.__PANELS_URL;
+    if (!url) { window.__PANELS_LOADED = true; return Promise.resolve(true); }
+    panelsReady = new Promise(function (resolve, reject) {
+      panelsAttempt++;
+      var done = false;
+      var sc = document.createElement('script'); sc.src = url + (panelsAttempt > 1 ? '?r=' + panelsAttempt : ''); sc.async = true;
+      var deadTimer = setTimeout(function () { finish(false, new Error('دریافت بخش‌های کاربری بیش از حد طول کشید؛ اینترنت را بررسی و دوباره تلاش کنید.')); }, 25000);
+      function finish(ok, err) {
+        if (done) return; done = true;
+        clearTimeout(deadTimer);
+        if (ok) { window.__PANELS_LOADED = true; resolve(true); return; }
+        panelsReady = null;
+        try { sc.remove(); } catch (e) {}
+        reject(err);
+      }
+      sc.onload = function () { finish(true); };
+      sc.onerror = function () {
+        if (panelsAttempt === 1) {
+          done = true; clearTimeout(deadTimer); try { sc.remove(); } catch (e) {}
+          panelsReady = null;
+          setTimeout(function () { loadPanels().then(resolve, reject); }, 800);
+          return;
+        }
+        finish(false, new Error('بارگذاری بخش‌های پنل کاربری ناموفق بود؛ اینترنت را بررسی کنید.'));
+      };
+      document.head.appendChild(sc);
+    });
+    return panelsReady;
+  }
+  function prefetchPanels() { loadPanels().catch(function () {}); }
+  function scheduleLandingPrefetch() {
+    if (landingPrefetchScheduled || window.__PANELS_LOADED) return;
+    landingPrefetchScheduled = true;
+    setTimeout(prefetchPanels, 1500);
+    document.addEventListener('focusin', function (e) { if (e.target && e.target.tagName === 'INPUT') prefetchPanels(); }, {once: true});
   }
   /* V199 — اثر انگشت سربرگ: فیلدهای f_* پیش‌نمایش، مرتب، بدون خالی‌ها؛ عیناً مثل PrintPayFingerprint.kt اپ (سرور md5 می‌کند) */
   function headerFingerprint(fields) {
@@ -1310,12 +1355,13 @@
     /* V148 — پوستهٔ موبایل (mobile.js) در حالت گوشی/معلم جای پنل دسکتاپ را می‌گیرد */
     /* V202.6 — گوشی: با نشست فعال هم اول صفحهٔ اول (دریافت برنامه / ورود به سامانه) تا کاربر «ورود به سامانه» بزند */
     if (user && !user.requiresSetup && window.SiteMobile && window.SiteMobile.gateActive()) { document.body.classList.remove('m-mode'); closeAuth(); root.innerHTML = ''; window.SiteMobile.paintAuth(root); return; }
+    if (user && !user.requiresSetup && !window.__PANELS_LOADED && window.__PANELS_URL) { root.innerHTML = ''; loading(root); loadPanels().then(function () { render(); }, function (e) { showErr(root, e); }); return; }
     if (user && !user.requiresSetup && window.SiteMobile && window.SiteMobile.active()) { document.body.classList.add('m-mode'); window.SiteMobile.paint(); return; }
     document.body.classList.remove('m-mode');
     /* V154 — ورود/ثبت‌نام در گوشی به سبک SignInScreen اپ (پوستهٔ یخی) */
-    if (!user && window.SiteMobile && window.SiteMobile.authActive()) { closeAuth(); root.innerHTML = ''; window.SiteMobile.paintAuth(root); return; }
+    if (!user && window.SiteMobile && window.SiteMobile.authActive()) { closeAuth(); root.innerHTML = ''; window.SiteMobile.paintAuth(root); scheduleLandingPrefetch(); return; }
     root.innerHTML = '';
-    if (user && !user.requiresSetup) { document.body.classList.remove('lp-body'); renderPanel(); } else renderLanding();
+    if (user && !user.requiresSetup) { document.body.classList.remove('lp-body'); renderPanel(); } else { renderLanding(); scheduleLandingPrefetch(); }
   }
 
   /* ---------------- لندینگ (V164: صفحهٔ ورود به سبک اپ؛ فرم داخل کارت، بدون پنجرهٔ بازشو) ---------------- */
@@ -2429,6 +2475,7 @@
     document.addEventListener('keydown', function (e) { if (e.key === 'Escape') { closeAuth(); if (formulaCtx) return; if (printCtx) closePrintOverlay(); } });
     var profileStale = false;
     if (session && KEY_READY) {
+      prefetchPanels();
       /* V260.4 — پروفایل کش‌شدهٔ همین کاربر: رندر فوری، تأیید در پس‌زمینه (بدون یک رفت‌وبرگشت قبل از اولین نقاشی) */
       var cachedProfile = session.user && !window.__googleReturn ? cacheGet(LS_PROFILE, session.user.id) : null;
       if (cachedProfile && !cachedProfile.requiresSetup) { user = cachedProfile; profileStale = true; }
@@ -2504,7 +2551,7 @@
   }
   window.ExamSite = {emojiSvg: function (k) { return emojiSvg(k, false) || ''; }, headerFingerprint: headerFingerprint, printHeaderFp: printHeaderFp, ensurePrintPaid: ensurePrintPaid, jalaliPicker: jalaliPicker, jalaliDisplay: jalaliDisplay, openFormulaEditor: openFormulaEditor, openHeaderSettings: openHeaderSettings, headerSettingsForm: headerSettingsForm, readPrintHeader: readPrintHeader, faReason: faReason, uploadMedia: uploadMedia, openPrintPreview: openPrintPreview, buildPrintPayload: buildPrintPayload, api: api, demoPrint: demoPrint, openLandingCatalog: openLandingCatalogModal,
     enamadBadge: enamadBadge, el: el, esc: esc, fa: fa, en: en, gradeLabel: gradeLabel, toast: toast, confirmDlg: confirmDlg, infoDlg: infoDlg, costDoneDlg: costDoneDlg, promptDlg: promptDlg, mediaBlobUrl: mediaBlobUrl, isOwnStorageUrl: isOwnStorageUrl, deleteMedia: deleteMedia, mediaUrlsIn: mediaUrlsIn, isOwnedMediaUrl: isOwnedMediaUrl, rpc: rpc, rpcObj: rpcObj, select: select, http: http, uuid: uuid, fmtScore: fmtScore, fmtDate: fmtDate, money: money, errMsg: errMsg,
-    localState: localState, setLocalState: setLocalState, loading: loading, showErr: showErr, emptyBox: emptyBox, qType: qType, engineHtml: engineHtml, loadEngines: loadEngines,
+    localState: localState, setLocalState: setLocalState, loading: loading, showErr: showErr, emptyBox: emptyBox, qType: qType, engineHtml: engineHtml, loadEngines: loadEngines, loadPanels: loadPanels, prefetchPanels: prefetchPanels, scheduleLandingPrefetch: scheduleLandingPrefetch,
     user: function () { return user; }, session: function () { return session; }, config: {url: SUPABASE_URL, anon: ANON},
     go: function (panel, arg) { view.panel = panel; view.arg = arg; render(); }, navBack: navBack, view: view, examActions: examActions,
     render: render, renderPage: renderPage, printExam: printExam, wordExam: wordExam, wordOnlineExam: wordOnlineExam, WORD_ICON: WORD_ICON_HTML, /* V286 */ logout: doLogout, printSection: printSection, /* V230 */ duplicateExamDlg: duplicateExamDlg, /* V264 */

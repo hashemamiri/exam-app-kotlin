@@ -107,7 +107,21 @@ def build_formula_engine():
 def main():
     tpl = read(os.path.join(SITE, "src", "template.html"))
     site_css = read(os.path.join(SITE, "src", "site.css"))
-    site_js = read(os.path.join(SITE, "src", "app.js")) + "\n" + read(os.path.join(SITE, "src", "builder.js")) + "\n" + read(os.path.join(SITE, "src", "studio.js")) + "\n" + read(os.path.join(SITE, "src", "student.js")) + "\n" + read(os.path.join(SITE, "src", "admin.js")) + "\n" + read(os.path.join(SITE, "src", "school.js")) + "\n" + read(os.path.join(SITE, "src", "extras.js")) + "\n" + read(os.path.join(SITE, "src", "mobile.js")) + "\n" + read(os.path.join(SITE, "src", "push.js"))
+    # V312.1 — بار اول (دسکتاپ و گوشی) فقط هستهٔ صفحهٔ اول و ورود/ثبت‌نام (app.js + extras.js + mobile.js)
+    # داخل index.html قرار می‌گیرد تا صفحهٔ اول بلافاصله باز شود؛ بقیهٔ بخش‌های سایت (سازندهٔ آزمون، استودیو،
+    # پنل دانش‌آموز، تصحیح/مدیریت، مدرسه/بانک سؤال و اعلان وب) در فایل کش‌شدهٔ panels.<hash>.js قرار می‌گیرند
+    # و در حین لاگین و پس از لاگین بارگذاری می‌شوند.
+    site_js = read(os.path.join(SITE, "src", "app.js")) + "\n" + read(os.path.join(SITE, "src", "extras.js")) + "\n" + read(os.path.join(SITE, "src", "mobile.js"))
+    panels_raw = (
+        "window.__HEADER_SCHEMA = %s;\n" % read(os.path.join(ASSETS, "print", "header_settings_schema.json")).strip()
+        + read(os.path.join(SITE, "src", "builder.js")) + "\n"
+        + read(os.path.join(SITE, "src", "studio.js")) + "\n"
+        + read(os.path.join(SITE, "src", "student.js")) + "\n"
+        + read(os.path.join(SITE, "src", "admin.js")) + "\n"
+        + read(os.path.join(SITE, "src", "school.js")) + "\n"
+        + read(os.path.join(SITE, "src", "push.js")) + "\n"
+        + "window.__PANELS_LOADED = true;\n"
+    )
     # V181 — قلم وزیرمتن فقط از site/fonts/*.woff2 (V164، کش immutable)؛ نسخهٔ base64 (۱۳۵k) دیگر داخل index.html تکرار نمی‌شود
     vazir = "/* Vazirmatn: site/fonts/*.woff2 (see site.css) */"
     # V162 — سرعت: دو موتور سنگین (چاپ + فرمول ≈ ۵ مگابایت) دیگر داخل index.html نیستند؛
@@ -131,13 +145,28 @@ def main():
             os.remove(os.path.join(SITE, old))
     with open(os.path.join(SITE, engines_name), "wb") as f:
         f.write(engines_b)
-    # V157 — همان header_settings_schema.json اپ برای پنجرهٔ «تنظیمات سربرگ» سایت (HeaderSettingsDialog)
-    inline = "window.__ENGINES_URL = %s;" % json.dumps("/" + engines_name)
-    inline += "\nwindow.__HEADER_SCHEMA = %s;" % read(os.path.join(ASSETS, "print", "header_settings_schema.json")).strip()
     # V307 / ۱۲ — بانک آمادهٔ ابتدایی: همان فایل اپ (assets) در سایت تعبیه می‌شود تا دو نسخه جدا نشوند
     with open(os.path.join(ASSETS, "primary_bank.json"), encoding="utf-8") as bf:
         bank_json = json.dumps(json.loads(bf.read()), ensure_ascii=False, separators=(",", ":"))
     site_js = site_js.replace("/*__PRIMARY_BANK__*/null", bank_json)
+    panels_raw = panels_raw.replace("/*__PRIMARY_BANK__*/null", bank_json)
+    panels_b = min_js(panels_raw).encode("utf-8")
+    panels_hash = hashlib.sha256(panels_b).hexdigest()[:12]
+    panels_name = "panels.%s.js" % panels_hash
+    pkeep_path = os.path.join(SITE, "panels_keep.txt")
+    pkeep = []
+    if os.path.exists(pkeep_path):
+        pkeep = [l.strip() for l in open(pkeep_path, encoding="utf-8") if l.strip()]
+    pkeep = [panels_name] + [k for k in pkeep if k != panels_name]
+    pkeep = pkeep[:3]
+    with open(pkeep_path, "w", encoding="utf-8") as f:
+        f.write("\n".join(pkeep) + "\n")
+    for old in os.listdir(SITE):
+        if old.startswith("panels.") and old.endswith(".js") and old not in pkeep:
+            os.remove(os.path.join(SITE, old))
+    with open(os.path.join(SITE, panels_name), "wb") as f:
+        f.write(panels_b)
+    inline = "window.__ENGINES_URL = %s;\nwindow.__PANELS_URL = %s;" % (json.dumps("/" + engines_name), json.dumps("/" + panels_name))
     out = (tpl.replace("/*__SUPABASE_URL__*/", SUPABASE_URL)
               .replace("/*__VAZIR_CSS__*/", vazir)
               .replace("/*__SITE_CSS__*/", min_css(site_css))

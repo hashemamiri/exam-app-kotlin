@@ -747,11 +747,12 @@
   function authActive() { return MQ.matches && !S.user(); }
   /* V202.6 — دروازهٔ صفحهٔ اول: حتی با نشست فعال، در هر بار بازشدن سایت (هر تب) اول صفحهٔ اول می‌آید؛ «ورود به سامانه» کاربرِ واردشده را مستقیم به سامانه می‌برد */
   function entered() { try { return sessionStorage.getItem('m-entered') === '1'; } catch (e) { return true; } }
-  function enter() { try { sessionStorage.setItem('m-entered', '1'); } catch (e) {} }
+  function enter() { if (S.prefetchPanels) S.prefetchPanels(); try { sessionStorage.setItem('m-entered', '1'); } catch (e) {} }
   function gateActive() { return MQ.matches && !!S.user() && !entered(); }
   var LANDING_TILES = [['🗂️', 'آزمون‌ساز و بانک سؤال', 'bank'], ['⏱️', 'برگزاری آنلاین', 'live'], ['📊', 'کارنامهٔ خودکار', 'report'], ['🖨', 'چاپ رسمی و Word', 'print'], ['🧮', 'فرمول و جدول تناوبی', 'formula'], ['📐', 'شکل و محور', 'figure'], ['🎨', 'تختهٔ سفید', 'board'], ['🏫', 'مدیریت مدرسه', 'school']]; /* V300: کلید آیکن رنگی مشترک (LP_FLAT_ICONS) */ /* V299: ۸ بلوک */ /* = tiles صفحهٔ دسکتاپ (app.js renderLanding) — V202.5 (قبلاً داخل paintAuth بعد از فراخوانی landing() تعریف شده بود → undefined → صفحهٔ خالی) */
   var A = {screen: 'landing', tab: 1, regTab: 0, email: '', step: 'form', fullName: '', username: null};
   function paintAuth(root) {
+    if (S.scheduleLandingPrefetch) S.scheduleLandingPrefetch();
     var recovery = A.screen === 'recovery' || (A.screen === 'otp' && A.otpKind === 'recovery');
     var shell = el('div', {class: 'ice' + (recovery ? ' ice-snow' : '')}, [el('div', {class: 'ice-bg'}, [el('div', {class: 'ice-disc'}), el('div', {class: 'ice-waves'}, [el('i'), el('i'), el('i')])])]);
     if (recovery) { var sn = el('div', {class: 'ice-snowfall'}); for (var i = 0; i < 26; i++) sn.appendChild(el('b', {style: '--x:' + Math.random() * 100 + '%;--d:' + (7 + Math.random() * 9) + 's;--s:' + (2 + Math.random() * 4) + 'px;--o:' + (-Math.random() * 12) + 's'})); shell.appendChild(sn); }
@@ -1169,6 +1170,7 @@
   function paint() {
     cleanupBuilder();
     var root = document.getElementById('root'); if (!root) return;
+    if (!window.__PANELS_LOADED && window.__PANELS_URL && S.loadPanels) { S.loading(root); S.loadPanels().then(function () { paint(); }, function (e) { S.showErr(root, e); }); return; }
     /* V170 — وقتی صفحه‌های حساب/تنظیمات روی دسکتاپ (بدون پوستهٔ گوشی) استفاده می‌شوند، بازنقاشی = رندر پنل دسکتاپ */
     if (!MQ.matches && !document.getElementById('m-shell')) { S.render(); return; }
     var shell = document.getElementById('m-shell');

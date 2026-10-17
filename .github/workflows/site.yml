@@ -55,8 +55,9 @@ jobs:
           cp site/status.html site_out/status.html  # V228 — صفحهٔ وضعیت سرویس
           cp site/terms.html site/privacy.html site_out/  # V282 — شرایط استفاده و حریم خصوصی
           cp site/robots.txt site/sitemap.xml site/favicon.ico site_out/  # V248 — سئو؛ V248.3 — favicon.ico
-          # V162 — موتورهای چاپ/فرمول در فایل جداگانه با hash در نام (کش دائمی)
+          # V162 / V312.1 — موتورهای چاپ/فرمول و پنل‌های پس از ورود در فایل‌های جداگانه با hash در نام (کش دائمی)
           cp site/engines.*.js site_out/
+          cp site/panels.*.js site_out/
           # V164 — قلم وزیرمتن (woff2) — کش یک‌ساله
           cp -r site/fonts site_out/fonts
           python3 - <<'PY'
@@ -67,7 +68,7 @@ jobs:
           open(p, 'w', encoding='utf-8').write(s.replace('__SW_VERSION__', h))
           PY
           # هدرها: بدون کش برای index و SW تا به‌روزرسانی فوری دیده شود؛ Alt-Svc: clear برای جلوگیری از گیر کردن QUIC/HTTP3 در اپراتورهای ایران؛ آیکون‌ها کش طولانی
-          printf '/*\n  Cache-Control: no-cache\n  Alt-Svc: clear\n  X-Content-Type-Options: nosniff\n  X-Frame-Options: SAMEORIGIN\n  Referrer-Policy: strict-origin-when-cross-origin\n  Strict-Transport-Security: max-age=31536000; includeSubDomains\n/pwa/sw.js\n  Cache-Control: no-cache\n  Service-Worker-Allowed: /\n/pwa/manifest.webmanifest\n  Content-Type: application/manifest+json; charset=utf-8\n/pwa/*.png\n  Cache-Control: public, max-age=604800\n/pwa/v3/*\n  Cache-Control: public, max-age=604800\n/engines.*.js\n  Cache-Control: public, max-age=31536000, immutable\n/fonts/*\n  Cache-Control: public, max-age=31536000, immutable\n' > site_out/_headers
+          printf '/*\n  Cache-Control: no-cache\n  Alt-Svc: clear\n  X-Content-Type-Options: nosniff\n  X-Frame-Options: SAMEORIGIN\n  Referrer-Policy: strict-origin-when-cross-origin\n  Strict-Transport-Security: max-age=31536000; includeSubDomains\n/pwa/sw.js\n  Cache-Control: no-cache\n  Service-Worker-Allowed: /\n/pwa/manifest.webmanifest\n  Content-Type: application/manifest+json; charset=utf-8\n/pwa/*.png\n  Cache-Control: public, max-age=604800\n/pwa/v3/*\n  Cache-Control: public, max-age=604800\n/engines.*.js\n  Cache-Control: public, max-age=31536000, immutable\n/panels.*.js\n  Cache-Control: public, max-age=31536000, immutable\n/fonts/*\n  Cache-Control: public, max-age=31536000, immutable\n' > site_out/_headers
       # V261.3 — Cloudflare گاهی «Failed to publish your Function. Got error: Unknown internal error occurred.» می‌دهد (خطای موقتی سمت Cloudflare)؛ تا ۳ بار با فاصله تلاش می‌کنیم
       - name: Deploy to Cloudflare Pages
         id: deploy1

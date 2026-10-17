@@ -70,9 +70,13 @@ self.addEventListener('fetch', function (e) {
     }));
     return;
   }
-  /* V162 — engines.<hash>.js: کش-اول (نام با هش عوض می‌شود)؛ نسخه‌های قدیمی موتور پاک می‌شوند */
+  /* V162 / V312.1 — engines.<hash>.js و panels.<hash>.js: کش-اول (نام با هش عوض می‌شود)؛ نسخه‌های قدیمی پاک می‌شوند */
   if (/^\/engines\.[0-9a-f]+\.js$/.test(url.pathname)) {
     e.respondWith(caches.match(req).then(function (r) { return r || fetch(req).then(function (n) { if (n.ok) { var copy = n.clone(); caches.open(CACHE).then(function (c) { c.keys().then(function (ks) { ks.forEach(function (k) { if (/\/engines\./.test(k.url) && k.url !== req.url) c.delete(k); }); }); c.put(req, copy); }); } return n; }); }));
+    return;
+  }
+  if (/^\/panels\.[0-9a-f]+\.js$/.test(url.pathname)) {
+    e.respondWith(caches.match(req).then(function (r) { return r || fetch(req).then(function (n) { if (n.ok) { var copy = n.clone(); caches.open(CACHE).then(function (c) { c.keys().then(function (ks) { ks.forEach(function (k) { if (/\/panels\./.test(k.url) && k.url !== req.url) c.delete(k); }); }); c.put(req, copy); }); } return n; }); }));
     return;
   }
   /* V164 — قلم‌ها و پوشهٔ pwa: کش-اول */
