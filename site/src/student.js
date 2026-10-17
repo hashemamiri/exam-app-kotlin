@@ -139,6 +139,38 @@
     return b;
   }
 
+  function isTeacher() { return !!(S.user() && S.user().role === 'teacher'); }
+  function buildTeacherPracticeExam(raw) {
+    var keysMap = {};
+    (Array.isArray(raw.__answers) ? raw.__answers : []).forEach(function (k, i) { if (k && typeof k === 'object') keysMap[k.i != null ? Number(k.i) : i] = k; });
+    var rawQs = Array.isArray(raw.questions) ? raw.questions : [];
+    var now = Date.now(), safe = sanitize(raw);
+    var exam = decodeExam(safe, S.user().id, now);
+    exam.practice = true;
+    exam.rawQuestions = rawQs;
+    exam.answerKeys = keysMap;
+    return exam;
+  }
+  async function joinTeacherPracticeById(examId) {
+    var raw = await S.api.examDetail(examId);
+    if (!Array.isArray(raw.questions) || !raw.questions.length) throw new Error('این آزمون هنوز سؤالی ندارد.');
+    return buildTeacherPracticeExam(raw);
+  }
+  async function joinTeacherPracticeByCode(code) {
+    var clean = code.trim().toUpperCase();
+    try {
+      var list = await S.api.exams();
+      var own = (list || []).filter(function (x) { return String(x.code || '').trim().toUpperCase() === clean; })[0];
+      if (own) return await joinTeacherPracticeById(own.id);
+    } catch (e) {}
+    var raw = await S.rpcObj('get_exam_for_student', {p_code: clean});
+    if (raw && raw.error) throw new Error(String(raw.error));
+    var exam = decodeExam(sanitize(raw), S.user().id, Date.now());
+    exam.practice = true;
+    exam.rawQuestions = Array.isArray(raw.questions) ? raw.questions : [];
+    exam.answerKeys = {};
+    return exam;
+  }
   async function joinByCode(code) {
     var raw = await S.rpcObj('get_exam_for_student', {p_code: code.trim()});
     if (raw && raw.error) throw new Error(String(raw.error));
@@ -240,13 +272,40 @@
     var btn = el('button', {class: 'btn', style: 'width:100%', text: 'ورود به آزمون', onclick: async function () {
       var code = en(inp.value).trim().toUpperCase(); if (code.length < 4) return toast('کد آزمون را وارد کنید.', 'err');
       btn.disabled = true; msg.innerHTML = '<div class="loading"><span class="spinner"></span> در حال دریافت آزمون…</div>';
-      try { var exam = await joinByCode(code); msg.innerHTML = ''; startExam(c, exam, false); } catch (e) { msg.innerHTML = ''; msg.appendChild(el('div', {class: 'alert error', text: errMsg(e)})); btn.disabled = false; }
+      try { var exam = isTeacher() ? await joinTeacherPracticeByCode(code) : await joinByCode(code); msg.innerHTML = ''; startExam(c, exam, false); } catch (e) { msg.innerHTML = ''; msg.appendChild(el('div', {class: 'alert error', text: errMsg(e)})); btn.disabled = false; }
     }});
     inp.addEventListener('keydown', function (e) { if (e.key === 'Enter') btn.click(); });
     card.appendChild(el('div', {class: 'field'}, [el('label', {text: 'کد آزمون'}), inp]));
     card.appendChild(btn); card.appendChild(msg);
-    card.appendChild(el('p', {class: 'muted', style: 'font-size:13px;margin-top:14px', text: 'کد را از معلم بگیرید. پس از ورود، زمان‌سنج شروع می‌شود و پاسخ‌ها به‌صورت خودکار روی همین مرورگر ذخیره می‌شوند.'}));
+    card.appendChild(el('p', {class: 'muted', style: 'font-size:13px;margin-top:14px', text: isTeacher() ? 'کد ۶ حرفی آزمون را وارد کنید یا یکی از آزمون‌های خود را از فهرست زیر انتخاب کنید (بدون ثبت در آمار کلاس).' : 'کد را از معلم بگیرید. پس از ورود، زمان‌سنج شروع می‌شود و پاسخ‌ها به‌صورت خودکار روی همین مرورگر ذخیره می‌شوند.'}));
     c.appendChild(card);
+    if (isTeacher()) {
+      var listCard = el('div', {class: 'card', style: 'max-width:720px;margin:16px auto 0'});
+      listCard.appendChild(el('h3', {text: '📝 آزمون‌های من (پاسخ‌گویی آزمایشی در محیط دانش‌آموز)'}));
+      var listBox = el('div'); S.loading(listBox); listCard.appendChild(listBox);
+      c.appendChild(listCard);
+      S.api.exams().then(function (exams) {
+        listBox.innerHTML = '';
+        if (!exams || !exams.length) { listBox.appendChild(el('p', {class: 'muted', text: 'هنوز آزمونی نساخته‌اید.'})); return; }
+        exams.forEach(function (x) {
+          var startBtn = el('button', {class: 'btn sm', text: '▶ شروع آزمون', onclick: async function () {
+            startBtn.disabled = true; startBtn.textContent = 'در حال باز کردن…';
+            try { var ex = await joinTeacherPracticeById(x.id); startExam(c, ex, false); }
+            catch (e) { toast(errMsg(e), 'err'); startBtn.disabled = false; startBtn.textContent = '▶ شروع آزمون'; }
+          }});
+          listBox.appendChild(el('div', {class: 'row', style: 'padding:10px 0;border-bottom:1px solid var(--line,rgba(128,128,128,.18));align-items:center;gap:10px'}, [
+            el('div', {class: 'grow'}, [
+              el('div', {class: 'row', style: 'gap:8px;align-items:center'}, [
+                el('b', {text: x.title || 'بدون عنوان'}),
+                el('span', {class: 'chip ' + (x.is_open ? 'ok' : 'warn'), text: x.is_open ? 'باز' : 'بسته'})
+              ]),
+              el('div', {class: 'muted', style: 'font-size:12px;margin-top:4px', text: [(x.subject || 'بدون درس'), 'کد ' + (x.code || '—'), fa(x.duration || 0) + ' دقیقه', 'بارم ' + fa(S.fmtScore(x.total_score))].join(' · ')})
+            ]),
+            startBtn
+          ]));
+        });
+      }).catch(function (e) { listBox.innerHTML = ''; listBox.appendChild(el('div', {class: 'alert error', text: errMsg(e)})); });
+    }
   }
 
   /* ================================================================ اجرای آزمون */
@@ -293,8 +352,8 @@
     return q.options.every(function (o, i) { var img = q.optionImages && q.optionImages[i]; var t = String(o || '').trim(); return !!img || (t && t.indexOf('$') < 0 && t.indexOf('%%') < 0 && Array.from(t).length <= 4); });
   }
   function startExam(c, exam, resumed) {
-    var d = draftGet(exam.id);
-    run = {exam: exam, index: 0, answers: d.answers || {}, images: d.images || {}, started: true, finished: false, submitting: false, enteredAt: Date.now(), qEnter: {}, qTime: {}, qVisits: {}, events: {}, timer: null, monitorTimer: null};
+    var d = exam.practice ? {answers: {}, images: {}} : draftGet(exam.id);
+    run = {exam: exam, practice: !!exam.practice, index: 0, answers: d.answers || {}, images: d.images || {}, started: true, finished: false, submitting: false, enteredAt: Date.now(), qEnter: {}, qTime: {}, qVisits: {}, events: {}, timer: null, monitorTimer: null};
     run.qEnter[0] = Date.now(); run.qVisits[exam.questions[0] && exam.questions[0].id] = 1;
     document.addEventListener('visibilitychange', onVis);
     window.addEventListener('blur', onBlur);
@@ -334,7 +393,7 @@
   }
   var lastReport = 0;
   function reportMonitor(final) {
-    if (!run) return Promise.resolve();
+    if (!run || run.practice) return Promise.resolve();
     if (!final && Date.now() - lastReport < 5000) return Promise.resolve();
     lastReport = Date.now();
     return S.rpcObj('native_monitor_upsert_v1', {p_exam: run.exam.id, p_report: monitorReport(final)}).catch(function () {});
@@ -347,7 +406,7 @@
     run.qEnter[run.index] = now;
     var nq = run.exam.questions[run.index]; if (nq) run.qVisits[nq.id] = (run.qVisits[nq.id] || 0) + 1;
   }
-  function saveDraft() { draftSet(run.exam.id, {answers: run.answers, images: run.images}); }
+  function saveDraft() { if (run && !run.practice) draftSet(run.exam.id, {answers: run.answers, images: run.images}); }
   function stopAll() { guardsOff(); clearInterval(run.timer); clearInterval(run.monitorTimer); document.removeEventListener('visibilitychange', onVis); window.removeEventListener('blur', onBlur); }
 
   function examUI(c) {
@@ -356,8 +415,9 @@
     wrap.appendChild(netBanner()); /* V231 — نوار قطع اینترنت */
     var timerEl = el('span', {class: 'st-timer'});
     var head = el('div', {class: 'card st-head'}, [
-      el('div', {}, [el('b', {text: ex.title}), el('div', {class: 'muted', style: 'font-size:12px', text: [ex.subject, 'کد ' + ex.code, ex.attemptNumber ? 'تلاش ' + fa(ex.attemptNumber) + ' از ' + fa(ex.attemptsAllowed) : ''].filter(Boolean).join(' · ')})]),
+      el('div', {}, [el('b', {text: ex.title}), el('div', {class: 'muted', style: 'font-size:12px', text: [ex.subject, 'کد ' + ex.code, run.practice ? 'حالت آزمایشی معلم' : (ex.attemptNumber ? 'تلاش ' + fa(ex.attemptNumber) + ' از ' + fa(ex.attemptsAllowed) : '')].filter(Boolean).join(' · ')})]),
       el('span', {class: 'grow'}), timerEl,
+      run.practice ? el('button', {class: 'btn light sm', text: '✕ خروج', onclick: async function () { if (await S.confirmDlg('خروج از آزمون آزمایشی', 'از آزمون آزمایشی خارج می‌شوید؟', 'خروج', true)) { run.finished = true; stopAll(); run = null; if (window.SiteMobile && window.SiteMobile.active()) window.SiteMobile.paint(); else page(c); } }}) : null,
       el('button', {class: 'btn sm', text: '✅ ارسال پاسخ‌ها', onclick: function () { review(c); }})
     ]);
     wrap.appendChild(head);
@@ -658,8 +718,93 @@
     if (!res.ok) throw new Error('آپلود تصویر پاسخ ناموفق بود: ' + (await res.text()).slice(0, 120));
     return S.config.url + '/storage/v1/object/public/' + BUCKET + '/' + path;
   }
+  function practiceGradeQuestion(q, key, r) {
+    var s = Number(q.score) || 0, k = key || {}, L = ['الف', 'ب', 'ج', 'د', 'ه', 'و', 'ز', 'ح', 'ط', 'ی'];
+    var origOpts = (run.exam.rawQuestions && run.exam.rawQuestions[q.originalIndex] && run.exam.rawQuestions[q.originalIndex].options) || q.options || [];
+    var hasAns = r != null && r !== '' && !(typeof r === 'object' && !Object.keys(r).length);
+    var userStr = 'بدون پاسخ', correctStr = '—', earned = null;
+    if (q.type === 'multiple') {
+      var ci = k.correctOption != null ? Number(k.correctOption) : (k.correctIndex != null ? Number(k.correctIndex) : null);
+      if (ci != null) correctStr = (L[ci] || fa(ci + 1)) + ') ' + (origOpts[ci] != null ? origOpts[ci] : '');
+      if (hasAns) { var ui = Number(r); userStr = (L[ui] || fa(ui + 1)) + ') ' + (origOpts[ui] != null ? origOpts[ui] : ''); earned = ci != null ? (ui === ci ? s : 0) : null; }
+      else if (ci != null) earned = 0;
+    } else if (q.type === 'truefalse') {
+      var ca = k.correctAnswer === true || k.correctAnswer === 'true';
+      correctStr = ca ? 'صحیح' : 'غلط';
+      if (hasAns) { var ua = r === true || r === 'true'; userStr = ua ? 'صحیح' : 'غلط'; earned = ua === ca ? s : 0; }
+      else earned = 0;
+    } else if (q.type === 'fill') {
+      var acc = Array.isArray(k.accept) ? k.accept : [];
+      correctStr = acc.join(' یا ') || '—';
+      if (hasAns) {
+        userStr = String(r);
+        var norm = acc.map(function (x) { return k.caseSensitive ? String(x).trim() : String(x).trim().toLowerCase(); });
+        var uv = k.caseSensitive ? String(r).trim() : String(r).trim().toLowerCase();
+        earned = norm.length ? (norm.indexOf(uv) >= 0 ? s : 0) : null;
+      } else if (acc.length) earned = 0;
+    } else if (q.type === 'numeric') {
+      var na = parseFloat(k.answer), tol = parseFloat(k.tolerance) || 0;
+      correctStr = k.answer != null ? String(k.answer) + (tol ? ' ± ' + tol : '') : '—';
+      if (hasAns) { userStr = String(r); var ux = parseFloat(en(String(r))); earned = isFinite(na) ? (isFinite(ux) && Math.abs(ux - na) <= tol ? s : 0) : null; }
+      else if (isFinite(na)) earned = 0;
+    } else if (q.type === 'matching') {
+      var ma = k.matchAnswer || {}, ks = Object.keys(ma);
+      correctStr = ks.sort(function (a, b) { return a - b; }).map(function (l) { return fa(Number(l) + 1) + ' ← ' + (L[Number(ma[l])] || fa(Number(ma[l]) + 1)); }).join('، ') || '—';
+      if (hasAns && typeof r === 'object') {
+        userStr = Object.keys(r).sort(function (a, b) { return a - b; }).map(function (l) { return fa(Number(l) + 1) + ' ← ' + (L[Number(r[l])] || fa(Number(r[l]) + 1)); }).join('، ');
+        if (ks.length) { var ok = 0; ks.forEach(function (l) { if (Number(r[l]) === Number(ma[l])) ok++; }); earned = Math.round(s * ok / ks.length * 100) / 100; }
+      } else if (ks.length) earned = 0;
+    } else {
+      correctStr = 'تصحیح تشریحی توسط معلم';
+      if (hasAns) userStr = String(r);
+    }
+    return {earned: earned, score: s, userStr: userStr, correctStr: correctStr, hasAns: hasAns};
+  }
+  function renderPracticeResult(c, ex, auto) {
+    run.finished = true; stopAll();
+    if (window.SiteMobile && window.SiteMobile.active()) { window.SiteMobile.paint(); c = document.getElementById('content'); }
+    c.innerHTML = '';
+    var keys = ex.answerKeys || {};
+    var totalScore = 0, earnedScore = 0, okCnt = 0, wrongCnt = 0, essayCnt = 0;
+    var rows = ex.questions.map(function (q, idx) {
+      var res = practiceGradeQuestion(q, keys[q.originalIndex], run.answers[q.id]);
+      totalScore += res.score;
+      if (res.earned != null) { earnedScore += res.earned; if (res.earned >= res.score && res.score > 0) okCnt++; else wrongCnt++; }
+      else essayCnt++;
+      var qBox = el('div', {class: 'card', style: 'margin-top:10px;text-align:right'}, [
+        el('div', {class: 'row', style: 'margin-bottom:6px;gap:8px;align-items:center'}, [
+          el('span', {class: 'chip brand', text: 'سؤال ' + fa(idx + 1)}),
+          el('span', {class: 'chip ' + (res.earned == null ? '' : (res.earned >= res.score && res.score > 0 ? 'ok' : 'warn')), text: res.earned == null ? 'تشریحی (' + fa(S.fmtScore(res.score)) + ' نمره)' : fa(S.fmtScore(res.earned)) + ' از ' + fa(S.fmtScore(res.score))})
+        ]),
+        (function () { var d = el('div', {style: 'margin-bottom:8px', html: esc(q.text).replace(/\n/g, '<br>')}); richHtml(q.text).then(function (h) { d.innerHTML = h; fitMath(d); }); return d; })(),
+        el('div', {class: 'muted', style: 'font-size:13px'}, [el('b', {text: 'پاسخ شما: '}), el('span', {text: res.userStr})]),
+        el('div', {class: 'muted', style: 'font-size:13px;margin-top:4px'}, [el('b', {text: 'پاسخ صحیح: '}), el('span', {text: res.correctStr})])
+      ]);
+      return qBox;
+    });
+    var summary = el('div', {class: 'card', style: 'max-width:720px;margin:0 auto;text-align:center'}, [
+      el('div', {style: 'font-size:46px', text: '🎯'}),
+      el('h3', {text: 'نتیجهٔ آزمایشی آزمون: ' + ex.title}),
+      el('div', {style: 'font-size:20px;font-weight:700;margin:8px 0'}, [el('span', {text: 'نمرهٔ کسب‌شده: ' + fa(S.fmtScore(Math.round(earnedScore * 100) / 100)) + ' از ' + fa(S.fmtScore(Math.round(totalScore * 100) / 100))})]),
+      el('div', {class: 'row', style: 'justify-content:center;gap:8px;margin:8px 0'}, [
+        el('span', {class: 'chip ok', text: 'صحیح: ' + fa(okCnt)}),
+        el('span', {class: 'chip warn', text: 'نادرست/بی‌پاسخ: ' + fa(wrongCnt)}),
+        essayCnt ? el('span', {class: 'chip', text: 'تشریحی: ' + fa(essayCnt)}) : null
+      ]),
+      el('div', {class: 'alert info', style: 'margin-top:10px;text-align:right', text: 'این آزمون در حالت آزمایشی معلم انجام شد و هیچ نمره یا تلاشی در لیست دانش‌آموزان و آمار کلاس ثبت نشده است.'}),
+      auto ? el('p', {class: 'muted', text: 'زمان آزمون به پایان رسید.'}) : null,
+      el('div', {class: 'row', style: 'justify-content:center;margin-top:12px;gap:8px'}, [
+        el('button', {class: 'btn', text: '🔄 شرکت مجدد در همین آزمون', onclick: async function () { try { var fresh = await joinTeacherPracticeById(ex.id); startExam(c, fresh, false); } catch (e) { run = null; page(c); } }}),
+        el('button', {class: 'btn light', text: 'آزمون دیگر', onclick: function () { run = null; page(c); }}),
+        el('button', {class: 'btn light', text: 'بازگشت به کارت‌ها', onclick: function () { run = null; S.go('cards'); }})
+      ])
+    ]);
+    var wrap = el('div', {style: 'max-width:720px;margin:0 auto'}, [summary].concat(rows));
+    c.appendChild(wrap);
+  }
   async function submit(c, auto) {
     if (!run || run.submitting || run.finished) return;
+    if (run.practice) { renderPracticeResult(c, run.exam, auto); return; }
     run.submitting = true; clearInterval(run.timer);
     var ex = run.exam;
     var ov = el('div', {class: 'modal-bg'}, [el('div', {class: 'modal', style: 'text-align:center'}, [el('div', {class: 'loading'}, [el('span', {class: 'spinner'}), ' در حال ارسال پاسخ‌ها…'])])]);

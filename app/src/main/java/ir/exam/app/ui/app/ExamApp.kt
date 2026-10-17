@@ -101,6 +101,7 @@ import ir.exam.app.ui.reports.ReportsScreen
 import ir.exam.app.ui.reports.StudentResultsScreen
 import ir.exam.app.ui.security.AppLockGate
 import ir.exam.app.ui.student.StudentHomeScreen
+import ir.exam.app.ui.student.TeacherPracticeExamScreen
 import ir.exam.app.ui.update.AboutScreen
 import ir.exam.app.ui.update.UpdateViewModel
 
@@ -108,7 +109,9 @@ private enum class MainPage {
     HOME, CALENDAR, SCHOOL, QUESTION_BANK, GRADING, REPORTS, STUDENT_RESULTS,
     WALLET, CARDS, REQUESTS, SETTINGS, BUILDER,
     // صفحهٔ «چاپ آزمون».
-    PRINT
+    PRINT,
+    // V313.0 — شرکت آزمایشی معلم در آزمون‌های خود (محیط دانش‌آموز).
+    PRACTICE_EXAM
 }
 
 @Composable
@@ -687,10 +690,21 @@ private fun AuthenticatedExamApp(
                             gradingGradedOnly = true
                             page = MainPage.GRADING
                         },
-                        onRequests = { page = MainPage.REQUESTS }
+                        onRequests = { page = MainPage.REQUESTS },
+                        onPracticeExam = { page = MainPage.PRACTICE_EXAM }
                     )
                 }
                 MainPage.REQUESTS -> if (user.role == UserRole.TEACHER) TeacherManagerRequestsScreen()
+                MainPage.PRACTICE_EXAM -> if (user.role == UserRole.TEACHER) {
+                    TeacherPracticeExamScreen(
+                        userId = user.id,
+                        onExamActiveChanged = { studentExamActive = it },
+                        onBackToCards = {
+                            studentExamActive = false
+                            page = MainPage.CARDS
+                        }
+                    )
+                }
                 // صفحهٔ چاپ آزمون: فهرست آزمون‌ها، نسخه‌های محلی و چاپ مستقیم.
                 MainPage.PRINT -> if (user.role == UserRole.TEACHER) {
                     ir.exam.app.ui.printing.ExamPrintCenterScreen(
@@ -1327,12 +1341,13 @@ private fun MainPage.sectionTitle(
     MainPage.BUILDER -> "ساخت آزمون"
     // V62.7 — عنوان صفحهٔ چاپ آزمون.
     MainPage.PRINT -> "چاپ آزمون"
+    MainPage.PRACTICE_EXAM -> "شرکت در آزمون"
 }
 
 private fun MainPage.teacherDockSection(): TeacherDockSection = when (this) {
     MainPage.HOME -> TeacherDockSection.EXAMS
     MainPage.WALLET -> TeacherDockSection.WALLET
-    MainPage.CARDS, MainPage.REQUESTS, MainPage.QUESTION_BANK, MainPage.GRADING, MainPage.REPORTS ->
+    MainPage.CARDS, MainPage.REQUESTS, MainPage.QUESTION_BANK, MainPage.GRADING, MainPage.REPORTS, MainPage.PRACTICE_EXAM ->
         TeacherDockSection.CARDS
     else -> TeacherDockSection.NONE
 }

@@ -22,7 +22,7 @@
     if (p === 'wallet') return 'wallet';
     if (isManager()) { if (p === 'teachers') return 'exams'; if (p === 'cards' || p === 'school' || p === 'dashboard') return 'cards'; return 'none'; }
     if (p === 'exams' || p === 'dashboard' || p === 'builder' || p === 'print') return 'exams';
-    if (p === 'cards' || p === 'reports' || p === 'bank' || p === 'grading' || p === 'requests') return 'cards';
+    if (p === 'join' || p === 'cards' || p === 'reports' || p === 'bank' || p === 'grading' || p === 'requests') return 'cards';
     return 'none';
   }
   /* V163 — با باز شدن منوی همبرگری، هر پنجره/شیت باز (modal-bg, m-sheet-bg) بسته می‌شود تا منو زیر آن نماند */
@@ -278,7 +278,8 @@
       ['تصحیح', 'همه پاسخ‌ها، حضور، بازخورد و ثبت یا اصلاح نمره را باز می‌کند.', 'grading', 'linear-gradient(135deg,#25BFA4,#45D7BD)', function () { go('grading'); }],
       ['مانده', 'فقط پاسخ‌های در انتظار تصحیح و پیگیری را نمایش می‌دهد.', 'cards', 'linear-gradient(135deg,#E0587F,#7D6CF4)', function () { go('grading', {filter: 'pending'}); }],
       ['پاسخ', 'فقط پاسخ‌های تصحیح‌شده دارای نمره و بازخورد نهایی را نمایش می‌دهد.', 'grading', 'linear-gradient(135deg,#4D5B74,#273247)', function () { go('grading', {filter: 'graded'}); }],
-      ['درخواست‌ها', 'درخواست‌های ویرایش یا حذف مدیر را مشاهده، تأیید یا رد کنید.', 'account', 'linear-gradient(135deg,#7D6CF4,#E0587F)', function () { go('requests'); }]
+      ['درخواست‌ها', 'درخواست‌های ویرایش یا حذف مدیر را مشاهده، تأیید یا رد کنید.', 'account', 'linear-gradient(135deg,#7D6CF4,#E0587F)', function () { go('requests'); }],
+      ['شرکت در آزمون', 'پاسخ‌گویی آزمایشی به آزمون‌های خود دقیقاً در محیط دانش‌آموز و مشاهدهٔ نمره.', 'exams', 'linear-gradient(135deg,#10B981,#3B82F6)', function () { go('join', {practice: true}); }]
     ];
     return cards;
   }
@@ -951,7 +952,7 @@
   /* ---------- پوسته ---------- */
   var STUDENT_TITLES = {dashboard: 'خانه دانش‌آموز', join: 'خانه دانش‌آموز', grades: 'نتایج من', calendar: 'تقویم و پیام‌ها', profile: 'حساب', tools: 'تنظیمات'};
   var MANAGER_TITLES = {teachers: 'معلم‌ها', dashboard: 'داشبورد', school: 'مدرسه', wallet: 'کیف پول', profile: 'حساب', tools: 'تنظیمات', calendar: 'تقویم', cards: 'کارت‌ها'};
-  var TITLES = {exams: 'آزمون‌ها', dashboard: 'آزمون‌ها', wallet: 'کیف پول', cards: 'کارت‌ها', builder: 'ساخت آزمون', print: 'چاپ آزمون', classes: 'کلاس‌ها', students: 'دانش‌آموزان', bank: 'بانک سؤال', reports: 'گزارش‌ها', grading: 'تصحیح', requests: 'درخواست‌ها', calendar: 'تقویم و پیام‌ها', tools: 'تنظیمات', profile: 'حساب'};
+  var TITLES = {exams: 'آزمون‌ها', dashboard: 'آزمون‌ها', wallet: 'کیف پول', cards: 'کارت‌ها', builder: 'ساخت آزمون', print: 'چاپ آزمون', classes: 'کلاس‌ها', students: 'دانش‌آموزان', bank: 'بانک سؤال', reports: 'گزارش‌ها', grading: 'تصحیح', requests: 'درخواست‌ها', join: 'شرکت در آزمون', calendar: 'تقویم و پیام‌ها', tools: 'تنظیمات', profile: 'حساب'};
   /* ================================================================ V161 — «حساب» گوشی مثل ProfileSettingsScreen اپ
      چیپ‌های بالا: پروفایل / حساب / سربرگ (معلم). پروفایل = ProfileSection (عکس محلی، نام نمایشی، مشخصات معلم، ذخیره).
      حساب = AccountSection: آکاردئون‌های «مشخصات حساب»، «پیوستن به مدرسه» (معلم)، «تغییر نام کاربری»، «تغییر ایمیل»،
@@ -1181,12 +1182,13 @@
     var head = null;
     var mgr = isManager();
     var home = mgr ? 'teachers' : 'exams';
-    var noHead = mgr ? (page === 'teachers' || page === 'cards') : (page === 'exams' || page === 'dashboard' || page === 'cards');
+    var inPracticeExam = page === 'join' && window.SiteStudent && window.SiteStudent.inExam && window.SiteStudent.inExam();
+    var noHead = mgr ? (page === 'teachers' || page === 'cards') : (page === 'exams' || page === 'dashboard' || page === 'cards' || inPracticeExam);
     if (!ui.menuOpen && !noHead) {
       var ttl = (mgr ? MANAGER_TITLES : TITLES)[page] || '';
       if (page === 'builder' && view.arg && view.arg.examId) ttl = 'ویرایش آزمون';
       if (page === 'builder' && view.arg && view.arg.mode === 'print') ttl = 'ساخت آزمون';
-      var backTo = (page === 'builder' && view.arg && view.arg.mode === 'print') ? 'print' : home;
+      var backTo = (page === 'builder' && view.arg && view.arg.mode === 'print') ? 'print' : (page === 'join' ? 'cards' : home);
       head = el('div', {class: 'm-head'}, [el('button', {class: 'm-back', 'aria-label': 'بازگشت', onclick: function () { go(backTo); }}, [ic('chevron')]), el('h1', {text: ttl})]);
     }
     var content = el('div', {class: 'm-content' + (head ? '' : ' no-head'), id: 'content'});
@@ -1194,6 +1196,7 @@
     shell.appendChild(content);
     /* V156 — مثل ExamApp.kt (page == BUILDER تمام‌صفحه و بدون bottomBar): در سازنده داک پایین نمایش داده نمی‌شود */
     if (page !== 'builder') shell.appendChild(dock());
+    if (inPracticeExam) { var dk = shell.querySelector('#m-dock'); if (dk) dk.remove(); }
     if (ui.addOpen && page !== 'builder') shell.appendChild(quickAdd());
     if (ui.menuOpen) content.appendChild(mgr ? managerMenu() : menuScreen());
     else if (mgr && page === 'cards') managerCards(content);

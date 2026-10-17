@@ -1827,6 +1827,7 @@
     var title = view.panel === 'menu' ? 'منو' : ((MENUS[user.role + 'Menu'] || []).concat(items, MENUS.teacherMenu).filter(function (x) { return x[0] === view.panel; })[0] || ['', '', ''])[2];
     /* V172 — عنوان صفحه‌های کارت‌ها مثل اپ (ExamApp.kt:381,1220,1226) */
     if (!title) { var a = view.arg || {}; title = {reports: a.section === 'grades' ? 'کارنامه' : 'آمار', grading: a.filter === 'pending' ? 'مانده' : (a.filter === 'graded' ? 'پاسخ' : 'تصحیح'), bank: 'بانک سؤال', requests: 'درخواست‌ها'}[view.panel] || ''; }
+    if (!title && view.panel === 'join') title = 'شرکت در آزمون';
     /* V165 — ریل عمودی: «منو» + همهٔ بخش‌های نقش؛ نام هر مورد با نگه‌داشتن ماوس باز می‌شود */
     /* V176 — صفحه‌هایی که از «منو» باز می‌شوند (چاپ، تقویم، حساب، تنظیمات، …) در ریل، «منو» را روشن نگه می‌دارند */
     /* V197 — ریل دسکتاپ معلم: «چاپ آزمون» بالای «کیف پول» (فقط ریل؛ منوی پایین گوشی/تبلت بدون تغییر) */

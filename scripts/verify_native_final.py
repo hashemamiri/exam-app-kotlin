@@ -169,7 +169,7 @@ require("fun pickOption(id: String?, current: String?, optionsJson: String?)" in
 _pe0 = read(WEB_ENGINE / "pgs_engine.js")
 require("<label>عرض (mm):</label>" in _pe0 and "<label>عرض سفارشی (mm):</label>" not in _pe0 and "__pgsSyncCustomState" in _pe0, "custom W/H labels")
 _cards = read(ROOT / "app/src/main/java/ir/exam/app/ui/app/TeacherManagementCardsScreen.kt")
-require("const val CARD_COUNT = 7" in _cards and '"کارنامه"' in _cards and "onGradeList" in _cards, "grade-list card missing")
+require("const val CARD_COUNT = 8" in _cards and '"کارنامه"' in _cards and '"شرکت در آزمون"' in _cards and "onGradeList" in _cards and "onPracticeExam" in _cards, "grade-list card missing")
 require("fun neoDepth(base: Dp): Dp" in read(ROOT / "app/src/main/java/ir/exam/app/ui/app/Neumorphic69Design.kt"), "neoDepth missing")
 # V132 — کادرِ چسبیده و دستگیره‌های لمس‌پذیر، هزینهٔ چاپ، کارت «سایت»، آیکن‌های کارت آزمون، گاردِ پنل
 _wc = read(WEB_ENGINE / "webhost.css")

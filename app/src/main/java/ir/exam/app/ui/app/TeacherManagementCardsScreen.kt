@@ -64,7 +64,8 @@ import kotlin.math.sign
 
 object Design69ManagementCardsContract {
     // V131 — کارت «کارنامه» (کارنامه و لیست نمرات) از «آمار» جدا شد.
-    const val CARD_COUNT = 7
+    // V313.0 — کارت هشتم «شرکت در آزمون» (پاسخ‌گویی آزمایشی معلم در محیط دانش‌آموز).
+    const val CARD_COUNT = 8
     const val DRAG_THRESHOLD_DP = 52
 }
 
@@ -86,7 +87,8 @@ fun TeacherManagementCardsScreen(
     onGrading: () -> Unit,
     onPending: () -> Unit,
     onAnswers: () -> Unit,
-    onRequests: () -> Unit
+    onRequests: () -> Unit,
+    onPracticeExam: () -> Unit = {}
 ) {
     val neo = neumorphic69Colors
     val cards = remember(
@@ -97,6 +99,7 @@ fun TeacherManagementCardsScreen(
         onPending,
         onAnswers,
         onRequests,
+        onPracticeExam,
         neo.accent,
         neo.accent2
     ) {
@@ -149,6 +152,13 @@ fun TeacherManagementCardsScreen(
                 Design69Icons.Requests,
                 listOf(Color(0xFF7D6CF4), Color(0xFFE0587F)),
                 onRequests
+            ),
+            ManagementCardSpec(
+                "شرکت در آزمون",
+                "پاسخ‌گویی آزمایشی به آزمون‌های خود دقیقاً در محیط دانش‌آموز و مشاهدهٔ نمره.",
+                Design69Icons.Exams,
+                listOf(Color(0xFF10B981), Color(0xFF3B82F6)),
+                onPracticeExam
             )
         )
     }
