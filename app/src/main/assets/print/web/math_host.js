@@ -457,6 +457,27 @@ function mEsc(e) {
       }
       return h + '</span>';
     }
+    if (cmd === 'sdiv') {
+      const la = this.readUnit(), lb = this.readUnit();
+      this.skipWs();
+      const lq = (this.peek() === '{') ? this.readUnit() : '';
+      const steps = [];
+      while (!this.eof()) {
+        this.skipWs();
+        if (this.peek() !== '{') break;
+        const lc = this.readUnit();
+        this.skipWs();
+        const lr = (this.peek() === '{') ? this.readUnit() : '';
+        steps.push({ c: lc, r: lr });
+      }
+      if (!steps.length) steps.push({ c: '', r: '' });
+      let h = '<span class="math-ldiv math-sdiv"><span class="math-ldiv-tr"><span class="math-sdiv-op"></span><span class="math-sdiv-a">' + (la || '&nbsp;') + '</span><span class="math-sdiv-gap"></span><span class="math-sdiv-b">' + (lb || '&nbsp;') + '</span></span>';
+      for (let k = 0; k < steps.length; k++) {
+        h += '<span class="math-ldiv-tr"><span class="math-sdiv-op">−</span><span class="math-sdiv-sub">' + (steps[k].c || '&nbsp;') + '</span><span class="math-sdiv-gap"></span><span class="math-sdiv-q">' + (k === 0 ? (lq || '&nbsp;') : '') + '</span></span>' +
+          '<span class="math-ldiv-tr"><span class="math-sdiv-op"></span><span class="math-sdiv-r">' + (steps[k].r || '&nbsp;') + '</span><span class="math-sdiv-gap"></span><span class="math-sdiv-q"></span></span>';
+      }
+      return h + '</span>';
+    }
     if (cmd === 'sfrac' || cmd === 'nicefrac')
       return '<span class="msfrac">' + this.readUnit() + '<span class="mslash">/</span>' + this.readUnit() + '</span>';
     if (cmd === 'sqrt') {
@@ -669,6 +690,14 @@ function mEsc(e) {
     '.math-ldiv-q{text-align:left}\n' +
     '.math-bdiv-op{display:inline-block;min-width:.95em;text-align:center;font-weight:700;padding-right:.18em}\n' +
     '.math-bdiv-v{display:inline-block;text-align:right;font-variant-numeric:tabular-nums}\n' +
+    '.math-sdiv-op,.math-sdiv-a,.math-sdiv-sub,.math-sdiv-r,.math-sdiv-gap,.math-sdiv-b,.math-sdiv-q{display:table-cell;white-space:nowrap;vertical-align:middle;font-variant-numeric:tabular-nums}\n' +
+    '.math-sdiv-op{padding:.06em .18em .06em .06em;text-align:center;font-weight:700}\n' +
+    '.math-sdiv-a,.math-sdiv-r{padding:.06em .14em;text-align:right}\n' +
+    '.math-sdiv-sub{padding:.06em .14em .14em;border-bottom:1.7px solid currentColor;text-align:right}\n' +
+    '.math-sdiv-r{padding-top:.12em}\n' +
+    '.math-sdiv-gap{width:.26em;min-width:.26em;padding:0}\n' +
+    '.math-sdiv-b{padding:.06em .32em .12em;border-left:1.7px solid currentColor;border-bottom:1.7px solid currentColor;text-align:center}\n' +
+    '.math-sdiv-q{padding:.12em .32em .06em;text-align:center}\n' +
     '.mmixed>.mm-w{margin-inline-end:.1em}\n' +
     '.mathx sup.msup{font-size:.72em;vertical-align:super;line-height:0}\n' +
     '.mathx sub.msub{font-size:.72em;vertical-align:sub;line-height:0}\n' +

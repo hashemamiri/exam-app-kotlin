@@ -106,30 +106,44 @@ class NativeMathCanvasRenderer {
             val all = measure(node, size)
             val isVop = node.delimiter in charArrayOf('+', '-', '*')
             val isBdiv = node.delimiter == '\\'
+            val isSdiv = node.delimiter == 'L'
             val isLdiv = node.delimiter == '/' || isBdiv
-            val hasFrame = node.delimiter != ' ' && !isVop && !isLdiv
+            val hasFrame = node.delimiter != ' ' && !isVop && !isLdiv && !isSdiv
             if (hasFrame) {
                 canvas.drawText(node.delimiter.toString(), x, top + size, paint(size * 1.4f, false, color))
             }
             var rowY = top
             var col0MaxW = 0f
+            var col1MaxW = 0f
             val subLineYs = mutableListOf<Float>()
             node.rows.forEachIndexed { rowIdx, row ->
                 var cellX = x + (if (hasFrame) size * .65f else size * .15f)
                 row.forEachIndexed { colIdx, cell ->
                     val w = draw(canvas, cell, cellX, rowY, size * .75f, color)
                     if (colIdx == 0 && w > col0MaxW) col0MaxW = w
+                    if (colIdx == 1 && w > col1MaxW) col1MaxW = w
                     cellX += w + 10f
                 }
                 rowY += size * 1.25f
                 val sym = row.firstOrNull() as? MathNode.Symbol
                 if (isVop && sym != null && !sym.editable) {
                     canvas.drawLine(x + size * .1f, rowY - size * .2f, x + all.width - size * .1f, rowY - size * .2f, paint(1.2f, false, color))
-                } else if (isBdiv && rowIdx % 2 == 1) {
+                } else if ((isBdiv || isSdiv) && rowIdx % 2 == 1) {
                     subLineYs += rowY - size * .2f
                 }
             }
-            if (isLdiv) {
+            if (isSdiv) {
+                val cLeft = x + size * .15f + col0MaxW + 8f
+                val cRight = cLeft + col1MaxW + 2f
+                val vX = cRight + 5f
+                val hY = top + size * 1.05f
+                val lp = paint(1.2f, false, color)
+                canvas.drawLine(vX, top + size * .1f, vX, hY, lp)
+                canvas.drawLine(vX, hY, x + all.width - size * .1f, hY, lp)
+                subLineYs.forEach { sy ->
+                    canvas.drawLine(cLeft, sy, cRight, sy, lp)
+                }
+            } else if (isLdiv) {
                 val vX = x + size * .15f + col0MaxW + 5f
                 val hY = top + size * 1.05f
                 val lp = paint(1.2f, false, color)

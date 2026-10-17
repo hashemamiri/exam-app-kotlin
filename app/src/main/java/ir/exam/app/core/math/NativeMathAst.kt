@@ -109,7 +109,7 @@ object NativeMathParser {
         "overleftarrow", "overrightarrow", "overleftrightarrow",
         "overset", "underset", "xrightarrow", "binom", "pmod",
         "left", "right", "begin", "end", "quad", "qquad",
-        "vadd", "vsub", "vmul", "vops", "ldiv", "bdiv"
+        "vadd", "vsub", "vmul", "vops", "ldiv", "bdiv", "sdiv"
     )
 
     val supportedCommands: Set<String> =
@@ -202,7 +202,7 @@ object NativeMathParser {
             "begin", "end", "quad", "qquad", "big", "Big", "bigg", "Bigg", "bigl", "Bigl", "biggl", "Biggl", "bigr", "Bigr", "biggr", "Biggr",
             "bigm", "Bigm", "limits", "nolimits", "displaystyle", "textstyle", "scriptstyle", "scriptscriptstyle", "sum", "prod", "int", "lim",
             "binom", "stackrel", "overset", "underset", "underbrace", "overbrace", "cases", "pmatrix", "bmatrix", "vmatrix", "matrix", "not", "cdot",
-            "vadd", "vsub", "vmul", "vops", "ldiv", "bdiv"
+            "vadd", "vsub", "vmul", "vops", "ldiv", "bdiv", "sdiv"
         )
     }
 
@@ -428,7 +428,7 @@ object NativeMathParser {
                     }
                     MathNode.Matrix(rows = rows, delimiter = '+')
                 }
-                "bdiv" -> {
+                "bdiv", "sdiv" -> {
                     val a = groupOrAtom()
                     val b = groupOrAtom()
                     skipWhitespace()
@@ -444,13 +444,22 @@ object NativeMathParser {
                     }
                     if (steps.isEmpty()) steps += MathNode.Sequence(emptyList()) to MathNode.Sequence(emptyList())
                     val rows = mutableListOf<List<MathNode>>()
-                    rows += listOf(a, b)
-                    steps.forEachIndexed { idx, (c, r) ->
-                        val subCell = MathNode.Sequence(listOf(MathNode.Symbol("−", editable = false), c))
-                        rows += listOf(subCell, if (idx == 0) q else MathNode.Sequence(emptyList()))
-                        rows += listOf(r, MathNode.Sequence(emptyList()))
+                    if (name == "sdiv") {
+                        rows += listOf(MathNode.Sequence(emptyList()), a, b)
+                        steps.forEachIndexed { idx, (c, r) ->
+                            rows += listOf(MathNode.Symbol("−", editable = false), c, if (idx == 0) q else MathNode.Sequence(emptyList()))
+                            rows += listOf(MathNode.Sequence(emptyList()), r, MathNode.Sequence(emptyList()))
+                        }
+                        MathNode.Matrix(rows = rows, delimiter = 'L')
+                    } else {
+                        rows += listOf(a, b)
+                        steps.forEachIndexed { idx, (c, r) ->
+                            val subCell = MathNode.Sequence(listOf(MathNode.Symbol("−", editable = false), c))
+                            rows += listOf(subCell, if (idx == 0) q else MathNode.Sequence(emptyList()))
+                            rows += listOf(r, MathNode.Sequence(emptyList()))
+                        }
+                        MathNode.Matrix(rows = rows, delimiter = '\\')
                     }
-                    MathNode.Matrix(rows = rows, delimiter = '\\')
                 }
                 "sqrt" -> parseRadical()
                 "root" -> {

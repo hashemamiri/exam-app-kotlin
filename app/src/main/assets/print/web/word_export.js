@@ -305,6 +305,19 @@
       }
       out.push(vout + '</m:m>'); return;
     }
+    if (cl.contains('math-sdiv')) {
+      var srows = n.querySelectorAll(':scope > .math-ldiv-tr'), sout = '<m:m><m:mPr><m:mcs><m:mc><m:mcPr><m:count m:val="3"/><m:mcJc m:val="right"/></m:mcPr></m:mc></m:mcs></m:mPr>';
+      for (var si = 0; si < srows.length; si++) {
+        var sc = srows[si].children;
+        var s0 = sc[0] ? joinM(mathChildren(sc[0])) : '';
+        var s1 = sc[1] ? joinM(mathChildren(sc[1])) : '';
+        var s3 = sc[3] ? joinM(mathChildren(sc[3])) : '';
+        if (sc[1] && sc[1].classList.contains('math-sdiv-sub')) s1 = '<m:bar><m:barPr><m:pos m:val="bot"/></m:barPr>' + mE(s1) + '</m:bar>';
+        if (si === 0) s3 = mT('│') + '<m:bar><m:barPr><m:pos m:val="bot"/></m:barPr>' + mE(s3) + '</m:bar>';
+        sout += '<m:mr>' + mE(s0) + mE(s1) + mE(s3) + '</m:mr>';
+      }
+      out.push(sout + '</m:m>'); return;
+    }
     if (cl.contains('math-ldiv')) {
       var lrows = n.querySelectorAll(':scope > .math-ldiv-tr'), lout = '<m:m><m:mPr><m:mcs><m:mc><m:mcPr><m:count m:val="2"/><m:mcJc m:val="center"/></m:mcPr></m:mc></m:mcs></m:mPr>';
       for (var li = 0; li < lrows.length; li++) {

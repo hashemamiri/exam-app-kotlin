@@ -441,9 +441,10 @@ object NativeMathSvgRenderer {
     private fun matrix(node: MathNode.Matrix, size: Float): Layout {
         val isVop = node.delimiter in charArrayOf('+', '-', '*')
         val isBdiv = node.delimiter == '\\'
+        val isSdiv = node.delimiter == 'L'
         val isLdiv = node.delimiter == '/' || isBdiv
-        val hasFrame = node.delimiter != ' ' && !isVop && !isLdiv
-        val cellSize = if (isVop || isLdiv) size * .86f else size * .72f
+        val hasFrame = node.delimiter != ' ' && !isVop && !isLdiv && !isSdiv
+        val cellSize = if (isVop || isLdiv || isSdiv) size * .86f else size * .72f
         val rows = node.rows.map { row -> row.map { layout(it, cellSize) } }
         val columnCount = rows.maxOfOrNull { it.size } ?: 0
         val columnGap = if (isVop) size * .22f else size * .38f
@@ -465,7 +466,7 @@ object NativeMathSvgRenderer {
             rows.forEachIndexed { rowIndex, row ->
                 var x = sideWidth
                 row.forEachIndexed { columnIndex, cell ->
-                    val cellX = if ((isVop && columnIndex == 1) || (isLdiv && columnIndex == 0)) {
+                    val cellX = if ((isVop && columnIndex == 1) || (isLdiv && columnIndex == 0) || (isSdiv && columnIndex == 1)) {
                         x + columnWidths[columnIndex] - cell.width
                     } else {
                         x + (columnWidths[columnIndex] - cell.width) / 2f
@@ -490,6 +491,27 @@ object NativeMathSvgRenderer {
                             .append("\" y2=\"").append(number(barY)).append("\" stroke-width=\"")
                             .append(sw).append("\" stroke-linecap=\"round\"/>")
                     }
+                }
+            } else if (isSdiv && columnWidths.size >= 3 && rowHeights.isNotEmpty()) {
+                val sw = number(size * .075f)
+                val bLeftX = sideWidth + columnWidths[0] + columnGap + columnWidths[1] + columnGap * .55f
+                val bBottomY = size * .10f + rowHeights[0] + rowGap * .5f
+                append("<line x1=\"").append(number(bLeftX)).append("\" y1=\"")
+                    .append(number(size * .06f)).append("\" x2=\"").append(number(bLeftX))
+                    .append("\" y2=\"").append(number(bBottomY))
+                    .append("\" stroke-width=\"").append(sw).append("\" stroke-linecap=\"round\"/>")
+                append("<line x1=\"").append(number(bLeftX)).append("\" y1=\"")
+                    .append(number(bBottomY)).append("\" x2=\"").append(number(width - sideWidth))
+                    .append("\" y2=\"").append(number(bBottomY))
+                    .append("\" stroke-width=\"").append(sw).append("\" stroke-linecap=\"round\"/>")
+                val cLeftX = sideWidth + columnWidths[0] + columnGap * .7f
+                val cRightX = sideWidth + columnWidths[0] + columnGap + columnWidths[1] + columnGap * .2f
+                for (rIdx in 1 until rowBottomYs.size step 2) {
+                    val subY = rowBottomYs[rIdx]
+                    append("<line x1=\"").append(number(cLeftX)).append("\" y1=\"")
+                        .append(number(subY)).append("\" x2=\"").append(number(cRightX))
+                        .append("\" y2=\"").append(number(subY))
+                        .append("\" stroke-width=\"").append(sw).append("\" stroke-linecap=\"round\"/>")
                 }
             } else if (isLdiv && columnWidths.isNotEmpty() && rowHeights.isNotEmpty()) {
                 val vX = sideWidth + columnWidths[0] + columnGap / 2f
