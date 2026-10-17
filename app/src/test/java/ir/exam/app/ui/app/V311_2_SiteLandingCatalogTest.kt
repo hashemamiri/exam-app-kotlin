@@ -22,6 +22,7 @@ class V311_2_SiteLandingCatalogTest {
             assertTrue(price, price in app && price in tpl)
         }
         assertTrue("['صوت سؤال تا ۱ مگابایت', '۲٬۰۰۰ تومان']" in app && "['صوت سؤال تا ۲ مگابایت', '۴٬۰۰۰ تومان']" in app && "['صوت سؤال تا ۳ مگابایت', '۶٬۰۰۰ تومان']" in app)
+        assertTrue("['بازیابی نسخهٔ پشتیبان (هر عکس)', '۱٬۰۰۰ تومان']" in app && ".lp-tariff-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}" in css)
         assertTrue("function openLandingCatalogModal(" in app && "خرید و شارژ آنلاین" in app && "💳 محصولات و تعرفه‌ها" in app)
         assertTrue("var tilesCol = el('div', {class: 'lp-tiles-col'});" in app && "left.replaceChild(tilesCol, tilesEl);" in app && "tilesCol.appendChild(priceBtn);" in app && "tilesCol.appendChild(tilesEl);" in app)
         assertTrue("img.setAttribute('alt', '');" in app && "img.style.cursor = 'pointer';" in app)
