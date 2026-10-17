@@ -409,6 +409,54 @@ function mEsc(e) {
       return '<span class="math-ldiv"><span class="math-ldiv-tr"><span class="math-ldiv-a">' + (la || '&nbsp;') + '</span><span class="math-ldiv-b">' + (lb || '&nbsp;') + '</span></span>' +
         '<span class="math-ldiv-tr"><span class="math-ldiv-r">' + (lr || '&nbsp;') + '</span><span class="math-ldiv-q">' + (lq || '&nbsp;') + '</span></span></span>';
     }
+    if (cmd === 'vops') {
+      const rows = [];
+      const opMap = { '+': '+', '＋': '+', '-': '−', '−': '−', '*': '×', '×': '×', '\\times': '×', '/': '÷', '÷': '÷', '\\div': '÷', '=': '=', '±': '±', '\\pm': '±' };
+      while (!this.eof()) {
+        this.skipWs();
+        if (this.peek() !== '{') break;
+        this.i++;
+        let rawOp = '';
+        while (!this.eof() && this.peek() !== '}') rawOp += this.s[this.i++];
+        if (this.peek() === '}') this.i++;
+        rawOp = rawOp.trim();
+        const line = /[;_]$/.test(rawOp);
+        const cleanOp = line ? rawOp.slice(0, -1).trim() : rawOp;
+        this.skipWs();
+        const val = (this.peek() === '{') ? this.readUnit() : '';
+        rows.push({ op: opMap[cleanOp] || '', line: line, val: val });
+      }
+      if (rows.length >= 2 && !rows.some(function (r) { return r.line; })) rows[rows.length - 2].line = true;
+      let h = '<span class="math-vop">';
+      for (let r = 0; r < rows.length; r++) {
+        const rw = rows[r];
+        const prevLine = r > 0 && rows[r - 1].line;
+        const cls = 'math-vop-r' + (rw.line ? ' math-vop-line' : '') + (prevLine ? ' math-vop-ans' : '');
+        h += '<span class="' + cls + '"><span class="math-vop-op">' + mEsc(rw.op) + '</span><span class="math-vop-v">' + (rw.val || '&nbsp;') + '</span></span>';
+      }
+      return h + '</span>';
+    }
+    if (cmd === 'bdiv') {
+      const la = this.readUnit(), lb = this.readUnit();
+      this.skipWs();
+      const lq = (this.peek() === '{') ? this.readUnit() : '';
+      const steps = [];
+      while (!this.eof()) {
+        this.skipWs();
+        if (this.peek() !== '{') break;
+        const lc = this.readUnit();
+        this.skipWs();
+        const lr = (this.peek() === '{') ? this.readUnit() : '';
+        steps.push({ c: lc, r: lr });
+      }
+      if (!steps.length) steps.push({ c: '', r: '' });
+      let h = '<span class="math-ldiv math-bdiv"><span class="math-ldiv-tr"><span class="math-ldiv-a"><span class="math-bdiv-op"></span><span class="math-bdiv-v">' + (la || '&nbsp;') + '</span></span><span class="math-ldiv-b">' + (lb || '&nbsp;') + '</span></span>';
+      for (let k = 0; k < steps.length; k++) {
+        h += '<span class="math-ldiv-tr"><span class="math-ldiv-sub"><span class="math-bdiv-op">−</span><span class="math-bdiv-v">' + (steps[k].c || '&nbsp;') + '</span></span><span class="math-ldiv-q">' + (k === 0 ? (lq || '&nbsp;') : '') + '</span></span>' +
+          '<span class="math-ldiv-tr"><span class="math-ldiv-r"><span class="math-bdiv-op"></span><span class="math-bdiv-v">' + (steps[k].r || '&nbsp;') + '</span></span><span class="math-ldiv-q"></span></span>';
+      }
+      return h + '</span>';
+    }
     if (cmd === 'sfrac' || cmd === 'nicefrac')
       return '<span class="msfrac">' + this.readUnit() + '<span class="mslash">/</span>' + this.readUnit() + '</span>';
     if (cmd === 'sqrt') {
@@ -613,11 +661,14 @@ function mEsc(e) {
     '.math-vop-ans>.math-vop-op,.math-vop-ans>.math-vop-v{padding-top:.14em}\n' +
     '.math-ldiv{display:inline-table;vertical-align:middle;border-collapse:collapse;direction:ltr;margin:0 .16em;line-height:1.2}\n' +
     '.math-ldiv-tr{display:table-row}\n' +
-    '.math-ldiv-a,.math-ldiv-b,.math-ldiv-r,.math-ldiv-q{display:table-cell;padding:.1em .32em;white-space:nowrap;vertical-align:middle;text-align:center;font-variant-numeric:tabular-nums}\n' +
+    '.math-ldiv-a,.math-ldiv-b,.math-ldiv-r,.math-ldiv-q,.math-ldiv-sub{display:table-cell;padding:.1em .32em;white-space:nowrap;vertical-align:middle;text-align:center;font-variant-numeric:tabular-nums}\n' +
     '.math-ldiv-a{border-right:1.6px solid currentColor;text-align:right}\n' +
     '.math-ldiv-b{border-bottom:1.6px solid currentColor;text-align:left}\n' +
     '.math-ldiv-r{border-right:1.6px solid currentColor;text-align:right}\n' +
+    '.math-ldiv-sub{border-right:1.6px solid currentColor;border-bottom:1.5px solid currentColor;text-align:right;padding-bottom:.14em}\n' +
     '.math-ldiv-q{text-align:left}\n' +
+    '.math-bdiv-op{display:inline-block;min-width:.95em;text-align:center;font-weight:700;padding-right:.18em}\n' +
+    '.math-bdiv-v{display:inline-block;text-align:right;font-variant-numeric:tabular-nums}\n' +
     '.mmixed>.mm-w{margin-inline-end:.1em}\n' +
     '.mathx sup.msup{font-size:.72em;vertical-align:super;line-height:0}\n' +
     '.mathx sub.msub{font-size:.72em;vertical-align:sub;line-height:0}\n' +

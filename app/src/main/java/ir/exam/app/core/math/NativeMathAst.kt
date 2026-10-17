@@ -109,7 +109,7 @@ object NativeMathParser {
         "overleftarrow", "overrightarrow", "overleftrightarrow",
         "overset", "underset", "xrightarrow", "binom", "pmod",
         "left", "right", "begin", "end", "quad", "qquad",
-        "vadd", "vsub", "vmul", "ldiv"
+        "vadd", "vsub", "vmul", "vops", "ldiv", "bdiv"
     )
 
     val supportedCommands: Set<String> =
@@ -202,7 +202,7 @@ object NativeMathParser {
             "begin", "end", "quad", "qquad", "big", "Big", "bigg", "Bigg", "bigl", "Bigl", "biggl", "Biggl", "bigr", "Bigr", "biggr", "Biggr",
             "bigm", "Bigm", "limits", "nolimits", "displaystyle", "textstyle", "scriptstyle", "scriptscriptstyle", "sum", "prod", "int", "lim",
             "binom", "stackrel", "overset", "underset", "underbrace", "overbrace", "cases", "pmatrix", "bmatrix", "vmatrix", "matrix", "not", "cdot",
-            "vadd", "vsub", "vmul", "ldiv"
+            "vadd", "vsub", "vmul", "vops", "ldiv", "bdiv"
         )
     }
 
@@ -386,6 +386,71 @@ object NativeMathParser {
                         ),
                         delimiter = '/'
                     )
+                }
+                "vops" -> {
+                    val parsed = mutableListOf<Triple<String, Boolean, MathNode>>()
+                    while (true) {
+                        skipWhitespace()
+                        if (index >= source.length || source[index] != '{') break
+                        index++
+                        val sb = StringBuilder()
+                        while (index < source.length && source[index] != '}') {
+                            sb.append(source[index++])
+                        }
+                        if (index < source.length && source[index] == '}') index++
+                        val rawSpec = sb.toString().trim()
+                        val hasLine = rawSpec.endsWith(";") || rawSpec.endsWith("_")
+                        val rawOp = if (hasLine) rawSpec.dropLast(1).trim() else rawSpec
+                        val opSym = when (rawOp) {
+                            "+", "＋" -> "+"
+                            "-", "−" -> "−"
+                            "*", "×", "\\times" -> "×"
+                            "/", "÷", "\\div" -> "÷"
+                            "=" -> "="
+                            "±", "\\pm" -> "±"
+                            else -> ""
+                        }
+                        skipWhitespace()
+                        val vNode = if (index < source.length && source[index] == '{') groupOrAtom() else MathNode.Sequence(emptyList())
+                        parsed += Triple(opSym, hasLine, vNode)
+                    }
+                    val anyLine = parsed.any { it.second }
+                    val rows = parsed.mapIndexed { idx, (opSym, hasLine, vNode) ->
+                        val lineHere = if (anyLine) hasLine else (parsed.size >= 2 && idx == parsed.size - 2)
+                        val opCell = if (lineHere) {
+                            MathNode.Symbol(opSym, editable = false)
+                        } else if (opSym.isEmpty()) {
+                            MathNode.Sequence(emptyList())
+                        } else {
+                            MathNode.Symbol(opSym, editable = true)
+                        }
+                        listOf(opCell, vNode)
+                    }
+                    MathNode.Matrix(rows = rows, delimiter = '+')
+                }
+                "bdiv" -> {
+                    val a = groupOrAtom()
+                    val b = groupOrAtom()
+                    skipWhitespace()
+                    val q = if (index < source.length && source[index] == '{') groupOrAtom() else MathNode.Sequence(emptyList())
+                    val steps = mutableListOf<Pair<MathNode, MathNode>>()
+                    while (true) {
+                        skipWhitespace()
+                        if (index >= source.length || source[index] != '{') break
+                        val c = groupOrAtom()
+                        skipWhitespace()
+                        val r = if (index < source.length && source[index] == '{') groupOrAtom() else MathNode.Sequence(emptyList())
+                        steps += c to r
+                    }
+                    if (steps.isEmpty()) steps += MathNode.Sequence(emptyList()) to MathNode.Sequence(emptyList())
+                    val rows = mutableListOf<List<MathNode>>()
+                    rows += listOf(a, b)
+                    steps.forEachIndexed { idx, (c, r) ->
+                        val subCell = MathNode.Sequence(listOf(MathNode.Symbol("−", editable = false), c))
+                        rows += listOf(subCell, if (idx == 0) q else MathNode.Sequence(emptyList()))
+                        rows += listOf(r, MathNode.Sequence(emptyList()))
+                    }
+                    MathNode.Matrix(rows = rows, delimiter = '\\')
                 }
                 "sqrt" -> parseRadical()
                 "root" -> {

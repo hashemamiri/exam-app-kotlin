@@ -440,7 +440,8 @@ object NativeMathSvgRenderer {
 
     private fun matrix(node: MathNode.Matrix, size: Float): Layout {
         val isVop = node.delimiter in charArrayOf('+', '-', '*')
-        val isLdiv = node.delimiter == '/'
+        val isBdiv = node.delimiter == '\\'
+        val isLdiv = node.delimiter == '/' || isBdiv
         val hasFrame = node.delimiter != ' ' && !isVop && !isLdiv
         val cellSize = if (isVop || isLdiv) size * .86f else size * .72f
         val rows = node.rows.map { row -> row.map { layout(it, cellSize) } }
@@ -460,10 +461,11 @@ object NativeMathSvgRenderer {
         val bars = mutableListOf<RadicalLine>()
         val body = buildString {
             var y = size * .10f
+            val rowBottomYs = FloatArray(rows.size)
             rows.forEachIndexed { rowIndex, row ->
                 var x = sideWidth
                 row.forEachIndexed { columnIndex, cell ->
-                    val cellX = if (isVop && columnIndex == 1) {
+                    val cellX = if ((isVop && columnIndex == 1) || (isLdiv && columnIndex == 0)) {
                         x + columnWidths[columnIndex] - cell.width
                     } else {
                         x + (columnWidths[columnIndex] - cell.width) / 2f
@@ -475,13 +477,20 @@ object NativeMathSvgRenderer {
                     x += columnWidths[columnIndex] + columnGap
                 }
                 y += rowHeights[rowIndex] + rowGap
+                rowBottomYs[rowIndex] = y - rowGap * .5f
             }
             if (isVop && rowHeights.size >= 2) {
-                val barY = size * .10f + rowHeights[0] + rowGap + rowHeights[1] + rowGap * .5f
-                append("<line x1=\"").append(number(sideWidth)).append("\" y1=\"")
-                    .append(number(barY)).append("\" x2=\"").append(number(width - sideWidth))
-                    .append("\" y2=\"").append(number(barY)).append("\" stroke-width=\"")
-                    .append(number(size * .075f)).append("\" stroke-linecap=\"round\"/>")
+                val sw = number(size * .075f)
+                node.rows.forEachIndexed { rIdx, rNodes ->
+                    val sym = rNodes.firstOrNull() as? MathNode.Symbol
+                    if (sym != null && !sym.editable && rIdx < rowBottomYs.size) {
+                        val barY = rowBottomYs[rIdx]
+                        append("<line x1=\"").append(number(sideWidth)).append("\" y1=\"")
+                            .append(number(barY)).append("\" x2=\"").append(number(width - sideWidth))
+                            .append("\" y2=\"").append(number(barY)).append("\" stroke-width=\"")
+                            .append(sw).append("\" stroke-linecap=\"round\"/>")
+                    }
+                }
             } else if (isLdiv && columnWidths.isNotEmpty() && rowHeights.isNotEmpty()) {
                 val vX = sideWidth + columnWidths[0] + columnGap / 2f
                 val hY = size * .10f + rowHeights[0] + rowGap / 2f
@@ -494,6 +503,15 @@ object NativeMathSvgRenderer {
                     .append(number(hY)).append("\" x2=\"").append(number(width - sideWidth))
                     .append("\" y2=\"").append(number(hY))
                     .append("\" stroke-width=\"").append(sw).append("\" stroke-linecap=\"round\"/>")
+                if (isBdiv) {
+                    for (rIdx in 1 until rowBottomYs.size step 2) {
+                        val subY = rowBottomYs[rIdx]
+                        append("<line x1=\"").append(number(sideWidth)).append("\" y1=\"")
+                            .append(number(subY)).append("\" x2=\"").append(number(vX))
+                            .append("\" y2=\"").append(number(subY))
+                            .append("\" stroke-width=\"").append(sw).append("\" stroke-linecap=\"round\"/>")
+                    }
+                }
             } else if (hasFrame) {
                 append(delimiterPath(node.delimiter.toString(), sideWidth, height, true, size))
                 val close = when (node.delimiter) {

@@ -105,13 +105,15 @@ class NativeMathCanvasRenderer {
         is MathNode.Matrix -> {
             val all = measure(node, size)
             val isVop = node.delimiter in charArrayOf('+', '-', '*')
-            val isLdiv = node.delimiter == '/'
+            val isBdiv = node.delimiter == '\\'
+            val isLdiv = node.delimiter == '/' || isBdiv
             val hasFrame = node.delimiter != ' ' && !isVop && !isLdiv
             if (hasFrame) {
                 canvas.drawText(node.delimiter.toString(), x, top + size, paint(size * 1.4f, false, color))
             }
             var rowY = top
             var col0MaxW = 0f
+            val subLineYs = mutableListOf<Float>()
             node.rows.forEachIndexed { rowIdx, row ->
                 var cellX = x + (if (hasFrame) size * .65f else size * .15f)
                 row.forEachIndexed { colIdx, cell ->
@@ -120,8 +122,11 @@ class NativeMathCanvasRenderer {
                     cellX += w + 10f
                 }
                 rowY += size * 1.25f
-                if (isVop && rowIdx == 1) {
+                val sym = row.firstOrNull() as? MathNode.Symbol
+                if (isVop && sym != null && !sym.editable) {
                     canvas.drawLine(x + size * .1f, rowY - size * .2f, x + all.width - size * .1f, rowY - size * .2f, paint(1.2f, false, color))
+                } else if (isBdiv && rowIdx % 2 == 1) {
+                    subLineYs += rowY - size * .2f
                 }
             }
             if (isLdiv) {
@@ -130,6 +135,11 @@ class NativeMathCanvasRenderer {
                 val lp = paint(1.2f, false, color)
                 canvas.drawLine(vX, top + size * .1f, vX, rowY - size * .1f, lp)
                 canvas.drawLine(vX, hY, x + all.width - size * .1f, hY, lp)
+                if (isBdiv) {
+                    subLineYs.forEach { sy ->
+                        canvas.drawLine(x + size * .1f, sy, vX, sy, lp)
+                    }
+                }
             } else if (hasFrame) {
                 val close = when (node.delimiter) {
                     '(' -> ")"

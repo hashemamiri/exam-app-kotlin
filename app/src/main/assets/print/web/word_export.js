@@ -309,6 +309,7 @@
       var lrows = n.querySelectorAll(':scope > .math-ldiv-tr'), lout = '<m:m><m:mPr><m:mcs><m:mc><m:mcPr><m:count m:val="2"/><m:mcJc m:val="center"/></m:mcPr></m:mc></m:mcs></m:mPr>';
       for (var li = 0; li < lrows.length; li++) {
         var lc = lrows[li].children, l0 = lc[0] ? joinM(mathChildren(lc[0])) : '', l1 = lc[1] ? joinM(mathChildren(lc[1])) : '';
+        if (lc[0] && lc[0].classList.contains('math-ldiv-sub')) l0 = '<m:bar><m:barPr><m:pos m:val="bot"/></m:barPr>' + mE(l0) + '</m:bar>';
         if (li === 0) l1 = '<m:bar><m:barPr><m:pos m:val="bot"/></m:barPr>' + mE(l1) + '</m:bar>';
         lout += '<m:mr>' + mE(l0) + mE(mT('│') + l1) + '</m:mr>';
       }

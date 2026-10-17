@@ -7578,11 +7578,26 @@ html[data-theme="light"] .q-math-prev { background: #f3f6ff; }
 .math-vop-ans>.math-vop-op,.math-vop-ans>.math-vop-v,.mathx .math-vop-ans>.math-vop-op,.mathx .math-vop-ans>.math-vop-v{padding-top:.14em}
 .math-ldiv,.mathx .math-ldiv{display:inline-table;vertical-align:middle;border-collapse:collapse;direction:ltr;margin:0 .16em;line-height:1.2}
 .math-ldiv-tr,.mathx .math-ldiv-tr{display:table-row}
-.math-ldiv-a,.math-ldiv-b,.math-ldiv-r,.math-ldiv-q,.mathx .math-ldiv-a,.mathx .math-ldiv-b,.mathx .math-ldiv-r,.mathx .math-ldiv-q{display:table-cell;padding:.1em .32em;white-space:nowrap;vertical-align:middle;text-align:center;font-variant-numeric:tabular-nums}
+.math-ldiv-a,.math-ldiv-b,.math-ldiv-r,.math-ldiv-q,.math-ldiv-sub,.mathx .math-ldiv-a,.mathx .math-ldiv-b,.mathx .math-ldiv-r,.mathx .math-ldiv-q,.mathx .math-ldiv-sub{display:table-cell;padding:.1em .32em;white-space:nowrap;vertical-align:middle;text-align:center;font-variant-numeric:tabular-nums}
 .math-ldiv-a,.mathx .math-ldiv-a{border-right:1.6px solid currentColor;text-align:right}
 .math-ldiv-b,.mathx .math-ldiv-b{border-bottom:1.6px solid currentColor;text-align:left}
 .math-ldiv-r,.mathx .math-ldiv-r{border-right:1.6px solid currentColor;text-align:right}
+.math-ldiv-sub,.mathx .math-ldiv-sub{border-right:1.6px solid currentColor;border-bottom:1.5px solid currentColor;text-align:right;padding-bottom:.14em}
 .math-ldiv-q,.mathx .math-ldiv-q{text-align:left}
+.math-bdiv-op,.mathx .math-bdiv-op{display:inline-block;min-width:.95em;text-align:center;font-weight:700;padding-right:.18em}
+.math-bdiv-v,.mathx .math-bdiv-v{display:inline-block;text-align:right;font-variant-numeric:tabular-nums}
+.mb-vop-bar{display:none;flex-wrap:wrap;align-items:center;gap:6px;padding:7px 10px;margin:6px 0 4px;border-radius:11px;background:rgba(108,99,245,.08);border:1px solid rgba(108,99,245,.25);direction:rtl;font:600 .78rem Vazirmatn,Tahoma,sans-serif}
+.mb-vb-lbl{color:var(--text);font-weight:700;margin-left:4px;font-size:.78rem}
+.mb-vb-sep{width:1px;height:20px;background:var(--card-brd);margin:0 4px}
+.mb-vb-btn{height:30px;padding:0 9px;border-radius:8px;border:1px solid var(--input-brd);background:var(--input-bg);color:var(--text);font:700 .76rem Vazirmatn,Tahoma,sans-serif;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;transition:all .15s}
+.mb-vb-btn:hover{border-color:var(--accent);background:rgba(108,99,245,.12)}
+.mb-vb-btn.on{background:linear-gradient(135deg,#6c63f5,#27c4a8);color:#fff !important;border-color:transparent}
+.mb-vb-btn.add{border-color:rgba(39,196,168,.45);background:rgba(39,196,168,.12);color:var(--text)}
+.mb-vb-btn.del{border-color:rgba(200,91,107,.45);background:rgba(200,91,107,.12);color:var(--text)}
+.mb-vop-opbtn{cursor:pointer;border-radius:5px;transition:background .15s}
+.mb-vop-opbtn:hover{background:rgba(108,99,245,.16)}
+.mb-vop-op-empty{opacity:.28;font-size:.75em;font-weight:400;padding:0 2px}
+.mb-vop-opbtn:hover .mb-vop-op-empty{opacity:.85;color:var(--accent)}
 .mb-kt-vop{display:none}
 @media (min-width:561px){#mfModal.box-fullscreen .mb-kt-enter,#mfModal.box-fullscreen .mb-kt-abc,#mfModal.box-fullscreen .mb-chip-vop{display:none !important}#mfModal.box-fullscreen .mb-kt-vop{display:inline-flex !important;order:13}}
 </style>
@@ -7654,6 +7669,7 @@ html[data-theme="light"] .q-math-prev { background: #f3f6ff; }
                  autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" aria-label="ورودی فرمول"
                  oninput="mbKeyInput(this)" onkeydown="mbKeyDown(event)" onpaste="mbKeyPaste(event)">
         </div>
+        <div id="mbVopBar" class="mb-vop-bar" style="display:none" aria-label="تنظیمات سطرها و علامت‌های زیرهم"></div>
 
 
         <!-- بخش دوم: تراشه‌های افقی با منوی گزینه‌ها -->
@@ -8387,6 +8403,54 @@ function mEsc(e) {
       return '<span class="math-ldiv"><span class="math-ldiv-tr"><span class="math-ldiv-a">' + (la || '&nbsp;') + '</span><span class="math-ldiv-b">' + (lb || '&nbsp;') + '</span></span>' +
         '<span class="math-ldiv-tr"><span class="math-ldiv-r">' + (lr || '&nbsp;') + '</span><span class="math-ldiv-q">' + (lq || '&nbsp;') + '</span></span></span>';
     }
+    if (cmd === 'vops') {
+      const rows = [];
+      const opMap = { '+': '+', '＋': '+', '-': '−', '−': '−', '*': '×', '×': '×', '\\times': '×', '/': '÷', '÷': '÷', '\\div': '÷', '=': '=', '±': '±', '\\pm': '±' };
+      while (!this.eof()) {
+        this.skipWs();
+        if (this.peek() !== '{') break;
+        this.i++;
+        let rawOp = '';
+        while (!this.eof() && this.peek() !== '}') rawOp += this.s[this.i++];
+        if (this.peek() === '}') this.i++;
+        rawOp = rawOp.trim();
+        const line = /[;_]$/.test(rawOp);
+        const cleanOp = line ? rawOp.slice(0, -1).trim() : rawOp;
+        this.skipWs();
+        const val = (this.peek() === '{') ? this.readUnit() : '';
+        rows.push({ op: opMap[cleanOp] || '', line: line, val: val });
+      }
+      if (rows.length >= 2 && !rows.some(function (r) { return r.line; })) rows[rows.length - 2].line = true;
+      let h = '<span class="math-vop">';
+      for (let r = 0; r < rows.length; r++) {
+        const rw = rows[r];
+        const prevLine = r > 0 && rows[r - 1].line;
+        const cls = 'math-vop-r' + (rw.line ? ' math-vop-line' : '') + (prevLine ? ' math-vop-ans' : '');
+        h += '<span class="' + cls + '"><span class="math-vop-op">' + mEsc(rw.op) + '</span><span class="math-vop-v">' + (rw.val || '&nbsp;') + '</span></span>';
+      }
+      return h + '</span>';
+    }
+    if (cmd === 'bdiv') {
+      const la = this.readUnit(), lb = this.readUnit();
+      this.skipWs();
+      const lq = (this.peek() === '{') ? this.readUnit() : '';
+      const steps = [];
+      while (!this.eof()) {
+        this.skipWs();
+        if (this.peek() !== '{') break;
+        const lc = this.readUnit();
+        this.skipWs();
+        const lr = (this.peek() === '{') ? this.readUnit() : '';
+        steps.push({ c: lc, r: lr });
+      }
+      if (!steps.length) steps.push({ c: '', r: '' });
+      let h = '<span class="math-ldiv math-bdiv"><span class="math-ldiv-tr"><span class="math-ldiv-a"><span class="math-bdiv-op"></span><span class="math-bdiv-v">' + (la || '&nbsp;') + '</span></span><span class="math-ldiv-b">' + (lb || '&nbsp;') + '</span></span>';
+      for (let k = 0; k < steps.length; k++) {
+        h += '<span class="math-ldiv-tr"><span class="math-ldiv-sub"><span class="math-bdiv-op">−</span><span class="math-bdiv-v">' + (steps[k].c || '&nbsp;') + '</span></span><span class="math-ldiv-q">' + (k === 0 ? (lq || '&nbsp;') : '') + '</span></span>' +
+          '<span class="math-ldiv-tr"><span class="math-ldiv-r"><span class="math-bdiv-op"></span><span class="math-bdiv-v">' + (steps[k].r || '&nbsp;') + '</span></span><span class="math-ldiv-q"></span></span>';
+      }
+      return h + '</span>';
+    }
     if (cmd === 'sfrac' || cmd === 'nicefrac')
       return '<span class="msfrac">' + this.readUnit() + '<span class="mslash">/</span>' + this.readUnit() + '</span>';
     if (cmd === 'sqrt') {
@@ -8624,11 +8688,14 @@ function mEsc(e) {
     '.math-vop-ans>.math-vop-op,.math-vop-ans>.math-vop-v{padding-top:.14em}\n' +
     '.math-ldiv{display:inline-table;vertical-align:middle;border-collapse:collapse;direction:ltr;margin:0 .16em;line-height:1.2}\n' +
     '.math-ldiv-tr{display:table-row}\n' +
-    '.math-ldiv-a,.math-ldiv-b,.math-ldiv-r,.math-ldiv-q{display:table-cell;padding:.1em .32em;white-space:nowrap;vertical-align:middle;text-align:center;font-variant-numeric:tabular-nums}\n' +
+    '.math-ldiv-a,.math-ldiv-b,.math-ldiv-r,.math-ldiv-q,.math-ldiv-sub{display:table-cell;padding:.1em .32em;white-space:nowrap;vertical-align:middle;text-align:center;font-variant-numeric:tabular-nums}\n' +
     '.math-ldiv-a{border-right:1.6px solid currentColor;text-align:right}\n' +
     '.math-ldiv-b{border-bottom:1.6px solid currentColor;text-align:left}\n' +
     '.math-ldiv-r{border-right:1.6px solid currentColor;text-align:right}\n' +
+    '.math-ldiv-sub{border-right:1.6px solid currentColor;border-bottom:1.5px solid currentColor;text-align:right;padding-bottom:.14em}\n' +
     '.math-ldiv-q{text-align:left}\n' +
+    '.math-bdiv-op{display:inline-block;min-width:.95em;text-align:center;font-weight:700;padding-right:.18em}\n' +
+    '.math-bdiv-v{display:inline-block;text-align:right;font-variant-numeric:tabular-nums}\n' +
     '.mmixed>.mm-w{margin-inline-end:.1em}\n' +
     '/* توان و اندیسِ هم‌زمان: یک ستون، مرزِ دو ردیف روی محورِ ریاضی،\n' +
     '   هر کدام آزادانه بسته به محتوا بالا/پایین رشد می‌کنند (منعطف) */\n' +
@@ -8930,7 +8997,64 @@ function mEsc(e) {
   function mbPar(o, c, k) { return { id: mbId(), t: 'par', o: o || '(', c: c || ')', k: k || 'norm', a: [] }; }
   function mbMixed() { return { id: mbId(), t: 'mixed', w: [], a: [], b: [] }; }
   function mbVop(op) { return { id: mbId(), t: 'vop', op: op || '+', a: [], b: [], c: [] }; }
+  function mbNormVopOp(op) {
+    const s = String(op == null ? '' : op).trim();
+    if (s === '+' || s === '＋') return '+';
+    if (s === '-' || s === '−') return '−';
+    if (s === '*' || s === '×' || s === '\\times') return '×';
+    if (s === '/' || s === '÷' || s === '\\div') return '÷';
+    if (s === '=') return '=';
+    if (s === '±' || s === '\\pm') return '±';
+    return '';
+  }
+  function mbVopOpCode(op, line) {
+    const sym = mbNormVopOp(op);
+    const code = sym === '−' ? '-' : (sym === '×' ? '*' : (sym === '÷' ? '/' : sym));
+    return code + (line ? ';' : '');
+  }
+  function mbParseVopOpSpec(spec) {
+    const s = String(spec == null ? '' : spec).trim();
+    const line = /[;_]$/.test(s);
+    const raw = line ? s.slice(0, -1).trim() : s;
+    return { op: mbNormVopOp(raw), line: line };
+  }
+  function mbVops(rowsSpec) {
+    const spec = (rowsSpec && rowsSpec.length >= 2) ? rowsSpec : [
+      { op: '', line: false },
+      { op: '+', line: false },
+      { op: '−', line: true },
+      { op: '', line: false }
+    ];
+    const nd = { id: mbId(), t: 'vops', rows: [] };
+    spec.forEach(function (r, idx) {
+      nd.rows.push({ op: mbNormVopOp(r.op), line: !!r.line });
+      nd['r' + idx] = Array.isArray(r.arr) ? r.arr : [];
+    });
+    return nd;
+  }
   function mbLdiv() { return { id: mbId(), t: 'ldiv', a: [], b: [], q: [], r: [] }; }
+  function mbBdiv(steps) {
+    const cnt = Math.max(1, steps || 1);
+    const nd = { id: mbId(), t: 'bdiv', steps: cnt, a: [], b: [], q: [] };
+    for (let k = 0; k < cnt; k++) { nd['c' + k] = []; nd['r' + k] = []; }
+    return nd;
+  }
+  function mbSlotFieldsOf(node) {
+    if (!node) return [];
+    if (node.t === 'op') return ['from', 'to'];
+    if (node.t === 'sqrt') return ['n', 'a'];
+    if (node.t === 'mixed') return ['w', 'a', 'b'];
+    if (node.t === 'vop') return ['a', 'b', 'c'];
+    if (node.t === 'vops') return (node.rows || []).map(function (_, i) { return 'r' + i; });
+    if (node.t === 'ldiv') return ['a', 'b', 'q', 'r'];
+    if (node.t === 'bdiv') {
+      const out = ['a', 'b', 'q'];
+      const cnt = Math.max(1, node.steps || 1);
+      for (let k = 0; k < cnt; k++) out.push('c' + k, 'r' + k);
+      return out;
+    }
+    return ['n', 'w', 'a', 'b', 'from', 'to'];
+  }
   function mbOp(v, w) { return { id: mbId(), t: 'op', v: v, w: !!w, from: [], to: [] }; }
   function mbFn(v) { return { id: mbId(), t: 'fn', v: v }; }
   function mbSym(v) { return { id: mbId(), t: 'sym', v: v }; }
@@ -9097,14 +9221,43 @@ function mEsc(e) {
         return '<span class="mb-n mmixed"><span class="mm-w">' + slot(node.w, 'w') + '</span>' +
           '<span class="mfrac mb-n"><span class="mnum">' + slot(node.a, 'a') + '</span><span class="mden">' + slot(node.b, 'b') + '</span></span></span>';
       case 'vop': {
-        const opSym = node.op === '-' || node.op === '−' ? '−' : (node.op === '×' || node.op === '*' ? '×' : '+');
-        return '<span class="math-vop mb-n"><span class="math-vop-r"><span class="math-vop-op"></span><span class="math-vop-v">' + slot(node.a, 'a') + '</span></span>' +
-          '<span class="math-vop-r math-vop-line"><span class="math-vop-op">' + mEsc(opSym) + '</span><span class="math-vop-v">' + slot(node.b, 'b') + '</span></span>' +
-          '<span class="math-vop-r math-vop-ans"><span class="math-vop-op"></span><span class="math-vop-v">' + slot(node.c, 'c') + '</span></span></span>';
+        const opSym = mbNormVopOp(node.op || '+') || '+';
+        return '<span class="math-vop mb-n" data-nodeid="' + node.id + '">' +
+          '<span class="math-vop-r"><span class="math-vop-op mb-vop-opbtn" onclick="mbVopCycleOp(event,\'' + node.id + '\',0)" title="تغییر علامت سطر ۱"><span class="mb-vop-op-empty">±</span></span><span class="math-vop-v">' + slot(node.a, 'a') + '</span></span>' +
+          '<span class="math-vop-r math-vop-line"><span class="math-vop-op mb-vop-opbtn" onclick="mbVopCycleOp(event,\'' + node.id + '\',1)" title="تغییر علامت سطر ۲">' + mEsc(opSym) + '</span><span class="math-vop-v">' + slot(node.b, 'b') + '</span></span>' +
+          '<span class="math-vop-r math-vop-ans"><span class="math-vop-op mb-vop-opbtn" onclick="mbVopCycleOp(event,\'' + node.id + '\',2)" title="تغییر علامت سطر ۳"><span class="mb-vop-op-empty">±</span></span><span class="math-vop-v">' + slot(node.c, 'c') + '</span></span></span>';
+      }
+      case 'vops': {
+        const rows = node.rows || [];
+        let h = '<span class="math-vop mb-n" data-nodeid="' + node.id + '">';
+        for (let r = 0; r < rows.length; r++) {
+          const rw = rows[r] || { op: '', line: false };
+          const opSym = mbNormVopOp(rw.op);
+          const prevLine = r > 0 && rows[r - 1] && rows[r - 1].line;
+          const cls = 'math-vop-r' + (rw.line ? ' math-vop-line' : '') + (prevLine ? ' math-vop-ans' : '');
+          if (!Array.isArray(node['r' + r])) node['r' + r] = [];
+          h += '<span class="' + cls + '"><span class="math-vop-op mb-vop-opbtn" onclick="mbVopCycleOp(event,\'' + node.id + '\',' + r + ')" title="برای تغییر علامت این سطر کلیک کنید">' +
+            (opSym ? mEsc(opSym) : '<span class="mb-vop-op-empty">±</span>') +
+            '</span><span class="math-vop-v">' + slot(node['r' + r], 'r' + r) + '</span></span>';
+        }
+        return h + '</span>';
       }
       case 'ldiv':
-        return '<span class="math-ldiv mb-n"><span class="math-ldiv-tr"><span class="math-ldiv-a">' + slot(node.a, 'a') + '</span><span class="math-ldiv-b">' + slot(node.b, 'b') + '</span></span>' +
+        return '<span class="math-ldiv mb-n" data-nodeid="' + node.id + '"><span class="math-ldiv-tr"><span class="math-ldiv-a">' + slot(node.a, 'a') + '</span><span class="math-ldiv-b">' + slot(node.b, 'b') + '</span></span>' +
           '<span class="math-ldiv-tr"><span class="math-ldiv-r">' + slot(node.r, 'r') + '</span><span class="math-ldiv-q">' + slot(node.q, 'q') + '</span></span></span>';
+      case 'bdiv': {
+        const cnt = Math.max(1, node.steps || 1);
+        let h = '<span class="math-ldiv math-bdiv mb-n" data-nodeid="' + node.id + '">' +
+          '<span class="math-ldiv-tr"><span class="math-ldiv-a"><span class="math-bdiv-op"></span><span class="math-bdiv-v">' + slot(node.a, 'a') + '</span></span><span class="math-ldiv-b">' + slot(node.b, 'b') + '</span></span>';
+        for (let k = 0; k < cnt; k++) {
+          if (!Array.isArray(node['c' + k])) node['c' + k] = [];
+          if (!Array.isArray(node['r' + k])) node['r' + k] = [];
+          h += '<span class="math-ldiv-tr"><span class="math-ldiv-sub"><span class="math-bdiv-op">−</span><span class="math-bdiv-v">' + slot(node['c' + k], 'c' + k) + '</span></span>' +
+            '<span class="math-ldiv-q">' + (k === 0 ? slot(node.q, 'q') : '') + '</span></span>' +
+            '<span class="math-ldiv-tr"><span class="math-ldiv-r"><span class="math-bdiv-op"></span><span class="math-bdiv-v">' + slot(node['r' + k], 'r' + k) + '</span></span><span class="math-ldiv-q"></span></span>';
+        }
+        return h + '</span>';
+      }
       case 'op':
         return '<span class="mbigop mb-n"><span class="mover">' + slot(node.to, 'to') + '</span>' +
           '<span class="mbigsym' + (node.w ? ' mword' : '') + '">' + mEsc(node.v) + '</span>' +
@@ -9177,6 +9330,7 @@ function mEsc(e) {
     mfSyncTex();
     if (typeof mfSmartSyncPreview === 'function') mfSmartSyncPreview();
     mbSyncBtns();
+    try { mbUpdateVopBar(); } catch (e) {}
   }
 
   /* ---------- تنظیم خودکار اندازهٔ علامت رادیکال ---------- */
@@ -9383,9 +9537,7 @@ function mEsc(e) {
         for(let r=0;r<node.rows;r++) for(let c=0;c<node.cols;c++) mbTabOrder(node.cells[r][c], node.id + '.m' + r + '_' + c).forEach(x => list.push(x));
         return;
       }
-      const fields = (node.t === 'op') ? ['from', 'to'] : (node.t === 'sqrt') ? ['n', 'a']
-        : (node.t === 'mixed') ? ['w', 'a', 'b'] : (node.t === 'vop') ? ['a', 'b', 'c']
-        : (node.t === 'ldiv') ? ['a', 'b', 'q', 'r'] : ['a', 'b'];
+      const fields = mbSlotFieldsOf(node);
       fields.forEach(f => {
         if (node[f]) mbTabOrder(node[f], node.id + '.' + f).forEach(x => list.push(x));
       });
@@ -9779,8 +9931,29 @@ function mEsc(e) {
         arr.splice(i, 0, node);
         into = node.a;
         break;
+      case 'vops':
+        node = mbVops(arg);
+        arr.splice(i, 0, node);
+        into = node.r0;
+        break;
+      case 'vmul2':
+        node = mbVops([
+          { op: '', line: false },
+          { op: '×', line: true },
+          { op: '', line: false },
+          { op: '+', line: true },
+          { op: '', line: false }
+        ]);
+        arr.splice(i, 0, node);
+        into = node.r0;
+        break;
       case 'ldiv':
         node = mbLdiv();
+        arr.splice(i, 0, node);
+        into = node.a;
+        break;
+      case 'bdiv': case 'bdiv2':
+        node = mbBdiv(kind === 'bdiv2' ? 2 : ((arg && arg.steps) || 1));
         arr.splice(i, 0, node);
         into = node.a;
         break;
@@ -9853,9 +10026,10 @@ function mEsc(e) {
     if (action[0]==='frac') { mbInsertTemplate('\\frac{a}{b}'); return; }
     if (action[0]==='matrix') { mbInsertPresetMatrix(action[1].rows,action[1].cols); return; }
     if (action[0]==='matrixcustom') { mbInsertCustomMatrix(); return; }
+    if (action[0]==='vopcustom') { mbVopPicker(); return; }
     // ساختارهای دارای خانهٔ اختصاصی باید با مدل جعبه‌ای خودشان ساخته شوند.
     if (action[0]==='par') { mbInsertPresetPar(action[1], 'x'); return; }
-    if (['sup','sub','vec','bar','hat','mixed','fact','lim','sqrt4','fn','op','vadd','vsub','vmul','ldiv'].includes(action[0])) { mbPadDo(action); return; }
+    if (['sup','sub','vec','bar','hat','mixed','fact','lim','sqrt4','fn','op','vadd','vsub','vmul','vops','vmul2','ldiv','bdiv','bdiv2'].includes(action[0])) { mbPadDo(action); return; }
     // برای عملگرها، توابع و عبارت‌های نمادی، خود پیش‌نمایش به مدل قابل‌ویرایش تبدیل می‌شود.
     mbInsertTemplate(shown);
   }
@@ -9935,6 +10109,360 @@ function mEsc(e) {
     mbMatrixPicker();
   }
 
+  /* V312.5 — ساخت و ویرایش حساب زیر هم چندسطری (با انتخاب علامت هر سطر و افزودن سطر) + تقسیم چکمه‌ای/تفنگی */
+  let MB_VOP_CFG = [
+    { op: '', line: false },
+    { op: '+', line: false },
+    { op: '−', line: true },
+    { op: '', line: false }
+  ];
+  function mbVopCfgSetOp(idx, op) {
+    if (!MB_VOP_CFG[idx]) return;
+    MB_VOP_CFG[idx].op = mbNormVopOp(op);
+    mbVopPicker();
+  }
+  function mbVopCfgToggleLine(idx) {
+    if (!MB_VOP_CFG[idx]) return;
+    MB_VOP_CFG[idx].line = !MB_VOP_CFG[idx].line;
+    mbVopPicker();
+  }
+  function mbVopCfgAddRow() {
+    if (MB_VOP_CFG.length >= 10) return;
+    const n = MB_VOP_CFG.length;
+    if (n >= 2 && MB_VOP_CFG[n - 2].line && !MB_VOP_CFG[n - 1].op) {
+      MB_VOP_CFG[n - 2].line = false;
+      MB_VOP_CFG.splice(n - 1, 0, { op: '+', line: true });
+    } else {
+      MB_VOP_CFG.push({ op: '+', line: false });
+    }
+    mbVopPicker();
+  }
+  function mbVopCfgDelRow() {
+    if (MB_VOP_CFG.length <= 2) return;
+    MB_VOP_CFG.pop();
+    mbVopPicker();
+  }
+  function mbVopCfgConfirm() {
+    mbVarClose();
+    mbInsert('vops', MB_VOP_CFG.map(function (r) { return { op: r.op, line: !!r.line }; }));
+  }
+  function mbVopPicker() {
+    const pop = el('mbVar');
+    if (!pop) return;
+    const bStyle = 'min-width:34px;height:32px;padding:0 7px;border-radius:7px;border:1px solid var(--input-brd);background:var(--input-bg);color:var(--text);font-size:.86rem;cursor:pointer;touch-action:manipulation';
+    const ops = [['', 'بدون'], ['+', '+'], ['−', '−'], ['×', '×'], ['÷', '÷'], ['=', '=']];
+    let rowsHtml = MB_VOP_CFG.map(function (rw, idx) {
+      const opBtns = ops.map(function (o) {
+        const on = mbNormVopOp(rw.op) === o[0];
+        return '<button type="button" style="' + bStyle + (on ? ';background:linear-gradient(135deg,#11998e,var(--ok));color:#fff;border:0;font-weight:bold' : '') + '" onclick="mbVopCfgSetOp(' + idx + ',\'' + o[0] + '\')">' + o[1] + '</button>';
+      }).join('');
+      const lineBtn = '<button type="button" style="' + bStyle + (rw.line ? ';background:linear-gradient(135deg,#6c63f5,#27c4a8);color:#fff;border:0;font-weight:bold' : '') + '" onclick="mbVopCfgToggleLine(' + idx + ')" title="خط افقی زیر این سطر">─── خط</button>';
+      return '<div class="mbv-row" style="flex-wrap:wrap;gap:4px;margin:4px 0"><span class="mbv-rt" style="min-width:3.4em">سطر ' + (idx + 1) + ':</span>' + opBtns + lineBtn + '</div>';
+    }).join('');
+    pop.innerHTML =
+      '<div class="mbv-title">تنظیم سطرها و علامت‌های حساب زیر هم:</div>' +
+      rowsHtml +
+      '<div class="mbv-row" style="gap:6px;margin-top:8px">' +
+      '<button type="button" style="' + bStyle + '" onclick="mbVopCfgAddRow()">➕ افزودن سطر</button>' +
+      (MB_VOP_CFG.length > 2 ? '<button type="button" style="' + bStyle + '" onclick="mbVopCfgDelRow()">➖ حذف سطر</button>' : '') +
+      '<button type="button" style="' + bStyle + ';background:linear-gradient(135deg,#11998e,var(--ok));color:#fff;border:0;font-weight:bold;padding:0 12px" onclick="mbVopCfgConfirm()">✅ درج عبارت زیر هم</button>' +
+      '</div>' +
+      '<div class="mbv-hint">برای هر سطر علامت دلخواه (+، −، ×، ÷ یا بدون علامت) و خط افقی زیر سطر را انتخاب کنید.</div>';
+    mbVarOpen(pop, null);
+  }
+  window.mbVopCfgSetOp = mbVopCfgSetOp;
+  window.mbVopCfgToggleLine = mbVopCfgToggleLine;
+  window.mbVopCfgAddRow = mbVopCfgAddRow;
+  window.mbVopCfgDelRow = mbVopCfgDelRow;
+  window.mbVopCfgConfirm = mbVopCfgConfirm;
+  window.mbVopPicker = mbVopPicker;
+
+  function mbFindNodeById(id, arr) {
+    const list = arr || MB.root;
+    if (!Array.isArray(list)) return null;
+    for (let i = 0; i < list.length; i++) {
+      const nd = list[i];
+      if (!nd) continue;
+      if (nd.id === id) return { node: nd, parentArr: list, parentIdx: i };
+      const slots = mbAllSlotsOf(nd);
+      for (let s = 0; s < slots.length; s++) {
+        const found = mbFindNodeById(id, slots[s]);
+        if (found) return found;
+      }
+    }
+    return null;
+  }
+
+  function mbActiveVopContext() {
+    if (!MB.cur || !MB.cur.arr) return null;
+    let arr = MB.cur.arr, guard = 0;
+    while (arr && arr !== MB.root && guard++ < 40) {
+      const sid = mbFindSlot(arr);
+      if (!sid) break;
+      const info = MB.info[sid];
+      if (!info || !info.node) break;
+      const nd = info.node;
+      const field = sid.slice(sid.lastIndexOf('.') + 1);
+      if (nd.t === 'vop' || nd.t === 'vops' || nd.t === 'ldiv' || nd.t === 'bdiv') {
+        let rowIdx = 0;
+        if (nd.t === 'vop') rowIdx = field === 'b' ? 1 : (field === 'c' ? 2 : 0);
+        else if (nd.t === 'vops') rowIdx = Math.max(0, parseInt(field.replace(/^r/, ''), 10) || 0);
+        return { node: nd, parentArr: info.parentArr, parentIdx: info.parentIdx, field: field, rowIdx: rowIdx };
+      }
+      arr = info.parentArr;
+    }
+    return null;
+  }
+
+  function mbEnsureVops(ctx) {
+    if (!ctx || !ctx.node) return null;
+    if (ctx.node.t === 'vops') return ctx.node;
+    if (ctx.node.t !== 'vop') return null;
+    const old = ctx.node;
+    const next = mbVops([
+      { op: '', line: false, arr: old.a || [] },
+      { op: mbNormVopOp(old.op || '+') || '+', line: true, arr: old.b || [] },
+      { op: '', line: false, arr: old.c || [] }
+    ]);
+    next.id = old.id;
+    if (ctx.parentArr && ctx.parentArr[ctx.parentIdx] === old) {
+      ctx.parentArr[ctx.parentIdx] = next;
+    }
+    ctx.node = next;
+    return next;
+  }
+
+  function mbVopSetOp(op) {
+    const ctx = mbActiveVopContext();
+    if (!ctx || !ctx.node) return;
+    mbPush();
+    const sym = mbNormVopOp(op);
+    if (ctx.node.t === 'vop' && ctx.rowIdx === 1 && (sym === '+' || sym === '−' || sym === '×')) {
+      ctx.node.op = sym;
+      MB.cur = { arr: ctx.node.b, i: ctx.node.b.length };
+      mbDraw(); mbFocus();
+      return;
+    }
+    const nd = mbEnsureVops(ctx);
+    if (!nd) return;
+    const r = Math.min(ctx.rowIdx || 0, nd.rows.length - 1);
+    nd.rows[r].op = sym;
+    const target = nd['r' + r] || [];
+    MB.cur = { arr: target, i: target.length };
+    mbDraw(); mbFocus();
+  }
+
+  function mbVopCycleOp(ev, nodeId, rowIdx) {
+    if (ev && ev.stopPropagation) ev.stopPropagation();
+    const found = mbFindNodeById(nodeId);
+    if (!found || !found.node) return;
+    mbPush();
+    const ctx = { node: found.node, parentArr: found.parentArr, parentIdx: found.parentIdx, rowIdx: rowIdx };
+    const nd = mbEnsureVops(ctx);
+    if (!nd) return;
+    const r = Math.min(Math.max(0, rowIdx || 0), nd.rows.length - 1);
+    const cycle = ['+', '−', '×', '÷', '=', ''];
+    const cur = mbNormVopOp(nd.rows[r].op);
+    const nextOp = cycle[(cycle.indexOf(cur) + 1) % cycle.length];
+    nd.rows[r].op = nextOp;
+    const target = nd['r' + r] || [];
+    MB.cur = { arr: target, i: target.length };
+    mbDraw(); mbFocus();
+  }
+
+  function mbVopToggleLine() {
+    const ctx = mbActiveVopContext();
+    if (!ctx || !ctx.node) return;
+    mbPush();
+    const nd = mbEnsureVops(ctx);
+    if (!nd) return;
+    const r = Math.min(ctx.rowIdx || 0, nd.rows.length - 1);
+    nd.rows[r].line = !nd.rows[r].line;
+    const target = nd['r' + r] || [];
+    MB.cur = { arr: target, i: target.length };
+    mbDraw(); mbFocus();
+  }
+
+  function mbVopAddRow(op, asAnswer) {
+    const ctx = mbActiveVopContext();
+    if (!ctx || !ctx.node) return;
+    mbPush();
+    const nd = mbEnsureVops(ctx);
+    if (!nd) return;
+    const items = (nd.rows || []).map(function (rw, idx) {
+      return { op: mbNormVopOp(rw.op), line: !!rw.line, arr: nd['r' + idx] || [] };
+    });
+    if (items.length >= 12) return;
+    const r = Math.min(ctx.rowIdx || 0, items.length - 1);
+    const sym = mbNormVopOp(op);
+    let targetIdx = r + 1;
+    if (asAnswer) {
+      items[r].line = true;
+      items.splice(r + 1, 0, { op: '', line: false, arr: [] });
+      targetIdx = r + 1;
+    } else if (r === items.length - 1 && items.length >= 2 && items[items.length - 2].line && !items[items.length - 1].op && !items[items.length - 1].arr.length) {
+      items[items.length - 2].line = false;
+      items.splice(items.length - 1, 0, { op: sym, line: true, arr: [] });
+      targetIdx = items.length - 2;
+    } else if (r === items.length - 1 && items.length >= 2 && items[items.length - 2].line && items[items.length - 1].arr.length > 0) {
+      items.push({ op: sym, line: true, arr: [] });
+      items.push({ op: '', line: false, arr: [] });
+      targetIdx = items.length - 2;
+    } else {
+      const hadLine = items[r].line;
+      if (hadLine) items[r].line = false;
+      items.splice(r + 1, 0, { op: sym, line: hadLine, arr: [] });
+      targetIdx = r + 1;
+    }
+    nd.rows = items.map(function (it) { return { op: it.op, line: !!it.line }; });
+    items.forEach(function (it, idx) { nd['r' + idx] = it.arr; });
+    MB.cur = { arr: nd['r' + targetIdx], i: 0 };
+    mbDraw(); mbFocus();
+  }
+
+  function mbVopDelRow() {
+    const ctx = mbActiveVopContext();
+    if (!ctx || !ctx.node) return;
+    const total = ctx.node.t === 'vop' ? 3 : (ctx.node.rows ? ctx.node.rows.length : 0);
+    if (total <= 2) { notify('حداقل ۲ سطر لازم است', 'warn'); return; }
+    mbPush();
+    const nd = mbEnsureVops(ctx);
+    if (!nd) return;
+    const items = (nd.rows || []).map(function (rw, idx) {
+      return { op: mbNormVopOp(rw.op), line: !!rw.line, arr: nd['r' + idx] || [] };
+    });
+    const r = Math.min(ctx.rowIdx || 0, items.length - 1);
+    const hadLine = items[r].line;
+    items.splice(r, 1);
+    if (hadLine && r > 0 && r - 1 < items.length) items[r - 1].line = true;
+    delete nd['r' + items.length];
+    nd.rows = items.map(function (it) { return { op: it.op, line: !!it.line }; });
+    items.forEach(function (it, idx) { nd['r' + idx] = it.arr; });
+    const nextIdx = Math.max(0, Math.min(r, items.length - 1));
+    MB.cur = { arr: nd['r' + nextIdx], i: nd['r' + nextIdx].length };
+    mbDraw(); mbFocus();
+  }
+
+  function mbDivSetMode(mode) {
+    const ctx = mbActiveVopContext();
+    if (!ctx || !ctx.node) return;
+    const old = ctx.node;
+    if (old.t === mode) return;
+    mbPush();
+    if (mode === 'bdiv' && old.t === 'ldiv') {
+      const next = mbBdiv(1);
+      next.id = old.id;
+      next.a = old.a || [];
+      next.b = old.b || [];
+      next.q = old.q || [];
+      next.c0 = [];
+      next.r0 = old.r || [];
+      if (ctx.parentArr && ctx.parentArr[ctx.parentIdx] === old) ctx.parentArr[ctx.parentIdx] = next;
+      MB.cur = { arr: next.c0, i: 0 };
+    } else if (mode === 'ldiv' && old.t === 'bdiv') {
+      const next = mbLdiv();
+      next.id = old.id;
+      next.a = old.a || [];
+      next.b = old.b || [];
+      next.q = old.q || [];
+      const lastK = Math.max(0, (old.steps || 1) - 1);
+      next.r = old['r' + lastK] || old.r0 || [];
+      if (ctx.parentArr && ctx.parentArr[ctx.parentIdx] === old) ctx.parentArr[ctx.parentIdx] = next;
+      MB.cur = { arr: next.r, i: next.r.length };
+    }
+    mbDraw(); mbFocus();
+  }
+
+  function mbDivAddStep() {
+    const ctx = mbActiveVopContext();
+    if (!ctx || !ctx.node) return;
+    const old = ctx.node;
+    if (old.t === 'ldiv') { mbDivSetMode('bdiv'); return; }
+    if (old.t !== 'bdiv') return;
+    const cnt = Math.max(1, old.steps || 1);
+    if (cnt >= 6) return;
+    mbPush();
+    old.steps = cnt + 1;
+    old['c' + cnt] = [];
+    old['r' + cnt] = [];
+    MB.cur = { arr: old['c' + cnt], i: 0 };
+    mbDraw(); mbFocus();
+  }
+
+  function mbDivDelStep() {
+    const ctx = mbActiveVopContext();
+    if (!ctx || !ctx.node) return;
+    const old = ctx.node;
+    if (old.t !== 'bdiv') return;
+    const cnt = Math.max(1, old.steps || 1);
+    if (cnt <= 1) { mbDivSetMode('ldiv'); return; }
+    mbPush();
+    delete old['c' + (cnt - 1)];
+    delete old['r' + (cnt - 1)];
+    old.steps = cnt - 1;
+    const prevR = old['r' + (cnt - 2)] || old.a;
+    MB.cur = { arr: prevR, i: prevR.length };
+    mbDraw(); mbFocus();
+  }
+
+  function mbUpdateVopBar() {
+    const bar = el('mbVopBar');
+    if (!bar) return;
+    const ctx = mbActiveVopContext();
+    if (!ctx || !ctx.node) {
+      bar.style.display = 'none';
+      bar.innerHTML = '';
+      return;
+    }
+    const nd = ctx.node;
+    bar.style.display = 'flex';
+    if (nd.t === 'vop' || nd.t === 'vops') {
+      const r = ctx.rowIdx || 0;
+      const curOp = nd.t === 'vop' ? (r === 1 ? (mbNormVopOp(nd.op) || '+') : '') : mbNormVopOp((nd.rows[r] || {}).op);
+      const curLine = nd.t === 'vop' ? (r === 1) : !!(nd.rows[r] && nd.rows[r].line);
+      const totalRows = nd.t === 'vop' ? 3 : (nd.rows ? nd.rows.length : 3);
+      const ops = [
+        ['', 'بدون علامت'],
+        ['+', '+'],
+        ['−', '−'],
+        ['×', '×'],
+        ['÷', '÷'],
+        ['=', '=']
+      ];
+      bar.innerHTML =
+        '<span class="mb-vb-lbl">سطر ' + (r + 1) + ' از ' + totalRows + ' — علامت:</span>' +
+        ops.map(function (o) {
+          const on = curOp === o[0];
+          return '<button type="button" class="mb-vb-btn' + (on ? ' on' : '') + '" onclick="mbVopSetOp(\'' + o[0] + '\')">' + o[1] + '</button>';
+        }).join('') +
+        '<button type="button" class="mb-vb-btn' + (curLine ? ' on' : '') + '" onclick="mbVopToggleLine()" title="خط افقی زیر این سطر">─── خط زیر سطر</button>' +
+        '<span class="mb-vb-sep"></span>' +
+        '<button type="button" class="mb-vb-btn add" onclick="mbVopAddRow(\'+\',false)">➕ سطر +</button>' +
+        '<button type="button" class="mb-vb-btn add" onclick="mbVopAddRow(\'−\',false)">➕ سطر −</button>' +
+        '<button type="button" class="mb-vb-btn add" onclick="mbVopAddRow(\'×\',false)">➕ سطر ×</button>' +
+        '<button type="button" class="mb-vb-btn add" onclick="mbVopAddRow(\'\',true)">➕ سطر جواب</button>' +
+        (totalRows > 2 ? '<button type="button" class="mb-vb-btn del" onclick="mbVopDelRow()">🗑️ حذف سطر</button>' : '');
+    } else if (nd.t === 'ldiv' || nd.t === 'bdiv') {
+      const isBdiv = nd.t === 'bdiv';
+      const st = isBdiv ? (nd.steps || 1) : 0;
+      bar.innerHTML =
+        '<span class="mb-vb-lbl">نوع تقسیم:</span>' +
+        '<button type="button" class="mb-vb-btn' + (!isBdiv ? ' on' : '') + '" onclick="mbDivSetMode(\'ldiv\')">تقسیم کلنگی ساده</button>' +
+        '<button type="button" class="mb-vb-btn' + (isBdiv ? ' on' : '') + '" onclick="mbDivSetMode(\'bdiv\')">تقسیم چکمه‌ای (تفنگی)</button>' +
+        '<span class="mb-vb-sep"></span>' +
+        '<button type="button" class="mb-vb-btn add" onclick="mbDivAddStep()">➕ افزودن مرحلهٔ تفریق' + (st ? ' (' + st + ')' : '') + '</button>' +
+        (isBdiv ? '<button type="button" class="mb-vb-btn del" onclick="mbDivDelStep()">➖ حذف مرحله</button>' : '');
+    }
+  }
+  window.mbVopSetOp = mbVopSetOp;
+  window.mbVopCycleOp = mbVopCycleOp;
+  window.mbVopToggleLine = mbVopToggleLine;
+  window.mbVopAddRow = mbVopAddRow;
+  window.mbVopDelRow = mbVopDelRow;
+  window.mbDivSetMode = mbDivSetMode;
+  window.mbDivAddStep = mbDivAddStep;
+  window.mbDivDelStep = mbDivDelStep;
+
   /* درج سریع: حرف، پیش‌پر شده‌ها، کسر مخلوط، حد کامل، جفت پرانتز */
   function mbNewLine() {
     /* MF_BAR_V961: سطر تازه در فرمول (\\ در TeX) */
@@ -9973,7 +10501,7 @@ window.mbCloseSymbolLibrary = mbCloseSymbolLibrary;
     for (const nd of nodes) {
       if (!nd) continue;
       if ((nd.t === 'c' || nd.t === 'text') && nd.v != null) nd.v = mbDigitMap(nd.v, toFa);
-      ['a', 'b', 'c', 'q', 'r', 'n', 'w', 'from', 'to', 'by'].forEach(function (k) {
+      ['a', 'b', 'c', 'q', 'r', 'n', 'w', 'from', 'to', 'by'].concat(mbSlotFieldsOf(nd)).forEach(function (k) {
         if (nd[k] && nd[k].splice) mbDigitWalk(nd[k], toFa);
       });
       if (nd.cells && nd.cells.length) nd.cells.forEach(function (r) {   /* ماتریس */
@@ -10142,8 +10670,8 @@ window.mbCloseSymbolLibrary = mbCloseSymbolLibrary;
 
   function mbSlotsOf(node) {
     const out = [];
-    const fields = (node && node.t === 'vop') ? ['a', 'b', 'c'] : (node && node.t === 'ldiv') ? ['a', 'b', 'q', 'r'] : ['n', 'w', 'a', 'b', 'from', 'to'];
-    fields.forEach(f => { if (node[f]) out.push(node[f]); });
+    const fields = mbSlotFieldsOf(node);
+    fields.forEach(f => { if (node && node[f]) out.push(node[f]); });
     return out;
   }
 
@@ -10553,7 +11081,9 @@ window.mbCloseSymbolLibrary = mbCloseSymbolLibrary;
       ['جمع زیر هم', '\\vadd{a}{b}{c}', ['vadd']],
       ['تفریق زیر هم', '\\vsub{a}{b}{c}', ['vsub']],
       ['ضرب زیر هم', '\\vmul{a}{b}{c}', ['vmul']],
+      ['چندسطری با انتخاب علامت', '\\vops{}{a}{+}{b}{-;}{c}{}{d}', ['vops']],
       ['تقسیم کلنگی', '\\ldiv{a}{b}{q}{r}', ['ldiv']],
+      ['تقسیم چکمه‌ای (تفنگی)', '\\bdiv{a}{b}{q}{c}{r}', ['bdiv']],
       ['توان پرکاربرد', 'x^{n}', ['sup']],
       ['جذر پرکاربرد', '\\sqrt{x}', ['sqrt']],
       ['حد پرکاربرد', '\\lim_{x \\to a}', ['lim']],
@@ -10586,7 +11116,9 @@ window.mbCloseSymbolLibrary = mbCloseSymbolLibrary;
       ['جمع زیر هم', '\\vadd{a}{b}{c}', ['vadd']],
       ['تفریق زیر هم', '\\vsub{a}{b}{c}', ['vsub']],
       ['ضرب زیر هم', '\\vmul{a}{b}{c}', ['vmul']],
+      ['چندسطری با انتخاب علامت', '\\vops{}{a}{+}{b}{-;}{c}{}{d}', ['vops']],
       ['تقسیم کلنگی', '\\ldiv{a}{b}{q}{r}', ['ldiv']],
+      ['تقسیم چکمه‌ای (تفنگی)', '\\bdiv{a}{b}{q}{c}{r}', ['bdiv']],
       ['توان', 'x^{n}', ['sup'], [
         ['توان', 'x^{n}', ['sup']],
         ['مربع', 'x^{2}', ['sup2']],
@@ -10773,7 +11305,7 @@ window.mbCloseSymbolLibrary = mbCloseSymbolLibrary;
 
   /* کتابخانه‌های تکمیلی ریاضی — افزوده شده‌اند و دکمه‌های فعلی را تغییر نمی‌دهند. */
   const CURRICULUM_PAD = [
-    {id:'cur-num',label:'🔢 محاسبات',items:[['جمع','+',['sym','+']],['تفریق','−',['sym','−']],['ضرب','×',['sym','×']],['تقسیم','÷',['sym','÷']],['کسر','a⁄b',['frac']],['جمع زیر هم','\\vadd{a}{b}{c}',['vadd']],['تفریق زیر هم','\\vsub{a}{b}{c}',['vsub']],['ضرب زیر هم','\\vmul{a}{b}{c}',['vmul']],['تقسیم کلنگی','\\ldiv{a}{b}{q}{r}',['ldiv']],['اعشار','0.5',['sym','.']],['درصد','٪',['sym','%']],['ضرب پیاپی','∏',['op',{v:'∏'}]]]},
+    {id:'cur-num',label:'🔢 محاسبات',items:[['جمع','+',['sym','+']],['تفریق','−',['sym','−']],['ضرب','×',['sym','×']],['تقسیم','÷',['sym','÷']],['کسر','a⁄b',['frac']],['جمع زیر هم','\\vadd{a}{b}{c}',['vadd']],['تفریق زیر هم','\\vsub{a}{b}{c}',['vsub']],['ضرب زیر هم','\\vmul{a}{b}{c}',['vmul']],['چندسطری با انتخاب علامت','\\vops{}{a}{+}{b}{-;}{c}{}{d}',['vops']],['تقسیم کلنگی','\\ldiv{a}{b}{q}{r}',['ldiv']],['تقسیم چکمه‌ای (تفنگی)','\\bdiv{a}{b}{q}{c}{r}',['bdiv']],['اعشار','0.5',['sym','.']],['درصد','٪',['sym','%']],['ضرب پیاپی','∏',['op',{v:'∏'}]]]},
     {id:'cur-number',label:'🔐 نظریه اعداد',items:[['عدد اول','p',['sym','p']],['ب.م.م','gcd',['fn','gcd']],['ک.م.م','lcm',['sym','lcm']],['فاکتوریل','n!',['fact']]]},
     {id:'cur-power',label:'ⁿ توان و ریشه',items:[['توان','xⁿ',['sup']],['جذر','√x',['sqrt']],['ریشه سوم','∛x',['sqrt3']],['فرجه دلخواه','ⁿ√x',['sqrtn']],['تتراسیون','ⁿa',['tpl','{}^{n}a']],['نماد علمی','a×10ⁿ',['tpl','×10^n']]]},
     {id:'cur-sets',label:'∩ مجموعه‌ها',items:[['عضو','∈',['sym','∈']],['اجتماع','∪',['sym','∪']],['اشتراک','∩',['sym','∩']],['تفاضل','∖',['sym','∖']],['زیرمجموعه','⊂',['sym','⊂']]]},
@@ -11670,6 +12202,7 @@ window.mbCloseSymbolLibrary = mbCloseSymbolLibrary;
       case 'op': mbInsert('op', act[1]); break;
       case 'matrix': mbInsert('matrix', act[1]); break;
       case 'matrixcustom': mbInsertCustomMatrix(); break;
+      case 'vopcustom': mbVopPicker(); break;
       case 'tpl': mbInsertTemplate(act[1]); break;
       case 'mixed': mbInsert('mixed'); break;
       case 'sup2': mbInsPrefillSup('2'); break;
@@ -12289,8 +12822,22 @@ window.mbCloseSymbolLibrary = mbCloseSymbolLibrary;
           const cmd = (node.op === '-' || node.op === '−') ? '\\vsub' : (node.op === '×' || node.op === '*' ? '\\vmul' : '\\vadd');
           return cmd + '{' + grp(node.a) + '}{' + grp(node.b) + '}{' + grp(node.c) + '}';
         }
+        case 'vops': {
+          const rows = node.rows || [];
+          return '\\vops' + rows.map(function (rw, rIdx) {
+            return '{' + mbVopOpCode(rw.op, rw.line) + '}{' + grp(node['r' + rIdx] || []) + '}';
+          }).join('');
+        }
         case 'ldiv':
           return '\\ldiv{' + grp(node.a) + '}{' + grp(node.b) + '}{' + grp(node.q) + '}{' + grp(node.r) + '}';
+        case 'bdiv': {
+          const cnt = Math.max(1, node.steps || 1);
+          let s = '\\bdiv{' + grp(node.a) + '}{' + grp(node.b) + '}{' + grp(node.q) + '}';
+          for (let k = 0; k < cnt; k++) {
+            s += '{' + grp(node['c' + k] || []) + '}{' + grp(node['r' + k] || []) + '}';
+          }
+          return s;
+        }
         case 'op': {
           let s = '\\' + (MB_OP_TEX[node.v] || 'sum');
           if (node.from && node.from.length) s += '_{' + grp(node.from) + '}';
@@ -12432,6 +12979,43 @@ window.mbCloseSymbolLibrary = mbCloseSymbolLibrary;
         d.a = readUnit(); d.b = readUnit();
         skipWs(); if (t[n] === '{') d.q = readUnit();
         skipWs(); if (t[n] === '{') d.r = readUnit();
+        return [d];
+      }
+      if (name === 'vops') {
+        const rowsSpec = [];
+        while (n < t.length) {
+          skipWs();
+          if (t[n] !== '{') break;
+          n++;
+          let rawOp = '';
+          while (n < t.length && t[n] !== '}') rawOp += t[n++];
+          if (t[n] === '}') n++;
+          const parsedOp = mbParseVopOpSpec(rawOp);
+          skipWs();
+          const valArr = (t[n] === '{') ? readUnit() : [];
+          rowsSpec.push({ op: parsedOp.op, line: parsedOp.line, arr: valArr });
+        }
+        if (rowsSpec.length >= 2 && !rowsSpec.some(function (r) { return r.line; })) {
+          rowsSpec[rowsSpec.length - 2].line = true;
+        }
+        return [mbVops(rowsSpec)];
+      }
+      if (name === 'bdiv') {
+        const a = readUnit(), b = readUnit();
+        skipWs(); const q = (t[n] === '{') ? readUnit() : [];
+        const steps = [];
+        while (n < t.length) {
+          skipWs();
+          if (t[n] !== '{') break;
+          const c = readUnit();
+          skipWs();
+          const r = (t[n] === '{') ? readUnit() : [];
+          steps.push({ c: c, r: r });
+        }
+        if (!steps.length) steps.push({ c: [], r: [] });
+        const d = mbBdiv(steps.length);
+        d.a = a; d.b = b; d.q = q;
+        steps.forEach(function (st, k) { d['c' + k] = st.c; d['r' + k] = st.r; });
         return [d];
       }
       if (name === 'sqrt') {
@@ -12835,16 +13419,23 @@ window.mbCloseSymbolLibrary = mbCloseSymbolLibrary;
         ['کسر مخلوط', '3\\frac{1}{2}', ['mixed']],
         ['خط کسری /', 'a/b', ['tpl', 'a/b']],
         ['تقسیم کلنگی', '\\ldiv{a}{b}{q}{r}', ['ldiv']],
+        ['تقسیم چکمه‌ای (تفنگی)', '\\bdiv{a}{b}{q}{c}{r}', ['bdiv']],
         ['جمع زیر هم', '\\vadd{a}{b}{c}', ['vadd']],
         ['تفریق زیر هم', '\\vsub{a}{b}{c}', ['vsub']],
-        ['ضرب زیر هم', '\\vmul{a}{b}{c}', ['vmul']]
+        ['ضرب زیر هم', '\\vmul{a}{b}{c}', ['vmul']],
+        ['حساب زیر هم چندسطری (انتخاب علامت)', '\\vops{}{a}{+}{b}{-;}{c}{}{d}', ['vops']]
       ];
     } else if (kind === 'vop') {
       variants = [
         ['جمع زیر هم', '\\vadd{a}{b}{c}', ['vadd']],
         ['تفریق زیر هم', '\\vsub{a}{b}{c}', ['vsub']],
         ['ضرب زیر هم', '\\vmul{a}{b}{c}', ['vmul']],
-        ['تقسیم کلنگی', '\\ldiv{a}{b}{q}{r}', ['ldiv']]
+        ['ضرب دو مرحله‌ای (با جمع)', '\\vops{}{a}{*;}{b}{}{c}{+;}{d}{}{e}', ['vmul2']],
+        ['چندسطری با انتخاب علامت‌ها', '\\vops{}{a}{+}{b}{-;}{c}{}{d}', ['vops']],
+        ['تقسیم کلنگی ساده', '\\ldiv{a}{b}{q}{r}', ['ldiv']],
+        ['تقسیم چکمه‌ای (تفنگی)', '\\bdiv{a}{b}{q}{c}{r}', ['bdiv']],
+        ['تقسیم چکمه‌ای دو مرحله‌ای', '\\bdiv{a}{b}{q}{c}{r}{d}{s}', ['bdiv2']],
+        ['⚙️ ساخت زیرهم دلخواه (سطر و علامت)', '\\vops{}{a}{*;}{b}{+;}{c}{}{d}', ['vopcustom']]
       ];
     } else if (kind === 'sup') {
       variants = [
@@ -23231,6 +23822,7 @@ window.mbHwState = function () { return state; };
       if (!nd || typeof nd !== 'object') continue;
       if ((nd.t === 'c' || nd.t === 'sym' || nd.t === 'text') && typeof nd.v === 'string') nd.v = mapDigits(nd.v, toFa);
       ['a', 'b', 'c', 'q', 'r', 'n', 'w', 'from', 'to'].forEach(function (f) { if (Array.isArray(nd[f])) walk(nd[f], toFa); });
+      Object.keys(nd).forEach(function (f) { if (/^[rc]\d+$/.test(f) && Array.isArray(nd[f])) walk(nd[f], toFa); });
       if (Array.isArray(nd.cells)) nd.cells.forEach(function (row) { if (Array.isArray(row)) row.forEach(function (c) { walk(c, toFa); }); });
     }
   }
