@@ -1346,8 +1346,8 @@
     drawAuthInto(card, mode || 'login');
     var right = el('div', {class: 'lp-r'}, [card]);
     var catalog = buildLandingCatalog(card, mode);
-    var bdg = intro.querySelector('.lp-badges');
-    if (bdg) bdg.appendChild(el('button', {type: 'button', class: 'btn light sm lp-price-jump', text: '💳 محصولات و تعرفه‌ها', onclick: function () { catalog.scrollIntoView({behavior: 'smooth', block: 'start'}); }}));
+    var priceBtn = el('button', {type: 'button', class: 'btn light sm lp-price-jump', text: '💳 محصولات و تعرفه‌ها', onclick: function () { catalog.scrollIntoView({behavior: 'smooth', block: 'start'}); }});
+    left.replaceChild(el('div', {class: 'lp-tiles-col'}, [priceBtn, tilesEl]), tilesEl);
     var page = el('div', {class: 'lp lp-sky'}, [
       el('div', {class: 'glow g1'}), el('div', {class: 'glow g2'}), el('div', {class: 'cloud c1'}), el('div', {class: 'cloud c2'}), el('div', {class: 'cloud c3'}), el('div', {class: 'cloud c4'}),
       left, right, catalog
@@ -1395,7 +1395,8 @@
         el('h3', {text: '📋 تعرفهٔ تک‌خدمت‌ها (کسر از کیف پول)'}),
         el('span', {class: 'muted', style: 'font-size:12.5px', text: 'ثبت‌نام، ساخت کلاس، تعریف دانش‌آموز و کارنامه رایگان است؛ هزینه فقط به ازای مصرف واقعی کسر می‌شود.'}),
         el('span', {class: 'grow'}),
-        el('button', {type: 'button', class: 'btn light sm', text: 'پنجرهٔ کامل تعرفه‌ها', onclick: function () { if (window.SiteAdmin && window.SiteAdmin.tariffDlg) window.SiteAdmin.tariffDlg(); }})
+        el('button', {type: 'button', class: 'btn light sm', text: 'پنجرهٔ کامل تعرفه‌ها', onclick: function () { if (window.SiteAdmin && window.SiteAdmin.tariffDlg) window.SiteAdmin.tariffDlg(); }}),
+        enamadBadge()
       ]),
       el('div', {class: 'lp-tariff-grid'}, window.LP_TARIFFS.map(function (r) {
         return el('div', {class: 'lp-tariff-item'}, [el('span', {text: r[0]}), el('b', {text: r[1]})]);
@@ -1424,6 +1425,7 @@
     img.style.cursor = 'pointer';
     /* V299 — اگر تصویر از سرور اینماد نیامد (دامنهٔ غیرثبت‌شده مثل سایت آزمایشی، یا قطعی)، به‌جای مخفی‌شدن، پیوند متنی نمایش داده شود */
     img.addEventListener('error', function () { a.classList.add('enamad-txt'); img.remove(); a.textContent = 'نماد اعتماد الکترونیکی'; });
+    img.addEventListener('load', function () { if (img.naturalWidth && img.naturalWidth > 16) a.classList.add('enamad-ok'); else { a.classList.add('enamad-txt'); a.textContent = 'نماد اعتماد الکترونیکی'; } });
     a.appendChild(img);
     return a;
   }

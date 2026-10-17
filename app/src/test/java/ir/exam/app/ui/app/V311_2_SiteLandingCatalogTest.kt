@@ -1,26 +1,31 @@
 package ir.exam.app.ui.app
 
-import java.io.File
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.io.File
 
-/** V311.2 — نمایش مستقیم محصولات، بسته‌های شارژ کیف پول و تعرفهٔ خدمات به تومان در صفحهٔ اصلی سایت (الزام شاپرک). */
+/** V311.2 / V311.3 — نمایش محصولات، بسته‌های شارژ کیف پول، تعرفهٔ خدمات (الزام شاپرک)، دکمه بالای ۸ بلوک، نمایش تضمین‌شدهٔ اینماد و اسکرول گوشی. */
 class V311_2_SiteLandingCatalogTest {
-    private fun root(): File = listOf(File("."), File("..")).first { File(it, "site/src/app.js").isFile }
-    private fun src(p: String): String = File(root(), p).readText()
+    private fun root(): File = listOf(File("."), File("..")).first { File(it, "site/src/extras.js").isFile }
+    private fun src(p: String) = File(root(), p).readText()
 
     @Test
-    fun `landing page displays products packages prices and tariffs on desktop mobile and html`() {
+    fun landingPageDisplaysProductsPricesAndBuyButtonsOnDesktopAndMobile() {
         val app = src("site/src/app.js")
         val mob = src("site/src/mobile.js")
-        val tpl = src("site/src/template.html")
+        val adm = src("site/src/admin.js")
         val css = src("site/src/site.css")
-        assertTrue("window.LP_PRODUCTS = [" in app)
-        assertTrue("window.LP_TARIFFS = [" in app)
-        assertTrue("function buildLandingCatalog(card, mode)" in app)
-        assertTrue("خرید و شارژ آنلاین" in app)
-        assertTrue("function buildMobileCatalog()" in mob)
-        assertTrue("بستهٔ اعتبار پایه (۱۰۰ سؤالی): ۱۰۰٬۰۰۰ تومان" in tpl)
-        assertTrue(".lp-catalog{" in css && ".lp-prod-grid{" in css && ".ice-catalog{" in css)
+        val tpl = src("site/src/template.html")
+
+        assertTrue("window.LP_PRODUCTS = [" in app && "window.LP_TARIFFS = [" in app)
+        for (price in listOf("۱۰۰٬۰۰۰ تومان", "۲۰۰٬۰۰۰ تومان", "۵۰۰٬۰۰۰ تومان", "۱٬۰۰۰٬۰۰۰ تومان")) {
+            assertTrue(price, price in app && price in tpl)
+        }
+        assertTrue("function buildLandingCatalog(" in app && "خرید و شارژ آنلاین" in app && "💳 محصولات و تعرفه‌ها" in app)
+        assertTrue("left.replaceChild(el('div', {class: 'lp-tiles-col'}, [priceBtn, tilesEl]), tilesEl);" in app)
+        assertTrue("img.addEventListener('load', function () { if (img.naturalWidth && img.naturalWidth > 16) a.classList.add('enamad-ok');" in app)
+        assertTrue("function buildMobileCatalog()" in mob && "function mobileShowcase()" in mob && "ice-price-jump" in mob)
+        assertTrue("sessionStorage.getItem('lp-selected-pkg')" in adm && "sessionStorage.getItem('lp-selected-pkg')" in app)
+        assertTrue(".lp-catalog{" in css && ".lp-tiles-col{" in css && ".enamad:not(.enamad-ok){" in css && ".ice{overflow-x:hidden;overflow-y:visible;" in css)
     }
 }
