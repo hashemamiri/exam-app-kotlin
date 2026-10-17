@@ -46,7 +46,7 @@ class V312_2_VerticalOpsAndWhiteboardTest {
         assertTrue("#mfModal.box-fullscreen .mb-kt-enter,#mfModal.box-fullscreen .mb-kt-abc,#mfModal.box-fullscreen .mb-chip-vop{display:none !important}" in fh)
         assertTrue("#mfModal.box-fullscreen .mb-kt-vop{display:inline-flex !important;order:13}" in fh)
         assertTrue("grid-template-columns:repeat(3,minmax(0,1fr)) !important;\n    grid-template-rows:repeat(7,auto) !important;" in fh)
-        assertTrue("#mfModal.box-fullscreen .mb-Fixed" !in fh && "grid-template-rows:auto auto auto minmax(140px,1fr) !important;" in fh)
+        assertTrue("grid-template-columns:repeat(2,minmax(0,1fr)) !important;\n    grid-template-rows:auto minmax(0,1fr) auto !important;" in fh)
         assertTrue("#mfModal.box-fullscreen .mb-fixed-keypad button[onclick=\"mbInsert('sym','=')\"],\n  #mfModal.box-fullscreen .mb-kt-abc,\n  #mfModal.box-fullscreen .mb-chip-vop,\n  #mfModal.box-fullscreen .mb-kt-enter{display:none !important}" in fh)
         val mh = src("app/src/main/assets/print/web/math_host.js")
         assertTrue("if (cmd === 'vadd' || cmd === 'vsub' || cmd === 'vmul')" in mh)
