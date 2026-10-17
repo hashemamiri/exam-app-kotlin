@@ -1345,20 +1345,19 @@
     var card = el('div', {class: 'card neo'});
     drawAuthInto(card, mode || 'login');
     var right = el('div', {class: 'lp-r'}, [card]);
-    var catalog = buildLandingCatalog(card, mode);
-    var priceBtn = el('button', {type: 'button', class: 'btn light sm lp-price-jump', text: '💳 محصولات و تعرفه‌ها', onclick: function () { catalog.scrollIntoView({behavior: 'smooth', block: 'start'}); }});
+    var priceBtn = el('button', {type: 'button', class: 'btn light sm lp-price-jump', text: '💳 محصولات و تعرفه‌ها', onclick: function () { openLandingCatalogModal(function (p) { selectLandingProduct(p, card, mode); }); }});
     var tilesCol = el('div', {class: 'lp-tiles-col'});
     left.replaceChild(tilesCol, tilesEl);
     tilesCol.appendChild(priceBtn);
     tilesCol.appendChild(tilesEl);
     var page = el('div', {class: 'lp lp-sky'}, [
       el('div', {class: 'glow g1'}), el('div', {class: 'glow g2'}), el('div', {class: 'cloud c1'}), el('div', {class: 'cloud c2'}), el('div', {class: 'cloud c3'}), el('div', {class: 'cloud c4'}),
-      left, right, catalog
+      left, right
     ]);
     if (keyWarn) page.appendChild(keyWarn);
     root.appendChild(page);
   }
-  /* V311.2 — فهرست محصولات، بسته‌های شارژ کیف پول و تعرفهٔ خدمات در صفحهٔ اصلی سایت (الزام شاپرک: نمایش محصولات به همراه قیمت در صفحهٔ اصلی) */
+  /* V311.2 / V311.6 — فهرست محصولات، بسته‌های شارژ کیف پول و تعرفهٔ خدمات در پنجرهٔ میانی صفحهٔ اصلی سایت (الزام شاپرک) */
   window.LP_PRODUCTS = [
     {id: 'pkg-100', amount: 100000, title: 'بستهٔ اعتبار پایه (۱۰۰ سؤالی)', desc: 'شارژ کیف پول جهت ساخت، برگزاری و چاپ تا ۱۰۰ سؤال آزمون آنلاین یا چاپی با تصحیح خودکار', price: '۱۰۰٬۰۰۰ تومان'},
     {id: 'pkg-200', amount: 200000, title: 'بستهٔ اعتبار استاندارد (۲۰۰ سؤالی)', desc: 'شارژ کیف پول جهت ساخت و برگزاری تا ۲۰۰ سؤال آزمون آنلاین یا ۴ خروجی فایل Word آزمون', price: '۲۰۰٬۰۰۰ تومان'},
@@ -1368,7 +1367,9 @@
   window.LP_TARIFFS = [
     ['هر سؤال آزمون آنلاین', '۱٬۰۰۰ تومان'],
     ['هر تصویر (در سؤال یا گزینه)', '۱٬۰۰۰ تومان'],
-    ['صوت سؤال (تا ۱ / ۲ / ۳ مگابایت)', '۲٬۰۰۰ تا ۶٬۰۰۰ تومان'],
+    ['صوت سؤال تا ۱ مگابایت', '۲٬۰۰۰ تومان'],
+    ['صوت سؤال تا ۲ مگابایت', '۴٬۰۰۰ تومان'],
+    ['صوت سؤال تا ۳ مگابایت', '۶٬۰۰۰ تومان'],
     ['چاپ رسمی برگهٔ A4 (هر سؤال / تصویر)', '۱٬۰۰۰ تومان'],
     ['دریافت فایل Word آزمون (هر فایل)', '۵۰٬۰۰۰ تومان'],
     ['بازیابی نسخهٔ پشتیبان (هر سؤال)', '۱٬۰۰۰ تومان']
@@ -1381,7 +1382,7 @@
     }
     toast('بستهٔ «' + p.title + '» انتخاب شد؛ برای پرداخت وارد حساب خود شوید.', 'ok');
   }
-  function buildLandingCatalog(card, mode) {
+  function buildLandingCatalog(card, mode, onPick) {
     var prods = el('div', {class: 'lp-prod-grid'}, window.LP_PRODUCTS.map(function (p) {
       return el('div', {class: 'lp-prod-card neo'}, [
         el('div', {class: 'lp-prod-head'}, [
@@ -1390,15 +1391,13 @@
         ]),
         el('h3', {class: 'lp-prod-title', text: p.title}),
         el('p', {class: 'lp-prod-desc', text: p.desc}),
-        el('button', {type: 'button', class: 'btn sm lp-buy-btn', text: 'خرید و شارژ آنلاین', onclick: function () { selectLandingProduct(p, card, mode); }})
+        el('button', {type: 'button', class: 'btn sm lp-buy-btn', text: 'خرید و شارژ آنلاین', onclick: function () { if (onPick) onPick(p); else selectLandingProduct(p, card, mode); }})
       ]);
     }));
     var tariffs = el('div', {class: 'lp-tariff-box neo'}, [
       el('div', {class: 'lp-tariff-head'}, [
         el('h3', {text: '📋 تعرفهٔ تک‌خدمت‌ها (کسر از کیف پول)'}),
-        el('span', {class: 'muted', style: 'font-size:12.5px', text: 'ثبت‌نام، ساخت کلاس، تعریف دانش‌آموز و کارنامه رایگان است؛ هزینه فقط به ازای مصرف واقعی کسر می‌شود.'}),
-        el('span', {class: 'grow'}),
-        el('button', {type: 'button', class: 'btn light sm', text: 'پنجرهٔ کامل تعرفه‌ها', onclick: function () { if (window.SiteAdmin && window.SiteAdmin.tariffDlg) window.SiteAdmin.tariffDlg(); }})
+        el('span', {class: 'muted', style: 'font-size:12.5px', text: 'ثبت‌نام، ساخت کلاس، تعریف دانش‌آموز و کارنامه رایگان است؛ هزینه فقط به ازای مصرف واقعی کسر می‌شود.'})
       ]),
       el('div', {class: 'lp-tariff-grid'}, window.LP_TARIFFS.map(function (r) {
         return el('div', {class: 'lp-tariff-item'}, [el('span', {text: r[0]}), el('b', {text: r[1]})]);
@@ -1412,6 +1411,19 @@
       prods,
       tariffs
     ]);
+  }
+  function openLandingCatalogModal(onSelectPkg) {
+    var bg = el('div', {class: 'modal-bg lp-cat-bg', onclick: function (e) { if (e.target === bg) bg.remove(); }});
+    var cat = buildLandingCatalog(null, null, function (p) {
+      try { sessionStorage.setItem('lp-selected-pkg', String(p.amount)); sessionStorage.setItem('lp-selected-pkg-title', p.title + ' (' + p.price + ')'); } catch (e) {}
+      bg.remove();
+      if (onSelectPkg) onSelectPkg(p);
+    });
+    var head = cat.querySelector('.lp-cat-head');
+    if (head) head.insertBefore(el('button', {type: 'button', class: 'x tariff-x lp-cat-x', text: '✕', 'aria-label': 'بستن', onclick: function () { bg.remove(); }}), head.firstChild);
+    var m = el('div', {class: 'modal lp-cat-modal'}, [cat]);
+    bg.appendChild(m);
+    document.body.appendChild(bg);
   }
   var APP_MARK_SVG = '<svg viewBox="0 0 108 108" width="100%" height="100%" aria-hidden="true"><rect x="0" y="0" width="108" height="108" rx="22" fill="#fff"/><image href="/pwa/v3/mark-256.png" x="10" y="10" width="88" height="88"/></svg>'; /* V253 — لوگوی جدید «آزمون» (همان آیکون اپ اندروید) */
   /* V292.1 — نماد اعتماد الکترونیکی (اینماد): کد رسمی، فقط نمایش؛ کلیک = صفحهٔ تأیید در trustseal.enamad.ir */
@@ -2472,7 +2484,7 @@
     if (!res.ok) { var tx = await res.text(); throw new Error('آپلود فایل ناموفق بود: ' + tx.slice(0, 120)); }
     return SUPABASE_URL + '/storage/v1/object/public/' + MEDIA_BUCKET + '/' + path;
   }
-  window.ExamSite = {emojiSvg: function (k) { return emojiSvg(k, false) || ''; }, headerFingerprint: headerFingerprint, printHeaderFp: printHeaderFp, ensurePrintPaid: ensurePrintPaid, jalaliPicker: jalaliPicker, jalaliDisplay: jalaliDisplay, openFormulaEditor: openFormulaEditor, openHeaderSettings: openHeaderSettings, headerSettingsForm: headerSettingsForm, readPrintHeader: readPrintHeader, faReason: faReason, uploadMedia: uploadMedia, openPrintPreview: openPrintPreview, buildPrintPayload: buildPrintPayload, api: api, demoPrint: demoPrint,
+  window.ExamSite = {emojiSvg: function (k) { return emojiSvg(k, false) || ''; }, headerFingerprint: headerFingerprint, printHeaderFp: printHeaderFp, ensurePrintPaid: ensurePrintPaid, jalaliPicker: jalaliPicker, jalaliDisplay: jalaliDisplay, openFormulaEditor: openFormulaEditor, openHeaderSettings: openHeaderSettings, headerSettingsForm: headerSettingsForm, readPrintHeader: readPrintHeader, faReason: faReason, uploadMedia: uploadMedia, openPrintPreview: openPrintPreview, buildPrintPayload: buildPrintPayload, api: api, demoPrint: demoPrint, openLandingCatalog: openLandingCatalogModal,
     enamadBadge: enamadBadge, el: el, esc: esc, fa: fa, en: en, gradeLabel: gradeLabel, toast: toast, confirmDlg: confirmDlg, infoDlg: infoDlg, costDoneDlg: costDoneDlg, promptDlg: promptDlg, mediaBlobUrl: mediaBlobUrl, isOwnStorageUrl: isOwnStorageUrl, deleteMedia: deleteMedia, mediaUrlsIn: mediaUrlsIn, isOwnedMediaUrl: isOwnedMediaUrl, rpc: rpc, rpcObj: rpcObj, select: select, http: http, uuid: uuid, fmtScore: fmtScore, fmtDate: fmtDate, money: money, errMsg: errMsg,
     localState: localState, setLocalState: setLocalState, loading: loading, showErr: showErr, emptyBox: emptyBox, qType: qType, engineHtml: engineHtml, loadEngines: loadEngines,
     user: function () { return user; }, session: function () { return session; }, config: {url: SUPABASE_URL, anon: ANON},

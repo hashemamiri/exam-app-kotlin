@@ -797,19 +797,26 @@
         /* V202.5 — صفحهٔ اول: «دریافت برنامه» (دانلود مستقیم APK از app_version) + «ورود به سامانه» + کاشی‌های معرفی سایت دسکتاپ */
         stag(3, apkBtn),
         stag(4, outline(S.user() ? 'ورود به سامانه' : 'ورود / ثبت‌نام', function () { if (S.user()) { enter(); S.render(); } else goA('login', {tab: 1}); })),
-        stag(5, btn('💳 محصولات و تعرفه‌ها', function () { var c = shell.querySelector('.ice-catalog'); if (c) c.scrollIntoView({behavior: 'smooth', block: 'start'}); }, 'outline ice-price-jump')),
+        stag(5, btn('💳 محصولات و تعرفه‌ها', function () { openMobileCatalog(); }, 'outline ice-price-jump')),
         stag(5, el('div', {class: 'ice-tiles'}, LANDING_TILES.map(function (t) { return el('div', {class: 'ice-tile'}, [(window.LP_FLAT_ICONS && window.LP_FLAT_ICONS[t[2]]) ? el('i', {class: 'ico48', 'aria-hidden': 'true', html: '<svg viewBox="0 0 48 48">' + window.LP_FLAT_ICONS[t[2]] + '</svg>'}) : el('i', {'aria-hidden': 'true', text: t[0]}), el('span', {text: t[1]})]); }))),
-        stag(6, buildMobileCatalog()),
         stag(6, S.user() ? null : link('ساخت حساب جدید (معلم / مدیر)', function () { goA('register', {regTab: 0, step: 'form'}); })),
         stag(7, el('div', {class: 'ice-badges'}, [S.enamadBadge()])), /* V292.1 — اینماد */
         stag(7, el('p', {class: 'ice-note', text: 'حساب دانش‌آموز را معلم می‌سازد؛ نام کاربری و رمز را از معلم خود دریافت کنید.'}))
       ]);
     }
+    function openMobileCatalog() {
+      if (S.openLandingCatalog) {
+        S.openLandingCatalog(function (p) {
+          toast('بستهٔ «' + p.title + '» انتخاب شد؛ برای پرداخت وارد حساب خود شوید.', 'ok');
+          if (S.user()) { ui.page = 'wallet'; enter(); S.render(); }
+          else goA('login', {tab: 1});
+        });
+      }
+    }
     function mobileShowcase() {
       return el('div', {class: 'ice-showcase'}, [
-        btn('💳 محصولات و تعرفه‌ها', function () { var c = shell.querySelector('.ice-catalog'); if (c) c.scrollIntoView({behavior: 'smooth', block: 'start'}); }, 'outline ice-price-jump'),
+        btn('💳 محصولات و تعرفه‌ها', function () { openMobileCatalog(); }, 'outline ice-price-jump'),
         el('div', {class: 'ice-tiles'}, LANDING_TILES.map(function (t) { return el('div', {class: 'ice-tile'}, [(window.LP_FLAT_ICONS && window.LP_FLAT_ICONS[t[2]]) ? el('i', {class: 'ico48', 'aria-hidden': 'true', html: '<svg viewBox="0 0 48 48">' + window.LP_FLAT_ICONS[t[2]] + '</svg>'}) : el('i', {'aria-hidden': 'true', text: t[0]}), el('span', {text: t[1]})]); })),
-        buildMobileCatalog(),
         el('div', {class: 'ice-badges'}, [S.enamadBadge()])
       ]);
     }

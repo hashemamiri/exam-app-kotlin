@@ -4,7 +4,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.File
 
-/** V311.2..V311.5 — نمایش محصولات، بسته‌های شارژ کیف پول، تعرفهٔ خدمات (الزام شاپرک)، دکمه بالای ۸ بلوک، تگ رسمی اینماد و اسکرول گوشی. */
+/** V311.2..V311.6 — پنجرهٔ میانی محصولات و تعرفه‌ها با لمس دکمهٔ «💳 محصولات و تعرفه‌ها»، تفکیک ۳ دکمهٔ صوت سؤال و اسکرول گوشی. */
 class V311_2_SiteLandingCatalogTest {
     private fun root(): File = listOf(File("."), File("..")).first { File(it, "site/src/extras.js").isFile }
     private fun src(p: String) = File(root(), p).readText()
@@ -21,11 +21,12 @@ class V311_2_SiteLandingCatalogTest {
         for (price in listOf("۱۰۰٬۰۰۰ تومان", "۲۰۰٬۰۰۰ تومان", "۵۰۰٬۰۰۰ تومان", "۱٬۰۰۰٬۰۰۰ تومان")) {
             assertTrue(price, price in app && price in tpl)
         }
-        assertTrue("function buildLandingCatalog(" in app && "خرید و شارژ آنلاین" in app && "💳 محصولات و تعرفه‌ها" in app)
+        assertTrue("['صوت سؤال تا ۱ مگابایت', '۲٬۰۰۰ تومان']" in app && "['صوت سؤال تا ۲ مگابایت', '۴٬۰۰۰ تومان']" in app && "['صوت سؤال تا ۳ مگابایت', '۶٬۰۰۰ تومان']" in app)
+        assertTrue("function openLandingCatalogModal(" in app && "خرید و شارژ آنلاین" in app && "💳 محصولات و تعرفه‌ها" in app)
         assertTrue("var tilesCol = el('div', {class: 'lp-tiles-col'});" in app && "left.replaceChild(tilesCol, tilesEl);" in app && "tilesCol.appendChild(priceBtn);" in app && "tilesCol.appendChild(tilesEl);" in app)
         assertTrue("img.setAttribute('alt', '');" in app && "img.style.cursor = 'pointer';" in app)
-        assertTrue("function buildMobileCatalog()" in mob && "function mobileShowcase()" in mob && "ice-price-jump" in mob)
+        assertTrue("function openMobileCatalog()" in mob && "function mobileShowcase()" in mob && "ice-price-jump" in mob)
         assertTrue("sessionStorage.getItem('lp-selected-pkg')" in adm && "sessionStorage.getItem('lp-selected-pkg')" in app)
-        assertTrue(".lp-catalog{" in css && ".lp-tiles-col{" in css && ".ice{overflow-x:hidden;overflow-y:visible;" in css)
+        assertTrue(".lp-cat-modal{" in css && ".lp-tiles-col{" in css && ".ice{overflow-x:hidden;overflow-y:visible;" in css)
     }
 }
