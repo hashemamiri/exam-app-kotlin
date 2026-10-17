@@ -22,7 +22,7 @@ class V167_SiteDesktopCardsTest {
         assertTrue("function pageCards(c)" in a && "cards: pageCards" in a && "M.teacherCards().forEach(function (k)" in a && "class: 'dk-gcard', style: 'background:' + k[3], onclick: k[4]" in a)
         val m = source("site/src/mobile.js")
         assertTrue("function teacherCards() {" in m && "function cardsScreen(c) { cardsDeck(c, 'teacher', teacherCards()); }" in m && "teacherCards: teacherCards, icons: I," in m)
-        for (t in listOf("'آمار'", "'کارنامه'", "'بانک سؤال'", "'تصحیح'", "'مانده'", "'پاسخ'", "'درخواست‌ها'", "'شرکت در آزمون'")) assertTrue(t, "[$t, " in m)
+        for (t in listOf("'آمار'", "'کارنامه'", "'بانک سؤال'", "'تصحیح'", "'مانده'", "'پاسخ'", "'درخواست‌ها'", "'شرکت در آزمون'", "'حضور و غیاب'", "'گزارش نظارتی'", "'تحلیل سؤال‌ها'", "'بانک بازخورد'")) assertTrue(t, "[$t, " in m)
         assertTrue("function joinTeacherPracticeById(examId)" in source("site/src/student.js"))
         assertTrue("function renderPracticeResult(c, ex, auto)" in source("site/src/student.js"))
         val css = source("site/src/site.css")

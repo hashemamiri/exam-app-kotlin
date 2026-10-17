@@ -159,6 +159,7 @@ class GradingViewModel(
         val inputs = submissions.flatMap { answer ->
             exam.questions.indices.map { index -> scoreKey(answer.id, index) to edits.getValue(answer.id).grades[index].toString() }
         }.toMap()
+        val targetMode = state.value.mode.takeIf { it in setOf("grading", "question", "attendance") } ?: "grading"
         _state.update {
             it.copy(
                 actionLoading = false,
@@ -167,9 +168,10 @@ class GradingViewModel(
                 edits = edits,
                 scoreInputs = inputs,
                 scoreErrors = emptySet(),
-                mode = "grading"
+                mode = targetMode
             )
         }
+        if (targetMode == "attendance") startLiveRefresh()
     }
 
     fun back() {

@@ -64,8 +64,8 @@ import kotlin.math.sign
 
 object Design69ManagementCardsContract {
     // V131 — کارت «کارنامه» (کارنامه و لیست نمرات) از «آمار» جدا شد.
-    // V313.0 — کارت هشتم «شرکت در آزمون» (پاسخ‌گویی آزمایشی معلم در محیط دانش‌آموز).
-    const val CARD_COUNT = 8
+    // V313.0/V313.2 — کارت «شرکت در آزمون» + ۴ کارت عملیاتی آزمون (حضور و غیاب، گزارش نظارتی، تحلیل سؤال‌ها، بانک بازخورد).
+    const val CARD_COUNT = 12
     const val DRAG_THRESHOLD_DP = 52
 }
 
@@ -88,7 +88,11 @@ fun TeacherManagementCardsScreen(
     onPending: () -> Unit,
     onAnswers: () -> Unit,
     onRequests: () -> Unit,
-    onPracticeExam: () -> Unit = {}
+    onPracticeExam: () -> Unit = {},
+    onAttendance: () -> Unit = onGrading,
+    onMonitor: () -> Unit = onGrading,
+    onAnalysis: () -> Unit = onStats,
+    onFeedbackBank: () -> Unit = onGrading
 ) {
     val neo = neumorphic69Colors
     val cards = remember(
@@ -100,6 +104,10 @@ fun TeacherManagementCardsScreen(
         onAnswers,
         onRequests,
         onPracticeExam,
+        onAttendance,
+        onMonitor,
+        onAnalysis,
+        onFeedbackBank,
         neo.accent,
         neo.accent2
     ) {
@@ -159,6 +167,34 @@ fun TeacherManagementCardsScreen(
                 Design69Icons.Exams,
                 listOf(Color(0xFF10B981), Color(0xFF3B82F6)),
                 onPracticeExam
+            ),
+            ManagementCardSpec(
+                "حضور و غیاب",
+                "حاضرین و غایبین آزمون، وضعیت زنده، تمدید وقت و ریست تلاش دانش‌آموزان.",
+                Design69Icons.Students,
+                listOf(Color(0xFFF59E0B), Color(0xFFEF4444)),
+                onAttendance
+            ),
+            ManagementCardSpec(
+                "گزارش نظارتی",
+                "بررسی خروج از صفحه، اسکرین‌شات، تلاش برای کپی و زمان صرف‌شده روی هر سؤال.",
+                Design69Icons.InfoUpdate,
+                listOf(Color(0xFFEC4899), Color(0xFF8B5CF6)),
+                onMonitor
+            ),
+            ManagementCardSpec(
+                "تحلیل سؤال‌ها",
+                "ضریب دشواری، درصد پاسخ صحیح و توزیع گزینه‌های انتخاب‌شده در هر سؤال.",
+                Design69Icons.Dashboard,
+                listOf(Color(0xFF14B8A6), Color(0xFF6366F1)),
+                onAnalysis
+            ),
+            ManagementCardSpec(
+                "بانک بازخورد",
+                "مدیریت، افزودن، ویرایش و حذف جملات آمادهٔ تشویقی و بازخورد تصحیح.",
+                Design69Icons.Header,
+                listOf(Color(0xFF8B5CF6), Color(0xFF06B6D4)),
+                onFeedbackBank
             )
         )
     }

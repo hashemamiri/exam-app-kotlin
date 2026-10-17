@@ -279,7 +279,11 @@
       ['مانده', 'فقط پاسخ‌های در انتظار تصحیح و پیگیری را نمایش می‌دهد.', 'cards', 'linear-gradient(135deg,#E0587F,#7D6CF4)', function () { go('grading', {filter: 'pending'}); }],
       ['پاسخ', 'فقط پاسخ‌های تصحیح‌شده دارای نمره و بازخورد نهایی را نمایش می‌دهد.', 'grading', 'linear-gradient(135deg,#4D5B74,#273247)', function () { go('grading', {filter: 'graded'}); }],
       ['درخواست‌ها', 'درخواست‌های ویرایش یا حذف مدیر را مشاهده، تأیید یا رد کنید.', 'account', 'linear-gradient(135deg,#7D6CF4,#E0587F)', function () { go('requests'); }],
-      ['شرکت در آزمون', 'پاسخ‌گویی آزمایشی به آزمون‌های خود دقیقاً در محیط دانش‌آموز و مشاهدهٔ نمره.', 'exams', 'linear-gradient(135deg,#10B981,#3B82F6)', function () { go('join', {practice: true}); }]
+      ['شرکت در آزمون', 'پاسخ‌گویی آزمایشی به آزمون‌های خود دقیقاً در محیط دانش‌آموز و مشاهدهٔ نمره.', 'exams', 'linear-gradient(135deg,#10B981,#3B82F6)', function () { go('join', {practice: true}); }],
+      ['حضور و غیاب', 'حاضرین و غایبین آزمون، وضعیت زنده، تمدید وقت و ریست تلاش دانش‌آموزان.', 'students', 'linear-gradient(135deg,#F59E0B,#EF4444)', function () { go('grading', {tab: 'attendance'}); }],
+      ['گزارش نظارتی', 'بررسی خروج از صفحه، اسکرین‌شات، تلاش برای کپی و زمان صرف‌شده روی هر سؤال.', 'eye', 'linear-gradient(135deg,#EC4899,#8B5CF6)', function () { go('grading', {tab: 'monitor'}); }],
+      ['تحلیل سؤال‌ها', 'ضریب دشواری، درصد پاسخ صحیح و توزیع گزینه‌های انتخاب‌شده در هر سؤال.', 'filter', 'linear-gradient(135deg,#14B8A6,#6366F1)', function () { go('grading', {tab: 'analysis'}); }],
+      ['بانک بازخورد', 'مدیریت، افزودن، ویرایش و حذف جملات آمادهٔ تشویقی و بازخورد تصحیح.', 'edit', 'linear-gradient(135deg,#8B5CF6,#06B6D4)', function () { go('grading', {tab: 'feedback'}); }]
     ];
     return cards;
   }

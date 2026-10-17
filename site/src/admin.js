@@ -25,16 +25,23 @@
       try { var ans = await S.select('answers', 'select=exam_id,graded'); (ans || []).forEach(function (a) { var k = counts[a.exam_id] || (counts[a.exam_id] = {n: 0, g: 0}); k.n++; if (a.graded) k.g++; }); } catch (e) {}
       c.innerHTML = '';
       /* V148 — فیلتر کارت‌های «مانده» (فقط آزمون‌های دارای پاسخ در انتظار) و «پاسخ» (فقط تصحیح‌شده‌ها)، مثل اپ */
-      var filt = arg.filter || '';
+      var filt = arg.filter || '', defTab = arg.tab || '';
       if (filt === 'pending') exams = exams.filter(function (x) { var k = counts[x.id]; return k && k.n > k.g; });
       if (filt === 'graded') exams = exams.filter(function (x) { var k = counts[x.id]; return k && k.g > 0; });
-      var card = el('div', {class: 'card'}, [el('h3', {text: filt === 'pending' ? '⏳ مانده (در انتظار تصحیح)' : filt === 'graded' ? '✅ پاسخ‌های تصحیح‌شده' : '✅ تصحیح و بازخورد'})]);
+      var headTitle = filt === 'pending' ? '⏳ مانده (در انتظار تصحیح)' : filt === 'graded' ? '✅ پاسخ‌های تصحیح‌شده' : defTab === 'attendance' ? '👥 حضور و وضعیت زنده آزمون‌ها' : defTab === 'monitor' ? '🛡 گزارش نظارتی آزمون‌ها' : defTab === 'analysis' ? '📈 تحلیل کیفیت سؤال‌های آزمون‌ها' : defTab === 'feedback' ? '💬 بانک بازخورد معلم' : '✅ تصحیح و بازخورد';
+      var card = el('div', {class: 'card'}, [el('h3', {text: headTitle})]);
+      if (defTab === 'feedback') {
+        var fbBody = el('div'); card.appendChild(fbBody); c.appendChild(card);
+        tabFeedbackBank(fbBody, {refresh: function () { gradingPage(c, arg); }});
+        return;
+      }
       if (!exams.length) { card.appendChild(S.emptyBox('📝', filt === 'pending' ? 'پاسخی در انتظار تصحیح نیست.' : filt === 'graded' ? 'هنوز پاسخی تصحیح نشده است.' : 'هنوز آزمونی نساخته‌اید.')); c.appendChild(card); return; }
+      var mainActLabel = defTab === 'attendance' ? 'حضور و وضعیت زنده' : defTab === 'monitor' ? 'گزارش نظارتی' : defTab === 'analysis' ? 'تحلیل سؤال‌ها' : 'تصحیح';
       card.appendChild(el('table', {class: 'tbl'}, [
         el('thead', {}, [el('tr', {}, ['آزمون', 'درس', 'بارم', 'پاسخ‌ها', 'تصحیح‌شده', ''].map(function (h) { return el('th', {text: h}); }))]),
         el('tbody', {}, exams.map(function (x) { var k = counts[x.id] || {n: 0, g: 0}; var pend = k.n - k.g; return el('tr', {}, [el('td', {html: '<b>' + esc(x.title) + '</b>'}), el('td', {text: x.subject || '—'}), el('td', {text: fa(S.fmtScore(x.total_score))}), el('td', {text: fa(k.n)}),
           el('td', {}, [el('span', {class: 'chip ' + (pend ? 'warn' : 'ok'), text: fa(k.g) + ' / ' + fa(k.n) + (pend ? ' (' + fa(pend) + ' در انتظار)' : '')})]),
-          el('td', {}, [el('div', {class: 'acts'}, [el('button', {class: 'btn sm', text: 'تصحیح', onclick: function () { S.go('grading', {examId: x.id}); }}), el('button', {class: 'btn light sm', text: 'حضور', onclick: function () { S.go('grading', {examId: x.id, tab: 'attendance'}); }})])])]); }))
+          el('td', {}, [el('div', {class: 'acts'}, [el('button', {class: 'btn sm', text: mainActLabel, onclick: function () { S.go('grading', {examId: x.id, tab: defTab || 'grading'}); }}), defTab !== 'attendance' ? el('button', {class: 'btn light sm', text: 'حضور', onclick: function () { S.go('grading', {examId: x.id, tab: 'attendance'}); }}) : null])])]); }))
       ]));
       c.appendChild(card);
     } catch (e) { S.showErr(c, e); }

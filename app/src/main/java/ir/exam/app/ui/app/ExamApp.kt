@@ -208,6 +208,7 @@ private fun AuthenticatedExamApp(
     var siteError by remember(user.id) { mutableStateOf<String?>(null) }
     var gradingPendingOnly by remember(user.id) { mutableStateOf(false) }
     var gradingGradedOnly by remember(user.id) { mutableStateOf(false) }
+    var gradingInitialMode by remember(user.id) { mutableStateOf("grading") }
     var showSignOut by remember(user.id) { mutableStateOf(false) }
     var studentExamDialog by rememberSaveable(user.id) { mutableStateOf(false) }
     var studentExamCode by rememberSaveable(user.id) { mutableStateOf("") }
@@ -624,7 +625,8 @@ private fun AuthenticatedExamApp(
                 MainPage.GRADING -> if (user.role == UserRole.TEACHER) {
                     GradingScreen(
                         initialPendingOnly = gradingPendingOnly,
-                        initialGradedOnly = gradingGradedOnly
+                        initialGradedOnly = gradingGradedOnly,
+                        initialMode = gradingInitialMode
                     )
                 }
                 MainPage.REPORTS -> if (user.role == UserRole.TEACHER) ReportsScreen(section = reportsSection)
@@ -678,20 +680,47 @@ private fun AuthenticatedExamApp(
                         onGrading = {
                             gradingPendingOnly = false
                             gradingGradedOnly = false
+                            gradingInitialMode = "grading"
                             page = MainPage.GRADING
                         },
                         onPending = {
                             gradingPendingOnly = true
                             gradingGradedOnly = false
+                            gradingInitialMode = "grading"
                             page = MainPage.GRADING
                         },
                         onAnswers = {
                             gradingPendingOnly = false
                             gradingGradedOnly = true
+                            gradingInitialMode = "grading"
                             page = MainPage.GRADING
                         },
                         onRequests = { page = MainPage.REQUESTS },
-                        onPracticeExam = { page = MainPage.PRACTICE_EXAM }
+                        onPracticeExam = { page = MainPage.PRACTICE_EXAM },
+                        onAttendance = {
+                            gradingPendingOnly = false
+                            gradingGradedOnly = false
+                            gradingInitialMode = "attendance"
+                            page = MainPage.GRADING
+                        },
+                        onMonitor = {
+                            gradingPendingOnly = false
+                            gradingGradedOnly = false
+                            gradingInitialMode = "monitor"
+                            page = MainPage.GRADING
+                        },
+                        onAnalysis = {
+                            gradingPendingOnly = false
+                            gradingGradedOnly = false
+                            gradingInitialMode = "question"
+                            page = MainPage.GRADING
+                        },
+                        onFeedbackBank = {
+                            gradingPendingOnly = false
+                            gradingGradedOnly = false
+                            gradingInitialMode = "feedback"
+                            page = MainPage.GRADING
+                        }
                     )
                 }
                 MainPage.REQUESTS -> if (user.role == UserRole.TEACHER) TeacherManagerRequestsScreen()

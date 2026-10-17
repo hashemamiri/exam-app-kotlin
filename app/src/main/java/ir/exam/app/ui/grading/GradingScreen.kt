@@ -63,15 +63,19 @@ import kotlinx.serialization.json.jsonPrimitive
 fun GradingScreen(
     initialPendingOnly: Boolean = false,
     initialGradedOnly: Boolean = false,
+    initialMode: String = "grading",
     viewModel: GradingViewModel = remember { GradingViewModel() }
 ) {
     val state by viewModel.state.collectAsState()
     var showFeedbackDialog by remember { mutableStateOf(false) }
     var editingFeedback by remember { mutableStateOf<ir.exam.app.domain.model.FeedbackPhrase?>(null) }
     LaunchedEffect(Unit) { viewModel.load() }
-    LaunchedEffect(initialPendingOnly, initialGradedOnly) {
+    LaunchedEffect(initialPendingOnly, initialGradedOnly, initialMode) {
         viewModel.setPendingOnly(initialPendingOnly)
         viewModel.setGradedOnly(initialGradedOnly)
+        if (initialMode in setOf("grading", "question", "attendance")) {
+            viewModel.setMode(initialMode)
+        }
     }
 
     // V58.0 — پنجرهٔ گزارش‌های نظارتی آزمون (لیست دانش‌آموزان + رویدادها).
@@ -91,6 +95,36 @@ fun GradingScreen(
 
         val exam = state.selectedExam
         if (exam == null) {
+            if (initialMode == "feedback") {
+                Card(Modifier.fillMaxWidth()) {
+                    Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Row(
+                            Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text("بانک بازخورد معلم", style = MaterialTheme.typography.titleMedium)
+                            Button(onClick = { showFeedbackDialog = true }) { Text("بازخورد جدید") }
+                        }
+                        if (state.feedbackBank.isEmpty()) {
+                            Text("هنوز عبارت بازخوردی ثبت نکرده‌اید.", style = MaterialTheme.typography.bodySmall)
+                        } else {
+                            Row(
+                                Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                state.feedbackBank.forEach { phrase ->
+                                    FilterChip(
+                                        selected = false,
+                                        onClick = { editingFeedback = phrase },
+                                        label = { Text(phrase.text) }
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
             // V280 — توضیح کوتاه به هدر برنامه منتقل شد (ExamApp › gradingHint)؛ داخل صفحه هیچ عنوانی نیست.
             val visibleExams = if (state.pendingOnly) {
                 // «مانده» فقط آزمون‌هایی را نشان می‌دهد که پاسخِ تصحیح‌نشده دارند (تا آمار نرسیده، همه می‌مانند).

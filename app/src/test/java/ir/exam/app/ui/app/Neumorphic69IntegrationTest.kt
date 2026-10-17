@@ -71,8 +71,8 @@ class Neumorphic69IntegrationTest {
         // V61.5 — عمل چهارم «مدرسه جدید» به پنجرهٔ + اضافه شد.
         assertEquals(4, Design69QuickAddContract.ACTION_COUNT)
         assertEquals(135, Design69QuickAddContract.OPEN_ROTATION_DEGREES)
-        // V131 — کارت «کارنامه» از «آمار» جدا شد؛ V313.0 — کارت هشتم «شرکت در آزمون».
-        assertEquals(8, Design69ManagementCardsContract.CARD_COUNT)
+        // V131 — کارت «کارنامه» از «آمار» جدا شد؛ V313.0/V313.2 — تکمیل ۱۲ کارت مدیریتی معلم.
+        assertEquals(12, Design69ManagementCardsContract.CARD_COUNT)
         assertEquals(52, Design69ManagementCardsContract.DRAG_THRESHOLD_DP)
     }
 
