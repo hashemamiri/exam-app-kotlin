@@ -1398,8 +1398,7 @@
         el('h3', {text: '📋 تعرفهٔ تک‌خدمت‌ها (کسر از کیف پول)'}),
         el('span', {class: 'muted', style: 'font-size:12.5px', text: 'ثبت‌نام، ساخت کلاس، تعریف دانش‌آموز و کارنامه رایگان است؛ هزینه فقط به ازای مصرف واقعی کسر می‌شود.'}),
         el('span', {class: 'grow'}),
-        el('button', {type: 'button', class: 'btn light sm', text: 'پنجرهٔ کامل تعرفه‌ها', onclick: function () { if (window.SiteAdmin && window.SiteAdmin.tariffDlg) window.SiteAdmin.tariffDlg(); }}),
-        enamadBadge()
+        el('button', {type: 'button', class: 'btn light sm', text: 'پنجرهٔ کامل تعرفه‌ها', onclick: function () { if (window.SiteAdmin && window.SiteAdmin.tariffDlg) window.SiteAdmin.tariffDlg(); }})
       ]),
       el('div', {class: 'lp-tariff-grid'}, window.LP_TARIFFS.map(function (r) {
         return el('div', {class: 'lp-tariff-item'}, [el('span', {text: r[0]}), el('b', {text: r[1]})]);
@@ -1418,17 +1417,16 @@
   /* V292.1 — نماد اعتماد الکترونیکی (اینماد): کد رسمی، فقط نمایش؛ کلیک = صفحهٔ تأیید در trustseal.enamad.ir */
   var ENAMAD_ID = '7284073', ENAMAD_CODE = 'jMyKBK6rprs9sP21KAmyzz1gB7ZuPySb';
   function enamadBadge() {
-    var a = el('a', {class: 'enamad', href: 'https://trustseal.enamad.ir/?id=' + ENAMAD_ID + '&Code=' + ENAMAD_CODE, target: '_blank', rel: 'noopener', 'aria-label': 'نماد اعتماد الکترونیکی'});
+    var a = el('a', {class: 'enamad', href: 'https://trustseal.enamad.ir/?id=' + ENAMAD_ID + '&Code=' + ENAMAD_CODE, target: '_blank'});
     a.setAttribute('referrerpolicy', 'origin');
     var img = document.createElement('img');
     img.setAttribute('referrerpolicy', 'origin');
     img.setAttribute('src', 'https://trustseal.enamad.ir/logo.aspx?id=' + ENAMAD_ID + '&Code=' + ENAMAD_CODE);
-    img.setAttribute('alt', 'نماد اعتماد الکترونیکی');
-    img.setAttribute('code', ENAMAD_CODE);
+    img.setAttribute('alt', '');
     img.style.cursor = 'pointer';
+    img.setAttribute('code', ENAMAD_CODE);
     /* V299 — اگر تصویر از سرور اینماد نیامد (دامنهٔ غیرثبت‌شده مثل سایت آزمایشی، یا قطعی)، به‌جای مخفی‌شدن، پیوند متنی نمایش داده شود */
     img.addEventListener('error', function () { a.classList.add('enamad-txt'); img.remove(); a.textContent = 'نماد اعتماد الکترونیکی'; });
-    img.addEventListener('load', function () { if (img.naturalWidth && img.naturalWidth > 16) a.classList.add('enamad-ok'); else { a.classList.add('enamad-txt'); a.textContent = 'نماد اعتماد الکترونیکی'; } });
     a.appendChild(img);
     return a;
   }
