@@ -1347,7 +1347,10 @@
     var right = el('div', {class: 'lp-r'}, [card]);
     var catalog = buildLandingCatalog(card, mode);
     var priceBtn = el('button', {type: 'button', class: 'btn light sm lp-price-jump', text: '💳 محصولات و تعرفه‌ها', onclick: function () { catalog.scrollIntoView({behavior: 'smooth', block: 'start'}); }});
-    left.replaceChild(el('div', {class: 'lp-tiles-col'}, [priceBtn, tilesEl]), tilesEl);
+    var tilesCol = el('div', {class: 'lp-tiles-col'});
+    left.replaceChild(tilesCol, tilesEl);
+    tilesCol.appendChild(priceBtn);
+    tilesCol.appendChild(tilesEl);
     var page = el('div', {class: 'lp lp-sky'}, [
       el('div', {class: 'glow g1'}), el('div', {class: 'glow g2'}), el('div', {class: 'cloud c1'}), el('div', {class: 'cloud c2'}), el('div', {class: 'cloud c3'}), el('div', {class: 'cloud c4'}),
       left, right, catalog

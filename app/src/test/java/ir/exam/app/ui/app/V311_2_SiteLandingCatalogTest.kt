@@ -22,7 +22,7 @@ class V311_2_SiteLandingCatalogTest {
             assertTrue(price, price in app && price in tpl)
         }
         assertTrue("function buildLandingCatalog(" in app && "خرید و شارژ آنلاین" in app && "💳 محصولات و تعرفه‌ها" in app)
-        assertTrue("left.replaceChild(el('div', {class: 'lp-tiles-col'}, [priceBtn, tilesEl]), tilesEl);" in app)
+        assertTrue("var tilesCol = el('div', {class: 'lp-tiles-col'});" in app && "left.replaceChild(tilesCol, tilesEl);" in app && "tilesCol.appendChild(priceBtn);" in app && "tilesCol.appendChild(tilesEl);" in app)
         assertTrue("img.addEventListener('load', function () { if (img.naturalWidth && img.naturalWidth > 16) a.classList.add('enamad-ok');" in app)
         assertTrue("function buildMobileCatalog()" in mob && "function mobileShowcase()" in mob && "ice-price-jump" in mob)
         assertTrue("sessionStorage.getItem('lp-selected-pkg')" in adm && "sessionStorage.getItem('lp-selected-pkg')" in app)
