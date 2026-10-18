@@ -16,5 +16,14 @@
 /panels.*.js
   Cache-Control: public, max-age=31536000, immutable
 
+/s*.css
+  Cache-Control: public, max-age=31536000, immutable
+
+/c*.js
+  Cache-Control: public, max-age=31536000, immutable
+
+/p*.js
+  Cache-Control: public, max-age=31536000, immutable
+
 /pwa/v3/*
   Cache-Control: public, max-age=604800

@@ -757,6 +757,26 @@
   function loadPanels() {
     if (window.__PANELS_LOADED || (window.SiteAdmin && window.SiteSchool && window.SiteBuilder && window.SiteStudent)) { window.__PANELS_LOADED = true; return Promise.resolve(true); }
     if (panelsReady) return panelsReady;
+    if (Array.isArray(window.__PANELS_URLS) && window.__PANELS_URLS.length) {
+      panelsReady = Promise.all(window.__PANELS_URLS.map(function (u) {
+        return new Promise(function (res, rej) {
+          function tryChunk(n) {
+            var s = document.createElement('script'); s.src = u + (n > 1 ? '?r=' + n : ''); s.async = true;
+            var t = setTimeout(function () { try { s.remove(); } catch (e) {} if (n < 2) tryChunk(n + 1); else rej(new Error('بارگذاری بخش‌های پنل کاربری ناموفق بود؛ اینترنت را بررسی کنید.')); }, 15000);
+            s.onload = function () { clearTimeout(t); res(true); };
+            s.onerror = function () { clearTimeout(t); try { s.remove(); } catch (e) {} if (n < 2) setTimeout(function () { tryChunk(n + 1); }, 600); else rej(new Error('بارگذاری بخش‌های پنل کاربری ناموفق بود؛ اینترنت را بررسی کنید.')); };
+            document.head.appendChild(s);
+          }
+          tryChunk(1);
+        });
+      })).then(function () {
+        if (Array.isArray(window.__PJ)) {
+          var ex = document.createElement('script'); ex.textContent = window.__PJ.join(''); delete window.__PJ; document.body.appendChild(ex);
+        }
+        window.__PANELS_LOADED = true; return true;
+      }, function (err) { panelsReady = null; throw err; });
+      return panelsReady;
+    }
     var url = window.__PANELS_URL;
     if (!url) { window.__PANELS_LOADED = true; return Promise.resolve(true); }
     panelsReady = new Promise(function (resolve, reject) {

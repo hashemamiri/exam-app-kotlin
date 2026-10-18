@@ -50,7 +50,7 @@ self.addEventListener('fetch', function (e) {
   if (req.method !== 'GET') return;
   var url = new URL(req.url);
   if (url.origin !== self.location.origin) return; /* Supabase، آروان، فونت‌ها: مستقیم شبکه */
-  if (req.mode === 'navigate' || url.pathname === '/' || url.pathname === '/index.html') {
+  if ((req.mode === 'navigate' && (url.pathname === '/' || url.pathname === '/index.html')) || url.pathname === '/' || url.pathname === '/index.html') {
     /* V312.0 — ضد قفل اپراتورهای ایران: اگر پوسته در کش هست حداکثر ۳٫۵ ثانیه منتظر شبکه می‌ماند و در صورت کندی/قطعی فوراً کش را نشان داده و در پس‌زمینه به‌روز می‌کند؛ اگر کش نبود با مهلت ۱۰ ثانیه و یک تکرار خودکار تلاش می‌کند. */
     e.respondWith(caches.match('/').then(function (cached) {
       var bgUpdate = fetch(req).then(function (r) {
@@ -77,6 +77,10 @@ self.addEventListener('fetch', function (e) {
   }
   if (/^\/panels\.[0-9a-f]+\.js$/.test(url.pathname)) {
     e.respondWith(caches.match(req).then(function (r) { return r || fetch(req).then(function (n) { if (n.ok) { var copy = n.clone(); caches.open(CACHE).then(function (c) { c.keys().then(function (ks) { ks.forEach(function (k) { if (/\/panels\./.test(k.url) && k.url !== req.url) c.delete(k); }); }); c.put(req, copy); }); } return n; }); }));
+    return;
+  }
+  if (/^\/(s[0-9]|c[0-9]|p[0-9])\.[0-9a-f]+\.(css|js)$/.test(url.pathname)) {
+    e.respondWith(caches.match(req).then(function (r) { return r || fetch(req).then(function (n) { if (n.ok) { var copy = n.clone(); caches.open(CACHE).then(function (c) { c.put(req, copy); }); } return n; }); }));
     return;
   }
   /* V164 — قلم‌ها و پوشهٔ pwa: کش-اول */
