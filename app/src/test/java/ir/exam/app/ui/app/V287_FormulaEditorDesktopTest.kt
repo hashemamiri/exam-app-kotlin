@@ -75,4 +75,21 @@ class V287_FormulaEditorDesktopTest {
         assertTrue("W.__mbBracketDefault = bracketDefault;" in f)
         assertTrue("if (MB_MATRIX_DIM) MB_MATRIX_DIM.env = 'bmatrix';" in f)
     }
+
+    @Test
+    fun formulaBackAndToolNoDuplicateBar() {
+        val f = src("app/src/main/assets/formula_editor/formula.html")
+        assertTrue("id=\"mbBackWinBtn\"" in f && "window.mbBackOrClose = function ()" in f)
+        assertTrue("window.__mbActivePrevMenu = window.__mbFromCatMenu" in f)
+        val host = src("app/src/main/java/ir/exam/app/ui/math/FormulaHostDialog.kt")
+        assertTrue("window.mbBackOrClose ? window.mbBackOrClose() : 'closed'" in host)
+        val app = src("site/src/app.js")
+        assertTrue("overlay.__onBack = function ()" in app)
+        assertTrue("iframe.srcdoc = h;\n      iframe.addEventListener('load'" in app)
+        val mob = src("site/src/mobile.js")
+        assertTrue("if (typeof e.__onBack === 'function') { e.__onBack(); return true; }" in mob)
+        val builder = src("site/src/builder.js")
+        val fn = builder.substringAfter("function insertFigure(").substringBefore("function dictate(")
+        assertTrue("overlay.__close = close;" in fn && "engine-bar" !in fn)
+    }
 }

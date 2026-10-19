@@ -976,7 +976,8 @@
       el('button', {class: 'btn light sm', text: '✕ بستن', onclick: closePrintOverlay})
     ]);
     var iframe = el('iframe', {class: 'with-bar', title: 'print-engine'});
-    overlay.appendChild(bar); overlay.appendChild(iframe); document.body.appendChild(overlay);
+    overlay.__close = closePrintOverlay;
+    overlay.appendChild(bar); document.body.appendChild(overlay);
     document.body.style.overflow = 'hidden'; document.body.classList.add('engine-open'); /* V179 */
     printCtx = {overlay: overlay, iframe: iframe, direct: opts.printMode === 'student' || opts.printMode === 'teacher', examId: opts.examId || '', questionCount: (payload.questions || []).length, onClosed: opts.onClosed, onSnapshot: opts.onSnapshot,
       payload: payload, title: opts.title || '', printExam: opts.printExam, printDirty: !!opts.printDirty}; /* V199 */
@@ -1001,13 +1002,13 @@
         if (tries < 200 || (!inlined.done && tries < 1200)) setTimeout(push, 50); else toast(inlined.done ? 'موتور چاپ آماده نشد.' : 'بارگذاری تصویرهای آزمون طول کشید.', 'err');
       })();
     });
-    engineHtml('print').then(function (h) { if (h) iframe.srcdoc = h; else closePrintOverlay(); });
+    engineHtml('print').then(function (h) { if (h) { iframe.srcdoc = h; overlay.appendChild(iframe); } else closePrintOverlay(); });
   }
   /* ---- ویرایشگر فرمول: پل ExamEditorNative (FormulaHostDialog.kt) ---- */
   var formulaCtx = null;
   window.__formulaBridge = {
     onTextChanged: function (v) { if (formulaCtx) formulaCtx.text = String(v == null ? '' : v); },
-    onEditorClosed: function () { if (!formulaCtx) return; var c = formulaCtx; formulaCtx = null; try { c.overlay.remove(); } catch (e) {} document.body.style.overflow = ''; document.body.classList.remove('engine-open'); c.resolve(c.text); prewarmFormula(); /* V216 */ },
+    onEditorClosed: function () { document.body.style.overflow = ''; document.body.classList.remove('engine-open'); if (!formulaCtx) return; var c = formulaCtx; formulaCtx = null; try { c.overlay.remove(); } catch (e) {} c.resolve(c.text); prewarmFormula(); /* V216 */ },
     onError: function (code) { console.warn('formula editor:', code); }
   };
   /* V216 — ویرایشگر فرمول «گرم»: فایل ۱٫۸MB ویرایشگر یک بار در iframe پنهان parse می‌شود و هر باز شدن
@@ -1018,10 +1019,33 @@
     var iframe = el('iframe', {title: 'formula-editor'});
     /* V288 — تا آماده شدن ویرایشگر، به‌جای صفحهٔ سفیدِ بی‌خبر، پیام فارسی و دکمهٔ انصراف */
     var wait = el('div', {class: 'engine-wait'}, [el('div', {class: 'engine-wait-spin'}), el('div', {class: 'engine-wait-txt', text: 'در حال آماده‌سازی ویرایشگر فرمول…'}), el('button', {type: 'button', class: 'btn ghost', text: 'انصراف', onclick: function () { window.__formulaBridge.onEditorClosed(); }})]);
-    overlay.appendChild(wait); overlay.appendChild(iframe); document.body.appendChild(overlay);
+    overlay.appendChild(wait); document.body.appendChild(overlay);
     var w = {overlay: overlay, iframe: iframe, wait: wait, loaded: false, failed: false};
-    iframe.addEventListener('load', function () { w.loaded = true; });
-    engineHtml('formula').then(function (h) { if (h) iframe.srcdoc = h; else w.failed = true; });
+    overlay.__onBack = function () {
+      try {
+        var cw = iframe.contentWindow;
+        if (cw && typeof cw.mbBackOrClose === 'function') {
+          if (cw.mbBackOrClose() === 'sub') return true;
+        }
+      } catch (e) {}
+      window.__formulaBridge.onEditorClosed();
+      return true;
+    };
+    overlay.__close = function () { window.__formulaBridge.onEditorClosed(); };
+    engineHtml('formula').then(function (h) {
+      if (!h) { w.failed = true; return; }
+      iframe.srcdoc = h;
+      iframe.addEventListener('load', function () {
+        try {
+          if (w.loaded && (!iframe.contentWindow || !iframe.contentWindow.ExamFormulaHost)) {
+            window.__formulaBridge.onEditorClosed();
+            return;
+          }
+        } catch (e) {}
+        w.loaded = true;
+      });
+      overlay.appendChild(iframe);
+    });
     return w;
   }
   function prewarmFormula() {
@@ -1035,6 +1059,7 @@
       var w = warmFormula && !warmFormula.failed ? warmFormula : makeFormulaOverlay();
       warmFormula = null;
       var overlay = w.overlay, iframe = w.iframe;
+      if (!overlay.parentNode) document.body.appendChild(overlay);
       overlay.style.display = '';
       document.body.style.overflow = 'hidden'; document.body.classList.add('engine-open');
       formulaCtx = {overlay: overlay, iframe: iframe, text: text || '', resolve: resolve};

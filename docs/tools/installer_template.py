@@ -57,6 +57,9 @@ def main():
     run(["git", "-c", "user.name=Hashem Amiri", "-c", "user.email=hashemamiri@users.noreply.github.com",
          "commit", "-m", COMMIT_MSG])
     # V298 — مقصد طبق انتخاب کاربر در گفتگو (قاعده: هر بار پرسیده می‌شود: آزمایشی / اصلی / هر دو)
+    run(["git", "config", "http.postBuffer", "524288000"], check=False)
+    run(["git", "config", "http.lowSpeedLimit", "0"], check=False)
+    run(["git", "config", "http.lowSpeedTime", "999999"], check=False)
     if TARGET == "main":
         run(["git", "push", "origin", "HEAD:refs/heads/main"])
         run(["git", "push", "origin", "HEAD:refs/heads/staging"], check=False)  # آزمایشی هم همگام می‌شود

@@ -6617,9 +6617,12 @@ body.role-teacher.tab-myExams #teacherDashboard > .main-content{
 
 #mfModal.box-fullscreen #mfP_box { display:grid !important; grid-template-rows:minmax(0,1fr) auto auto; height:100%; min-height:0; overflow:hidden; }
 
-#mfModal.box-fullscreen .mb-wrap { grid-row: 1; min-height: 0; margin: 0; padding: 20px; display: flex; overflow: hidden; background: var(--bg1); }
+#mfModal.box-fullscreen .mb-wrap { position: relative; grid-row: 1; min-height: 0; margin: 0; padding: 20px; display: flex; overflow: hidden; background: var(--bg1); }
+.mb-back-win { display: none; }
+#mfModal.box-fullscreen .mb-back-win { display: inline-flex; align-items: center; gap: 6px; position: absolute; top: 22px; right: 26px; z-index: 6; height: 34px; padding: 0 13px; border-radius: 11px; border: 1px solid var(--input-brd); background: var(--input-bg); color: var(--text); font: 700 .78rem Vazirmatn, Tahoma, sans-serif; cursor: pointer; box-shadow: 0 3px 10px rgba(0,0,0,.12); }
+#mfModal.box-fullscreen .mb-back-win:hover { border-color: var(--accent); }
 
-#mfModal.box-fullscreen .mb-canvas { width: 100%; flex: 1 1 auto; min-height: 0; border: 1px solid var(--card-brd); border-radius: 20px; background: var(--bg2); color: #fff; box-shadow: inset 0 2px 10px rgba(0,0,0,0.2); font-size: calc(1.5rem * var(--mbfs, 1)); align-items: flex-start; justify-content: flex-start; padding: 30px; overflow: auto; overscroll-behavior: contain; direction: ltr; }
+#mfModal.box-fullscreen .mb-canvas { width: 100%; flex: 1 1 auto; min-height: 0; border: 1px solid var(--card-brd); border-radius: 20px; background: var(--bg2); color: #fff; box-shadow: inset 0 2px 10px rgba(0,0,0,0.2); font-size: calc(1.5rem * var(--mbfs, 1)); align-items: flex-start; justify-content: flex-start; padding: 50px 30px 30px; overflow: auto; overscroll-behavior: contain; direction: ltr; }
 
 #mfModal.box-fullscreen .mb-ph { display:none; }
 
@@ -7672,6 +7675,7 @@ html[data-theme="light"] .q-math-prev { background: #f3f6ff; }
         </div>
 
         <div class="mb-wrap" onclick="mbClick(event)">
+          <button type="button" class="mb-back-win" id="mbBackWinBtn" onclick="event.stopPropagation(); mbBackOrClose()" title="برگشت به پنجرهٔ قبل (Esc)">↩ برگشت</button>
           <div id="mbCanvas" class="mb-canvas"></div>
           <input id="mbKey" class="mb-key" inputmode="text" enterkeyhint="done"
                  autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" aria-label="ورودی فرمول"
@@ -10848,10 +10852,10 @@ window.mbCloseSymbolLibrary = mbCloseSymbolLibrary;
     const modal = el('mfModal');
     if (!modal || !modal.classList.contains('open')) return;
     if (ev.key === 'Escape') {
-      const p = el('mbVar');
-      if (p && p.classList.contains('open')) { mbVarClose(); return; } // اول منو بسته شود
-      
-      ev.preventDefault(); closeMath(); return;
+      ev.preventDefault();
+      if (typeof window.mbBackOrClose === 'function') window.mbBackOrClose();
+      else closeMath();
+      return;
     }
     if (ev._mbHandled) return;
     if (MF_MODE !== 'box') return;
@@ -12194,6 +12198,7 @@ window.mbCloseSymbolLibrary = mbCloseSymbolLibrary;
     const group = MB_GROUPS.find(g => g.key === key);
     const pop = el('mbVar');
     if (!group || !pop) return;
+    window.__mbLastCatOpener = function () { if (typeof window.mbGroupLibrary === 'function') window.mbGroupLibrary(null, key); };
     pop.innerHTML = '<div class="mbv-title">' + esc(group.label) + ' — یک دسته را انتخاب کنید:</div><div class="mbv-library">' +
       group.cats.map(c => '<button type="button" class="mbv-cat" onclick="mbShowSymbolCategory(\'' + c[1] + '\')">' + esc(c[0]) + '</button>').join('') + '</div>';
     mbVarOpen(pop, null);
@@ -12212,14 +12217,23 @@ window.mbCloseSymbolLibrary = mbCloseSymbolLibrary;
 
   /* کتابخانهٔ حروف A-Z در حالت تمام‌صفحه (داخل گروه «اعداد») — با تغییر بزرگ/کوچک */
   function mbOpenLettersLibrary() {
+    window.__mbActivePrevMenu = window.__mbFromCatMenu ? (window.__mbLastCatOpener || null) : null;
+    window.__mbFromCatMenu = false;
     mbVarClose();
     const pad = el('mfPad');
     if (!pad) return;
     const up = MB_PAD_CASE === 'upper';
     const abc = (up ? 'ABCDEFGHIJKLMNOPQRSTUVWXYZ' : 'abcdefghijklmnopqrstuvwxyz').split('');
     pad.innerHTML = '';
+    if (typeof window.__mbActivePrevMenu === 'function') {
+      const back = document.createElement('button');
+      back.type = 'button'; back.className = 'mb-library-close mb-library-back';
+      back.textContent = '↩ برگشت';
+      back.onclick = function () { if (typeof window.mbBackOrClose === 'function') window.mbBackOrClose(); };
+      pad.appendChild(back);
+    }
     const close = document.createElement('button');
-    close.type = 'button'; close.className = 'mb-library-close'; close.textContent = '× بستن'; close.onclick = mbCloseSymbolLibrary;
+    close.type = 'button'; close.className = 'mb-library-close'; close.textContent = '× بستن'; close.onclick = function () { window.__mbActivePrevMenu = null; mbCloseSymbolLibrary(); };
     pad.appendChild(close);
     const tgl = document.createElement('button');
     tgl.type = 'button'; tgl.className = 'mfk mfk-case'; tgl.title = 'تغییر بزرگ/کوچک';
@@ -12411,12 +12425,21 @@ window.mbCloseSymbolLibrary = mbCloseSymbolLibrary;
     });
   }
   function mbOpenItemLibrary(items) {
+    window.__mbActivePrevMenu = window.__mbFromCatMenu ? (window.__mbLastCatOpener || null) : null;
+    window.__mbFromCatMenu = false;
     items=mbUniqueItems(items);
     const pad=el('mfPad');
     if(!pad) return;
     pad.innerHTML='';
+    if (typeof window.__mbActivePrevMenu === 'function') {
+      const back = document.createElement('button');
+      back.type = 'button'; back.className = 'mb-library-close mb-library-back';
+      back.textContent = '↩ برگشت';
+      back.onclick = function () { if (typeof window.mbBackOrClose === 'function') window.mbBackOrClose(); };
+      pad.appendChild(back);
+    }
     const close=document.createElement('button');
-    close.type='button'; close.className='mb-library-close'; close.textContent='× بستن'; close.onclick=mbCloseSymbolLibrary;
+    close.type='button'; close.className='mb-library-close'; close.textContent='× بستن'; close.onclick=function(){ window.__mbActivePrevMenu = null; mbCloseSymbolLibrary(); };
     pad.appendChild(close);
     items.forEach(it => {
       const b=document.createElement('button'); b.type='button'; b.className='mfk'; b.title=it[0];
@@ -12512,11 +12535,14 @@ window.mbCloseSymbolLibrary = mbCloseSymbolLibrary;
     if (ev) ev.stopPropagation();
     const pop = el('mbVar');
     const tabs = MB_PAD.filter(t => t.id !== 'recent' && t.id !== 'letters');
+    window.__mbLastCatOpener = function () { if (typeof window.mbOpenSymbolLibrary === 'function') window.mbOpenSymbolLibrary(null); };
     pop.innerHTML = '<div class="mbv-title">دستهٔ نمادها را انتخاب کنید:</div><div class="mbv-library">' +
       tabs.map(t => '<button type="button" class="mbv-cat" onclick="mbShowSymbolCategory(\'' + t.id + '\')">' + esc(t.label) + '</button>').join('') + '</div>';
     mbVarOpen(pop, null);
   }
   function mbShowSymbolCategory(id) {
+    const pop = el('mbVar');
+    window.__mbFromCatMenu = !!(pop && pop.classList.contains('open') && pop.querySelector('.mbv-library'));
     mbVarClose();
     if (id === 'letters') { mbOpenLettersLibrary(); return; }
     if (id === 'fav') { mbOpenFavorites(); return; }
@@ -16311,6 +16337,9 @@ window.openMath = function () {
     function report(done) {
       try {
         var t = field();
+        if (!window.ExamEditorNative && window.parent && window.parent !== window && window.parent.__formulaBridge) {
+          window.ExamEditorNative = window.parent.__formulaBridge;
+        }
         if (window.ExamEditorNative && typeof ExamEditorNative.onTextChanged === 'function') {
           ExamEditorNative.onTextChanged(t ? (t.value || '') : '');
         }
@@ -16595,8 +16624,59 @@ window.openMath = function () {
         } catch (e) {}
       }, 1300);
     }
+    window.mbBackOrClose = function () {
+      try {
+        var hc = document.getElementById('helpCard');
+        if (hc && !hc.hidden) {
+          hc.hidden = true;
+          var hb = document.getElementById('helpBackdrop');
+          if (hb) hb.hidden = true;
+          return 'sub';
+        }
+        var mb = document.getElementById('mback');
+        if (mb && !mb.hidden) {
+          var hx = document.querySelector('#mtitle .x');
+          if (hx) hx.click(); else mb.hidden = true;
+          return 'sub';
+        }
+        var pop = document.getElementById('mbVar');
+        if (pop && pop.classList.contains('open')) {
+          if (typeof window.mbVarClose === 'function') window.mbVarClose();
+          else pop.classList.remove('open');
+          pop.classList.remove('word-cats');
+          return 'sub';
+        }
+        var pad = document.getElementById('mfPad');
+        if (pad && pad.classList.contains('mb-library-open')) {
+          var prev = window.__mbActivePrevMenu;
+          window.__mbActivePrevMenu = null;
+          if (typeof window.mbCloseSymbolLibrary === 'function') window.mbCloseSymbolLibrary();
+          else pad.classList.remove('mb-library-open');
+          if (typeof prev === 'function') {
+            setTimeout(function () { try { prev(); } catch (e) {} }, 0);
+          }
+          return 'sub';
+        }
+        if (pad && pad.classList.contains('mb-smart-hub')) {
+          if (typeof window.mbCloseSmartHub === 'function') window.mbCloseSmartHub();
+          else pad.classList.remove('mb-smart-hub');
+          return 'sub';
+        }
+        var qc = document.getElementById('mbQuickConvertInline');
+        if (qc && qc.style.display !== 'none') {
+          if (typeof window.mbCloseQuickConvert === 'function') window.mbCloseQuickConvert();
+          else qc.style.display = 'none';
+          return 'sub';
+        }
+      } catch (e) {}
+      try { installAll(); } catch (e) {}
+      if (typeof window.closeMath === 'function') window.closeMath();
+      else report(true);
+      return 'closed';
+    };
     window.ExamFormulaHost = {
       begin: function (text, s, e) {
+        try { installAll(); } catch (e00) {}
         var t = field();
         if (!t) return;
         try { if (window.__mfPersianDigits !== undefined && window.mbSetDigitsFa) window.mbSetDigitsFa(window.__mfPersianDigits); } catch (e0) {} /* V287 */
@@ -16686,23 +16766,25 @@ window.openMath = function () {
       window.closeMath = wrapped;
       return true;
     }
+    function installAll() {
+      install();
+      /* بازگشایی خودکار مرجع (setTimeout 250ms پس از close) را هم خنثی کن:
+         openMath فقط وقتی مجاز است که پنجره هنوز بسته نشده باشد. */
+      var innerOpen = window.openMath;
+      if (typeof innerOpen === 'function' && !innerOpen.__nativeWrapped) {
+        var wrappedOpen = function (id) {
+          if (window.__aoNativeClosing) return; /* reopen خودکار مسدود */
+          return innerOpen.apply(window, arguments);
+        };
+        wrappedOpen.__nativeWrapped = true;
+        window.openMath = wrappedOpen;
+      }
+    }
     /* باید «بعد از» auto-open مرجع نصب شود تا بیرونی‌ترین wrapper باشیم؛
-       چون این بلوک قبل از auto-open است، نصب را به load می‌سپاریم. */
+       چون این بلوک قبل از auto-open است، نصب را به DOMContentLoaded و load می‌سپاریم. */
+    document.addEventListener('DOMContentLoaded', function () { setTimeout(installAll, 0); });
     window.addEventListener('load', function () {
-      setTimeout(function () {
-        install();
-        /* بازگشایی خودکار مرجع (setTimeout 250ms پس از close) را هم خنثی کن:
-           openMath فقط وقتی مجاز است که پنجره هنوز بسته نشده باشد. */
-        var innerOpen = window.openMath;
-        if (typeof innerOpen === 'function' && !innerOpen.__nativeWrapped) {
-          var wrappedOpen = function (id) {
-            if (window.__aoNativeClosing) return; /* reopen خودکار مسدود */
-            return innerOpen.apply(window, arguments);
-          };
-          wrappedOpen.__nativeWrapped = true;
-          window.openMath = wrappedOpen;
-        }
-      }, 30);
+      setTimeout(installAll, 30);
     });
   })();
 </script>

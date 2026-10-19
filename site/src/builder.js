@@ -1473,11 +1473,11 @@ var fillSubj = function () { var cur = ss.value; ss.innerHTML = ''; ss.appendChi
   }
   function insertFigure(kind, ta, q, editTok, presetSpec) {
     var overlay = el('div', {class: 'engine-bg'});
-    var bar = el('div', {class: 'engine-bar'}, [el('span', {text: editTok ? '✏️ ویرایش شیء درج‌شده' : kind === 'math' ? '🧮 درج ابزار ریاضی ابتدایی در سؤال' : kind === 'axis' ? '📐 درج محور در سؤال' : presetSpec ? '🖼 تصویر خودم — روی تصویر بکشید (کلیک و کشیدن) تا فلش و شماره اضافه شود؛ نام هر شماره را در ستون کنار بنویسید' : '📐 درج شکل در سؤال'}), el('span', {class: 'grow'}), el('button', {class: 'btn light sm', text: '✕ بستن', onclick: close})]);
-    var iframe = el('iframe', {class: 'with-bar'});
-    overlay.appendChild(bar); overlay.appendChild(iframe); document.body.appendChild(overlay);
+    var iframe = el('iframe');
+    document.body.appendChild(overlay);
     document.body.style.overflow = 'hidden';
     function close() { overlay.remove(); document.body.style.overflow = ''; }
+    overlay.__close = close;
     iframe.addEventListener('load', function () {
       var w = iframe.contentWindow, d = iframe.contentDocument, tries = 0;
       (function go() {
@@ -1511,12 +1511,15 @@ var fillSubj = function () { var cur = ss.value; ss.innerHTML = ''; ss.appendChi
           var h3 = d.querySelector('#anOverlay h3'); if (h3) h3.textContent = 'تصویر خودم — فلش‌گذاری برای نام‌گذاری';
         } else api.open(null, null, kind === 'math' ? 'math' : kind === 'axis' ? 'axis' : sciDom); /* V206 — 'axis' → GraphFig در حالت محور؛ V310 — 'math' → ابزار ریاضی ابتدایی */
         if (editTok && /"t":"photo"/.test(editTok)) { var st3 = d.createElement('style'); st3.textContent = '#anCats,#anShapes,.an-split>.gf-types{display:none!important}'; d.head.appendChild(st3); }
+        Array.prototype.forEach.call(d.querySelectorAll('.gf-x, [id$="Close"], [id$="Cancel"]'), function (b) {
+          b.addEventListener('click', function () { setTimeout(function () { var anyOpen = Array.prototype.some.call(d.querySelectorAll('[id$="Overlay"], .gf-overlay'), function (o) { return o.classList.contains('open'); }); if (!anyOpen && document.body.contains(overlay)) close(); }, 20); });
+        });
         /* بستن روکش وب بدون درج → بستن ما */
         var ovId = {geo: 'gfOverlay', graph: 'grOverlay', axis: 'grOverlay', math: 'grOverlay', table: 'tbOverlay'}[kind];
-        var poll = setInterval(function () { var anyOpen = Array.prototype.some.call(d.querySelectorAll('[id$="Overlay"], .gf-overlay'), function (o) { return o.classList.contains('open'); }); if (!anyOpen && tries > 1) { clearInterval(poll); if (document.body.contains(overlay)) close(); } tries++; }, 300);
+        var poll = setInterval(function () { var anyOpen = Array.prototype.some.call(d.querySelectorAll('[id$="Overlay"], .gf-overlay'), function (o) { return o.classList.contains('open'); }); if (!anyOpen && tries > 1) { clearInterval(poll); if (document.body.contains(overlay)) close(); } tries++; }, 180);
       })();
     });
-    S.engineHtml('print').then(function (h) { if (h) iframe.srcdoc = h; else close(); });
+    S.engineHtml('print').then(function (h) { if (h) { iframe.srcdoc = h; overlay.appendChild(iframe); } else close(); });
   }
 
   /* ================================================================ گفتار به متن (Web Speech، فارسی/انگلیسی) */

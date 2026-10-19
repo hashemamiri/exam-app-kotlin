@@ -53,6 +53,14 @@ fun FormulaHostDialog(
 ) {
     var latestText by remember { mutableStateOf(initialText) }
     var loading by remember { mutableStateOf(true) }
+    var finished by remember { mutableStateOf(false) }
+    fun finishOnce() {
+        if (!finished) {
+            finished = true
+            onResult(latestText)
+            onDismiss()
+        }
+    }
     // V54.5 — خطای واقعی JS (پاک‌سازی‌شده در asset؛ بدون URL/Token) برای نمایش امن.
     var jsError by remember { mutableStateOf<String?>(null) }
     // V217 — حالت تیرهٔ برنامه ⇒ ویرایشگر فرمول هم با تم تیرهٔ خودش باز می‌شود (پوستهٔ روشن میزبان خاموش).
@@ -60,7 +68,14 @@ fun FormulaHostDialog(
     val shellColor = if (darkTheme) ComposeColor(0xFF0F0C29) else ComposeColor(0xFFE9EEF5)
 
     Dialog(
-        onDismissRequest = { onResult(latestText); onDismiss() },
+        onDismissRequest = {
+            val wv = FormulaEditorPool.current
+            if (wv != null && FormulaEditorPool.isReady(wv)) {
+                wv.evaluateJavascript("(function(){return window.mbBackOrClose ? window.mbBackOrClose() : 'closed';})()") { res ->
+                    if (res == null || !res.contains("sub")) finishOnce()
+                }
+            } else finishOnce()
+        },
         properties = DialogProperties(
             usePlatformDefaultWidth = false,
             dismissOnClickOutside = false
@@ -80,7 +95,7 @@ fun FormulaHostDialog(
                             onJsError = { message -> view.post { jsError = message; loading = false } },
                             // V55 — فایل مستقل رویداد صریح onEditorClosed دارد؛
                             // بستن (✕ یا درج فرمول) متن نهایی را برمی‌گرداند.
-                            onClosed = { view.post { onResult(latestText); onDismiss() } }
+                            onClosed = { view.post { finishOnce() } }
                         )
                         // V55.1/V216 — تا تعریف‌شدن پل (صفحهٔ گرم: همان لحظه)، begin هر 150ms تکرار می‌شود.
                         val text = JSONObject.quote(initialText)

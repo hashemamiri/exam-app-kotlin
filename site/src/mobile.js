@@ -35,8 +35,32 @@
   /* V220 — در همهٔ چیدمان‌ها (دسکتاپ هم) */
   function pushHist() { if (backGuard) return; try { history.pushState({m: ++histDepth}, ''); } catch (e) {} }
   function closeTopOverlay() {
-    var sel = ['.m-sheet-bg', '.modal-bg', '.engine-bg', '.m-radial-bg', '.m-qa-bg'];
-    for (var i = 0; i < sel.length; i++) { var all = document.querySelectorAll(sel[i]); if (all.length) { var n = all[all.length - 1]; if (n.classList.contains('engine-bg')) { var x = n.querySelector('.engine-bar .btn'); if (x) x.click(); else n.remove(); } else if (n.classList.contains('m-qa-bg')) { ui.addOpen = false; paint(); } else n.remove(); return true; } }
+    var vis = function (list) {
+      var out = [];
+      for (var k = 0; k < list.length; k++) if (list[k].style.display !== 'none' && !list[k].hidden) out.push(list[k]);
+      return out;
+    };
+    var eng = vis(document.querySelectorAll('.engine-bg'));
+    if (eng.length) {
+      var e = eng[eng.length - 1];
+      if (typeof e.__onBack === 'function') { e.__onBack(); return true; }
+      if (typeof e.__close === 'function') { e.__close(); return true; }
+      var x = e.querySelector('.engine-bar .btn');
+      if (x) x.click();
+      else { document.body.style.overflow = ''; document.body.classList.remove('engine-open'); e.remove(); }
+      return true;
+    }
+    var sel = ['.m-sheet-bg', '.modal-bg', '.m-radial-bg', '.m-qa-bg'];
+    for (var i = 0; i < sel.length; i++) {
+      var all = vis(document.querySelectorAll(sel[i]));
+      if (all.length) {
+        var n = all[all.length - 1];
+        if (n.classList.contains('m-qa-bg')) { ui.addOpen = false; paint(); }
+        else if (typeof n.__onCancel === 'function') { var fn = n.__onCancel; n.remove(); try { fn(); } catch (err) {} }
+        else n.remove();
+        return true;
+      }
+    }
     return false;
   }
   function onBack() {
