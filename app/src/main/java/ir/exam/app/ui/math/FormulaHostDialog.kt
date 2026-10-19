@@ -67,6 +67,7 @@ fun FormulaHostDialog(
     val darkTheme = MaterialTheme.colorScheme.background.luminance() < 0.5f
     val shellColor = if (darkTheme) ComposeColor(0xFF0F0C29) else ComposeColor(0xFFE9EEF5)
 
+    // بستن پایه: onDismissRequest = { onResult(latestText); onDismiss() } (با بازگشت پله‌ای زیرپنجره‌های WebView)
     Dialog(
         onDismissRequest = {
             val wv = FormulaEditorPool.current
