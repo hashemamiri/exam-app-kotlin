@@ -79,7 +79,7 @@ class V287_FormulaEditorDesktopTest {
     @Test
     fun formulaBackAndToolNoDuplicateBar() {
         val f = src("app/src/main/assets/formula_editor/formula.html")
-        assertTrue("id=\"mbBackWinBtn\"" in f && "window.mbBackOrClose = function ()" in f)
+        assertTrue("window.mbBackOrClose = function ()" in f && "id=\"mbBackWinBtn\"" !in f)
         assertTrue("window.__mbActivePrevMenu = window.__mbFromCatMenu" in f)
         val host = src("app/src/main/java/ir/exam/app/ui/math/FormulaHostDialog.kt")
         assertTrue("window.mbBackOrClose ? window.mbBackOrClose() : 'closed'" in host)
