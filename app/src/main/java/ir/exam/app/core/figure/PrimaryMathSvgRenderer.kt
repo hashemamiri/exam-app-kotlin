@@ -442,7 +442,10 @@ object PrimaryMathSvgRenderer {
             sb.append(text(xm, y - h * 0.58f, "+$step", PINK, "middle", bold = true, size = 11))
         }
         val endVal = start + jumps * step
-        if (spec.xStr("label", "1") != "0") {
+        val lblMode = spec.xStr("label", "1")
+        if (lblMode == "2") {
+            sb.append(text(180f, 252f, "$start + ($jumps × $step) = ؟", PINK, "middle", bold = true, size = 14))
+        } else if (lblMode != "0") {
             sb.append(text(180f, 252f, "$start + ($jumps × $step) = $endVal", ST, "middle", bold = true, size = 14))
         }
         return sb.toString()
@@ -489,9 +492,9 @@ object PrimaryMathSvgRenderer {
         val mx = max(mn + 5f, spec.xNum("max", 50f))
         val v = spec.xNum("val", 25f).coerceIn(mn, mx)
         val sb = StringBuilder()
-        val cx = 160f
+        val cx = 136f
         val top = 34f
-        val bot = 206f
+        val bot = 204f
         fun py(t: Float): Float = bot - (bot - top) * ((t - mn) / (mx - mn))
         val vy = py(v)
         val col = if (v <= 0f) "#1e88e5" else "#e53935"
@@ -503,10 +506,11 @@ object PrimaryMathSvgRenderer {
         while (tk <= mx + 0.01f) {
             val y = py(tk)
             sb.append(line(cx + 12f, y, cx + 22f, y, ST, 1.6f))
-            sb.append(text(cx + 28f, y + 4f, "${tk.toInt()}°", ST, "start", bold = true, size = 11))
+            sb.append(text(cx + 42f, y + 4f, "${tk.toInt()}°", ST, "middle", bold = true, size = 11))
             tk += step
         }
-        sb.append(text(255f, 130f, "${v.toInt()}°C", col, "middle", bold = true, size = 22))
+        sb.append(rect(224f, 102f, 94f, 44f, "#fff8e1", col, 1.8f, rx = 10f))
+        sb.append(text(271f, 131f, "${v.toInt()}°C", col, "middle", bold = true, size = 20))
         return sb.toString()
     }
 
@@ -700,24 +704,30 @@ object PrimaryMathSvgRenderer {
         val v = spec.xNum("val", 350f).coerceIn(0f, mx)
         val unit = spec.xStr("unit", "mL")
         val sb = StringBuilder()
-        val x0 = 116f
+        val x0 = 96f
         val w = 112f
-        val top = 38f
-        val bot = 224f
+        val top = 36f
+        val bot = 216f
         val h = bot - top
         val vh = h * (v / mx)
         val vy = bot - vh
+        sb.append(rect(x0, top, w, h, "#f8fafc", "none", 0f))
         if (v > 0f) {
             sb.append(rect(x0 + 3f, vy, w - 6f, vh, "rgba(38,166,154,.42)", "#00897b", 1.5f))
         }
         sb.append("<path d=\"M ${f(x0 - 8f)} ${f(top)} L ${f(x0)} ${f(top)} L ${f(x0)} ${f(bot)} L ${f(x0 + w)} ${f(bot)} L ${f(x0 + w)} ${f(top)} L ${f(x0 + w + 8f)} ${f(top)}\" fill=\"none\" stroke=\"$ST\" stroke-width=\"3\"/>")
-        for (i in 1..5) {
-            val tv = (mx * i / 5f)
-            val ty = bot - h * (i / 5f)
-            sb.append(line(x0 + w - 18f, ty, x0 + w, ty, ST, 1.8f))
-            sb.append(text(x0 + w + 8f, ty + 4f, "${tv.toInt()} $unit", ST, "start", bold = true, size = 11))
+        sb.append(text(x0 + w + 34f, top - 8f, "($unit)", MU, "middle", bold = true, size = 11))
+        for (i in 0..10) {
+            val ty = bot - h * (i / 10f)
+            val major = i % 2 == 0
+            sb.append(line(x0 + w - (if (major) 18f else 10f), ty, x0 + w, ty, ST, if (major) 1.8f else 1.1f))
+            if (major && i > 0) {
+                val tv = Math.round(mx * i / 10f)
+                sb.append(text(x0 + w + 34f, ty + 4f, tv.toString(), ST, "middle", bold = true, size = 12))
+            }
         }
-        sb.append(text(180f, 256f, "${v.toInt()} $unit", "#00695c", "middle", bold = true, size = 15))
+        sb.append(rect(x0 - 4f, 230f, w + 8f, 30f, "#e0f2f1", "#00897b", 1.5f, rx = 8f))
+        sb.append(text(x0 + w / 2f, 250f, "${v.toInt()} $unit", "#00695c", "middle", bold = true, size = 15))
         return sb.toString()
     }
 
@@ -808,8 +818,8 @@ object PrimaryMathSvgRenderer {
         sb.append(rect(x0 + w1, y0 + h1, w2, h2, "rgba(214,51,108,.15)", ST, 1.8f))
         sb.append(text(x0 + w1 / 2f, y0 - 10f, a1.toString(), ST, "middle", bold = true, size = 14))
         sb.append(text(x0 + w1 + w2 / 2f, y0 - 10f, a2.toString(), ST, "middle", bold = true, size = 14))
-        sb.append(text(x0 - 18f, y0 + h1 / 2f + 5f, b1.toString(), ST, "end", bold = true, size = 14))
-        sb.append(text(x0 - 18f, y0 + h1 + h2 / 2f + 5f, b2.toString(), ST, "end", bold = true, size = 14))
+        sb.append(text(x0 - 26f, y0 + h1 / 2f + 5f, b1.toString(), ST, "middle", bold = true, size = 14))
+        sb.append(text(x0 - 26f, y0 + h1 + h2 / 2f + 5f, b2.toString(), ST, "middle", bold = true, size = 14))
         sb.append(text(x0 + w1 / 2f, y0 + h1 / 2f + 6f, if (blank) "؟" else (a1 * b1).toString(), ST, "middle", bold = true, size = 15))
         sb.append(text(x0 + w1 + w2 / 2f, y0 + h1 / 2f + 6f, if (blank) "؟" else (a2 * b1).toString(), ST, "middle", bold = true, size = 15))
         sb.append(text(x0 + w1 / 2f, y0 + h1 + h2 / 2f + 6f, if (blank) "؟" else (a1 * b2).toString(), ST, "middle", bold = true, size = 15))
@@ -824,11 +834,17 @@ object PrimaryMathSvgRenderer {
         val rightStr = spec.xStr("right", "آبزی: ماهی، میگو")
         val midStr = spec.xStr("mid", "اردک")
         val sb = StringBuilder()
-        sb.append("<circle cx=\"134\" cy=\"144\" r=\"84\" fill=\"rgba(66,165,245,.22)\" stroke=\"#1e88e5\" stroke-width=\"2.2\"/>")
-        sb.append("<circle cx=\"226\" cy=\"144\" r=\"84\" fill=\"rgba(102,187,106,.22)\" stroke=\"#43a047\" stroke-width=\"2.2\"/>")
-        sb.append(text(98f, 144f, leftStr, ST, "middle", bold = true, size = 11))
-        sb.append(text(262f, 144f, rightStr, ST, "middle", bold = true, size = 11))
-        sb.append(text(180f, 144f, midStr, PINK, "middle", bold = true, size = 12))
+        sb.append("<circle cx=\"128\" cy=\"144\" r=\"88\" fill=\"rgba(66,165,245,.20)\" stroke=\"#1e88e5\" stroke-width=\"2.2\"/>")
+        sb.append("<circle cx=\"232\" cy=\"144\" r=\"88\" fill=\"rgba(102,187,106,.20)\" stroke=\"#43a047\" stroke-width=\"2.2\"/>")
+        fun renderRegion(raw: String, cx: Float, startY: Float, col: String) {
+            val lines = raw.split(':', '،', ',').map { it.trim() }.filter { it.isNotEmpty() }.take(4)
+            lines.forEachIndexed { idx, ln ->
+                sb.append(text(cx, startY + idx * 22f, ln, if (idx == 0 && lines.size > 1) col else ST, "middle", bold = true, size = if (idx == 0 && lines.size > 1) 12 else 11))
+            }
+        }
+        renderRegion(leftStr, 84f, 114f, "#1565c0")
+        renderRegion(rightStr, 276f, 114f, "#2e7d32")
+        renderRegion(midStr, 180f, 128f, PINK)
         return sb.toString()
     }
 
@@ -855,6 +871,6 @@ object PrimaryMathSvgRenderer {
         if (s.isBlank()) return ""
         val weight = if (bold) " font-weight=\"700\"" else ""
         val esc = FigureDigits.apply(s).replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace("\"", "&quot;")
-        return "<text x=\"${f(x)}\" y=\"${f(y)}\" font-family=\"sans-serif\" font-size=\"$size\"$weight fill=\"$color\" text-anchor=\"$anchor\">$esc</text>"
+        return "<text x=\"${f(x)}\" y=\"${f(y)}\" direction=\"ltr\" font-family=\"sans-serif\" font-size=\"$size\"$weight fill=\"$color\" text-anchor=\"$anchor\">$esc</text>"
     }
 }

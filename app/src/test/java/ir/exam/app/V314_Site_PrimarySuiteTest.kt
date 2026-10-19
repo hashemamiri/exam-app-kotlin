@@ -44,9 +44,14 @@ class V314_Site_PrimarySuiteTest {
         assertTrue(admin.contains("🌟 آفرین قهرمان! خیلی خوب درخشیدی"))
         assertTrue(app.contains("📋 کارنامهٔ توصیفی به تفکیک درس"))
 
-        // ۵) تعامل لمسی مستقیم روی شکل‌های ابتدایی در وب (bindClock)
+        // ۵) تعامل لمسی مستقیم و منوی کشویی همهٔ شکل‌های ابتدایی در وب (bindClock + GF_DROPDOWNS)
         assertTrue(graphFig.contains("if (t === 'axfrac')"))
         assertTrue(graphFig.contains("if (t === 'axabacus')"))
         assertTrue(graphFig.contains("if (t === 'axthermo')"))
+        assertTrue(graphFig.contains("var GF_DROPDOWNS ="))
+        assertTrue(graphFig.contains("'axsaw:X.mode'"))
+        assertTrue(graphFig.contains("'axsym:X.axis'"))
+        assertTrue(graphFig.contains("'axbeaker:X.unit'"))
+        assertTrue(graphFig.contains("direction=\"ltr\""))
     }
 }

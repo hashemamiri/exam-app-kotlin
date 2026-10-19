@@ -79,8 +79,8 @@
   }
   function wrap(inner, vh) {
     vh = vh || 280;
-    return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 ' + vh + '" width="320" height="' + Math.round(250 * vh / 280) + '" overflow="hidden">' +
-      '<style>text{font:700 12px Vazirmatn,Tahoma,sans-serif;fill:#243044}.tk{font:600 11px Vazirmatn,Tahoma,sans-serif;fill:#4a5870}.ttl{font:800 13px Vazirmatn,Tahoma,sans-serif;fill:#1a2433}.fa{font:700 11px Vazirmatn,Tahoma,sans-serif;fill:#1a2433}.lg{font:700 11px Vazirmatn,Tahoma,sans-serif;fill:#1a2433}.onf{font:800 11px Vazirmatn,Tahoma,sans-serif;fill:#fff;paint-order:stroke;stroke:#1a2433;stroke-width:2.6;stroke-linejoin:round}</style>' +
+    return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 ' + vh + '" width="320" height="' + Math.round(250 * vh / 280) + '" direction="ltr" overflow="hidden">' +
+      '<style>text{font:700 12px Vazirmatn,Tahoma,sans-serif;fill:#243044;direction:ltr;unicode-bidi:embed}.tk{font:600 11px Vazirmatn,Tahoma,sans-serif;fill:#4a5870}.ttl{font:800 13px Vazirmatn,Tahoma,sans-serif;fill:#1a2433}.fa{font:700 11px Vazirmatn,Tahoma,sans-serif;fill:#1a2433}.lg{font:700 11px Vazirmatn,Tahoma,sans-serif;fill:#1a2433}.onf{font:800 11px Vazirmatn,Tahoma,sans-serif;fill:#fff;paint-order:stroke;stroke:#1a2433;stroke-width:2.6;stroke-linejoin:round}</style>' +
       inner + '</svg>';
   }
   function splitList(s) {
@@ -281,7 +281,7 @@
     var AL = 40, AT = 26, AR = 336, AB = 246, ST = '#2c3a50', GR = '#d5dce6', MU = '#4a5870', PT = '#d6336c';
     function f2(v) { return String(Math.round(v * 100) / 100); }
     function ln(x1, y1, x2, y2, c, w, dash) { return '<line x1="' + f2(x1) + '" y1="' + f2(y1) + '" x2="' + f2(x2) + '" y2="' + f2(y2) + '" stroke="' + c + '" stroke-width="' + w + '"' + (dash ? ' stroke-dasharray="4 3"' : '') + '/>'; }
-    function tx(x, y, s, c, an, bold, sz) { if (s == null || String(s).trim() === '') return ''; return '<text x="' + f2(x) + '" y="' + f2(y) + '" font-family="sans-serif" font-size="' + (sz || 11) + '"' + (bold ? ' font-weight="700"' : '') + ' fill="' + c + '" text-anchor="' + an + '" style="font:' + (bold ? '700 ' : '400 ') + (sz || 11) + 'px sans-serif">' + esc(s) + '</text>'; }
+    function tx(x, y, s, c, an, bold, sz) { if (s == null || String(s).trim() === '') return ''; return '<text x="' + f2(x) + '" y="' + f2(y) + '" direction="ltr" font-family="sans-serif" font-size="' + (sz || 11) + '"' + (bold ? ' font-weight="700"' : '') + ' fill="' + c + '" text-anchor="' + an + '" style="font:' + (bold ? '700 ' : '400 ') + (sz || 11) + 'px sans-serif;direction:ltr;unicode-bidi:embed">' + esc(s) + '</text>'; }
     function poly(pts, c) { return '<polygon points="' + pts + '" fill="' + c + '"/>'; }
     function arR(x, y, c) { return poly(f2(x) + ',' + f2(y) + ' ' + f2(x - 8) + ',' + f2(y - 4.5) + ' ' + f2(x - 8) + ',' + f2(y + 4.5), c || ST); }
     function arL(x, y) { return poly(f2(x) + ',' + f2(y) + ' ' + f2(x + 8) + ',' + f2(y - 4.5) + ' ' + f2(x + 8) + ',' + f2(y + 4.5), ST); }
@@ -580,7 +580,8 @@
         s += '<path d="M ' + f2(jxa) + ' ' + f2(jy - 4) + ' Q ' + f2(jxm) + ' ' + f2(jy - jh) + ' ' + f2(jxb) + ' ' + f2(jy - 4) + '" fill="none" stroke="' + ACC + '" stroke-width="2.4"/>';
         s += '<circle cx="' + f2(jxb) + '" cy="' + f2(jy) + '" r="4" fill="' + PT + '"/>' + tx(jxm, jy - jh * 0.58, '+' + jsp, PT, 'middle', true, 11);
       }
-      if (xs('label', '1') !== '0') s += tx(180, 252, jst + ' + (' + jcnt + ' × ' + jsp + ') = ' + (jst + jcnt * jsp), ST, 'middle', true, 14);
+      if (xs('label', '1') === '2') s += tx(180, 252, jst + ' + (' + jcnt + ' × ' + jsp + ') = ؟', PT, 'middle', true, 14);
+      else if (xs('label', '1') !== '0') s += tx(180, 252, jst + ' + (' + jcnt + ' × ' + jsp + ') = ' + (jst + jcnt * jsp), ST, 'middle', true, 14);
       return wrap(s);
     }
     if (t === 'axbalance') {
@@ -596,14 +597,14 @@
     }
     if (t === 'axthermo') {
       var tmin = num(X.min, -10), tmax = Math.max(tmin + 5, num(X.max, 50)), tval = clamp(num(X.val, 25), tmin, tmax);
-      var tcx = 160, ttop = 34, tbot = 206, tvy = tbot - (tbot - ttop) * ((tval - tmin) / (tmax - tmin)), tcol = tval <= 0 ? '#1e88e5' : '#e53935';
+      var tcx = 136, ttop = 34, tbot = 204, tvy = tbot - (tbot - ttop) * ((tval - tmin) / (tmax - tmin)), tcol = tval <= 0 ? '#1e88e5' : '#e53935';
       s += rc(tcx - 12, ttop - 8, 24, tbot - ttop + 16, '#f8fafc', ST, 2, 12) + rc(tcx - 7, tvy, 14, tbot - tvy + 12, tcol, 'none', 0, 6) + '<circle cx="' + f2(tcx) + '" cy="' + f2(tbot + 22) + '" r="22" fill="' + tcol + '" stroke="' + ST + '" stroke-width="2"/>';
       var tstep = (tmax - tmin <= 20) ? 2 : (tmax - tmin <= 60) ? 10 : 20;
       for (var ttk = Math.ceil(tmin / tstep) * tstep; ttk <= tmax + 0.01; ttk += tstep) {
         var tty = tbot - (tbot - ttop) * ((ttk - tmin) / (tmax - tmin));
-        s += lnr(tcx + 12, tty, tcx + 22, tty, ST, 1.6) + tx(tcx + 28, tty + 4, Math.round(ttk) + '°', ST, 'start', true, 11);
+        s += lnr(tcx + 12, tty, tcx + 22, tty, ST, 1.6) + tx(tcx + 42, tty + 4, Math.round(ttk) + '°', ST, 'middle', true, 11);
       }
-      s += tx(255, 130, Math.round(tval) + '°C', tcol, 'middle', true, 22);
+      s += rc(224, 102, 94, 44, '#fff8e1', tcol, 1.8, 10) + tx(271, 131, Math.round(tval) + '°C', tcol, 'middle', true, 20);
       return wrap(s);
     }
     if (t === 'axsaw') {
@@ -701,14 +702,17 @@
     }
     if (t === 'axbeaker') {
       var bmx = Math.max(10, num(X.max, 500)), bval = clamp(num(X.val, 350), 0, bmx), bunit = xs('unit', 'mL');
-      var bx0 = 116, bw2 = 112, btop = 38, bbot = 224, bh2 = bbot - btop, bvh = bh2 * (bval / bmx), bvy = bbot - bvh;
+      var bx0 = 96, bw2 = 112, btop = 36, bbot = 216, bh2 = bbot - btop, bvh = bh2 * (bval / bmx), bvy = bbot - bvh;
+      s += rc(bx0, btop, bw2, bh2, '#f8fafc', 'none', 0);
       if (bval > 0) s += rc(bx0 + 3, bvy, bw2 - 6, bvh, 'rgba(38,166,154,.42)', '#00897b', 1.5);
       s += '<path d="M ' + f2(bx0 - 8) + ' ' + f2(btop) + ' L ' + f2(bx0) + ' ' + f2(btop) + ' L ' + f2(bx0) + ' ' + f2(bbot) + ' L ' + f2(bx0 + bw2) + ' ' + f2(bbot) + ' L ' + f2(bx0 + bw2) + ' ' + f2(btop) + ' L ' + f2(bx0 + bw2 + 8) + ' ' + f2(btop) + '" fill="none" stroke="' + ST + '" stroke-width="3"/>';
-      for (i = 1; i <= 5; i++) {
-        var btv = Math.round(bmx * i / 5), bty = bbot - bh2 * (i / 5);
-        s += lnr(bx0 + bw2 - 18, bty, bx0 + bw2, bty, ST, 1.8) + tx(bx0 + bw2 + 8, bty + 4, btv + ' ' + bunit, ST, 'start', true, 11);
+      s += tx(bx0 + bw2 + 34, btop - 8, '(' + bunit + ')', MU, 'middle', true, 11);
+      for (i = 0; i <= 10; i++) {
+        var bty = bbot - bh2 * (i / 10), bmaj = (i % 2 === 0);
+        s += lnr(bx0 + bw2 - (bmaj ? 18 : 10), bty, bx0 + bw2, bty, ST, bmaj ? 1.8 : 1.1);
+        if (bmaj && i > 0) s += tx(bx0 + bw2 + 34, bty + 4, String(Math.round(bmx * i / 10)), ST, 'middle', true, 12);
       }
-      s += tx(180, 256, Math.round(bval) + ' ' + bunit, '#00695c', 'middle', true, 15);
+      s += rc(bx0 - 4, 230, bw2 + 8, 30, '#e0f2f1', '#00897b', 1.5, 8) + tx(bx0 + bw2 / 2, 250, Math.round(bval) + ' ' + bunit, '#00695c', 'middle', true, 15);
       return wrap(s);
     }
     if (t === 'axgeoboard') {
@@ -755,7 +759,7 @@
       s += rc(mx0, my0, mw1, mh1, 'rgba(108,99,245,.16)', ST, 1.8) + rc(mx0 + mw1, my0, mw2, mh1, 'rgba(39,196,168,.18)', ST, 1.8) +
         rc(mx0, my0 + mh1, mw1, mh2, 'rgba(240,162,2,.18)', ST, 1.8) + rc(mx0 + mw1, my0 + mh1, mw2, mh2, 'rgba(214,51,108,.15)', ST, 1.8);
       s += tx(mx0 + mw1 / 2, my0 - 10, String(ma1), ST, 'middle', true, 14) + tx(mx0 + mw1 + mw2 / 2, my0 - 10, String(ma2), ST, 'middle', true, 14) +
-        tx(mx0 - 18, my0 + mh1 / 2 + 5, String(mb1), ST, 'end', true, 14) + tx(mx0 - 18, my0 + mh1 + mh2 / 2 + 5, String(mb2), ST, 'end', true, 14);
+        tx(mx0 - 26, my0 + mh1 / 2 + 5, String(mb1), ST, 'middle', true, 14) + tx(mx0 - 26, my0 + mh1 + mh2 / 2 + 5, String(mb2), ST, 'middle', true, 14);
       s += tx(mx0 + mw1 / 2, my0 + mh1 / 2 + 6, mblank ? '؟' : String(ma1 * mb1), ST, 'middle', true, 15) +
         tx(mx0 + mw1 + mw2 / 2, my0 + mh1 / 2 + 6, mblank ? '؟' : String(ma2 * mb1), ST, 'middle', true, 15) +
         tx(mx0 + mw1 / 2, my0 + mh1 + mh2 / 2 + 6, mblank ? '؟' : String(ma1 * mb2), ST, 'middle', true, 15) +
@@ -765,8 +769,17 @@
     }
     if (t === 'axvenn') {
       var vleft = xs('left', 'پرنده: کبوتر، گنجشک'), vright = xs('right', 'آبزی: ماهی، میگو'), vmid = xs('mid', 'اردک');
-      s += '<circle cx="134" cy="144" r="84" fill="rgba(66,165,245,.22)" stroke="#1e88e5" stroke-width="2.2"/><circle cx="226" cy="144" r="84" fill="rgba(102,187,106,.22)" stroke="#43a047" stroke-width="2.2"/>';
-      s += tx(98, 144, vleft, ST, 'middle', true, 11) + tx(262, 144, vright, ST, 'middle', true, 11) + tx(180, 144, vmid, PT, 'middle', true, 12);
+      s += '<circle cx="128" cy="144" r="88" fill="rgba(66,165,245,.20)" stroke="#1e88e5" stroke-width="2.2"/><circle cx="232" cy="144" r="88" fill="rgba(102,187,106,.20)" stroke="#43a047" stroke-width="2.2"/>';
+      var vRegion = function (raw, rcx, startY, col) {
+        var lines = String(raw || '').split(/[:،,]/).map(function (z) { return z.trim(); }).filter(Boolean).slice(0, 4);
+        lines.forEach(function (ln2, ix2) {
+          var isHdr = ix2 === 0 && lines.length > 1;
+          s += tx(rcx, startY + ix2 * 22, ln2, isHdr ? col : ST, 'middle', true, isHdr ? 12 : 11);
+        });
+      };
+      vRegion(vleft, 84, 114, '#1565c0');
+      vRegion(vright, 276, 114, '#2e7d32');
+      vRegion(vmid, 180, 128, PT);
       return wrap(s);
     }
     return null;
@@ -2696,14 +2709,21 @@
     if (clockDrag === 'hour') state.X.h = String(Math.round(deg / 30) % 12);
     else state.X.m = String(Math.round(deg / 6) % 60);
   }
-  // V310.7 / V314.0 — عقربه‌های ساعت، رنگ‌آمیزی کسر، مهره‌های چرتکه و دماسنج با ماوس/لمس قابل تنظیم‌اند
+  // V310.7 / V314.0 / V315.1 — همهٔ ابزارهای ریاضی و علوم ابتدایی با ماوس و لمس در پیش‌نمایش قابل تنظیم‌اند
   function bindClock(box) {
-    if (['axclock', 'axfrac', 'axabacus', 'axthermo', 'axtenframe', 'axspin', 'axbeaker'].indexOf(state.t) < 0) {
+    var INTERACTIVE_PRIMARY = {
+      axclock: 1, axfrac: 1, axabacus: 1, axthermo: 1, axtenframe: 1, axspin: 1, axbeaker: 1,
+      axtally: 1, axbase10: 1, axplace: 1, axruler: 1, axmoney: 1, axjump: 1, axbalance: 1,
+      axsaw: 1, axpattern: 1, axsym: 1, axgeoboard: 1, axdice: 1, axmularea: 1
+    };
+    if (!INTERACTIVE_PRIMARY[state.t]) {
       box.onpointerdown = box.onpointermove = box.onpointerup = box.onpointercancel = null;
       box.style.touchAction = '';
+      box.style.cursor = '';
       return;
     }
     box.style.touchAction = 'none';
+    box.style.cursor = 'pointer';
     if (state.t === 'axtenframe') {
       box.onpointerdown = function (e) {
         var p = clockPoint(box, e); if (!p) return;
@@ -2730,13 +2750,189 @@
       var setBeaker = function (e) {
         var p = clockPoint(box, e); if (!p) return;
         var mx = Math.max(10, num(state.X.max, 500));
-        var ratio = Math.max(0, Math.min(1, (224 - p.y) / (224 - 38)));
+        var ratio = Math.max(0, Math.min(1, (216 - p.y) / (216 - 36)));
         var step = mx >= 100 ? 10 : 1;
         state.X.val = String(Math.min(mx, Math.max(0, Math.round((ratio * mx) / step) * step)));
       };
       box.onpointerdown = function (e) { clockDrag = 'beaker'; setBeaker(e); paint(); try { box.setPointerCapture(e.pointerId); } catch (_c) {} };
       box.onpointermove = function (e) { if (!clockDrag) return; setBeaker(e); paint(); };
       box.onpointerup = box.onpointercancel = function () { if (!clockDrag) return; clockDrag = null; renderFields(); };
+      return;
+    }
+    if (state.t === 'axruler') {
+      var setRuler = function (e) {
+        var p = clockPoint(box, e); if (!p) return;
+        var len = Math.max(2, Math.min(50, Math.floor(num(state.X.len, 10))));
+        var ratio = Math.max(0, Math.min(1, (p.x - 24) / (336 - 24)));
+        state.X.a = '0';
+        state.X.b = String(Math.max(1, Math.min(len, Math.round(ratio * len))));
+      };
+      box.onpointerdown = function (e) { clockDrag = 'ruler'; setRuler(e); paint(); try { box.setPointerCapture(e.pointerId); } catch (_c) {} };
+      box.onpointermove = function (e) { if (!clockDrag) return; setRuler(e); paint(); };
+      box.onpointerup = box.onpointercancel = function () { if (!clockDrag) return; clockDrag = null; renderFields(); };
+      return;
+    }
+    if (state.t === 'axtally') {
+      box.onpointerdown = function (e) {
+        var p = clockPoint(box, e); if (!p) return;
+        var cur = Math.max(0, Math.min(75, Math.floor(num(state.X.n, 7))));
+        state.X.n = String(p.x >= 180 ? Math.min(75, cur + 1) : Math.max(1, cur - 1));
+        paint(); renderFields();
+      };
+      box.onpointermove = box.onpointerup = box.onpointercancel = null;
+      return;
+    }
+    if (state.t === 'axbase10') {
+      box.onpointerdown = function (e) {
+        var p = clockPoint(box, e); if (!p) return;
+        var cur = Math.max(0, Math.min(999999, Math.floor(num(state.X.n, 134))));
+        var delta = p.x < 120 ? 100 : (p.x < 240 ? 10 : 1);
+        state.X.n = String(Math.min(999999, cur + delta));
+        paint(); renderFields();
+      };
+      box.onpointermove = box.onpointerup = box.onpointercancel = null;
+      return;
+    }
+    if (state.t === 'axplace') {
+      box.onpointerdown = function (e) {
+        var p = clockPoint(box, e); if (!p) return;
+        var cur = Math.max(0, parseInt(faEn(String(state.X.n || '2457')).replace(/\D/g, '') || '0', 10));
+        var col = Math.max(0, Math.min(11, Math.floor((p.x - 30) / (326 / 12))));
+        var pow = Math.pow(10, 11 - col);
+        var d = Math.floor(cur / pow) % 10;
+        state.X.n = String(cur + (((d + 1) % 10) - d) * pow);
+        paint(); renderFields();
+      };
+      box.onpointermove = box.onpointerup = box.onpointercancel = null;
+      return;
+    }
+    if (state.t === 'axmoney') {
+      box.onpointerdown = function () {
+        state.X.sum = String(state.X.sum || '1') === '0' ? '1' : '0';
+        paint(); renderFields();
+      };
+      box.onpointermove = box.onpointerup = box.onpointercancel = null;
+      return;
+    }
+    if (state.t === 'axjump') {
+      box.onpointerdown = function (e) {
+        var p = clockPoint(box, e); if (!p) return;
+        var s0 = Math.max(0, Math.floor(num(state.X.start, 0)));
+        if (p.x >= 180) {
+          var j = (Math.max(1, Math.floor(num(state.X.jumps, 4))) % 8) + 1;
+          var st = Math.max(1, Math.floor(num(state.X.step, 3)));
+          state.X.jumps = String(j); state.X.max = String(s0 + j * st);
+        } else {
+          var st2 = (Math.max(1, Math.floor(num(state.X.step, 3))) % 6) + 1;
+          var j2 = Math.max(1, Math.floor(num(state.X.jumps, 4)));
+          state.X.step = String(st2); state.X.max = String(s0 + j2 * st2);
+        }
+        paint(); renderFields();
+      };
+      box.onpointermove = box.onpointerup = box.onpointercancel = null;
+      return;
+    }
+    if (state.t === 'axbalance') {
+      box.onpointerdown = function (e) {
+        var p = clockPoint(box, e); if (!p) return;
+        if (p.x < 180) state.X.left = String((Math.max(1, Math.floor(num(state.X.left, 5))) % 10) + 1);
+        else state.X.right = String((Math.max(1, Math.floor(num(state.X.right, 3))) % 10) + 1);
+        paint(); renderFields();
+      };
+      box.onpointermove = box.onpointerup = box.onpointercancel = null;
+      return;
+    }
+    if (state.t === 'axsaw') {
+      box.onpointerdown = function (e) {
+        var p = clockPoint(box, e); if (!p) return;
+        var c = Math.max(0, Math.min(3, Math.floor((p.x - 80) / 50)));
+        var r = Math.max(0, Math.min(3, Math.floor((p.y - 36) / 50)));
+        var raw = String(state.X.vals || '1,2,3,4;3,4,?,2;2,?,4,3;4,3,2,1').split(';');
+        var grid = [0, 1, 2, 3].map(function (ri) {
+          var row = (raw[ri] || '').split(',').map(function (z) { return faEn(z.trim()); });
+          return [0, 1, 2, 3].map(function (ci) { return row[ci] || '?'; });
+        });
+        var cyc = ['1', '2', '3', '4', '?'];
+        grid[r][c] = cyc[(cyc.indexOf(grid[r][c]) + 1) % cyc.length];
+        state.X.vals = grid.map(function (row) { return row.join(','); }).join(';');
+        paint(); renderFields();
+      };
+      box.onpointermove = box.onpointerup = box.onpointercancel = null;
+      return;
+    }
+    if (state.t === 'axpattern') {
+      box.onpointerdown = function (e) {
+        var p = clockPoint(box, e); if (!p) return;
+        var items = String(state.X.seq || '●,▲,●,▲,●,?').split(/[,،]/).map(function (z) { return z.trim(); }).filter(Boolean);
+        if (!items.length) return;
+        var n = items.length, cw = Math.min(42, 290 / n), gap = 6;
+        var x0 = (360 - (n * cw + (n - 1) * gap)) / 2;
+        var idx = Math.max(0, Math.min(n - 1, Math.floor((p.x - x0) / (cw + gap))));
+        var cyc = ['●', '▲', '■', '★', '?'];
+        items[idx] = cyc[(cyc.indexOf(items[idx]) + 1) % cyc.length];
+        state.X.seq = items.join(',');
+        paint(); renderFields();
+      };
+      box.onpointermove = box.onpointerup = box.onpointercancel = null;
+      return;
+    }
+    if (state.t === 'axsym') {
+      box.onpointerdown = function (e) {
+        var p = clockPoint(box, e); if (!p) return;
+        var c = Math.max(0, Math.min(7, Math.floor((p.x - 76) / 26)));
+        var r = Math.max(0, Math.min(7, Math.floor((p.y - 32) / 26)));
+        var axis = String(state.X.axis || 'v').toLowerCase();
+        var pair = axis === 'h'
+          ? ((c + 1) + ',' + (r < 4 ? 4 - r : r - 3))
+          : ((r + 1) + ',' + (c < 4 ? 4 - c : c - 3));
+        var list = String(state.X.cells || '1,1;2,1;2,2;3,2').split(/[;؛]/).map(function (z) { return faEn(z.trim()); }).filter(Boolean);
+        var ix = list.indexOf(pair);
+        if (ix >= 0 && list.length > 1) list.splice(ix, 1);
+        else if (ix < 0) list.push(pair);
+        state.X.cells = list.join(';');
+        paint(); renderFields();
+      };
+      box.onpointermove = box.onpointerup = box.onpointercancel = null;
+      return;
+    }
+    if (state.t === 'axgeoboard') {
+      box.onpointerdown = function (e) {
+        var p = clockPoint(box, e); if (!p) return;
+        var g = Math.max(3, Math.min(7, Math.floor(num(state.X.grid, 5))));
+        var step = 200 / Math.max(1, g - 1);
+        var px = Math.max(0, Math.min(g - 1, Math.round((p.x - 80) / step))) + 1;
+        var py = g - Math.max(0, Math.min(g - 1, Math.round((p.y - 36) / step)));
+        var key = px + ',' + py;
+        var list = String(state.X.pts || '1,1;4,1;4,3;1,3').split(/[;؛]/).map(function (z) { return faEn(z.trim()); }).filter(Boolean);
+        var ix = list.indexOf(key);
+        if (ix >= 0 && list.length > 3) list.splice(ix, 1);
+        else if (ix < 0) list.push(key);
+        state.X.pts = list.join(';');
+        paint(); renderFields();
+      };
+      box.onpointermove = box.onpointerup = box.onpointercancel = null;
+      return;
+    }
+    if (state.t === 'axdice') {
+      box.onpointerdown = function (e) {
+        var p = clockPoint(box, e); if (!p) return;
+        var dl = String(state.X.dice || '4,6').split(/[,،]/).map(function (z) { return parseInt(faEn(z.trim()), 10); }).filter(function (v2) { return v2 >= 1 && v2 <= 6; });
+        if (!dl.length) dl = [4, 6];
+        var x0 = (360 - (dl.length * 66 + (dl.length - 1) * 22)) / 2;
+        var idx = Math.max(0, Math.min(dl.length - 1, Math.floor((p.x - x0) / 88)));
+        dl[idx] = (dl[idx] % 6) + 1;
+        state.X.dice = dl.join(',');
+        paint(); renderFields();
+      };
+      box.onpointermove = box.onpointerup = box.onpointercancel = null;
+      return;
+    }
+    if (state.t === 'axmularea') {
+      box.onpointerdown = function () {
+        state.X.blank = Math.floor(num(state.X.blank, 0)) === 0 ? '1' : '0';
+        paint(); renderFields();
+      };
+      box.onpointermove = box.onpointerup = box.onpointercancel = null;
       return;
     }
     if (state.t === 'axfrac') {
@@ -2767,7 +2963,7 @@
       var setThermo = function (e) {
         var p = clockPoint(box, e); if (!p) return;
         var mn = num(state.X.min, -10), mx = Math.max(mn + 5, num(state.X.max, 50));
-        var ratio = Math.max(0, Math.min(1, (206 - p.y) / (206 - 34)));
+        var ratio = Math.max(0, Math.min(1, (204 - p.y) / (204 - 34)));
         state.X.val = String(Math.round(mn + ratio * (mx - mn)));
       };
       box.onpointerdown = function (e) { clockDrag = 'thermo'; setThermo(e); paint(); try { box.setPointerCapture(e.pointerId); } catch (_c) {} };
@@ -2811,21 +3007,47 @@
     }
     o[ks[ks.length - 1]] = val;
   }
+  var GF_DROPDOWNS = {
+    'axfrac:X.shape': [['circle', 'دایره‌ای (قطاع)'], ['ring', 'حلقه‌ای'], ['bar', 'نواری'], ['square', 'مربعی (شبکه)']],
+    'axsaw:X.mode': [['shape', 'شکلی (● ▲ ■ ★)'], ['num', 'عددی (۱ تا ۴)']],
+    'axsym:X.axis': [['v', 'عمودی (چپ و راست)'], ['h', 'افقی (بالا و پایین)']],
+    'axsym:X.mirror': [['1', 'نمایش کامل شکل قرینه'], ['0', 'جای خالی (؟) برای سؤال']],
+    'axplace:X.op2': [['', 'ندارد'], ['+', 'جمع (+)'], ['-', 'تفریق (−)']],
+    'axplace:X.op3': [['', 'ندارد'], ['+', 'جمع (+)'], ['-', 'تفریق (−)']],
+    'axplace:X.rows': [['1', '۱ ردیف'], ['2', '۲ ردیف'], ['3', '۳ ردیف'], ['4', '۴ ردیف']],
+    'axplace:X.blank': [['0', 'نمایش عددها'], ['1', 'جای خالی (برای طرح سؤال)']],
+    'axabacus:X.blank': [['0', 'نمایش عددها'], ['1', 'جای خالی (برای طرح سؤال)']],
+    'axmularea:X.blank': [['0', 'نمایش عددها'], ['1', 'جای خالی (برای طرح سؤال)']],
+    'axabacus:X.cols': [['2', '۲ ستون (تا دهگان)'], ['3', '۳ ستون (تا صدگان)'], ['4', '۴ ستون (تا هزار)'], ['5', '۵ ستون (تا ده‌هزار)'], ['6', '۶ ستون (تا صدهزار)']],
+    'axclock:X.nums': [['1', 'نمایش عددهای ۱ تا ۱۲'], ['0', 'بدون عدد (تمرین ساعت)']],
+    'axclock:X.label': [['0', 'ندارد'], ['1', 'نمایش زیر شکل']],
+    'axfrac:X.label': [['0', 'ندارد'], ['1', 'نمایش زیر شکل']],
+    'axjump:X.label': [['1', 'نمایش عبارت کامل'], ['2', 'نمایش با جای خالی (= ؟)'], ['0', 'ندارد']],
+    'axmoney:X.unit': [['تومان', 'تومان'], ['ریال', 'ریال']],
+    'axmoney:X.sum': [['1', 'نمایش جمع کل'], ['0', 'مخفی (برای سؤال)']],
+    'axbalance:X.unit': [['کیلوگرم', 'کیلوگرم'], ['گرم', 'گرم']],
+    'axbeaker:X.unit': [['mL', 'میلی‌لیتر (mL)'], ['لیتر', 'لیتر'], ['سی‌سی', 'سی‌سی (cc)']],
+    'axtenframe:X.frames': [['2', '۲ قاب (۲۰تایی)'], ['1', '۱ قاب (۱۰تایی)']],
+    'axgeoboard:X.grid': [['3', '۳×۳'], ['4', '۴×۴'], ['5', '۵×۵ (استاندارد)'], ['6', '۶×۶'], ['7', '۷×۷']],
+    'axdice:X.sum': [['1', 'نمایش جمع کامل (۴ + ۶ = ۱۰)'], ['2', 'نمایش با جای خالی (۴ + ۶ = ؟)'], ['0', 'فقط نمایش تاس‌ها']]
+  };
   function renderFields() {
     gfDdClose();
     var host = $('grFields');
     if (!host) return;
     host.innerHTML = '<h4>داده‌ها و بازه</h4><div class="gf-grid">' + fieldsFor(state.t).map(function (r) {
       var v = getPath(state, r[0]);
-      if (r[0] === 'X.shape') {
-        // V310.7 / V310.9 — شکل کسر شکلی به‌صورت منوی کشویی (در div.gf-field.gf-span تا label کلیک دکمه را به select بومی نفرستد و عرض کامل بگیرد)
-        var cur = v || 'circle';
-        var opts = [['circle', 'دایره‌ای (قطاع)'], ['ring', 'حلقه‌ای'], ['bar', 'نواری'], ['square', 'مربعی (شبکه)']];
-        return '<div class="gf-field gf-span"><span class="gf-lbl">' + esc(r[1]) + '</span><select data-k="X.shape" class="gf-sel">' + opts.map(function (o) {
-          return '<option value="' + o[0] + '"' + (cur === o[0] ? ' selected' : '') + '>' + o[1] + '</option>';
+      var ddOpts = GF_DROPDOWNS[state.t + ':' + r[0]];
+      if (r[0] === 'X.shape' || ddOpts) {
+        // V310.7 / V310.9 / V315.1 — گزینه‌های چندحالته به‌صورت منوی کشویی (در div.gf-field.gf-span تا label کلیک دکمه را به select بومی نفرستد و عرض کامل بگیرد)
+        var opts = ddOpts || [['circle', 'دایره‌ای (قطاع)'], ['ring', 'حلقه‌ای'], ['bar', 'نواری'], ['square', 'مربعی (شبکه)']];
+        var cur = (v != null && v !== '') ? String(v) : opts[0][0];
+        var selTag = r[0] === 'X.shape' ? '<select data-k="X.shape" class="gf-sel">' : '<select data-k="' + r[0] + '" class="gf-sel">';
+        return '<div class="gf-field gf-span"><span class="gf-lbl">' + esc(r[1]) + '</span>' + selTag + opts.map(function (o) {
+          return '<option value="' + esc(o[0]) + '"' + (cur === o[0] ? ' selected' : '') + '>' + esc(o[1]) + '</option>';
         }).join('') + '</select></div>';
       }
-      var wide = /labs|vals|title|xs|ys|zs|rows|cols|mins|q1s|meds|q3s|maxs|opens|highs|lows|closes/.test(r[0]);
+      var wide = /labs|vals|title|xs|ys|zs|rows|cols|mins|q1s|meds|q3s|maxs|opens|highs|lows|closes|cells|pts|seq|parts|dice|left|right|mid/.test(r[0]);
       return '<label class="' + (wide ? 'gf-span' : '') + '">' + esc(r[1]) +
         '<input data-k="' + r[0] + '" value="' + esc(v == null ? '' : v) + '"></label>';
     }).join('') + '</div>';

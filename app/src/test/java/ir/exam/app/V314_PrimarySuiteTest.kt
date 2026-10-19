@@ -105,8 +105,16 @@ class V314_PrimarySuiteTest {
         assertTrue(results.contains("📋 کارنامهٔ توصیفی به تفکیک درس"))
         assertTrue(results.contains("lvl.stars"))
         val adj = File(root(), "app/src/main/java/ir/exam/app/ui/figure/AdjustableFigure.kt").readText()
-        for (t in listOf("axclock", "axfrac", "axabacus", "axthermo")) {
+        for (t in listOf(
+            "axclock", "axfrac", "axabacus", "axthermo", "axtenframe", "axspin", "axbeaker",
+            "axtally", "axbase10", "axplace", "axruler", "axmoney", "axjump", "axbalance",
+            "axsaw", "axpattern", "axsym", "axgeoboard", "axdice", "axmularea"
+        )) {
             assertTrue("Missing $t in AdjustableFigure.kt", adj.contains("\"$t\""))
         }
+        val picker = File(root(), "app/src/main/java/ir/exam/app/ui/figure/FigurePickerDialog.kt").readText()
+        assertTrue(picker.contains("dropdownOptionsFor("))
+        assertTrue(picker.contains("\"axsaw\" to \"mode\""))
+        assertTrue(picker.contains("\"axbeaker\" to \"unit\""))
     }
 }

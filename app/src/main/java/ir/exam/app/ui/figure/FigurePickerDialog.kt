@@ -363,11 +363,13 @@ private fun GraphEditorPane(initialSpec: FigureSpec, onInsert: (FigureSpec) -> U
             )
         }
         items(paramKeys(graphType), key = { it }) { key ->
-            if (graphType == "axfrac" && key == "shape") {
+            val ddOpts = dropdownOptionsFor(graphType, key)
+            if (ddOpts != null) {
                 FigureShapeDropdown(
                     label = paramLabel(graphType, key),
-                    value = params[key].orEmpty().ifBlank { "circle" },
-                    onSelect = { v -> params = params + (key to v) }
+                    value = params[key].orEmpty().ifBlank { ddOpts.first().first },
+                    onSelect = { v -> params = params + (key to v) },
+                    options = ddOpts
                 )
             } else {
                 OutlinedTextField(
@@ -383,7 +385,7 @@ private fun GraphEditorPane(initialSpec: FigureSpec, onInsert: (FigureSpec) -> U
             Card(Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                     Text("پیش‌نمایش", style = MaterialTheme.typography.labelLarge)
-                    // V310.7 — ساعت با دست در پیش‌نمایش قابل تنظیم است و مقدار h/m را به فرم برمی‌گرداند
+                    // V310.7 / V315.1 — همهٔ ابزارهای ابتدایی با لمس در پیش‌نمایش قابل تنظیم‌اند و مقادیر تازه به فرم برمی‌گردد
                     AdjustableFigure(
                         draft,
                         Modifier.fillMaxWidth().height(180.dp),
@@ -391,7 +393,7 @@ private fun GraphEditorPane(initialSpec: FigureSpec, onInsert: (FigureSpec) -> U
                         onChanged = { s ->
                             val xo = s.raw["X"] as? JsonObject
                             if (xo != null) {
-                                params = params + listOf("h", "m").mapNotNull { k ->
+                                params = params + paramKeys(graphType).mapNotNull { k ->
                                     (xo[k] as? JsonPrimitive)?.contentOrNull?.let { k to it }
                                 }
                             }
@@ -621,10 +623,37 @@ private fun templateLabel(kind: FigureKind, type: String): String =
 private fun trimNum(value: Float): String =
     if (value == value.toInt().toFloat()) value.toInt().toString() else value.toString()
 
-/** V310.7 / V310.9 — منوی کشویی شکل کسر شکلی (دایره‌ای، حلقه‌ای، نواری، مربعی). */
+/** V315.1 — گزینه‌های منوی کشویی برای پارامترهای چندحالتهٔ ابزارهای ریاضی و علوم ابتدایی. */
+private fun dropdownOptionsFor(type: String, key: String): List<Pair<String, String>>? = when (type to key) {
+    "axfrac" to "shape" -> listOf("circle" to "دایره‌ای (قطاع)", "ring" to "حلقه‌ای", "bar" to "نواری", "square" to "مربعی (شبکه)")
+    "axsaw" to "mode" -> listOf("shape" to "شکلی (● ▲ ■ ★)", "num" to "عددی (۱ تا ۴)")
+    "axsym" to "axis" -> listOf("v" to "عمودی (چپ و راست)", "h" to "افقی (بالا و پایین)")
+    "axsym" to "mirror" -> listOf("1" to "نمایش کامل شکل قرینه", "0" to "جای خالی (؟) برای سؤال")
+    "axplace" to "op2", "axplace" to "op3" -> listOf("" to "ندارد", "+" to "جمع (+)", "-" to "تفریق (−)")
+    "axplace" to "rows" -> listOf("1" to "۱ ردیف", "2" to "۲ ردیف", "3" to "۳ ردیف", "4" to "۴ ردیف")
+    "axplace" to "blank", "axabacus" to "blank", "axmularea" to "blank" -> listOf("0" to "نمایش عددها", "1" to "جای خالی (برای طرح سؤال)")
+    "axabacus" to "cols" -> listOf("2" to "۲ ستون (تا دهگان)", "3" to "۳ ستون (تا صدگان)", "4" to "۴ ستون (تا هزار)", "5" to "۵ ستون (تا ده‌هزار)", "6" to "۶ ستون (تا صدهزار)")
+    "axclock" to "nums" -> listOf("1" to "نمایش عددهای ۱ تا ۱۲", "0" to "بدون عدد (تمرین ساعت)")
+    "axclock" to "label", "axfrac" to "label" -> listOf("0" to "ندارد", "1" to "نمایش زیر شکل")
+    "axjump" to "label" -> listOf("1" to "نمایش عبارت کامل", "2" to "نمایش با جای خالی (= ؟)", "0" to "ندارد")
+    "axmoney" to "unit" -> listOf("تومان" to "تومان", "ریال" to "ریال")
+    "axmoney" to "sum" -> listOf("1" to "نمایش جمع کل", "0" to "مخفی (برای سؤال)")
+    "axbalance" to "unit" -> listOf("کیلوگرم" to "کیلوگرم", "گرم" to "گرم")
+    "axbeaker" to "unit" -> listOf("mL" to "میلی‌لیتر (mL)", "لیتر" to "لیتر", "سی‌سی" to "سی‌سی (cc)")
+    "axtenframe" to "frames" -> listOf("2" to "۲ قاب (۲۰تایی)", "1" to "۱ قاب (۱۰تایی)")
+    "axgeoboard" to "grid" -> listOf("3" to "۳×۳", "4" to "۴×۴", "5" to "۵×۵ (استاندارد)", "6" to "۶×۶", "7" to "۷×۷")
+    "axdice" to "sum" -> listOf("1" to "نمایش جمع کامل (۴ + ۶ = ۱۰)", "2" to "نمایش با جای خالی (۴ + ۶ = ؟)", "0" to "فقط نمایش تاس‌ها")
+    else -> null
+}
+
+/** V310.7 / V310.9 / V315.1 — منوی کشویی گزینه‌های چندحالتهٔ شکل‌های ابتدایی. */
 @Composable
-private fun FigureShapeDropdown(label: String, value: String, onSelect: (String) -> Unit) {
-    val options = listOf("circle" to "دایره‌ای (قطاع)", "ring" to "حلقه‌ای", "bar" to "نواری", "square" to "مربعی (شبکه)")
+private fun FigureShapeDropdown(
+    label: String,
+    value: String,
+    onSelect: (String) -> Unit,
+    options: List<Pair<String, String>> = listOf("circle" to "دایره‌ای (قطاع)", "ring" to "حلقه‌ای", "bar" to "نواری", "square" to "مربعی (شبکه)")
+) {
     var open by remember { mutableStateOf(false) }
     val currentLabel = options.firstOrNull { it.first == value }?.second ?: options.first().second
     Box(Modifier.fillMaxWidth()) {
