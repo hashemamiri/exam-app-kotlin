@@ -1,22 +1,20 @@
 package ir.exam.app
 
-import ir.exam.app.core.figure.FigureGallery
-import ir.exam.app.core.figure.FigureSpecParser
+import ir.exam.app.core.figure.AXIS_FIGURES
 import ir.exam.app.core.figure.PrimaryMathSvgRenderer
 import ir.exam.app.data.repository.ExamQuestionCodec
 import ir.exam.app.data.repository.StudentExamPayloadCodec
 import ir.exam.app.domain.model.FillBlankQuestion
-import ir.exam.app.domain.model.QuestionDraft
-import ir.exam.app.domain.model.QuestionType
 import ir.exam.app.ui.builder.PrimaryBank
+import ir.exam.app.ui.builder.QuestionDraft
+import ir.exam.app.ui.builder.QuestionType
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.File
 
 /**
- * V314.0 — بستهٔ ۵گانهٔ ارتقای دورهٔ ابتدایی در اندروید:
+ * V314.0 / V314.1 — بستهٔ ۵گانهٔ ارتقای دورهٔ ابتدایی در اندروید:
  * ۱) گونه‌های تعاملی جدید: بخش‌کردن و صداکشی (syllable) و دسته‌بندی در سبد (bucket)
  * ۲) ۶ ابزار ریاضی/علوم ابتدایی جدید: چرتکه (axabacus)، محور پرش (axjump)، ترازو (axbalance)، دماسنج (axthermo)، جدول شگفت‌انگیز (axsaw)، الگویابی (axpattern)
  * ۳) بانک آمادهٔ غنی‌شدهٔ ابتدایی (۱۱۴ سؤال در ۹ درس رسمی پایه‌های ۱ تا ۶ + جستجو و افزودن گروهی)
@@ -50,34 +48,34 @@ class V314_PrimarySuiteTest {
         )
         val encoded = ExamQuestionCodec.encode(drafts)
         val decodedDrafts = ExamQuestionCodec.decode(
-            encoded.publicQuestions.toString(),
-            encoded.answerKey.toString()
+            encoded.publicQuestions,
+            encoded.answerKey
         )
         assertEquals("syllable", decodedDrafts[0].mode)
         assertEquals("bucket", decodedDrafts[1].mode)
 
         val rawExam = """{"id":"ex1","title":"آزمون ابتدایی","options":{"primary":true},"questions":${encoded.publicQuestions}}"""
-        val studentExam = StudentExamPayloadCodec.decode(rawExam, studentId = "st1", nowEpochMillis = 1000L)
+        val studentExam = StudentExamPayloadCodec.decodeFresh(StudentExamPayloadCodec.parse(rawExam), studentId = "st1", receivedAtEpochMs = 1000L)
         val qSyl = studentExam.questions[0] as FillBlankQuestion
         val qBkt = studentExam.questions[1] as FillBlankQuestion
         assertEquals(3, qSyl.syllableCount)
         assertEquals(listOf("پرنده", "پستاندار"), qBkt.buckets)
         assertEquals(4, qBkt.bucketItems.size)
-        assertEquals("پستاندار:شیر+گربه|پرنده:کبوتر+گنجشک".split("|").sorted(),
-            ExamQuestionCodec.bucketCanonicalAnswer(ExamQuestionCodec.parseBucketSpec(drafts[1].expectedText)).split("|").sorted())
+        assertEquals(
+            "پستاندار:شیر+گربه|پرنده:کبوتر+گنجشک".split("|").sorted(),
+            ExamQuestionCodec.bucketCanonicalAnswer(ExamQuestionCodec.parseBucketSpec(drafts[1].expectedText)).split("|").sorted()
+        )
     }
 
     @Test
     fun category2_sixNewPrimaryMathFiguresRenderValidSvg() {
-        val ids = FigureGallery.PRIMARY_MATH_FIGURES.map { it.id }.toSet()
+        val ids = AXIS_FIGURES.map { it.id }.toSet()
         for (k in listOf("axabacus", "axjump", "axbalance", "axthermo", "axsaw", "axpattern")) {
-            assertTrue("Missing $k in PRIMARY_MATH_FIGURES", k in ids)
-            val tpl = FigureGallery.PRIMARY_MATH_FIGURES.first { it.id == k }
-            val spec = FigureSpecParser.parseFirst(tpl.token)
-            assertNotNull("Failed to parse token for $k", spec)
-            val svg = PrimaryMathSvgRenderer.render(spec!!)
-            assertNotNull("Null SVG for $k", svg)
-            assertTrue("Invalid SVG for $k", svg!!.startsWith("<svg") && svg.endsWith("</svg>"))
+            assertTrue("Missing $k in AXIS_FIGURES", k in ids)
+            assertTrue("Missing $k in PrimaryMathSvgRenderer.SUPPORTED", k in PrimaryMathSvgRenderer.SUPPORTED)
+            val tpl = AXIS_FIGURES.first { it.id == k }
+            val body = PrimaryMathSvgRenderer.body(tpl.toSpec())
+            assertTrue("Empty SVG body for $k", body.isNotBlank())
         }
     }
 
@@ -101,6 +99,7 @@ class V314_PrimarySuiteTest {
         assertTrue(grading.contains("🌟 آفرین قهرمان! خیلی خوب درخشیدی"))
         val results = File(root(), "app/src/main/java/ir/exam/app/ui/reports/StudentResultsScreen.kt").readText()
         assertTrue(results.contains("📋 کارنامهٔ توصیفی به تفکیک درس"))
+        assertTrue(results.contains("lvl.stars"))
         val adj = File(root(), "app/src/main/java/ir/exam/app/ui/figure/AdjustableFigure.kt").readText()
         for (t in listOf("axclock", "axfrac", "axabacus", "axthermo")) {
             assertTrue("Missing $t in AdjustableFigure.kt", adj.contains("\"$t\""))

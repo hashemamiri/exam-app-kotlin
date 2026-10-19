@@ -108,10 +108,9 @@ fun StudentResultsScreen(viewModel: StudentResultsViewModel = remember { Student
                             bySubject.forEach { (subj, list) ->
                                 val avgPct = list.map { it.percent }.average()
                                 val lvl = ir.exam.app.core.report.PrimaryLevels.levelOf(avgPct)
-                                val stars = ir.exam.app.core.report.PrimaryLevels.stars(lvl.rank)
                                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                                     Text("$subj (${list.size} آزمون)", style = MaterialTheme.typography.bodyMedium)
-                                    Text("${lvl.name}  $stars", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
+                                    Text("${lvl.name}  ${lvl.stars}", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
                                 }
                             }
                         }
