@@ -10,7 +10,7 @@ import java.io.File
 class V314_Site_PrimarySuiteTest {
     private fun root(): File {
         var d = File(System.getProperty("user.dir") ?: ".")
-        while (!File(d, "settings.gradle.kts").exists() && d.parentFile != null) d = d.parentFile
+        while (!File(d, "settings.gradle.kts").exists() && d.parentFile != null) d = d.parentFile!!
         return d
     }
 
