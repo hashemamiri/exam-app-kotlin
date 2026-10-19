@@ -255,17 +255,28 @@ private fun geometryFields(type: String): List<GeometryField> = when (type) {
         listOf(v("A"), v("B"), v("C"), v("D"), v("E"), v("F"), s("a"))
     "oct" ->
         listOf(v("A"), v("B"), v("C"), v("D"), v("E"), v("F"), v("G"), v("H"), s("a"))
-    "circ", "semi" -> listOf(v("O"), x("r", "شعاع r"))
+    "circ", "semi", "hemi", "sph" -> listOf(v("O"), x("r", "شعاع r"))
+    "sec" -> listOf(v("O"), x("r", "شعاع r"), x("m", "زاویهٔ مرکزی"))
+    "arc" -> listOf(v("O"), v("A"), v("B"), x("m", "اندازهٔ کمان"))
+    "segm" -> listOf(v("A"), v("B"), x("r", "شعاع"), x("m", "زاویهٔ کمان"))
+    "ngon" -> listOf(x("n", "تعداد اضلاع n"), s("a"))
+    "hept", "deca" -> listOf(s("a"))
     "ring" -> listOf(v("O"), x("R", "شعاع بیرونی R"), x("r", "شعاع داخلی r"))
-    "ell" -> listOf(v("O"), x("a", "نیم‌محور a"))
+    "torus" -> listOf(x("R", "شعاع بزرگ R"), x("r", "شعاع لوله r"))
+    "frust" -> listOf(x("R", "شعاع قاعده بزرگ R"), x("r", "شعاع قاعده کوچک r"), x("h", "ارتفاع h"))
+    "ell" -> listOf(v("O"), x("a", "نیم‌محور بزرگ a"), x("b", "نیم‌محور کوچک b"))
+    "elps" -> listOf(v("O"), x("a", "نیم‌قطر a"), x("b", "نیم‌قطر b"), x("c", "نیم‌قطر c"))
     "ang" -> listOf(v("O"), v("A"), v("B"), x("m", "اندازه زاویه"))
     "parll" -> listOf(v("d1"), v("d2"), x("n", "تعداد خطوط"), x("tilt", "زاویه خطوط"))
-    "pseg", "ray", "ln" -> listOf(v("A"), v("B"))
+    "pseg", "ray", "ln" -> listOf(v("A"), v("B"), s("a"))
     "cube" -> listOf(s("s"))
     "box" -> listOf(s("a"), s("b"), s("h"))
     "cyl", "cone" -> listOf(x("h", "ارتفاع"), x("r", "شعاع"))
-    "sph" -> listOf(v("O"), x("r", "شعاع"))
     "pyr" -> listOf(v("S"), v("A"), v("B"), s("a"), x("h", "ارتفاع"))
+    "tet" -> listOf(v("S"), v("A"), v("B"), v("C"), x("h", "ارتفاع"))
+    "hpris" -> listOf(x("h", "ارتفاع h"), s("a"))
+    "octa", "dodec", "icosa" -> listOf(v("S"), v("A"), v("B"), s("a"))
+    "star" -> listOf(v("A"), v("B"), v("C"), v("D"), v("E"), s("a"))
     "pris" -> listOf(v("A"), v("B"), v("C"), v("A2"), x("h", "ارتفاع"))
     else -> listOf(v("A"), v("B"), v("C"), s("a"))
 }
@@ -309,22 +320,35 @@ private fun GeometryEditorPane(initialSpec: FigureSpec, onInsert: (FigureSpec) -
             )
         }
         items(fields, key = GeometryField::id) { field ->
-            OutlinedTextField(
-                value = values[field.id].orEmpty(),
-                onValueChange = { values = values + (field.id to it) },
-                label = { Text(field.label) },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true
-            )
+            val ddOpts = dropdownOptionsFor(initialSpec.type, field.id)
+            if (ddOpts != null) {
+                FigureShapeDropdown(
+                    label = field.label,
+                    value = values[field.id].orEmpty().ifBlank { ddOpts.first().first },
+                    onSelect = { v -> values = values + (field.id to v) },
+                    options = ddOpts
+                )
+            } else {
+                OutlinedTextField(
+                    value = values[field.id].orEmpty(),
+                    onValueChange = { values = values + (field.id to it) },
+                    label = { Text(field.label) },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true
+                )
+            }
         }
         item {
             Card(Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                     Text("پیش‌نمایش", style = MaterialTheme.typography.labelLarge)
-                    InlineFigureView(
+                    AdjustableFigure(
                         draft,
                         Modifier.fillMaxWidth().height(220.dp),
-                        contentDescription = "پیش‌نمایش شکل"
+                        contentDescription = "پیش‌نمایش شکل",
+                        onChanged = { s ->
+                            values = values + fields.associate { f -> f.id to fieldValue(s, f) }
+                        }
                     )
                 }
             }
@@ -496,22 +520,22 @@ private fun paramFields(type: String): List<Pair<String, String>> = when (type) 
     "axloglog" -> listOf("xmax" to "تعداد دههٔ x", "ymax" to "تعداد دههٔ y")
     "axtime" -> listOf("labs" to "زمان‌ها (با ویرگول)", "s1" to "نام محور")
     // V304 — ابزار ریاضی ابتدایی
-    "axtally" -> listOf("n" to "تعداد (۰ تا ۷۵)")
-    "axbase10" -> listOf("n" to "عدد (۰ تا ۱٬۰۰۰٬۰۰۰)")
+    "axtally" -> listOf("n" to "تعداد (۰ تا ۷۵)", "label" to "نمایش تعداد زیر شکل")
+    "axbase10" -> listOf("n" to "عدد (۰ تا ۱٬۰۰۰٬۰۰۰)", "label" to "نمایش عدد زیر شکل")
     "axplace" -> listOf("n" to "ردیف ۱ (عدد)", "n2" to "ردیف ۲ (خالی = ندارد)", "op2" to "علامت ردیف ۲ (+ یا −)", "n3" to "ردیف ۳ (خالی = ندارد)", "op3" to "علامت ردیف ۳ (+ یا −)", "rows" to "تعداد ردیف‌ها (۱ تا ۶)", "blank" to "خانه‌ها خالی؟ (۱=بله)")
     "axclock" -> listOf("h" to "ساعت (۰ تا ۱۲)", "m" to "دقیقه (۰ تا ۵۹)", "nums" to "نمایش عددها (۱/۰)", "label" to "نوشتن ساعت زیر شکل (۱/۰)")
-    "axruler" -> listOf("len" to "طول خط‌کش (۲ تا ۵۰ سانتی‌متر)", "a" to "ابتدای اندازه‌گیری (اختیاری)", "b" to "انتهای اندازه‌گیری (اختیاری)")
+    "axruler" -> listOf("len" to "طول خط‌کش (۲ تا ۵۰ سانتی‌متر)", "a" to "ابتدای اندازه‌گیری (اختیاری)", "b" to "انتهای اندازه‌گیری (اختیاری)", "label" to "نمایش طول بازه")
     "axfrac" -> listOf("num" to "صورت", "den" to "مخرج", "shape" to "شکل", "label" to "نوشتن کسر زیر شکل (۱/۰)")
     "axmoney" -> listOf("notes" to "اسکناس‌ها (با ویرگول)", "coins" to "سکه‌ها (با ویرگول)", "unit" to "واحد", "sum" to "نوشتن جمع (۱/۰)")
     // V314.0 — ۶ ابزار جدید ریاضی و علوم ابتدایی
     "axabacus" -> listOf("n" to "عدد (۰ تا ۹۹۹٬۹۹۹)", "cols" to "تعداد ستون‌ها (۲ تا ۶)", "blank" to "مخفی کردن ارقام زیر چرتکه (۱=بله)")
     "axjump" -> listOf("start" to "نقطهٔ شروع", "step" to "طول هر پرش", "jumps" to "تعداد پرش", "max" to "انتهای محور", "label" to "نمایش عبارت جمع/ضرب (۱/۰)")
-    "axbalance" -> listOf("left" to "وزنهٔ کفهٔ چپ", "right" to "وزنهٔ کفهٔ راست", "unit" to "واحد جرم")
+    "axbalance" -> listOf("left" to "وزنهٔ کفهٔ چپ", "right" to "وزنهٔ کفهٔ راست", "unit" to "واحد جرم", "label" to "نمایش علامت مقایسه")
     "axthermo" -> listOf("val" to "دما (°C)", "min" to "کمینهٔ دما", "max" to "بیشینهٔ دما")
     "axsaw" -> listOf("vals" to "سطرها با ; و خانه‌ها با , (جای خالی = ?)", "mode" to "نمایش (shape=شکل / num=عدد)")
     "axpattern" -> listOf("seq" to "دنباله با ویرگول (مثلاً ●,▲,●,▲,?)")
     // V315.0 — ۸ ابزار جدید ریاضی و علوم ابتدایی
-    "axtenframe" -> listOf("a" to "مهره‌های قرمز", "b" to "مهره‌های آبی", "frames" to "تعداد قاب (۱ یا ۲)")
+    "axtenframe" -> listOf("a" to "مهره‌های قرمز", "b" to "مهره‌های آبی", "frames" to "تعداد قاب (۱ یا ۲)", "label" to "نمایش عبارت جمع")
     "axsym" -> listOf("cells" to "خانه‌ها (ردیف,ستون با ;)", "axis" to "خط تقارن (v عمودی / h افقی)", "mirror" to "نمایش قرینه (۱=بله، ۰=؟)")
     "axspin" -> listOf("parts" to "بخش‌های چرخنده (با کاما)", "arrow" to "شمارهٔ بخش عقربه")
     "axbeaker" -> listOf("val" to "حجم مایع", "max" to "ظرفیت کل", "unit" to "واحد (mL یا لیتر)")
@@ -623,7 +647,7 @@ private fun templateLabel(kind: FigureKind, type: String): String =
 private fun trimNum(value: Float): String =
     if (value == value.toInt().toFloat()) value.toInt().toString() else value.toString()
 
-/** V315.1 — گزینه‌های منوی کشویی برای پارامترهای چندحالتهٔ ابزارهای ریاضی و علوم ابتدایی. */
+/** V315.1 / V315.2 — گزینه‌های منوی کشویی برای پارامترهای چندحالتهٔ ابزارهای ریاضی/علوم ابتدایی، محورها، نمودارها و هندسه. */
 private fun dropdownOptionsFor(type: String, key: String): List<Pair<String, String>>? = when (type to key) {
     "axfrac" to "shape" -> listOf("circle" to "دایره‌ای (قطاع)", "ring" to "حلقه‌ای", "bar" to "نواری", "square" to "مربعی (شبکه)")
     "axsaw" to "mode" -> listOf("shape" to "شکلی (● ▲ ■ ★)", "num" to "عددی (۱ تا ۴)")
@@ -634,15 +658,29 @@ private fun dropdownOptionsFor(type: String, key: String): List<Pair<String, Str
     "axplace" to "blank", "axabacus" to "blank", "axmularea" to "blank" -> listOf("0" to "نمایش عددها", "1" to "جای خالی (برای طرح سؤال)")
     "axabacus" to "cols" -> listOf("2" to "۲ ستون (تا دهگان)", "3" to "۳ ستون (تا صدگان)", "4" to "۴ ستون (تا هزار)", "5" to "۵ ستون (تا ده‌هزار)", "6" to "۶ ستون (تا صدهزار)")
     "axclock" to "nums" -> listOf("1" to "نمایش عددهای ۱ تا ۱۲", "0" to "بدون عدد (تمرین ساعت)")
-    "axclock" to "label", "axfrac" to "label" -> listOf("0" to "ندارد", "1" to "نمایش زیر شکل")
-    "axjump" to "label" -> listOf("1" to "نمایش عبارت کامل", "2" to "نمایش با جای خالی (= ؟)", "0" to "ندارد")
+    "axclock" to "label" -> listOf("0" to "ندارد", "1" to "نمایش ساعت زیر شکل", "2" to "نمایش با جای خالی (ساعت = ؟ : ؟)")
+    "axfrac" to "label" -> listOf("1" to "نمایش کسر زیر شکل", "2" to "نمایش با جای خالی (؟ / ؟)", "0" to "ندارد")
+    "axtally" to "label", "axbase10" to "label" -> listOf("1" to "نمایش عدد زیر شکل", "2" to "نمایش با جای خالی (؟) برای سؤال", "0" to "ندارد")
+    "axruler" to "label" -> listOf("1" to "نمایش طول بازه (cm)", "2" to "نمایش با جای خالی (؟ cm)", "0" to "ندارد")
+    "axbalance" to "label" -> listOf("1" to "نمایش علامت مقایسه (> / < / =)", "2" to "نمایش با جای خالی (؟) برای سؤال", "0" to "ندارد")
+    "axtenframe" to "label", "axjump" to "label" -> listOf("1" to "نمایش عبارت کامل", "2" to "نمایش با جای خالی (= ؟)", "0" to "ندارد")
     "axmoney" to "unit" -> listOf("تومان" to "تومان", "ریال" to "ریال")
-    "axmoney" to "sum" -> listOf("1" to "نمایش جمع کل", "0" to "مخفی (برای سؤال)")
+    "axmoney" to "sum" -> listOf("1" to "نمایش جمع کل", "2" to "نمایش با جای خالی (جمع: ؟)", "0" to "مخفی (بدون جمع)")
     "axbalance" to "unit" -> listOf("کیلوگرم" to "کیلوگرم", "گرم" to "گرم")
     "axbeaker" to "unit" -> listOf("mL" to "میلی‌لیتر (mL)", "لیتر" to "لیتر", "سی‌سی" to "سی‌سی (cc)")
     "axtenframe" to "frames" -> listOf("2" to "۲ قاب (۲۰تایی)", "1" to "۱ قاب (۱۰تایی)")
     "axgeoboard" to "grid" -> listOf("3" to "۳×۳", "4" to "۴×۴", "5" to "۵×۵ (استاندارد)", "6" to "۶×۶", "7" to "۷×۷")
     "axdice" to "sum" -> listOf("1" to "نمایش جمع کامل (۴ + ۶ = ۱۰)", "2" to "نمایش با جای خالی (۴ + ۶ = ؟)", "0" to "فقط نمایش تاس‌ها")
+    // محورها و نمودارها
+    "axnumint" to "lc" -> listOf("1" to "بسته [ (نقطهٔ توپر)", "0" to "باز ( (نقطهٔ توخالی)")
+    "axnumint" to "hc" -> listOf("0" to "باز ) (نقطهٔ توخالی)", "1" to "بسته ] (نقطهٔ توپر)")
+    "axnumineq" to "dir" -> listOf("1" to "به سمت راست (x > یا x ≥)", "-1" to "به سمت چپ (x < یا x ≤)")
+    "axnumineq" to "cl" -> listOf("0" to "باز (توخالی: > یا <)", "1" to "بسته (توپر: ≥ یا ≤)")
+    "axnumfrac" to "den" -> listOf("2" to "۲ (نیم)", "3" to "۳ (ثلث)", "4" to "۴ (ربع)", "5" to "۵ (خمس)", "6" to "۶ (سدس)", "8" to "۸", "10" to "۱۰ (دهم)")
+    "venn" to "n" -> listOf("2" to "۲ مجموعه (A و B)", "3" to "۳ مجموعه (A، B و C)")
+    // شکل‌های هندسی
+    "ngon" to "X:n" -> listOf("3" to "۳ضلعی", "4" to "۴ضلعی", "5" to "۵ضلعی", "6" to "۶ضلعی", "7" to "۷ضلعی", "8" to "۸ضلعی", "9" to "۹ضلعی", "10" to "۱۰ضلعی", "12" to "۱۲ضلعی")
+    "parll" to "X:n" -> listOf("1" to "۱ خط مورب", "2" to "۲ خط مورب", "3" to "۳ خط مورب", "4" to "۴ خط مورب")
     else -> null
 }
 

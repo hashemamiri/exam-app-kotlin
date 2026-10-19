@@ -420,11 +420,13 @@
         for (i = 0; i < Math.min(cnt, 4); i++) s += lnr(gx + i * 11, gy, gx + i * 11, gy + 40, ST, 3);
         if (cnt === 5) s += lnr(gx - 6, gy + 34, gx + 40, gy + 6, PT, 3);
       }
-      s += tx(180, 262, 'تعداد: ' + n, MU, 'middle', false, 13);
+      var tlMode = xs('label', '1');
+      if (tlMode === '2') s += tx(180, 262, 'تعداد: ؟', PT, 'middle', true, 14);
+      else if (tlMode !== '0') s += tx(180, 262, 'تعداد: ' + n, MU, 'middle', false, 13);
       return wrap(s);
     }
     if (t === 'axbase10') {
-      var nb = clamp(Math.floor(num(X.n, 134)), 0, 999999999), bd = [], bq = nb, bk;
+      var nb = clamp(Math.floor(num(X.n, 134)), 0, 999999999), bd = [], bq = nb, bk, bLbMode = xs('label', '1');
       for (bk = 0; bk < 9; bk++) { bd.push(bq % 10); bq = Math.floor(bq / 10); }
       // (a,b,h) واحد؛ نمایش سه‌بعدی؛ مقیاس رتبه‌های بالاتر نمایشی است
       var BSHP = [[1, 1, 1, '#ffd54f', 'یکان', 6], [1, 10, 1, '#66bb6a', 'دهگان', 3], [10, 10, 1, '#42a5f5', 'صدگان', 2.4], [10, 10, 10, '#ab47bc', 'یکان هزار', 1.8], [1, 10, 10, '#ef5350', 'دهگان هزار', 2], [10, 10, 10, '#26a69a', 'صدگان هزار', 1.8], [10, 10, 10, '#ff7043', 'یکان میلیون', 1.8], [10, 10, 10, '#8d6e63', 'دهگان میلیون', 1.8], [10, 10, 10, '#5c6bc0', 'صدگان میلیون', 1.8]];
@@ -444,7 +446,7 @@
       for (bp = 0; bp < 9; bp++) {
         var ptop = 4 + (8 - bp) * 36, pbot = ptop + 33, shp = BSHP[bp], pa = shp[0], pb = shp[1], ph = shp[2], pcol = shp[3];
         bn = bd[bp];
-        s += ltx(4, ptop + 14, shp[4], ST, 10) + (bn === 0 ? '' : ltx(4, ptop + 28, '× ' + bn, MU, 11));
+        s += ltx(4, ptop + 14, shp[4], ST, 10) + ((bn === 0 || bLbMode === '2' || bLbMode === '0') ? '' : ltx(4, ptop + 28, '× ' + bn, MU, 11));
         if (bn === 0) continue;
         var kh = 32 / ((pa + pb) * 0.5 + ph), kw = (BAVAIL - 4 * bn) / (bn * (pa + pb) * 0.866), kk = Math.min(shp[5], kh, kw), slot = 92;
         for (bj = 0; bj < bn; bj++) {
@@ -452,7 +454,8 @@
           slot += (pa + pb) * 0.866 * kk + 4;
         }
       }
-      s += tx(180, 362, 'عدد: ' + grp(nb), ST, 'middle', true, 13);
+      if (bLbMode === '2') s += tx(180, 362, 'عدد: ؟', PT, 'middle', true, 14);
+      else if (bLbMode !== '0') s += tx(180, 362, 'عدد: ' + grp(nb), ST, 'middle', true, 13);
       return wrap(s, 370);
     }
     if (t === 'axplace') {
@@ -494,7 +497,9 @@
       var ah = ((ch0 % 12) * 30 + cm * 0.5) * Math.PI / 180, am = cm * 6 * Math.PI / 180;
       s += lnr(ccx, ccy, ccx + cr * 0.5 * Math.sin(ah), ccy - cr * 0.5 * Math.cos(ah), ST, 6) + lnr(ccx, ccy, ccx + cr * 0.78 * Math.sin(am), ccy - cr * 0.78 * Math.cos(am), PT, 3.5);
       s += '<circle cx="180" cy="150" r="5" fill="' + ST + '"/>';
-      if (xs('label', '0') === '1') s += tx(ccx, 272, (ch0 === 0 ? 12 : ch0) + ':' + (cm < 10 ? '0' : '') + cm, MU, 'middle', false, 13);
+      var clkLb = xs('label', '0');
+      if (clkLb === '1') s += tx(ccx, 272, (ch0 === 0 ? 12 : ch0) + ':' + (cm < 10 ? '0' : '') + cm, MU, 'middle', false, 13);
+      else if (clkLb === '2') s += tx(ccx, 272, 'ساعت = ؟ : ؟', PT, 'middle', true, 14);
       return wrap(s);
     }
     if (t === 'axruler') {
@@ -506,8 +511,15 @@
         if (i % lstep === 0 || i === len) s += tx(x, ry0 + 46, String(i), ST, 'middle', false, len > 30 ? 10 : 12);
         if (showMm && i < len) for (k = 1; k < 10; k++) s += lnr(x + k * unit / 10, ry0, x + k * unit / 10, ry0 + (k === 5 ? 17 : 10), ST, k === 5 ? 1.2 : 0.8);
       }
-      s += tx(rx1 + 4, ry0 + 62, 'cm', MU, 'end', false, 11);
-      if (!isNaN(ra) && !isNaN(rb)) { var xa = rx0 + clamp(ra, 0, len) * unit, xb = rx0 + clamp(rb, 0, len) * unit; s += lnr(xa, ry0 - 22, xb, ry0 - 22, PT, 4) + lnr(xa, ry0 - 32, xa, ry0 - 12, PT, 2) + lnr(xb, ry0 - 32, xb, ry0 - 12, PT, 2); }
+      s += tx(rx1, ry0 + 64, 'cm', MU, 'middle', true, 11);
+      if (!isNaN(ra) && !isNaN(rb)) {
+        var xa = rx0 + clamp(ra, 0, len) * unit, xb = rx0 + clamp(rb, 0, len) * unit;
+        s += lnr(xa, ry0 - 22, xb, ry0 - 22, PT, 4) + lnr(xa, ry0 - 32, xa, ry0 - 12, PT, 2) + lnr(xb, ry0 - 32, xb, ry0 - 12, PT, 2);
+        var rSpan = Math.abs(clamp(rb, 0, len) - clamp(ra, 0, len)), rLb = xs('label', '1');
+        var rSpanTxt = Math.abs(rSpan - Math.round(rSpan)) < 1e-4 ? String(Math.round(rSpan)) : rSpan.toFixed(1);
+        if (rLb === '2') s += tx((xa + xb) / 2, ry0 - 30, '؟ cm', PT, 'middle', true, 13);
+        else if (rLb !== '0') s += tx((xa + xb) / 2, ry0 - 30, rSpanTxt + ' cm', PT, 'middle', true, 12);
+      }
       return wrap(s);
     }
     if (t === 'axfrac') {
@@ -519,18 +531,20 @@
         for (i = 0; i < den; i++) s += rc(90 + (i % scols) * scw, 50 + Math.floor(i / scols) * sch, scw, sch, fillF(i), ST, 1.6);
       }
       else if (shape === 'ring') {
-        if (den === 1) s += '<circle cx="180" cy="140" r="96" fill="' + fillF(0) + '" stroke="' + ST + '" stroke-width="1.8"/><circle cx="180" cy="140" r="48" fill="#fff" stroke="' + ST + '" stroke-width="1.8"/>';
+        if (den === 1) s += '<circle cx="180" cy="124" r="88" fill="' + fillF(0) + '" stroke="' + ST + '" stroke-width="1.8"/><circle cx="180" cy="124" r="44" fill="#fff" stroke="' + ST + '" stroke-width="1.8"/>';
         else for (i = 0; i < den; i++) {
           var ra0 = (i * 360 / den - 90) * Math.PI / 180, ra1 = ((i + 1) * 360 / den - 90) * Math.PI / 180, rlg = 360 / den > 180 ? 1 : 0;
-          s += '<path d="M ' + f2(180 + 96 * Math.cos(ra0)) + ' ' + f2(140 + 96 * Math.sin(ra0)) + ' A 96 96 0 ' + rlg + ' 1 ' + f2(180 + 96 * Math.cos(ra1)) + ' ' + f2(140 + 96 * Math.sin(ra1)) + ' L ' + f2(180 + 48 * Math.cos(ra1)) + ' ' + f2(140 + 48 * Math.sin(ra1)) + ' A 48 48 0 ' + rlg + ' 0 ' + f2(180 + 48 * Math.cos(ra0)) + ' ' + f2(140 + 48 * Math.sin(ra0)) + ' Z" fill="' + fillF(i) + '" stroke="' + ST + '" stroke-width="1.8"/>';
+          s += '<path d="M ' + f2(180 + 88 * Math.cos(ra0)) + ' ' + f2(124 + 88 * Math.sin(ra0)) + ' A 88 88 0 ' + rlg + ' 1 ' + f2(180 + 88 * Math.cos(ra1)) + ' ' + f2(124 + 88 * Math.sin(ra1)) + ' L ' + f2(180 + 44 * Math.cos(ra1)) + ' ' + f2(124 + 44 * Math.sin(ra1)) + ' A 44 44 0 ' + rlg + ' 0 ' + f2(180 + 44 * Math.cos(ra0)) + ' ' + f2(124 + 44 * Math.sin(ra0)) + ' Z" fill="' + fillF(i) + '" stroke="' + ST + '" stroke-width="1.8"/>';
         }
       }
-      else if (den === 1) s += '<circle cx="180" cy="140" r="96" fill="' + (nu === 1 ? ACC : '#fff') + '" stroke="' + ST + '" stroke-width="1.8"/>';
+      else if (den === 1) s += '<circle cx="180" cy="124" r="88" fill="' + (nu === 1 ? ACC : '#fff') + '" stroke="' + ST + '" stroke-width="1.8"/>';
       else for (i = 0; i < den; i++) {
         var a0 = (i * 360 / den - 90) * Math.PI / 180, a1 = ((i + 1) * 360 / den - 90) * Math.PI / 180, lg = 360 / den > 180 ? 1 : 0;
-        s += '<path d="M 180 140 L ' + f2(180 + 96 * Math.cos(a0)) + ' ' + f2(140 + 96 * Math.sin(a0)) + ' A 96 96 0 ' + lg + ' 1 ' + f2(180 + 96 * Math.cos(a1)) + ' ' + f2(140 + 96 * Math.sin(a1)) + ' Z" fill="' + (i < nu ? ACC : '#fff') + '" stroke="' + ST + '" stroke-width="1.8"/>';
+        s += '<path d="M 180 124 L ' + f2(180 + 88 * Math.cos(a0)) + ' ' + f2(124 + 88 * Math.sin(a0)) + ' A 88 88 0 ' + lg + ' 1 ' + f2(180 + 88 * Math.cos(a1)) + ' ' + f2(124 + 88 * Math.sin(a1)) + ' Z" fill="' + (i < nu ? ACC : '#fff') + '" stroke="' + ST + '" stroke-width="1.8"/>';
       }
-      if (xs('label', '1') !== '0') s += tx(180, 250, String(nu), ST, 'middle', true, 20) + lnr(166, 256, 194, 256, ST, 2) + tx(180, 276, String(den), ST, 'middle', true, 20);
+      var frLb = xs('label', '1');
+      if (frLb === '2') s += tx(180, 242, '؟', PT, 'middle', true, 19) + lnr(166, 250, 194, 250, ST, 2) + tx(180, 272, '؟', PT, 'middle', true, 19);
+      else if (frLb !== '0') s += tx(180, 242, String(nu), ST, 'middle', true, 19) + lnr(166, 250, 194, 250, ST, 2) + tx(180, 272, String(den), ST, 'middle', true, 19);
       return wrap(s);
     }
     if (t === 'axmoney') {
@@ -546,7 +560,9 @@
         s += '<circle cx="' + f2(mx + 24) + '" cy="' + f2(my + 24) + '" r="24" fill="rgba(240,162,2,.28)" stroke="' + GLD + '" stroke-width="2"/><circle cx="' + f2(mx + 24) + '" cy="' + f2(my + 24) + '" r="18" fill="none" stroke="' + GLD + '" stroke-width="0.8"/>' + tx(mx + 24, my + 28, grp(coins[i]), ST, 'middle', true, 11);
         mx += 60; total += coins[i];
       }
-      if (xs('sum', '0') === '1') s += tx(180, 272, 'جمع: ' + grp(total) + ' ' + un, PT, 'middle', true, 13);
+      var mnSum = xs('sum', '1');
+      if (mnSum === '2') s += tx(180, 272, 'جمع: ؟ ' + un, PT, 'middle', true, 13);
+      else if (mnSum === '1') s += tx(180, 272, 'جمع: ' + grp(total) + ' ' + un, PT, 'middle', true, 13);
       return wrap(s);
     }
     if (t === 'axabacus') {
@@ -592,7 +608,9 @@
         var px = p[0], py = p[1], pv = p[2], pcol = p[3], plb = String(pv);
         s += lnr(px, py, px - 28, py + 44, MU, 1.5) + lnr(px, py, px + 28, py + 44, MU, 1.5) + rc(px - 36, py + 44, 72, 10, GLD, ST, 1.6, 4) + rc(px - 22, py + 14, 44, 30, pcol, ST, 1.6, 5) + tx(px, py + 33, plb, '#fff', 'middle', true, 13) + tx(px, py + 68, plb + ' ' + bun, ST, 'middle', true, 11);
       });
-      s += tx(180, 268, bl > br ? '>' : bl < br ? '<' : '=', PT, 'middle', true, 20);
+      var balLb = xs('label', '1');
+      if (balLb === '2') s += tx(180, 268, '؟', PT, 'middle', true, 20);
+      else if (balLb !== '0') s += tx(180, 268, bl > br ? '>' : bl < br ? '<' : '=', PT, 'middle', true, 20);
       return wrap(s);
     }
     if (t === 'axthermo') {
@@ -645,7 +663,9 @@
           if (tidx < ta + tb) s += '<circle cx="' + f2(tcx2 + tcw / 2) + '" cy="' + f2(tcy2 + tch / 2) + '" r="14" fill="' + (tidx < ta ? '#e53935' : '#1e88e5') + '" stroke="' + ST + '" stroke-width="1.4"/>';
         }
       }
-      s += tx(180, 262, ta + ' + ' + tb + ' = ' + (ta + tb), ST, 'middle', true, 15);
+      var tfLb = xs('label', '1');
+      if (tfLb === '2') s += tx(180, 262, ta + ' + ' + tb + ' = ؟', PT, 'middle', true, 15);
+      else if (tfLb !== '0') s += tx(180, 262, ta + ' + ' + tb + ' = ' + (ta + tb), ST, 'middle', true, 15);
       return wrap(s);
     }
     if (t === 'axsym') {
@@ -769,17 +789,21 @@
     }
     if (t === 'axvenn') {
       var vleft = xs('left', 'پرنده: کبوتر، گنجشک'), vright = xs('right', 'آبزی: ماهی، میگو'), vmid = xs('mid', 'اردک');
-      s += '<circle cx="128" cy="144" r="88" fill="rgba(66,165,245,.20)" stroke="#1e88e5" stroke-width="2.2"/><circle cx="232" cy="144" r="88" fill="rgba(102,187,106,.20)" stroke="#43a047" stroke-width="2.2"/>';
-      var vRegion = function (raw, rcx, startY, col) {
-        var lines = String(raw || '').split(/[:،,]/).map(function (z) { return z.trim(); }).filter(Boolean).slice(0, 4);
-        lines.forEach(function (ln2, ix2) {
-          var isHdr = ix2 === 0 && lines.length > 1;
-          s += tx(rcx, startY + ix2 * 22, ln2, isHdr ? col : ST, 'middle', true, isHdr ? 12 : 11);
-        });
+      s += '<circle cx="128" cy="150" r="84" fill="rgba(66,165,245,.20)" stroke="#1e88e5" stroke-width="2.2"/><circle cx="232" cy="150" r="84" fill="rgba(102,187,106,.20)" stroke="#43a047" stroke-width="2.2"/>';
+      var vSide = function (raw, titleX, itemX, col, bg) {
+        var str0 = String(raw || ''), cIdx = str0.indexOf(':');
+        var titlePart = cIdx >= 0 ? str0.slice(0, cIdx).trim() : '';
+        var bodyPart = cIdx >= 0 ? str0.slice(cIdx + 1) : str0;
+        if (titlePart) s += rc(titleX - 44, 32, 88, 24, bg, col, 1.5, 12) + tx(titleX, 48, titlePart, col, 'middle', true, 12);
+        var items = bodyPart.split(/[،,]/).map(function (z) { return z.trim(); }).filter(Boolean).slice(0, 4);
+        var sy = 154 - (items.length - 1) * 11;
+        items.forEach(function (ln2, ix2) { s += tx(itemX, sy + ix2 * 22, ln2, ST, 'middle', true, 12); });
       };
-      vRegion(vleft, 84, 114, '#1565c0');
-      vRegion(vright, 276, 114, '#2e7d32');
-      vRegion(vmid, 180, 128, PT);
+      vSide(vleft, 114, 82, '#1565c0', '#e3f2fd');
+      vSide(vright, 246, 278, '#2e7d32', '#e8f5e9');
+      var mItems = String(vmid || '').split(/[:،,]/).map(function (z) { return z.trim(); }).filter(Boolean).slice(0, 4);
+      var mSy = 154 - (mItems.length - 1) * 11;
+      mItems.forEach(function (ln2, ix2) { s += tx(180, mSy + ix2 * 22, ln2, PT, 'middle', true, 12); });
       return wrap(s);
     }
     return null;
@@ -2509,20 +2533,20 @@
       axpolpts: [['xmax', 'تعداد حلقه'], ['pts', 'نقطه‌ها (r,θ;r,θ)'], ['labs', 'نام نقطه‌ها']],
       ax3dpt: [['xmax', 'تعداد تیک'], ['step', 'گام'], ['x1', 'x نقطه'], ['y1', 'y نقطه'], ['z1', 'z نقطه'], ['labs', 'نام نقطه']],
       // V304 — ابزار ریاضی ابتدایی (عیناً FigurePickerDialog.kt)
-      axtally: [['n', 'تعداد (۰ تا ۷۵)']],
-      axbase10: [['n', 'عدد (۰ تا ۱٬۰۰۰٬۰۰۰)']],
+      axtally: [['n', 'تعداد (۰ تا ۷۵)'], ['label', 'نمایش تعداد زیر شکل']],
+      axbase10: [['n', 'عدد (۰ تا ۱٬۰۰۰٬۰۰۰)'], ['label', 'نمایش عدد زیر شکل']],
       axplace: [['n', 'ردیف ۱ (عدد)'], ['n2', 'ردیف ۲ (خالی = ندارد)'], ['op2', 'علامت ردیف ۲ (+ یا −)'], ['n3', 'ردیف ۳ (خالی = ندارد)'], ['op3', 'علامت ردیف ۳ (+ یا −)'], ['rows', 'تعداد ردیف‌ها (۱ تا ۶)'], ['blank', 'خانه‌ها خالی؟ (۱=بله)']],
       axclock: [['h', 'ساعت (۰ تا ۱۲)'], ['m', 'دقیقه (۰ تا ۵۹)'], ['nums', 'نمایش عددها (۱/۰)'], ['label', 'نوشتن ساعت زیر شکل (۱/۰)']],
-      axruler: [['len', 'طول خط‌کش (۲ تا ۵۰ سانتی‌متر)'], ['a', 'ابتدای اندازه‌گیری (اختیاری)'], ['b', 'انتهای اندازه‌گیری (اختیاری)']],
+      axruler: [['len', 'طول خط‌کش (۲ تا ۵۰ سانتی‌متر)'], ['a', 'ابتدای اندازه‌گیری (اختیاری)'], ['b', 'انتهای اندازه‌گیری (اختیاری)'], ['label', 'نمایش طول بازه']],
       axfrac: [['num', 'صورت'], ['den', 'مخرج'], ['shape', 'شکل'], ['label', 'نوشتن کسر زیر شکل (۱/۰)']],
       axmoney: [['notes', 'اسکناس‌ها (با ویرگول)'], ['coins', 'سکه‌ها (با ویرگول)'], ['unit', 'واحد'], ['sum', 'نوشتن جمع (۱/۰)']],
       axabacus: [['n', 'عدد (۰ تا ۹۹۹٬۹۹۹)'], ['cols', 'تعداد ستون‌ها (۲ تا ۶)'], ['blank', 'مخفی کردن ارقام زیر چرتکه (۱=بله)']],
       axjump: [['start', 'نقطهٔ شروع'], ['step', 'طول هر پرش'], ['jumps', 'تعداد پرش'], ['max', 'انتهای محور'], ['label', 'نمایش عبارت جمع/ضرب (۱/۰)']],
-      axbalance: [['left', 'وزنهٔ کفهٔ چپ'], ['right', 'وزنهٔ کفهٔ راست'], ['unit', 'واحد جرم']],
+      axbalance: [['left', 'وزنهٔ کفهٔ چپ'], ['right', 'وزنهٔ کفهٔ راست'], ['unit', 'واحد جرم'], ['label', 'نمایش علامت مقایسه']],
       axthermo: [['val', 'دما (°C)'], ['min', 'کمینهٔ دما'], ['max', 'بیشینهٔ دما']],
       axsaw: [['vals', 'سطرها با ; و خانه‌ها با , (جای خالی = ?)'], ['mode', 'نمایش (shape=شکل / num=عدد)']],
       axpattern: [['seq', 'دنباله با ویرگول (مثلاً ●,▲,●,▲,?)']],
-      axtenframe: [['a', 'مهره‌های قرمز'], ['b', 'مهره‌های آبی'], ['frames', 'تعداد قاب (۱ یا ۲)']],
+      axtenframe: [['a', 'مهره‌های قرمز'], ['b', 'مهره‌های آبی'], ['frames', 'تعداد قاب (۱ یا ۲)'], ['label', 'نمایش عبارت جمع']],
       axsym: [['cells', 'خانه‌ها (ردیف,ستون با ;)'], ['axis', 'خط تقارن (v عمودی / h افقی)'], ['mirror', 'نمایش قرینه (۱=بله، ۰=؟)']],
       axspin: [['parts', 'بخش‌های چرخنده (با کاما)'], ['arrow', 'شمارهٔ بخش عقربه']],
       axbeaker: [['val', 'حجم مایع'], ['max', 'ظرفیت کل'], ['unit', 'واحد (mL یا لیتر)']],
@@ -2709,12 +2733,14 @@
     if (clockDrag === 'hour') state.X.h = String(Math.round(deg / 30) % 12);
     else state.X.m = String(Math.round(deg / 6) % 60);
   }
-  // V310.7 / V314.0 / V315.1 — همهٔ ابزارهای ریاضی و علوم ابتدایی با ماوس و لمس در پیش‌نمایش قابل تنظیم‌اند
+  // V310.7 / V314.0 / V315.1 / V315.2 — همهٔ ابزارهای ریاضی/علوم ابتدایی و محورها و نمودار عقربه‌ای با ماوس و لمس در پیش‌نمایش قابل تنظیم‌اند
   function bindClock(box) {
     var INTERACTIVE_PRIMARY = {
       axclock: 1, axfrac: 1, axabacus: 1, axthermo: 1, axtenframe: 1, axspin: 1, axbeaker: 1,
       axtally: 1, axbase10: 1, axplace: 1, axruler: 1, axmoney: 1, axjump: 1, axbalance: 1,
-      axsaw: 1, axpattern: 1, axsym: 1, axgeoboard: 1, axdice: 1, axmularea: 1
+      axsaw: 1, axpattern: 1, axsym: 1, axgeoboard: 1, axdice: 1, axmularea: 1, axvenn: 1,
+      axnumpts: 1, axnumint: 1, axnumineq: 1, axxypts: 1, axxyline: 1, axxyvec: 1, axxycirc: 1, axpolpts: 1,
+      gauge: 1
     };
     if (!INTERACTIVE_PRIMARY[state.t]) {
       box.onpointerdown = box.onpointermove = box.onpointerup = box.onpointercancel = null;
@@ -2737,13 +2763,119 @@
       return;
     }
     if (state.t === 'axspin') {
-      box.onpointerdown = function () {
-        var sp = String(state.X.parts || 'قرمز,آبی,سبز,زرد').split(/[,،]/).map(function (x) { return x.trim(); }).filter(Boolean);
-        var n = Math.max(2, sp.length), cur = Math.max(1, Math.min(n, Math.floor(num(state.X.arrow, 1))));
-        state.X.arrow = String((cur % n) + 1);
+      box.onpointerdown = function (e) {
+        var p = clockPoint(box, e);
+        var sp = String(state.X.parts || 'قرمز,آبی,سبز,زرد,قرمز,آبی').split(/[,،]/).map(function (x) { return x.trim(); }).filter(Boolean);
+        var n = Math.max(2, sp.length);
+        if (p) {
+          var deg = (Math.atan2(p.y - 142, p.x - 180) * 180 / Math.PI + 90 + 360) % 360;
+          state.X.arrow = String(Math.min(n, Math.max(1, Math.floor(deg / (360 / n)) + 1)));
+        } else {
+          var cur = Math.max(1, Math.min(n, Math.floor(num(state.X.arrow, 1))));
+          state.X.arrow = String((cur % n) + 1);
+        }
         paint(); renderFields();
       };
       box.onpointermove = box.onpointerup = box.onpointercancel = null;
+      return;
+    }
+    if (state.t === 'axvenn') {
+      box.onpointerdown = function (e) {
+        var p = clockPoint(box, e); if (!p) return;
+        var key = p.x < 135 ? 'left' : (p.x > 225 ? 'right' : 'mid');
+        var fb = key === 'left' ? 'پرنده: کبوتر، گنجشک' : (key === 'right' ? 'آبزی: ماهی، میگو' : 'اردک');
+        var cur = String(state.X[key] || fb);
+        state.X[key] = (cur.trim() === '؟' || /:\s*؟$/.test(cur)) ? fb : (cur.indexOf(':') >= 0 ? cur.split(':')[0] + ': ؟' : '؟');
+        paint(); renderFields();
+      };
+      box.onpointermove = box.onpointerup = box.onpointercancel = null;
+      return;
+    }
+    if (state.t === 'axnumpts') {
+      box.onpointerdown = function (e) {
+        var p = clockPoint(box, e); if (!p) return;
+        var xmin = num(state.X.xmin, -5), xmax = Math.max(xmin + 2, num(state.X.xmax, 5));
+        var v = Math.round((xmin + Math.max(0, Math.min(1, (p.x - 40) / (336 - 40))) * (xmax - xmin)) * 2) / 2;
+        var vs = String(v);
+        var list = String(state.X.pts || '-2,1.5,4').split(/[,،]/).map(function (z) { return faEn(z.trim()); }).filter(Boolean);
+        var ix = list.indexOf(vs);
+        if (ix >= 0 && list.length > 1) list.splice(ix, 1); else if (ix < 0) list.push(vs);
+        state.X.pts = list.join(',');
+        paint(); renderFields();
+      };
+      box.onpointermove = box.onpointerup = box.onpointercancel = null;
+      return;
+    }
+    if (state.t === 'axnumint' || state.t === 'axnumineq') {
+      var setNumAxis = function (e) {
+        var p = clockPoint(box, e); if (!p) return;
+        var xmin = num(state.X.xmin, -5), xmax = Math.max(xmin + 2, num(state.X.xmax, 5));
+        var v = Math.round((xmin + Math.max(0, Math.min(1, (p.x - 40) / (336 - 40))) * (xmax - xmin)) * 2) / 2;
+        if (state.t === 'axnumineq') state.X.x0 = String(v);
+        else if (p.x < 188) state.X.lo = String(v);
+        else state.X.hi = String(v);
+      };
+      box.onpointerdown = function (e) { clockDrag = 'numax'; setNumAxis(e); paint(); try { box.setPointerCapture(e.pointerId); } catch (_c) {} };
+      box.onpointermove = function (e) { if (!clockDrag) return; setNumAxis(e); paint(); };
+      box.onpointerup = box.onpointercancel = function () { if (!clockDrag) return; clockDrag = null; renderFields(); };
+      return;
+    }
+    if (state.t === 'axxypts') {
+      box.onpointerdown = function (e) {
+        var p = clockPoint(box, e); if (!p) return;
+        var xmin = num(state.X.xmin, -5), xmax = Math.max(xmin + 2, num(state.X.xmax, 5));
+        var ymin = num(state.X.ymin, -4), ymax = Math.max(ymin + 2, num(state.X.ymax, 4));
+        var xv = Math.round(xmin + Math.max(0, Math.min(1, (p.x - 40) / (336 - 40))) * (xmax - xmin));
+        var yv = Math.round(ymin + Math.max(0, Math.min(1, (246 - p.y) / (246 - 26))) * (ymax - ymin));
+        var key = xv + ',' + yv;
+        var list = String(state.X.pts || '1,2;-3,1;2,-2').split(/[;؛]/).map(function (z) { return faEn(z.trim()); }).filter(Boolean);
+        var ix = list.indexOf(key);
+        if (ix >= 0 && list.length > 1) list.splice(ix, 1); else if (ix < 0) list.push(key);
+        state.X.pts = list.join(';');
+        paint(); renderFields();
+      };
+      box.onpointermove = box.onpointerup = box.onpointercancel = null;
+      return;
+    }
+    if (state.t === 'axxyline' || state.t === 'axxyvec' || state.t === 'axxycirc') {
+      var setXy = function (e) {
+        var p = clockPoint(box, e); if (!p) return;
+        var xmin = num(state.X.xmin, -5), xmax = Math.max(xmin + 2, num(state.X.xmax, 5));
+        var ymin = num(state.X.ymin, -4), ymax = Math.max(ymin + 2, num(state.X.ymax, 4));
+        var xv = Math.round((xmin + Math.max(0, Math.min(1, (p.x - 40) / (336 - 40))) * (xmax - xmin)) * 2) / 2;
+        var yv = Math.round((ymin + Math.max(0, Math.min(1, (246 - p.y) / (246 - 26))) * (ymax - ymin)) * 2) / 2;
+        if (state.t === 'axxyline') state.X.b = String(yv);
+        else if (state.t === 'axxyvec') { state.X.x2 = String(xv); state.X.y2 = String(yv); }
+        else { state.X.cx = String(xv); state.X.cy = String(yv); }
+      };
+      box.onpointerdown = function (e) { clockDrag = 'xyax'; setXy(e); paint(); try { box.setPointerCapture(e.pointerId); } catch (_c) {} };
+      box.onpointermove = function (e) { if (!clockDrag) return; setXy(e); paint(); };
+      box.onpointerup = box.onpointercancel = function () { if (!clockDrag) return; clockDrag = null; renderFields(); };
+      return;
+    }
+    if (state.t === 'axpolpts') {
+      box.onpointerdown = function (e) {
+        var p = clockPoint(box, e); if (!p) return;
+        var rings = Math.max(1, Math.min(12, Math.floor(num(state.X.xmax, 4))));
+        var dx = p.x - 180, dy = 136 - p.y;
+        var rr = Math.max(1, Math.min(rings, Math.round(Math.hypot(dx, dy) / 104 * rings)));
+        var deg = (Math.round(((Math.atan2(dy, dx) * 180 / Math.PI + 360) % 360) / 30) * 30) % 360;
+        state.X.pts = rr + ',' + deg;
+        paint(); renderFields();
+      };
+      box.onpointermove = box.onpointerup = box.onpointercancel = null;
+      return;
+    }
+    if (state.t === 'gauge') {
+      var setGauge = function (e) {
+        var p = clockPoint(box, e); if (!p) return;
+        var vmin = num(state.X.vmin, 0), vmax = Math.max(vmin + 1, num(state.X.vmax, 100));
+        var ratio = Math.max(0, Math.min(1, (p.x - 60) / 240));
+        state.X.val = String(Math.round(vmin + ratio * (vmax - vmin)));
+      };
+      box.onpointerdown = function (e) { clockDrag = 'gauge'; setGauge(e); paint(); try { box.setPointerCapture(e.pointerId); } catch (_c) {} };
+      box.onpointermove = function (e) { if (!clockDrag) return; setGauge(e); paint(); };
+      box.onpointerup = box.onpointercancel = function () { if (!clockDrag) return; clockDrag = null; renderFields(); };
       return;
     }
     if (state.t === 'axbeaker') {
@@ -2785,9 +2917,16 @@
     if (state.t === 'axbase10') {
       box.onpointerdown = function (e) {
         var p = clockPoint(box, e); if (!p) return;
-        var cur = Math.max(0, Math.min(999999, Math.floor(num(state.X.n, 134))));
-        var delta = p.x < 120 ? 100 : (p.x < 240 ? 10 : 1);
-        state.X.n = String(Math.min(999999, cur + delta));
+        var cur = Math.max(0, Math.min(999999999, Math.floor(num(state.X.n, 134))));
+        if (p.y >= 340) {
+          var lb = String(state.X.label || '1');
+          state.X.label = lb === '1' ? '2' : (lb === '2' ? '0' : '1');
+        } else {
+          var bp = Math.max(0, Math.min(8, 8 - Math.floor((p.y - 4) / 36)));
+          var pow = Math.pow(10, bp);
+          var d = Math.floor(cur / pow) % 10;
+          state.X.n = String(cur + (((d + 1) % 10) - d) * pow);
+        }
         paint(); renderFields();
       };
       box.onpointermove = box.onpointerup = box.onpointercancel = null;
@@ -2807,8 +2946,20 @@
       return;
     }
     if (state.t === 'axmoney') {
-      box.onpointerdown = function () {
-        state.X.sum = String(state.X.sum || '1') === '0' ? '1' : '0';
+      box.onpointerdown = function (e) {
+        var p = clockPoint(box, e);
+        if (p && p.y < 140) {
+          var nts = String(state.X.notes || '1000,500').split(/[,،]/).map(function (z) { return z.trim(); }).filter(Boolean);
+          if (nts.length >= 5) nts.pop(); else nts.push('1000');
+          state.X.notes = nts.join(',');
+        } else if (p && p.y < 230) {
+          var cns = String(state.X.coins || '200,100,100').split(/[,،]/).map(function (z) { return z.trim(); }).filter(Boolean);
+          if (cns.length >= 6) cns.pop(); else cns.push('100');
+          state.X.coins = cns.join(',');
+        } else {
+          var sm = String(state.X.sum || '1');
+          state.X.sum = sm === '1' ? '2' : (sm === '2' ? '0' : '1');
+        }
         paint(); renderFields();
       };
       box.onpointermove = box.onpointerup = box.onpointercancel = null;
@@ -3020,16 +3171,27 @@
     'axmularea:X.blank': [['0', 'نمایش عددها'], ['1', 'جای خالی (برای طرح سؤال)']],
     'axabacus:X.cols': [['2', '۲ ستون (تا دهگان)'], ['3', '۳ ستون (تا صدگان)'], ['4', '۴ ستون (تا هزار)'], ['5', '۵ ستون (تا ده‌هزار)'], ['6', '۶ ستون (تا صدهزار)']],
     'axclock:X.nums': [['1', 'نمایش عددهای ۱ تا ۱۲'], ['0', 'بدون عدد (تمرین ساعت)']],
-    'axclock:X.label': [['0', 'ندارد'], ['1', 'نمایش زیر شکل']],
-    'axfrac:X.label': [['0', 'ندارد'], ['1', 'نمایش زیر شکل']],
+    'axclock:X.label': [['0', 'ندارد'], ['1', 'نمایش ساعت زیر شکل'], ['2', 'نمایش با جای خالی (ساعت = ؟ : ؟)']],
+    'axfrac:X.label': [['1', 'نمایش کسر زیر شکل'], ['2', 'نمایش با جای خالی (؟ / ؟)'], ['0', 'ندارد']],
+    'axtally:X.label': [['1', 'نمایش عدد زیر شکل'], ['2', 'نمایش با جای خالی (؟) برای سؤال'], ['0', 'ندارد']],
+    'axbase10:X.label': [['1', 'نمایش عدد زیر شکل'], ['2', 'نمایش با جای خالی (؟) برای سؤال'], ['0', 'ندارد']],
+    'axruler:X.label': [['1', 'نمایش طول بازه (cm)'], ['2', 'نمایش با جای خالی (؟ cm)'], ['0', 'ندارد']],
+    'axbalance:X.label': [['1', 'نمایش علامت مقایسه (> / < / =)'], ['2', 'نمایش با جای خالی (؟) برای سؤال'], ['0', 'ندارد']],
+    'axtenframe:X.label': [['1', 'نمایش عبارت کامل'], ['2', 'نمایش با جای خالی (= ؟)'], ['0', 'ندارد']],
     'axjump:X.label': [['1', 'نمایش عبارت کامل'], ['2', 'نمایش با جای خالی (= ؟)'], ['0', 'ندارد']],
     'axmoney:X.unit': [['تومان', 'تومان'], ['ریال', 'ریال']],
-    'axmoney:X.sum': [['1', 'نمایش جمع کل'], ['0', 'مخفی (برای سؤال)']],
+    'axmoney:X.sum': [['1', 'نمایش جمع کل'], ['2', 'نمایش با جای خالی (جمع: ؟)'], ['0', 'مخفی (بدون جمع)']],
     'axbalance:X.unit': [['کیلوگرم', 'کیلوگرم'], ['گرم', 'گرم']],
     'axbeaker:X.unit': [['mL', 'میلی‌لیتر (mL)'], ['لیتر', 'لیتر'], ['سی‌سی', 'سی‌سی (cc)']],
     'axtenframe:X.frames': [['2', '۲ قاب (۲۰تایی)'], ['1', '۱ قاب (۱۰تایی)']],
     'axgeoboard:X.grid': [['3', '۳×۳'], ['4', '۴×۴'], ['5', '۵×۵ (استاندارد)'], ['6', '۶×۶'], ['7', '۷×۷']],
-    'axdice:X.sum': [['1', 'نمایش جمع کامل (۴ + ۶ = ۱۰)'], ['2', 'نمایش با جای خالی (۴ + ۶ = ؟)'], ['0', 'فقط نمایش تاس‌ها']]
+    'axdice:X.sum': [['1', 'نمایش جمع کامل (۴ + ۶ = ۱۰)'], ['2', 'نمایش با جای خالی (۴ + ۶ = ؟)'], ['0', 'فقط نمایش تاس‌ها']],
+    'axnumint:X.lc': [['1', 'بسته [ (نقطهٔ توپر)'], ['0', 'باز ( (نقطهٔ توخالی)']],
+    'axnumint:X.hc': [['0', 'باز ) (نقطهٔ توخالی)'], ['1', 'بسته ] (نقطهٔ توپر)']],
+    'axnumineq:X.dir': [['1', 'به سمت راست (x > یا x ≥)'], ['-1', 'به سمت چپ (x < یا x ≤)']],
+    'axnumineq:X.cl': [['0', 'باز (توخالی: > یا <)'], ['1', 'بسته (توپر: ≥ یا ≤)']],
+    'axnumfrac:X.den': [['2', '۲ (نیم)'], ['3', '۳ (ثلث)'], ['4', '۴ (ربع)'], ['5', '۵ (خمس)'], ['6', '۶ (سدس)'], ['8', '۸'], ['10', '۱۰ (دهم)']],
+    'venn:X.n': [['2', '۲ مجموعه (A و B)'], ['3', '۳ مجموعه (A، B و C)']]
   };
   function renderFields() {
     gfDdClose();

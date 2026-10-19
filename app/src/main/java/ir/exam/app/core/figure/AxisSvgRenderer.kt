@@ -227,7 +227,7 @@ internal object AxisSvgRenderer {
 
     /** جفت‌های عددی از متن؛ «1,2;-3,1» یا «(1,2) (-3,1)». */
     private fun pairsOf(s: String): List<Pair<Float, Float>> =
-        Regex("(-?\\d+(?:\\.\\d+)?)\\s*[,،]\\s*(-?\\d+(?:\\.\\d+)?)").findAll(s)
+        Regex("(-?\\d+(?:\\.\\d+)?)\\s*[,،]\\s*(-?\\d+(?:\\.\\d+)?)").findAll(faEnDigits(s))
             .map { it.groupValues[1].toFloat() to it.groupValues[2].toFloat() }.toList()
 
     private fun dot(x: Float, y: Float, color: String = POINT, r: Float = 4f) =
@@ -291,7 +291,7 @@ internal object AxisSvgRenderer {
         when (type) {
             "axnumpts" -> {
                 val labs = spec.xList("labs")
-                spec.xList("pts").ifEmpty { listOf("-2", "1.5", "4") }.mapNotNull { it.toFloatOrNull() }.forEachIndexed { i, v ->
+                spec.xList("pts").ifEmpty { listOf("-2", "1.5", "4") }.mapNotNull { faEnDigits(it.trim()).toFloatOrNull() }.forEachIndexed { i, v ->
                     if (v in xmin..xmax) {
                         sb.append(dot(px(v), y))
                         sb.append(text(px(v), y - 14f, labs.getOrNull(i) ?: num(v), POINT, "middle", bold = true, size = 11))
@@ -583,6 +583,6 @@ internal object AxisSvgRenderer {
         if (s.isBlank()) return ""
         val weight = if (bold) " font-weight=\"700\"" else ""
         val esc = FigureDigits.apply(s).replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace("\"", "&quot;")
-        return "<text x=\"${f(x)}\" y=\"${f(y)}\" font-family=\"sans-serif\" font-size=\"$size\"$weight fill=\"$color\" text-anchor=\"$anchor\">$esc</text>"
+        return "<text x=\"${f(x)}\" y=\"${f(y)}\" direction=\"ltr\" font-family=\"sans-serif\" font-size=\"$size\"$weight fill=\"$color\" text-anchor=\"$anchor\">$esc</text>"
     }
 }

@@ -47,7 +47,7 @@ private fun txt(x: Float, y: Float, s: String, color: String, anchor: String = "
     if (s.isBlank()) return ""
     val fam = if (serif) "serif" else "sans-serif"
     val anchorAttr = if (anchor.isNotBlank()) " text-anchor=\"$anchor\"" else ""
-    return "<text x=\"${fmt(x)}\" y=\"${fmt(y)}\" font-family=\"$fam\" font-size=\"$size\" font-weight=\"700\" fill=\"$color\"$anchorAttr>${escapeXml(FigureDigits.apply(s))}</text>"
+    return "<text x=\"${fmt(x)}\" y=\"${fmt(y)}\" direction=\"ltr\" font-family=\"$fam\" font-size=\"$size\" font-weight=\"700\" fill=\"$color\"$anchorAttr>${escapeXml(FigureDigits.apply(s))}</text>"
 }
 
 object FigureSvgRenderer {
@@ -190,7 +190,7 @@ object FigureSvgRenderer {
         return if (s.contains('°')) s else s + "°"
     }
 
-    private fun isRight(label: String): Boolean = label.toFloatOrNull() == 90f
+    private fun isRight(label: String): Boolean = faEnDigits(label).toFloatOrNull() == 90f
 
     private fun polar(o: Pt, deg: Float, r: Float): Pt {
         val rad = deg * PI.toFloat() / 180f

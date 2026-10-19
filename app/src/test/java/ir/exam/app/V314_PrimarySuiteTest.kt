@@ -108,7 +108,9 @@ class V314_PrimarySuiteTest {
         for (t in listOf(
             "axclock", "axfrac", "axabacus", "axthermo", "axtenframe", "axspin", "axbeaker",
             "axtally", "axbase10", "axplace", "axruler", "axmoney", "axjump", "axbalance",
-            "axsaw", "axpattern", "axsym", "axgeoboard", "axdice", "axmularea"
+            "axsaw", "axpattern", "axsym", "axgeoboard", "axdice", "axmularea", "axvenn",
+            "axnumpts", "axnumint", "axnumineq", "axxypts", "axxyline", "axxyvec", "axxycirc", "axpolpts",
+            "gauge", "ang", "sec", "arc", "segm", "parll", "ngon"
         )) {
             assertTrue("Missing $t in AdjustableFigure.kt", adj.contains("\"$t\""))
         }
@@ -116,5 +118,8 @@ class V314_PrimarySuiteTest {
         assertTrue(picker.contains("dropdownOptionsFor("))
         assertTrue(picker.contains("\"axsaw\" to \"mode\""))
         assertTrue(picker.contains("\"axbeaker\" to \"unit\""))
+        assertTrue(picker.contains("\"axnumint\" to \"lc\""))
+        assertTrue(picker.contains("\"axnumineq\" to \"dir\""))
+        assertTrue(picker.contains("\"ngon\" to \"X:n\""))
     }
 }

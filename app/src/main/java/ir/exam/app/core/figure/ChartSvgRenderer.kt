@@ -86,7 +86,7 @@ object ChartSvgRenderer {
         spec.xList("labs", default).ifEmpty { listOf("A", "B", "C", "D") }
 
     private fun nums(spec: FigureSpec, key: String, default: String): List<Float> =
-        spec.xList(key, default).map { it.toFloatOrNull() ?: 0f }
+        spec.xList(key, default).map { faEnDigits(it.trim()).replace('٫', '.').replace('،', '.').toFloatOrNull() ?: 0f }
 
     private fun pad(values: List<Float>, size: Int): List<Float> =
         values + List((size - values.size).coerceAtLeast(0)) { 0f }
@@ -470,7 +470,7 @@ object ChartSvgRenderer {
         if (s.isBlank()) return ""
         val weight = if (bold) " font-weight=\"700\"" else ""
         val anchorAttr = if (anchor.isNotBlank()) " text-anchor=\"$anchor\"" else ""
-        return "<text x=\"${f(x)}\" y=\"${f(y)}\" font-family=\"sans-serif\" font-size=\"$size\"$weight fill=\"$color\"$anchorAttr>${escape(FigureDigits.apply(s))}</text>"
+        return "<text x=\"${f(x)}\" y=\"${f(y)}\" direction=\"ltr\" font-family=\"sans-serif\" font-size=\"$size\"$weight fill=\"$color\"$anchorAttr>${escape(FigureDigits.apply(s))}</text>"
     }
 
     private fun escape(value: String): String = buildString(value.length) {

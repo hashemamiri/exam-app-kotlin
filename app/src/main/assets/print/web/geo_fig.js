@@ -64,8 +64,13 @@
   function clean(s) {
     return String(s == null ? '' : s).replace(/%/g, '').trim();
   }
+  function faEn(s) {
+    return String(s == null ? '' : s)
+      .replace(/[۰-۹]/g, function (d) { return String.fromCharCode(d.charCodeAt(0) - 0x06F0 + 48); })
+      .replace(/[٠-٩]/g, function (d) { return String.fromCharCode(d.charCodeAt(0) - 0x0660 + 48); });
+  }
   function num(v, fallback) {
-    var n = parseFloat(String(v == null ? '' : v).replace('°', '').replace('،', '.'));
+    var n = parseFloat(faEn(v).replace('°', '').replace(/[،٫]/g, '.'));
     return isFinite(n) ? n : fallback;
   }
   function clamp(n, a, b) { return Math.max(a, Math.min(b, n)); }
@@ -77,15 +82,15 @@
   }
   function txt(x, y, s, extra) {
     if (!s) return '';
-    return '<text x="' + x + '" y="' + y + '" ' + (extra || '') + '>' + esc(s) + '</text>';
+    return '<text x="' + x + '" y="' + y + '" direction="ltr" ' + (extra || '') + '>' + esc(s) + '</text>';
   }
   function poly(pts) {
     return pts.map(function (p) { return p[0] + ',' + p[1]; }).join(' ');
   }
   function wrap(inner, vb) {
     vb = vb || '0 0 360 280';
-    return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="' + vb + '" width="320" height="250" overflow="hidden">' +
-      '<style>text{font:700 14px Vazirmatn,Tahoma,sans-serif;fill:#243044} .s{font:700 14px Times New Roman,serif;fill:#15607a} .a{font:700 13px Times New Roman,serif;fill:#5b52e0} .v{fill:#243044}</style>' +
+    return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="' + vb + '" width="320" height="250" direction="ltr" overflow="hidden">' +
+      '<style>text{font:700 14px Vazirmatn,Tahoma,sans-serif;fill:#243044;direction:ltr;unicode-bidi:embed} .s{font:700 14px Times New Roman,serif;fill:#15607a} .a{font:700 13px Times New Roman,serif;fill:#5b52e0} .v{fill:#243044}</style>' +
       inner + '</svg>';
   }
   function stroke(pts) {
@@ -1022,9 +1027,49 @@
   let replaceEl = null;
   function $(id) { return document.getElementById(id); }
 
+  var geoDrag = null;
+  function geoPoint(box, e) {
+    var svg = box.querySelector('svg');
+    if (!svg || !svg.getScreenCTM || !svg.createSVGPoint) return null;
+    var pt = svg.createSVGPoint();
+    pt.x = e.clientX; pt.y = e.clientY;
+    return pt.matrixTransform(svg.getScreenCTM().inverse());
+  }
+  function bindGeoPreview(box) {
+    var INTERACTIVE_GEO = { ang: 1, sec: 1, arc: 1, segm: 1, parll: 1, ngon: 1 };
+    if (!INTERACTIVE_GEO[state.t]) {
+      box.onpointerdown = box.onpointermove = box.onpointerup = box.onpointercancel = null;
+      box.style.touchAction = '';
+      box.style.cursor = '';
+      return;
+    }
+    box.style.touchAction = 'none';
+    box.style.cursor = 'pointer';
+    if (state.t === 'ngon') {
+      box.onpointerdown = function () {
+        var n = ((Math.floor(num(state.X.n, 6)) - 2) % 10) + 3;
+        state.X.n = String(n);
+        paint(); renderFields();
+      };
+      box.onpointermove = box.onpointerup = box.onpointercancel = null;
+      return;
+    }
+    var setGeo = function (e) {
+      var p = geoPoint(box, e); if (!p) return;
+      var deg = Math.round((Math.atan2(160 - p.y, p.x - 180) * 180 / Math.PI + 360) % 360);
+      if (state.t === 'parll') state.X.t0 = String(clamp(deg, 15, 165));
+      else state.X.m = String(clamp(deg, 10, 350));
+    };
+    box.onpointerdown = function (e) { geoDrag = state.t; setGeo(e); paint(); try { box.setPointerCapture(e.pointerId); } catch (_c) {} };
+    box.onpointermove = function (e) { if (!geoDrag) return; setGeo(e); paint(); };
+    box.onpointerup = box.onpointercancel = function () { if (!geoDrag) return; geoDrag = null; renderFields(); };
+  }
   function paint() {
     const box = $('gfPreview');
-    if (box) box.innerHTML = svgOf(state);
+    if (box) {
+      box.innerHTML = svgOf(state);
+      bindGeoPreview(box);
+    }
   }
 
   function bindField(inp) {
@@ -1032,7 +1077,7 @@
       var key = inp.getAttribute('data-k');
       var min = inp.min, max = inp.max;
       if (inp.type === 'number' || inp.type === 'range') {
-        var n = parseFloat(val);
+        var n = parseFloat(faEn(val));
         if (isFinite(n)) {
           if (min !== '' && n < parseFloat(min)) n = parseFloat(min);
           if (max !== '' && n > parseFloat(max)) n = parseFloat(max);

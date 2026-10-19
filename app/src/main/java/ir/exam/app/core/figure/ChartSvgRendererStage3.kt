@@ -70,16 +70,8 @@ internal object ChartSvgRendererStage3 {
     private fun labels(spec: FigureSpec, key: String = "labs", default: String = "A,B,C,D"): List<String> =
         spec.xList(key, default).ifEmpty { listOf("A", "B", "C", "D") }
 
-    private fun faFloat(raw: String): Float {
-        val normalized = raw.trim().map { ch ->
-            when (ch) {
-                in '۰'..'۹' -> ('0' + (ch - '۰'))
-                '٫' -> '.'
-                else -> ch
-            }
-        }.joinToString("")
-        return normalized.toFloatOrNull() ?: 0f
-    }
+    private fun faFloat(raw: String): Float =
+        faEnDigits(raw.trim()).replace('٫', '.').replace('،', '.').toFloatOrNull() ?: 0f
 
     private fun nums(spec: FigureSpec, key: String, default: String): List<Float> =
         spec.xList(key, default).map { faFloat(it) }
@@ -646,7 +638,7 @@ internal object ChartSvgRendererStage3 {
         if (s.isBlank()) return ""
         val weight = if (bold) " font-weight=\"700\"" else ""
         val anchorAttr = if (anchor.isNotBlank()) " text-anchor=\"$anchor\"" else ""
-        return "<text x=\"${f(x)}\" y=\"${f(y)}\" font-family=\"sans-serif\" font-size=\"$size\"$weight fill=\"$color\"$anchorAttr>${escape(FigureDigits.apply(s))}</text>"
+        return "<text x=\"${f(x)}\" y=\"${f(y)}\" direction=\"ltr\" font-family=\"sans-serif\" font-size=\"$size\"$weight fill=\"$color\"$anchorAttr>${escape(FigureDigits.apply(s))}</text>"
     }
 
     private fun escape(value: String): String = buildString(value.length) {

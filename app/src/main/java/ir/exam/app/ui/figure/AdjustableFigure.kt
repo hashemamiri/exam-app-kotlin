@@ -39,7 +39,9 @@ fun AdjustableFigure(
     val interactiveTypes = setOf(
         "axclock", "axfrac", "axabacus", "axthermo", "axtenframe", "axspin", "axbeaker",
         "axtally", "axbase10", "axplace", "axruler", "axmoney", "axjump", "axbalance",
-        "axsaw", "axpattern", "axsym", "axgeoboard", "axdice", "axmularea"
+        "axsaw", "axpattern", "axsym", "axgeoboard", "axdice", "axmularea", "axvenn",
+        "axnumpts", "axnumint", "axnumineq", "axxypts", "axxyline", "axxyvec", "axxycirc", "axpolpts",
+        "gauge", "ang", "sec", "arc", "segm", "parll", "ngon"
     )
     if (spec.type in interactiveTypes) {
         InteractiveClock(current, modifier, contentDescription) { next ->
@@ -63,13 +65,14 @@ private fun InteractiveClock(
     var canvasSize by remember { mutableStateOf(IntSize.Zero) }
     var grab by remember { mutableStateOf<String?>(null) }
 
-    // مختصات صفحه → مختصات SVG (بوم 360×280 با ContentScale.Fit وسط‌چین)
+    // مختصات صفحه → مختصات SVG (بوم 360×280 یا 360×370 با ContentScale.Fit وسط‌چین)
     fun toSvg(p: Offset): Offset? {
         val w = canvasSize.width.toFloat()
         val h = canvasSize.height.toFloat()
         if (w <= 0f || h <= 0f) return null
-        val sc = min(w / 360f, h / 280f)
-        return Offset((p.x - (w - 360f * sc) / 2f) / sc, (p.y - (h - 280f * sc) / 2f) / sc)
+        val vh = if (latest.type == "axbase10") 370f else 280f
+        val sc = min(w / 360f, h / vh)
+        return Offset((p.x - (w - 360f * sc) / 2f) / sc, (p.y - (h - vh * sc) / 2f) / sc)
     }
 
     fun moveTo(p: Offset) {
@@ -94,6 +97,37 @@ private fun InteractiveClock(
             val ratio = ((q.x - 24f) / (336f - 24f)).coerceIn(0f, 1f)
             val bVal = Math.round(ratio * len).coerceIn(1, len)
             x + ("a" to JsonPrimitive(0)) + ("b" to JsonPrimitive(bVal))
+        } else if (latest.type == "axnumint") {
+            val xmin = latest.xNum("xmin", -5f)
+            val xmax = kotlin.math.max(xmin + 2f, latest.xNum("xmax", 5f))
+            val v = Math.round((xmin + ((q.x - 40f) / (336f - 40f)).coerceIn(0f, 1f) * (xmax - xmin)) * 2f) / 2f
+            if (q.x < 188f) x + ("lo" to JsonPrimitive(v)) else x + ("hi" to JsonPrimitive(v))
+        } else if (latest.type == "axnumineq") {
+            val xmin = latest.xNum("xmin", -5f)
+            val xmax = kotlin.math.max(xmin + 2f, latest.xNum("xmax", 5f))
+            val v = Math.round((xmin + ((q.x - 40f) / (336f - 40f)).coerceIn(0f, 1f) * (xmax - xmin)) * 2f) / 2f
+            x + ("x0" to JsonPrimitive(v))
+        } else if (latest.type in setOf("axxyline", "axxyvec", "axxycirc")) {
+            val xmin = latest.xNum("xmin", -5f)
+            val xmax = kotlin.math.max(xmin + 2f, latest.xNum("xmax", 5f))
+            val ymin = latest.xNum("ymin", -4f)
+            val ymax = kotlin.math.max(ymin + 2f, latest.xNum("ymax", 4f))
+            val xv = Math.round((xmin + ((q.x - 40f) / (336f - 40f)).coerceIn(0f, 1f) * (xmax - xmin)) * 2f) / 2f
+            val yv = Math.round((ymin + ((246f - q.y) / (246f - 26f)).coerceIn(0f, 1f) * (ymax - ymin)) * 2f) / 2f
+            when (latest.type) {
+                "axxyline" -> x + ("b" to JsonPrimitive(yv))
+                "axxyvec" -> x + ("x2" to JsonPrimitive(xv)) + ("y2" to JsonPrimitive(yv))
+                else -> x + ("cx" to JsonPrimitive(xv)) + ("cy" to JsonPrimitive(yv))
+            }
+        } else if (latest.type == "gauge") {
+            val vmin = latest.xNum("vmin", 0f)
+            val vmax = kotlin.math.max(vmin + 1f, latest.xNum("vmax", 100f))
+            val ratio = ((q.x - 60f) / 240f).coerceIn(0f, 1f)
+            x + ("val" to JsonPrimitive(Math.round(vmin + ratio * (vmax - vmin))))
+        } else if (latest.type in setOf("ang", "sec", "arc", "segm", "parll")) {
+            val angDeg = ((atan2((160f - q.y).toDouble(), (q.x - 180f).toDouble()) * 180.0 / PI + 360.0) % 360.0).toInt().coerceIn(10, 350)
+            if (latest.type == "parll") x + ("tilt" to JsonPrimitive(angDeg.coerceIn(15, 165).toString()))
+            else x + ("m" to JsonPrimitive(angDeg.toString()))
         } else if (mode == "hour") {
             x + ("h" to JsonPrimitive(Math.round(deg / 30.0).toInt() % 12))
         } else {
@@ -136,10 +170,24 @@ private fun InteractiveClock(
                 emit(FigureSpec(JsonObject(latest.raw + ("X" to JsonObject(x + ("n" to JsonPrimitive(nextN)))))))
             }
             "axbase10" -> {
-                val cur = latest.xNum("n", 134f).toLong().coerceIn(0L, 999999L)
-                val delta = if (q.x < 120f) 100L else if (q.x < 240f) 10L else 1L
-                val nextN = (cur + delta).coerceAtMost(999999L)
-                emit(FigureSpec(JsonObject(latest.raw + ("X" to JsonObject(x + ("n" to JsonPrimitive(nextN)))))))
+                val cur = latest.xNum("n", 134f).toLong().coerceIn(0L, 1_000_000L)
+                if (q.y >= 340f) {
+                    val lb = latest.xStr("label", "1")
+                    val nextLb = if (lb == "1") "2" else if (lb == "2") "0" else "1"
+                    emit(FigureSpec(JsonObject(latest.raw + ("X" to JsonObject(x + ("label" to JsonPrimitive(nextLb)))))))
+                } else {
+                    val rowIdx = ((q.y - 26f) / 45f).toInt().coerceIn(0, 6)
+                    val pows = longArrayOf(1_000_000L, 100_000L, 10_000L, 1_000L, 100L, 10L, 1L)
+                    val pow = pows[rowIdx]
+                    val nextN = if (pow == 1_000_000L) {
+                        if (cur >= 1_000_000L) 0L else 1_000_000L
+                    } else {
+                        val base = cur % 1_000_000L
+                        val d = (base / pow) % 10L
+                        base + (((d + 1L) % 10L) - d) * pow
+                    }
+                    emit(FigureSpec(JsonObject(latest.raw + ("X" to JsonObject(x + ("n" to JsonPrimitive(nextN)))))))
+                }
             }
             "axplace" -> {
                 val cur = latest.xStr("n", "2457").filter { it.isDigit() }.ifEmpty { "0" }.toLongOrNull() ?: 0L
@@ -152,8 +200,19 @@ private fun InteractiveClock(
                 emit(FigureSpec(JsonObject(latest.raw + ("X" to JsonObject(x + ("n" to JsonPrimitive(nextN.toString())))))))
             }
             "axmoney" -> {
-                val cur = latest.xStr("sum", "1")
-                emit(FigureSpec(JsonObject(latest.raw + ("X" to JsonObject(x + ("sum" to JsonPrimitive(if (cur == "0") "1" else "0")))))))
+                if (q.y < 140f) {
+                    val curNotes = latest.xStr("notes", "1000,500").split(',', '،').map { it.trim() }.filter { it.isNotEmpty() }.toMutableList()
+                    if (curNotes.size >= 5) curNotes.removeAt(curNotes.lastIndex) else curNotes.add("1000")
+                    emit(FigureSpec(JsonObject(latest.raw + ("X" to JsonObject(x + ("notes" to JsonPrimitive(curNotes.joinToString(","))))))))
+                } else if (q.y < 230f) {
+                    val curCoins = latest.xStr("coins", "200,100,100").split(',', '،').map { it.trim() }.filter { it.isNotEmpty() }.toMutableList()
+                    if (curCoins.size >= 6) curCoins.removeAt(curCoins.lastIndex) else curCoins.add("100")
+                    emit(FigureSpec(JsonObject(latest.raw + ("X" to JsonObject(x + ("coins" to JsonPrimitive(curCoins.joinToString(","))))))))
+                } else {
+                    val cur = latest.xStr("sum", "1")
+                    val nextSum = if (cur == "1") "2" else if (cur == "2") "0" else "1"
+                    emit(FigureSpec(JsonObject(latest.raw + ("X" to JsonObject(x + ("sum" to JsonPrimitive(nextSum)))))))
+                }
             }
             "axjump" -> {
                 if (q.x >= 180f) {
@@ -257,27 +316,75 @@ private fun InteractiveClock(
                 emit(FigureSpec(JsonObject(latest.raw + ("X" to JsonObject(next)))))
             }
             "axspin" -> {
-                val parts = latest.xStr("parts", "قرمز,آبی,سبز,زرد").split(',', '،').map { it.trim() }.filter { it.isNotEmpty() }
+                val parts = latest.xStr("parts", "قرمز,آبی,سبز,زرد,قرمز,آبی").split(',', '،').map { it.trim() }.filter { it.isNotEmpty() }
                 val n = parts.size.coerceAtLeast(2)
-                val cur = latest.xNum("arrow", 1f).toInt().coerceIn(1, n)
-                val nextArrow = (cur % n) + 1
+                var deg = atan2((q.y - 142f).toDouble(), (q.x - 180f).toDouble()) * 180.0 / PI + 90.0
+                if (deg < 0) deg += 360.0
+                val nextArrow = ((deg % 360.0) / (360.0 / n)).toInt().coerceIn(0, n - 1) + 1
                 emit(FigureSpec(JsonObject(latest.raw + ("X" to JsonObject(x + ("arrow" to JsonPrimitive(nextArrow)))))))
+            }
+            "axvenn" -> {
+                val key = if (q.x < 135f) "left" else if (q.x > 225f) "right" else "mid"
+                val fb = if (key == "left") "پرنده: کبوتر، گنجشک" else if (key == "right") "آبزی: ماهی، میگو" else "اردک"
+                val cur = latest.xStr(key, fb)
+                val nextVal = if (cur.trim() == "؟" || cur.endsWith(": ؟")) fb else if (':' in cur) cur.substringBefore(':') + ": ؟" else "؟"
+                emit(FigureSpec(JsonObject(latest.raw + ("X" to JsonObject(x + (key to JsonPrimitive(nextVal)))))))
+            }
+            "axnumpts" -> {
+                val xmin = latest.xNum("xmin", -5f)
+                val xmax = kotlin.math.max(xmin + 2f, latest.xNum("xmax", 5f))
+                val v = Math.round((xmin + ((q.x - 40f) / (336f - 40f)).coerceIn(0f, 1f) * (xmax - xmin)) * 2f) / 2f
+                val vs = if (v == v.toInt().toFloat()) v.toInt().toString() else v.toString()
+                val cur = latest.xList("pts", "-2,1.5,4").toMutableList()
+                if (vs in cur && cur.size > 1) cur.remove(vs) else if (vs !in cur) cur.add(vs)
+                emit(FigureSpec(JsonObject(latest.raw + ("X" to JsonObject(x + ("pts" to JsonPrimitive(cur.joinToString(","))))))))
+            }
+            "axxypts" -> {
+                val xmin = latest.xNum("xmin", -5f)
+                val xmax = kotlin.math.max(xmin + 2f, latest.xNum("xmax", 5f))
+                val ymin = latest.xNum("ymin", -4f)
+                val ymax = kotlin.math.max(ymin + 2f, latest.xNum("ymax", 4f))
+                val xv = Math.round(xmin + ((q.x - 40f) / (336f - 40f)).coerceIn(0f, 1f) * (xmax - xmin))
+                val yv = Math.round(ymin + ((246f - q.y) / (246f - 26f)).coerceIn(0f, 1f) * (ymax - ymin))
+                val key = "$xv,$yv"
+                val cur = latest.xStr("pts", "1,2;-3,1;2,-2").split(';', '؛').map { it.trim() }.filter { it.isNotEmpty() }.toMutableList()
+                if (key in cur && cur.size > 1) cur.remove(key) else if (key !in cur) cur.add(key)
+                emit(FigureSpec(JsonObject(latest.raw + ("X" to JsonObject(x + ("pts" to JsonPrimitive(cur.joinToString(";"))))))))
+            }
+            "axpolpts" -> {
+                val rings = latest.xNum("xmax", 4f).toInt().coerceIn(1, 12)
+                val rMax = 104f
+                val dx = q.x - 180f
+                val dy = 136f - q.y
+                val rr = (hypot(dx, dy) / rMax * rings).coerceIn(1f, rings.toFloat())
+                val deg = (((atan2(dy.toDouble(), dx.toDouble()) * 180.0 / PI + 360.0) % 360.0) / 30.0).let { Math.round(it) * 30 } % 360
+                val key = "${Math.round(rr)},$deg"
+                emit(FigureSpec(JsonObject(latest.raw + ("X" to JsonObject(x + ("pts" to JsonPrimitive(key)))))))
+            }
+            "ngon" -> {
+                val n = ((latest.xNum("n", 6f).toInt() - 2) % 10) + 3
+                emit(FigureSpec(JsonObject(latest.raw + ("X" to JsonObject(x + ("n" to JsonPrimitive(n.toString())))))))
             }
         }
     }
 
+    val dragTypes = setOf(
+        "axclock", "axthermo", "axbeaker", "axruler",
+        "axnumint", "axnumineq", "axxyline", "axxyvec", "axxycirc",
+        "gauge", "ang", "sec", "arc", "segm", "parll"
+    )
     Box(
         modifier
             .onSizeChanged { canvasSize = it }
             .pointerInput(latest.type) {
-                if (latest.type !in setOf("axclock", "axthermo", "axbeaker", "axruler")) {
+                if (latest.type !in dragTypes) {
                     detectTapGestures { p -> tapAt(p) }
                 } else {
                     detectDragGestures(
                         onDragStart = { p ->
                             val q = toSvg(p)
                             if (q != null) {
-                                grab = if (latest.type in setOf("axthermo", "axbeaker", "axruler")) "thermo" else if (hypot(q.x - 180f, q.y - 150f) <= 62f) "hour" else "minute"
+                                grab = if (latest.type != "axclock") "thermo" else if (hypot(q.x - 180f, q.y - 150f) <= 62f) "hour" else "minute"
                                 moveTo(p)
                             }
                         },
