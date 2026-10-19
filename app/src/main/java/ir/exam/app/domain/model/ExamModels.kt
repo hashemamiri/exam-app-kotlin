@@ -108,7 +108,12 @@ data class FillBlankQuestion(
     /** V305 — مرتب‌سازی با کشیدن: موارد (به ترتیب نمایش بُرخورده)؛ خالی = جای خالی عادی. پاسخ = ترتیب با «,». */
     val orderItems: List<String> = emptyList(),
     /** V306 — املا: متنی که «بخوان» می‌خواند (فقط وقتی صدای معلم نیست؛ در پاسخ عمومی همین است). */
-    val dictationText: String? = null
+    val dictationText: String? = null,
+    /** V314.0 — بخش‌کردن و صداکشی: تعداد بخش‌ها/صداها (≥ ۲). */
+    val syllableCount: Int = 0,
+    /** V314.0 — دسته‌بندی در سبد: نام سبدها و فهرست موارد بُرخورده. */
+    val buckets: List<String> = emptyList(),
+    val bucketItems: List<String> = emptyList()
 ) : Question
 
 data class NumericQuestion(

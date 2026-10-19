@@ -24,6 +24,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.border
 import androidx.compose.ui.input.pointer.pointerInput
@@ -447,6 +448,22 @@ fun StudentExamContent(
                         val saved = (state.answers[question.id] as? TextAnswer)?.value.orEmpty()
                         val order = orderFromAnswer(saved, question.orderItems)
                         PrimaryOrderAnswer(order, onChange = { onAnswer(TextAnswer(question.id, it.joinToString(","))) })
+                    } else if (primary && question.buckets.isNotEmpty() && question.bucketItems.isNotEmpty()) {
+                        val saved = (state.answers[question.id] as? TextAnswer)?.value.orEmpty()
+                        PrimaryBucketAnswer(
+                            buckets = question.buckets,
+                            items = question.bucketItems,
+                            saved = saved,
+                            onChange = { onAnswer(TextAnswer(question.id, it)) }
+                        )
+                    } else if (primary && question.syllableCount >= 2) {
+                        val saved = (state.answers[question.id] as? TextAnswer)?.value.orEmpty()
+                        PrimarySyllableAnswer(
+                            questionId = question.id,
+                            count = question.syllableCount,
+                            saved = saved,
+                            onChange = { onAnswer(TextAnswer(question.id, it)) }
+                        )
                     } else {
                         val current = (state.answers[question.id] as? TextAnswer)?.value.orEmpty()
                         var keypad by remember(question.id) { mutableStateOf(false) }
@@ -1053,6 +1070,103 @@ private fun PrimaryOrderAnswer(order: List<String>, onChange: (List<String>) -> 
                 }
             }
             Spacer(Modifier.height(4.dp))
+        }
+    }
+}
+
+/** V314.0 — بخش‌کردن و صداکشی: کادرهای رنگی مجزا + صفحه‌کلید نشانه‌ها و مصوت‌های فارسی. */
+@Composable
+private fun PrimarySyllableAnswer(
+    questionId: String,
+    count: Int,
+    saved: String,
+    onChange: (String) -> Unit
+) {
+    val parts = remember(questionId, saved, count) {
+        val sp = if (saved.isBlank()) emptyList() else saved.split('-')
+        List(count) { i -> sp.getOrNull(i).orEmpty() }
+    }
+    var activeBox by remember(questionId) { mutableIntStateOf(0) }
+    val signs = listOf("ـَ", "ـِ", "ـُ", "ـّ", "ا", "آ", "ای", "او", "ی", "و")
+    fun updateAt(idx: Int, v: String) {
+        val next = parts.toMutableList().also { it[idx] = v.replace("-", "") }
+        onChange(next.joinToString("-"))
+    }
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text("هر بخش یا صدا را در کادر خودش بنویس:", style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold)
+        Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+            parts.forEachIndexed { idx, txt ->
+                if (idx > 0) Text(" - ", fontWeight = FontWeight.Bold, fontSize = 20.sp)
+                OutlinedTextField(
+                    value = txt,
+                    onValueChange = { activeBox = idx; updateAt(idx, it) },
+                    label = { Text("بخش ${PersianDigits.convert(idx + 1)}") },
+                    singleLine = true,
+                    modifier = Modifier.width(96.dp)
+                )
+            }
+        }
+        Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            signs.forEach { sign ->
+                val ch = sign.removePrefix("ـ")
+                OutlinedButton(onClick = {
+                    val idx = activeBox.coerceIn(0, parts.lastIndex)
+                    updateAt(idx, parts[idx] + ch)
+                }) { Text(sign, fontWeight = FontWeight.Bold) }
+            }
+        }
+    }
+}
+
+/** V314.0 — دسته‌بندی در سبد: قرار دادن هر مورد در سبد مناسب با لمس. */
+@Composable
+private fun PrimaryBucketAnswer(
+    buckets: List<String>,
+    items: List<String>,
+    saved: String,
+    onChange: (String) -> Unit
+) {
+    val assigned = remember(saved, buckets, items) {
+        val map = mutableMapOf<String, String>()
+        saved.split('|').forEach { seg ->
+            val idx = seg.indexOf(':')
+            if (idx > 0) {
+                val b = seg.substring(0, idx).trim()
+                seg.substring(idx + 1).split('+').map { it.trim() }.filter { it.isNotBlank() }.forEach { itItem ->
+                    map[itItem] = b
+                }
+            }
+        }
+        map
+    }
+    fun assignItem(item: String, bucket: String?) {
+        val next = assigned.toMutableMap()
+        if (bucket == null) next.remove(item) else next[item] = bucket
+        val out = buckets.joinToString("|") { b ->
+            val list = items.filter { next[it] == b }.map { it.trim() }.sorted()
+            "$b:${list.joinToString("+")}"
+        }
+        onChange(out)
+    }
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Text("برای هر مورد، سبد درست را انتخاب کن:", style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold)
+        items.forEach { item ->
+            val cur = assigned[item]
+            Card(Modifier.fillMaxWidth()) {
+                Column(Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Text(item, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                    Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        buckets.forEach { b ->
+                            val on = cur == b
+                            if (on) {
+                                Button(onClick = { assignItem(item, null) }) { Text("🧺 $b ✓") }
+                            } else {
+                                OutlinedButton(onClick = { assignItem(item, b) }) { Text("🧺 $b") }
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
 }

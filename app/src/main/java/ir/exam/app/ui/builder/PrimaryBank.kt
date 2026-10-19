@@ -40,9 +40,16 @@ object PrimaryBank {
     /** دروس مجاز برای یک پایه؛ پایهٔ نامعتبر (۰) → همهٔ دروس. */
     fun subjectsFor(grade: Int): List<String> = if (grade in 1..6) GRADE_SUBJECTS[grade].orEmpty() else SUBJECTS
 
-    fun parse(raw: String): List<PrimaryBankItem> {
+    fun parse(raw: String): List<PrimaryBankItem> = parseArray(Json.parseToJsonElement(raw).jsonObject["items"] as? JsonArray)
+
+    /** V314.0 — همهٔ سؤالات بانک ابتدایی (items پایه + extra_items تکمیلی برای ۹ درس رسمی). */
+    fun parseAll(raw: String): List<PrimaryBankItem> {
         val root = Json.parseToJsonElement(raw).jsonObject
-        val list = root["items"] as? JsonArray ?: return emptyList()
+        return parseArray(root["items"] as? JsonArray) + parseArray(root["extra_items"] as? JsonArray)
+    }
+
+    private fun parseArray(list: JsonArray?): List<PrimaryBankItem> {
+        if (list == null) return emptyList()
         return list.mapNotNull { element ->
             val o = element as? JsonObject ?: return@mapNotNull null
             val id = o.str("id") ?: return@mapNotNull null

@@ -160,7 +160,11 @@ internal object StudentExamPayloadCodec {
                 // V305 — مرتب‌سازی: موارد همیشه با ترتیب پایدار بُر می‌خورند (مستقل از shuffle_opt)
                 orderItems = if (obj.text("mode") == "order") shuffledOrderItems(obj["items"].arrayStrings().filter { it.isNotBlank() }, "$optionSeed:$originalIndex:order") else emptyList(),
                 // V306 — املا: متن «بخوان» فقط وقتی در پاسخ عمومی آمده (صدای معلم نباشد)
-                dictationText = if (obj.text("mode") == "dictation") obj.text("speak")?.takeIf(String::isNotBlank) else null
+                dictationText = if (obj.text("mode") == "dictation") obj.text("speak")?.takeIf(String::isNotBlank) else null,
+                // V314.0 — بخش‌کردن و صداکشی + دسته‌بندی در سبد
+                syllableCount = if (obj.text("mode") == "syllable") (obj.int("syllableCount") ?: 2).coerceIn(2, 10) else 0,
+                buckets = if (obj.text("mode") == "bucket") obj["buckets"].arrayStrings().filter { it.isNotBlank() } else emptyList(),
+                bucketItems = if (obj.text("mode") == "bucket") shuffledOrderItems(obj["items"].arrayStrings().filter { it.isNotBlank() }, "$optionSeed:$originalIndex:bucket") else emptyList()
             )
             "numeric", "number" -> NumericQuestion(
                 id, text, score, images, maxAnswerImages, answerImagesRequired, originalIndex

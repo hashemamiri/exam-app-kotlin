@@ -216,7 +216,8 @@
     'axxypts', 'axxyline', 'axxyvec', 'axxycirc', 'axxynogrid', 'axxyquads', 'axxyblank', 'axdual',
     'axlog', 'axloglog', 'axtime', 'axpolpts', 'ax3dpt',
     // V304 — ابزار ریاضی ابتدایی (PrimaryMathSvgRenderer.kt)
-    'axtally', 'axbase10', 'axplace', 'axclock', 'axruler', 'axfrac', 'axmoney'];
+    'axtally', 'axbase10', 'axplace', 'axclock', 'axruler', 'axfrac', 'axmoney',
+    'axabacus', 'axjump', 'axbalance', 'axthermo', 'axsaw', 'axpattern'];
   var PRIMARY_MATH_FIRST_ID = 'axtally';
   // V206 — حالت «درج محور» در ویرایشگر وب (سایت): همان ۶ محور پایهٔ AXIS_FIGURES اپ (FigureGallery.kt)
   // با پیش‌فرض‌های یکسان. در اپ، انتخاب محور بومی است و این فهرست فقط وقتی open(…,'axis') یا
@@ -257,7 +258,13 @@
     { id: 'axclock', name: 'ساعت عقربه‌ای', X: { h: '3', m: '0', nums: '1' } },
     { id: 'axruler', name: 'خط‌کش', X: { len: '10' } },
     { id: 'axfrac', name: 'کسر شکلی', X: { num: '1', den: '4', shape: 'circle' } },
-    { id: 'axmoney', name: 'سکه و اسکناس', X: { notes: '1000,2000,5000,10000', coins: '500,1000', unit: 'تومان' } }
+    { id: 'axmoney', name: 'سکه و اسکناس', X: { notes: '1000,2000,5000,10000', coins: '500,1000', unit: 'تومان' } },
+    { id: 'axabacus', name: 'چرتکهٔ ستونی', X: { n: '2435', cols: '4' } },
+    { id: 'axjump', name: 'پرش روی محور', X: { start: '0', step: '3', jumps: '4', max: '12' } },
+    { id: 'axbalance', name: 'ترازوی دوکفه‌ای', X: { left: '5', right: '3', unit: 'کیلوگرم' } },
+    { id: 'axthermo', name: 'دماسنج', X: { val: '25', min: '-10', max: '50' } },
+    { id: 'axsaw', name: 'جدول شگفت‌انگیز (۴×۴)', X: { vals: '1,2,3,4;3,4,?,2;2,?,4,3;4,3,2,1', mode: 'shape' } },
+    { id: 'axpattern', name: 'الگویابی شکلی/عددی', X: { seq: '●,▲,●,▲,●,?' } }
   ];
   function isAxisType(t) { return /^ax/.test(String(t || '')); }
   // V247 — پورت یک‌به‌یک ۲۱ محور تازهٔ AxisSvgRenderer.kt (V137.2) برای سایت (بدون پل بومی).
@@ -531,6 +538,88 @@
         mx += 60; total += coins[i];
       }
       if (xs('sum', '0') === '1') s += tx(180, 272, 'جمع: ' + grp(total) + ' ' + un, PT, 'middle', true, 13);
+      return wrap(s);
+    }
+    if (t === 'axabacus') {
+      var cols = clamp(Math.floor(num(X.cols, 4)), 2, 6), an = clamp(Math.floor(num(X.n, 2435)), 0, 999999);
+      var alabs = ['یکان', 'دهگان', 'صدگان', 'هزار', 'ده‌هزار', 'صدهزار'], acols = ['#ef5350', '#42a5f5', '#66bb6a', '#ab47bc', '#ffa726', '#26a69a'];
+      var astep = 288 / cols, digs = [], arem = an;
+      for (i = 0; i < cols; i++) { digs.push(arem % 10); arem = Math.floor(arem / 10); }
+      s += rc(24, 214, 312, 22, '#8d6e63', ST, 1.8, 6);
+      for (c = 0; c < cols; c++) {
+        var aidx = cols - 1 - c, acx = 36 + c * astep + astep / 2, ad = digs[aidx], acol = acols[aidx % acols.length];
+        s += lnr(acx, 44, acx, 214, ST, 3.2);
+        for (k = 0; k < ad; k++) s += rc(acx - 16, 204 - k * 16 - 7, 32, 14, acol, ST, 1.2, 7);
+        s += tx(acx, 230, alabs[aidx], '#fff', 'middle', true, 10);
+        if (xs('blank', '0') !== '1') s += tx(acx, 258, String(ad), ST, 'middle', true, 15);
+      }
+      return wrap(s);
+    }
+    if (t === 'axjump') {
+      var jst = clamp(Math.floor(num(X.start, 0)), 0, 50), jsp = clamp(Math.floor(num(X.step, 3)), 1, 20), jcnt = clamp(Math.floor(num(X.jumps, 4)), 1, 10);
+      var jmax = clamp(Math.max(jst + jsp * jcnt, Math.floor(num(X.max, jst + jsp * jcnt))), 2, 100), jy = 186;
+      s += lnr(20, jy, 342, jy, ST, 2.2);
+      var jtk = jmax <= 15 ? 1 : jmax <= 30 ? 2 : 5;
+      for (i = 0; i <= jmax; i++) {
+        var jx = 28 + 304 * (i / jmax), jmaj = i % jtk === 0;
+        s += lnr(jx, jy - (jmaj ? 7 : 4), jx, jy + (jmaj ? 7 : 4), ST, jmaj ? 1.8 : 1);
+        if (jmaj) s += tx(jx, jy + 22, String(i), ST, 'middle', true, 11);
+      }
+      for (i = 0; i < jcnt; i++) {
+        var ja = jst + i * jsp, jb = ja + jsp; if (jb > jmax) break;
+        var jxa = 28 + 304 * (ja / jmax), jxb = 28 + 304 * (jb / jmax), jxm = (jxa + jxb) / 2, jh = Math.min(85, Math.max(34, (jxb - jxa) * 0.65));
+        s += '<path d="M ' + f2(jxa) + ' ' + f2(jy - 4) + ' Q ' + f2(jxm) + ' ' + f2(jy - jh) + ' ' + f2(jxb) + ' ' + f2(jy - 4) + '" fill="none" stroke="' + ACC + '" stroke-width="2.4"/>';
+        s += '<circle cx="' + f2(jxb) + '" cy="' + f2(jy) + '" r="4" fill="' + PT + '"/>' + tx(jxm, jy - jh * 0.58, '+' + jsp, PT, 'middle', true, 11);
+      }
+      if (xs('label', '1') !== '0') s += tx(180, 252, jst + ' + (' + jcnt + ' × ' + jsp + ') = ' + (jst + jcnt * jsp), ST, 'middle', true, 14);
+      return wrap(s);
+    }
+    if (t === 'axbalance') {
+      var bl = num(X.left, 5), br = num(X.right, 3), bun = xs('unit', 'کیلوگرم'), bdiff = clamp(br - bl, -10, 10), bang = (bdiff / 10) * 14 * Math.PI / 180;
+      var bcx = 180, bcy = 116, barm = 104, blx = bcx - barm * Math.cos(bang), bly = bcy - barm * Math.sin(bang), brx = bcx + barm * Math.cos(bang), bry = bcy + barm * Math.sin(bang);
+      s += '<polygon points="' + f2(bcx) + ',' + f2(bcy) + ' ' + f2(bcx - 26) + ',236 ' + f2(bcx + 26) + ',236" fill="#90a4ae" stroke="' + ST + '" stroke-width="2"/>' + rc(bcx - 56, 236, 112, 14, ST, ST, 1, 5) + lnr(blx, bly, brx, bry, ST, 4) + '<circle cx="' + f2(bcx) + '" cy="' + f2(bcy) + '" r="7" fill="' + GLD + '" stroke="' + ST + '" stroke-width="2"/>';
+      [[blx, bly, bl, ACC], [brx, bry, br, GRN]].forEach(function (p) {
+        var px = p[0], py = p[1], pv = p[2], pcol = p[3], plb = String(pv);
+        s += lnr(px, py, px - 28, py + 44, MU, 1.5) + lnr(px, py, px + 28, py + 44, MU, 1.5) + rc(px - 36, py + 44, 72, 10, GLD, ST, 1.6, 4) + rc(px - 22, py + 14, 44, 30, pcol, ST, 1.6, 5) + tx(px, py + 33, plb, '#fff', 'middle', true, 13) + tx(px, py + 68, plb + ' ' + bun, ST, 'middle', true, 11);
+      });
+      s += tx(180, 268, bl > br ? '>' : bl < br ? '<' : '=', PT, 'middle', true, 20);
+      return wrap(s);
+    }
+    if (t === 'axthermo') {
+      var tmin = num(X.min, -10), tmax = Math.max(tmin + 5, num(X.max, 50)), tval = clamp(num(X.val, 25), tmin, tmax);
+      var tcx = 160, ttop = 34, tbot = 206, tvy = tbot - (tbot - ttop) * ((tval - tmin) / (tmax - tmin)), tcol = tval <= 0 ? '#1e88e5' : '#e53935';
+      s += rc(tcx - 12, ttop - 8, 24, tbot - ttop + 16, '#f8fafc', ST, 2, 12) + rc(tcx - 7, tvy, 14, tbot - tvy + 12, tcol, 'none', 0, 6) + '<circle cx="' + f2(tcx) + '" cy="' + f2(tbot + 22) + '" r="22" fill="' + tcol + '" stroke="' + ST + '" stroke-width="2"/>';
+      var tstep = (tmax - tmin <= 20) ? 2 : (tmax - tmin <= 60) ? 10 : 20;
+      for (var ttk = Math.ceil(tmin / tstep) * tstep; ttk <= tmax + 0.01; ttk += tstep) {
+        var tty = tbot - (tbot - ttop) * ((ttk - tmin) / (tmax - tmin));
+        s += lnr(tcx + 12, tty, tcx + 22, tty, ST, 1.6) + tx(tcx + 28, tty + 4, Math.round(ttk) + '°', ST, 'start', true, 11);
+      }
+      s += tx(255, 130, Math.round(tval) + '°C', tcol, 'middle', true, 22);
+      return wrap(s);
+    }
+    if (t === 'axsaw') {
+      var sraw = xs('vals', '1,2,3,4;3,4,?,2;2,?,4,3;4,3,2,1'), smode = xs('mode', 'shape') === 'shape';
+      var sshapes = { '1': ['●', '#ef5350'], '2': ['▲', '#42a5f5'], '3': ['■', '#66bb6a'], '4': ['★', '#ffa726'] };
+      var srows = sraw.split(';').map(function (r) { return r.split(',').map(function (z) { return faEn(z.trim()); }); });
+      var sx0 = 80, sy0 = 36, scs = 50;
+      for (r = 0; r < 4; r++) for (c = 0; c < 4; c++) {
+        var scell = (srows[r] && srows[r][c]) ? srows[r][c] : '?', sx = sx0 + c * scs, sy = sy0 + r * scs, sisQ = scell === '?' || scell === '؟';
+        s += rc(sx, sy, scs, scs, sisQ ? '#fff8e1' : '#ffffff', ST, 1.2);
+        if (sisQ) s += tx(sx + scs / 2, sy + 32, '؟', PT, 'middle', true, 22);
+        else if (smode && sshapes[scell]) s += tx(sx + scs / 2, sy + 33, sshapes[scell][0], sshapes[scell][1], 'middle', true, 24);
+        else s += tx(sx + scs / 2, sy + 32, scell, ST, 'middle', true, 20);
+      }
+      s += rc(sx0, sy0, scs * 4, scs * 4, 'none', ST, 2.8) + lnr(sx0 + scs * 2, sy0, sx0 + scs * 2, sy0 + scs * 4, ST, 2.6) + lnr(sx0, sy0 + scs * 2, sx0 + scs * 4, sy0 + scs * 2, ST, 2.6);
+      return wrap(s);
+    }
+    if (t === 'axpattern') {
+      var pitems = xs('seq', '●,▲,●,▲,●,?').split(/[,،]/).map(function (z) { return z.trim(); }).filter(Boolean).slice(0, 8);
+      if (!pitems.length) return wrap('');
+      var pn = pitems.length, pcw = Math.min(42, 290 / pn), pgap = 6, ptw = pn * pcw + (pn - 1) * pgap, px0 = (360 - ptw) / 2, py0 = 112, ppal = [ACC, GRN, GLD, PT, '#42a5f5'];
+      for (i = 0; i < pn; i++) {
+        var px2 = px0 + i * (pcw + pgap), pisQ = pitems[i] === '?' || pitems[i] === '؟', pcol2 = pisQ ? PT : ppal[i % ppal.length];
+        s += rc(px2, py0, pcw, 54, pisQ ? '#fff8e1' : ACCS, pcol2, 2, 9) + tx(px2 + pcw / 2, py0 + 34, pisQ ? '؟' : pitems[i], pcol2, 'middle', true, 20);
+      }
       return wrap(s);
     }
     return null;
@@ -2209,7 +2298,13 @@
       axclock: '<circle cx="18" cy="15" r="11" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M18,15 V8 M18,15 L24,17" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><circle cx="18" cy="15" r="1.4" fill="currentColor"/>',
       axruler: '<rect x="3" y="10" width="30" height="10" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M8,10 V15 M13,10 V13 M18,10 V15 M23,10 V13 M28,10 V15" stroke="currentColor" stroke-width="1.2"/>',
       axfrac: '<circle cx="18" cy="15" r="11" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M18,15 V4 A11,11 0 0 1 29,15 Z" fill="currentColor"/><path d="M18,15 H29 M18,15 V26 M18,15 L7,15" stroke="currentColor" stroke-width="1"/>',
-      axmoney: '<rect x="2" y="8" width="20" height="12" rx="2" fill="none" stroke="currentColor" stroke-width="1.4"/><circle cx="12" cy="14" r="2.5" fill="none" stroke="currentColor" stroke-width="1"/><circle cx="27" cy="19" r="6" fill="none" stroke="currentColor" stroke-width="1.6"/><circle cx="27" cy="19" r="3" fill="none" stroke="currentColor" stroke-width="0.8"/>'
+      axmoney: '<rect x="2" y="8" width="20" height="12" rx="2" fill="none" stroke="currentColor" stroke-width="1.4"/><circle cx="12" cy="14" r="2.5" fill="none" stroke="currentColor" stroke-width="1"/><circle cx="27" cy="19" r="6" fill="none" stroke="currentColor" stroke-width="1.6"/><circle cx="27" cy="19" r="3" fill="none" stroke="currentColor" stroke-width="0.8"/>',
+      axabacus: '<rect x="4" y="23" width="28" height="4" rx="1" fill="currentColor"/><path d="M10,6 V23 M18,6 V23 M26,6 V23" stroke="currentColor" stroke-width="1.6"/><circle cx="10" cy="20" r="2.5" fill="currentColor"/><circle cx="18" cy="20" r="2.5" fill="currentColor"/><circle cx="18" cy="14" r="2.5" fill="currentColor"/><circle cx="26" cy="20" r="2.5" fill="currentColor"/>',
+      axjump: '<path d="M4,22 H32" stroke="currentColor" stroke-width="1.6"/><path d="M6,22 Q12,10 18,22 Q24,10 30,22" fill="none" stroke="currentColor" stroke-width="1.6"/>',
+      axbalance: '<path d="M18,10 L14,25 H22 Z M6,10 H30 M8,10 L5,18 H11 Z M28,10 L25,18 H31 Z" fill="none" stroke="currentColor" stroke-width="1.4"/>',
+      axthermo: '<rect x="15" y="4" width="6" height="16" rx="3" fill="none" stroke="currentColor" stroke-width="1.5"/><circle cx="18" cy="23" r="4.5" fill="currentColor"/>',
+      axsaw: '<rect x="6" y="4" width="24" height="22" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M18,4 V26 M6,15 H30" stroke="currentColor" stroke-width="1.4"/>',
+      axpattern: '<rect x="3" y="10" width="8" height="10" rx="2" fill="none" stroke="currentColor" stroke-width="1.4"/><rect x="14" y="10" width="8" height="10" rx="2" fill="none" stroke="currentColor" stroke-width="1.4"/><rect x="25" y="10" width="8" height="10" rx="2" fill="none" stroke="currentColor" stroke-width="1.4"/>'
     };
     return '<svg viewBox="0 0 36 30" aria-hidden="true">' + (m[id] || AXI[id] || m.plot) + '</svg>';
   }
@@ -2252,7 +2347,13 @@
       axclock: [['h', 'ساعت (۰ تا ۱۲)'], ['m', 'دقیقه (۰ تا ۵۹)'], ['nums', 'نمایش عددها (۱/۰)'], ['label', 'نوشتن ساعت زیر شکل (۱/۰)']],
       axruler: [['len', 'طول خط‌کش (۲ تا ۵۰ سانتی‌متر)'], ['a', 'ابتدای اندازه‌گیری (اختیاری)'], ['b', 'انتهای اندازه‌گیری (اختیاری)']],
       axfrac: [['num', 'صورت'], ['den', 'مخرج'], ['shape', 'شکل'], ['label', 'نوشتن کسر زیر شکل (۱/۰)']],
-      axmoney: [['notes', 'اسکناس‌ها (با ویرگول)'], ['coins', 'سکه‌ها (با ویرگول)'], ['unit', 'واحد'], ['sum', 'نوشتن جمع (۱/۰)']]
+      axmoney: [['notes', 'اسکناس‌ها (با ویرگول)'], ['coins', 'سکه‌ها (با ویرگول)'], ['unit', 'واحد'], ['sum', 'نوشتن جمع (۱/۰)']],
+      axabacus: [['n', 'عدد (۰ تا ۹۹۹٬۹۹۹)'], ['cols', 'تعداد ستون‌ها (۲ تا ۶)'], ['blank', 'مخفی کردن ارقام زیر چرتکه (۱=بله)']],
+      axjump: [['start', 'نقطهٔ شروع'], ['step', 'طول هر پرش'], ['jumps', 'تعداد پرش'], ['max', 'انتهای محور'], ['label', 'نمایش عبارت جمع/ضرب (۱/۰)']],
+      axbalance: [['left', 'وزنهٔ کفهٔ چپ'], ['right', 'وزنهٔ کفهٔ راست'], ['unit', 'واحد جرم']],
+      axthermo: [['val', 'دما (°C)'], ['min', 'کمینهٔ دما'], ['max', 'بیشینهٔ دما']],
+      axsaw: [['vals', 'سطرها با ; و خانه‌ها با , (جای خالی = ?)'], ['mode', 'نمایش (shape=شکل / num=عدد)']],
+      axpattern: [['seq', 'دنباله با ویرگول (مثلاً ●,▲,●,▲,?)']]
     };
     if (AXF[t]) return [['X.title', 'عنوان']].concat(AXF[t].map(function (f) { return ['X.' + f[0], f[1]]; }));
     if (isAxisType(t)) return [['X.title', 'عنوان']];
@@ -2432,14 +2533,50 @@
     if (clockDrag === 'hour') state.X.h = String(Math.round(deg / 30) % 12);
     else state.X.m = String(Math.round(deg / 6) % 60);
   }
-  // V310.7 — عقربه‌های ساعت با ماوس/لمس جابه‌جا می‌شوند: نزدیک مرکز = ساعت، بیرون = دقیقه
+  // V310.7 / V314.0 — عقربه‌های ساعت، رنگ‌آمیزی کسر، مهره‌های چرتکه و دماسنج با ماوس/لمس قابل تنظیم‌اند
   function bindClock(box) {
-    if (state.t !== 'axclock') {
+    if (['axclock', 'axfrac', 'axabacus', 'axthermo'].indexOf(state.t) < 0) {
       box.onpointerdown = box.onpointermove = box.onpointerup = box.onpointercancel = null;
       box.style.touchAction = '';
       return;
     }
     box.style.touchAction = 'none';
+    if (state.t === 'axfrac') {
+      box.onpointerdown = function () {
+        var den = Math.max(1, Math.min(24, Math.floor(num(state.X.den, 4))));
+        var cur = Math.max(0, Math.min(den, Math.floor(num(state.X.num, 1))));
+        state.X.num = String((cur + 1) % (den + 1));
+        paint(); renderFields();
+      };
+      box.onpointermove = box.onpointerup = box.onpointercancel = null;
+      return;
+    }
+    if (state.t === 'axabacus') {
+      box.onpointerdown = function (e) {
+        var p = clockPoint(box, e); if (!p) return;
+        var cols = Math.max(2, Math.min(6, Math.floor(num(state.X.cols, 4))));
+        var cidx = Math.max(0, Math.min(cols - 1, Math.floor((p.x - 36) / (288 / cols))));
+        var place = cols - 1 - cidx, pow = Math.pow(10, place);
+        var curN = Math.max(0, Math.min(999999, Math.floor(num(state.X.n, 2435))));
+        var curD = Math.floor(curN / pow) % 10, nextD = (curD + 1) % 10;
+        state.X.n = String(curN + (nextD - curD) * pow);
+        paint(); renderFields();
+      };
+      box.onpointermove = box.onpointerup = box.onpointercancel = null;
+      return;
+    }
+    if (state.t === 'axthermo') {
+      var setThermo = function (e) {
+        var p = clockPoint(box, e); if (!p) return;
+        var mn = num(state.X.min, -10), mx = Math.max(mn + 5, num(state.X.max, 50));
+        var ratio = Math.max(0, Math.min(1, (206 - p.y) / (206 - 34)));
+        state.X.val = String(Math.round(mn + ratio * (mx - mn)));
+      };
+      box.onpointerdown = function (e) { clockDrag = 'thermo'; setThermo(e); paint(); try { box.setPointerCapture(e.pointerId); } catch (_c) {} };
+      box.onpointermove = function (e) { if (!clockDrag) return; setThermo(e); paint(); };
+      box.onpointerup = box.onpointercancel = function () { if (!clockDrag) return; clockDrag = null; renderFields(); };
+      return;
+    }
     box.onpointerdown = function (e) {
       var p = clockPoint(box, e);
       if (!p) return;

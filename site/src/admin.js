@@ -149,12 +149,24 @@
         detail.appendChild(box);
       });
       var fb = el('textarea', {rows: 2, style: 'width:100%;border:1px solid var(--line);border-radius:10px;padding:8px', placeholder: 'بازخورد به دانش‌آموز (اختیاری)'}); fb.value = a.feedback || '';
+      /* V314.0 — مهرها و برچسب‌های تشویقی تصویری ویژهٔ دورهٔ ابتدایی */
+      var stampRow = el('div', {class: 'row', style: 'flex-wrap:wrap;gap:4px;margin:6px 0'});
+      [
+        '🌟 آفرین قهرمان! خیلی خوب درخشیدی',
+        '🏆 ستارهٔ طلایی برای دقت و تلاش عالی',
+        '🎨 پاسخ و ترسیم بسیار تمیز و خلاقانه',
+        '🦋 تلاش بسیار خوب؛ همین مسیر زیبا را ادامه بده',
+        '📚 پیشرفت عالی نسبت به آزمون‌های قبل!',
+        '💪 با کمی تمرین بیشتر عالی می‌شوی'
+      ].forEach(function (st) {
+        stampRow.appendChild(el('button', {class: 'chip', style: 'cursor:pointer', text: st.slice(0, 24), title: st, onclick: function () { fb.value = (fb.value ? fb.value.trim() + ' — ' : '') + st; }}));
+      });
       var fbBank = el('div', {class: 'row', style: 'flex-wrap:wrap;gap:4px;margin:6px 0'});
       fbList().then(function (list) { (list || []).slice(0, 12).forEach(function (p) { fbBank.appendChild(el('button', {class: 'chip', style: 'cursor:pointer', text: p.text, onclick: function () { fb.value = (fb.value ? fb.value + ' ' : '') + p.text; }})); }); }).catch(function () {});
       var total = el('b');
       function sum() { var s = 0; inputs.forEach(function (x) { s += num(x.value); }); total.textContent = 'جمع: ' + fa(S.fmtScore(s)) + ' از ' + fa(S.fmtScore(maxScore)); }
       inputs.forEach(function (x) { x.addEventListener('input', sum); }); sum();
-      detail.appendChild(el('div', {class: 'field', style: 'margin-top:12px'}, [el('label', {text: 'بازخورد'}), fb, fbBank]));
+      detail.appendChild(el('div', {class: 'field', style: 'margin-top:12px'}, [el('label', {text: 'بازخورد'}), fb, stampRow, fbBank]));
       detail.appendChild(el('div', {class: 'row'}, [total, el('span', {class: 'grow'}), el('button', {class: 'btn', text: '💾 ذخیرهٔ نمره', onclick: async function () {
         var g = inputs.map(function (x, i) { var v = num(x.value); if (v < 0 || v > num(questions[i].score)) throw new Error('نمرهٔ سؤال ' + fa(i + 1) + ' خارج از بازه است.'); return v; });
         try { chk(await S.rpcObj('native_save_grade', {p_answer: a.id, p_grades: g, p_feedback: fb.value.trim()})); toast('نمره ذخیره شد.', 'ok'); var idx = answers.indexOf(a); a.graded = true; a.grades = g; a.total_grade = g.reduce(function (s, v) { return s + v; }, 0); a.feedback = fb.value.trim(); if (idx < answers.length - 1) { sel = answers[idx + 1]; } drawList(); drawDetail(); } catch (e) { if (!(e && e.requested)) toast(errMsg(e), 'err'); }

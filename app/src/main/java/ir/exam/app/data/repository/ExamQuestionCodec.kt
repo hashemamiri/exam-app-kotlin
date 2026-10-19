@@ -181,8 +181,8 @@ internal object ExamQuestionCodec {
                 audioUri = obj["audio"]?.asString()?.takeIf(String::isNotBlank),
                 audioBytes = (obj["audioBytes"] as? JsonPrimitive)?.longOrNull ?: 0L,
                 audioMs = (obj["audioMs"] as? JsonPrimitive)?.longOrNull ?: 0L,
-                // V305 — حالت ویژهٔ ابتدایی (مرتب‌سازی / انتخاب روی تصویر)
-                mode = obj["mode"]?.asString()?.takeIf { it in setOf("order", "hotspot", "draw", "dictation", "voice") }.orEmpty(),
+                // V305 / V314.0 — حالت ویژهٔ ابتدایی (مرتب‌سازی / انتخاب روی تصویر / بخش‌کردن / سبد)
+                mode = obj["mode"]?.asString()?.takeIf { it in setOf("order", "hotspot", "draw", "dictation", "voice", "syllable", "bucket") }.orEmpty(),
                 // ترتیب درست فقط در کلید پاسخ (accept[0]) است؛ public items بُرخورده است.
                 orderItems = if (obj["mode"]?.asString() != "order") emptyList() else key["accept"].asArrayOrEmpty().firstOrNull()?.asString()
                     ?.split(',')?.map { it.trim() }?.filter { it.isNotBlank() }
@@ -256,8 +256,8 @@ internal object ExamQuestionCodec {
                     values["optionStyles"] = it
                 }
             }
-            // V305 — حالت ویژه: mode/items/hotspots فقط وقتی فعال است نوشته می‌شود
-            values.remove("mode"); values.remove("items"); values.remove("hotspots"); values.remove("speak")
+            // V305 / V314.0 — حالت ویژه: mode/items/hotspots/buckets/syllableCount فقط وقتی فعال است نوشته می‌شود
+            values.remove("mode"); values.remove("items"); values.remove("hotspots"); values.remove("speak"); values.remove("buckets"); values.remove("syllableCount")
             // V306 — پاسخ با تخته: فقط نشانهٔ حالت؛ پاسخ دانش‌آموز تصویر تخته است.
             if (question.type == QuestionType.ESSAY && question.mode == "draw") values["mode"] = JsonPrimitive("draw")
             // V309 — پاسخ صوتی: حالت و سقف ضبط (ثانیه) نوشته می‌شود
@@ -274,6 +274,21 @@ internal object ExamQuestionCodec {
                 values["mode"] = JsonPrimitive("order")
                 // V305 — امنیت: موارد عمومی همیشه بُرخورده‌اند تا ترتیب درست در پاسخ عمومی لو نرود.
                 values["items"] = JsonArray(shuffledOrderPublic(question.orderItems).map { JsonPrimitive(it) })
+            }
+            // V314.0 — بخش‌کردن و صداکشی: تعداد بخش‌ها در دادهٔ عمومی قرار می‌گیرد
+            if (question.type == QuestionType.FILL_BLANK && question.mode == "syllable") {
+                values["mode"] = JsonPrimitive("syllable")
+                val cnt = question.expectedText.split('|').firstOrNull().orEmpty().split('-').map { it.trim() }.count { it.isNotEmpty() }.coerceIn(2, 10)
+                values["syllableCount"] = JsonPrimitive(cnt)
+            }
+            // V314.0 — دسته‌بندی در سبد: نام سبدها و موارد بُرخورده در دادهٔ عمومی قرار می‌گیرد
+            if (question.type == QuestionType.FILL_BLANK && question.mode == "bucket") {
+                val parsed = parseBucketSpec(question.expectedText)
+                if (parsed.isNotEmpty()) {
+                    values["mode"] = JsonPrimitive("bucket")
+                    values["buckets"] = JsonArray(parsed.map { JsonPrimitive(it.first) })
+                    values["items"] = JsonArray(shuffledOrderPublic(parsed.flatMap { it.second }).map { JsonPrimitive(it) })
+                }
             }
             if (question.type == QuestionType.MULTIPLE_CHOICE && question.mode == "hotspot") {
                 values["mode"] = JsonPrimitive("hotspot")
@@ -309,11 +324,22 @@ internal object ExamQuestionCodec {
                 QuestionType.MULTIPLE_CHOICE -> values["correctOption"] = JsonPrimitive(question.correctIndex ?: 0)
                 QuestionType.TRUE_FALSE -> values["correctAnswer"] = JsonPrimitive(question.expectedText.toBooleanStrictOrNull() ?: false)
                 QuestionType.FILL_BLANK -> {
-                    // V305 — مرتب‌سازی: پاسخ درست = ترتیب واردشدهٔ items با «,» (همان قراردادی که دانش‌آموز می‌فرستد)
-                    values["accept"] = if (question.mode == "order") JsonArray(listOf(JsonPrimitive(orderAnswerOf(question.orderItems))))
-                    else JsonArray(
-                        question.expectedText.split('|').map(String::trim).filter(String::isNotBlank).map(::JsonPrimitive)
-                    )
+                    // V305 / V314.0 — مرتب‌سازی، بخش‌کردن و دسته‌بندی سبدی
+                    values["accept"] = when (question.mode) {
+                        "order" -> JsonArray(listOf(JsonPrimitive(orderAnswerOf(question.orderItems))))
+                        "syllable" -> JsonArray(
+                            question.expectedText.split('|').map { variant ->
+                                variant.split('-').map { it.trim() }.filter { it.isNotEmpty() }.joinToString("-")
+                            }.filter(String::isNotBlank).map(::JsonPrimitive)
+                        )
+                        "bucket" -> {
+                            val canon = bucketCanonicalAnswer(parseBucketSpec(question.expectedText))
+                            JsonArray(listOf(JsonPrimitive(canon.ifBlank { question.expectedText.trim() })))
+                        }
+                        else -> JsonArray(
+                            question.expectedText.split('|').map(String::trim).filter(String::isNotBlank).map(::JsonPrimitive)
+                        )
+                    }
                     values["caseSensitive"] = JsonPrimitive(question.caseSensitive)
                 }
                 QuestionType.NUMERIC -> {
@@ -344,6 +370,22 @@ internal object ExamQuestionCodec {
 
     /** V305 — رشتهٔ پاسخ مرتب‌سازی: موارد با «,» (سرور «،» را هم به «,» نرمال می‌کند؛ فاصله‌های اطراف حذف). */
     fun orderAnswerOf(items: List<String>): String = items.map { it.trim().replace("،", ",") }.filter { it.isNotBlank() }.joinToString(",")
+
+    /** V314.0 — تجزیهٔ فرمت دسته‌بندی در سبد: «سبد ۱: الف، ب | سبد ۲: ج، د» */
+    fun parseBucketSpec(spec: String): List<Pair<String, List<String>>> =
+        spec.split('|').mapNotNull { seg ->
+            val idx = seg.indexOf(':')
+            if (idx <= 0) null
+            else {
+                val bName = seg.substring(0, idx).trim()
+                val bItems = seg.substring(idx + 1).split(',', '،', '+').map { it.trim() }.filter { it.isNotBlank() }
+                if (bName.isBlank() || bItems.isEmpty()) null else bName to bItems
+            }
+        }
+
+    /** V314.0 — رشتهٔ استاندارد پاسخ دسته‌بندی سبدی (موارد داخل هر سبد مرتب می‌شوند تا ترتیب مهم نباشد). */
+    fun bucketCanonicalAnswer(buckets: List<Pair<String, List<String>>>): String =
+        buckets.joinToString("|") { (name, list) -> "${name.trim()}:${list.map { it.trim() }.filter { it.isNotBlank() }.sorted().joinToString("+")}" }
 
     private fun parseType(value: String?): QuestionType = when (value?.lowercase()) {
         "multiple", "multiple_choice", "multiplechoice" -> QuestionType.MULTIPLE_CHOICE

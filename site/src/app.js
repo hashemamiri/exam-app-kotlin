@@ -2454,10 +2454,35 @@
       var card = el('div', {class: 'card'}, [el('div', {class: 'row'}, [el('h3', {class: 'grow', text: '📊 نمرات'}), window.SiteExtras && grades.length ? window.SiteExtras.gradesExcelButton(grades) : null,
         grades.length ? el('button', {class: 'btn light sm no-print', text: '🖨 ذخیرهٔ PDF', 'aria-label': 'ذخیرهٔ کارنامه به‌صورت PDF', onclick: function () { printSection('کارنامهٔ ' + ((user || {}).name || 'دانش‌آموز'), card); }}) : null])]);
       if (!grades.length) card.appendChild(emptyBox('📊', 'هنوز نمره‌ای ثبت نشده است.'));
-      else card.appendChild(el('table', {class: 'tbl'}, [
+      else {
+        /* V314.0 — کارنامهٔ توصیفی به تفکیک درس (۴ سطحی استاندارد ابتدایی + ستاره) */
+        var bySubj = {};
+        grades.forEach(function (g) {
+          var sb = String(g.subject || '').trim(), ts = Number(g.total_score) || 0, tg = Number(g.total_grade) || 0;
+          if (!sb || !ts || !g.graded_at) return;
+          if (!bySubj[sb]) bySubj[sb] = [];
+          bySubj[sb].push(Math.round(tg / ts * 100));
+        });
+        var subjKeys = Object.keys(bySubj);
+        if (subjKeys.length) {
+          var descBox = el('div', {style: 'margin:8px 0 12px;padding:10px;border:1px solid var(--line);border-radius:12px'});
+          descBox.appendChild(el('b', {style: 'display:block;margin-bottom:6px', text: '📋 کارنامهٔ توصیفی به تفکیک درس'}));
+          subjKeys.forEach(function (sb) {
+            var arr = bySubj[sb], avgP = arr.reduce(function (a, b) { return a + b; }, 0) / arr.length;
+            var rk = avgP >= 85 ? 4 : (avgP >= 70 ? 3 : (avgP >= 50 ? 2 : 1));
+            var nm = rk === 4 ? 'خیلی خوب' : (rk === 3 ? 'خوب' : (rk === 2 ? 'قابل قبول' : 'نیاز به تلاش بیشتر'));
+            descBox.appendChild(el('div', {class: 'row', style: 'justify-content:space-between;padding:4px 0'}, [
+              el('span', {text: sb + ' (' + fa(arr.length) + ' آزمون)'}),
+              el('b', {text: nm + '  ' + levelStarsText(rk)})
+            ]));
+          });
+          card.appendChild(descBox);
+        }
+        card.appendChild(el('table', {class: 'tbl'}, [
         el('thead', {}, [el('tr', {}, ['آزمون', 'درس', 'ارسال', 'نمره', 'درصد', 'بازخورد'].map(function (h) { return el('th', {text: h}); }))]),
         el('tbody', {}, grades.map(function (g) { var ts = Number(g.total_score) || 0, tg = Number(g.total_grade) || 0; var pct = ts ? Math.round(tg / ts * 100) : 0; return el('tr', {}, [el('td', {html: '<b>' + esc(g.title || 'آزمون') + '</b>' + (g.level_name ? '<div class="muted" style="font-size:12px">سطح: ' + esc(g.level_name) + ' ' + levelStarsText(g.level_rank) + '</div>' : '')}), el('td', {text: g.subject || '—'}), el('td', {class: 'muted', style: 'font-size:12px', text: fmtDate(g.submitted_at)}), el('td', {text: g.graded_at ? fa(fmtScore(tg)) + ' از ' + fa(fmtScore(ts)) : 'در انتظار تصحیح'}), el('td', {}, [g.graded_at ? el('span', {class: 'chip ' + (pct >= 50 ? 'ok' : 'off'), text: fa(pct) + '٪'}) : el('span', {class: 'chip off', text: '—'})]), el('td', {class: 'muted', text: g.feedback || '—'})]); }))
       ]));
+      }
       c.appendChild(card);
       if (answers.length) {
         var card2 = el('div', {class: 'card'}, [el('h3', {text: '🗂 پاسخ‌های ارسال‌شده'})]);

@@ -63,6 +63,9 @@
       }
       /* V305 — ابتدایی: مرتب‌سازی (موارد بُرخورده) و انتخاب روی تصویر (ناحیه‌ها به اندیس اصلی گزینه) */
       if (obj.mode === 'order' && type === 'fill') { q.mode = 'order'; q.orderItems = strs(obj.items).map(function (x) { return x.trim(); }).filter(Boolean); }
+      /* V314.0 — بخش‌کردن و صداکشی + دسته‌بندی در سبد */
+      if (obj.mode === 'syllable' && type === 'fill') { q.mode = 'syllable'; q.syllableCount = Math.max(2, Math.min(10, Number(obj.syllableCount) || 2)); }
+      if (obj.mode === 'bucket' && type === 'fill') { q.mode = 'bucket'; q.buckets = strs(obj.buckets).map(function (x) { return x.trim(); }).filter(Boolean); q.bucketItems = strs(obj.items).map(function (x) { return x.trim(); }).filter(Boolean); }
       /* V306 — پاسخ با تخته (تشریحی ابتدایی) و املا (جای خالی + متن «بخوان») */
       if (obj.mode === 'draw' && type === 'essay') q.mode = 'draw';
       /* V309 — پاسخ صوتی با سقف مدت معلم */
@@ -516,6 +519,81 @@
       });
       return box;
     }
+    /* V314.0 — بخش‌کردن و صداکشی: کادرهای رنگی مجزا + صفحه‌کلید نشانه‌ها و مصوت‌های فارسی */
+    function syllableAnswer(q, saved, set) {
+      var count = Math.max(2, Math.min(10, q.syllableCount || 2));
+      var rawParts = saved ? String(saved).split('-') : [];
+      var parts = []; for (var i = 0; i < count; i++) parts.push(rawParts[i] || '');
+      var activeIdx = 0;
+      var wrap = el('div', {class: 'pri-syllable', style: 'display:flex;flex-direction:column;gap:8px'});
+      wrap.appendChild(el('b', {style: 'font-size:15px', text: 'هر بخش یا صدا را در کادر خودش بنویس:'}));
+      var boxesRow = el('div', {class: 'row', style: 'gap:6px;flex-wrap:wrap;align-items:center'});
+      var inputs = [];
+      function emit() { set(parts.map(function (x) { return String(x || '').replace(/-/g, '').trim(); }).join('-')); }
+      parts.forEach(function (val, idx) {
+        if (idx > 0) boxesRow.appendChild(el('b', {style: 'font-size:20px;padding:0 2px', text: ' - '}));
+        var inp = el('input', {type: 'text', value: val, placeholder: 'بخش ' + fa(idx + 1), style: 'width:92px;text-align:center;font-size:18px;font-weight:bold;border:2px solid #0E7490;border-radius:10px;padding:6px'});
+        inp.addEventListener('focus', function () { activeIdx = idx; });
+        inp.addEventListener('input', function () { activeIdx = idx; parts[idx] = inp.value; emit(); });
+        inputs.push(inp);
+        boxesRow.appendChild(inp);
+      });
+      wrap.appendChild(boxesRow);
+      var signsRow = el('div', {class: 'row', style: 'gap:6px;flex-wrap:wrap'});
+      ['ـَ', 'ـِ', 'ـُ', 'ـّ', 'ا', 'آ', 'ای', 'او', 'ی', 'و'].forEach(function (sign) {
+        var ch = sign.replace(/^ـ/, '');
+        signsRow.appendChild(el('button', {type: 'button', class: 'btn soft sm', text: sign, onclick: function () {
+          var idx = Math.max(0, Math.min(count - 1, activeIdx));
+          parts[idx] = (parts[idx] || '') + ch;
+          if (inputs[idx]) { inputs[idx].value = parts[idx]; inputs[idx].focus(); }
+          emit();
+        }}));
+      });
+      wrap.appendChild(signsRow);
+      return wrap;
+    }
+    /* V314.0 — دسته‌بندی در سبد: انتخاب سبد مناسب برای هر مورد با لمس */
+    function bucketAnswer(q, saved, set) {
+      var buckets = q.buckets || [], items = q.bucketItems || [];
+      var assigned = {};
+      if (saved) {
+        String(saved).split('|').forEach(function (seg) {
+          var ci = seg.indexOf(':');
+          if (ci > 0) {
+            var b = seg.slice(0, ci).trim();
+            seg.slice(ci + 1).split('+').map(function (x) { return x.trim(); }).filter(Boolean).forEach(function (it) { assigned[it] = b; });
+          }
+        });
+      }
+      var wrap = el('div', {class: 'pri-bucket', style: 'display:flex;flex-direction:column;gap:8px'});
+      wrap.appendChild(el('b', {style: 'font-size:15px', text: 'برای هر مورد، سبد درست را انتخاب کن:'}));
+      var listBox = el('div', {style: 'display:flex;flex-direction:column;gap:8px'});
+      wrap.appendChild(listBox);
+      function emit() {
+        var out = buckets.map(function (b) {
+          var chosen = items.filter(function (it) { return assigned[it] === b; }).map(function (x) { return x.trim(); }).sort();
+          return b + ':' + chosen.join('+');
+        }).join('|');
+        set(out);
+      }
+      function paint() {
+        listBox.innerHTML = '';
+        items.forEach(function (item) {
+          var cur = assigned[item] || '';
+          var bRow = el('div', {class: 'row', style: 'gap:6px;flex-wrap:wrap;margin-top:6px'});
+          buckets.forEach(function (b) {
+            var on = cur === b;
+            bRow.appendChild(el('button', {type: 'button', class: 'btn sm ' + (on ? '' : 'light'), text: '🧺 ' + b + (on ? ' ✓' : ''), onclick: function () {
+              if (on) delete assigned[item]; else assigned[item] = b;
+              emit(); paint();
+            }}));
+          });
+          listBox.appendChild(el('div', {class: 'card', style: 'padding:10px;margin:0'}, [el('b', {style: 'font-size:16px', text: item}), bRow]));
+        });
+      }
+      paint();
+      return wrap;
+    }
     /* پد عددی بزرگ ۰–۹ برای ابتدایی؛ کادر ورودی هم کار می‌کند */
     function numericBigPad(q, a, set) {
       var wrap = el('div', {class: 'st-numpad'});
@@ -569,6 +647,12 @@
       } else if (ex.primary && q.type === 'fill' && q.mode === 'order') {
         /* V305 — ابتدایی: مرتب‌سازی با کشیدن؛ پاسخ = ترتیب فعلی با «,» */
         box.appendChild(orderAnswer(q, a, function (arr) { set(arr.join(',')); box.replaceWith(answerArea(q)); }));
+      } else if (ex.primary && q.type === 'fill' && q.mode === 'syllable' && (q.syllableCount || 0) >= 2) {
+        /* V314.0 — بخش‌کردن و صداکشی */
+        box.appendChild(syllableAnswer(q, a, set));
+      } else if (ex.primary && q.type === 'fill' && q.mode === 'bucket' && q.buckets && q.buckets.length && q.bucketItems && q.bucketItems.length) {
+        /* V314.0 — دسته‌بندی در سبد */
+        box.appendChild(bucketAnswer(q, a, set));
       } else if (ex.primary && q.type === 'numeric') {
         /* V305 — ابتدایی: کادر پاسخ + پد عددی بزرگ */
         box.appendChild(numericBigPad(q, a, set));

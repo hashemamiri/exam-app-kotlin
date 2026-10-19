@@ -290,6 +290,19 @@ private fun SubmissionCard(
                 label = { Text("بازخورد") },
                 modifier = Modifier.fillMaxWidth()
             )
+            // V314.0 — مهرها و برچسب‌های تشویقی تصویری ویژهٔ دورهٔ ابتدایی
+            Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+                listOf(
+                    "🌟 آفرین قهرمان! خیلی خوب درخشیدی",
+                    "🏆 ستارهٔ طلایی برای دقت و تلاش عالی",
+                    "🎨 پاسخ و ترسیم بسیار تمیز و خلاقانه",
+                    "🦋 تلاش بسیار خوب؛ همین مسیر زیبا را ادامه بده",
+                    "📚 پیشرفت عالی نسبت به آزمون‌های قبل!",
+                    "💪 با کمی تمرین بیشتر عالی می‌شوی"
+                ).forEach { stamp ->
+                    FilterChip(selected = false, onClick = { viewModel.appendFeedback(submission.id, stamp) }, label = { Text(stamp.take(22)) })
+                }
+            }
             if (feedbackPhrases.isNotEmpty()) {
                 Row(horizontalArrangement = Arrangement.spacedBy(5.dp)) {
                     feedbackPhrases.take(4).forEach { phrase ->

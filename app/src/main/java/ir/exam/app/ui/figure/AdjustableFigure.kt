@@ -1,6 +1,7 @@
 package ir.exam.app.ui.figure
 
 import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
@@ -35,7 +36,7 @@ fun AdjustableFigure(
     onChanged: (FigureSpec) -> Unit = {}
 ) {
     var current by remember(spec) { mutableStateOf(spec) }
-    if (spec.type == "axclock") {
+    if (spec.type in setOf("axclock", "axfrac", "axabacus", "axthermo")) {
         InteractiveClock(current, modifier, contentDescription) { next ->
             current = next
             onChanged(next)
@@ -71,7 +72,13 @@ private fun InteractiveClock(
         val q = toSvg(p) ?: return
         val deg = (atan2((q.x - 180f).toDouble(), -(q.y - 150f).toDouble()) * 180.0 / PI + 360.0) % 360.0
         val x = (latest.raw["X"] as? JsonObject) ?: JsonObject(emptyMap())
-        val nx = if (mode == "hour") {
+        val nx = if (latest.type == "axthermo") {
+            val mn = latest.xNum("min", -10f)
+            val mx = kotlin.math.max(mn + 5f, latest.xNum("max", 50f))
+            val ratio = ((206f - q.y) / (206f - 34f)).coerceIn(0f, 1f)
+            val v = Math.round(mn + ratio * (mx - mn))
+            x + ("val" to JsonPrimitive(v))
+        } else if (mode == "hour") {
             x + ("h" to JsonPrimitive(Math.round(deg / 30.0).toInt() % 12))
         } else {
             x + ("m" to JsonPrimitive(Math.round(deg / 6.0).toInt() % 60))
@@ -79,25 +86,60 @@ private fun InteractiveClock(
         emit(FigureSpec(JsonObject(latest.raw + ("X" to JsonObject(nx)))))
     }
 
+    fun tapAt(p: Offset) {
+        val q = toSvg(p) ?: return
+        val x = (latest.raw["X"] as? JsonObject) ?: JsonObject(emptyMap())
+        when (latest.type) {
+            "axfrac" -> {
+                val den = latest.xNum("den", 4f).toInt().coerceIn(1, 24)
+                val num = latest.xNum("num", 1f).toInt().coerceIn(0, den)
+                val nextNum = (num + 1) % (den + 1)
+                emit(FigureSpec(JsonObject(latest.raw + ("X" to JsonObject(x + ("num" to JsonPrimitive(nextNum)))))))
+            }
+            "axabacus" -> {
+                val cols = latest.xNum("cols", 4f).toInt().coerceIn(2, 6)
+                val step = 288f / cols
+                val colIdx = ((q.x - 36f) / step).toInt().coerceIn(0, cols - 1)
+                val place = cols - 1 - colIdx
+                var pow = 1L
+                repeat(place) { pow *= 10L }
+                val curN = latest.xNum("n", 2435f).toLong().coerceIn(0L, 999999L)
+                val curDigit = (curN / pow) % 10L
+                val nextDigit = (curDigit + 1L) % 10L
+                val nextN = curN + (nextDigit - curDigit) * pow
+                emit(FigureSpec(JsonObject(latest.raw + ("X" to JsonObject(x + ("n" to JsonPrimitive(nextN)))))))
+            }
+            "axthermo" -> {
+                grab = "thermo"
+                moveTo(p)
+                grab = null
+            }
+        }
+    }
+
     Box(
         modifier
             .onSizeChanged { canvasSize = it }
-            .pointerInput(Unit) {
-                detectDragGestures(
-                    onDragStart = { p ->
-                        val q = toSvg(p)
-                        if (q != null) {
-                            grab = if (hypot(q.x - 180f, q.y - 150f) <= 62f) "hour" else "minute"
-                            moveTo(p)
-                        }
-                    },
-                    onDrag = { change, _ ->
-                        change.consume()
-                        moveTo(change.position)
-                    },
-                    onDragEnd = { grab = null },
-                    onDragCancel = { grab = null }
-                )
+            .pointerInput(latest.type) {
+                if (latest.type == "axfrac" || latest.type == "axabacus") {
+                    detectTapGestures { p -> tapAt(p) }
+                } else {
+                    detectDragGestures(
+                        onDragStart = { p ->
+                            val q = toSvg(p)
+                            if (q != null) {
+                                grab = if (latest.type == "axthermo") "thermo" else if (hypot(q.x - 180f, q.y - 150f) <= 62f) "hour" else "minute"
+                                moveTo(p)
+                            }
+                        },
+                        onDrag = { change, _ ->
+                            change.consume()
+                            moveTo(change.position)
+                        },
+                        onDragEnd = { grab = null },
+                        onDragCancel = { grab = null }
+                    )
+                }
             }
     ) {
         InlineFigureView(spec = latest, modifier = Modifier.fillMaxSize(), contentDescription = contentDescription)

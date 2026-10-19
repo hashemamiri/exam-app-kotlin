@@ -98,6 +98,26 @@ fun StudentResultsScreen(viewModel: StudentResultsViewModel = remember { Student
                 }
             }
             item { Card(Modifier.fillMaxWidth()){Column(Modifier.padding(10.dp)){Text("روند پیشرفت");NativeLineChart(state.grades.sortedBy{it.submittedAt}.map{it.percent})}} }
+            // V314.0 — کارنامهٔ توصیفی به تفکیک درس (۴ سطحی استاندارد ابتدایی + ستاره)
+            item {
+                val bySubject = state.grades.filter { it.subject.isNotBlank() }.groupBy { it.subject }
+                if (bySubject.isNotEmpty()) {
+                    Card(Modifier.fillMaxWidth()) {
+                        Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                            Text("📋 کارنامهٔ توصیفی به تفکیک درس", style = MaterialTheme.typography.titleMedium)
+                            bySubject.forEach { (subj, list) ->
+                                val avgPct = list.map { it.percent }.average()
+                                val lvl = ir.exam.app.core.report.PrimaryLevels.levelOf(avgPct)
+                                val stars = ir.exam.app.core.report.PrimaryLevels.stars(lvl.rank)
+                                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                    Text("$subj (${list.size} آزمون)", style = MaterialTheme.typography.bodyMedium)
+                                    Text("${lvl.name}  $stars", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
             items(state.grades, key = { it.examId + it.submittedAt }) { grade ->
                 Card(Modifier.fillMaxWidth()) {
                     Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {

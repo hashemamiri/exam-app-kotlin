@@ -2304,7 +2304,13 @@ private fun PrimaryTagEditor(question: QuestionDraft, viewModel: ExamBuilderView
 @Composable
 private fun PrimaryModeChooser(question: QuestionDraft, viewModel: ExamBuilderViewModel) {
     val choices = when (question.type) {
-        QuestionType.FILL_BLANK -> listOf("" to "جای خالی معمولی", "order" to "مرتب‌سازی با کشیدن", "dictation" to "املا (گوش بده و بنویس)")
+        QuestionType.FILL_BLANK -> listOf(
+            "" to "جای خالی معمولی",
+            "order" to "مرتب‌سازی با کشیدن",
+            "dictation" to "املا (گوش بده و بنویس)",
+            "syllable" to "بخش‌کردن و صداکشی",
+            "bucket" to "دسته‌بندی در سبد"
+        )
         // V306 — پاسخ تشریحی: متنی یا نقاشی روی تخته
         QuestionType.ESSAY -> listOf("" to "پاسخ متنی", "draw" to "پاسخ با نقاشی (تخته بزرگ)", "voice" to "پاسخ صوتی (ضبط)")
         else -> listOf("" to "گزینه‌ای معمولی", "hotspot" to "انتخاب روی تصویر")
@@ -2335,6 +2341,12 @@ private fun PrimaryModeChooser(question: QuestionDraft, viewModel: ExamBuilderVi
     // V306 — راهنمای املا: متن املا همان «پاسخ درست» است و در داده‌های عمومی سؤال می‌آید (اگر صدای معلم نباشد).
     if (question.mode == "dictation") {
         Text("متن املا را در «پاسخ درست» بنویسید. اگر صدای معلم ضبط نشده باشد، دستگاه همین متن را می‌خواند و متن در داده‌های عمومی سؤال قرار می‌گیرد.", style = MaterialTheme.typography.bodySmall)
+    }
+    if (question.mode == "syllable") {
+        Text("بخش‌ها یا صداهای کلمه را در «پاسخ‌های قابل‌قبول» با خط تیره (-) جدا کنید؛ مثلاً: ما-در یا د-ر-خ-ت. به تعداد بخش‌ها کادر رنگی به دانش‌آموز نمایش داده می‌شود.", style = MaterialTheme.typography.bodySmall)
+    }
+    if (question.mode == "bucket") {
+        Text("سبدها را در «پاسخ‌های قابل‌قبول» با فرمت «نام سبد ۱: مورد الف، مورد ب | نام سبد ۲: مورد ج، مورد د» بنویسید تا خودکار تصحیح شود.", style = MaterialTheme.typography.bodySmall)
     }
 }
 

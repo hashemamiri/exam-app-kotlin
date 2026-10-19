@@ -17,7 +17,10 @@ import kotlin.math.sin
  * بوم همان 360×280 محورهاست. پورت JS یک‌به‌یک: graph_fig.js → primarySvg().
  */
 object PrimaryMathSvgRenderer {
-    val SUPPORTED: Set<String> = setOf("axtally", "axbase10", "axplace", "axclock", "axruler", "axfrac", "axmoney")
+    val SUPPORTED: Set<String> = setOf(
+        "axtally", "axbase10", "axplace", "axclock", "axruler", "axfrac", "axmoney",
+        "axabacus", "axjump", "axbalance", "axthermo", "axsaw", "axpattern"
+    )
 
     private const val ST = "#2c3a50"
     private const val MU = "#4a5870"
@@ -38,6 +41,12 @@ object PrimaryMathSvgRenderer {
             "axruler" -> ruler(spec)
             "axfrac" -> fraction(spec)
             "axmoney" -> money(spec)
+            "axabacus" -> abacus(spec)
+            "axjump" -> jumpLine(spec)
+            "axbalance" -> balanceScale(spec)
+            "axthermo" -> thermometer(spec)
+            "axsaw" -> magicGrid(spec)
+            "axpattern" -> patternTrain(spec)
             else -> ""
         }
     }
@@ -357,6 +366,193 @@ object PrimaryMathSvgRenderer {
             total += v
         }
         if (spec.xStr("sum", "0") == "1") sb.append(text(180f, 272f, "جمع: ${group(total)} $unit", PINK, "middle", bold = true, size = 13))
+        return sb.toString()
+    }
+
+    // --------------------------------------------------- V314.0 — چرتکهٔ ستونی
+    private fun abacus(spec: FigureSpec): String {
+        val cols = spec.xNum("cols", 4f).toInt().coerceIn(2, 6)
+        val n = spec.xNum("n", 2435f).toLong().coerceIn(0L, 999999L)
+        val labels = listOf("یکان", "دهگان", "صدگان", "هزار", "ده‌هزار", "صدهزار")
+        val colors = listOf("#ef5350", "#42a5f5", "#66bb6a", "#ab47bc", "#ffa726", "#26a69a")
+        val sb = StringBuilder()
+        val x0 = 36f
+        val w = 288f
+        val step = w / cols
+        sb.append(rect(24f, 214f, 312f, 22f, "#8d6e63", ST, 1.8f, rx = 6f))
+        var rem = n
+        val digits = IntArray(cols)
+        for (i in 0 until cols) { digits[i] = (rem % 10L).toInt(); rem /= 10L }
+        for (c in 0 until cols) {
+            val idx = cols - 1 - c
+            val cx = x0 + c * step + step / 2f
+            sb.append(line(cx, 44f, cx, 214f, ST, 3.2f))
+            val d = digits[idx]
+            val col = colors[idx % colors.size]
+            for (b in 0 until d) {
+                val by = 204f - b * 16f
+                sb.append(rect(cx - 16f, by - 7f, 32f, 14f, col, ST, 1.2f, rx = 7f))
+            }
+            sb.append(text(cx, 230f, labels[idx], "#fff", "middle", bold = true, size = 10))
+            if (spec.xStr("blank", "0") != "1") {
+                sb.append(text(cx, 258f, d.toString(), ST, "middle", bold = true, size = 15))
+            }
+        }
+        return sb.toString()
+    }
+
+    // ---------------------------------------------- V314.0 — پرش روی محور اعداد
+    private fun jumpLine(spec: FigureSpec): String {
+        val start = spec.xNum("start", 0f).toInt().coerceIn(0, 50)
+        val step = spec.xNum("step", 3f).toInt().coerceIn(1, 20)
+        val jumps = spec.xNum("jumps", 4f).toInt().coerceIn(1, 10)
+        val maxVal = max(start + step * jumps, spec.xNum("max", (start + step * jumps).toFloat()).toInt()).coerceIn(2, 100)
+        val sb = StringBuilder()
+        val x0 = 28f
+        val x1 = 332f
+        val y = 186f
+        sb.append(line(x0 - 8f, y, x1 + 10f, y, ST, 2.2f))
+        fun px(v: Int): Float = x0 + (x1 - x0) * (v.toFloat() / maxVal.toFloat())
+        val tickStep = if (maxVal <= 15) 1 else if (maxVal <= 30) 2 else 5
+        for (v in 0..maxVal) {
+            val x = px(v)
+            val major = v % tickStep == 0
+            sb.append(line(x, y - (if (major) 7f else 4f), x, y + (if (major) 7f else 4f), ST, if (major) 1.8f else 1f))
+            if (major) sb.append(text(x, y + 22f, v.toString(), ST, "middle", bold = true, size = 11))
+        }
+        for (j in 0 until jumps) {
+            val a = start + j * step
+            val b = a + step
+            if (b > maxVal) break
+            val xa = px(a)
+            val xb = px(b)
+            val xm = (xa + xb) / 2f
+            val h = min(85f, max(34f, (xb - xa) * 0.65f))
+            sb.append("<path d=\"M ${f(xa)} ${f(y - 4f)} Q ${f(xm)} ${f(y - h)} ${f(xb)} ${f(y - 4f)}\" fill=\"none\" stroke=\"$ACC\" stroke-width=\"2.4\"/>")
+            sb.append("<circle cx=\"${f(xb)}\" cy=\"${f(y)}\" r=\"4\" fill=\"$PINK\"/>")
+            sb.append(text(xm, y - h * 0.58f, "+$step", PINK, "middle", bold = true, size = 11))
+        }
+        val endVal = start + jumps * step
+        if (spec.xStr("label", "1") != "0") {
+            sb.append(text(180f, 252f, "$start + ($jumps × $step) = $endVal", ST, "middle", bold = true, size = 14))
+        }
+        return sb.toString()
+    }
+
+    // ----------------------------------------------- V314.0 — ترازوی دوکفه‌ای
+    private fun balanceScale(spec: FigureSpec): String {
+        val left = spec.xNum("left", 5f)
+        val right = spec.xNum("right", 3f)
+        val unit = spec.xStr("unit", "کیلوگرم")
+        val diff = (right - left).coerceIn(-10f, 10f)
+        val angle = (diff / 10f) * 14f * (PI.toFloat() / 180f)
+        val cx = 180f
+        val cy = 116f
+        val arm = 104f
+        val lx = cx - arm * cos(angle)
+        val ly = cy - arm * sin(angle)
+        val rx = cx + arm * cos(angle)
+        val ry = cy + arm * sin(angle)
+        val sb = StringBuilder()
+        sb.append("<polygon points=\"${f(cx)},${f(cy)} ${f(cx - 26f)},236 ${f(cx + 26f)},236\" fill=\"#90a4ae\" stroke=\"$ST\" stroke-width=\"2\"/>")
+        sb.append(rect(cx - 56f, 236f, 112f, 14f, ST, ST, 1f, rx = 5f))
+        sb.append(line(lx, ly, rx, ry, ST, 4f))
+        sb.append("<circle cx=\"${f(cx)}\" cy=\"${f(cy)}\" r=\"7\" fill=\"$GOLD\" stroke=\"$ST\" stroke-width=\"2\"/>")
+        fun pan(px: Float, py: Float, v: Float, col: String) {
+            sb.append(line(px, py, px - 28f, py + 44f, MU, 1.5f))
+            sb.append(line(px, py, px + 28f, py + 44f, MU, 1.5f))
+            sb.append(rect(px - 36f, py + 44f, 72f, 10f, GOLD, ST, 1.6f, rx = 4f))
+            sb.append(rect(px - 22f, py + 14f, 44f, 30f, col, ST, 1.6f, rx = 5f))
+            val lbl = if (v == Math.round(v).toFloat()) Math.round(v).toString() else v.toString()
+            sb.append(text(px, py + 33f, lbl, "#fff", "middle", bold = true, size = 13))
+            sb.append(text(px, py + 68f, "$lbl $unit", ST, "middle", bold = true, size = 11))
+        }
+        pan(lx, ly, left, ACC)
+        pan(rx, ry, right, GREEN)
+        val cmp = if (left > right) ">" else if (left < right) "<" else "="
+        sb.append(text(180f, 268f, cmp, PINK, "middle", bold = true, size = 20))
+        return sb.toString()
+    }
+
+    // ------------------------------------------------------ V314.0 — دماسنج
+    private fun thermometer(spec: FigureSpec): String {
+        val mn = spec.xNum("min", -10f)
+        val mx = max(mn + 5f, spec.xNum("max", 50f))
+        val v = spec.xNum("val", 25f).coerceIn(mn, mx)
+        val sb = StringBuilder()
+        val cx = 160f
+        val top = 34f
+        val bot = 206f
+        fun py(t: Float): Float = bot - (bot - top) * ((t - mn) / (mx - mn))
+        val vy = py(v)
+        val col = if (v <= 0f) "#1e88e5" else "#e53935"
+        sb.append(rect(cx - 12f, top - 8f, 24f, bot - top + 16f, "#f8fafc", ST, 2f, rx = 12f))
+        sb.append(rect(cx - 7f, vy, 14f, bot - vy + 12f, col, "none", 0f, rx = 6f))
+        sb.append("<circle cx=\"${f(cx)}\" cy=\"${f(bot + 22f)}\" r=\"22\" fill=\"$col\" stroke=\"$ST\" stroke-width=\"2\"/>")
+        val step = if (mx - mn <= 20f) 2f else if (mx - mn <= 60f) 10f else 20f
+        var tk = ceil(mn / step) * step
+        while (tk <= mx + 0.01f) {
+            val y = py(tk)
+            sb.append(line(cx + 12f, y, cx + 22f, y, ST, 1.6f))
+            sb.append(text(cx + 28f, y + 4f, "${tk.toInt()}°", ST, "start", bold = true, size = 11))
+            tk += step
+        }
+        sb.append(text(255f, 130f, "${v.toInt()}°C", col, "middle", bold = true, size = 22))
+        return sb.toString()
+    }
+
+    // ------------------------------------ V314.0 — جدول شگفت‌انگیز (سودوکو ۴×۴)
+    private fun magicGrid(spec: FigureSpec): String {
+        val raw = spec.xStr("vals", "1,2,3,4;3,4,?,2;2,?,4,3;4,3,2,1")
+        val shapeMode = spec.xStr("mode", "shape") == "shape"
+        val shapes = mapOf("1" to ("●" to "#ef5350"), "2" to ("▲" to "#42a5f5"), "3" to ("■" to "#66bb6a"), "4" to ("★" to "#ffa726"))
+        val rows = raw.split(';').map { it.split(',').map { c -> faEnDigits(c.trim()) } }
+        val sb = StringBuilder()
+        val x0 = 80f
+        val y0 = 36f
+        val cs = 50f
+        for (r in 0 until 4) {
+            for (c in 0 until 4) {
+                val cell = rows.getOrNull(r)?.getOrNull(c).orEmpty().ifBlank { "?" }
+                val x = x0 + c * cs
+                val y = y0 + r * cs
+                val isQ = cell == "?"
+                sb.append(rect(x, y, cs, cs, if (isQ) "#fff8e1" else "#ffffff", ST, 1.2f))
+                if (isQ) {
+                    sb.append(text(x + cs / 2f, y + 32f, "؟", PINK, "middle", bold = true, size = 22))
+                } else if (shapeMode && cell in shapes) {
+                    val pair = shapes.getValue(cell)
+                    sb.append(text(x + cs / 2f, y + 33f, pair.first, pair.second, "middle", bold = true, size = 24))
+                } else {
+                    sb.append(text(x + cs / 2f, y + 32f, cell, ST, "middle", bold = true, size = 20))
+                }
+            }
+        }
+        sb.append(rect(x0, y0, cs * 4f, cs * 4f, "none", ST, 2.8f))
+        sb.append(line(x0 + cs * 2f, y0, x0 + cs * 2f, y0 + cs * 4f, ST, 2.6f))
+        sb.append(line(x0, y0 + cs * 2f, x0 + cs * 4f, y0 + cs * 2f, ST, 2.6f))
+        return sb.toString()
+    }
+
+    // ----------------------------------------- V314.0 — الگویابی شکلی و عددی
+    private fun patternTrain(spec: FigureSpec): String {
+        val items = spec.xList("seq", "●,▲,●,▲,●,?").map { it.trim() }.filter { it.isNotEmpty() }.take(8)
+        if (items.isEmpty()) return ""
+        val sb = StringBuilder()
+        val n = items.size
+        val cw = min(42f, 290f / n)
+        val gap = 6f
+        val totalW = n * cw + (n - 1) * gap
+        val x0 = (360f - totalW) / 2f
+        val y0 = 112f
+        val palette = listOf("#6c63f5", "#27c4a8", "#f0a202", "#d6336c", "#42a5f5")
+        items.forEachIndexed { i, it ->
+            val x = x0 + i * (cw + gap)
+            val isQ = it == "?" || it == "؟"
+            val col = if (isQ) PINK else palette[i % palette.size]
+            sb.append(rect(x, y0, cw, 54f, if (isQ) "#fff8e1" else "rgba(108,99,245,.10)", col, 2f, rx = 9f))
+            sb.append(text(x + cw / 2f, y0 + 34f, if (isQ) "؟" else it, col, "middle", bold = true, size = 20))
+        }
         return sb.toString()
     }
 

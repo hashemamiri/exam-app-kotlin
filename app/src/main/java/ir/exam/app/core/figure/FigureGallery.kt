@@ -85,7 +85,14 @@ val AXIS_FIGURES: List<FigureTemplate> = listOf(
     FigureTemplate("axclock", "ساعت عقربه‌ای", """{"k":"g","t":"axclock","X":{"h":3,"m":0,"nums":1}}"""),
     FigureTemplate("axruler", "خط‌کش", """{"k":"g","t":"axruler","X":{"len":10}}"""),
     FigureTemplate("axfrac", "کسر شکلی", """{"k":"g","t":"axfrac","X":{"num":1,"den":4,"shape":"circle"}}"""),
-    FigureTemplate("axmoney", "سکه و اسکناس", """{"k":"g","t":"axmoney","X":{"notes":"1000,2000,5000,10000","coins":"500,1000","unit":"تومان"}}""")
+    FigureTemplate("axmoney", "سکه و اسکناس", """{"k":"g","t":"axmoney","X":{"notes":"1000,2000,5000,10000","coins":"500,1000","unit":"تومان"}}"""),
+    // V314.0 — ۶ ابزار جدید ریاضی و علوم ابتدایی
+    FigureTemplate("axabacus", "چرتکهٔ ستونی", """{"k":"g","t":"axabacus","X":{"n":2435,"cols":4}}"""),
+    FigureTemplate("axjump", "پرش روی محور", """{"k":"g","t":"axjump","X":{"start":0,"step":3,"jumps":4,"max":12}}"""),
+    FigureTemplate("axbalance", "ترازوی دوکفه‌ای", """{"k":"g","t":"axbalance","X":{"left":5,"right":3,"unit":"کیلوگرم"}}"""),
+    FigureTemplate("axthermo", "دماسنج", """{"k":"g","t":"axthermo","X":{"val":25,"min":-10,"max":50}}"""),
+    FigureTemplate("axsaw", "جدول شگفت‌انگیز (۴×۴)", """{"k":"g","t":"axsaw","X":{"vals":"1,2,3,4;3,4,?,2;2,?,4,3;4,3,2,1","mode":"shape"}}"""),
+    FigureTemplate("axpattern", "الگویابی شکلی/عددی", """{"k":"g","t":"axpattern","X":{"seq":"●,▲,●,▲,●,?"}}""")
 )
 
 /** V304 — اولین شناسهٔ بخش «ابزار ریاضی ابتدایی» در AXIS_FIGURES (برای سرتیتر جدا در انتخابگر). */

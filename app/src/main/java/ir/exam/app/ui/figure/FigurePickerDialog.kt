@@ -501,6 +501,13 @@ private fun paramFields(type: String): List<Pair<String, String>> = when (type) 
     "axruler" -> listOf("len" to "طول خط‌کش (۲ تا ۵۰ سانتی‌متر)", "a" to "ابتدای اندازه‌گیری (اختیاری)", "b" to "انتهای اندازه‌گیری (اختیاری)")
     "axfrac" -> listOf("num" to "صورت", "den" to "مخرج", "shape" to "شکل", "label" to "نوشتن کسر زیر شکل (۱/۰)")
     "axmoney" -> listOf("notes" to "اسکناس‌ها (با ویرگول)", "coins" to "سکه‌ها (با ویرگول)", "unit" to "واحد", "sum" to "نوشتن جمع (۱/۰)")
+    // V314.0 — ۶ ابزار جدید ریاضی و علوم ابتدایی
+    "axabacus" -> listOf("n" to "عدد (۰ تا ۹۹۹٬۹۹۹)", "cols" to "تعداد ستون‌ها (۲ تا ۶)", "blank" to "مخفی کردن ارقام زیر چرتکه (۱=بله)")
+    "axjump" -> listOf("start" to "نقطهٔ شروع", "step" to "طول هر پرش", "jumps" to "تعداد پرش", "max" to "انتهای محور", "label" to "نمایش عبارت جمع/ضرب (۱/۰)")
+    "axbalance" -> listOf("left" to "وزنهٔ کفهٔ چپ", "right" to "وزنهٔ کفهٔ راست", "unit" to "واحد جرم")
+    "axthermo" -> listOf("val" to "دما (°C)", "min" to "کمینهٔ دما", "max" to "بیشینهٔ دما")
+    "axsaw" -> listOf("vals" to "سطرها با ; و خانه‌ها با , (جای خالی = ?)", "mode" to "نمایش (shape=شکل / num=عدد)")
+    "axpattern" -> listOf("seq" to "دنباله با ویرگول (مثلاً ●,▲,●,▲,?)")
     "axpolpts" -> listOf("xmax" to "تعداد حلقه", "pts" to "نقطه‌ها (r,θ;r,θ)", "labs" to "نام نقطه‌ها")
     "ax3dpt" -> listOf("xmax" to "تعداد تیک", "step" to "گام", "x1" to "x نقطه", "y1" to "y نقطه", "z1" to "z نقطه", "labs" to "نام نقطه")
     "flow" -> listOf("labs" to "مراحل (با ویرگول)")
@@ -537,7 +544,7 @@ private fun paramFields(type: String): List<Pair<String, String>> = when (type) 
 
 /** کلیدهایی که مقدار متنی (فهرست با ویرگول یا نام سری) دارند نه عدد. */
 private val TEXT_PARAM_KEYS = setOf(
-    "shape", "unit", "notes", "coins", "op2", "op3", "n2", "n3", // V304 — V310.8/V310.9: علامت‌ها و ردیف‌های ارزش مکانی
+    "shape", "unit", "notes", "coins", "op2", "op3", "n2", "n3", "mode", "seq", // V304 — V310.8/V310.9/V314.0: کلیدهای متنی ابزارهای ابتدایی
     "labs", "labs2", "vals", "vals2", "vals3", "xs", "ys", "zs", "s1", "s2", "s3",
     // V54.2 — فهرست‌های عددی چندتایی و مقادیر آزاد مرحلهٔ دوم متنی ذخیره می‌شوند
     // (همان قرارداد رشته‌ای مرجع).
