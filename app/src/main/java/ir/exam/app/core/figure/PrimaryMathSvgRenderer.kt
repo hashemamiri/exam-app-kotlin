@@ -19,7 +19,8 @@ import kotlin.math.sin
 object PrimaryMathSvgRenderer {
     val SUPPORTED: Set<String> = setOf(
         "axtally", "axbase10", "axplace", "axclock", "axruler", "axfrac", "axmoney",
-        "axabacus", "axjump", "axbalance", "axthermo", "axsaw", "axpattern"
+        "axabacus", "axjump", "axbalance", "axthermo", "axsaw", "axpattern",
+        "axtenframe", "axsym", "axspin", "axbeaker", "axgeoboard", "axdice", "axmularea", "axvenn"
     )
 
     private const val ST = "#2c3a50"
@@ -47,6 +48,14 @@ object PrimaryMathSvgRenderer {
             "axthermo" -> thermometer(spec)
             "axsaw" -> magicGrid(spec)
             "axpattern" -> patternTrain(spec)
+            "axtenframe" -> tenFrame(spec)
+            "axsym" -> symmetryGrid(spec)
+            "axspin" -> probabilitySpinner(spec)
+            "axbeaker" -> graduatedBeaker(spec)
+            "axgeoboard" -> geoBoard(spec)
+            "axdice" -> dicePair(spec)
+            "axmularea" -> areaModelMultiply(spec)
+            "axvenn" -> vennDiagram(spec)
             else -> ""
         }
     }
@@ -553,6 +562,273 @@ object PrimaryMathSvgRenderer {
             sb.append(rect(x, y0, cw, 54f, if (isQ) "#fff8e1" else "rgba(108,99,245,.10)", col, 2f, rx = 9f))
             sb.append(text(x + cw / 2f, y0 + 34f, if (isQ) "؟" else it, col, "middle", bold = true, size = 20))
         }
+        return sb.toString()
+    }
+
+    // --------------------------------------------------- V315.0 — قاب ده‌تایی
+    private fun tenFrame(spec: FigureSpec): String {
+        val frames = spec.xNum("frames", 2f).toInt().coerceIn(1, 2)
+        val cap = frames * 10
+        val a = spec.xNum("a", 7f).toInt().coerceIn(0, cap)
+        val b = spec.xNum("b", 5f).toInt().coerceIn(0, cap - a)
+        val sb = StringBuilder()
+        val cw = 44f
+        val ch = 44f
+        val fw = cw * 5f
+        val fh = ch * 2f
+        val x0 = (360f - fw) / 2f
+        for (fr in 0 until frames) {
+            val fy = if (frames == 1) 88f else 32f + fr * (fh + 18f)
+            sb.append(rect(x0, fy, fw, fh, "#ffffff", ST, 2.2f, rx = 6f))
+            for (r in 0..1) {
+                for (c in 0..4) {
+                    val cx = x0 + c * cw
+                    val cy = fy + r * ch
+                    sb.append(rect(cx, cy, cw, ch, "none", ST, 1.2f))
+                    val idx = fr * 10 + r * 5 + c
+                    if (idx < a + b) {
+                        val col = if (idx < a) "#e53935" else "#1e88e5"
+                        sb.append("<circle cx=\"${f(cx + cw / 2f)}\" cy=\"${f(cy + ch / 2f)}\" r=\"14\" fill=\"$col\" stroke=\"$ST\" stroke-width=\"1.4\"/>")
+                    }
+                }
+            }
+        }
+        sb.append(text(180f, 262f, "$a + $b = ${a + b}", ST, "middle", bold = true, size = 15))
+        return sb.toString()
+    }
+
+    // -------------------------------------------------- V315.0 — تقارن شطرنجی
+    private fun symmetryGrid(spec: FigureSpec): String {
+        val axis = spec.xStr("axis", "v").lowercase()
+        val mirror = spec.xNum("mirror", 1f).toInt() != 0
+        val rawCells = spec.xStr("cells", "1,1;2,1;2,2;3,2")
+        val pairs = rawCells.split(';', '؛').mapNotNull { token ->
+            val p = token.split(',', '،').mapNotNull { it.trim().toIntOrNull() }
+            if (p.size >= 2) (p[0].coerceIn(1, 4) to p[1].coerceIn(1, 4)) else null
+        }
+        val sb = StringBuilder()
+        val cell = 26f
+        val n = 8
+        val gw = cell * n
+        val x0 = (360f - gw) / 2f
+        val y0 = 32f
+        sb.append(rect(x0, y0, gw, gw, "#f8fafc", ST, 1.8f))
+        for (r in 0 until n) {
+            for (c in 0 until n) {
+                sb.append(rect(x0 + c * cell, y0 + r * cell, cell, cell, "none", "#cbd5e1", 1f))
+            }
+        }
+        pairs.forEach { (r1, d1) ->
+            if (axis == "h") {
+                val rTop = (4 - d1).coerceIn(0, 3)
+                val cPos = (r1 - 1).coerceIn(0, 7)
+                sb.append(rect(x0 + cPos * cell + 2f, y0 + rTop * cell + 2f, cell - 4f, cell - 4f, ACC, ST, 1.2f, rx = 3f))
+                val rBot = (3 + d1).coerceIn(4, 7)
+                if (mirror) {
+                    sb.append(rect(x0 + cPos * cell + 2f, y0 + rBot * cell + 2f, cell - 4f, cell - 4f, GREEN, ST, 1.2f, rx = 3f))
+                } else {
+                    sb.append(text(x0 + cPos * cell + cell / 2f, y0 + rBot * cell + cell * 0.68f, "؟", PINK, "middle", bold = true, size = 14))
+                }
+            } else {
+                val rPos = (r1 - 1).coerceIn(0, 7)
+                val cLeft = (4 - d1).coerceIn(0, 3)
+                val cRight = (3 + d1).coerceIn(4, 7)
+                sb.append(rect(x0 + cLeft * cell + 2f, y0 + rPos * cell + 2f, cell - 4f, cell - 4f, ACC, ST, 1.2f, rx = 3f))
+                if (mirror) {
+                    sb.append(rect(x0 + cRight * cell + 2f, y0 + rPos * cell + 2f, cell - 4f, cell - 4f, GREEN, ST, 1.2f, rx = 3f))
+                } else {
+                    sb.append(text(x0 + cRight * cell + cell / 2f, y0 + rPos * cell + cell * 0.68f, "؟", PINK, "middle", bold = true, size = 14))
+                }
+            }
+        }
+        if (axis == "h") {
+            val my = y0 + 4f * cell
+            sb.append("<line x1=\"${f(x0 - 12f)}\" y1=\"${f(my)}\" x2=\"${f(x0 + gw + 12f)}\" y2=\"${f(my)}\" stroke=\"$PINK\" stroke-width=\"3.2\" stroke-dasharray=\"6 4\"/>")
+        } else {
+            val mx = x0 + 4f * cell
+            sb.append("<line x1=\"${f(mx)}\" y1=\"${f(y0 - 10f)}\" x2=\"${f(mx)}\" y2=\"${f(y0 + gw + 10f)}\" stroke=\"$PINK\" stroke-width=\"3.2\" stroke-dasharray=\"6 4\"/>")
+        }
+        return sb.toString()
+    }
+
+    // ------------------------------------------------- V315.0 — چرخندهٔ احتمال
+    private fun probabilitySpinner(spec: FigureSpec): String {
+        val parts = spec.xStr("parts", "قرمز,آبی,سبز,زرد,قرمز,آبی").split(',', '،').map { it.trim() }.filter { it.isNotEmpty() }.ifEmpty { listOf("قرمز", "آبی", "سبز", "زرد") }.take(12)
+        val n = parts.size.coerceAtLeast(2)
+        val arrowIdx = (spec.xNum("arrow", 1f).toInt() - 1).mod(n)
+        val cx = 180f
+        val cy = 142f
+        val r = 98f
+        val palette = listOf("#ef5350", "#42a5f5", "#66bb6a", "#ffca28", "#ab47bc", "#26a69a", "#ffa726", "#ec407a")
+        fun colorFor(lbl: String, idx: Int): String = when {
+            "قرمز" in lbl || "سرخ" in lbl -> "#ef5350"
+            "آبی" in lbl -> "#42a5f5"
+            "سبز" in lbl -> "#66bb6a"
+            "زرد" in lbl -> "#ffca28"
+            "بنفش" in lbl -> "#ab47bc"
+            "نارنجی" in lbl -> "#ffa726"
+            else -> palette[idx % palette.size]
+        }
+        val sb = StringBuilder()
+        for (i in 0 until n) {
+            val a0 = (i * 360.0 / n - 90.0) * PI / 180.0
+            val a1 = ((i + 1) * 360.0 / n - 90.0) * PI / 180.0
+            val x1 = cx + r * cos(a0).toFloat()
+            val y1 = cy + r * sin(a0).toFloat()
+            val x2 = cx + r * cos(a1).toFloat()
+            val y2 = cy + r * sin(a1).toFloat()
+            val lg = if (360.0 / n > 180.0) 1 else 0
+            val col = colorFor(parts[i], i)
+            sb.append("<path d=\"M ${f(cx)} ${f(cy)} L ${f(x1)} ${f(y1)} A ${f(r)} ${f(r)} 0 $lg 1 ${f(x2)} ${f(y2)} Z\" fill=\"$col\" stroke=\"$ST\" stroke-width=\"1.8\"/>")
+            val am = (a0 + a1) / 2.0
+            val tx = cx + (r * 0.62f) * cos(am).toFloat()
+            val ty = cy + (r * 0.62f) * sin(am).toFloat() + 4f
+            sb.append(text(tx, ty, parts[i], "#fff", "middle", bold = true, size = 11))
+        }
+        val ang = ((arrowIdx + 0.5) * 360.0 / n - 90.0) * PI / 180.0
+        val ax = cx + (r * 0.48f) * cos(ang).toFloat()
+        val ay = cy + (r * 0.48f) * sin(ang).toFloat()
+        sb.append(line(cx, cy, ax, ay, ST, 4.2f))
+        sb.append("<circle cx=\"${f(ax)}\" cy=\"${f(ay)}\" r=\"5.5\" fill=\"$GOLD\" stroke=\"$ST\" stroke-width=\"1.8\"/>")
+        sb.append("<circle cx=\"${f(cx)}\" cy=\"${f(cy)}\" r=\"9\" fill=\"#fff\" stroke=\"$ST\" stroke-width=\"2.4\"/>")
+        return sb.toString()
+    }
+
+    // --------------------------------------------- V315.0 — استوانهٔ مدرج (حجم)
+    private fun graduatedBeaker(spec: FigureSpec): String {
+        val mx = max(10f, spec.xNum("max", 500f))
+        val v = spec.xNum("val", 350f).coerceIn(0f, mx)
+        val unit = spec.xStr("unit", "mL")
+        val sb = StringBuilder()
+        val x0 = 116f
+        val w = 112f
+        val top = 38f
+        val bot = 224f
+        val h = bot - top
+        val vh = h * (v / mx)
+        val vy = bot - vh
+        if (v > 0f) {
+            sb.append(rect(x0 + 3f, vy, w - 6f, vh, "rgba(38,166,154,.42)", "#00897b", 1.5f))
+        }
+        sb.append("<path d=\"M ${f(x0 - 8f)} ${f(top)} L ${f(x0)} ${f(top)} L ${f(x0)} ${f(bot)} L ${f(x0 + w)} ${f(bot)} L ${f(x0 + w)} ${f(top)} L ${f(x0 + w + 8f)} ${f(top)}\" fill=\"none\" stroke=\"$ST\" stroke-width=\"3\"/>")
+        for (i in 1..5) {
+            val tv = (mx * i / 5f)
+            val ty = bot - h * (i / 5f)
+            sb.append(line(x0 + w - 18f, ty, x0 + w, ty, ST, 1.8f))
+            sb.append(text(x0 + w + 8f, ty + 4f, "${tv.toInt()} $unit", ST, "start", bold = true, size = 11))
+        }
+        sb.append(text(180f, 256f, "${v.toInt()} $unit", "#00695c", "middle", bold = true, size = 15))
+        return sb.toString()
+    }
+
+    // ------------------------------------------ V315.0 — ژئوبرد (تختهٔ میخی)
+    private fun geoBoard(spec: FigureSpec): String {
+        val g = spec.xNum("grid", 5f).toInt().coerceIn(3, 7)
+        val pts = spec.xStr("pts", "1,1;4,1;4,3;1,3").split(';', '؛').mapNotNull { token ->
+            val p = token.split(',', '،').mapNotNull { it.trim().toFloatOrNull() }
+            if (p.size >= 2) (p[0].coerceIn(1f, g.toFloat()) to p[1].coerceIn(1f, g.toFloat())) else null
+        }
+        val sb = StringBuilder()
+        val bw = 200f
+        val x0 = (360f - bw) / 2f
+        val y0 = 36f
+        val step = bw / (g - 1).coerceAtLeast(1)
+        sb.append(rect(x0 - 18f, y0 - 18f, bw + 36f, bw + 36f, "#fff8e1", ST, 2f, rx = 12f))
+        if (pts.size >= 2) {
+            val polyPts = pts.joinToString(" ") { (px, py) ->
+                "${f(x0 + (px - 1f) * step)},${f(y0 + (g - py) * step)}"
+            }
+            sb.append("<polygon points=\"$polyPts\" fill=\"$ACC_SOFT\" stroke=\"$PINK\" stroke-width=\"3\"/>")
+        }
+        for (r in 0 until g) {
+            for (c in 0 until g) {
+                val px = x0 + c * step
+                val py = y0 + r * step
+                sb.append("<circle cx=\"${f(px)}\" cy=\"${f(py)}\" r=\"4.2\" fill=\"$ST\"/>")
+            }
+        }
+        return sb.toString()
+    }
+
+    // ------------------------------------------- V315.0 — تاس و مکعب شمارش
+    private fun dicePair(spec: FigureSpec): String {
+        val list = spec.xStr("dice", "4,6").split(',', '،').mapNotNull { it.trim().toIntOrNull()?.coerceIn(1, 6) }.ifEmpty { listOf(4, 6) }.take(4)
+        val sumMode = spec.xNum("sum", 1f).toInt()
+        val sb = StringBuilder()
+        val size = 66f
+        val gap = 22f
+        val totalW = list.size * size + (list.size - 1) * gap
+        val x0 = (360f - totalW) / 2f
+        val y0 = 92f
+        val pipPos = mapOf(
+            1 to listOf(0.5f to 0.5f),
+            2 to listOf(0.26f to 0.26f, 0.74f to 0.74f),
+            3 to listOf(0.24f to 0.24f, 0.5f to 0.5f, 0.76f to 0.76f),
+            4 to listOf(0.26f to 0.26f, 0.74f to 0.26f, 0.26f to 0.74f, 0.74f to 0.74f),
+            5 to listOf(0.24f to 0.24f, 0.76f to 0.24f, 0.5f to 0.5f, 0.24f to 0.76f, 0.76f to 0.76f),
+            6 to listOf(0.26f to 0.22f, 0.74f to 0.22f, 0.26f to 0.5f, 0.74f to 0.5f, 0.26f to 0.78f, 0.74f to 0.78f)
+        )
+        list.forEachIndexed { idx, v ->
+            val dx = x0 + idx * (size + gap)
+            sb.append(rect(dx, y0, size, size, "#ffffff", ST, 2.2f, rx = 12f))
+            pipPos[v].orEmpty().forEach { (rx, ry) ->
+                sb.append("<circle cx=\"${f(dx + rx * size)}\" cy=\"${f(y0 + ry * size)}\" r=\"5.6\" fill=\"$PINK\"/>")
+            }
+            if (idx < list.lastIndex && sumMode != 0) {
+                sb.append(text(dx + size + gap / 2f, y0 + size * 0.58f, "+", ST, "middle", bold = true, size = 18))
+            }
+        }
+        if (sumMode == 1) {
+            sb.append(text(180f, 214f, "${list.joinToString(" + ")} = ${list.sum()}", ST, "middle", bold = true, size = 16))
+        } else if (sumMode == 2) {
+            sb.append(text(180f, 214f, "${list.joinToString(" + ")} = ؟", PINK, "middle", bold = true, size = 16))
+        }
+        return sb.toString()
+    }
+
+    // ----------------------------------------- V315.0 — ضرب مساحتی (مستطیلی)
+    private fun areaModelMultiply(spec: FigureSpec): String {
+        val a = spec.xNum("a", 24f).toInt().coerceIn(10, 99)
+        val b = spec.xNum("b", 13f).toInt().coerceIn(10, 99)
+        val blank = spec.xNum("blank", 0f).toInt() != 0
+        val a1 = (a / 10) * 10
+        val a2 = a % 10
+        val b1 = (b / 10) * 10
+        val b2 = b % 10
+        val sb = StringBuilder()
+        val x0 = 76f
+        val y0 = 56f
+        val w1 = 136f
+        val w2 = 76f
+        val h1 = 96f
+        val h2 = 58f
+        sb.append(rect(x0, y0, w1, h1, "rgba(108,99,245,.16)", ST, 1.8f))
+        sb.append(rect(x0 + w1, y0, w2, h1, "rgba(39,196,168,.18)", ST, 1.8f))
+        sb.append(rect(x0, y0 + h1, w1, h2, "rgba(240,162,2,.18)", ST, 1.8f))
+        sb.append(rect(x0 + w1, y0 + h1, w2, h2, "rgba(214,51,108,.15)", ST, 1.8f))
+        sb.append(text(x0 + w1 / 2f, y0 - 10f, a1.toString(), ST, "middle", bold = true, size = 14))
+        sb.append(text(x0 + w1 + w2 / 2f, y0 - 10f, a2.toString(), ST, "middle", bold = true, size = 14))
+        sb.append(text(x0 - 18f, y0 + h1 / 2f + 5f, b1.toString(), ST, "end", bold = true, size = 14))
+        sb.append(text(x0 - 18f, y0 + h1 + h2 / 2f + 5f, b2.toString(), ST, "end", bold = true, size = 14))
+        sb.append(text(x0 + w1 / 2f, y0 + h1 / 2f + 6f, if (blank) "؟" else (a1 * b1).toString(), ST, "middle", bold = true, size = 15))
+        sb.append(text(x0 + w1 + w2 / 2f, y0 + h1 / 2f + 6f, if (blank) "؟" else (a2 * b1).toString(), ST, "middle", bold = true, size = 15))
+        sb.append(text(x0 + w1 / 2f, y0 + h1 + h2 / 2f + 6f, if (blank) "؟" else (a1 * b2).toString(), ST, "middle", bold = true, size = 15))
+        sb.append(text(x0 + w1 + w2 / 2f, y0 + h1 + h2 / 2f + 6f, if (blank) "؟" else (a2 * b2).toString(), ST, "middle", bold = true, size = 15))
+        sb.append(text(180f, 248f, if (blank) "$a × $b = ؟" else "$a × $b = ${a * b}", ST, "middle", bold = true, size = 15))
+        return sb.toString()
+    }
+
+    // ----------------------------------------- V315.0 — نمودار ون (مجموعه‌ها)
+    private fun vennDiagram(spec: FigureSpec): String {
+        val leftStr = spec.xStr("left", "پرنده: کبوتر، گنجشک")
+        val rightStr = spec.xStr("right", "آبزی: ماهی، میگو")
+        val midStr = spec.xStr("mid", "اردک")
+        val sb = StringBuilder()
+        sb.append("<circle cx=\"134\" cy=\"144\" r=\"84\" fill=\"rgba(66,165,245,.22)\" stroke=\"#1e88e5\" stroke-width=\"2.2\"/>")
+        sb.append("<circle cx=\"226\" cy=\"144\" r=\"84\" fill=\"rgba(102,187,106,.22)\" stroke=\"#43a047\" stroke-width=\"2.2\"/>")
+        sb.append(text(98f, 144f, leftStr, ST, "middle", bold = true, size = 11))
+        sb.append(text(262f, 144f, rightStr, ST, "middle", bold = true, size = 11))
+        sb.append(text(180f, 144f, midStr, PINK, "middle", bold = true, size = 12))
         return sb.toString()
     }
 

@@ -70,7 +70,11 @@ class V314_PrimarySuiteTest {
     @Test
     fun category2_sixNewPrimaryMathFiguresRenderValidSvg() {
         val ids = AXIS_FIGURES.map { it.id }.toSet()
-        for (k in listOf("axabacus", "axjump", "axbalance", "axthermo", "axsaw", "axpattern")) {
+        val allNew = listOf(
+            "axabacus", "axjump", "axbalance", "axthermo", "axsaw", "axpattern",
+            "axtenframe", "axsym", "axspin", "axbeaker", "axgeoboard", "axdice", "axmularea", "axvenn"
+        )
+        for (k in allNew) {
             assertTrue("Missing $k in AXIS_FIGURES", k in ids)
             assertTrue("Missing $k in PrimaryMathSvgRenderer.SUPPORTED", k in PrimaryMathSvgRenderer.SUPPORTED)
             val tpl = AXIS_FIGURES.first { it.id == k }

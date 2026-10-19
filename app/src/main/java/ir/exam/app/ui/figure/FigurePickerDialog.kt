@@ -508,6 +508,15 @@ private fun paramFields(type: String): List<Pair<String, String>> = when (type) 
     "axthermo" -> listOf("val" to "دما (°C)", "min" to "کمینهٔ دما", "max" to "بیشینهٔ دما")
     "axsaw" -> listOf("vals" to "سطرها با ; و خانه‌ها با , (جای خالی = ?)", "mode" to "نمایش (shape=شکل / num=عدد)")
     "axpattern" -> listOf("seq" to "دنباله با ویرگول (مثلاً ●,▲,●,▲,?)")
+    // V315.0 — ۸ ابزار جدید ریاضی و علوم ابتدایی
+    "axtenframe" -> listOf("a" to "مهره‌های قرمز", "b" to "مهره‌های آبی", "frames" to "تعداد قاب (۱ یا ۲)")
+    "axsym" -> listOf("cells" to "خانه‌ها (ردیف,ستون با ;)", "axis" to "خط تقارن (v عمودی / h افقی)", "mirror" to "نمایش قرینه (۱=بله، ۰=؟)")
+    "axspin" -> listOf("parts" to "بخش‌های چرخنده (با کاما)", "arrow" to "شمارهٔ بخش عقربه")
+    "axbeaker" -> listOf("val" to "حجم مایع", "max" to "ظرفیت کل", "unit" to "واحد (mL یا لیتر)")
+    "axgeoboard" -> listOf("pts" to "مختصات میخ‌ها (x,y با ;)", "grid" to "اندازهٔ شبکه (۳ تا ۷)")
+    "axdice" -> listOf("dice" to "اعداد تاس‌ها (با کاما)", "sum" to "نمایش جمع (۱=جمع، ۲=؟، ۰=خیر)")
+    "axmularea" -> listOf("a" to "عدد اول (افقی)", "b" to "عدد دوم (عمودی)", "blank" to "مخفی کردن حاصل‌ها (۰ یا ۱)")
+    "axvenn" -> listOf("left" to "دایرهٔ چپ", "right" to "دایرهٔ راست", "mid" to "بخش مشترک (وسط)")
     "axpolpts" -> listOf("xmax" to "تعداد حلقه", "pts" to "نقطه‌ها (r,θ;r,θ)", "labs" to "نام نقطه‌ها")
     "ax3dpt" -> listOf("xmax" to "تعداد تیک", "step" to "گام", "x1" to "x نقطه", "y1" to "y نقطه", "z1" to "z نقطه", "labs" to "نام نقطه")
     "flow" -> listOf("labs" to "مراحل (با ویرگول)")
@@ -545,6 +554,7 @@ private fun paramFields(type: String): List<Pair<String, String>> = when (type) 
 /** کلیدهایی که مقدار متنی (فهرست با ویرگول یا نام سری) دارند نه عدد. */
 private val TEXT_PARAM_KEYS = setOf(
     "shape", "unit", "notes", "coins", "op2", "op3", "n2", "n3", "mode", "seq", // V304 — V310.8/V310.9/V314.0: کلیدهای متنی ابزارهای ابتدایی
+    "cells", "axis", "parts", "dice", "left", "right", "mid", // V315.0: کلیدهای متنی ۸ ابزار جدید ابتدایی
     "labs", "labs2", "vals", "vals2", "vals3", "xs", "ys", "zs", "s1", "s2", "s3",
     // V54.2 — فهرست‌های عددی چندتایی و مقادیر آزاد مرحلهٔ دوم متنی ذخیره می‌شوند
     // (همان قرارداد رشته‌ای مرجع).

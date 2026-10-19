@@ -28,8 +28,11 @@ class V314_Site_PrimarySuiteTest {
         assertTrue(student.contains("function syllableAnswer("))
         assertTrue(student.contains("function bucketAnswer("))
 
-        // ۲) ۶ ابزار ریاضی/علوم ابتدایی در graph_fig.js
-        for (k in listOf("axabacus", "axjump", "axbalance", "axthermo", "axsaw", "axpattern")) {
+        // ۲) ۱۴ ابزار جدید ریاضی/علوم ابتدایی در graph_fig.js (۶ ابزار V314 + ۸ ابزار V315)
+        for (k in listOf(
+            "axabacus", "axjump", "axbalance", "axthermo", "axsaw", "axpattern",
+            "axtenframe", "axsym", "axspin", "axbeaker", "axgeoboard", "axdice", "axmularea", "axvenn"
+        )) {
             assertTrue("Missing $k in graph_fig.js", graphFig.contains(k))
         }
 

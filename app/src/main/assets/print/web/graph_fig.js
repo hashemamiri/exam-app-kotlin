@@ -217,7 +217,8 @@
     'axlog', 'axloglog', 'axtime', 'axpolpts', 'ax3dpt',
     // V304 — ابزار ریاضی ابتدایی (PrimaryMathSvgRenderer.kt)
     'axtally', 'axbase10', 'axplace', 'axclock', 'axruler', 'axfrac', 'axmoney',
-    'axabacus', 'axjump', 'axbalance', 'axthermo', 'axsaw', 'axpattern'];
+    'axabacus', 'axjump', 'axbalance', 'axthermo', 'axsaw', 'axpattern',
+    'axtenframe', 'axsym', 'axspin', 'axbeaker', 'axgeoboard', 'axdice', 'axmularea', 'axvenn'];
   var PRIMARY_MATH_FIRST_ID = 'axtally';
   // V206 — حالت «درج محور» در ویرایشگر وب (سایت): همان ۶ محور پایهٔ AXIS_FIGURES اپ (FigureGallery.kt)
   // با پیش‌فرض‌های یکسان. در اپ، انتخاب محور بومی است و این فهرست فقط وقتی open(…,'axis') یا
@@ -264,7 +265,15 @@
     { id: 'axbalance', name: 'ترازوی دوکفه‌ای', X: { left: '5', right: '3', unit: 'کیلوگرم' } },
     { id: 'axthermo', name: 'دماسنج', X: { val: '25', min: '-10', max: '50' } },
     { id: 'axsaw', name: 'جدول شگفت‌انگیز (۴×۴)', X: { vals: '1,2,3,4;3,4,?,2;2,?,4,3;4,3,2,1', mode: 'shape' } },
-    { id: 'axpattern', name: 'الگویابی شکلی/عددی', X: { seq: '●,▲,●,▲,●,?' } }
+    { id: 'axpattern', name: 'الگویابی شکلی/عددی', X: { seq: '●,▲,●,▲,●,?' } },
+    { id: 'axtenframe', name: 'قاب ده‌تایی', X: { a: '7', b: '5', frames: '2' } },
+    { id: 'axsym', name: 'تقارن شطرنجی', X: { cells: '1,1;2,1;2,2;3,2', axis: 'v', mirror: '1' } },
+    { id: 'axspin', name: 'چرخندهٔ احتمال', X: { parts: 'قرمز,آبی,سبز,زرد,قرمز,آبی', arrow: '1' } },
+    { id: 'axbeaker', name: 'استوانهٔ مدرج (حجم)', X: { val: '350', max: '500', unit: 'mL' } },
+    { id: 'axgeoboard', name: 'ژئوبرد (تختهٔ میخی)', X: { pts: '1,1;4,1;4,3;1,3', grid: '5' } },
+    { id: 'axdice', name: 'تاس و مکعب شمارش', X: { dice: '4,6', sum: '1' } },
+    { id: 'axmularea', name: 'ضرب مساحتی (مستطیلی)', X: { a: '24', b: '13', blank: '0' } },
+    { id: 'axvenn', name: 'نمودار ون (مجموعه‌ها)', X: { left: 'پرنده: کبوتر، گنجشک', right: 'آبزی: ماهی، میگو', mid: 'اردک' } }
   ];
   function isAxisType(t) { return /^ax/.test(String(t || '')); }
   // V247 — پورت یک‌به‌یک ۲۱ محور تازهٔ AxisSvgRenderer.kt (V137.2) برای سایت (بدون پل بومی).
@@ -620,6 +629,144 @@
         var px2 = px0 + i * (pcw + pgap), pisQ = pitems[i] === '?' || pitems[i] === '؟', pcol2 = pisQ ? PT : ppal[i % ppal.length];
         s += rc(px2, py0, pcw, 54, pisQ ? '#fff8e1' : ACCS, pcol2, 2, 9) + tx(px2 + pcw / 2, py0 + 34, pisQ ? '؟' : pitems[i], pcol2, 'middle', true, 20);
       }
+      return wrap(s);
+    }
+    if (t === 'axtenframe') {
+      var tfr = clamp(Math.floor(num(X.frames, 2)), 1, 2), tcap = tfr * 10;
+      var ta = clamp(Math.floor(num(X.a, 7)), 0, tcap), tb = clamp(Math.floor(num(X.b, 5)), 0, tcap - ta);
+      var tcw = 44, tch = 44, tfw = tcw * 5, tfh = tch * 2, tx0 = (360 - tfw) / 2;
+      for (var fi = 0; fi < tfr; fi++) {
+        var tfy = tfr === 1 ? 88 : 32 + fi * (tfh + 18);
+        s += rc(tx0, tfy, tfw, tfh, '#ffffff', ST, 2.2, 6);
+        for (r = 0; r < 2; r++) for (c = 0; c < 5; c++) {
+          var tcx2 = tx0 + c * tcw, tcy2 = tfy + r * tch, tidx = fi * 10 + r * 5 + c;
+          s += rc(tcx2, tcy2, tcw, tch, 'none', ST, 1.2);
+          if (tidx < ta + tb) s += '<circle cx="' + f2(tcx2 + tcw / 2) + '" cy="' + f2(tcy2 + tch / 2) + '" r="14" fill="' + (tidx < ta ? '#e53935' : '#1e88e5') + '" stroke="' + ST + '" stroke-width="1.4"/>';
+        }
+      }
+      s += tx(180, 262, ta + ' + ' + tb + ' = ' + (ta + tb), ST, 'middle', true, 15);
+      return wrap(s);
+    }
+    if (t === 'axsym') {
+      var saxis = xs('axis', 'v').toLowerCase(), smir = Math.floor(num(X.mirror, 1)) !== 0;
+      var scells = xs('cells', '1,1;2,1;2,2;3,2').split(/[;؛]/).map(function (tk) {
+        var pp = tk.split(/[,،]/).map(function (z) { return parseInt(faEn(z.trim()), 10); });
+        return (pp.length >= 2 && isFinite(pp[0]) && isFinite(pp[1])) ? [clamp(pp[0], 1, 4), clamp(pp[1], 1, 4)] : null;
+      }).filter(Boolean);
+      var sc = 26, sn = 8, sgw = sc * sn, sx00 = (360 - sgw) / 2, sy00 = 32;
+      s += rc(sx00, sy00, sgw, sgw, '#f8fafc', ST, 1.8);
+      for (r = 0; r < sn; r++) for (c = 0; c < sn; c++) s += rc(sx00 + c * sc, sy00 + r * sc, sc, sc, 'none', '#cbd5e1', 1);
+      scells.forEach(function (pr) {
+        var r1 = pr[0], d1 = pr[1];
+        if (saxis === 'h') {
+          var rTop = clamp(4 - d1, 0, 3), cPos = clamp(r1 - 1, 0, 7), rBot = clamp(3 + d1, 4, 7);
+          s += rc(sx00 + cPos * sc + 2, sy00 + rTop * sc + 2, sc - 4, sc - 4, ACC, ST, 1.2, 3);
+          if (smir) s += rc(sx00 + cPos * sc + 2, sy00 + rBot * sc + 2, sc - 4, sc - 4, GRN, ST, 1.2, 3);
+          else s += tx(sx00 + cPos * sc + sc / 2, sy00 + rBot * sc + sc * 0.68, '؟', PT, 'middle', true, 14);
+        } else {
+          var rPos = clamp(r1 - 1, 0, 7), cLeft = clamp(4 - d1, 0, 3), cRight = clamp(3 + d1, 4, 7);
+          s += rc(sx00 + cLeft * sc + 2, sy00 + rPos * sc + 2, sc - 4, sc - 4, ACC, ST, 1.2, 3);
+          if (smir) s += rc(sx00 + cRight * sc + 2, sy00 + rPos * sc + 2, sc - 4, sc - 4, GRN, ST, 1.2, 3);
+          else s += tx(sx00 + cRight * sc + sc / 2, sy00 + rPos * sc + sc * 0.68, '؟', PT, 'middle', true, 14);
+        }
+      });
+      if (saxis === 'h') s += ln(sx00 - 12, sy00 + 4 * sc, sx00 + sgw + 12, sy00 + 4 * sc, PT, 3.2, true);
+      else s += ln(sx00 + 4 * sc, sy00 - 10, sx00 + 4 * sc, sy00 + sgw + 10, PT, 3.2, true);
+      return wrap(s);
+    }
+    if (t === 'axspin') {
+      var sparts = xs('parts', 'قرمز,آبی,سبز,زرد,قرمز,آبی').split(/[,،]/).map(function (z) { return z.trim(); }).filter(Boolean).slice(0, 12);
+      if (sparts.length < 2) sparts = ['قرمز', 'آبی', 'سبز', 'زرد'];
+      var spn = sparts.length, sarrow = ((Math.floor(num(X.arrow, 1)) - 1) % spn + spn) % spn;
+      var spcx = 180, spcy = 142, spr = 98, sppal = ['#ef5350', '#42a5f5', '#66bb6a', '#ffca28', '#ab47bc', '#26a69a', '#ffa726', '#ec407a'];
+      var spcol = function (lb, ix) {
+        if (lb.indexOf('قرمز') >= 0 || lb.indexOf('سرخ') >= 0) return '#ef5350';
+        if (lb.indexOf('آبی') >= 0) return '#42a5f5';
+        if (lb.indexOf('سبز') >= 0) return '#66bb6a';
+        if (lb.indexOf('زرد') >= 0) return '#ffca28';
+        if (lb.indexOf('بنفش') >= 0) return '#ab47bc';
+        if (lb.indexOf('نارنجی') >= 0) return '#ffa726';
+        return sppal[ix % sppal.length];
+      };
+      for (i = 0; i < spn; i++) {
+        var spa0 = (i * 360 / spn - 90) * Math.PI / 180, spa1 = ((i + 1) * 360 / spn - 90) * Math.PI / 180;
+        var spx1 = spcx + spr * Math.cos(spa0), spy1 = spcy + spr * Math.sin(spa0), spx2 = spcx + spr * Math.cos(spa1), spy2 = spcy + spr * Math.sin(spa1), splg = 360 / spn > 180 ? 1 : 0;
+        s += '<path d="M ' + f2(spcx) + ' ' + f2(spcy) + ' L ' + f2(spx1) + ' ' + f2(spy1) + ' A ' + f2(spr) + ' ' + f2(spr) + ' 0 ' + splg + ' 1 ' + f2(spx2) + ' ' + f2(spy2) + ' Z" fill="' + spcol(sparts[i], i) + '" stroke="' + ST + '" stroke-width="1.8"/>';
+        var spam = (spa0 + spa1) / 2;
+        s += tx(spcx + spr * 0.62 * Math.cos(spam), spcy + spr * 0.62 * Math.sin(spam) + 4, sparts[i], '#fff', 'middle', true, 11);
+      }
+      var spang = ((sarrow + 0.5) * 360 / spn - 90) * Math.PI / 180, spax = spcx + spr * 0.48 * Math.cos(spang), spay = spcy + spr * 0.48 * Math.sin(spang);
+      s += lnr(spcx, spcy, spax, spay, ST, 4.2) + '<circle cx="' + f2(spax) + '" cy="' + f2(spay) + '" r="5.5" fill="' + GLD + '" stroke="' + ST + '" stroke-width="1.8"/><circle cx="' + f2(spcx) + '" cy="' + f2(spcy) + '" r="9" fill="#fff" stroke="' + ST + '" stroke-width="2.4"/>';
+      return wrap(s);
+    }
+    if (t === 'axbeaker') {
+      var bmx = Math.max(10, num(X.max, 500)), bval = clamp(num(X.val, 350), 0, bmx), bunit = xs('unit', 'mL');
+      var bx0 = 116, bw2 = 112, btop = 38, bbot = 224, bh2 = bbot - btop, bvh = bh2 * (bval / bmx), bvy = bbot - bvh;
+      if (bval > 0) s += rc(bx0 + 3, bvy, bw2 - 6, bvh, 'rgba(38,166,154,.42)', '#00897b', 1.5);
+      s += '<path d="M ' + f2(bx0 - 8) + ' ' + f2(btop) + ' L ' + f2(bx0) + ' ' + f2(btop) + ' L ' + f2(bx0) + ' ' + f2(bbot) + ' L ' + f2(bx0 + bw2) + ' ' + f2(bbot) + ' L ' + f2(bx0 + bw2) + ' ' + f2(btop) + ' L ' + f2(bx0 + bw2 + 8) + ' ' + f2(btop) + '" fill="none" stroke="' + ST + '" stroke-width="3"/>';
+      for (i = 1; i <= 5; i++) {
+        var btv = Math.round(bmx * i / 5), bty = bbot - bh2 * (i / 5);
+        s += lnr(bx0 + bw2 - 18, bty, bx0 + bw2, bty, ST, 1.8) + tx(bx0 + bw2 + 8, bty + 4, btv + ' ' + bunit, ST, 'start', true, 11);
+      }
+      s += tx(180, 256, Math.round(bval) + ' ' + bunit, '#00695c', 'middle', true, 15);
+      return wrap(s);
+    }
+    if (t === 'axgeoboard') {
+      var gg = clamp(Math.floor(num(X.grid, 5)), 3, 7);
+      var gpts = xs('pts', '1,1;4,1;4,3;1,3').split(/[;؛]/).map(function (tk) {
+        var pp = tk.split(/[,،]/).map(function (z) { return parseFloat(faEn(z.trim())); });
+        return (pp.length >= 2 && isFinite(pp[0]) && isFinite(pp[1])) ? [clamp(pp[0], 1, gg), clamp(pp[1], 1, gg)] : null;
+      }).filter(Boolean);
+      var gbw = 200, gx0 = (360 - gbw) / 2, gy0 = 36, gstep = gbw / Math.max(1, gg - 1);
+      s += rc(gx0 - 18, gy0 - 18, gbw + 36, gbw + 36, '#fff8e1', ST, 2, 12);
+      if (gpts.length >= 2) {
+        var gpoly = gpts.map(function (pt) { return f2(gx0 + (pt[0] - 1) * gstep) + ',' + f2(gy0 + (gg - pt[1]) * gstep); }).join(' ');
+        s += '<polygon points="' + gpoly + '" fill="' + ACCS + '" stroke="' + PT + '" stroke-width="3"/>';
+      }
+      for (r = 0; r < gg; r++) for (c = 0; c < gg; c++) s += '<circle cx="' + f2(gx0 + c * gstep) + '" cy="' + f2(gy0 + r * gstep) + '" r="4.2" fill="' + ST + '"/>';
+      return wrap(s);
+    }
+    if (t === 'axdice') {
+      var dl = xs('dice', '4,6').split(/[,،]/).map(function (z) { return parseInt(faEn(z.trim()), 10); }).filter(function (v2) { return isFinite(v2) && v2 >= 1 && v2 <= 6; }).slice(0, 4);
+      if (!dl.length) dl = [4, 6];
+      var dsum = Math.floor(num(X.sum, 1)), dsz = 66, dgap = 22, dtw = dl.length * dsz + (dl.length - 1) * dgap, dx0 = (360 - dtw) / 2, dy0 = 92;
+      var dpips = {
+        1: [[0.5, 0.5]], 2: [[0.26, 0.26], [0.74, 0.74]], 3: [[0.24, 0.24], [0.5, 0.5], [0.76, 0.76]],
+        4: [[0.26, 0.26], [0.74, 0.26], [0.26, 0.74], [0.74, 0.74]],
+        5: [[0.24, 0.24], [0.76, 0.24], [0.5, 0.5], [0.24, 0.76], [0.76, 0.76]],
+        6: [[0.26, 0.22], [0.74, 0.22], [0.26, 0.5], [0.74, 0.5], [0.26, 0.78], [0.74, 0.78]]
+      };
+      var dtot = 0;
+      dl.forEach(function (dv, idx) {
+        dtot += dv;
+        var ddx = dx0 + idx * (dsz + dgap);
+        s += rc(ddx, dy0, dsz, dsz, '#ffffff', ST, 2.2, 12);
+        (dpips[dv] || []).forEach(function (pp) { s += '<circle cx="' + f2(ddx + pp[0] * dsz) + '" cy="' + f2(dy0 + pp[1] * dsz) + '" r="5.6" fill="' + PT + '"/>'; });
+        if (idx < dl.length - 1 && dsum !== 0) s += tx(ddx + dsz + dgap / 2, dy0 + dsz * 0.58, '+', ST, 'middle', true, 18);
+      });
+      if (dsum === 1) s += tx(180, 214, dl.join(' + ') + ' = ' + dtot, ST, 'middle', true, 16);
+      else if (dsum === 2) s += tx(180, 214, dl.join(' + ') + ' = ؟', PT, 'middle', true, 16);
+      return wrap(s);
+    }
+    if (t === 'axmularea') {
+      var ma = clamp(Math.floor(num(X.a, 24)), 10, 99), mb = clamp(Math.floor(num(X.b, 13)), 10, 99), mblank = Math.floor(num(X.blank, 0)) !== 0;
+      var ma1 = Math.floor(ma / 10) * 10, ma2 = ma % 10, mb1 = Math.floor(mb / 10) * 10, mb2 = mb % 10;
+      var mx0 = 76, my0 = 56, mw1 = 136, mw2 = 76, mh1 = 96, mh2 = 58;
+      s += rc(mx0, my0, mw1, mh1, 'rgba(108,99,245,.16)', ST, 1.8) + rc(mx0 + mw1, my0, mw2, mh1, 'rgba(39,196,168,.18)', ST, 1.8) +
+        rc(mx0, my0 + mh1, mw1, mh2, 'rgba(240,162,2,.18)', ST, 1.8) + rc(mx0 + mw1, my0 + mh1, mw2, mh2, 'rgba(214,51,108,.15)', ST, 1.8);
+      s += tx(mx0 + mw1 / 2, my0 - 10, String(ma1), ST, 'middle', true, 14) + tx(mx0 + mw1 + mw2 / 2, my0 - 10, String(ma2), ST, 'middle', true, 14) +
+        tx(mx0 - 18, my0 + mh1 / 2 + 5, String(mb1), ST, 'end', true, 14) + tx(mx0 - 18, my0 + mh1 + mh2 / 2 + 5, String(mb2), ST, 'end', true, 14);
+      s += tx(mx0 + mw1 / 2, my0 + mh1 / 2 + 6, mblank ? '؟' : String(ma1 * mb1), ST, 'middle', true, 15) +
+        tx(mx0 + mw1 + mw2 / 2, my0 + mh1 / 2 + 6, mblank ? '؟' : String(ma2 * mb1), ST, 'middle', true, 15) +
+        tx(mx0 + mw1 / 2, my0 + mh1 + mh2 / 2 + 6, mblank ? '؟' : String(ma1 * mb2), ST, 'middle', true, 15) +
+        tx(mx0 + mw1 + mw2 / 2, my0 + mh1 + mh2 / 2 + 6, mblank ? '؟' : String(ma2 * mb2), ST, 'middle', true, 15);
+      s += tx(180, 248, mblank ? (ma + ' × ' + mb + ' = ؟') : (ma + ' × ' + mb + ' = ' + (ma * mb)), ST, 'middle', true, 15);
+      return wrap(s);
+    }
+    if (t === 'axvenn') {
+      var vleft = xs('left', 'پرنده: کبوتر، گنجشک'), vright = xs('right', 'آبزی: ماهی، میگو'), vmid = xs('mid', 'اردک');
+      s += '<circle cx="134" cy="144" r="84" fill="rgba(66,165,245,.22)" stroke="#1e88e5" stroke-width="2.2"/><circle cx="226" cy="144" r="84" fill="rgba(102,187,106,.22)" stroke="#43a047" stroke-width="2.2"/>';
+      s += tx(98, 144, vleft, ST, 'middle', true, 11) + tx(262, 144, vright, ST, 'middle', true, 11) + tx(180, 144, vmid, PT, 'middle', true, 12);
       return wrap(s);
     }
     return null;
@@ -2304,7 +2451,15 @@
       axbalance: '<path d="M18,10 L14,25 H22 Z M6,10 H30 M8,10 L5,18 H11 Z M28,10 L25,18 H31 Z" fill="none" stroke="currentColor" stroke-width="1.4"/>',
       axthermo: '<rect x="15" y="4" width="6" height="16" rx="3" fill="none" stroke="currentColor" stroke-width="1.5"/><circle cx="18" cy="23" r="4.5" fill="currentColor"/>',
       axsaw: '<rect x="6" y="4" width="24" height="22" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M18,4 V26 M6,15 H30" stroke="currentColor" stroke-width="1.4"/>',
-      axpattern: '<rect x="3" y="10" width="8" height="10" rx="2" fill="none" stroke="currentColor" stroke-width="1.4"/><rect x="14" y="10" width="8" height="10" rx="2" fill="none" stroke="currentColor" stroke-width="1.4"/><rect x="25" y="10" width="8" height="10" rx="2" fill="none" stroke="currentColor" stroke-width="1.4"/>'
+      axpattern: '<rect x="3" y="10" width="8" height="10" rx="2" fill="none" stroke="currentColor" stroke-width="1.4"/><rect x="14" y="10" width="8" height="10" rx="2" fill="none" stroke="currentColor" stroke-width="1.4"/><rect x="25" y="10" width="8" height="10" rx="2" fill="none" stroke="currentColor" stroke-width="1.4"/>',
+      axtenframe: '<rect x="3" y="7" width="30" height="16" rx="2" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M3,15 H33 M9,7 V23 M15,7 V23 M21,7 V23 M27,7 V23" stroke="currentColor" stroke-width="1"/><circle cx="6" cy="11" r="2" fill="currentColor"/><circle cx="12" cy="11" r="2" fill="currentColor"/>',
+      axsym: '<path d="M18,3 V27" stroke="currentColor" stroke-width="1.8" stroke-dasharray="2 2"/><rect x="8" y="8" width="8" height="14" fill="currentColor" opacity=".4"/><rect x="20" y="8" width="8" height="14" fill="none" stroke="currentColor" stroke-width="1.4"/>',
+      axspin: '<circle cx="18" cy="15" r="11" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M18,4 V26 M7,15 H29" stroke="currentColor" stroke-width="1"/><path d="M18,15 L25,9" stroke="currentColor" stroke-width="2.2"/>',
+      axbeaker: '<path d="M9,5 H11 V25 H25 V5 H27" fill="none" stroke="currentColor" stroke-width="1.6"/><rect x="11" y="13" width="14" height="12" fill="currentColor" opacity=".35"/>',
+      axgeoboard: '<rect x="5" y="5" width="26" height="20" rx="2" fill="none" stroke="currentColor" stroke-width="1.4"/><polygon points="10,9 26,9 22,21 10,21" fill="currentColor" opacity=".25" stroke="currentColor" stroke-width="1.4"/>',
+      axdice: '<rect x="4" y="7" width="12" height="14" rx="2" fill="none" stroke="currentColor" stroke-width="1.5"/><rect x="20" y="7" width="12" height="14" rx="2" fill="none" stroke="currentColor" stroke-width="1.5"/><circle cx="10" cy="14" r="1.6" fill="currentColor"/><circle cx="24" cy="11" r="1.4" fill="currentColor"/><circle cx="28" cy="17" r="1.4" fill="currentColor"/>',
+      axmularea: '<rect x="5" y="6" width="26" height="18" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M21,6 V24 M5,16 H31" stroke="currentColor" stroke-width="1.3"/>',
+      axvenn: '<circle cx="14" cy="15" r="9" fill="none" stroke="currentColor" stroke-width="1.5"/><circle cx="22" cy="15" r="9" fill="none" stroke="currentColor" stroke-width="1.5"/>'
     };
     return '<svg viewBox="0 0 36 30" aria-hidden="true">' + (m[id] || AXI[id] || m.plot) + '</svg>';
   }
@@ -2353,7 +2508,15 @@
       axbalance: [['left', 'وزنهٔ کفهٔ چپ'], ['right', 'وزنهٔ کفهٔ راست'], ['unit', 'واحد جرم']],
       axthermo: [['val', 'دما (°C)'], ['min', 'کمینهٔ دما'], ['max', 'بیشینهٔ دما']],
       axsaw: [['vals', 'سطرها با ; و خانه‌ها با , (جای خالی = ?)'], ['mode', 'نمایش (shape=شکل / num=عدد)']],
-      axpattern: [['seq', 'دنباله با ویرگول (مثلاً ●,▲,●,▲,?)']]
+      axpattern: [['seq', 'دنباله با ویرگول (مثلاً ●,▲,●,▲,?)']],
+      axtenframe: [['a', 'مهره‌های قرمز'], ['b', 'مهره‌های آبی'], ['frames', 'تعداد قاب (۱ یا ۲)']],
+      axsym: [['cells', 'خانه‌ها (ردیف,ستون با ;)'], ['axis', 'خط تقارن (v عمودی / h افقی)'], ['mirror', 'نمایش قرینه (۱=بله، ۰=؟)']],
+      axspin: [['parts', 'بخش‌های چرخنده (با کاما)'], ['arrow', 'شمارهٔ بخش عقربه']],
+      axbeaker: [['val', 'حجم مایع'], ['max', 'ظرفیت کل'], ['unit', 'واحد (mL یا لیتر)']],
+      axgeoboard: [['pts', 'مختصات میخ‌ها (x,y با ;)'], ['grid', 'اندازهٔ شبکه (۳ تا ۷)']],
+      axdice: [['dice', 'اعداد تاس‌ها (با کاما)'], ['sum', 'نمایش جمع (۱=جمع، ۲=؟، ۰=خیر)']],
+      axmularea: [['a', 'عدد اول (افقی)'], ['b', 'عدد دوم (عمودی)'], ['blank', 'مخفی کردن حاصل‌ها (۰ یا ۱)']],
+      axvenn: [['left', 'دایرهٔ چپ'], ['right', 'دایرهٔ راست'], ['mid', 'بخش مشترک (وسط)']]
     };
     if (AXF[t]) return [['X.title', 'عنوان']].concat(AXF[t].map(function (f) { return ['X.' + f[0], f[1]]; }));
     if (isAxisType(t)) return [['X.title', 'عنوان']];
@@ -2535,12 +2698,47 @@
   }
   // V310.7 / V314.0 — عقربه‌های ساعت، رنگ‌آمیزی کسر، مهره‌های چرتکه و دماسنج با ماوس/لمس قابل تنظیم‌اند
   function bindClock(box) {
-    if (['axclock', 'axfrac', 'axabacus', 'axthermo'].indexOf(state.t) < 0) {
+    if (['axclock', 'axfrac', 'axabacus', 'axthermo', 'axtenframe', 'axspin', 'axbeaker'].indexOf(state.t) < 0) {
       box.onpointerdown = box.onpointermove = box.onpointerup = box.onpointercancel = null;
       box.style.touchAction = '';
       return;
     }
     box.style.touchAction = 'none';
+    if (state.t === 'axtenframe') {
+      box.onpointerdown = function (e) {
+        var p = clockPoint(box, e); if (!p) return;
+        var fr = Math.max(1, Math.min(2, Math.floor(num(state.X.frames, 2)))), cap = fr * 10;
+        var a = Math.max(0, Math.min(cap, Math.floor(num(state.X.a, 7)))), b = Math.max(0, Math.min(cap - a, Math.floor(num(state.X.b, 5))));
+        if (p.x <= 180) state.X.a = String((a + 1) % (cap - b + 1));
+        else state.X.b = String((b + 1) % (cap - a + 1));
+        paint(); renderFields();
+      };
+      box.onpointermove = box.onpointerup = box.onpointercancel = null;
+      return;
+    }
+    if (state.t === 'axspin') {
+      box.onpointerdown = function () {
+        var sp = String(state.X.parts || 'قرمز,آبی,سبز,زرد').split(/[,،]/).map(function (x) { return x.trim(); }).filter(Boolean);
+        var n = Math.max(2, sp.length), cur = Math.max(1, Math.min(n, Math.floor(num(state.X.arrow, 1))));
+        state.X.arrow = String((cur % n) + 1);
+        paint(); renderFields();
+      };
+      box.onpointermove = box.onpointerup = box.onpointercancel = null;
+      return;
+    }
+    if (state.t === 'axbeaker') {
+      var setBeaker = function (e) {
+        var p = clockPoint(box, e); if (!p) return;
+        var mx = Math.max(10, num(state.X.max, 500));
+        var ratio = Math.max(0, Math.min(1, (224 - p.y) / (224 - 38)));
+        var step = mx >= 100 ? 10 : 1;
+        state.X.val = String(Math.min(mx, Math.max(0, Math.round((ratio * mx) / step) * step)));
+      };
+      box.onpointerdown = function (e) { clockDrag = 'beaker'; setBeaker(e); paint(); try { box.setPointerCapture(e.pointerId); } catch (_c) {} };
+      box.onpointermove = function (e) { if (!clockDrag) return; setBeaker(e); paint(); };
+      box.onpointerup = box.onpointercancel = function () { if (!clockDrag) return; clockDrag = null; renderFields(); };
+      return;
+    }
     if (state.t === 'axfrac') {
       box.onpointerdown = function () {
         var den = Math.max(1, Math.min(24, Math.floor(num(state.X.den, 4))));

@@ -36,7 +36,7 @@ class V247_WalletTariffAxisParityTest {
         val g = source("app/src/main/assets/print/web/graph_fig.js")
         val gallery = source("app/src/main/java/ir/exam/app/core/figure/FigureGallery.kt")
         val ids = Regex("FigureTemplate\\(\"(ax[a-z0-9]+)\"").findAll(gallery).map { it.groupValues[1] }.toSet()
-        assertTrue(ids.size == 40) // V304 + V314: ۲۷ محور + ۱۳ ابزار ریاضی/علوم ابتدایی
+        assertTrue(ids.size == 48) // V304 + V314 + V315: ۲۷ محور + ۲۱ ابزار ریاضی/علوم ابتدایی
         assertTrue("function axisExSvg(t, X, title)" in g && "var exSvg = axisExSvg(t, X, title); if (exSvg) return exSvg;" in g)
         for (id in ids) {
             assertTrue(id, "{ id: '$id'," in g)

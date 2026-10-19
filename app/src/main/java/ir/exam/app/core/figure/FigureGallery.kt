@@ -92,7 +92,16 @@ val AXIS_FIGURES: List<FigureTemplate> = listOf(
     FigureTemplate("axbalance", "ترازوی دوکفه‌ای", """{"k":"g","t":"axbalance","X":{"left":5,"right":3,"unit":"کیلوگرم"}}"""),
     FigureTemplate("axthermo", "دماسنج", """{"k":"g","t":"axthermo","X":{"val":25,"min":-10,"max":50}}"""),
     FigureTemplate("axsaw", "جدول شگفت‌انگیز (۴×۴)", """{"k":"g","t":"axsaw","X":{"vals":"1,2,3,4;3,4,?,2;2,?,4,3;4,3,2,1","mode":"shape"}}"""),
-    FigureTemplate("axpattern", "الگویابی شکلی/عددی", """{"k":"g","t":"axpattern","X":{"seq":"●,▲,●,▲,●,?"}}""")
+    FigureTemplate("axpattern", "الگویابی شکلی/عددی", """{"k":"g","t":"axpattern","X":{"seq":"●,▲,●,▲,●,?"}}"""),
+    // V315.0 — ۸ ابزار جدید ریاضی و علوم ابتدایی
+    FigureTemplate("axtenframe", "قاب ده‌تایی", """{"k":"g","t":"axtenframe","X":{"a":7,"b":5,"frames":2}}"""),
+    FigureTemplate("axsym", "تقارن شطرنجی", """{"k":"g","t":"axsym","X":{"cells":"1,1;2,1;2,2;3,2","axis":"v","mirror":1}}"""),
+    FigureTemplate("axspin", "چرخندهٔ احتمال", """{"k":"g","t":"axspin","X":{"parts":"قرمز,آبی,سبز,زرد,قرمز,آبی","arrow":1}}"""),
+    FigureTemplate("axbeaker", "استوانهٔ مدرج (حجم)", """{"k":"g","t":"axbeaker","X":{"val":350,"max":500,"unit":"mL"}}"""),
+    FigureTemplate("axgeoboard", "ژئوبرد (تختهٔ میخی)", """{"k":"g","t":"axgeoboard","X":{"pts":"1,1;4,1;4,3;1,3","grid":5}}"""),
+    FigureTemplate("axdice", "تاس و مکعب شمارش", """{"k":"g","t":"axdice","X":{"dice":"4,6","sum":1}}"""),
+    FigureTemplate("axmularea", "ضرب مساحتی (مستطیلی)", """{"k":"g","t":"axmularea","X":{"a":24,"b":13,"blank":0}}"""),
+    FigureTemplate("axvenn", "نمودار ون (مجموعه‌ها)", """{"k":"g","t":"axvenn","X":{"left":"پرنده: کبوتر، گنجشک","right":"آبزی: ماهی، میگو","mid":"اردک"}}""")
 )
 
 /** V304 — اولین شناسهٔ بخش «ابزار ریاضی ابتدایی» در AXIS_FIGURES (برای سرتیتر جدا در انتخابگر). */

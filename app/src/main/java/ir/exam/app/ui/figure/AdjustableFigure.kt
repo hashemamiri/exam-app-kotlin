@@ -36,7 +36,7 @@ fun AdjustableFigure(
     onChanged: (FigureSpec) -> Unit = {}
 ) {
     var current by remember(spec) { mutableStateOf(spec) }
-    if (spec.type in setOf("axclock", "axfrac", "axabacus", "axthermo")) {
+    if (spec.type in setOf("axclock", "axfrac", "axabacus", "axthermo", "axtenframe", "axspin", "axbeaker")) {
         InteractiveClock(current, modifier, contentDescription) { next ->
             current = next
             onChanged(next)
@@ -78,6 +78,12 @@ private fun InteractiveClock(
             val ratio = ((206f - q.y) / (206f - 34f)).coerceIn(0f, 1f)
             val v = Math.round(mn + ratio * (mx - mn))
             x + ("val" to JsonPrimitive(v))
+        } else if (latest.type == "axbeaker") {
+            val mx = kotlin.math.max(10f, latest.xNum("max", 500f))
+            val ratio = ((224f - q.y) / (224f - 38f)).coerceIn(0f, 1f)
+            val step = if (mx >= 100f) 10 else 1
+            val v = (Math.round((ratio * mx) / step) * step).coerceIn(0, mx.toInt())
+            x + ("val" to JsonPrimitive(v))
         } else if (mode == "hour") {
             x + ("h" to JsonPrimitive(Math.round(deg / 30.0).toInt() % 12))
         } else {
@@ -109,10 +115,31 @@ private fun InteractiveClock(
                 val nextN = curN + (nextDigit - curDigit) * pow
                 emit(FigureSpec(JsonObject(latest.raw + ("X" to JsonObject(x + ("n" to JsonPrimitive(nextN)))))))
             }
-            "axthermo" -> {
+            "axthermo", "axbeaker" -> {
                 grab = "thermo"
                 moveTo(p)
                 grab = null
+            }
+            "axtenframe" -> {
+                val frames = latest.xNum("frames", 2f).toInt().coerceIn(1, 2)
+                val cap = frames * 10
+                val a = latest.xNum("a", 7f).toInt().coerceIn(0, cap)
+                val b = latest.xNum("b", 5f).toInt().coerceIn(0, cap - a)
+                val next = if (q.x <= 180f) {
+                    val na = (a + 1) % (cap - b + 1)
+                    x + ("a" to JsonPrimitive(na))
+                } else {
+                    val nb = (b + 1) % (cap - a + 1)
+                    x + ("b" to JsonPrimitive(nb))
+                }
+                emit(FigureSpec(JsonObject(latest.raw + ("X" to JsonObject(next)))))
+            }
+            "axspin" -> {
+                val parts = latest.xStr("parts", "قرمز,آبی,سبز,زرد").split(',', '،').map { it.trim() }.filter { it.isNotEmpty() }
+                val n = parts.size.coerceAtLeast(2)
+                val cur = latest.xNum("arrow", 1f).toInt().coerceIn(1, n)
+                val nextArrow = (cur % n) + 1
+                emit(FigureSpec(JsonObject(latest.raw + ("X" to JsonObject(x + ("arrow" to JsonPrimitive(nextArrow)))))))
             }
         }
     }
@@ -121,14 +148,14 @@ private fun InteractiveClock(
         modifier
             .onSizeChanged { canvasSize = it }
             .pointerInput(latest.type) {
-                if (latest.type == "axfrac" || latest.type == "axabacus") {
+                if (latest.type in setOf("axfrac", "axabacus", "axtenframe", "axspin")) {
                     detectTapGestures { p -> tapAt(p) }
                 } else {
                     detectDragGestures(
                         onDragStart = { p ->
                             val q = toSvg(p)
                             if (q != null) {
-                                grab = if (latest.type == "axthermo") "thermo" else if (hypot(q.x - 180f, q.y - 150f) <= 62f) "hour" else "minute"
+                                grab = if (latest.type == "axthermo" || latest.type == "axbeaker") "thermo" else if (hypot(q.x - 180f, q.y - 150f) <= 62f) "hour" else "minute"
                                 moveTo(p)
                             }
                         },
