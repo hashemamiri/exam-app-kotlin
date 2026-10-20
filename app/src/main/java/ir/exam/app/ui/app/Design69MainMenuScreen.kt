@@ -23,6 +23,7 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -75,6 +76,10 @@ fun Design69MainMenuScreen(
     cards: List<Design69MenuCard>,
     onProfile: () -> Unit,
     featuredCard: Design69MenuCard? = null,
+    /** V321 — تغییر سریع حالت تیره/روشن از کارت پروفایل (بدون رفتن به تنظیمات). */
+    onToggleTheme: (() -> Unit)? = null,
+    /** V321 — حالت تیره الان فعال است؟ (برای آیکن ماه/خورشید) */
+    darkTheme: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     require(Design69MenuContract.isCompleteGrid(cards.size))
@@ -151,6 +156,15 @@ fun Design69MainMenuScreen(
                             style = MaterialTheme.typography.bodySmall,
                             modifier = Modifier.padding(top = 6.dp)
                         )
+                    }
+                    // V321 — کلید سریع «تیره/روشن»؛ تنظیم در همان تنظیمات ذخیره می‌شود
+                    if (onToggleTheme != null) {
+                        IconButton(onClick = onToggleTheme, modifier = Modifier.size(38.dp)) {
+                            Text(
+                                if (darkTheme) "☀️" else "🌙",
+                                style = MaterialTheme.typography.titleMedium
+                            )
+                        }
                     }
                     Icon(
                         Design69Icons.ChevronLeft,

@@ -1,6 +1,11 @@
 package ir.exam.app.ui.reports
 
+import ir.exam.app.core.cache.ReportsSnapshot
+import ir.exam.app.core.cache.ReportsSnapshotPayload
 import ir.exam.app.core.cache.SessionCache
+import ir.exam.app.core.cache.SnapshotClass
+import ir.exam.app.core.cache.SnapshotExam
+import ir.exam.app.core.cache.SnapshotRow
 import ir.exam.app.core.network.UserFacingError
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -17,6 +22,7 @@ import ir.exam.app.domain.model.ExamQuestionAnalysis
 import ir.exam.app.domain.model.SchoolClass
 import ir.exam.app.domain.model.StudentProfile
 import ir.exam.app.ui.classes.TeacherSchoolItem
+import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.postgrest.postgrest
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
@@ -55,7 +61,11 @@ data class ReportsState(
     val selectedAnalysisExamId: String? = null,
     val questionAnalysis: ExamQuestionAnalysis? = null,
     val analysisLoading: Boolean = false,
-    val error: String? = null
+    val error: String? = null,
+    /** V321 — داده از عکس فوریِ روی‌دیسک آمده است (بدون شبکه). */
+    val offline: Boolean = false,
+    /** زمان ذخیرهٔ عکس فوری (میلی‌ثانیهٔ یونیکس) برای نمایش «آخرین به‌روزرسانی». */
+    val offlineSavedAt: Long? = null
 ) {
     /** کلاس‌های قابل انتخاب: کلاس‌های مدرسهٔ انتخاب‌شده یا همهٔ کلاس‌های معلم. */
     val classOptions: List<SchoolClass> get() = if (selectedSchoolId != null) schoolClasses else classes
@@ -72,6 +82,8 @@ class ReportsViewModel(
         // V212 — دادهٔ قبلی فوراً نشان داده می‌شود؛ سه درخواست هم‌زمان (نه پشت سر هم) و نتیجه جایگزین می‌شود.
         val cached = SessionCache.get<ReportsCache>(CACHE_KEY)
         if (cached != null && state.value.exams.isEmpty()) applyLoaded(cached.analytics, cached.exams, cached.classes)
+        // V321 — اگر رم خالی است، آخرین وضعیتِ ذخیره‌شده روی دیسک نشان داده می‌شود (باز شدن آفلاین)
+        if (cached == null && state.value.exams.isEmpty()) applyOfflineSnapshot()
         _state.update { it.copy(loading = cached == null && it.exams.isEmpty(), error = null) }
         runCatching {
             coroutineScope {
@@ -83,8 +95,14 @@ class ReportsViewModel(
         }.onSuccess { (analytics, exams, classes) ->
             SessionCache.put(CACHE_KEY, ReportsCache(analytics, exams, classes))
             applyLoaded(analytics, exams, classes)
+            saveSnapshot(exams, classes)
             // V208 — تحلیل کیفیت سؤال از صفحهٔ آمار حذف شد؛ بارگیری خودکار آن هم لازم نیست.
-        }.onFailure { if (cached == null) fail(it) else _state.update { s -> s.copy(loading = false) } }
+        }.onFailure {
+            // V321 — شبکه نبود: اگر عکس فوری داریم، صفحه خالی نشود.
+            if (cached == null && state.value.exams.isEmpty() && applyOfflineSnapshot()) {
+                _state.update { s -> s.copy(loading = false) }
+            } else if (cached == null) fail(it) else _state.update { s -> s.copy(loading = false) }
+        }
         // V277 — مدرسه‌ها (اگر معلم عضو مدرسه‌ای نباشد، مرحلهٔ «مدرسه» نمایش داده نمی‌شود)
         loadSchools()
     }
@@ -217,8 +235,72 @@ class ReportsViewModel(
                     maxScores = maxScores
                 )
             }
-        }.onSuccess { rows -> _state.update { it.copy(loading = false, rows = rows, rowsShown = true) } }
-            .onFailure(::fail)
+        }.onSuccess { rows ->
+            _state.update { it.copy(loading = false, rows = rows, rowsShown = true) }
+            val exams = state.value.exams
+            if (exams.isNotEmpty()) saveSnapshot(exams, state.value.classes, rows)
+        }.onFailure(::fail)
+    }
+
+    /** V321 — کلید کاربر برای فایل عکس فوری (خروج از حساب = فایل دیگر). */
+    private fun userKey(): String = runCatching {
+        SupabaseProvider.client.auth.currentUserOrNull()?.id
+    }.getOrNull()?.takeIf(String::isNotBlank) ?: "guest"
+
+    /** V321 — نوشتن عکس فوریِ کارنامه روی دیسک (فقط عنوان/نام/درصد). */
+    private fun saveSnapshot(
+        exams: List<ExamDashboardDto>,
+        classes: List<SchoolClass>,
+        rows: List<ClassGradeRow> = state.value.rows
+    ) {
+        val payload = ReportsSnapshotPayload(
+            savedAtMillis = System.currentTimeMillis(),
+            exams = exams.map { SnapshotExam(it.id, it.title, it.subject.orEmpty()) },
+            classes = classes.map { SnapshotClass(it.id, it.name) },
+            rows = rows.map { row ->
+                SnapshotRow(
+                    studentId = row.studentId,
+                    name = row.studentName,
+                    scores = row.scores,
+                    maxScores = row.maxScores
+                )
+            }
+        )
+        ReportsSnapshot.write(userKey(), payload)
+    }
+
+    /**
+     * V321 — خواندن عکس فوری. اگر داده‌ای باشد، آزمون‌ها/کلاس‌ها و سطرهای آخر نمایش داده می‌شوند
+     * و پرچم `offline` روشن می‌شود. خروجی: آیا چیزی بازیابی شد؟
+     */
+    private fun applyOfflineSnapshot(): Boolean {
+        val snap = ReportsSnapshot.read(userKey()) ?: return false
+        val exams = snap.exams.map { ExamDashboardDto(id = it.id, title = it.title, subject = it.subject.takeIf(String::isNotBlank)) }
+        val classes = snap.classes.map { SchoolClass(id = it.id, name = it.name) }
+        val rows = snap.rows.map { row ->
+            val percentages = row.scores.mapNotNull { (examId, score) ->
+                val max = row.maxScores[examId] ?: 0.0
+                if (score != null && max > 0) score * 100.0 / max else null
+            }
+            ClassGradeRow(
+                studentId = row.studentId,
+                studentName = row.name,
+                scores = row.scores,
+                averagePercent = percentages.average().takeUnless(Double::isNaN),
+                maxScores = row.maxScores
+            )
+        }
+        _state.update {
+            it.copy(
+                loading = false,
+                offline = true,
+                offlineSavedAt = snap.savedAtMillis.takeIf { at -> at > 0 },
+                classes = if (it.classes.isEmpty()) classes else it.classes,
+                rows = if (it.rows.isEmpty()) rows else it.rows,
+                rowsShown = it.rowsShown || rows.isNotEmpty()
+            )
+        }
+        return true
     }
 
     fun csv(): String {

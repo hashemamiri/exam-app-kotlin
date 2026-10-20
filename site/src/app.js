@@ -747,7 +747,18 @@
     var c = navigator.connection || {};
     if (c.saveData || /(^|-)2g$|^3g$/.test(String(c.effectiveType || ''))) return;
     var idle = window.requestIdleCallback || function (f) { setTimeout(f, 2500); };
-    setTimeout(function () { idle(function () { loadEngines().then(function () { prewarmFormula(); /* V216 */ }).catch(function () {}); }); }, 8000);
+    var started = false;
+    function start() {
+      if (started) return; started = true;
+      idle(function () { loadEngines().then(function () { prewarmFormula(); /* V216 */ }).catch(function () {}); });
+    }
+    /* V321 — «سرعت»: موتور چاپ/فرمول (حدود ۵MB) با اولین لمس/کلید/اسکرول کاربر یا حداکثر پس از
+       ۶ ثانیه شروع می‌شود؛ قبلاً فقط ۸ ثانیه پس از بیکاری بود و اولین کلیک روی «فرمول» منتظر دانلود می‌ماند. */
+    try {
+      var once = { once: true, passive: true };
+      ['pointerdown', 'keydown', 'scroll', 'touchstart'].forEach(function (ev) { window.addEventListener(ev, start, once); });
+    } catch (e) {}
+    setTimeout(start, 6000);
   }
   /* V312.1 — بار اول فقط صفحهٔ اول (لندینگ/ورود دسکتاپ و گوشی) بارگذاری می‌شود؛
      پنل‌های پس از ورود (SiteAdmin:cal_month، SiteSchool، SiteBuilder، SiteStudent، SiteStudio، SitePush)

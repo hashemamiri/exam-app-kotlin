@@ -67,7 +67,10 @@ import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import ir.exam.app.BuildConfig
+import ir.exam.app.core.ui.AppearancePreferences
 import ir.exam.app.core.ui.AppearanceSettings
+import ir.exam.app.core.ui.ThemeMode
+import androidx.compose.foundation.isSystemInDarkTheme
 import ir.exam.app.core.update.ApkUpdateManager
 import ir.exam.app.core.update.UpdateUseCase
 import androidx.compose.runtime.rememberCoroutineScope
@@ -275,6 +278,18 @@ private fun AuthenticatedExamApp(
     // V163 — رکورد از سرور (print_exams) خوانده می‌شود؛ بارگذاری ناهمگام.
     val printExamRepo = remember(appContext) { ir.exam.app.data.repository.SupabasePrintExamRepository(appContext) }
     val printOpenScope = rememberCoroutineScope()
+    // V321 — کلید سریع حالت تیره/روشن در کارت پروفایل (همان تنظیمِ ظاهر، فقط یک لمس)
+    val appearancePrefs = remember(appContext) { AppearancePreferences(appContext) }
+    val systemDark = isSystemInDarkTheme()
+    val darkActive = when (appearance.themeMode) {
+        ThemeMode.DARK -> true
+        ThemeMode.LIGHT -> false
+        ThemeMode.SYSTEM -> systemDark
+    }
+    val toggleTheme: () -> Unit = {
+        val next = if (darkActive) ThemeMode.LIGHT else ThemeMode.DARK
+        printOpenScope.launch { appearancePrefs.setTheme(next) }
+    }
     fun openLocalPrintExam(localId: String) {
         closeTransientNavigation()
         printOpenScope.launch {
@@ -1315,7 +1330,10 @@ private fun AuthenticatedShell(
                                         cards = menuCards,
                                         onProfile = onProfile,
                                         // V61.0 — کارت وسط‌چین «داشبورد» زیر پروفایل مدیر/معاون.
-                                        featuredCard = featuredMenuCard
+                                        featuredCard = featuredMenuCard,
+                                        // V321 — یک لمس: تیره/روشن
+                                        onToggleTheme = toggleTheme,
+                                        darkTheme = darkActive
                                     )
                                 }
                             }

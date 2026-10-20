@@ -155,6 +155,8 @@ fun ExamBuilderScreen(
     val context = LocalContext.current
     val listState = rememberLazyListState()
     val scope = rememberCoroutineScope()
+    // V321 — «بررسی نهایی»: پیش از ذخیره، سؤال‌ها یک‌بار ماشینی بازبینی می‌شوند
+    var preflightReport by remember { mutableStateOf<BuilderPreflightReport?>(null) }
     var radialMenuOpen by rememberSaveable { mutableStateOf(false) }
     var bankDialogOpen by rememberSaveable { mutableStateOf(false) }
     var settingsExpanded by rememberSaveable { mutableStateOf(false) }
@@ -172,6 +174,18 @@ fun ExamBuilderScreen(
     val builderContext = androidx.compose.ui.platform.LocalContext.current
     var expandedQuestionId by rememberSaveable { mutableStateOf<String?>(null) }
     var confirmSave by remember { mutableStateOf(false) }
+    /**
+     * V321 — درخواست ذخیره: اول بازبینی، بعد پنجرهٔ تأیید.
+     * اگر خطای بازدارنده باشد پنجرهٔ «بررسی نهایی» باز می‌شود و ذخیره انجام نمی‌شود.
+     */
+    val requestSave: () -> Unit = {
+        val report = BuilderPreflight.check(state.title, state.questions)
+        if (report.canSave) {
+            if (printMode) askPrintName = true else confirmSave = true
+        } else {
+            preflightReport = report
+        }
+    }
     // هنگام جابه‌جایی گزینه/جورکردنی، اسکرول لمسی فهرست غیرفعال می‌شود تا فقط
     // همان انگشت کنترل کند و کارت سؤال زیر انگشت نلغزد.
     var innerReorderActive by remember { mutableStateOf(false) }
@@ -303,6 +317,14 @@ fun ExamBuilderScreen(
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "بازگشت")
                     }
+                },
+                actions = {
+                    // V321 — بررسی نهایی: همیشه گزارش کامل (حتی وقتی همه‌چیز سالم است)
+                    IconButton(onClick = {
+                        preflightReport = BuilderPreflight.check(state.title, state.questions)
+                    }) {
+                        Icon(Icons.Outlined.FactCheck, contentDescription = "بررسی نهایی آزمون")
+                    }
                 }
             )
         },
@@ -317,7 +339,7 @@ fun ExamBuilderScreen(
                     ) {
                         FloatingActionButton(
                             // V86.8 — در مسیرِ چاپ، ذخیره محلی است
-                            onClick = { if (printMode) askPrintName = true else confirmSave = true },
+                            onClick = requestSave,
                             modifier = Modifier.size(56.dp),
                             containerColor = Color(0xFF27A86B),
                             contentColor = Color.White
@@ -413,7 +435,7 @@ fun ExamBuilderScreen(
                 } else {
                     Box(Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
                         FloatingActionButton(
-                            onClick = { confirmSave = true },
+                            onClick = requestSave,
                             modifier = Modifier.align(Alignment.CenterStart).size(56.dp),
                             containerColor = Color(0xFF27A86B),
                             contentColor = Color.White
@@ -776,6 +798,57 @@ fun ExamBuilderScreen(
         }
     }
 
+    // V321 — پنجرهٔ «بررسی نهایی»: فهرست اشکال‌ها با شمارهٔ سؤال و سطح اهمیت
+    preflightReport?.let { report ->
+        AlertDialog(
+            onDismissRequest = { preflightReport = null },
+            title = {
+                Text(if (report.canSave) "بررسی نهایی — آمادهٔ ذخیره" else "بررسی نهایی — نیاز به اصلاح")
+            },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Text(report.summary, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    if (report.isEmpty) {
+                        Text(
+                            "همهٔ ${report.questionCount} سؤال کامل است؛ جمع نمره ${BuilderPreflightReport.formatScore(report.totalScore)}.",
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                    }
+                    LazyColumn(Modifier.heightIn(max = 340.dp)) {
+                        items(report.issues) { issue ->
+                            val tint = when (issue.level) {
+                                BuilderIssueLevel.BLOCKER -> MaterialTheme.colorScheme.error
+                                BuilderIssueLevel.WARNING -> MaterialTheme.colorScheme.tertiary
+                                BuilderIssueLevel.HINT -> MaterialTheme.colorScheme.onSurfaceVariant
+                            }
+                            val mark = when (issue.level) {
+                                BuilderIssueLevel.BLOCKER -> "⛔"
+                                BuilderIssueLevel.WARNING -> "⚠"
+                                BuilderIssueLevel.HINT -> "💡"
+                            }
+                            Row(Modifier.fillMaxWidth().padding(vertical = 3.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                Text(mark, style = MaterialTheme.typography.bodyMedium)
+                                Text(
+                                    issue.where + ": " + issue.message,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = tint
+                                )
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                Button(onClick = {
+                    preflightReport = null
+                    if (report.canSave) {
+                        if (printMode) askPrintName = true else confirmSave = true
+                    }
+                }) { Text(if (report.canSave) "ادامه و ذخیره" else "اصلاح می‌کنم") }
+            },
+            dismissButton = { TextButton(onClick = { preflightReport = null }) { Text("بستن") } }
+        )
+    }
     if (confirmSave) {
         AlertDialog(
             onDismissRequest = { confirmSave = false },

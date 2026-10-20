@@ -20,6 +20,8 @@ class V260_3_SitePerfProbeTest {
         assertTrue("perfLog(path, performance.now() - _t0, res.status + ' ' + text.length + 'B');" in a)
         assertTrue("performance.getEntriesByType('navigation')" in a && "performance.getEntriesByType('resource')" in a)
         assertTrue("if (c.saveData || /(^|-)2g$|^3g$/.test(String(c.effectiveType || ''))) return;" in a)
-        assertTrue("setTimeout(function () { idle(function () { loadEngines().then(function () { prewarmFormula();" in a)
+        // V321 — پیش‌بارگذاری به «اولین تعامل کاربر یا ۶ ثانیه» تغییر کرد (قبلاً تنها ۸ ثانیه پس از بیکاری)
+        assertTrue("idle(function () { loadEngines().then(function () { prewarmFormula();" in a)
+        assertTrue("setTimeout(start, 6000)" in a)
     }
 }

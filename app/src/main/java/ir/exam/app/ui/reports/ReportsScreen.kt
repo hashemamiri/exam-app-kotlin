@@ -61,6 +61,12 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import ir.exam.app.core.calendar.PersianDigits
+import ir.exam.app.core.report.ClassAnalytics
+import ir.exam.app.core.report.ExamAnalytics
+import ir.exam.app.core.report.ScoreRow
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 import ir.exam.app.core.export.XlsxSheet
 import ir.exam.app.core.export.XlsxWorkbook
 import kotlinx.coroutines.launch
@@ -137,6 +143,8 @@ fun ReportsScreen(
     ) {
         // V277 — عنوان داخل صفحه حذف شد؛ هدر برنامه («کارنامه و لیست نمرات»/«آمار») همان را نشان می‌دهد (دو هدر نباشد)
         state.error?.let { item { Text(it, color = MaterialTheme.colorScheme.error) } }
+        // V321 — نوار آفلاین: دادهٔ ذخیره‌شدهٔ روی دستگاه نمایش داده می‌شود
+        if (state.offline) item { OfflineBanner(state.offlineSavedAt) }
         if (state.loading) item { CircularProgressIndicator() }
         if (statsOnly) state.analytics?.let { analytics ->
             item {
@@ -205,6 +213,11 @@ fun ReportsScreen(
                     }
                 }
                 if (state.rows.isEmpty()) item { Text("نتیجه‌ای برای این انتخاب نیست.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+                if (state.rows.isNotEmpty()) {
+                    // V321 — کارنامهٔ تحلیلی (میانگین/میانه/انحراف معیار، توزیع، برترها، در معرض خطر)
+                    val analytics = remember(state.rows, selectedExams) { buildAnalytics(state.rows, selectedExams) }
+                    item { ClassAnalyticsCard(analytics) }
+                }
                 // V277 — کارت تمیز هر دانش‌آموز: نام + میانگین + آیکن کارنامه (ریز نمرات فقط داخل کارنامهٔ تکی)
                 items(state.rows, key = { it.studentId }) { row ->
                     Card(Modifier.fillMaxWidth()) {
@@ -277,17 +290,65 @@ private fun PickerDialog(title: String, items: List<PickItem>, selected: Set<Str
     )
 }
 
+
+/**
+ * V321 — تبدیل سطرهای کارنامه (نمرهٔ خام) به درصد و ساخت آمار تحلیلی.
+ * در `remember(state.rows, selectedExams)` صدا زده می‌شود تا با هر تغییرِ انتخاب فقط یک‌بار حساب شود.
+ */
+private fun buildAnalytics(rows: List<ClassGradeRow>, exams: List<ExamDashboardDto>): ClassAnalytics {
+    val scoreRows = rows.map { row ->
+        ScoreRow(
+            studentId = row.studentId,
+            name = row.studentName,
+            scores = row.scores.mapValues { (examId, score) ->
+                val max = row.maxScores[examId] ?: 0.0
+                if (score != null && max > 0) score * 100.0 / max else null
+            }
+        )
+    }
+    return ExamAnalytics.of(scoreRows, exams.associate { it.id to it.title })
+}
+
+/** V321 — نوار «آفلاین»: منبع داده و زمان آخرین ذخیره. */
+@Composable
+private fun OfflineBanner(savedAt: Long?) {
+    val stamp = savedAt?.let {
+        runCatching { SimpleDateFormat("yyyy/MM/dd HH:mm", Locale.US).format(Date(it)) }.getOrNull()
+    }
+    Surface(
+        shape = MaterialTheme.shapes.small,
+        color = MaterialTheme.colorScheme.tertiaryContainer,
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Text(
+            "آفلاین — آخرین دادهٔ ذخیره‌شده روی دستگاه" + (stamp?.let { " ($it)" } ?: ""),
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onTertiaryContainer,
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
+        )
+    }
+}
+
 @Composable
 private fun AverageBadge(avg: Double?) {
     Surface(
         shape = MaterialTheme.shapes.small,
-        color = when { avg == null -> MaterialTheme.colorScheme.surfaceVariant; avg >= 50.0 -> Color(0xFFE3F5E8); else -> Color(0xFFFDE7E7) },
+        // V321 — رنگ‌ها از تم گرفته می‌شوند تا در حالت تیره/پرکنتراست هم خوانا باشند
+        color = when {
+            avg == null -> MaterialTheme.colorScheme.surfaceVariant
+            avg >= 50.0 -> MaterialTheme.colorScheme.secondaryContainer
+            else -> MaterialTheme.colorScheme.errorContainer
+        },
         modifier = Modifier.width(72.dp)
     ) {
         Text(
             avg?.let { PersianDigits.convert("%.1f".format(it)) + "٪" } ?: "—",
             style = MaterialTheme.typography.labelLarge,
-            color = if (avg == null) MaterialTheme.colorScheme.onSurfaceVariant else Color(0xFF1F2937),
+            color = when {
+                avg == null -> MaterialTheme.colorScheme.onSurfaceVariant
+                avg >= 50.0 -> MaterialTheme.colorScheme.onSecondaryContainer
+                else -> MaterialTheme.colorScheme.onErrorContainer
+            },
             textAlign = TextAlign.Center,
             modifier = Modifier.padding(vertical = 6.dp)
         )
@@ -326,7 +387,8 @@ private fun StudentReportCardDialog(row: ClassGradeRow, exams: List<ExamDashboar
                         Text(
                             pct?.let { PersianDigits.convert("%.0f".format(it)) + "٪" } ?: "—",
                             style = MaterialTheme.typography.bodyMedium,
-                            color = when { pct == null -> MaterialTheme.colorScheme.onSurfaceVariant; pct >= 50.0 -> Color(0xFF2E9E6B); else -> Color(0xFFC62828) },
+                            // V321 — سبز/قرمزِ ثابت در حالت تیره کم‌کنتراست بود؛ از رنگ‌های تم استفاده می‌شود
+                            color = when { pct == null -> MaterialTheme.colorScheme.onSurfaceVariant; pct >= 50.0 -> MaterialTheme.colorScheme.secondary; else -> MaterialTheme.colorScheme.error },
                             modifier = Modifier.width(56.dp), textAlign = TextAlign.Center
                         )
                     }
