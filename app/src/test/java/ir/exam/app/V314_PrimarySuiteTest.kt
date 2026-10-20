@@ -73,7 +73,8 @@ class V314_PrimarySuiteTest {
         val allNew = listOf(
             "axabacus", "axjump", "axbalance", "axthermo", "axsaw", "axpattern",
             "axtenframe", "axsym", "axspin", "axbeaker", "axgeoboard", "axdice", "axmularea", "axvenn",
-            "axnumgrid", "axfacttree", "axfnmachine", "axfracwall", "axtangram", "axangle"
+            "axnumgrid", "axfacttree", "axfnmachine", "axfracwall", "axtangram", "axangle",
+"axrod", "axtower", "axmulwheel", "axmultgrid", "axnet", "axcubes", "axcalendar", "axlever", "axcycle", "axwordtrain", "axtiles", "axkenken", "axdicefold", "axtransform", "axcaliper", "axsigntable", "axtrigcircle", "axmapping", "axprobtree", "axconic", "axorbital", "axpunnett", "axecg", "axprosody", "axtruthtable", "axledger", "axstaff", "axkmap", "axgate", "axdfa", "axbst", "axbode", "axbeam", "axmohr", "axpv", "axpert", "axbenzene", "axnormal", "axsupply", "axgame"
         )
         for (k in allNew) {
             assertTrue("Missing $k in AXIS_FIGURES", k in ids)
@@ -111,6 +112,7 @@ class V314_PrimarySuiteTest {
             "axtally", "axbase10", "axplace", "axruler", "axmoney", "axjump", "axbalance",
             "axsaw", "axpattern", "axsym", "axgeoboard", "axdice", "axmularea", "axvenn",
             "axnumgrid", "axfacttree", "axfnmachine", "axfracwall", "axtangram", "axangle",
+"axrod", "axtower", "axmulwheel", "axmultgrid", "axnet", "axcubes", "axcalendar", "axlever", "axcycle", "axwordtrain", "axtiles", "axkenken", "axdicefold", "axtransform", "axcaliper", "axsigntable", "axtrigcircle", "axmapping", "axprobtree", "axconic", "axorbital", "axpunnett", "axecg", "axprosody", "axtruthtable", "axledger", "axstaff", "axkmap", "axgate", "axdfa", "axbst", "axbode", "axbeam", "axmohr", "axpv", "axpert", "axbenzene", "axnormal", "axsupply", "axgame",
             "axnumpts", "axnumint", "axnumineq", "axxypts", "axxyline", "axxyvec", "axxycirc", "axpolpts",
             "gauge", "ang", "sec", "arc", "segm", "parll", "ngon"
         )) {

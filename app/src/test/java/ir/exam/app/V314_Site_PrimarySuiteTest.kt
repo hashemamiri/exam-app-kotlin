@@ -32,7 +32,8 @@ class V314_Site_PrimarySuiteTest {
         for (k in listOf(
             "axabacus", "axjump", "axbalance", "axthermo", "axsaw", "axpattern",
             "axtenframe", "axsym", "axspin", "axbeaker", "axgeoboard", "axdice", "axmularea", "axvenn",
-            "axnumgrid", "axfacttree", "axfnmachine", "axfracwall", "axtangram", "axangle"
+            "axnumgrid", "axfacttree", "axfnmachine", "axfracwall", "axtangram", "axangle",
+"axrod", "axtower", "axmulwheel", "axmultgrid", "axnet", "axcubes", "axcalendar", "axlever", "axcycle", "axwordtrain", "axtiles", "axkenken", "axdicefold", "axtransform", "axcaliper", "axsigntable", "axtrigcircle", "axmapping", "axprobtree", "axconic", "axorbital", "axpunnett", "axecg", "axprosody", "axtruthtable", "axledger", "axstaff", "axkmap", "axgate", "axdfa", "axbst", "axbode", "axbeam", "axmohr", "axpv", "axpert", "axbenzene", "axnormal", "axsupply", "axgame"
         )) {
             assertTrue("Missing $k in graph_fig.js", graphFig.contains(k))
         }

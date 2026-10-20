@@ -23,6 +23,50 @@ import kotlin.math.atan2
 import kotlin.math.hypot
 import kotlin.math.min
 
+/** V318 — چرخهٔ پارامتر با هر لمس برای ۴۰ ابزار جامع (هم‌تراز با CYCLES در graph_fig.js). */
+private val ADV_CYCLE_PARAMS: Map<String, Pair<String, List<String>>> = mapOf(
+    "axrod" to ("blank" to listOf("0", "1")),
+    "axtower" to ("op" to listOf("+", "-")),
+    "axmulwheel" to ("c" to listOf("1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12")),
+    "axmultgrid" to ("blank" to listOf("0", "1", "2")),
+    "axnet" to ("shape" to listOf("cube", "cuboid", "pyramid", "prism")),
+    "axcubes" to ("view" to listOf("iso", "top", "front", "side")),
+    "axcalendar" to ("start" to listOf("0", "1", "2", "3", "4", "5", "6")),
+    "axlever" to ("kind" to listOf("lever1", "lever2", "lever3", "pulley", "gears")),
+    "axcycle" to ("kind" to listOf("water", "plant", "frog", "food")),
+    "axwordtrain" to ("mode" to listOf("join", "blank")),
+    "axtiles" to ("x" to listOf("0", "1", "2", "3", "4", "5", "6", "7", "8")),
+    "axkenken" to ("size" to listOf("3", "4", "5", "6")),
+    "axdicefold" to ("top" to listOf("1", "2", "3", "4", "5", "6")),
+    "axtransform" to ("op" to listOf("translate", "rotate", "reflect")),
+    "axsigntable" to ("lead" to listOf("1", "-1")),
+    "axprobtree" to ("mode" to listOf("prob", "count")),
+    "axconic" to ("kind" to listOf("ellipse", "hyperbola", "parabola")),
+    "axpunnett" to ("mode" to listOf("genotype", "ratio")),
+    "axecg" to ("kind" to listOf("ecg", "shm")),
+    "axprosody" to ("mode" to listOf("arkan", "taqti")),
+    "axtruthtable" to ("kind" to listOf("truth", "square")),
+    "axstaff" to ("kind" to listOf("staff", "color")),
+    "axkmap" to ("vars" to listOf("2", "3", "4")),
+    "axbst" to ("mode" to listOf("bst", "heap")),
+    "axbode" to ("kind" to listOf("bode", "nyquist")),
+    "axbeam" to ("load" to listOf("point", "udl")),
+    "axpv" to ("kind" to listOf("carnot", "otto", "diesel", "rankine")),
+    "axbenzene" to ("kind" to listOf("kekule", "chair", "newman", "fischer")),
+    "axsupply" to ("kind" to listOf("equilibrium", "shift", "ceiling")),
+    "axgame" to ("kind" to listOf("game", "islm"))
+
+)
+
+/** V318 — پارامتر عددی با گام مشخص (کلیک = یک گام؛ پس از بیشینه به کمینه برمی‌گردد). */
+private val ADV_NUM_PARAMS: Map<String, Triple<String, Float, ClosedFloatingPointRange<Float>>> = mapOf(
+    "axcaliper" to Triple("val", 1f, 0f..50f),
+    "axorbital" to Triple("z", 1f, 1f..36f),
+    "axmohr" to Triple("txy", 5f, 0f..120f)
+
+)
+
+
 /**
  * V310.7 — شکل‌ها: ساعت عقربه‌ای با دست قابل جابه‌جایی است (معلم و دانش‌آموز).
  * نزدیک مرکز = عقربهٔ ساعت، بیرون = عقربهٔ دقیقه. بقیهٔ شکل‌ها همان InlineFigureView هستند.
@@ -41,6 +85,7 @@ fun AdjustableFigure(
         "axtally", "axbase10", "axplace", "axruler", "axmoney", "axjump", "axbalance",
         "axsaw", "axpattern", "axsym", "axgeoboard", "axdice", "axmularea", "axvenn",
         "axnumgrid", "axfacttree", "axfnmachine", "axfracwall", "axtangram", "axangle",
+        "axrod", "axtower", "axmulwheel", "axmultgrid", "axnet", "axcubes", "axcalendar", "axlever", "axcycle", "axwordtrain", "axtiles", "axkenken", "axdicefold", "axtransform", "axcaliper", "axsigntable", "axtrigcircle", "axmapping", "axprobtree", "axconic", "axorbital", "axpunnett", "axecg", "axprosody", "axtruthtable", "axledger", "axstaff", "axkmap", "axgate", "axdfa", "axbst", "axbode", "axbeam", "axmohr", "axpv", "axpert", "axbenzene", "axnormal", "axsupply", "axgame",
         "axnumpts", "axnumint", "axnumineq", "axxypts", "axxyline", "axxyvec", "axxycirc", "axpolpts",
         "gauge", "ang", "sec", "arc", "segm", "parll", "ngon"
     )
@@ -125,6 +170,9 @@ private fun InteractiveClock(
             val vmax = kotlin.math.max(vmin + 1f, latest.xNum("vmax", 100f))
             val ratio = ((q.x - 60f) / 240f).coerceIn(0f, 1f)
             x + ("val" to JsonPrimitive(Math.round(vmin + ratio * (vmax - vmin))))
+        } else if (latest.type == "axtrigcircle") {
+            val angDeg = (atan2((140f - q.y).toDouble(), (q.x - 176f).toDouble()) * 180.0 / PI + 360.0) % 360.0
+            x + ("deg" to JsonPrimitive(Math.round(angDeg).toInt()))
         } else if (latest.type == "axangle") {
             val angDeg = (atan2((212f - q.y).toDouble(), (q.x - 180f).toDouble()) * 180.0 / PI).toInt().coerceIn(5, 175)
             x + ("deg" to JsonPrimitive(angDeg))
@@ -418,11 +466,35 @@ private fun InteractiveClock(
                 val n = ((latest.xNum("n", 6f).toInt() - 2) % 10) + 3
                 emit(FigureSpec(JsonObject(latest.raw + ("X" to JsonObject(x + ("n" to JsonPrimitive(n.toString())))))))
             }
+            "axgate" -> {
+                val key = if (q.y > 132f) "b" else "a"
+                val cur = latest.xStr(key, if (key == "a") "1" else "0")
+                val next = if (cur == "1") "0" else "1"
+                emit(FigureSpec(JsonObject(latest.raw + ("X" to JsonObject(x + (key to JsonPrimitive(next)))))))
+            }
+            else -> {
+                val cyc = ADV_CYCLE_PARAMS[latest.type]
+                val nmp = ADV_NUM_PARAMS[latest.type]
+                if (cyc != null) {
+                    val (key, vals) = cyc
+                    val cur = latest.xStr(key, vals.first())
+                    val idx = vals.indexOf(cur)
+                    val next = vals[(idx + 1) % vals.size]
+                    emit(FigureSpec(JsonObject(latest.raw + ("X" to JsonObject(x + (key to JsonPrimitive(next)))))))
+                } else if (nmp != null) {
+                    val (key, step, range) = nmp
+                    val cur = latest.xNum(key, range.start)
+                    var next = Math.round((cur + step) * 100f) / 100f
+                    if (next > range.endInclusive) next = range.start
+                    emit(FigureSpec(JsonObject(latest.raw + ("X" to JsonObject(x + (key to JsonPrimitive(next)))))))
+                }
+            }
         }
     }
 
     val dragTypes = setOf(
         "axclock", "axthermo", "axbeaker", "axruler", "axangle",
+        "axtrigcircle",
         "axnumint", "axnumineq", "axxyline", "axxyvec", "axxycirc",
         "gauge", "ang", "sec", "arc", "segm", "parll"
     )
