@@ -118,6 +118,8 @@ class V322_MathToolsRobustnessTest {
         assertTrue("advanced label fitting missing", adv.contains("private fun fitLabel(x: Float, s: String, anchor: String, size: Int): Triple<Float, String, Int>"))
 
         val axis = source("app/src/main/java/ir/exam/app/core/figure/AxisSvgRenderer.kt")
+        // پین V137.5: تبدیل ارقام باید در همان تابع text محورها بماند (جاگیری برچسب نباید آن را جابه‌جا کند).
+        assertTrue("axis digit conversion lost", "FigureDigits.apply(s)" in axis)
         assertTrue("axis auto-range missing", axis.contains("if (type == \"axxyvec\") {"))
         assertTrue("axis 3d clamp missing", axis.contains("val axisMax = n * step"))
         assertTrue("axis label fitting missing", axis.contains("val xx = if (lo <= hi) x.coerceIn(lo, hi) else x.coerceIn(3f, 357f)"))

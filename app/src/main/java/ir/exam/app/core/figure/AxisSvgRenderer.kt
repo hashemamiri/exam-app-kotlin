@@ -601,7 +601,7 @@ internal object AxisSvgRenderer {
         val weight = if (bold) " font-weight=\"700\"" else ""
         // V322 — جاگیری خودکار برچسب محورها: کوچک‌سازی، کوتاه‌سازی با «…» و مهار مختصات در بوم.
         val maxW = 344f
-        var txt = s
+        var txt = FigureDigits.apply(s)
         var fs = size
         var est = txt.length * fs * 0.55f
         if (est > maxW) {
@@ -617,7 +617,7 @@ internal object AxisSvgRenderer {
         val lo = when (anchor) { "middle" -> half + 3f; "end" -> est + 3f; else -> 3f }
         val hi = when (anchor) { "middle" -> 357f - half; "end" -> 357f; else -> 357f - est }
         val xx = if (lo <= hi) x.coerceIn(lo, hi) else x.coerceIn(3f, 357f)
-        val esc = FigureDigits.apply(txt).replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace("\"", "&quot;")
+        val esc = txt.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace("\"", "&quot;")
         return "<text x=\"${f(xx)}\" y=\"${f(y)}\" direction=\"ltr\" font-family=\"sans-serif\" font-size=\"$fs\"$weight fill=\"$color\" text-anchor=\"$anchor\">$esc</text>"
     }
 }
