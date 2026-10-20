@@ -7,7 +7,8 @@ import java.io.File
 
 /**
  * V310 — دو درخواست همگام‌سازی اپ و سایت:
- *  1) «ابزار ریاضی ابتدایی» آیکن جدا دارد (نه داخل پنجرهٔ «محور»)؛ در اپ و سایت.
+ *  1) «ابزار ریاضی» آیکن جدا دارد (نه داخل پنجرهٔ «محور»)؛ در اپ و سایت.
+ *     V320 — پس از لمس آیکن، اول دسته (دبستان/متوسطه/دانشگاه) و بعد ابزارهای همان دسته.
  *  2) مخاطبان آزمون در سایت مثل اپ: فقط «همه / مدارس / کلاس‌ها».
  */
 class V310_PrimaryMathIconAndAudienceParityTest {
@@ -27,10 +28,12 @@ class V310_PrimaryMathIconAndAudienceParityTest {
         assertTrue("val MathTools: ImageVector" in icons)
         assertTrue("MATH(\"ابزار ریاضی\")" in tools && "OptionInsertTool.MATH -> QuestionToolIcons.MathTools" in tools)
         assertTrue("onInsertMath: (insertOffset: Int) -> Unit" in web)
-        assertTrue("NativeToolButton(QuestionToolIcons.MathTools, \"درج ابزار ریاضی ابتدایی\") { onInsertMath(insertAtOffset) }" in web)
+        assertTrue("NativeToolButton(QuestionToolIcons.MathTools, \"درج ابزار ریاضی (دبستان تا دانشگاه)\") { onInsertMath(insertAtOffset) }" in web)
         assertTrue("OptionInsertTool.MATH -> {" in builder && "onInsertMath = {" in builder)
         assertTrue("mathOnly = target.mathOnly" in builder && "val mathOnly: Boolean = false" in builder)
-        assertTrue("mathOnly: Boolean = false" in picker && "🧮 ابزار ریاضی ابتدایی" in picker)
+        // V320 — پنجرهٔ ابزار ریاضی دو مرحله‌ای شد: اول دسته، بعد ابزارها.
+        assertTrue("mathOnly: Boolean = false" in picker && "🧮 ابزار ریاضی — انتخاب دسته" in picker)
+        assertTrue("items(MATH_CATEGORIES, key = { it.id })" in picker && "↩ دسته‌بندی‌ها" in picker)
     }
 
     @Test
@@ -45,9 +48,10 @@ class V310_PrimaryMathIconAndAudienceParityTest {
     fun `site has the math tool button and insert mapping like the app`() {
         val b = source("site/src/builder.js")
         val g = source("app/src/main/assets/print/web/graph_fig.js")
-        assertTrue("class: 'tool-btn is-math', title: 'ابزار ریاضی ابتدایی'" in b && "insertFigure('math', ta, q)" in b)
+        // V320 — عنوان دکمه به «ابزار ریاضی (دبستان تا دانشگاه)» تغییر کرد (پنجره دو مرحله‌ای شد)
+        assertTrue("class: 'tool-btn is-math', title: 'ابزار ریاضی (دبستان تا دانشگاه)'" in b && "insertFigure('math', ta, q)" in b)
         assertTrue("math: w.GraphFig" in b && "kind === 'math' ? 'math' : kind === 'axis' ? 'axis' : sciDom" in b)
-        assertTrue("function fillShapes(mode)" in g && "function isMathType(t)" in g)
+        assertTrue("function fillShapes(mode, forceCat)" in g && "function isMathType(t)" in g) // V320 — امضای تابع با مرحلهٔ دسته‌بندی گسترش یافت
         assertTrue("var math = mode === 'math' || !!(spec && isMathType(spec.t));" in g)
         assertTrue("fillShapes(math ? 'math' : axis ? 'axis' : 'graph')" in g)
         assertTrue(".tool-btn.is-math{" in source("site/src/site.css"))

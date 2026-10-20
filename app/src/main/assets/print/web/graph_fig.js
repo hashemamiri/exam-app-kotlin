@@ -5821,27 +5821,77 @@
   // V310 — «ابزار ریاضی ابتدایی» آیکن جدا دارد (حالت math)؛ فهرست محور فقط محورهای پایه را نشان می‌دهد.
   function mathSplit() { for (var i = 0; i < AXIS_TYPES.length; i++) if (AXIS_TYPES[i].id === PRIMARY_MATH_FIRST_ID) return i; return AXIS_TYPES.length; }
   function isMathType(t) { var sp = mathSplit(); for (var i = 0; i < AXIS_TYPES.length; i++) if (AXIS_TYPES[i].id === t) return i >= sp; return false; }
+  // V320 — دسته‌بندی ابزارهای ریاضی (هم‌تراز با MathToolCatalog.kt)
+  var MATH_CATS = [
+    { id: 'elementary', name: '🧮 دبستان', hint: 'پایهٔ اول تا ششم — شمارش، جمع و تفریق، ضرب، شکل و اندازه', ids: ['axtally', 'axbase10', 'axplace', 'axclock', 'axruler', 'axfrac', 'axmoney', 'axabacus', 'axjump', 'axbalance', 'axthermo', 'axsaw', 'axpattern', 'axtenframe', 'axsym', 'axspin', 'axbeaker', 'axgeoboard', 'axdice', 'axmularea', 'axvenn', 'axnumgrid', 'axfacttree', 'axfnmachine', 'axfracwall', 'axtangram', 'axangle', 'axrod', 'axtower', 'axmulwheel', 'axmultgrid', 'axnet', 'axcubes', 'axcalendar', 'axlever', 'axcycle', 'axwordtrain'] },
+    { id: 'middle', name: '📐 متوسطهٔ اول', hint: 'پایهٔ هفتم تا نهم — جبر، هندسه، اندازه‌گیری و آمار مقدماتی', ids: ['axtiles', 'axkenken', 'axdicefold', 'axtransform', 'axcaliper', 'axunitconv', 'axperimeter', 'axpictograph', 'axrounding', 'axdivision', 'axshapeid', 'axcircleparts', 'axcylinder', 'axproportion', 'axlinear'] },
+    { id: 'high', name: '🧪 متوسطهٔ دوم و کنکور', hint: 'ریاضی، فیزیک، شیمی و زیست — از تابع و مثلثات تا مدار و سلول', ids: ['axsigntable', 'axtrigcircle', 'axmapping', 'axprobtree', 'axconic', 'axorbital', 'axpunnett', 'axecg', 'axprosody', 'axtruthtable', 'axledger', 'axstaff', 'axbarchart', 'axparabola', 'axinthales', 'axpendulum', 'axincline', 'axcircuit', 'axoptics', 'axheatcurve', 'axdna', 'axcell'] },
+    { id: 'university', name: '🎓 انسانی و دانشگاه', hint: 'انسانی، هنر، فنی و دانشگاه — از عروض و حسابداری تا منطق دیجیتال و الگوریتم', ids: ['axkmap', 'axgate', 'axdfa', 'axbst', 'axbode', 'axbeam', 'axmohr', 'axpv', 'axpert', 'axbenzene', 'axnormal', 'axsupply', 'axgame', 'axtimeline', 'axmapgeo', 'axsentence', 'axvectors', 'axmatrix', 'axintegral', 'axflowchart', 'axstack', 'axsort', 'axregression'] }
+  ];
+  var mathCat = null;
   var shapesMode = null;
-  function fillShapes(mode) {
+  function mathCatById(id) { for (var i = 0; i < MATH_CATS.length; i++) if (MATH_CATS[i].id === id) return MATH_CATS[i]; return null; }
+  function mathToolById(id) { for (var i = 0; i < AXIS_TYPES.length; i++) if (AXIS_TYPES[i].id === id) return AXIS_TYPES[i]; return null; }
+  function mathCatOfType(t) { for (var i = 0; i < MATH_CATS.length; i++) if (MATH_CATS[i].ids.indexOf(t) >= 0) return MATH_CATS[i]; return null; }
+  /**
+   * V320 — پنجرهٔ «ابزار ریاضی» دو مرحله‌ای شد:
+   *   مرحلهٔ ۱: کارت چهار دسته (دبستان، متوسطهٔ اول، متوسطهٔ دوم و کنکور، انسانی و دانشگاه)
+   *   مرحلهٔ ۲: ابزارهای همان دسته + دکمهٔ «↩ دسته‌بندی‌ها»
+   */
+  function fillShapes(mode, forceCat) {
     /* mode: 'graph' | 'axis' | 'math' */
     if (mode !== 'axis' && mode !== 'math') mode = 'graph';
-    if (shapesMode === mode) return;
-    shapesMode = mode;
+    var math = mode === 'math';
+    if (!math) mathCat = null;
+    var key = mode + ':' + (math ? (mathCat || '-') : '');
+    if (shapesMode === key) return;
+    shapesMode = key;
     var host = $('grShapes'); if (!host) return;
     host.innerHTML = '';
-    var axis = mode !== 'graph', math = mode === 'math', sp = mathSplit();
-    var list = !axis ? TYPES : math ? AXIS_TYPES.slice(sp) : AXIS_TYPES.slice(0, sp);
-    list.forEach(function (s) {
-      var b = document.createElement('button');
-      b.type = 'button'; b.className = 'gf-shape'; b.setAttribute('data-t', s.id);
-      b.innerHTML = iconOf(s.id) + '<span>' + s.name + '</span>';
-      b.addEventListener('click', function () { setType(s.id); });
-      host.appendChild(b);
-    });
-    var title = math ? 'درج ابزار ریاضی ابتدایی' : axis ? 'درج محور' : 'درج نمودار';
+    var axis = mode !== 'graph', sp = mathSplit();
+    var title = math ? (mathCat ? ('ابزار ریاضی — ' + mathCatById(mathCat).name) : 'ابزار ریاضی — انتخاب دسته')
+      : axis ? 'درج محور' : 'درج نمودار';
+    if (math && !mathCat) {
+      var wrapEl = document.createElement('div');
+      wrapEl.className = 'gf-cats';
+      MATH_CATS.forEach(function (c) {
+        var card = document.createElement('button');
+        card.type = 'button'; card.className = 'gf-cat'; card.setAttribute('data-cat', c.id);
+        card.innerHTML = '<b>' + c.name + '</b><span>' + c.ids.length + ' ابزار</span><small>' + c.hint + '</small>';
+        card.addEventListener('click', function () { mathCat = c.id; fillShapes('math'); });
+        wrapEl.appendChild(card);
+      });
+      host.appendChild(wrapEl);
+    } else {
+      if (math && mathCat) {
+        var back = document.createElement('button');
+        back.type = 'button'; back.className = 'gf-back'; back.textContent = '↩ دسته‌بندی‌ها';
+        back.addEventListener('click', function () { mathCat = null; fillShapes('math'); });
+        host.appendChild(back);
+      }
+      var list;
+      if (!axis) list = TYPES;
+      else if (math) {
+        var cur = mathCatById(mathCat);
+        list = (cur ? cur.ids : AXIS_TYPES.slice(sp).map(function (x) { return x.id; })).map(mathToolById).filter(Boolean);
+      } else list = AXIS_TYPES.slice(0, sp);
+      list.forEach(function (s) {
+        var b = document.createElement('button');
+        b.type = 'button'; b.className = 'gf-shape'; b.setAttribute('data-t', s.id);
+        b.innerHTML = iconOf(s.id) + '<span>' + s.name + '</span>';
+        b.addEventListener('click', function () { setType(s.id); });
+        host.appendChild(b);
+      });
+    }
     var h3 = document.querySelector('#grOverlay .gf-head h3'); if (h3) h3.textContent = title;
-    var th = document.querySelector('#grOverlay .gf-types-h'); if (th) th.textContent = math ? 'نوع ابزار ریاضی' : axis ? 'نوع محور' : 'نوع نمودار';
-    var md = document.querySelector('#grOverlay .gf-modal'); if (md) md.setAttribute('aria-label', title);
+    var th = document.querySelector('#grOverlay .gf-types-h');
+    if (th) th.textContent = math ? (mathCat ? 'ابزارهای این دسته' : 'دستهٔ آموزشی') : axis ? 'نوع محور' : 'نوع نمودار';
+    var md = document.querySelector('#grOverlay .gf-modal');
+    if (md) {
+      md.setAttribute('aria-label', title);
+      /* V320 — در مرحلهٔ انتخاب دسته، ستون فهرست پهن‌تر و کارت‌ها دو ستونه می‌شوند */
+      md.classList.toggle('gf-cats-mode', !!(math && !mathCat));
+    }
   }
   function ensureModal() {
     if ($('grOverlay')) return;
@@ -5912,6 +5962,10 @@
     if (!state.t) state.t = axis ? t0 : 'col';
     if (!state.X) state.X = (isAxisType(state.t) ? defAxis(state.t) : def(state.t)).X;
     ensureModal();
+    shapesMode = null;
+    /* V320 — بازکردن تازه: از مرحلهٔ انتخاب دسته؛ ویرایش شکل موجودِ ریاضی: همان دسته از پیش انتخاب */
+    var presel = (spec && spec.t) ? mathCatOfType(spec.t) : null;
+    mathCat = presel ? presel.id : null;
     fillShapes(math ? 'math' : axis ? 'axis' : 'graph');
     $('grOverlay').classList.add('open');
     var ok = $('grApply');

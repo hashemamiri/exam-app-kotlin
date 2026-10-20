@@ -815,8 +815,8 @@
         el('button', {class: 'tool-btn is-gra', title: 'نمودار', 'aria-label': 'نمودار', html: toolSvg('graph'), onclick: function () { insertFigure('graph', ta, q); }}),
         /* V206 — آیکن محور کنار نمودار (مثل اپ، V136): ویرایشگر نمودار در حالت «درج محور» با ۶ محور پایه */
         el('button', {class: 'tool-btn is-axis', title: 'محور', 'aria-label': 'محور', html: toolSvg('axis'), onclick: function () { insertFigure('axis', ta, q); }}),
-        /* V310 — آیکن جدا «ابزار ریاضی ابتدایی» (مثل اپ: همان فهرست بخش ابتدایی، جدا از محور) */
-        el('button', {class: 'tool-btn is-math', title: 'ابزار ریاضی ابتدایی', 'aria-label': 'ابزار ریاضی ابتدایی', html: toolSvg('math'), onclick: function () { insertFigure('math', ta, q); }}),
+        /* V310 — آیکن جدا «ابزار ریاضی» (جدا از محور)؛ V320 — پنجره دو مرحله‌ای: اول دسته، بعد ابزار */
+        el('button', {class: 'tool-btn is-math', title: 'ابزار ریاضی (دبستان تا دانشگاه)', 'aria-label': 'ابزار ریاضی (دبستان تا دانشگاه)', html: toolSvg('math'), onclick: function () { insertFigure('math', ta, q); }}),
         el('button', {class: 'tool-btn is-tab', title: 'جدول', 'aria-label': 'جدول', html: toolSvg('table'), onclick: function () { insertFigure('table', ta, q); }}),
         el('button', {class: 'tool-btn is-pt', title: 'جدول تناوبی', 'aria-label': 'جدول تناوبی', html: toolSvg('periodic'), onclick: function () { insertFigure('periodic', ta, q); }}),
         el('button', {class: 'tool-btn is-ana', title: 'اطلس تصویری: آناتومی، فیزیک، شیمی، تصویر خودم با فلش‌گذاری', 'aria-label': 'اطلس تصویری', html: toolSvg('gallery'), onclick: function (e) { atlasMenu(e.currentTarget, ta, q); }}),

@@ -1484,7 +1484,7 @@ private fun QuestionEditor(
                 onInsertAxis = {
                     figureTarget = FigureTarget(kind = FigureKind.AXIS, chooseType = true)
                 },
-                // V310 — آیکن جدا «ابزار ریاضی ابتدایی» (همان فهرست بخش ابتدایی محورها).
+                // V310 — آیکن جدا «ابزار ریاضی»؛ V320 — ابتدا دسته (دبستان/متوسطه/دانشگاه)، سپس ابزارها.
                 onInsertMath = {
                     figureTarget = FigureTarget(kind = FigureKind.AXIS, chooseType = true, mathOnly = true)
                 },

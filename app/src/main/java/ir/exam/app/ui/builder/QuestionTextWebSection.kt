@@ -84,7 +84,7 @@ fun QuestionTextWebSection(
     onInsertGraph: (insertOffset: Int) -> Unit,
     /** V136 — درج محور (اعداد/مختصات/قطبی/سه‌بعدی). */
     onInsertAxis: (insertOffset: Int) -> Unit = {},
-    // V310 — آیکن جدا «ابزار ریاضی ابتدایی».
+    // V310 — آیکن جدا «ابزار ریاضی»؛ V320 — پنجرهٔ دو مرحله‌ای (دسته ← ابزار).
     onInsertMath: (insertOffset: Int) -> Unit = {},
     onInsertTable: (insertOffset: Int) -> Unit,
     onInsertPeriodic: (insertOffset: Int) -> Unit,
@@ -394,7 +394,7 @@ fun QuestionTextWebSection(
             NativeToolButton(QuestionToolIcons.Figure, "درج شکل") { onInsertFigure(insertAtOffset) }
             NativeToolButton(QuestionToolIcons.Graph, "درج نمودار") { onInsertGraph(insertAtOffset) }
             NativeToolButton(QuestionToolIcons.Axis, "درج محور") { onInsertAxis(insertAtOffset) }
-            NativeToolButton(QuestionToolIcons.MathTools, "درج ابزار ریاضی ابتدایی") { onInsertMath(insertAtOffset) }
+            NativeToolButton(QuestionToolIcons.MathTools, "درج ابزار ریاضی (دبستان تا دانشگاه)") { onInsertMath(insertAtOffset) }
             NativeToolButton(QuestionToolIcons.Table, "درج جدول") { onInsertTable(insertAtOffset) }
             NativeToolButton(QuestionToolIcons.Gallery, "گالری شکل‌ها") { onInsertGallery(insertAtOffset) }
             NativeToolButton(QuestionToolIcons.Periodic, "درج جدول تناوبی") { onInsertPeriodic(insertAtOffset) }

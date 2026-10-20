@@ -16,7 +16,7 @@ class V206_SiteAxisBoardTest {
     fun `graph engine has an axis mode mirroring AXIS_FIGURES`() {
         val g = source("app/src/main/assets/print/web/graph_fig.js")
         assertTrue("function open(spec, el, mode)" in g && "var axis = mode === 'axis' || math || !!(spec && isAxisType(spec.t));" in g)
-        assertTrue("function fillShapes(mode)" in g && "AXIS_TYPES.slice(0, sp)" in g)
+        assertTrue("function fillShapes(mode, forceCat)" in g && "AXIS_TYPES.slice(0, sp)" in g) // V320
         for (id in listOf("axnum", "axxy", "axq1", "axgrid", "axpol", "ax3d")) assertTrue(id, "{ id: '$id'," in g)
         assertTrue("function defAxis(t)" in g && "if (isAxisType(id)) {" in g)
     }

@@ -248,6 +248,28 @@
 }
 .gf-3 .gf-types{flex:0 0 292px;width:292px;min-height:0;overflow:hidden}
 .gf-3 .gf-shapes{overflow:auto;min-height:0}
+/* V320 — مرحلهٔ اول پنجرهٔ «ابزار ریاضی»: کارت دسته‌های آموزشی */
+.gf-shapes .gf-cats{grid-column:1/-1;display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:2px;align-content:start}
+.gf-shapes .gf-back{grid-column:1/-1}
+.gf-3.gf-cats-mode .gf-types{flex:0 0 480px;width:480px}
+@media (max-width:900px){.gf-3.gf-cats-mode .gf-types{flex:0 0 46%;width:46%}}
+.gf-cat{
+  display:flex;flex-direction:column;gap:6px;text-align:center;align-items:center;justify-content:center;
+  border:1.5px solid #d9dfea;border-radius:14px;background:#fff;color:#26324a;
+  padding:14px 10px;min-height:118px;font-family:inherit;line-height:1.4;
+  transition:border-color .15s,box-shadow .15s,transform .12s
+}
+.gf-cat:active{transform:scale(.98)}
+.gf-cat:hover,.gf-cat:focus-visible{border-color:#6c63f5;box-shadow:0 2px 10px rgba(108,99,245,.18);outline:none}
+.gf-cat b{font-size:15px;font-weight:800}
+.gf-cat span{font-size:11px;font-weight:800;color:#6c63f5;background:#eef0ff;border-radius:20px;padding:1px 10px}
+.gf-cat small{font-size:10.5px;color:#5b6880;font-weight:500;display:block}
+.gf-back{
+  margin:0 0 6px;cursor:pointer;border:1px solid #cfd6e4;background:#f3f6fc;color:#2c3a50;
+  border-radius:9px;padding:5px 9px;font:700 11px inherit;font-family:inherit;width:100%
+}
+.gf-back:hover{background:#e8eefc;border-color:#6c63f5}
+
 .gf-3 .an-mid{flex:1 1 auto;min-width:0;min-height:0;overflow:hidden;display:flex;flex-direction:column}
 .gf-3 .gf-preview{
   flex:1 1 auto;min-height:0;height:100%;overflow:hidden !important;

@@ -46,6 +46,9 @@ import ir.exam.app.core.figure.GEOMETRY_FIGURES
 import ir.exam.app.core.figure.GRAPH_FIGURES
 import ir.exam.app.core.figure.AXIS_FIGURES
 import ir.exam.app.core.figure.PRIMARY_MATH_FIRST_ID
+import ir.exam.app.core.figure.MATH_CATEGORIES
+import ir.exam.app.core.figure.MathCategory
+import ir.exam.app.core.figure.mathTemplatesOf
 import ir.exam.app.ui.figure.FigureKind.GEOMETRY
 import ir.exam.app.ui.figure.FigureKind.GRAPH
 import kotlinx.serialization.json.JsonObject
@@ -69,6 +72,8 @@ fun FigureTypePickerDialog(
     val geometry = kind == GEOMETRY
     val axis = kind == FigureKind.AXIS
     val math = axis && mathOnly
+    // V320 — پنجرهٔ پیشین «🧮 ابزار ریاضی ابتدایی» اکنون دو مرحله‌ای است: اول دسته، بعد ابزار.
+    var mathCategory by remember { mutableStateOf<MathCategory?>(null) }
     Dialog(
         onDismissRequest = onDismiss,
         properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)
@@ -77,7 +82,10 @@ fun FigureTypePickerDialog(
             Column(Modifier.fillMaxSize().systemBarsPadding().imePadding().padding(10.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) { // V247 — زیر نوار وضعیت نرود
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                     Text(
-                        if (geometry) "📐 درج شکل" else if (math) "🧮 ابزار ریاضی ابتدایی" else if (axis) "📏 درج محور" else "📈 درج نمودار",
+                        if (geometry) "📐 درج شکل"
+                        else if (math && mathCategory == null) "🧮 ابزار ریاضی — انتخاب دسته"
+                        else if (math) "🧮 " + mathCategory!!.title
+                        else if (axis) "📏 درج محور" else "📈 درج نمودار",
                         style = MaterialTheme.typography.titleLarge,
                         modifier = Modifier.weight(1f)
                     )
@@ -85,7 +93,8 @@ fun FigureTypePickerDialog(
                 }
                 Text(
                     if (geometry) "ابتدا نوع شکل هندسی را انتخاب کنید."
-                    else if (math) "نوع ابزار ریاضی را انتخاب کنید."
+                    else if (math && mathCategory == null) "دستهٔ آموزشی را انتخاب کنید؛ سپس ابزارهای همان دسته باز می‌شود."
+                    else if (math) (mathCategory!!.hint + " — " + mathCategory!!.count + " ابزار")
                     else if (axis) "نوع محور را انتخاب کنید."
                     else "ابتدا نوع نمودار را انتخاب کنید.",
                     style = MaterialTheme.typography.bodyMedium
@@ -102,6 +111,37 @@ fun FigureTypePickerDialog(
                     ) {
                         items(GEOMETRY_FIGURES, key = { it.id }) { template ->
                             GeometryTypeCell(template) { onTypeSelected(template.toSpec()) }
+                        }
+                    }
+                } else if (math) {
+                    // V320 — مرحلهٔ اول: چهار دستهٔ آموزشی؛ مرحلهٔ دوم: ابزارهای همان دسته.
+                    val current = mathCategory
+                    Column(Modifier.weight(1f).fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        if (current != null) {
+                            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                                Button(onClick = { mathCategory = null }) { Text("↩ دسته‌بندی‌ها") }
+                                Text(
+                                    "  ${current.emoji} ${current.title} — ${current.count} ابزار",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    modifier = Modifier.weight(1f)
+                                )
+                            }
+                        }
+                        LazyVerticalGrid(
+                            columns = if (tabletPicker) GridCells.Fixed(3) else GridCells.Fixed(2),
+                            modifier = Modifier.weight(1f).fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                            verticalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            if (current == null) {
+                                items(MATH_CATEGORIES, key = { it.id }) { category ->
+                                    MathCategoryCell(category, tabletPicker) { mathCategory = category }
+                                }
+                            } else {
+                                items(mathTemplatesOf(current), key = { it.id }) { template ->
+                                    GraphTypeCell(template) { onTypeSelected(template.toSpec()) }
+                                }
+                            }
                         }
                     }
                 } else {
@@ -130,6 +170,27 @@ fun FigureTypePickerDialog(
                     }
                 }
             }
+        }
+    }
+}
+
+/** V320 — کارت دستهٔ آموزشی در مرحلهٔ اول پنجرهٔ «ابزار ریاضی». */
+@Composable
+private fun MathCategoryCell(category: MathCategory, wide: Boolean, onClick: () -> Unit) {
+    Card(Modifier.fillMaxWidth().clickable(onClick = onClick)) {
+        Column(
+            Modifier.fillMaxWidth().padding(if (wide) 12.dp else 10.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            Text(category.emoji, style = MaterialTheme.typography.headlineMedium)
+            Text(category.title, style = MaterialTheme.typography.titleMedium)
+            Text("${category.count} ابزار", style = MaterialTheme.typography.labelLarge)
+            Text(
+                category.hint,
+                style = MaterialTheme.typography.labelSmall,
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center
+            )
         }
     }
 }
