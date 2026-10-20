@@ -38,11 +38,11 @@ class V55_18SmoothCardsEyeMenuTest {
 
     @Test
     fun `rightward card swipe enters smoothly from the exit side`() {
-        // V137.2 — حرکت «پرواز و بازگشت»: یک مسیر واحد برای هر دو جهت (بدون شاخهٔ direction == -1).
+        // V316.0 — چرخ‌وفلک کارت‌ها (Ferris Wheel): چرخش روی مدار بیضوی با حفظ حالت سرپا در هر دو جهت.
         assertTrue("if (direction == -1) {" !in cards)
-        assertTrue("returnX.animateTo(targetX, tween(340, easing = FastOutSlowInEasing))" in cards)
-        assertTrue("returnRotation.animateTo(direction * 14f" in cards)
-        assertTrue("dragX.snapTo(0f)" in cards)
+        assertTrue("wrapFerrisDistance(" in cards)
+        assertTrue("spring(dampingRatio = 0.92f, stiffness = 180f)" in cards)
+        assertTrue("translationX = -sn * orbitRxPx" in cards)
     }
 
     @Test

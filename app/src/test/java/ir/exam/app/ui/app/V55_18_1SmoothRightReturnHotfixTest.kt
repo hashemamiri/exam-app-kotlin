@@ -32,32 +32,30 @@ class V55_18_1SmoothRightReturnHotfixTest {
 
     @Test
     fun `rightward swipe returns the current card to the stack in one phase`() {
-        // state برگشت کارت قدیمی به پشته
-        assertTrue("var returningIndex by remember { mutableIntStateOf(-1) }" in cards)
-        assertTrue("returnX.snapTo(x)" in cards)
-        assertTrue("returnY.snapTo(y)" in cards)
-        // V137.2 — بازگشت با فنر نرم به جایگاه پشته
-        assertTrue("returnX.animateTo(0f, spring(dampingRatio = .78f, stiffness = 260f))" in cards)
-        // پس از پایان انیمیشن‌ها آزاد می‌شود
-        assertTrue("returningIndex = -1" in cards)
+        // V316.0 — چرخ‌وفلک کارت‌ها (Ferris Wheel): تمام کارت‌ها سرپا روی مدار بیضوی می‌چرخند.
+        assertTrue("private fun wrapFerrisDistance(d: Float, n: Int): Float" in cards)
+        assertTrue("val orbitRxPx = with(density) { 112.dp.toPx() }" in cards)
+        assertTrue("val orbitRyPx = with(density) { 44.dp.toPx() }" in cards)
+        assertTrue("val dragSpanPx = with(density) { 190.dp.toPx() }" in cards)
+        assertTrue("rotationZ = 0f" in cards)
     }
 
     @Test
     fun `no two-phase exit remains inside the rightward branch`() {
-        // V137.2 — چپ و راست یک مسیر مشترک دارند؛ activeIndex همان لحظه عوض می‌شود و کارتِ رفته
-        // با returnX (نه dragX) هم‌زمان با جلوآمدن کارت بعدی بیرون می‌پرد.
+        // V316.0 — انیمیشن قدیمیِ پشته/پرواز کامل حذف شد.
         assertFalse("if (direction == -1) {" in cards)
-        assertFalse("dragX.animateTo(targetX" in cards)
-        assertTrue("returningIndex = leaving" in cards)
-        assertTrue("returnX.animateTo(targetX, tween(340, easing = FastOutSlowInEasing))" in cards)
-        assertTrue("returnAlpha.animateTo(0f, tween(220, delayMillis = 120))" in cards)
+        assertFalse("returningIndex" in cards)
+        assertFalse("stackTopPx" in cards)
+        assertFalse("stackRotation" in cards)
+        assertFalse("leavingStaysVisible" in cards)
     }
 
     @Test
     fun `graphics layer animates the returning card instead of teleporting it`() {
-        assertTrue("val returning = index == returningIndex && !active" in cards)
-        assertTrue("returning -> returnX.value" in cards)
-        assertTrue("returning -> returnY.value" in cards)
-        assertTrue("returning -> stackRotation + returnRotation.value" in cards)
+        assertTrue("val sc = 0.78f + 0.22f * cs" in cards)
+        assertTrue("alpha = 0.35f + 0.65f * ((cs + 1f) / 2f)" in cards)
+        assertTrue("translationX = -sn * orbitRxPx" in cards)
+        assertTrue("translationY = (cs - 1f) * orbitRyPx" in cards)
+        assertTrue(".zIndex(100f + cs * 100f)" in cards)
     }
 }

@@ -1,10 +1,7 @@
 package ir.exam.app.ui.app
 
 import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.focusable
@@ -30,8 +27,8 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -57,10 +54,11 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import ir.exam.app.core.ui.LocalTabletLayout
-import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
-import kotlin.math.abs
-import kotlin.math.sign
+import kotlin.math.PI
+import kotlin.math.cos
+import kotlin.math.roundToInt
+import kotlin.math.sin
 
 object Design69ManagementCardsContract {
     // V131 — کارت «کارنامه» (کارنامه و لیست نمرات) از «آمار» جدا شد.
@@ -242,132 +240,55 @@ fun ManagerManagementCardsScreen(
     ManagementCardsStack(cycleKey = cycleKey, cards = cards)
 }
 
-/** V61.9 — پشتهٔ مشترک کارت‌ها (drag/کلید/نقطه‌ها) برای معلم و مدیر. */
+private fun wrapFerrisDistance(d: Float, n: Int): Float {
+    var w = ((d % n) + n) % n
+    if (w > n / 2f) w -= n
+    return w
+}
+
+/** V315.4 — چرخ‌وفلک کارت‌ها (Ferris Wheel): چرخش روی مدار بیضوی با حفظ حالت سرپا برای معلم و مدیر. */
 @Composable
 private fun ManagementCardsStack(cycleKey: Int, cards: List<ManagementCardSpec>) {
     val neo = neumorphic69Colors
-    var activeIndex by rememberSaveable { mutableIntStateOf(0) }
-    var settling by remember { mutableStateOf(false) }
-    val dragX = remember { Animatable(0f) }
-    val dragY = remember { Animatable(0f) }
-    // V55.18.1 — کارت در حال «برگشت به پشته» هنگام کشیدن به راست: بعد از تغییر
-    // activeIndex کارت قبلی هنوز مرئی است (relative=1) و بدون این state از زیر
-    // انگشت به جایگاه پشته تلپورت می‌کرد.
-    var returningIndex by remember { mutableIntStateOf(-1) }
-    val returnX = remember { Animatable(0f) }
-    val returnY = remember { Animatable(0f) }
-    // V137.2 — کج‌شدن/مقیاس/محوِ کارتِ در حال پرواز و بازگشت.
-    val returnRotation = remember { Animatable(0f) }
-    val returnScale = remember { Animatable(1f) }
-    val returnAlpha = remember { Animatable(1f) }
-    // V137.3 — ریشهٔ «انیمیشن قدیمی دیده می‌شود»: معلم ۱۰ کارت دارد؛ با کشیدن به چپ، کارتِ
-    // رفته بلافاصله relative = ۹ می‌شد و چون فقط relative ≤ ۲ رسم می‌شود، همان لحظه ناپدید
-    // می‌شد (پروازش هرگز دیده نمی‌شد) و شرط «cards.size ≤ ۳» هم فاز بازگشت را حذف می‌کرد.
-    // حالا: کارتِ در حال پرواز (flying) همیشه رسم می‌شود و در جای کارت فعال می‌ماند؛ فاز
-    // بازگشت وقتی اجرا می‌شود که کارت پس از تغییر در پشته دیده شود؛ و کارتی که از ته پشته
-    // جلو می‌آید (enteringIndex) با محو/مقیاس از پشت وارد می‌شود — هر دو جهت عیناً یکسان.
-    var flying by remember { mutableStateOf(false) }
-    var enteringIndex by remember { mutableIntStateOf(-1) }
-    val enterProgress = remember { Animatable(1f) }
+    val n = cards.size.coerceAtLeast(1)
+    val wheelPos = remember { Animatable(0f) }
+    var targetPos by rememberSaveable { mutableFloatStateOf(0f) }
+    var dragVel by remember { mutableFloatStateOf(0f) }
+    var lastDragMs by remember { mutableLongStateOf(0L) }
     val scope = rememberCoroutineScope()
     val density = LocalDensity.current
-    val threshold = with(density) { Design69ManagementCardsContract.DRAG_THRESHOLD_DP.dp.toPx() }
-    val exitHorizontal = with(density) { 520.dp.toPx() }
-    val liftPx = with(density) { 36.dp.toPx() }
+    val dragSpanPx = with(density) { 190.dp.toPx() }
+    val orbitRxPx = with(density) { 112.dp.toPx() }
+    val orbitRyPx = with(density) { 44.dp.toPx() }
+    val activeIndex = ((wheelPos.value.roundToInt() % n) + n) % n
 
-    fun changeCard(direction: Int) {
-        if (settling) return
-        activeIndex = (activeIndex + direction + cards.size) % cards.size
+    fun animateWheelTo(nextTarget: Float, initialVelocity: Float = 0f) {
+        targetPos = nextTarget
+        scope.launch {
+            wheelPos.animateTo(
+                targetValue = nextTarget,
+                animationSpec = spring(dampingRatio = 0.92f, stiffness = 180f),
+                initialVelocity = initialVelocity
+            )
+        }
     }
 
-    fun settle(cancel: Boolean) {
-        if (settling) return
-        settling = true
-        scope.launch {
-            val x = dragX.value
-            val y = dragY.value
-            val horizontal = abs(x) >= abs(y)
-            val accepted = !cancel && horizontal && abs(x) > threshold
-            if (accepted) {
-                val direction = if (x < 0f) 1 else -1
-                val targetX = (sign(x).takeIf { it != 0f } ?: 1f) * exitHorizontal
-                val targetY = y * 1.20f
-                // V137.2 — حرکت تازهٔ «پرواز و بازگشت» و کاملاً یکسان برای چپ و راست (خواستهٔ کاربر):
-                // ۱) کارت فعلی از نقطهٔ رهاشدن با کمی بلندشدن (scale ۱٫۰۶) و کج‌شدن به سمت حرکت (±۱۴°)
-                //    از همان سمت بیرون می‌پرد و در نیمهٔ راه محو می‌شود؛ هم‌زمان activeIndex عوض شده و
-                //    کارت بعدی با انیمیشن‌های پشته (فاصله/مقیاس/چرخش) جلو می‌آید.
-                // ۲) اگر کارتِ رفته در پشته دیده می‌شود، از همان سمت و از پشتِ پشته با محوِ معکوس و
-                //    فنر نرم (spring) به جایگاه انتهای پشته می‌نشیند. هیچ تفاوتی بین دو جهت نیست؛
-                //    فقط علامتِ targetX و زاویه عوض می‌شود.
-                val leaving = activeIndex
-                val arriving = (activeIndex + direction + cards.size) % cards.size
-                val arrivingWasVisible = ((arriving - leaving + cards.size) % cards.size) <= 2
-                val leavingStaysVisible = ((leaving - arriving + cards.size) % cards.size) <= 2
-                returningIndex = leaving
-                flying = true
-                if (!arrivingWasVisible) {
-                    enteringIndex = arriving
-                    enterProgress.snapTo(0f)
-                }
-                returnX.snapTo(x)
-                returnY.snapTo(y)
-                returnRotation.snapTo(x / 42f + y / 75f)
-                returnScale.snapTo(1f)
-                returnAlpha.snapTo(1f)
-                dragX.snapTo(0f)
-                dragY.snapTo(0f)
-                activeIndex = arriving
-                coroutineScope {
-                    if (!arrivingWasVisible) {
-                        launch { enterProgress.animateTo(1f, tween(420, delayMillis = 60, easing = FastOutSlowInEasing)) }
-                    }
-                    launch { returnX.animateTo(targetX, tween(340, easing = FastOutSlowInEasing)) }
-                    launch { returnY.animateTo(targetY - liftPx, tween(340, easing = FastOutSlowInEasing)) }
-                    launch { returnRotation.animateTo(direction * 14f, tween(340, easing = FastOutSlowInEasing)) }
-                    launch {
-                        returnScale.animateTo(1.06f, tween(150, easing = FastOutSlowInEasing))
-                        returnScale.animateTo(.92f, tween(190, easing = FastOutSlowInEasing))
-                    }
-                    launch { returnAlpha.animateTo(0f, tween(220, delayMillis = 120)) }
-                }
-                flying = false
-                // فاز بازگشت فقط وقتی کارتِ رفته پس از تغییر در پشته (۳ کارت اول) دیده می‌شود.
-                if (leavingStaysVisible) {
-                    returnX.snapTo(targetX * .45f)
-                    returnY.snapTo(-liftPx * .6f)
-                    returnRotation.snapTo(direction * 6f)
-                    returnScale.snapTo(.96f)
-                    coroutineScope {
-                        launch { returnAlpha.animateTo(1f, tween(260)) }
-                        launch { returnX.animateTo(0f, spring(dampingRatio = .78f, stiffness = 260f)) }
-                        launch { returnY.animateTo(0f, spring(dampingRatio = .78f, stiffness = 260f)) }
-                        launch { returnRotation.animateTo(0f, spring(dampingRatio = .78f, stiffness = 260f)) }
-                        launch { returnScale.animateTo(1f, spring(dampingRatio = .78f, stiffness = 260f)) }
-                    }
-                } else {
-                    returnX.snapTo(0f)
-                    returnY.snapTo(0f)
-                    returnRotation.snapTo(0f)
-                    returnScale.snapTo(1f)
-                    returnAlpha.snapTo(1f)
-                }
-                returningIndex = -1
-                enteringIndex = -1
-            } else {
-                coroutineScope {
-                    launch { dragX.animateTo(0f, tween(280)) }
-                    launch { dragY.animateTo(0f, tween(280)) }
-                }
-            }
-            settling = false
-        }
+    fun changeCard(direction: Int) {
+        animateWheelTo((targetPos.roundToInt() + direction).toFloat())
+    }
+
+    fun goTo(index: Int) {
+        val curI = ((targetPos.roundToInt() % n) + n) % n
+        var d = ((index - curI) % n + n) % n
+        if (d > n / 2f) d -= n
+        animateWheelTo((targetPos.roundToInt() + d).toFloat())
     }
 
     LaunchedEffect(cycleKey) {
         if (cycleKey > 0) changeCard(1)
     }
 
-    // V56.1 — تبلت: پشتهٔ کارت‌ها وسط صفحه با سقف پهنا تا کارت‌ها بیش از حد
+    // V56.1 — تبلت: چرخ‌وفلک کارت‌ها وسط صفحه با سقف پهنا تا کارت‌ها بیش از حد
     // کشیده و بدقواره نشوند؛ گوشی مثل قبل تمام‌پهنا.
     val tabletCards = LocalTabletLayout.current
     Column(
@@ -378,7 +299,7 @@ private fun ManagementCardsStack(cycleKey: Int, cards: List<ManagementCardSpec>)
             Modifier
                 .fillMaxWidth()
                 .widthIn(max = if (tabletCards) 620.dp else Dp.Unspecified)
-                .height(300.dp)
+                .height(316.dp)
                 .focusable()
                 .onPreviewKeyEvent { event ->
                     if (event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
@@ -398,124 +319,94 @@ private fun ManagementCardsStack(cycleKey: Int, cards: List<ManagementCardSpec>)
                         else -> false
                     }
                 }
-                // V137.4 — ریشهٔ «لگ و باگ» جابه‌جایی: کلیدهای (activeIndex, settling) با هر تغییر،
-                // آشکارسازِ حرکت را از نو می‌ساختند؛ اگر انگشت وسطِ نشستنِ کارت قبلی پایین می‌آمد،
-                // حرکت گم می‌شد و باید دوباره می‌کشید. حالا آشکارساز پایدار است و state را زنده می‌خواند.
                 .pointerInput(Unit) {
                     detectDragGestures(
-                        onDragEnd = { settle(false) },
-                        onDragCancel = { settle(true) }
+                        onDragStart = {
+                            dragVel = 0f
+                            lastDragMs = android.os.SystemClock.uptimeMillis()
+                        },
+                        onDragEnd = {
+                            val projected = (wheelPos.value + dragVel * 0.14f).roundToInt().toFloat()
+                            animateWheelTo(projected, dragVel)
+                        },
+                        onDragCancel = {
+                            animateWheelTo(wheelPos.value.roundToInt().toFloat(), 0f)
+                        }
                     ) { change, amount ->
-                        if (settling) return@detectDragGestures
                         change.consume()
+                        val now = android.os.SystemClock.uptimeMillis()
+                        val dtSec = ((now - lastDragMs).coerceAtLeast(1L)) / 1000f
+                        lastDragMs = now
+                        val dp = -amount.x / dragSpanPx
+                        if (dtSec > 0f) {
+                            dragVel = 0.7f * dragVel + 0.3f * (dp / dtSec)
+                        }
+                        val nextP = wheelPos.value + dp
+                        targetPos = nextP.roundToInt().toFloat()
                         scope.launch {
-                            dragX.snapTo(dragX.value + amount.x)
-                            dragY.snapTo(dragY.value + amount.y)
+                            wheelPos.snapTo(nextP)
                         }
                     }
                 },
             contentAlignment = Alignment.TopCenter
         ) {
-            cards.indices.reversed().forEach { index ->
-                val relative = (index - activeIndex + cards.size) % cards.size
-                val isFlying = flying && index == returningIndex
-                if (relative <= 2 || isFlying) {
-                    val active = relative == 0
-                    val data = cards[index]
-                    // V137.3 — کارتِ در حال پرواز تا پایان پرواز در جایگاه کارت فعال (relative ۰) می‌ماند.
-                    val visualRelative = if (isFlying) 0 else relative
-                    // V137.4 — جای کارت در پشته با translationY در graphicsLayer (فقط رسم دوباره)،
-                    // نه padding (که هر فریم برای همهٔ کارت‌ها layout دوباره می‌کرد → لگ).
-                    val stackTopPx by animateFloatAsState(
-                        with(density) { (visualRelative * 30).dp.toPx() },
-                        tween(520, easing = FastOutSlowInEasing),
-                        label = "management-card-top-$index"
-                    )
-                    val stackScale by animateFloatAsState(
-                        1f - visualRelative * .075f,
-                        tween(520, easing = FastOutSlowInEasing),
-                        label = "management-card-scale-$index"
-                    )
-                    val stackAlpha by animateFloatAsState(
-                        1f - visualRelative * .25f,
-                        tween(400),
-                        label = "management-card-alpha-$index"
-                    )
-                    val stackRotation by animateFloatAsState(
-                        if (visualRelative == 0) 0f else if (visualRelative == 1) 5f else -6f,
-                        tween(520, easing = FastOutSlowInEasing),
-                        label = "management-card-rotation-$index"
-                    )
-                    Box(
-                        Modifier
-                            .padding(top = 30.dp)
-                            .fillMaxWidth(.90f)
-                            .height(190.dp)
-                            .zIndex(if (isFlying) 4f else 3f - relative)
-                            .graphicsLayer {
-                                // V55.18.1: کارت در حال برگشت به پشته (کشیدن به راست)
-                                // از نقطهٔ رهاشدن نرم به جایگاهش می‌رود، نه تلپورت.
-                                val returning = index == returningIndex && !active
-                                // V137.2 — کارت فعال هنگام کشیدن کمی بلند می‌شود؛ کارتِ در حال پرواز مقیاس/محوِ خودش را دارد.
-                                val dragLift = if (active) 1f + (abs(dragX.value) / exitHorizontal).coerceIn(0f, .5f) * .08f else 1f
-                                // V137.3 — ورود کارت از ته پشته: از پشت (کمی بالاتر و کوچک‌تر) با محو وارد می‌شود.
-                                val enterP = if (index == enteringIndex) enterProgress.value else 1f
-                                val enterScale = .86f + .14f * enterP
-                                scaleX = stackScale * dragLift * enterScale * (if (returning) returnScale.value else 1f)
-                                scaleY = stackScale * dragLift * enterScale * (if (returning) returnScale.value else 1f)
-                                alpha = stackAlpha * enterP * (if (returning) returnAlpha.value else 1f)
-                                translationX = when {
-                                    active -> dragX.value
-                                    returning -> returnX.value
-                                    else -> 0f
-                                }
-                                translationY = stackTopPx + when {
-                                    active -> dragY.value - liftPx * .8f * (1f - enterP)
-                                    returning -> returnY.value
-                                    else -> 0f
-                                }
-                                rotationZ = when {
-                                    active -> stackRotation + dragX.value / 42f + dragY.value / 75f
-                                    returning -> stackRotation + returnRotation.value
-                                    else -> stackRotation
-                                }
-                            }
-                            .clip(RoundedCornerShape(29.dp))
-                            .background(Brush.linearGradient(data.colors))
-                            .clickable(
-                                interactionSource = remember { MutableInteractionSource() },
-                                indication = null,
-                                enabled = active,
-                                role = Role.Button,
-                                onClick = data.action
-                            )
-                            .padding(22.dp)
-                    ) {
-                        Column(Modifier.fillMaxSize()) {
-                            Row(
-                                Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Box(
-                                    Modifier
-                                        .size(48.dp)
-                                        .clip(RoundedCornerShape(16.dp))
-                                        .background(Color.White.copy(alpha = .18f)),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Icon(data.icon, null, tint = Color.White, modifier = Modifier.size(26.dp))
-                                }
-                                Text("آزمون آنلاین", color = Color.White.copy(alpha = .72f), style = MaterialTheme.typography.labelSmall)
-                            }
-                            Spacer(Modifier.weight(1f))
-                            Text(
-                                data.title,
-                                color = Color.White,
-                                style = MaterialTheme.typography.titleLarge,
-                                fontWeight = FontWeight.Bold
-                            )
+            cards.indices.forEach { index ->
+                val data = cards[index]
+                val w = wrapFerrisDistance(index - wheelPos.value, n)
+                val angle = (w * 2.0 * PI / n).toFloat()
+                val cs = cos(angle)
+                val sn = sin(angle)
+                val active = index == activeIndex
+                Box(
+                    Modifier
+                        .padding(top = 84.dp)
+                        .fillMaxWidth(.90f)
+                        .height(190.dp)
+                        .zIndex(100f + cs * 100f)
+                        .graphicsLayer {
+                            val sc = 0.78f + 0.22f * cs
+                            scaleX = sc
+                            scaleY = sc
+                            alpha = 0.35f + 0.65f * ((cs + 1f) / 2f)
+                            translationX = -sn * orbitRxPx
+                            translationY = (cs - 1f) * orbitRyPx
+                            rotationZ = 0f
                         }
+                        .clip(RoundedCornerShape(29.dp))
+                        .background(Brush.linearGradient(data.colors))
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null,
+                            enabled = active,
+                            role = Role.Button,
+                            onClick = data.action
+                        )
+                        .padding(22.dp)
+                ) {
+                    Column(Modifier.fillMaxSize()) {
+                        Row(
+                            Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Box(
+                                Modifier
+                                    .size(48.dp)
+                                    .clip(RoundedCornerShape(16.dp))
+                                    .background(Color.White.copy(alpha = .18f)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(data.icon, null, tint = Color.White, modifier = Modifier.size(26.dp))
+                            }
+                            Text("آزمون آنلاین", color = Color.White.copy(alpha = .72f), style = MaterialTheme.typography.labelSmall)
+                        }
+                        Spacer(Modifier.weight(1f))
+                        Text(
+                            data.title,
+                            color = Color.White,
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold
+                        )
                     }
                 }
             }
@@ -530,6 +421,11 @@ private fun ManagementCardsStack(cycleKey: Int, cards: List<ManagementCardSpec>)
                         .width(if (index == activeIndex) 23.dp else 7.dp)
                         .clip(CircleShape)
                         .background(if (index == activeIndex) neo.accent else neo.darkShadow.copy(alpha = .45f))
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null,
+                            onClick = { goTo(index) }
+                        )
                 )
             }
         }

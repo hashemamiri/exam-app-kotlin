@@ -63,12 +63,10 @@ class V137_3_FeedbackTest {
     @Test
     fun `card fly animation is visible with ten cards`() {
         val cards = source("app/src/main/java/ir/exam/app/ui/app/TeacherManagementCardsScreen.kt")
-        assertTrue("var flying by remember { mutableStateOf(false) }" in cards)
-        assertTrue("val isFlying = flying && index == returningIndex" in cards)
-        assertTrue("if (relative <= 2 || isFlying) {" in cards)
-        assertTrue("val visualRelative = if (isFlying) 0 else relative" in cards)
-        assertTrue("if (leavingStaysVisible) {" in cards)
-        assertTrue("enterProgress.animateTo(1f" in cards)
+        assertTrue("val w = wrapFerrisDistance(index - wheelPos.value, n)" in cards)
+        assertTrue("val angle = (w * 2.0 * PI / n).toFloat()" in cards)
+        assertTrue("val projected = (wheelPos.value + dragVel * 0.14f).roundToInt().toFloat()" in cards)
+        assertTrue("onClick = { goTo(index) }" in cards)
         assertFalse("if (cards.size <= 3) {" in cards)
     }
 

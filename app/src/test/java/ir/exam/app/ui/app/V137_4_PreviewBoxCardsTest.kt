@@ -39,8 +39,9 @@ class V137_4_PreviewBoxCardsTest {
         val cards = source("app/src/main/java/ir/exam/app/ui/app/TeacherManagementCardsScreen.kt")
         assertTrue(".pointerInput(Unit) {" in cards)
         assertFalse(".pointerInput(activeIndex, settling)" in cards)
-        assertTrue("val stackTopPx by animateFloatAsState(" in cards)
-        assertTrue("translationY = stackTopPx + when {" in cards)
+        assertTrue(".padding(top = 84.dp)" in cards)
+        assertTrue("translationX = -sn * orbitRxPx" in cards)
+        assertTrue("translationY = (cs - 1f) * orbitRyPx" in cards)
         assertFalse("animateDpAsState" in cards)
     }
 }
