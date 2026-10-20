@@ -6000,6 +6000,8 @@
     replaceEl = el || null;
     var math = mode === 'math' || !!(spec && isMathType(spec.t)); /* V310 */
     var axis = mode === 'axis' || math || !!(spec && isAxisType(spec.t));
+    /* V323 — منوی دسکتاپ دستهٔ خواسته‌شده را در window.__mathCatReq می‌گذارد تا پنجره مستقیم همان دسته را باز کند. */
+    var catReq = (mode === 'math' && window.__mathCatReq) ? mathCatById(String(window.__mathCatReq)) : null;
     var t0 = math ? PRIMARY_MATH_FIRST_ID : 'axnum';
     try { state = spec ? JSON.parse(JSON.stringify(spec)) : (axis ? defAxis(t0) : def('col')); }
     catch (e) { state = axis ? defAxis(t0) : def('col'); }
@@ -6009,7 +6011,7 @@
     ensureModal();
     shapesMode = null;
     /* V320 — بازکردن تازه: از مرحلهٔ انتخاب دسته؛ ویرایش شکل موجودِ ریاضی: همان دسته از پیش انتخاب */
-    var presel = (spec && spec.t) ? mathCatOfType(spec.t) : null;
+    var presel = (spec && spec.t) ? mathCatOfType(spec.t) : (catReq || null);
     mathCat = presel ? presel.id : null;
     fillShapes(math ? 'math' : axis ? 'axis' : 'graph');
     $('grOverlay').classList.add('open');

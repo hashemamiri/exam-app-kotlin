@@ -1242,6 +1242,7 @@ button.stat:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
 .b-grip{height:14px;margin:-4px 6px 4px;cursor:ns-resize;display:flex;align-items:center;justify-content:center;border-radius:0 0 10px 10px;touch-action:none;user-select:none}
 .b-grip i{width:44px;height:5px;border-radius:999px;background:#c4d0d6;transition:background .15s,width .15s}
 .b-grip:hover i,.b-grip:active i{background:#39758a;width:60px}
+.b-math-menu{min-width:330px;max-width:min(94vw,420px)}
 .b-atlas-menu{position:absolute;z-index:1200;background:var(--card);border:1px solid var(--line);border-radius:14px;box-shadow:0 14px 40px rgba(28,49,62,.18);padding:6px;display:flex;flex-direction:column;gap:2px;min-width:290px;direction:rtl}
 .b-atlas-menu button{display:grid;grid-template-columns:34px 1fr;grid-template-rows:auto auto;column-gap:10px;align-items:center;text-align:right;background:transparent;border:0;border-radius:10px;padding:8px 10px;cursor:pointer;font-family:inherit}
 .b-atlas-menu button:hover{background:#eef4f7}

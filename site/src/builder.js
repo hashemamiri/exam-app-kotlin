@@ -816,7 +816,7 @@
         /* V206 — آیکن محور کنار نمودار (مثل اپ، V136): ویرایشگر نمودار در حالت «درج محور» با ۶ محور پایه */
         el('button', {class: 'tool-btn is-axis', title: 'محور', 'aria-label': 'محور', html: toolSvg('axis'), onclick: function () { insertFigure('axis', ta, q); }}),
         /* V310 — آیکن جدا «ابزار ریاضی» (جدا از محور)؛ V320 — پنجره دو مرحله‌ای: اول دسته، بعد ابزار */
-        el('button', {class: 'tool-btn is-math', title: 'ابزار ریاضی (دبستان تا دانشگاه)', 'aria-label': 'ابزار ریاضی (دبستان تا دانشگاه)', html: toolSvg('math'), onclick: function () { insertFigure('math', ta, q); }}),
+        el('button', {class: 'tool-btn is-math', title: 'ابزار ریاضی (دبستان تا دانشگاه)', 'aria-label': 'ابزار ریاضی (دبستان تا دانشگاه)', html: toolSvg('math'), onclick: function (e) { mathMenu(e.currentTarget, ta, q); }}),
         el('button', {class: 'tool-btn is-tab', title: 'جدول', 'aria-label': 'جدول', html: toolSvg('table'), onclick: function () { insertFigure('table', ta, q); }}),
         el('button', {class: 'tool-btn is-pt', title: 'جدول تناوبی', 'aria-label': 'جدول تناوبی', html: toolSvg('periodic'), onclick: function () { insertFigure('periodic', ta, q); }}),
         el('button', {class: 'tool-btn is-ana', title: 'اطلس تصویری: آناتومی، فیزیک، شیمی، تصویر خودم با فلش‌گذاری', 'aria-label': 'اطلس تصویری', html: toolSvg('gallery'), onclick: function (e) { atlasMenu(e.currentTarget, ta, q); }}),
@@ -1415,7 +1415,7 @@ var fillSubj = function () { var cur = ss.value; ss.innerHTML = ''; ss.appendChi
       item('fig', 'شکل', 'is-fig', function () { insertFigure('geo', ta, null); }),
       item('graph', 'نمودار', 'is-gra', function () { insertFigure('graph', ta, null); }),
       item('axis', 'محور', 'is-axis', function () { insertFigure('axis', ta, null); }),
-      item('math', 'ابزار ریاضی', 'is-math', function () { insertFigure('math', ta, null); }),
+      item('math', 'ابزار ریاضی', 'is-math', function () { mathMenu(anchor, ta, null); }),
       item('table', 'جدول', 'is-tab', function () { insertFigure('table', ta, null); }),
       item('periodic', 'جدول تناوبی', 'is-pt', function () { insertFigure('periodic', ta, null); }),
       item('gallery', 'گالری', 'is-ana', function () { atlasMenu(anchor, ta, null); }),
@@ -1438,6 +1438,37 @@ var fillSubj = function () { var cur = ss.value; ss.innerHTML = ''; ss.appendChi
       el('button', {type: 'button', html: '<b>🖼</b><span>تصویر خودم + فلش‌گذاری</span><small>عکس دلخواه؛ روی آن شماره بگذارید تا دانش‌آموز نام‌گذاری کند</small>', onclick: function () { m.remove(); pickPhotoForAtlas(ta, q); }})
     ]);
     /* V259.5 — منو همیشه کامل در دید باشد: اگر پایین جا نشد بالای دکمه، و در هر حال داخل صفحه نگه داشته می‌شود */
+    var r = anchor.getBoundingClientRect(); document.body.appendChild(m);
+    var mh = m.offsetHeight, mw = m.offsetWidth, vh = window.innerHeight, vw = document.documentElement.clientWidth;
+    var top = r.bottom + 6; if (top + mh > vh - 8) top = Math.max(8, Math.min(r.top - mh - 6, vh - mh - 8));
+    var right = Math.max(8, Math.min(vw - r.right, vw - mw - 8));
+    m.style.top = (top + window.scrollY) + 'px'; m.style.right = (right + window.scrollX) + 'px';
+    setTimeout(function () { document.addEventListener('pointerdown', function h(e) { if (!m.contains(e.target)) { m.remove(); document.removeEventListener('pointerdown', h); } }); }, 0);
+  }
+  /* V323 — «ابزار ریاضی» هم مثل منوی اطلس: یک منوی کوچک چهارگزینه‌ای (دبستان/متوسطهٔ اول/متوسطهٔ دوم و کنکور/انسانی و دانشگاه)
+     و بعد پنجرهٔ همان دسته باز می‌شود؛ پیش‌تر پنجرهٔ بزرگ با چهار کارت باز می‌شد. */
+  var MATH_MENU = [
+    ['elementary', '🧮', 'دبستان', 'پایهٔ اول تا ششم — شمارش، جمع و تفریق، ضرب، شکل و اندازه'],
+    ['middle', '📐', 'متوسطهٔ اول', 'پایهٔ هفتم تا نهم — جبر، هندسه، اندازه‌گیری و آمار مقدماتی'],
+    ['high', '🧪', 'متوسطهٔ دوم و کنکور', 'ریاضی، فیزیک، شیمی و زیست — از تابع و مثلثات تا مدار و سلول'],
+    ['university', '🎓', 'انسانی و دانشگاه', 'انسانی، هنر، فنی و دانشگاه — از عروض و حسابداری تا منطق دیجیتال و الگوریتم']
+  ];
+  function mathMenu(anchor, ta, q) {
+    var oldM = document.querySelector('.b-math-menu'); if (oldM) oldM.remove();
+    var oldA = document.querySelector('.b-atlas-menu'); if (oldA) oldA.remove();
+    var oldI = document.querySelector('.b-ins-menu'); if (oldI) oldI.remove();
+    var m = el('div', {class: 'b-atlas-menu b-math-menu'}, MATH_MENU.map(function (c) {
+      return el('button', {type: 'button', html: '<b>' + c[1] + '</b><span>' + S.esc(c[2]) + '</span><small>' + S.esc(c[3]) + '</small>',
+        onclick: function () { m.remove(); insertFigure('math:' + c[0], ta, q); }});
+    }).concat([
+      /* V323 — همان پنجرهٔ قبلی با فهرست کامل (برای وقتی کاربر نمی‌خواهد اول دسته را انتخاب کند) */
+      el('button', {type: 'button', html: '<b>🗂</b><span>همهٔ ابزارها</span><small>فهرست هر ۹۷ ابزار با انتخاب دسته در همان پنجره</small>',
+        onclick: function () { m.remove(); insertFigure('math', ta, q); }})
+    ]));
+    placeFloat(m, anchor);
+  }
+  /* V323 — جای‌گذاری یکسان منوهای شناور (اطلس و ابزار ریاضی): پایین دکمه، و اگر جا نبود بالای آن، همیشه داخل صفحه. */
+  function placeFloat(m, anchor) {
     var r = anchor.getBoundingClientRect(); document.body.appendChild(m);
     var mh = m.offsetHeight, mw = m.offsetWidth, vh = window.innerHeight, vw = document.documentElement.clientWidth;
     var top = r.bottom + 6; if (top + mh > vh - 8) top = Math.max(8, Math.min(r.top - mh - 6, vh - mh - 8));
@@ -1482,6 +1513,9 @@ var fillSubj = function () { var cur = ss.value; ss.innerHTML = ''; ss.appendChi
       var w = iframe.contentWindow, d = iframe.contentDocument, tries = 0;
       (function go() {
         tries++;
+        /* V323 — kind می‌تواند «math:<دسته>» باشد (منوی دسکتاپ): دسته جدا می‌شود و kind مثل قبل «math» می‌ماند. */
+        var mathCatReq = '';
+        if (String(kind).indexOf('math:') === 0) { mathCatReq = String(kind).slice(5); kind = 'math'; }
         var api = {geo: w.GeoFig, graph: w.GraphFig, axis: w.GraphFig, math: w.GraphFig, table: w.TableFig, periodic: w.PeriodicFig, anatomy: w.AnatomyFig, science: w.ScienceFig, physics: w.ScienceFig, chemistry: w.ScienceFig}[kind];
         var sciDom = kind === 'physics' ? 'phys' : kind === 'chemistry' ? 'chem' : null; /* V195 — ScienceFig.open(spec, el, dom) */
         if (!api || typeof api.open !== 'function' || !w.renderPreview) { if (tries < 100) return setTimeout(go, 60); toast('ویرایشگر شکل آماده نشد.', 'err'); return close(); }
@@ -1509,7 +1543,7 @@ var fillSubj = function () { var cur = ss.value; ss.innerHTML = ''; ss.appendChi
           var st2 = d.createElement('style'); st2.textContent = '#anCats,#anShapes,.an-split>.gf-types{display:none!important}'; d.head.appendChild(st2);
           api.open(presetSpec, null);
           var h3 = d.querySelector('#anOverlay h3'); if (h3) h3.textContent = 'تصویر خودم — فلش‌گذاری برای نام‌گذاری';
-        } else api.open(null, null, kind === 'math' ? 'math' : kind === 'axis' ? 'axis' : sciDom); /* V206 — 'axis' → GraphFig در حالت محور؛ V310 — 'math' → ابزار ریاضی ابتدایی */
+        } else { try { w.__mathCatReq = mathCatReq || null; } catch (e) {} api.open(null, null, kind === 'math' ? 'math' : kind === 'axis' ? 'axis' : sciDom); } /* V206 — 'axis' → GraphFig در حالت محور؛ V310 — 'math' → ابزار ریاضی؛ V323 — دسته از __mathCatReq */
         if (editTok && /"t":"photo"/.test(editTok)) { var st3 = d.createElement('style'); st3.textContent = '#anCats,#anShapes,.an-split>.gf-types{display:none!important}'; d.head.appendChild(st3); }
         Array.prototype.forEach.call(d.querySelectorAll('.gf-x, [id$="Close"], [id$="Cancel"]'), function (b) {
           b.addEventListener('click', function () { setTimeout(function () { var anyOpen = Array.prototype.some.call(d.querySelectorAll('[id$="Overlay"], .gf-overlay'), function (o) { return o.classList.contains('open'); }); if (!anyOpen && document.body.contains(overlay)) close(); }, 20); });
