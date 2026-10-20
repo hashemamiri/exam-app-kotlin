@@ -8,6 +8,7 @@ import ir.exam.app.core.ui.NeumorphicPalette
 import ir.exam.app.core.ui.ThemeMode
 import ir.exam.app.data.local.PrintHeaderStore
 import ir.exam.app.data.remote.SupabaseProvider
+import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.postgrest.postgrest
 import kotlinx.coroutines.flow.first
 import kotlinx.serialization.json.JsonObject
@@ -77,6 +78,9 @@ class SettingsSyncRepository(
     suspend fun pushAppearance() {
         val s = appearance.settings.first()
         val body = appearanceJson(s)
+        // بدون ورود، سرور ردیفی برای auth.uid() ندارد؛ ارسال بی‌فایده است.
+        val loggedIn = runCatching { SupabaseProvider.client.auth.currentUserOrNull() != null }.getOrDefault(false)
+        if (!loggedIn) return
         runCatching {
             SupabaseProvider.client.postgrest.rpc(
                 "native_settings_put_v327",
@@ -88,10 +92,11 @@ class SettingsSyncRepository(
         }
     }
 
-    private fun headerJson(): JsonObject? = runCatching {
+    /** سربرگ چاپ به‌صورت شیء JSON؛ اگر خالی باشد شیء تهی می‌رود تا سمت سرور مقداری پاک نکند (coalesce). */
+    private fun headerJson(): JsonObject = runCatching {
         val map = header.read()
-        if (map.isEmpty()) null else buildJsonObject { map.forEach { (k, v) -> put(k, v) } }
-    }.getOrNull()
+        buildJsonObject { map.forEach { (k, v) -> put(k, v) } }
+    }.getOrElse { kotlinx.serialization.json.JsonObject(emptyMap()) }
 
     private fun appearanceJson(s: AppearanceSettings): JsonObject = buildJsonObject {
         put("themeMode", s.themeMode.name)

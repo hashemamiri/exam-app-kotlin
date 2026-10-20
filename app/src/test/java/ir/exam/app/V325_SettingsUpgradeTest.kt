@@ -103,10 +103,14 @@ class V325_SettingsUpgradeTest {
         assertTrue("چند مورد در صف", "suspend fun pendingCount(context: Context, userId: String)" in tools)
         assertTrue("تلاش دوبارهٔ صف", "suspend fun retryAll(context: Context, userId: String)" in tools)
         assertTrue("نشانهٔ تاریخ پشتیبان", "fun markBackupNow(context: Context)" in tools)
-        assertTrue("کارت حافظه در تنظیمات اپ", "SettingsAccordionCard(title = \"حافظه و ارسال‌های در انتظار\"" in
-            source("app/src/main/java/ir/exam/app/ui/profile/ProfileSettingsScreen.kt"))
-        assertTrue("حالت درس‌آزمون", "حالت درس‌آزمون" in
-            source("app/src/main/java/ir/exam/app/ui/profile/ProfileSettingsScreen.kt"))
+        val screen = source("app/src/main/java/ir/exam/app/ui/profile/ProfileSettingsScreen.kt")
+        val blocks = source("app/src/main/java/ir/exam/app/ui/profile/ProfileSettingsBlocks.kt")
+        assertTrue("کارت حافظه در تنظیمات اپ", "SettingsAccordionCard(title = \"حافظه و ارسال‌های در انتظار\"" in screen)
+        assertTrue("بخش‌های تازه به کارت وصل نشده‌اند",
+            "LocalStorageBlock(LocalContext.current, viewModel.currentUserId())" in screen &&
+                "NotificationCategoriesBlock(pushCtx)" in screen)
+        assertTrue("حالت درس‌آزمون", "حالت درس‌آزمون" in blocks)
+        assertTrue("ساعت سکوت در اپ", "ساعت سکوت" in blocks)
         assertTrue("ثبت تاریخ پشتیبان پس از خروجی اپ", "LocalStorageTools.markBackupNow(context)" in
             source("app/src/main/java/ir/exam/app/ui/portability/DataPortabilitySection.kt"))
     }

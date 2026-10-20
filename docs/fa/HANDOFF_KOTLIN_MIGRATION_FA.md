@@ -20507,3 +20507,8 @@ check_test_pins بهبودیافته (assertTrue/assertFalse/contains/!contains/
 - `V325_SettingsUpgradeTest` (۶ تست): قفل و هش PIN، چیدمان دوستونه و میان‌برها، دسته‌بندی اعلان در سایت/SW/اپ، حافظه و صف، RPCهای همگام‌سازی، و پایبندی جدول تازه به قاعدهٔ گرنت.
 - `preflight` PASS (شامل قدم `data_api_grants`)، سایت با باندل تازه، و `node --check` روی همهٔ فایل‌های JS تغییرکرده.
 - درس: در این مخزن کامپایل Compose/Gradle محلی نیست؛ برای فایل‌های Kotlin تازه فقط «خطای نحوی» با kotlinc و `< /dev/null` قابل بررسی است (بدون کلاس‌پَث اندروید، خطاهای unresolved طبیعی‌اند).
+
+### اصلاح پس از اولین اجرای CI (کامپایل)
+- `SettingsSyncRepository` به‌جای `JsonObject?` که به `JsonElement` نمی‌خورد، سربرگ خالی را `JsonObject(emptyMap())` می‌فرستد و پیش از ارسال، ورود کاربر را بررسی می‌کند (بدون ورود RPC بی‌فایده است).
+- دو بخش تازهٔ تنظیمات (`NotificationCategoriesBlock` و `LocalStorageBlock`) که اشتباهاً داخل `companion`/بدنهٔ کلاس افتاده بودند، به فایل تازهٔ `ProfileSettingsBlocks.kt` منتقل شدند (همان بسته، `internal`) و یک آکولاد اضافی انتهای `ProfileSettingsScreen.kt` حذف شد.
+- درس: فایل‌های Compose بدون AndroidX با kotlinc فقط از نظر «نحوی» بررسی می‌شوند؛ جاگذاری اشتباهِ سطح اعلان (top-level) را نمی‌گیرد. دو بخش تازه از این پس در فایل جدا هستند تا این خطا تکرار نشود.
