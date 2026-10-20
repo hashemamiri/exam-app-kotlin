@@ -16,7 +16,7 @@ LIT = r'"((?:[^"\\]|\\.)*)"'
 args = [a for a in sys.argv[1:] if not a.startswith('--')]
 strict = '--strict' in sys.argv or os.environ.get('PINS_STRICT') == '1'
 files = args or sorted(glob.glob('app/src/test/java/ir/exam/app/**/*Test.kt', recursive=True))
-bad = 0; unparsed = 0; checked = 0
+bad = 0; unparsed = 0; checked = 0; unresolved = 0
 
 def read(path):
     try: return open(path, encoding='utf-8').read()
@@ -48,10 +48,18 @@ for t in files:
         def resolve(ref, inline_path):
             return inline_path or vars_.get(ref)
         # "lit" in x   /   "lit" in source("p")   — با ! قبل از پرانتز هم (مثل !( "lit" in x ))
-        for m in re.finditer(r'(!?)\(?' + LIT + r' in (\w+|(?:source|src)\("([^"]+)"\))', s):
+        # V325 — شاخهٔ src("…") باید پیش از \w+ بیاید؛ وگرنه «src» به‌عنوان نام متغیر گرفته می‌شد
+        # و پین بی‌صدا نادیده می‌ماند (علت شکست V232_SitePushTest در CI).
+        for m in re.finditer(r'(!?)\(?' + LIT + r' in (?:(?:source|src)\("([^"]+)"\)|(\w+))', s):
             found_any = True
             negated = (m.group(1) == '!') ^ neg_all
-            check(m.group(2), resolve(m.group(3), m.group(4)), not negated, s)
+            path = m.group(3) or vars_.get(m.group(4) or '')
+            if not path:
+                unresolved += 1
+                if strict:
+                    print('PIN UNRESOLVED (check by hand): %s : %s' % (os.path.basename(t), s[:140]))
+                continue
+            check(m.group(2), path, not negated, s)
         # x.contains("lit")  /  !x.contains("lit")
         for m in re.finditer(r'(!?)(\w+)\.contains\(' + LIT + r'\)', s):
             found_any = True
@@ -72,5 +80,7 @@ for t in files:
         if not found_any and strict:
             unparsed += 1; print('UNPARSED (check by hand): %s : %s' % (os.path.basename(t), s[:140]))
 
-print('check_test_pins: %d missing/unexpected (%d pins checked%s)' % (bad, checked, (', %d unparsed' % unparsed) if strict else ''))
+if unresolved:
+    print('check_test_pins: %d پین بدون فایل مرجع (بررسی دستی لازم)' % unresolved)
+print('check_test_pins: %d missing/unexpected (%d pins checked%s%s)' % (bad, checked, (', %d unparsed' % unparsed) if strict else '', (', %d unresolved' % unresolved) if unresolved else ''))
 sys.exit(1 if bad else 0)

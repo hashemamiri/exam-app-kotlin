@@ -36,7 +36,10 @@ class V232_SitePushTest {
     fun serviceWorkerAndUi() {
         val sw = src("site/pwa/sw.js")
         assertTrue("self.addEventListener('push'" in sw && "self.addEventListener('notificationclick'" in sw && "c.postMessage({type: 'push-nav'" in sw && "self.clients.openWindow('/' + q)" in sw)
-        assertTrue("if (window.SitePush && window.SitePush.available()) c.appendChild(card('اعلان‌ها'" in src("site/src/mobile.js"))
+        // V325 — کارت اعلان‌ها به دسته‌های جداگانه بازطراحی شد؛ شرط نمایش کارت همان است.
+        val mob = src("site/src/mobile.js")
+        assertTrue("if (window.SitePush && window.SitePush.available()) {" in mob && "اعلان‌ها" in mob &&
+            "SitePush.setCat(" in mob && "SitePush.cats(" in mob)
         assertTrue("if (arg && arg.code) inp.value = String(arg.code);" in src("site/src/student.js"))
         val fn = src("supabase/functions/push-dispatch/index.ts")
         assertTrue("if (platform === 'web') {" in fn && "message.webpush = { headers: { Urgency: 'high', TTL: '86400' } };" in fn)
