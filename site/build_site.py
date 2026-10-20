@@ -111,7 +111,8 @@ def main():
     # داخل index.html قرار می‌گیرد تا صفحهٔ اول بلافاصله باز شود؛ بقیهٔ بخش‌های سایت (سازندهٔ آزمون، استودیو،
     # پنل دانش‌آموز، تصحیح/مدیریت، مدرسه/بانک سؤال و اعلان وب) در فایل کش‌شدهٔ panels.<hash>.js قرار می‌گیرند
     # و در حین لاگین و پس از لاگین بارگذاری می‌شوند.
-    site_js = read(os.path.join(SITE, "src", "app.js")) + "\n" + read(os.path.join(SITE, "src", "extras.js")) + "\n" + read(os.path.join(SITE, "src", "mobile.js"))
+    # V325 — lock.js هم در بار اول می‌آید تا قفل میز کار پیش از باز شدن پنل‌ها فعال باشد
+    site_js = read(os.path.join(SITE, "src", "app.js")) + "\n" + read(os.path.join(SITE, "src", "extras.js")) + "\n" + read(os.path.join(SITE, "src", "lock.js")) + "\n" + read(os.path.join(SITE, "src", "sync.js")) + "\n" + read(os.path.join(SITE, "src", "mobile.js"))
     panels_raw = (
         "window.__HEADER_SCHEMA = %s;\n" % read(os.path.join(ASSETS, "print", "header_settings_schema.json")).strip()
         + read(os.path.join(SITE, "src", "builder.js")) + "\n"

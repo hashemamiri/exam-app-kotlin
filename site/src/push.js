@@ -23,6 +23,19 @@
   }
   function ls(k, v) { try { if (v === undefined) return localStorage.getItem(k); if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch (e) { return null; } }
   function isEnabled() { return ls('push.enabled') !== '0'; }
+  /* V325 — دسته‌بندی اعلان: کاربر می‌تواند هر دسته را جدا خاموش کند.
+     چون نمایش اعلان در Service Worker انجام می‌شود و SW به localStorage دسترسی ندارد،
+     انتخاب‌ها در IndexedDB (دیتابیس examsite-push) هم نوشته می‌شوند. */
+  var CAT_DEF = {grades: true, exam: true, calendar: true, requests: true};
+  function cats() { try { return Object.assign({}, CAT_DEF, JSON.parse(ls('push.cats') || '{}')); } catch (e) { return Object.assign({}, CAT_DEF); } }
+  function idbPut(c) {
+    try {
+      var r = indexedDB.open('examsite-push', 1);
+      r.onupgradeneeded = function () { try { r.result.createObjectStore('prefs'); } catch (e) {} };
+      r.onsuccess = function () { try { r.result.transaction('prefs', 'readwrite').objectStore('prefs').put(c, 'cats'); } catch (e) {} };
+    } catch (e) {}
+  }
+  function setCat(k, v) { var c = cats(); c[k] = !!v; ls('push.cats', JSON.stringify(c)); idbPut(c); return c; }
   function b64url(buf) { var s = btoa(String.fromCharCode.apply(null, new Uint8Array(buf))); return s.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''); }
   function vapidBytes(key) { var p = '='.repeat((4 - key.length % 4) % 4); var b = atob((key + p).replace(/-/g, '+').replace(/_/g, '/')); var out = new Uint8Array(b.length); for (var i = 0; i < b.length; i++) out[i] = b.charCodeAt(i); return out; }
   function genFid() { var a = new Uint8Array(17); crypto.getRandomValues(a); a[0] = 0x70 + (a[0] % 16); return b64url(a.buffer).substr(0, 22); }
@@ -233,5 +246,6 @@
   ncTimer = setInterval(ncRefresh, 90000);
   setTimeout(ncRefresh, 1500);
 
-  window.SitePush = {available: available, notifications: {refresh: ncRefresh, open: ncOpen}, isEnabled: function () { return isEnabled() && Notification.permission === 'granted' && !!ls('push.token'); }, enable: enable, disable: disable, sync: sync, navigate: navigate};
+  idbPut(cats()); /* همگام‌سازی اولیه با SW */
+  window.SitePush = {available: available, cats: cats, setCat: setCat, notifications: {refresh: ncRefresh, open: ncOpen}, isEnabled: function () { return isEnabled() && Notification.permission === 'granted' && !!ls('push.token'); }, enable: enable, disable: disable, sync: sync, navigate: navigate};
 })();

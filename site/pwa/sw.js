@@ -21,12 +21,35 @@ function offlinePage() {
   return new Response(html, {status: 503, headers: {'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store'}});
 }
 /* V232.9 — اعلان وب: پیام data-only از FCM → نمایش؛ ضربه → تمرکز روی پنجرهٔ باز (پیام push-nav) یا باز کردن /?page=… */
+/* V325 — دسته‌بندی اعلان: انتخاب‌های کاربر در IndexedDB (examsite-push/prefs/cats) است
+   چون Service Worker به localStorage دسترسی ندارد. اگر دسته‌ای خاموش باشد، اعلان نمایش داده نمی‌شود. */
+function pushCats() {
+  return new Promise(function (resolve) {
+    try {
+      var r = indexedDB.open('examsite-push', 1);
+      r.onupgradeneeded = function () { try { r.result.createObjectStore('prefs'); } catch (e) {} };
+      r.onerror = function () { resolve(null); };
+      r.onsuccess = function () {
+        try {
+          var tx = r.result.transaction('prefs', 'readonly').objectStore('prefs').get('cats');
+          tx.onsuccess = function () { resolve(tx.result || null); };
+          tx.onerror = function () { resolve(null); };
+        } catch (e) { resolve(null); }
+      };
+    } catch (e) { resolve(null); }
+  });
+}
+var PUSH_CAT = {grades: 'grades', exam: 'exam', calendar: 'calendar', requests: 'requests', grading: 'requests', students: 'requests'};
 self.addEventListener('push', function (e) {
   var p = {}; try { p = e.data ? e.data.json() : {}; } catch (x) { p = {}; }
   var d = p.data || p; var n = p.notification || {};
   var title = d.title || n.title || 'آزمون آنلاین'; var body = d.body || n.body || '';
   var data = {page: d.page || '', exam_id: d.exam_id || '', code: d.code || ''};
-  e.waitUntil(self.registration.showNotification(title, {body: body, icon: '/pwa/v3/icon-192.png', badge: '/pwa/v3/icon-192.png', dir: 'rtl', lang: 'fa', tag: d.outbox_id ? 'ox-' + d.outbox_id : undefined, data: data}));
+  e.waitUntil(pushCats().then(function (cats) {
+    var key = PUSH_CAT[data.page] || '';
+    if (cats && key && cats[key] === false) return; /* دسته خاموش است */
+    return self.registration.showNotification(title, {body: body, icon: '/pwa/v3/icon-192.png', badge: '/pwa/v3/icon-192.png', dir: 'rtl', lang: 'fa', tag: d.outbox_id ? 'ox-' + d.outbox_id : undefined, data: data});
+  }));
 });
 self.addEventListener('notificationclick', function (e) {
   e.notification.close();

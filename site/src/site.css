@@ -2034,3 +2034,31 @@ table.rp-single td.num,table.rp-single th.num{text-align:center;white-space:nowr
 .ice-tariff-row{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:11.5px;color:var(--sec);padding:4px 0;border-bottom:1px dashed var(--stroke)}
 .ice-tariff-row:last-child{border-bottom:0}
 .ice-tariff-row b{color:var(--ink);font-weight:800;white-space:nowrap}
+
+/* ================= V325 — قفل میز کار، تنظیمات دسکتاپی، راهنمای میان‌برها ================= */
+.site-lock{position:fixed;inset:0;z-index:9990;display:none;align-items:center;justify-content:center;background:rgba(12,22,33,.55);backdrop-filter:blur(7px);padding:20px}
+.site-lock.on{display:flex}
+.site-lock-card{width:min(360px,94vw);background:var(--card);border:1px solid var(--line);border-radius:20px;box-shadow:0 24px 60px rgba(10,25,40,.35);padding:22px 20px;text-align:center;direction:rtl}
+.site-lock-badge{font-size:34px;line-height:1}
+body.site-locked{overflow:hidden}
+body.site-locked .app{filter:blur(3px);pointer-events:none;user-select:none}
+/* تنظیمات/حساب در دسکتاپ: دو ستونه (راست: ناوبری، چپ: کارت‌ها) به‌جای قالب موبایلی باریک */
+@media (min-width:980px){
+  .dk-mwrap.m-mode{max-width:none}
+  .dk-mwrap.m-mode .m-settings{display:grid;grid-template-columns:230px minmax(0,1fr);gap:18px;align-items:start;direction:rtl}
+  .dk-mwrap.m-mode .m-settings>.m-chips{grid-column:1;grid-row:1;flex-direction:column;align-items:stretch;justify-content:flex-start;gap:8px;padding:0;position:sticky;top:14px}
+  .dk-mwrap.m-mode .m-settings>.m-chips .m-chip{text-align:right;padding:10px 14px;border-radius:12px;font-size:13.5px}
+  .dk-mwrap.m-mode .m-settings>.m-settings-body{grid-column:2;grid-row:1;display:flex;flex-direction:column;gap:12px}
+  .dk-mwrap.m-mode .m-settings>.m-settings-body .m-pcard{padding:16px 18px}
+  .dk-mwrap.m-mode .m-settings-foot{grid-column:2;grid-row:2}
+}
+.m-kv{display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:13px;padding:5px 0;border-bottom:1px dashed var(--line)}
+.m-kv:last-child{border-bottom:0}.m-kv b{font-weight:800}
+.m-bar{height:8px;border-radius:5px;background:var(--m-dark);overflow:hidden;margin:8px 0 4px}
+.m-bar>i{display:block;height:100%;background:var(--m-acc);border-radius:5px}
+.kbd-help{position:fixed;inset:0;z-index:9985;display:none;align-items:center;justify-content:center;background:rgba(12,22,33,.5);padding:20px}
+.kbd-help.on{display:flex}
+.kbd-help .card{width:min(520px,94vw);max-height:86vh;overflow:auto;direction:rtl}
+.kbd-help kbd{display:inline-block;min-width:26px;text-align:center;font-family:Consolas,monospace;font-size:12px;background:#eef3f8;border:1px solid #cbd8e5;border-bottom-width:2px;border-radius:6px;padding:1px 6px;direction:ltr}
+.kbd-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:6px 0;border-bottom:1px dashed var(--line);font-size:13px}
+.kbd-row:last-child{border-bottom:0}

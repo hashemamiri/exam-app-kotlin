@@ -992,7 +992,7 @@
   var PALETTES = {INDIGO_MINT: ['#6C63F5', '#27C4A8', 'نیلی و سبز'], BLUE_CYAN: ['#1877D2', '#32B7C6', 'آبی و فیروزه‌ای'], PINK_ORANGE: ['#E96D8A', '#FFA14E', 'صورتی و نارنجی'], PURPLE_PINK: ['#8C5AD7', '#EC6DA7', 'بنفش و صورتی']};
   var APPEAR_DEF = {themeMode: 'SYSTEM', fontScale: 1, appFont: 'VAZIRMATN', palette: 'INDIGO_MINT', depth: 14, persianDigits: false, highContrast: false}; /* V228 highContrast */
   function appearance() { try { return Object.assign({}, APPEAR_DEF, JSON.parse(localStorage.getItem(LS_APPEAR) || '{}')); } catch (e) { return Object.assign({}, APPEAR_DEF); } }
-  function setAppearance(patch) { var a = Object.assign(appearance(), patch); try { localStorage.setItem(LS_APPEAR, JSON.stringify(a)); } catch (e) {} applyAppearance(); return a; }
+  function setAppearance(patch) { var a = Object.assign(appearance(), patch); try { localStorage.setItem(LS_APPEAR, JSON.stringify(a)); } catch (e) {} applyAppearance(); try { if (window.SiteSettingsSync) window.SiteSettingsSync.push('appearance'); } catch (e) {} return a; }
   function applyAppearance() {
     var a = appearance(), root = document.documentElement, st = root.style;
     var dark = a.themeMode === 'DARK' || (a.themeMode === 'SYSTEM' && window.matchMedia('(prefers-color-scheme: dark)').matches);
@@ -1013,33 +1013,54 @@
     var sw = el('button', {class: 'm-switch' + (on ? ' on' : ''), 'aria-pressed': on ? 'true' : 'false', onclick: function () { on = !on; sw.classList.toggle('on', on); sw.setAttribute('aria-pressed', on ? 'true' : 'false'); cb(on); }}, [el('i')]);
     return el('div', {class: 'm-switch-row'}, [el('div', {class: 'grow'}, [el('div', {text: title}), sub ? el('small', {class: 'muted', text: sub}) : null]), sw]);
   }
-  function settingsScreen(c) {
+  /* V325 — قالب تازه: نوار زبانه‌ها + بدنهٔ جدا. در دسکتاپ (>=980px) همین دو تکه با CSS
+     به دو ستون تبدیل می‌شوند (ناوبری راست، کارت‌ها چپ) — پیش‌تر کل صفحه یک ستون باریک موبایلی بود. */
+  var SETTINGS_TABS = [['appearance', 'ظاهر'], ['data', 'داده‌ها'], ['security', 'امنیت'], ['about', 'درباره']];
+  function renderSettings(c) {
     var u = S.user(); c.innerHTML = '';
-    var tabs = [['appearance', 'ظاهر'], ['data', 'داده‌ها'], ['about', 'درباره']];
-    c.appendChild(chipRow(tabs, settingsTab, function (k) { settingsTab = k; settingsScreen(c); }));
-    if (settingsTab === 'appearance') return appearanceSection(c);
+    var wrap = el('div', {class: 'm-settings'});
+    var body = el('div', {class: 'm-settings-body', id: 'settingsBody'});
+    wrap.appendChild(chipRow(SETTINGS_TABS, settingsTab, function (k) { settingsTab = k; renderSettings(c); }));
+    wrap.appendChild(body);
+    c.appendChild(wrap);
+    if (settingsTab === 'appearance') return appearanceSection(body);
+    if (settingsTab === 'security') return securitySection(body);
     if (settingsTab === 'data') {
-      if (u.role === 'teacher') c.appendChild(window.SiteExtras.backupCard());
-      else if (u.role === 'manager') c.appendChild(managerBackupCard());
-      else c.appendChild(el('div', {class: 'card m-pcard', text: 'پشتیبان کامل داده‌ها فقط برای کادر مدرسه در دسترس است.'}));
+      if (u.role === 'teacher') body.appendChild(window.SiteExtras.backupCard());
+      else if (u.role === 'manager') body.appendChild(managerBackupCard());
+      else body.appendChild(el('div', {class: 'card m-pcard', text: 'پشتیبان کامل داده‌ها فقط برای کادر مدرسه در دسترس است.'}));
+      body.appendChild(storageCard());
       return;
     }
-    aboutSection(c);
+    aboutSection(body);
+    body.appendChild(shortcutsCard());
   }
+  function settingsScreen(c) { renderSettings(c); }
   function appearanceSection(c) {
     var a = appearance();
     function card(title, kids) { return el('div', {class: 'card m-pcard'}, [el('h3', {text: title})].concat(kids)); }
-    var rerun = function () { appearanceSection.__redo && appearanceSection.__redo(); };
-    appearanceSection.__redo = function () { c.innerHTML = ''; c.appendChild(chipRow([['appearance', 'ظاهر'], ['data', 'داده‌ها'], ['about', 'درباره']], settingsTab, function (k) { settingsTab = k; settingsScreen(c); })); appearanceSection(c); };
+    /* V325 — فقط بدنه بازسازی می‌شود (زبانه‌ها ثابت می‌مانند) */
+    var rerun = function () { c.innerHTML = ''; appearanceSection(c); };
     c.appendChild(card('حالت نمایش', [
       chipRow([['SYSTEM', 'دستگاه'], ['LIGHT', 'روشن'], ['DARK', 'تیره']], a.themeMode, function (v) { setAppearance({themeMode: v}); rerun(); }),
       switchRow('اعداد فارسی در ابزارها و فرمول‌ها', 'محورها، نمودارها، شکل‌ها، جدول‌ها، فرمول‌ها و صفحه‌کلید فرمول', a.persianDigits, function (v) { setAppearance({persianDigits: v}); }),
       switchRow('حالت پرکنتراست', 'متن پررنگ‌تر، کادرهای مشخص‌تر و تمرکز واضح‌تر برای کم‌بینایان', a.highContrast, function (v) { setAppearance({highContrast: v}); })
     ]));
-    /* V232.9 — اعلان‌های وب (فقط وقتی پیکربندی فایربیس در سایت هست) */
-    if (window.SitePush && window.SitePush.available()) c.appendChild(card('اعلان‌ها', [
-      switchRow('اعلان‌ها', 'نمرهٔ جدید، باز شدن آزمون، پیام تقویم و درخواست‌های مدیر', window.SitePush.isEnabled(), function (v) { (v ? window.SitePush.enable() : window.SitePush.disable()).then(function () { rerun(); }); })
-    ]));
+    /* V325 — اعلان‌ها: کلید کلی + چهار دستهٔ جدا (پیش‌تر فقط یک کلید عمومی بود) */
+    if (window.SitePush && window.SitePush.available()) {
+      var master = switchRow('اعلان‌ها', 'نمرهٔ جدید، باز شدن آزمون، پیام تقویم و درخواست‌های مدیر', window.SitePush.isEnabled(), function (v) {
+        (v ? window.SitePush.enable() : window.SitePush.disable()).then(function () { rerun(); });
+      });
+      var kids = [master];
+      if (window.SitePush.isEnabled()) {
+        var cats = window.SitePush.cats();
+        kids.push(el('p', {class: 'muted', style: 'font-size:12.5px;margin:2px 0 0', text: 'هر دسته را جدا خاموش کنید؛ پیام‌های خاموش، در مرکز اعلان‌ها می‌مانند.'}));
+        [['grades', 'نمرهٔ جدید'], ['exam', 'باز شدن آزمون'], ['calendar', 'پیام تقویم'], ['requests', 'درخواست‌های مدیر']].forEach(function (c2) {
+          kids.push(switchRow(c2[1], '', !!cats[c2[0]], function (v) { window.SitePush.setCat(c2[0], v); rerun(); }));
+        });
+      }
+      c.appendChild(card('اعلان‌ها', kids));
+    }
     c.appendChild(card('چیدمان دستگاه', [el('p', {class: 'muted', text: 'در وب، چیدمان گوشی/دسکتاپ از روی پهنای صفحه تشخیص داده می‌شود؛ روی تبلت مرورگر را عریض‌تر کنید تا نمای دسکتاپ نمایش داده شود.'}), el('p', {class: 'muted', style: 'color:var(--m-acc)', text: 'چیدمان فعلی: ' + (MQ.matches ? 'گوشی' : 'دسکتاپ') /* V260.6 — قبلاً روی دسکتاپ هم «گوشی» نوشته می‌شد */})]));
     var palRow = el('div', {class: 'm-pal-row'}, Object.keys(PALETTES).map(function (k) { var p = PALETTES[k]; return el('button', {class: 'm-pal' + (a.palette === k ? ' on' : ''), 'aria-label': 'پالت ' + p[2], style: 'background:linear-gradient(135deg,' + p[0] + ',' + p[1] + ')', onclick: function () { setAppearance({palette: k}); rerun(); }}, [a.palette === k ? ic('check') : null]); }));
     var dv = el('b', {style: 'color:var(--m-acc)', text: fa(Math.round(a.depth))});
@@ -1059,6 +1080,137 @@
     c.appendChild(card('اندازه متن', [sv, sr, el('p', {text: 'نمونه متن فارسی — آزمون ریاضی فصل یک'})]));
     c.appendChild(el('button', {class: 'm-outline', style: 'width:100%;margin-bottom:12px', text: 'بازگردانی تنظیمات ظاهری', onclick: function () { try { localStorage.removeItem(LS_APPEAR); } catch (e) {} applyAppearance(); rerun(); }}));
   }
+  /* ================================================================ V325 — «امنیت»: قفل میز کار
+     اپ از V56 قفل بیومتریک/رمز دستگاه دارد؛ سایت قفل نداشت. PIN با هش SHA-256 + نمک ذخیره می‌شود. */
+  function securitySection(c) {
+    var L = window.SiteLock;
+    if (!L) { c.appendChild(el('div', {class: 'alert warn', text: 'ماژول قفل بارگذاری نشد.'})); return; }
+    function rerun() { c.innerHTML = ''; securitySection(c); }
+    var cfg = L.cfg();
+    var on = !!(cfg.enabled && cfg.hash);
+    var msg = el('p', {class: 'muted', style: 'min-height:18px;font-size:12.5px;margin:0'});
+    function card2(title, kids) { return el('div', {class: 'card m-pcard'}, [el('h3', {text: title})].concat(kids)); }
+    function pinRow(label, ph) {
+      var i = el('input', {type: 'password', inputmode: 'numeric', maxlength: '6', placeholder: ph || '', 'aria-label': label,
+        style: 'letter-spacing:8px;text-align:center;font-size:20px;padding:10px;width:100%;border-radius:12px;border:1px solid var(--line)'});
+      return el('div', {style: 'margin:6px 0;text-align:right'}, [el('label', {class: 'muted', style: 'font-size:12.5px;display:block;margin-bottom:4px', text: label}), i]);
+    }
+    if (!on) {
+      var p1 = pinRow('رمز قفل (۴ تا ۶ رقم)', '••••'), p2 = pinRow('تکرار رمز', '••••');
+      var b = el('button', {class: 'btn', style: 'width:100%;margin-top:6px', text: 'فعال کردن قفل', onclick: async function () {
+        var a = String(p1.children[1].value || '').trim(), bb = String(p2.children[1].value || '').trim();
+        if (a.length < 4 || a.length > 6) { msg.textContent = 'رمز باید ۴ تا ۶ رقم باشد.'; msg.style.color = '#c2412d'; return; }
+        if (a !== bb) { msg.textContent = 'دو رمز یکسان نیستند.'; msg.style.color = '#c2412d'; return; }
+        try { await L.setPin(a); msg.textContent = 'قفل فعال شد.'; msg.style.color = '#0f8a5f'; setTimeout(rerun, 500); }
+        catch (e) { msg.textContent = e.message || 'ذخیرهٔ رمز انجام نشد.'; msg.style.color = '#c2412d'; }
+      }});
+      c.appendChild(card2('🔒 قفل میز کار', [
+        el('p', {class: 'muted', style: 'font-size:13px', text: 'اگر رایانه در مدرسه مشترک است یا ممکن است باز رها شود، با فعال کردن قفل، صفحه پس از بی‌کاری با یک رمز ۴ تا ۶ رقمی بسته می‌شود.'}),
+        p1, p2, b, msg,
+        el('p', {class: 'muted', style: 'font-size:12px', text: 'رمز فقط روی همین مرورگر ذخیره و به‌صورت هش نگه‌داری می‌شود؛ خود رمز جایی فرستاده نمی‌شود.'})
+      ]));
+      return;
+    }
+    var cur = pinRow('رمز فعلی', '••••'), nw = pinRow('رمز تازه (خالی = بدون تغییر)', '••••');
+    var err = el('p', {class: 'muted', style: 'min-height:18px;font-size:12.5px;margin:0'});
+    c.appendChild(card2('🔒 قفل میز کار', [
+      switchRow('قفل فعال است', 'برای خاموش کردن، رمز فعلی لازم است', true, function () {}),
+      el('div', {class: 'm-chips', style: 'justify-content:flex-start;padding:6px 0 0'}, L.TIMEOUTS.map(function (t) {
+        return el('button', {class: 'm-chip' + (Number(cfg.timeoutMin) === t[0] ? ' on' : ''), text: 'بی‌کاری: ' + t[1],
+          onclick: function () { L.setTimeoutMin(t[0]); rerun(); }});
+      })),
+      cur, nw,
+      el('div', {class: 'row', style: 'gap:8px;margin-top:4px'}, [
+        el('button', {class: 'btn light', style: 'flex:1', text: 'قفل فوری', onclick: function () { L.lockNow(); }}),
+        el('button', {class: 'btn', style: 'flex:1', text: 'ذخیرهٔ رمز تازه', onclick: async function () {
+          var c0 = String(cur.children[1].value || '').trim(), n0 = String(nw.children[1].value || '').trim();
+          if (!(await L.checkPin(c0))) { err.textContent = 'رمز فعلی نادرست است.'; err.style.color = '#c2412d'; return; }
+          if (!n0) { err.textContent = 'رمز تازه خالی است؛ تغییری لازم نیست.'; err.style.color = '#63798a'; return; }
+          await L.setPin(n0); err.textContent = 'رمز عوض شد.'; err.style.color = '#0f8a5f'; setTimeout(rerun, 500);
+        }}),
+        el('button', {class: 'btn light', style: 'flex:1', text: 'خاموش کردن', onclick: async function () {
+          var c0 = String(cur.children[1].value || '').trim();
+          if (!(await L.checkPin(c0))) { err.textContent = 'برای خاموش کردن، رمز فعلی درست لازم است.'; err.style.color = '#c2412d'; return; }
+          L.disable(); err.textContent = 'قفل خاموش شد.'; err.style.color = '#0f8a5f'; setTimeout(rerun, 400);
+        }})
+      ]),
+      err,
+      el('p', {class: 'muted', style: 'font-size:12px', text: 'قفل با بارگذاری دوبارهٔ صفحه هم برقرار می‌ماند تا وقتی رمز وارد شود.'})
+    ]));
+  }
+
+  /* ================================================================ V325 — «فضای مرورگر»
+     تصاویر آزمون و کش پوستهٔ PWA در مرورگر جمع می‌شوند؛ پیش‌تر هیچ‌جا دیده/پاک نمی‌شدند. */
+  function storageCard() {
+    var msg = el('p', {class: 'muted', style: 'min-height:18px;font-size:12.5px;margin:0'});
+    var bar = el('div', {class: 'm-bar'}, [el('i', {style: 'width:0%'})]);
+    var total = el('b', {text: '…'}), detail = el('div');
+    function gb(n) { if (!n && n !== 0) return '—'; var mb = n / 1048576; return mb >= 1024 ? (mb / 1024).toFixed(2) + ' گیگابایت' : (mb >= 1 ? mb.toFixed(1) + ' مگابایت' : Math.max(1, Math.round(n / 1024)) + ' کیلوبایت'); }
+    async function refresh() {
+      var est = null;
+      try { if (navigator.storage && navigator.storage.estimate) est = await navigator.storage.estimate(); } catch (e) {}
+      var keys = [];
+      try { keys = (await caches.keys()).filter(function (k) { return k.indexOf('azmoon-shell-') === 0; }); } catch (e) {}
+      total.textContent = est ? gb(est.usage) + ' از ' + gb(est.quota) : 'نامشخص';
+      if (est && est.quota) { bar.firstChild.style.width = Math.min(100, Math.round((est.usage / est.quota) * 100)) + '%'; }
+      detail.innerHTML = '';
+      detail.appendChild(el('div', {class: 'm-kv'}, [el('span', {text: 'کش پوستهٔ PWA'}), el('b', {text: keys.length ? keys.length + ' نسخه' : 'خالی'})]));
+      detail.appendChild(el('div', {class: 'm-kv'}, [el('span', {text: 'تصاویر در حافظهٔ صفحه'}), el('b', {text: (window.ExamSite && ExamSite.mediaCacheSize ? ExamSite.mediaCacheSize() : 0) + ' مورد'})]));
+      detail.appendChild(el('div', {class: 'm-kv'}, [el('span', {text: 'دادهٔ محلی (پیش‌نویس/تنظیمات)'}), el('b', {text: (function () { var n = 0; try { for (var i = 0; i < localStorage.length; i++) { var k = localStorage.key(i); n += k.length + String(localStorage.getItem(k) || '').length; } } catch (e) {} return gb(n); })()})]));
+      /* V326 — یادآوری پشتیبان: اگر بیش از ۷ روز از آخرین پشتیبان گذشته باشد هشدار می‌دهد */
+      var lastB = 0; try { lastB = Number(localStorage.getItem('examsite.backup.last') || 0); } catch (e) {}
+      var daysB = lastB ? Math.floor((Date.now() - lastB) / 86400000) : -1;
+      detail.appendChild(el('div', {class: 'm-kv'}, [el('span', {text: 'آخرین پشتیبان'}), el('b', {text: daysB < 0 ? 'هنوز نگرفته‌اید' : (daysB === 0 ? 'امروز' : (daysB === 1 ? 'دیروز' : daysB + ' روز پیش'))})]));
+      if (daysB < 0 || daysB >= 7) {
+        detail.appendChild(el('div', {class: 'alert warn', style: 'font-size:12.5px', text: 'بیش از یک هفته از آخرین پشتیبان گذشته است؛ از بخش «داده‌ها» یک پشتیبان کامل بگیرید.'}));
+      }
+    }
+    var b1 = el('button', {class: 'btn light', style: 'flex:1', text: 'پاک‌سازی کش تصاویر', onclick: function () {
+      try { if (window.ExamSite && ExamSite.clearMediaCache) ExamSite.clearMediaCache(); } catch (e) {}
+      msg.textContent = 'کش تصاویر پاک شد.'; msg.style.color = '#0f8a5f'; setTimeout(refresh, 200);
+    }});
+    var b2 = el('button', {class: 'btn light', style: 'flex:1', text: 'حذف نسخه‌های قدیمی پوسته', onclick: async function () {
+      var n = 0;
+      try {
+        var keys = await caches.keys();
+        var act = (navigator.serviceWorker && navigator.serviceWorker.controller) ? 1 : 0;
+        for (var i = 0; i < keys.length; i++) {
+          if (keys[i].indexOf('azmoon-shell-') !== 0) continue;
+          if (act && i === keys.length - 1) continue; /* آخرین نسخه نگه داشته می‌شود */
+          await caches.delete(keys[i]); n++;
+        }
+      } catch (e) {}
+      msg.textContent = n ? (n + ' نسخهٔ قدیمی پاک شد.') : 'نسخهٔ قدیمی‌ای نبود.'; msg.style.color = n ? '#0f8a5f' : '#63798a';
+      setTimeout(refresh, 200);
+    }});
+    b2.style.marginRight = '0';
+    var card = el('div', {class: 'card m-pcard'}, [
+      el('h3', {text: '💾 فضای مرورگر'}),
+      el('p', {class: 'muted', style: 'font-size:13px;text-align:right', text: 'تصاویر آزمون و نسخه‌های پوستهٔ سایت در مرورگر ذخیره می‌شوند. اگر سایت کند شده یا فضا کم است، از اینجا پاک کنید (دادهٔ آزمون‌ها روی سرور است و پاک نمی‌شود).'}),
+      el('div', {style: 'text-align:right'}, [el('span', {class: 'muted', style: 'font-size:12.5px', text: 'مصرف کل: '}), total]), bar, detail,
+      el('div', {class: 'row', style: 'gap:8px;margin-top:6px'}, [b1]), b2, msg
+    ]);
+    setTimeout(refresh, 60);
+    var rb = el('button', {class: 'btn light', style: 'width:100%;margin-top:6px', text: 'به‌روزرسانی آمار', onclick: function () { refresh(); }});
+    card.appendChild(rb);
+    return card;
+  }
+
+  /* ================================================================ V325 — راهنمای میان‌برهای صفحه‌کلید (دسکتاپ) */
+  function shortcutsCard() {
+    var rows = [
+      ['Ctrl + S', 'ذخیرهٔ آزمون در حال ساخت'],
+      ['Ctrl + P', 'پیش‌نمایش و چاپ آزمون'],
+      ['Ctrl + Enter', 'افزودن سؤال تازه'],
+      ['Ctrl + K', 'جست‌وجوی سریع بخش‌ها'],
+      ['Esc', 'بستن پنجرهٔ باز'],
+      ['?', 'همین راهنما']
+    ];
+    return el('div', {class: 'card m-pcard'}, [el('h3', {text: '⌨️ میان‌برهای صفحه‌کلید (دسکتاپ)'})]
+      .concat(rows.map(function (r) { return el('div', {class: 'kbd-row'}, [el('span', {text: r[1]}), el('kbd', {text: r[0]})]); }))
+      .concat([el('p', {class: 'muted', style: 'font-size:12px;text-align:right', text: 'این میان‌برها روی نسخهٔ وب کار می‌کنند و در صفحهٔ ساخت آزمون فعال‌ترند.'})]));
+  }
+
   function managerBackupCard() {
     var msg = el('div');
     return el('div', {class: 'card m-pcard'}, [el('h3', {text: 'پشتیبان داده‌های مدرسه'}), el('p', {class: 'muted', text: 'مدرسه‌ها، معلم‌ها، کلاس‌ها و دانش‌آموزان در یک فایل JSON ذخیره می‌شوند.'}), msg,

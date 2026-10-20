@@ -50,7 +50,11 @@ fun DataPortabilitySection(onImportExam: (ExamImportDraft) -> Unit = {}) {
         val file = state.exportFile
         if (uri != null && file != null) {
             /* V252 — پشتیبان تا ۲۰ مگابایت روی نخ IO نوشته می‌شود و خطای فراهم‌کنندهٔ فایل دیگر برنامه را نمی‌بندد */
-            ioScope.launch { DocumentIo.writeText(context, uri, file.content).onFailure(viewModel::reportError) }
+            ioScope.launch {
+                DocumentIo.writeText(context, uri, file.content)
+                    .onSuccess { ir.exam.app.ui.profile.LocalStorageTools.markBackupNow(context) } /* V326 — تاریخ آخرین پشتیبان */
+                    .onFailure(viewModel::reportError)
+            }
         }
         viewModel.consumeExport()
     }

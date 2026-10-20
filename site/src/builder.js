@@ -8,6 +8,9 @@
   var el = S.el, esc = S.esc, fa = S.fa, en = S.en, toast = S.toast, errMsg = S.errMsg, uuid = S.uuid;
   var LS_PRINT = 'examsite.printexams.v1';
   var LS_DRAFT = 'examsite.builderdraft.v1';
+  /* V325 — میان‌برهای صفحه‌کلید: هر بار که صفحهٔ سازنده باز می‌شود، عمل‌های داخلی خودش
+     (ذخیره/سؤال تازه/پیش‌نمایش) این‌جا ثبت می‌شوند تا app.js بتواند صدا بزند. */
+  var SC = {};
   /* V205 — آیکن‌های نوار ابزار سؤال عیناً از اپ (QuestionToolIcons.kt: مسیرهای برداری ۲۴×۲۴؛ Mic/PhotoCamera/MusicNote متریال outlined در QuestionMediaEditor) */
   function toolSvg(kind) {
     var S_ = 'fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"';
@@ -775,6 +778,9 @@
       list.appendChild(el('div', {class: 'row', style: 'margin-bottom:10px'}, [el('b', {class: 'grow', text: 'سؤال‌ها (' + fa(state.questions.length) + ')'}), el('span', {class: 'muted', style: 'font-size:12px', text: 'جمع بارم: ' + fa(S.fmtScore(state.questions.reduce(function (s, q) { return s + (Number(q.score) || 0); }, 0)))})]));
       var addRow = el('div', {class: 'b-add'});
       TYPES.forEach(function (t) { addRow.appendChild(el('button', {class: 'btn light sm', title: t[1], text: t[2] + ' ' + t[1], onclick: function () { state.questions.push(newQuestion(t[0])); state.selected = state.questions.length - 1; mark(); drawList(); drawEditor(); }})); });
+      /* V325 — ثبت میان‌برهای همین صفحه: Ctrl+Enter سؤال تازه، Ctrl+S ذخیره */
+      SC.addq = function () { state.questions.push(newQuestion('multiple')); state.selected = state.questions.length - 1; mark(); drawList(); drawEditor(); };
+      try { SC.save = save; } catch (e) {}
       list.appendChild(addRow);
       if (bankAllowed()) list.appendChild(el('button', {class: 'btn soft sm', style: 'width:100%;margin-top:8px', text: '🏦 از بانک سؤال', onclick: openBank}));
       if (bankAllowed() && state.primaryMode && !state.bankEdit) list.appendChild(el('button', {class: 'btn soft sm', style: 'width:100%;margin-top:8px', text: '🏫 بانک آمادهٔ ابتدایی', onclick: openPrimaryBank}));
@@ -1593,5 +1599,5 @@ var fillSubj = function () { var cur = ss.value; ss.innerHTML = ''; ss.appendChi
   function sel(label, val, opts, on) { var s = el('select'); opts.forEach(function (o) { var op = el('option', {value: o[0], text: o[1]}); if (o[0] === val) op.selected = true; s.appendChild(op); }); s.addEventListener('change', function () { on(s.value); }); return el('div', {class: 'field'}, [el('label', {text: label}), s]); }
   function chk(label, val, on) { var c = el('input', {type: 'checkbox'}); c.checked = !!val; c.addEventListener('change', function () { on(c.checked); }); return el('label', {class: 'row', style: 'gap:6px;font-size:14px'}, [c, label]); }
 
-  window.SiteBuilder = {page: page, printExamsSection: printExamsSection, printExamsList: printExamsList, printExamGet: printExamGet, printExamSave: printExamSave, printExamDelete: printExamDelete, draftsFromCombined: draftsFromCombined, migrateLocalPrintExams: migrateLocalPrintExams, encodeQuestions: encodeQuestions, decodeQuestion: decodeQuestion, newQuestion: newQuestion, toServerExam: toServerExam};
+  window.SiteBuilder = {shortcut: function (kind) { var f = SC[kind]; if (typeof f === 'function') { try { f(); return true; } catch (e) { return false; } } return false; }, page: page, printExamsSection: printExamsSection, printExamsList: printExamsList, printExamGet: printExamGet, printExamSave: printExamSave, printExamDelete: printExamDelete, draftsFromCombined: draftsFromCombined, migrateLocalPrintExams: migrateLocalPrintExams, encodeQuestions: encodeQuestions, decodeQuestion: decodeQuestion, newQuestion: newQuestion, toServerExam: toServerExam};
 })();

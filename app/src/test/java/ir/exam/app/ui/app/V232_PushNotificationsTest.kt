@@ -32,7 +32,7 @@ class V232_PushNotificationsTest {
         assertTrue(reg.contains("\"native_push_register_v1\"") && reg.contains("\"native_push_unregister_v1\""))
         assertTrue(reg.contains("put(\"p_platform\", JsonPrimitive(\"android\"))"))
         val svc = src("app/src/main/java/ir/exam/app/core/push/PushMessagingService.kt")
-        assertTrue(svc.contains("const val CHANNEL_ID = \"exam_events\"") && svc.contains("if (!PushRegistrar.isEnabled(applicationContext)) return"))
+        assertTrue(svc.contains("const val CHANNEL_ID = \"exam_events\"") && svc.contains("if (!PushRegistrar.shouldShow(applicationContext, message.data[\"page\"])) return")) /* V326 — دسته‌بندی اعلان */
         val manifest = src("app/src/main/AndroidManifest.xml")
         assertTrue(manifest.contains("android.permission.POST_NOTIFICATIONS") && manifest.contains(".core.push.PushMessagingService") && manifest.contains("firebase_analytics_collection_deactivated"))
         assertTrue(src("app/src/main/java/ir/exam/app/ui/app/ExamApp.kt").contains("ir.exam.app.core.push.PushRegistrar.sync(pushContext, user.id)"))

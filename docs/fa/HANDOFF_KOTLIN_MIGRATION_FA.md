@@ -1,6 +1,6 @@
 # هندآف جامع مهاجرت سامانه آزمون از WebView به Native Kotlin
 
-**آخرین به‌روزرسانی:** ۲۰۲۶-۱۰-۲۰ — V324.0 (اپ 1.02.65 + سرور؛ مقصد: آزمایشی + اصلی) پاسخ به تغییر Data API سوپابیس از ۳۰ اکتبر: مهاجرت `20261020_explicit_data_api_grants_v324.sql` (گرنت صریح ۴۰ جدول + `alter default privileges`)، نگهبان `scripts/check_supabase_data_api_grants.py` در preflight، تست `V324_SupabaseDataApiGrantsTest`، توضیح فارسی در `docs/fa/SUPABASE_DATA_API_GRANTS_FA.md`. اصلاح‌های V323 (منوی دسته‌ای ابزار ریاضی) در همین بسته است.
+**آخرین به‌روزرسانی:** ۲۰۲۶-۱۰-۲۱ — V325.0 (اپ 1.02.66 + سایت و سرور؛ مقصد: آزمایشی + اصلی) ارتقای یک‌جای «تنظیمات»: قفل میز کار سایت (`site/src/lock.js`)، چیدمان دوستونهٔ تنظیمات و میان‌برهای صفحه‌کلید، اعلان‌های چهار دسته‌ای + ساعت سکوت + حالت درس‌آزمون، کارت «فضا و ارسال‌های در انتظار» (`LocalStorageTools.kt`)، و همگام‌سازی تنظیمات با حساب (`supabase/migrations/20261021_settings_sync_v327.sql` + `site/src/sync.js` + `SettingsSyncRepository.kt`) — جزئیات در انتهای فایل.
 **زبان همکاری:** فارسی
 **کاربر:** غیر‌برنامه‌نویس؛ دستورها باید ساده، مرحله‌ای و قابل کپی در WSL باشند.
 
@@ -755,10 +755,25 @@ cd /mnt/c/Users/Hashem/Downloads/exam-app-kotlin && python3 /mnt/c/Users/Hashem/
 
 ### الزامات هر تحویل:
 - ارائه فایل `apply_vXX.py` کامل و باز کردن آن با `present_file` برای دانلود مستقیم.
-- ارائه فایل SQL در صورت نیاز به مهاجرت پایگاه داده.
+- ارائه فایل SQL در صورت نیاز به مهاجرت پایگاه داده (و یادآوری اجرای دستی آن در **SQL Editor**).
 - توضیح فارسی کوتاه و شفاف از تغییرات.
 - به‌روزرسانی اجباری `docs/fa/HANDOFF_KOTLIN_MIGRATION_FA.md` در همان نسخه.
 - اجرای موفق `verify_native_final.py` و تست‌های واحد `testDebugUnitTest`.
+- اجرای `python3 scripts/preflight.py <تست‌های جدید>` و سبز بودنش. از **V324** این چک‌لیست یک قدم تازه هم دارد:
+  `data_api_grants` → `scripts/check_supabase_data_api_grants.py --quiet` (هر جدول تازه باید `grant` صریح داشته باشد).
+
+### قاعدهٔ دائمی پایگاه‌داده (از V324 — تغییر Data API سوپابیس در ۳۰ اکتبر):
+در **همان مهاجرتی که `create table` می‌سازد** این سه خط نوشته شود، وگرنه جدول از PostgREST، supabase-js و توابع لبه
+با `permission denied` رد می‌شود (شامل `supabase db reset`، شاخهٔ پیش‌نمایش و پروژهٔ تازه):
+
+```sql
+grant select on table public.your_table to anon;
+grant select, insert, update, delete on table public.your_table to authenticated;
+grant all on table public.your_table to service_role;
+```
+
+اگر جدولی نباید از Data API دیده شود، آن را در schema `private` بسازید (مثل `private.push_config`).
+جدول‌های موجود (پیش از ۳۰ اکتبر) دست‌نخورده‌اند؛ گرنت صریح آن‌ها یک‌بار در `20261020_explicit_data_api_grants_v324.sql` نوشته شد.
 
 ---
 
@@ -20416,3 +20431,79 @@ check_test_pins بهبودیافته (assertTrue/assertFalse/contains/!contains/
 ## V312.9 — تقسیم عمودی ویرایشگر فرمول دسکتاپ به دو نیمه (راست: کتابخانه‌ها + دکمه‌ها / چپ: کادر درج فرمول) (اپ 1.02.37 + سایت؛ مقصد: آزمایشی)
 - تقسیم عمودی `#mfModal.box-fullscreen #mfP_box` در دسکتاپ (`@media (min-width:561px)`) به دو ستون برابر (`grid-template-columns: repeat(2, minmax(0, 1fr))`) با جهت راست‌به‌چپ (`direction: rtl`).
 - قرار دادن `.mb-chip-scroll` (۲۱ کتابخانه در ۳ ستون و ۷ ردیف) در بالای ستون راست (`grid-column: 1; grid-row: 1`) و `.mb-key-section` (۴ ردیف ۸تایی دکمه‌های ابزار) در زیر آن (`grid-column: 1; grid-row: 2 / span 2`)، و قرار دادن `.mb-wrap` (کادر درج فرمول) در کل ارتفاع ستون چپ (`grid-column: 2; grid-row: 1 / span 2`).
+
+---
+
+## V322.1 — رفع CI: ارقام فارسی در محورهای شکلی + تیترهای لیست تغییرات (اپ 1.02.62 + سایت؛ مقصد: هر دو)
+- **شکست CI:** `testDebugUnitTest` روی تستی که خروجی SVG محور را می‌سنجید قرمز شد، چون برچسب عددی محورها با ارقام لاتین رندر می‌شد.
+- **رفع:** در `app/src/main/java/ir/exam/app/core/figure/AxisSvgRenderer.kt` تابع `text()` مقدار ورودی را از `FigureDigits.apply(s)` می‌گذراند (تبدیل ارقام لاتین → فارسی)، سپس `fitTxt` هم همین مقدار تبدیل‌شده را اندازه می‌گیرد؛ در `graph_fig.js` هم دو نقطهٔ اندازه‌گیری/رسم با مقدار تبدیل‌شده هم‌راست شدند.
+- **نکتهٔ مهم:** رندرر محور در Kotlin تابع `text()` دارد و در بقیهٔ رندررها `tx()`؛ تغییر باید فقط در همان فایل مقصد باشد (تست‌های پین همین را می‌سنجند).
+- **بسته:** ۵۱ فایل، ۴٫۲۸ مگابایت، پایهٔ `13699e67`.
+- **درس:** هر تغییر در تولید متن رندررها باید *قبل از اندازه‌گیری عرض* اعمال شود، نه بعد از آن؛ وگرنه متن فارسی از کادر بیرون می‌زند.
+
+## V322.2 — رفع CI: تیترهای بلوک بالای «لیست تغییرات» نباید شمارهٔ نسخهٔ داخلی داشته باشند (اپ 1.02.63 + سایت؛ مقصد: هر دو)
+- **شکست CI:** `V300_UpdateNoticeWalletTest > realChangelogTopAppBlockHasBullets` (خط ۵۹) — تست، ۶۰ خط اول `text/CHANGELOG_FA.txt` را می‌خواند، بلوک «اپ» بالای فایل را برمی‌دارد و شرط می‌گذارد هیچ تیتری با الگوی `\bV\d` جور نشود.
+- **علت:** تیترهای V322.1 شامل «تست ‎V137_5‎ …» و «تست V322» بودند؛ پاک‌ساز `ReleaseNotes.cleanBullet` فقط توکن تنها (`V123`) را حذف می‌کند و `V137_5` را نه → متن با شمارهٔ نسخهٔ داخلی به کاربر نشان داده می‌شد.
+- **رفع:** تیترهای V322.1 و V322.2 بازنویسی شدند (مثل «تست ارقام فارسی»، «تست لیست تغییرات»)، `text/APP_VERSION.txt` = `1.02.63`.
+- **نگهبان تازه:** تست `changelogTopBlockHasNoInternalVersionNumbers` در `V322_MathToolsRobustnessTest.kt` — همین قاعده را روی فایل واقعی می‌سنجد (≤۶ تیتر، هر تیتر ≤۲۰۰ نویسه، بدون `V\d`، بلوک مربوط به اپ).
+- **درس:** کاربر در پنجرهٔ «بروزرسانی» فقط شمارهٔ اپ (`1.02.63`) و توضیح ساده می‌بیند؛ هیچ نام نسخهٔ داخلی، شناسهٔ تست یا شمارهٔ فایل نباید در تیتر این بلوک باشد.
+
+## V323.0 — منوی «ابزار ریاضی» دسکتاپ مثل منوی «اطلس» شد (اپ 1.02.64 + سایت؛ مقصد: هر دو)
+- **خواستهٔ کاربر:** در دسکتاپ، پنجرهٔ بزرگ ابزار ریاضی با چهار کارت دسته باز می‌شد؛ باید مثل پنجرهٔ «اطلس» (آناتومی/فیزیک/شیمی/تصویر خودم) یک منوی کوچک با چهار گزینه باز شود و بعد پنجرهٔ همان دسته.
+- **منو (`site/src/builder.js`):** `mathMenu(anchor, ta, q)` با آرایهٔ `MATH_MENU` (دبستان 🧮 ۳۷ ابزار / متوسطهٔ اول 📐 ۱۵ / متوسطهٔ دوم و کنکور 🧪 ۲۲ / انسانی و دانشگاه 🎓 ۲۳) + گزینهٔ پنجم «🗂 همهٔ ابزارها» که رفتار قبلی (فهرست کامل ۹۷ ابزار) را نگه می‌دارد.
+- **کلاس و جای‌گذاری:** همان `b-atlas-menu` (کلاس تازه `b-math-menu` فقط عرض را تنظیم می‌کند) و تابع مشترک `placeFloat(m, anchor)` برای مهار منو داخل صفحه.
+- **عبور دسته به موتور:** `insertFigure('math:<cat>', …)` → در `insertFigure` دسته جدا می‌شود (`kind='math'` + `w.__mathCatReq`) → `GraphFig.open(null, null, 'math')` → `mathCatById(window.__mathCatReq)` → `presel` → `fillShapes('math')` مستقیم روی همان دسته.
+- **امضاها دست‌نخورده ماندند:** `var math = mode === 'math' || !!(spec && isMathType(spec.t));` و `api.open(null, null, kind === 'math' ? 'math' : kind === 'axis' ? 'axis' : sciDom)` — چون تست‌های V188/V206/V310 آن‌ها را پین کرده‌اند. این بار پیش از تحویل، پین‌های شکسته با `check_test_pins` پیدا و به‌جای تغییر امضا، طرح پیاده‌سازی عوض شد.
+- **آزمون مرورگر (headless):** هر چهار دسته باز شد با تعداد درست ابزار (۳۷/۱۵/۲۲/۲۳)، حالت بدون دسته همان چهار کارت را نشان داد.
+- **تست:** `V323_Site_MathCategoryMenuTest` (۴ تست) — هم‌خوانی منو با کاتالوگ اپ (`MATH_CATEGORIES`)، عبور دسته به موتور، شمارش ابزارها، و ارجاع `site/index.html` به باندل تازه.
+- **باندل سایت:** `site/engines.c9c2c24785de.js` (باندل قدیمی حذف شد؛ `site/engines_keep.txt` مرجع نام است).
+- **درس:** در این مخزن، «امضای توابع موتور» عملاً قرارداد عمومی است (فقط تست‌ها پین نیستند، کامنت‌ها هم به آن ارجاع می‌دهند)؛ برای تغییر رفتار، از پارامتر/متغیر جانبی استفاده کنید نه تغییر امضا.
+
+## V324.0 — گرنت‌های صریح Data API سوپابیس (تغییر ۳۰ اکتبر) (اپ 1.02.65 + سرور؛ مقصد: هر دو)
+- **موضوع:** از ۳۰ اکتبر سوپابیس به جدول‌های **تازه** در schema `public` به‌طور خودکار به `anon`/`authenticated`/`service_role` دسترسی نمی‌دهد؛ جدول‌های موجود تغییر نمی‌کنند.
+- **ممیزی پروژه:** ۴۰ جدول عمومی در مهاجرت‌ها (به‌علاوهٔ `private.push_config`)، RLS روی هر ۴۰ فعال، گرنت صریح فقط برای `app_version`. دسترسی سایت تقریباً همه از RPC (`security definer`، ۲۷۳ مورد) است؛ ریسک واقعی، **مهاجرت بعدی** و **`db reset`/شاخهٔ پیش‌نمایش/پروژهٔ تازه** بود که در آن توابع لبه (`service_role`) و `app_version` از کار می‌افتادند.
+- **مهاجرت:** `supabase/migrations/20261020_explicit_data_api_grants_v324.sql`
+  - `alter default privileges for role postgres in schema public …` برای جدول‌ها/دنباله‌ها/توابع (و همان مجموعه برای `supabase_admin` داخل `do $$ … exception when undefined_object or insufficient_privilege`).
+  - گرنت صریح برای هر ۴۰ جدول: `select`→`anon`، `select,insert,update,delete`→`authenticated`، `all`→`service_role` (۱۳۰ دستور، اجرای مکرر بی‌خطر).
+  - `notify pgrst, 'reload schema'`.
+  - `anon` قبلاً `all` داشت؛ اکنون فقط `select` (امنیت ردیف‌ها همان RLS است). `private.push_config` هیچ گرنتی به `anon/authenticated` نمی‌گیرد.
+- **نگهبان:** `scripts/check_supabase_data_api_grants.py` (+ گام `data_api_grants` در `scripts/preflight.py`): هر `create table` بدون گرنت، هر گرنت روی جدول غیرعمومی، و نبودِ `alter default privileges` را قرمز می‌کند. آزمون منفی (حذف یک گرنت) درست قرمز شد.
+- **تست:** `V324_SupabaseDataApiGrantsTest` (۵ تست، همه پاس): گرنت هر ۴۰ جدول، پیش‌فرض‌های آینده، خصوصی‌ماندن `push_config`، گرنت جدول‌های مصرفی توابع لبه، و اتصال نگهبان به preflight.
+- **راهنمای فارسی:** `docs/fa/SUPABASE_DATA_API_GRANTS_FA.md`.
+- **اقدام دستی لازم:** اجرای همان فایل SQL در **SQL Editor** پروژهٔ اصلی (و پروژهٔ آزمایشی، اگر جداست). نصاب فقط فایل را در مخزن می‌گذارد و SQL را خودش اجرا نمی‌کند.
+- **درس:** تست‌های کاتلینی که فایل SQL می‌خوانند باید `private.` را از `public.` جدا کنند، وگرنه نام schema به‌جای نام جدول گرفته می‌شود (`create table private.push_config` → جدول «private»).
+
+## V325.0 — ارتقای یک‌جای «تنظیمات»: دسکتاپ (قفل، چیدمان، میان‌بر) + اپ (حافظه، صف، اعلان) + همگام‌سازی (اپ 1.02.66 + سایت و سرور؛ مقصد: هر دو)
+مبنا: بررسی کدِ V324.0 که نشان داد پایهٔ تنظیمات دو طرف یکی است ولی چهار شکاف واقعی دارد. همهٔ چهار مورد در همین نسخه بسته شد.
+
+### ۱) دسکتاپ — قفل میز کار (`site/src/lock.js`)
+- اپ از V56 قفل بیومتریک/رمز دستگاه داشت؛ سایت هیچ. اکنون: PIN ۴ تا ۶ رقمی که **فقط به‌صورت هش SHA-256 با نمک** ذخیره می‌شود (`hash(salt + ':' + pin)`)، قفل خودکار پس از بی‌کاری (۱/۵/۱۵/۳۰ دقیقه یا فقط دستی)، دکمهٔ «قفل فوری» در تنظیمات → امنیت و پنل سریع کارت «تنظیمات» در منو.
+- قفل با بارگذاری دوبارهٔ صفحه هم برقرار می‌ماند: `sessionStorage['examsite.lock.open.v1']` نشانهٔ «در این نشست باز شده» است و در `lockAfterReload` بررسی می‌شود.
+- ارقام فارسی در ورودی رمز پذیرفته می‌شود (`npin()`).
+- **محدودهٔ امنیتی:** این قفل جلوگیری از دسترسی اتفاقی همکار/دانش‌آموز است، نه رمزنگاری دادهٔ مرورگر؛ این نکته در متن خودِ صفحه هم به کاربر گفته می‌شود.
+
+### ۲) دسکتاپ — چیدمان و میان‌برها
+- `settingsScreen` در `site/src/mobile.js` به `renderSettings` + `SETTINGS_TABS` (ظاهر/داده‌ها/امنیت/درباره) و دو تکهٔ `m-settings` + `m-settings-body` تبدیل شد؛ در `@media (min-width:980px)` با CSS به دو ستون (ناوبری راست چسبان، کارت‌ها چپ) تبدیل می‌شود.
+- میان‌برها در `site/src/app.js`: `Ctrl+S` (ذخیره)، `Ctrl+P` (چاپ/پیش‌نمایش)، `Ctrl+Enter` (سؤال تازه)، `Ctrl+K`، `Esc`، `?` (راهنما). عمل‌های وابسته به صفحهٔ سازنده در `site/src/builder.js` با `SC.save`/`SC.addq` و `window.SiteBuilder.shortcut(kind)` صدا زده می‌شوند. هنگام تایپ در کادرها به‌جز `Ctrl+…` دست نمی‌زند.
+- کارت «میان‌برهای صفحه‌کلید» در زبانهٔ «درباره».
+
+### ۳) اعلان‌های تفکیکی در هر دو نسخه
+- سایت: `push.js` چهار دسته (`grades/exam/calendar/requests`) با `cats()/setCat()`؛ چون نمایش اعلان در Service Worker است و SW به `localStorage` دسترسی ندارد، انتخاب‌ها در IndexedDB (`examsite-push/prefs/cats`) آینه می‌شوند و `sw.js` پیش از `showNotification` آن‌ها را می‌خواند (`pushCats()`).
+- اپ: `PushRegistrar` با `CATEGORIES`، `isCategoryEnabled/setCategoryEnabled`، `quietRange/inQuietHours` (بازهٔ سکوت ۲۳–۷)، `categoryOf(page)` و `shouldShow()`؛ `PushMessagingService.onMessageReceived` از `shouldShow(...)` استفاده می‌کند (پیش‌تر فقط کلید کلی).
+- «حالت درس‌آزمون» در اپ: بازهٔ سکوت را ۰–۱۴۳۹ می‌گذارد تا هیچ اعلانی نمایش داده نشود.
+
+### ۴) حافظه، صف ارسال و یادآوری پشتیبان
+- اپ: `app/src/main/java/ir/exam/app/ui/profile/LocalStorageTools.kt` — `report()`، `clearCache()`، `clearOldPreviews(7)`، `pendingCount/pendingList/retryAll/deleteFailed` (روی `PendingActionDao`)، `humanBytes`، و `lastBackupText/markBackupNow`. کارت تازه در «تنظیمات → داده‌ها»: «حافظه و ارسال‌های در انتظار».
+- تاریخ آخرین پشتیبان در `DataPortabilitySection` پس از نوشتن موفق فایل ثبت می‌شود.
+- سایت: کارت «فضای مرورگر» در زبانهٔ «داده‌ها» با `navigator.storage.estimate()`، شمارش نسخه‌های کش پوسته، «پاک‌سازی کش تصاویر» (`ExamSite.clearMediaCache` + `mediaCacheSize`) و «حذف نسخه‌های قدیمی پوسته»؛ به‌همراه یادآوری «بیش از یک هفته از آخرین پشتیبان گذشته است».
+
+### ۵) همگام‌سازی تنظیمات با حساب (سرور + هر دو کلاینت)
+- مهاجرت `supabase/migrations/20261021_settings_sync_v327.sql`: جدول `public.user_settings` (JSONB برای `appearance/print_header/page_setup`)، RLS + سه سیاست `auth.uid() = user_id`، گرنت صریح (قاعدهٔ Data API) و دو RPC `native_settings_get_v327` / `native_settings_put_v327` با `security definer` و `auth.uid()`.
+- سایت: `site/src/sync.js` (`window.SiteSettingsSync`) — `pull()` یک‌بار در شروع نشست، `push()` با تأخیر ۱٫۵ ثانیه پس از تغییر ظاهر/سربرگ و هنگام پنهان‌شدن صفحه؛ داخل باندل بار اول.
+- اپ: `data/repository/SettingsSyncRepository.kt` — `pull/applyRemote/pushAppearance` روی همان RPCها؛ در `ProfileSettingsViewModel` یک‌بار در `init` خوانده و پس از هر تغییر ظاهر نوشته می‌شود. **تعارض: آخرین نوشتن برنده.**
+- نکتهٔ امنیتی: گرنت `anon` روی `user_settings` فقط برای سازگاری با قاعدهٔ عمومی گذاشته شده؛ سیاست RLS بدون `auth.uid()` هیچ ردیفی برنمی‌گرداند.
+
+### تست و کنترل
+- `V325_SettingsUpgradeTest` (۶ تست): قفل و هش PIN، چیدمان دوستونه و میان‌برها، دسته‌بندی اعلان در سایت/SW/اپ، حافظه و صف، RPCهای همگام‌سازی، و پایبندی جدول تازه به قاعدهٔ گرنت.
+- `preflight` PASS (شامل قدم `data_api_grants`)، سایت با باندل تازه، و `node --check` روی همهٔ فایل‌های JS تغییرکرده.
+- درس: در این مخزن کامپایل Compose/Gradle محلی نیست؛ برای فایل‌های Kotlin تازه فقط «خطای نحوی» با kotlinc و `< /dev/null` قابل بررسی است (بدون کلاس‌پَث اندروید، خطاهای unresolved طبیعی‌اند).

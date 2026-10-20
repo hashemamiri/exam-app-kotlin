@@ -119,6 +119,8 @@ fun ProfileSettingsScreen(
     val imageScope = rememberCoroutineScope()
     val viewModel = remember(user.id) { ProfileSettingsViewModel(appContext, user.role) }
     val state by viewModel.state.collectAsState()
+    // V326 — کارت «حافظه و ارسال‌های در انتظار» در بخش داده‌ها
+    var localStorageOpen by remember(destination) { mutableStateOf(false) }
     var settingsSection by remember(destination, initialSettingsSection) {
         mutableStateOf(initialSettingsSection)
     }
@@ -245,6 +247,12 @@ fun ProfileSettingsScreen(
                     UserRole.MANAGER -> ManagerBackupSection()
                     UserRole.STUDENT -> Text("پشتیبان کامل داده‌ها فقط برای کادر مدرسه در دسترس است.")
                 }
+                // V326 — حافظهٔ دستگاه، پاک‌سازی امن و وضعیت صف ارسال (صف بود ولی هیچ‌جا دیده نمی‌شد)
+                Spacer(Modifier.height(12.dp))
+                SettingsAccordionCard(title = "حافظه و ارسال‌های در انتظار", expanded = localStorageOpen, onToggle = { localStorageOpen = !localStorageOpen }) {
+                    LocalStorageBlock(LocalContext.current, viewModel.currentUserId())
+                }
+                Spacer(Modifier.height(24.dp))
             }
             settingsSection == SettingsSection.APPEARANCE -> AppearanceSection(appearance, viewModel)
             else -> Box(Modifier.fillMaxSize()) { aboutContent() }
@@ -316,7 +324,7 @@ private fun AppearanceSection(settings: AppearanceSettings, viewModel: ProfileSe
                     }
                     Switch(settings.persianDigits, viewModel::setPersianDigits)
                 }
-                // V232 — اعلان‌ها (فقط وقتی اپ با FCM ساخته شده)
+                // V232 — اعلان‌ها (فقط وقتی اپ با FCM ساخته شده)؛ V326 — کلید کلی + چهار دستهٔ جدا + بازهٔ سکوت
                 if (ir.exam.app.core.push.PushRegistrar.available) {
                     val pushCtx = LocalContext.current
                     val pushScope = rememberCoroutineScope()
@@ -330,6 +338,9 @@ private fun AppearanceSection(settings: AppearanceSettings, viewModel: ProfileSe
                             pushOn = on
                             pushScope.launch { ir.exam.app.core.push.PushRegistrar.setEnabled(pushCtx, on, viewModel.currentUserId()) }
                         })
+                    }
+                    if (pushOn) {
+                        NotificationCategoriesBlock(pushCtx)
                     }
                 }
                 // V229 — حالت پرکنتراست (آینهٔ کلید سایت)
@@ -1185,4 +1196,102 @@ private fun ManagerBackupSection() {
         message?.let { Text(it, color = MaterialTheme.colorScheme.primary) }
         error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
     }
+
+/** V326 — دسته‌بندی اعلان‌ها و بازهٔ سکوت (پیش‌تر فقط یک کلید کلی بود). */
+@Composable
+private fun NotificationCategoriesBlock(context: android.content.Context) {
+    val rows = listOf("grades" to "نمرهٔ جدید", "exam" to "باز شدن آزمون", "calendar" to "پیام تقویم", "requests" to "درخواست‌های مدیر")
+    var state by remember {
+        mutableStateOf(rows.associate { it.first to ir.exam.app.core.push.PushRegistrar.isCategoryEnabled(context, it.first) })
+    }
+    var quiet by remember { mutableStateOf(ir.exam.app.core.push.PushRegistrar.quietRange(context).first != ir.exam.app.core.push.PushRegistrar.quietRange(context).second) }
+    Column(Modifier.fillMaxWidth().padding(top = 6.dp)) {
+        Text("دسته‌ها", style = MaterialTheme.typography.titleSmall)
+        Text("هر دسته را جدا خاموش کنید؛ پیام‌های خاموش در مرکز اعلان‌ها می‌مانند.", style = MaterialTheme.typography.bodySmall)
+        rows.forEach { (key, label) ->
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Text(label, Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
+                Switch(state[key] ?: true, { on ->
+                    state = state + (key to on)
+                    ir.exam.app.core.push.PushRegistrar.setCategoryEnabled(context, key, on)
+                })
+            }
+        }
+        var study by remember {
+            val (f, t) = ir.exam.app.core.push.PushRegistrar.quietRange(context)
+            mutableStateOf(f == 0 && t >= 1439)
+        }
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text("حالت درس‌آزمون")
+                Text("تا خاموش کردن، هیچ اعلانی نمایش داده نمی‌شود (مناسب جلسهٔ آزمون)", style = MaterialTheme.typography.bodySmall)
+            }
+            Switch(study, { on ->
+                study = on
+                if (on) ir.exam.app.core.push.PushRegistrar.setQuietRange(context, 0, 1439)
+                else if (!quiet) ir.exam.app.core.push.PushRegistrar.setQuietRange(context, 0, 0)
+            })
+        }
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text("ساعت سکوت (۲۳ تا ۷)")
+                Text("اعلان‌ها در این بازه نمایش داده نمی‌شوند", style = MaterialTheme.typography.bodySmall)
+            }
+            Switch(quiet, { on ->
+                quiet = on
+                if (on) ir.exam.app.core.push.PushRegistrar.setQuietRange(context, 23 * 60, 7 * 60)
+                else ir.exam.app.core.push.PushRegistrar.setQuietRange(context, 0, 0)
+            })
+        }
+    }
+}
+
+/** V326 — «حافظه و صف ارسال»: حجم مصرفی، پاک‌سازی امن و وضعیت موارد در انتظار. */
+@Composable
+private fun LocalStorageBlock(context: android.content.Context, userId: String?) {
+    val scope = rememberCoroutineScope()
+    var report by remember { mutableStateOf<LocalStorageTools.Report?>(null) }
+    var pendingRows by remember { mutableStateOf(listOf<LocalStorageTools.PendingRow>()) }
+    var busy by remember { mutableStateOf(false) }
+    var msg by remember { mutableStateOf<String?>(null) }
+    fun refresh() {
+        busy = true
+        scope.launch {
+            report = LocalStorageTools.report(context, userId)
+            pendingRows = if (userId.isNullOrBlank()) emptyList() else LocalStorageTools.pendingList(context, userId)
+            busy = false
+        }
+    }
+    LaunchedEffect(userId) { refresh() }
+    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        val r = report
+        if (r == null) {
+            Text("در حال محاسبهٔ حجم…", style = MaterialTheme.typography.bodySmall)
+        } else {
+            Text("کش و فایل‌های موقت: " + LocalStorageTools.humanBytes(r.totalBytes), style = MaterialTheme.typography.bodyMedium)
+            Text("کش سیستم: " + LocalStorageTools.humanBytes(r.cacheBytes) + " · پیش‌نمایش/چاپ: " + LocalStorageTools.humanBytes(r.filesBytes), style = MaterialTheme.typography.bodySmall)
+            if (r.lastBackupText != null) Text("آخرین پشتیبان: " + r.lastBackupText, style = MaterialTheme.typography.bodySmall)
+            if (pendingRows.isNotEmpty()) {
+                Text("در انتظار ارسال: ${ir.exam.app.core.calendar.PersianDigits.convert(pendingRows.size)} مورد", style = MaterialTheme.typography.bodyMedium)
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Button(onClick = { scope.launch { if (userId != null) LocalStorageTools.retryAll(context, userId); refresh() } }, enabled = !busy) { Text("تلاش دوباره") }
+                    OutlinedButton(onClick = { scope.launch { if (userId != null) LocalStorageTools.deleteFailed(context, userId); refresh() } }, enabled = !busy) { Text("حذف ناموفق‌ها") }
+                }
+            } else if (!userId.isNullOrBlank()) {
+                Text("همهٔ پاسخ‌ها ارسال شده‌اند.", style = MaterialTheme.typography.bodySmall)
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Button(onClick = {
+                    scope.launch {
+                        busy = true
+                        val freed = LocalStorageTools.clearOldPreviews(context)
+                        msg = "پاک شد: " + LocalStorageTools.humanBytes(freed)
+                        refresh()
+                    }
+                }, enabled = !busy) { Text("پاک‌سازی پیش‌نمایش‌های قدیمی") }
+            }
+        }
+        msg?.let { Text(it, style = MaterialTheme.typography.bodySmall) }
+    }
+}
 }

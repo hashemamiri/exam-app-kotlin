@@ -1306,7 +1306,7 @@
       el('button', {class: 'btn light', text: 'انصراف', onclick: function () { bg.remove(); }}),
       el('button', {class: 'btn', text: 'اعمال', onclick: function () {
         if (form) form.persist();
-        bg.remove(); toast('سربرگ ذخیره شد.', 'ok'); if (onApply) onApply(form ? form.payload() : readPrintHeader());
+        bg.remove(); toast('سربرگ ذخیره شد.', 'ok'); try { if (window.SiteSettingsSync) window.SiteSettingsSync.push('header'); } catch (e) {} if (onApply) onApply(form ? form.payload() : readPrintHeader());
       }})
     ]));
     bg.appendChild(box); document.body.appendChild(bg);
@@ -1957,7 +1957,11 @@
     var QUICK = {
       profile: [qbtn('ویرایش پروفایل', QI.user, function () { goTab('account', 'profile'); })].concat(user.role === 'teacher' ? [qbtn('سربرگ', QI.head, function () { goTab('account', 'header'); })] : []),
       account: [qbtn('پروفایل', QI.user, function () { goTab('account', 'profile'); }), qbtn('امنیت حساب', QI.lock, function () { goTab('account', 'account'); })].concat(user.role === 'teacher' ? [qbtn('سربرگ', QI.head, function () { goTab('account', 'header'); })] : []),
-      settings: themeBtns().concat([qbtn('داده‌ها', QI.db, function () { openSettings('data'); }), qbtn('درباره', QI.info, function () { openSettings('about'); })]),
+      settings: themeBtns().concat([
+        qbtn('امنیت', QI.lock, function () { openSettings('security'); }),
+        qbtn('داده‌ها', QI.db, function () { openSettings('data'); }),
+        qbtn('درباره', QI.info, function () { openSettings('about'); })
+      ].concat(window.SiteLock && window.SiteLock.isEnabled() ? [qbtn('قفل فوری', QI.lock, function () { window.SiteLock.lockNow(); })] : [])),
       print: [qbtn('آزمون چاپی جدید', QI.plus, function () { view.panel = 'builder'; view.arg = {mode: 'print', fresh: true}; render(); }), qbtn('از آزمون آنلاین', QI.print, function () { var M = window.SiteMobile; if (M && M.printOnlineSheet) M.printOnlineSheet(); else dkGo('exams'); })],
       students: [qa('دانش‌آموز جدید') ? qbtn('دانش‌آموز جدید', QI.plus, qa('دانش‌آموز جدید')) : null, qbtn('فهرست', QI.list, function () { dkGo('students'); })],
       classes: [qa('کلاس جدید') ? qbtn('کلاس جدید', QI.plus, qa('کلاس جدید')) : null, qa('مدرسه جدید') ? qbtn(user.role === 'manager' ? 'مدرسه جدید' : 'عضویت در مدرسه', QI.school, qa('مدرسه جدید')) : null],
@@ -2631,7 +2635,65 @@
     if (!res.ok) { var tx = await res.text(); throw new Error('آپلود فایل ناموفق بود: ' + tx.slice(0, 120)); }
     return SUPABASE_URL + '/storage/v1/object/public/' + MEDIA_BUCKET + '/' + path;
   }
-  window.ExamSite = {emojiSvg: function (k) { return emojiSvg(k, false) || ''; }, headerFingerprint: headerFingerprint, printHeaderFp: printHeaderFp, ensurePrintPaid: ensurePrintPaid, jalaliPicker: jalaliPicker, jalaliDisplay: jalaliDisplay, openFormulaEditor: openFormulaEditor, openHeaderSettings: openHeaderSettings, headerSettingsForm: headerSettingsForm, readPrintHeader: readPrintHeader, faReason: faReason, uploadMedia: uploadMedia, openPrintPreview: openPrintPreview, buildPrintPayload: buildPrintPayload, api: api, demoPrint: demoPrint, openLandingCatalog: openLandingCatalogModal,
+  /* ================= V325 — ابزارهای کش تصاویر (کارت «فضای مرورگر» در تنظیمات) ================= */
+  function mediaCacheSize() { return Object.keys(mediaCache).length; }
+  function clearMediaCache() {
+    Object.keys(mediaCache).forEach(function (k) {
+      try { Promise.resolve(mediaCache[k]).then(function (u) { if (typeof u === 'string' && u.indexOf('blob:') === 0) URL.revokeObjectURL(u); }); } catch (e) {}
+      delete mediaCache[k];
+    });
+    try { localStorage.removeItem('examsite.media.v1'); } catch (e) {}
+    return true;
+  }
+
+  /* ================= V325 — میان‌برهای صفحه‌کلید دسکتاپ =================
+     پیش‌تر فقط Esc/Enter در چند پنجره بود. این‌جا میان‌برهای عمومی تعریف می‌شوند؛
+     سامانه هنگام تایپ داخل کادرها (به‌جز Ctrl+…) دست نمی‌زند. */
+  var KBD = [
+    ['Ctrl + S', 'ذخیرهٔ آزمون در حال ساخت', 'save'],
+    ['Ctrl + P', 'پیش‌نمایش و چاپ آزمون', 'print'],
+    ['Ctrl + Enter', 'افزودن سؤال تازه', 'addq'],
+    ['Ctrl + K', 'جست‌وجوی سریع بخش‌ها', 'search'],
+    ['Esc', 'بستن پنجرهٔ باز', 'esc'],
+    ['?', 'همین راهنما', 'help']
+  ];
+  var kbdHelpEl = null;
+  function kbdHelp() {
+    if (kbdHelpEl) { kbdHelpEl.remove(); kbdHelpEl = null; return; }
+    var card = el('div', {class: 'card'}, [el('h3', {text: '⌨️ میان‌برهای صفحه‌کلید', style: 'margin-top:0'})]);
+    KBD.forEach(function (r) { card.appendChild(el('div', {class: 'kbd-row'}, [el('span', {text: r[1]}), el('kbd', {text: r[0]})])); });
+    card.appendChild(el('p', {class: 'muted', style: 'font-size:12px;margin-bottom:0', text: 'این میان‌برها نسخهٔ دسکتاپ را سریع‌تر می‌کنند. برای بستن، Esc یا بیرون کادر را بزنید.'}));
+    card.appendChild(el('button', {class: 'btn', style: 'width:100%;margin-top:10px', text: 'بستن', onclick: function () { box.remove(); kbdHelpEl = null; }}));
+    var box = el('div', {class: 'kbd-help on', id: 'kbdHelp'}, [card]);
+    box.addEventListener('pointerdown', function (e) { if (e.target === box) { box.remove(); kbdHelpEl = null; } });
+    document.body.appendChild(box); kbdHelpEl = box;
+  }
+  function kbdDispatch(kind) {
+    try {
+      if (kind === 'help') return kbdHelp();
+      if (kind === 'esc') { if (kbdHelpEl) { kbdHelpEl.remove(); kbdHelpEl = null; } document.dispatchEvent(new KeyboardEvent('keydown', {key: 'Escape'})); return; }
+      var B = window.SiteBuilder;
+      if (B && B.shortcut && B.shortcut(kind)) return;
+      if (kind === 'print') { if (window.ExamSite && ExamSite.demoPrint) return; }
+      if (kind === 'save') { toast('این میان‌بر داخل صفحهٔ ساخت آزمون فعال است.', 'warn'); return; }
+    } catch (e) { /* میان‌بر نباید چیزی را بشکند */ }
+  }
+  document.addEventListener('keydown', function (e) {
+    var tag = (e.target && e.target.tagName || '').toLowerCase();
+    var typing = tag === 'input' || tag === 'textarea' || tag === 'select' || (e.target && e.target.isContentEditable);
+    if (e.ctrlKey || e.metaKey) {
+      var k = (e.key || '').toLowerCase();
+      if (k === 's') { e.preventDefault(); kbdDispatch('save'); return; }
+      if (k === 'p') { e.preventDefault(); kbdDispatch('print'); return; }
+      if (k === 'enter') { e.preventDefault(); kbdDispatch('addq'); return; }
+      if (k === 'k') { e.preventDefault(); var sb = document.querySelector('.dk-rail'); if (sb) sb.scrollIntoView({block: 'nearest'}); kbdDispatch('search'); return; }
+      return;
+    }
+    if (typing) return;
+    if (e.key === '?') { e.preventDefault(); kbdDispatch('help'); }
+  });
+
+  window.ExamSite = {mediaCacheSize: mediaCacheSize, clearMediaCache: clearMediaCache, kbdHelp: kbdHelp, emojiSvg: function (k) { return emojiSvg(k, false) || ''; }, headerFingerprint: headerFingerprint, printHeaderFp: printHeaderFp, ensurePrintPaid: ensurePrintPaid, jalaliPicker: jalaliPicker, jalaliDisplay: jalaliDisplay, openFormulaEditor: openFormulaEditor, openHeaderSettings: openHeaderSettings, headerSettingsForm: headerSettingsForm, readPrintHeader: readPrintHeader, faReason: faReason, uploadMedia: uploadMedia, openPrintPreview: openPrintPreview, buildPrintPayload: buildPrintPayload, api: api, demoPrint: demoPrint, openLandingCatalog: openLandingCatalogModal,
     enamadBadge: enamadBadge, el: el, esc: esc, fa: fa, en: en, gradeLabel: gradeLabel, toast: toast, confirmDlg: confirmDlg, infoDlg: infoDlg, costDoneDlg: costDoneDlg, promptDlg: promptDlg, mediaBlobUrl: mediaBlobUrl, isOwnStorageUrl: isOwnStorageUrl, deleteMedia: deleteMedia, mediaUrlsIn: mediaUrlsIn, isOwnedMediaUrl: isOwnedMediaUrl, rpc: rpc, rpcObj: rpcObj, select: select, http: http, uuid: uuid, fmtScore: fmtScore, fmtDate: fmtDate, money: money, errMsg: errMsg,
     localState: localState, setLocalState: setLocalState, loading: loading, showErr: showErr, emptyBox: emptyBox, qType: qType, engineHtml: engineHtml, loadEngines: loadEngines, loadPanels: loadPanels, prefetchPanels: prefetchPanels, scheduleLandingPrefetch: scheduleLandingPrefetch,
     user: function () { return user; }, session: function () { return session; }, config: {url: SUPABASE_URL, anon: ANON},

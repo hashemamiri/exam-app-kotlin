@@ -38,12 +38,22 @@ class ProfileSettingsViewModel(
     context: Context,
     private val role: UserRole,
     private val repository: SupabaseProfileRepository = SupabaseProfileRepository(context),
-    private val appearance: AppearancePreferences = AppearancePreferences(context)
+    private val appearance: AppearancePreferences = AppearancePreferences(context),
+    // V327 — همگام‌سازی تنظیمات ظاهر/سربرگ با حساب (جدول user_settings)
+    private val settingsSync: ir.exam.app.data.repository.SettingsSyncRepository =
+        ir.exam.app.data.repository.SettingsSyncRepository(appearance, ir.exam.app.data.local.PrintHeaderStore(context))
 ) : ViewModel() {
     private val _state = MutableStateFlow(ProfileSettingsState())
     val state = _state.asStateFlow()
 
-    init { load() }
+    init {
+        load()
+        // V327 — تنظیمات ذخیره‌شدهٔ حساب (اگر روی سرور باشد) روی این دستگاه اعمال می‌شود
+        viewModelScope.launch { runCatching { settingsSync.applyRemote(settingsSync.pull()) } }
+    }
+
+    /** V327 — پس از هر تغییر ظاهر، نسخهٔ همین دستگاه روی حساب ذخیره می‌شود. */
+    private fun syncPush() = viewModelScope.launch { runCatching { settingsSync.pushAppearance() } }
 
     fun load() = viewModelScope.launch {
         _state.update { it.copy(loading = true, error = null) }
@@ -190,21 +200,24 @@ class ProfileSettingsViewModel(
             }
     }
 
-    fun setTheme(mode: ThemeMode) = viewModelScope.launch { appearance.setTheme(mode) }
-    fun setFontScale(scale: Float) = viewModelScope.launch { appearance.setFontScale(scale) }
-    fun setDynamicColors(enabled: Boolean) = viewModelScope.launch { appearance.setDynamicColors(enabled) }
-    fun setAppFont(font: AppFont) = viewModelScope.launch { appearance.setAppFont(font) }
+    fun setTheme(mode: ThemeMode) = viewModelScope.launch { appearance.setTheme(mode); runCatching { settingsSync.pushAppearance() } }
+    fun setFontScale(scale: Float) = viewModelScope.launch { appearance.setFontScale(scale); runCatching { settingsSync.pushAppearance() } }
+    fun setDynamicColors(enabled: Boolean) = viewModelScope.launch { appearance.setDynamicColors(enabled); runCatching { settingsSync.pushAppearance() } }
+    fun setAppFont(font: AppFont) = viewModelScope.launch { appearance.setAppFont(font); runCatching { settingsSync.pushAppearance() } }
     fun setNeumorphicPalette(palette: NeumorphicPalette) = viewModelScope.launch {
         appearance.setNeumorphicPalette(palette)
+        runCatching { settingsSync.pushAppearance() }
     }
     fun setNeumorphicDepth(depth: Float) = viewModelScope.launch {
         appearance.setNeumorphicDepth(depth)
+        runCatching { settingsSync.pushAppearance() }
     }
     fun setDeviceLayoutMode(mode: DeviceLayoutMode) = viewModelScope.launch {
         appearance.setDeviceLayoutMode(mode)
+        runCatching { settingsSync.pushAppearance() }
     }
-    fun setPersianDigits(enabled: Boolean) = viewModelScope.launch { appearance.setPersianDigits(enabled) }
-    fun setHighContrast(enabled: Boolean) = viewModelScope.launch { appearance.setHighContrast(enabled) }
+    fun setPersianDigits(enabled: Boolean) = viewModelScope.launch { appearance.setPersianDigits(enabled); runCatching { settingsSync.pushAppearance() } }
+    fun setHighContrast(enabled: Boolean) = viewModelScope.launch { appearance.setHighContrast(enabled); runCatching { settingsSync.pushAppearance() } }
     /** V232 — شناسهٔ کاربر فعلی برای ثبت توکن اعلان (null اگر نشستی نیست) */
     fun currentUserId(): String? = runCatching { ir.exam.app.data.remote.SupabaseProvider.client.auth.currentUserOrNull()?.id }.getOrNull()
     fun resetAppearance() = viewModelScope.launch { appearance.reset() }

@@ -31,7 +31,8 @@ class PushMessagingService : FirebaseMessagingService() {
     }
 
     override fun onMessageReceived(message: RemoteMessage) {
-        if (!PushRegistrar.isEnabled(applicationContext)) return
+        /* V326 — کلید کلی + دستهٔ اعلان + بازهٔ سکوت (پیش‌تر فقط کلید کلی بود) */
+        if (!PushRegistrar.shouldShow(applicationContext, message.data["page"])) return
         val title = message.notification?.title ?: message.data["title"] ?: "آزمون آنلاین"
         val body = message.notification?.body ?: message.data["body"] ?: return
         ensureChannel(applicationContext)
