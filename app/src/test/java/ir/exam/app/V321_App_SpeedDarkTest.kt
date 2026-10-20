@@ -18,7 +18,9 @@ class V321_App_SpeedDarkTest {
     @Test
     fun reportsScreenShowsAnalyticsCardAndOfflineBanner() {
         val screen = read("app/src/main/java/ir/exam/app/ui/reports/ReportsScreen.kt")
-        assertTrue("ClassAnalyticsCard(analytics)" in screen)
+        // V321.1 — محاسبه از داخل دامنهٔ LazyColumn بیرون آورده شد (remember در LazyListScope مجاز نیست)
+        assertTrue("val classAnalytics = remember(state.rows, selectedExams)" in screen)
+        assertTrue("item { ClassAnalyticsCard(classAnalytics) }" in screen)
         assertTrue("remember(state.rows, selectedExams)" in screen)
         assertTrue("if (state.offline) item { OfflineBanner(state.offlineSavedAt) }" in screen)
     }
@@ -47,6 +49,8 @@ class V321_App_SpeedDarkTest {
         assertTrue("val report = BuilderPreflight.check(state.title, state.questions)" in builder)
         assertTrue("onClick = requestSave," in builder)
         assertTrue("بررسی نهایی — نیاز به اصلاح" in builder)
+        // V321.1 — آیکن FactCheck در دسترس نبود؛ دکمهٔ متنی «بررسی» جای آن نشست
+        assertTrue("{ Text(\"بررسی\", style = MaterialTheme.typography.labelLarge) }" in builder)
     }
 
     @Test
@@ -57,5 +61,7 @@ class V321_App_SpeedDarkTest {
         val app = read("app/src/main/java/ir/exam/app/ui/app/ExamApp.kt")
         assertTrue("onToggleTheme = toggleTheme" in app)
         assertTrue("appearancePrefs.setTheme(next)" in app)
+        // V321.1 — اعلان‌ها باید در همان composable‌ای باشند که منو را می‌سازد (AuthenticatedShell)
+        assertTrue("val themeScope = rememberCoroutineScope()" in app)
     }
 }

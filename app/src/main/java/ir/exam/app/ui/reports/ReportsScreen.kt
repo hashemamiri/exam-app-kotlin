@@ -123,6 +123,8 @@ fun ReportsScreen(
         )
     }
     val selectedExams = remember(state.exams, state.selectedExamIds) { state.exams.filter { it.id in state.selectedExamIds } }
+    // V321 — کارنامهٔ تحلیلی: یک‌بار به ازای هر تغییرِ انتخاب حساب می‌شود (نه در هر بازآراییِ فهرست)
+    val classAnalytics = remember(state.rows, selectedExams) { buildAnalytics(state.rows, selectedExams) }
     reportCardRow?.let { row ->
         StudentReportCardDialog(
             row = row,
@@ -213,11 +215,8 @@ fun ReportsScreen(
                     }
                 }
                 if (state.rows.isEmpty()) item { Text("نتیجه‌ای برای این انتخاب نیست.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
-                if (state.rows.isNotEmpty()) {
-                    // V321 — کارنامهٔ تحلیلی (میانگین/میانه/انحراف معیار، توزیع، برترها، در معرض خطر)
-                    val analytics = remember(state.rows, selectedExams) { buildAnalytics(state.rows, selectedExams) }
-                    item { ClassAnalyticsCard(analytics) }
-                }
+                // V321 — کارنامهٔ تحلیلی (میانگین/میانه/انحراف معیار، توزیع، برترها، در معرض خطر)
+                if (state.rows.isNotEmpty()) item { ClassAnalyticsCard(classAnalytics) }
                 // V277 — کارت تمیز هر دانش‌آموز: نام + میانگین + آیکن کارنامه (ریز نمرات فقط داخل کارنامهٔ تکی)
                 items(state.rows, key = { it.studentId }) { row ->
                     Card(Modifier.fillMaxWidth()) {

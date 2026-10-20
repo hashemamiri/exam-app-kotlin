@@ -320,11 +320,10 @@ fun ExamBuilderScreen(
                 },
                 actions = {
                     // V321 — بررسی نهایی: همیشه گزارش کامل (حتی وقتی همه‌چیز سالم است)
-                    IconButton(onClick = {
+                    // (متن به‌جای آیکن: آیکن‌های «extended» در همهٔ نسخه‌های کامپوز موجود نیستند)
+                    TextButton(onClick = {
                         preflightReport = BuilderPreflight.check(state.title, state.questions)
-                    }) {
-                        Icon(Icons.Outlined.FactCheck, contentDescription = "بررسی نهایی آزمون")
-                    }
+                    }) { Text("بررسی", style = MaterialTheme.typography.labelLarge) }
                 }
             )
         },

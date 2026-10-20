@@ -295,6 +295,7 @@ class ReportsViewModel(
                 loading = false,
                 offline = true,
                 offlineSavedAt = snap.savedAtMillis.takeIf { at -> at > 0 },
+                exams = if (it.exams.isEmpty()) exams else it.exams,
                 classes = if (it.classes.isEmpty()) classes else it.classes,
                 rows = if (it.rows.isEmpty()) rows else it.rows,
                 rowsShown = it.rowsShown || rows.isNotEmpty()

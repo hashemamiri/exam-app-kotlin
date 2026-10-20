@@ -278,18 +278,6 @@ private fun AuthenticatedExamApp(
     // V163 — رکورد از سرور (print_exams) خوانده می‌شود؛ بارگذاری ناهمگام.
     val printExamRepo = remember(appContext) { ir.exam.app.data.repository.SupabasePrintExamRepository(appContext) }
     val printOpenScope = rememberCoroutineScope()
-    // V321 — کلید سریع حالت تیره/روشن در کارت پروفایل (همان تنظیمِ ظاهر، فقط یک لمس)
-    val appearancePrefs = remember(appContext) { AppearancePreferences(appContext) }
-    val systemDark = isSystemInDarkTheme()
-    val darkActive = when (appearance.themeMode) {
-        ThemeMode.DARK -> true
-        ThemeMode.LIGHT -> false
-        ThemeMode.SYSTEM -> systemDark
-    }
-    val toggleTheme: () -> Unit = {
-        val next = if (darkActive) ThemeMode.LIGHT else ThemeMode.DARK
-        printOpenScope.launch { appearancePrefs.setTheme(next) }
-    }
     fun openLocalPrintExam(localId: String) {
         closeTransientNavigation()
         printOpenScope.launch {
@@ -1087,6 +1075,22 @@ private fun AuthenticatedShell(
     content: @Composable () -> Unit
 ) {
     fun select(action: () -> Unit) = action()
+
+    // V321 — کلید سریع حالت تیره/روشن در کارت پروفایل (همان تنظیمِ ظاهر، فقط یک لمس).
+    // (باید در همین composable باشد که Design69MainMenuScreen را می‌سازد.)
+    val themeScope = rememberCoroutineScope()
+    val appearancePrefs = remember(LocalContext.current.applicationContext) {
+        AppearancePreferences(LocalContext.current.applicationContext)
+    }
+    val darkActive = when (appearance.themeMode) {
+        ThemeMode.DARK -> true
+        ThemeMode.LIGHT -> false
+        ThemeMode.SYSTEM -> isSystemInDarkTheme()
+    }
+    val toggleTheme: () -> Unit = {
+        val next = if (darkActive) ThemeMode.LIGHT else ThemeMode.DARK
+        themeScope.launch { appearancePrefs.setTheme(next) }
+    }
 
     val menuCards = if (user.role == UserRole.TEACHER) {
         // V131 — جای «تقویم» با «دانش‌آموزان» و جای «چاپ آزمون» با «کلاس‌ها» عوض شد.
