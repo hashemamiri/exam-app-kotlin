@@ -90,6 +90,20 @@ class V322_MathToolsRobustnessTest {
         assertTrue("spinner lost its default sectors", body.split("<path").size - 1 >= 4)
     }
 
+    /** نگهبان: تیترهای بالاترین بلوک لیست تغییرات نباید شمارهٔ نسخهٔ داخلی داشته باشند (پنجرهٔ بروزرسانی). */
+    @Test
+    fun changelogTopBlockHasNoInternalVersionNumbers() {
+        val lines = source("text/CHANGELOG_FA.txt").lines()
+        assertTrue("changelog is empty", lines.isNotEmpty())
+        assertTrue("changelog must start with a version header", lines.first().trim().startsWith("V"))
+        val top = ir.exam.app.core.update.ReleaseNotes.parse(lines.take(60)).first()
+        assertTrue("top block is not app-affecting", top.appAffecting)
+        assertTrue("top block has no bullets", top.bullets.isNotEmpty())
+        val offenders = top.bullets.filter { Regex("""\bV\d""").containsMatchIn(it) }
+        assertTrue("bullets contain internal version numbers: $offenders", offenders.isEmpty())
+        assertTrue("bullet too long", top.bullets.all { it.length <= 200 })
+    }
+
     /** همان مهارها در موتور بومی (Kotlin) — نگهبان رگرسیون. */
     @Test
     fun nativeEngineCarriesTheSameGuards() {
