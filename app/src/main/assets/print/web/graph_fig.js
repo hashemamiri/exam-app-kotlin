@@ -1788,7 +1788,7 @@
     if (t === 'axkmap') {
       var kmVars = clamp(Math.floor(num(X.vars, 3)), 2, 4), kmOnes = String(xs('ones', '0,1,3,5')).split(/[,،;]/).map(function (q10) { return parseInt(faEn(q10.trim()), 10); }).filter(function (q10) { return isFinite(q10); });
       var kmGroups = String(xs('groups', '')).split(/[;؛]/).filter(Boolean);
-      var kmRowsN = kmVars === 2 ? 2 : 4, kmColsN = kmVars === 2 ? 2 : 4;
+      var kmRowsN = kmVars >= 4 ? 4 : 2, kmColsN = kmVars === 2 ? 2 : 4;
       var kmRowLbl = kmVars === 2 ? ['0', '1'] : kmVars === 3 ? ['0', '1'] : ['00', '01', '11', '10'];
       var kmColLbl = kmVars === 2 ? ['0', '1'] : ['00', '01', '11', '10'];
       var kmCell = Math.min(56, 220 / Math.max(kmRowsN, kmColsN)), kmX0 = 180 - kmCell * kmColsN / 2 + 14, kmY0 = 56;

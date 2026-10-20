@@ -40,7 +40,8 @@ class V247_WalletTariffAxisParityTest {
         assertTrue("function axisExSvg(t, X, title)" in g && "var exSvg = axisExSvg(t, X, title); if (exSvg) return exSvg;" in g)
         for (id in ids) {
             assertTrue(id, "{ id: '$id'," in g)
-            assertTrue(id, "'$id'" in g.substringAfter("function axisExSvg(").substringBefore("return null;") || id in listOf("axnum", "axxy", "axq1", "axgrid", "axpol", "ax3d"))
+            // V318.1 — به‌جای substring شکنندهٔ «return null;» (که زودتر از پایان تابع برمی‌گشت)، وجود شاخهٔ dispatch سنجیده می‌شود
+            assertTrue(id, "t === '$id'" in g || id in listOf("axnum", "axxy", "axq1", "axgrid", "axpol", "ax3d"))
             assertTrue(id, (" $id: [" in g) || id in listOf("axnum", "axxy", "axq1", "axgrid", "axpol", "ax3d"))
         }
     }

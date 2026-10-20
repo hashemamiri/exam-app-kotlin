@@ -1104,9 +1104,10 @@ object AdvancedMathSvgRenderer {
         val vars = spec.xNum("vars", 3f).toInt().coerceIn(2, 4)
         val ones = ints(spec, "ones", "0,1,3,5")
         val groups = spec.xStr("groups", "").split(Regex("[;؛]")).filter { it.isNotBlank() }
-        val rowN = if (vars == 2) 2 else 4
+        // V318.1 — چیدمان درست: ۲ متغیره ۲×۲، ۳ متغیره ۲×۴ (سطر=A، ستون=BC خاکستری)، ۴ متغیره ۴×۴
+        val rowN = if (vars >= 4) 4 else 2
         val colN = if (vars == 2) 2 else 4
-        val rowLbl = if (vars == 2) listOf("0", "1") else if (vars == 3) listOf("0", "1") else listOf("00", "01", "11", "10")
+        val rowLbl = if (vars >= 4) listOf("00", "01", "11", "10") else listOf("0", "1")
         val colLbl = if (vars == 2) listOf("0", "1") else listOf("00", "01", "11", "10")
         val cell = min(56f, 220f / max(rowN, colN))
         val x0 = 180f - cell * colN / 2f + 14f

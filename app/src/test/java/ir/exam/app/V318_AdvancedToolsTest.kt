@@ -2,7 +2,9 @@ package ir.exam.app
 
 import ir.exam.app.core.figure.AdvancedMathSvgRenderer
 import ir.exam.app.core.figure.AXIS_FIGURES
+import ir.exam.app.core.figure.FigureSpec
 import ir.exam.app.core.figure.PrimaryMathSvgRenderer
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.File
@@ -51,6 +53,21 @@ class V318_AdvancedToolsTest {
             assertTrue("Empty SVG body for $k", body.isNotBlank())
             assertTrue("SVG without tags for $k", body.contains("<"))
             assertTrue("SVG contains NaN for $k", !body.contains("NaN"))
+        }
+    }
+
+    /** V318.1 — رگرسیون: جدول کارنو در هر سه حالت ۲/۳/۴ متغیره بدون خطا و با تعداد خانهٔ درست رندر شود. */
+    @Test
+    fun karnaughMapRendersForTwoThreeAndFourVariables() {
+        val expected = mapOf(2 to 4, 3 to 8, 4 to 16)
+        for ((vars, cells) in expected) {
+            val spec = FigureSpec.parse("""{"t":"axkmap","X":{"vars":"$vars","ones":"0,1,3,5"}}""")
+            assertTrue("spec parse failed for vars=$vars", spec != null)
+            val body = PrimaryMathSvgRenderer.body(spec!!)
+            assertTrue("Empty K-map body for vars=$vars", body.isNotBlank())
+            assertTrue("NaN in K-map vars=$vars", !body.contains("NaN"))
+            val drawn = body.split(">۱</text>").size - 1 + body.split(">۰</text>").size - 1
+            assertEquals("K-map cell count for vars=$vars", cells, drawn)
         }
     }
 
