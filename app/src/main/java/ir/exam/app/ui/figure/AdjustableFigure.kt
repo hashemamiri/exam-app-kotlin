@@ -40,6 +40,7 @@ fun AdjustableFigure(
         "axclock", "axfrac", "axabacus", "axthermo", "axtenframe", "axspin", "axbeaker",
         "axtally", "axbase10", "axplace", "axruler", "axmoney", "axjump", "axbalance",
         "axsaw", "axpattern", "axsym", "axgeoboard", "axdice", "axmularea", "axvenn",
+        "axnumgrid", "axfacttree", "axfnmachine", "axfracwall", "axtangram", "axangle",
         "axnumpts", "axnumint", "axnumineq", "axxypts", "axxyline", "axxyvec", "axxycirc", "axpolpts",
         "gauge", "ang", "sec", "arc", "segm", "parll", "ngon"
     )
@@ -124,6 +125,9 @@ private fun InteractiveClock(
             val vmax = kotlin.math.max(vmin + 1f, latest.xNum("vmax", 100f))
             val ratio = ((q.x - 60f) / 240f).coerceIn(0f, 1f)
             x + ("val" to JsonPrimitive(Math.round(vmin + ratio * (vmax - vmin))))
+        } else if (latest.type == "axangle") {
+            val angDeg = (atan2((212f - q.y).toDouble(), (q.x - 180f).toDouble()) * 180.0 / PI).toInt().coerceIn(5, 175)
+            x + ("deg" to JsonPrimitive(angDeg))
         } else if (latest.type in setOf("ang", "sec", "arc", "segm", "parll")) {
             val angDeg = ((atan2((160f - q.y).toDouble(), (q.x - 180f).toDouble()) * 180.0 / PI + 360.0) % 360.0).toInt().coerceIn(10, 350)
             if (latest.type == "parll") x + ("tilt" to JsonPrimitive(angDeg.coerceIn(15, 165).toString()))
@@ -237,32 +241,81 @@ private fun InteractiveClock(
                 }
             }
             "axsaw" -> {
-                val c = ((q.x - 80f) / 50f).toInt().coerceIn(0, 3)
-                val r = ((q.y - 36f) / 50f).toInt().coerceIn(0, 3)
                 val raw = latest.xStr("vals", "1,2,3,4;3,4,?,2;2,?,4,3;4,3,2,1")
-                val grid = MutableList(4) { ri ->
-                    val row = raw.split(';').getOrNull(ri)?.split(',')?.map { it.trim() }.orEmpty()
-                    MutableList(4) { ci -> row.getOrNull(ci)?.ifBlank { "?" } ?: "?" }
+                val parsed = raw.split(';', '؛').map { it.split(',', '،').map { c -> c.trim() } }.filter { it.isNotEmpty() }
+                val explicitSize = latest.xNum("size", 0f).toInt()
+                val n = (if (explicitSize in 3..9) explicitSize else parsed.size.coerceIn(3, 9)).coerceIn(3, 9)
+                val mode = latest.xStr("mode", "shape").lowercase()
+                val showLegend = mode == "color" || mode == "color_shape"
+                val maxGridPx = if (showLegend) 196f else 216f
+                val cs = kotlin.math.min(52f, maxGridPx / n)
+                val gw = cs * n
+                val x0 = (360f - gw) / 2f
+                val y0 = (if (showLegend) 24f else 28f) + (maxGridPx - gw) / 2f
+                val c = ((q.x - x0) / cs).toInt().coerceIn(0, n - 1)
+                val r = ((q.y - y0) / cs).toInt().coerceIn(0, n - 1)
+                val baseRows = if (parsed.size == n && parsed.all { it.size >= n }) parsed else ir.exam.app.core.figure.PrimaryMathSvgRenderer.defaultSudokuRows(n)
+                val grid = MutableList(n) { ri ->
+                    MutableList(n) { ci -> baseRows.getOrNull(ri)?.getOrNull(ci)?.ifBlank { "?" } ?: "?" }
                 }
-                val cycle = listOf("1", "2", "3", "4", "?")
+                val cycle = (1..n).map { it.toString() } + "?"
                 val cur = grid[r][c]
                 grid[r][c] = cycle[(cycle.indexOf(cur) + 1) % cycle.size]
                 val nextVals = grid.joinToString(";") { it.joinToString(",") }
-                emit(FigureSpec(JsonObject(latest.raw + ("X" to JsonObject(x + ("vals" to JsonPrimitive(nextVals)))))))
+                emit(FigureSpec(JsonObject(latest.raw + ("X" to JsonObject(x + ("size" to JsonPrimitive(n)) + ("vals" to JsonPrimitive(nextVals)))))))
             }
             "axpattern" -> {
                 val items = latest.xStr("seq", "●,▲,●,▲,●,?").split(',', '،').map { it.trim() }.filter { it.isNotEmpty() }.toMutableList()
                 if (items.isNotEmpty()) {
                     val n = items.size
-                    val cw = kotlin.math.min(42f, 290f / n)
-                    val gap = 6f
+                    val cw = kotlin.math.min(42f, 300f / n)
+                    val gap = if (n <= 8) 6f else 4f
                     val tw = n * cw + (n - 1) * gap
                     val x0 = (360f - tw) / 2f
                     val idx = ((q.x - x0) / (cw + gap)).toInt().coerceIn(0, n - 1)
-                    val cycle = listOf("●", "▲", "■", "★", "?")
+                    val mode = latest.xStr("mode", "shape").lowercase()
+                    val cycle = if (mode == "color" || mode == "bead") listOf("قرمز", "آبی", "سبز", "زرد", "بنفش", "?") else listOf("●", "▲", "■", "★", "?")
                     items[idx] = cycle[(cycle.indexOf(items[idx]) + 1) % cycle.size]
                     emit(FigureSpec(JsonObject(latest.raw + ("X" to JsonObject(x + ("seq" to JsonPrimitive(items.joinToString(","))))))))
                 }
+            }
+            "axnumgrid" -> {
+                val start = latest.xNum("start", 1f).toInt().coerceIn(0, 900)
+                val cols = latest.xStr("cols", "10").trim().toIntOrNull()?.coerceIn(4, 10) ?: 10
+                val rows = latest.xStr("rows", "10").trim().toIntOrNull()?.coerceIn(3, 10) ?: 10
+                val cs = kotlin.math.min(280f / cols, 218f / rows)
+                val gw = cs * cols
+                val gh = cs * rows
+                val x0 = (360f - gw) / 2f
+                val y0 = 26f + (222f - gh) / 2f
+                val c = ((q.x - x0) / cs).toInt().coerceIn(0, cols - 1)
+                val r = ((q.y - y0) / cs).toInt().coerceIn(0, rows - 1)
+                val targetNum = (start + r * cols + c).toString()
+                val cur = latest.xStr("blanks", "15,35,60,85").split(',', '،', ';', ' ').map { it.trim() }.filter { it.isNotEmpty() }.toMutableList()
+                if (targetNum in cur) cur.remove(targetNum) else cur.add(targetNum)
+                emit(FigureSpec(JsonObject(latest.raw + ("X" to JsonObject(x + ("blanks" to JsonPrimitive(cur.joinToString(","))))))))
+            }
+            "axfacttree", "axfnmachine" -> {
+                val cur = latest.xNum("blank", 1f).toInt()
+                val nextB = (cur + 1) % 3
+                emit(FigureSpec(JsonObject(latest.raw + ("X" to JsonObject(x + ("blank" to JsonPrimitive(nextB)))))))
+            }
+            "axfracwall" -> {
+                val dens = latest.xStr("dens", "1,2,3,4,6,8").split(',', '،', ';').mapNotNull { it.trim().toIntOrNull()?.coerceIn(1, 12) }.ifEmpty { listOf(1, 2, 3, 4, 6, 8) }.take(7)
+                val fills = latest.xStr("fills", "1,1,2,2,3,4").split(',', '،', ';').mapNotNull { it.trim().toIntOrNull() }.toMutableList()
+                while (fills.size < dens.size) fills.add(1)
+                val rh = kotlin.math.min(34f, 210f / dens.size)
+                val y0 = 30f + (214f - rh * dens.size) / 2f
+                val rIdx = ((q.y - y0) / rh).toInt().coerceIn(0, dens.lastIndex)
+                val den = dens[rIdx]
+                fills[rIdx] = (fills[rIdx] + 1) % (den + 1)
+                emit(FigureSpec(JsonObject(latest.raw + ("X" to JsonObject(x + ("fills" to JsonPrimitive(fills.take(dens.size).joinToString(","))))))))
+            }
+            "axtangram" -> {
+                val shapes = listOf("square", "house", "boat", "cat")
+                val cur = latest.xStr("shape", "square").lowercase()
+                val nextS = shapes[(shapes.indexOf(cur) + 1) % shapes.size]
+                emit(FigureSpec(JsonObject(latest.raw + ("X" to JsonObject(x + ("shape" to JsonPrimitive(nextS)))))))
             }
             "axsym" -> {
                 val c = ((q.x - 76f) / 26f).toInt().coerceIn(0, 7)
@@ -369,7 +422,7 @@ private fun InteractiveClock(
     }
 
     val dragTypes = setOf(
-        "axclock", "axthermo", "axbeaker", "axruler",
+        "axclock", "axthermo", "axbeaker", "axruler", "axangle",
         "axnumint", "axnumineq", "axxyline", "axxyvec", "axxycirc",
         "gauge", "ang", "sec", "arc", "segm", "parll"
     )

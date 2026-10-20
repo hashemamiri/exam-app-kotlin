@@ -91,8 +91,8 @@ val AXIS_FIGURES: List<FigureTemplate> = listOf(
     FigureTemplate("axjump", "پرش روی محور", """{"k":"g","t":"axjump","X":{"start":0,"step":3,"jumps":4,"max":12}}"""),
     FigureTemplate("axbalance", "ترازوی دوکفه‌ای", """{"k":"g","t":"axbalance","X":{"left":5,"right":3,"unit":"کیلوگرم"}}"""),
     FigureTemplate("axthermo", "دماسنج", """{"k":"g","t":"axthermo","X":{"val":25,"min":-10,"max":50}}"""),
-    FigureTemplate("axsaw", "جدول شگفت‌انگیز (۴×۴)", """{"k":"g","t":"axsaw","X":{"vals":"1,2,3,4;3,4,?,2;2,?,4,3;4,3,2,1","mode":"shape"}}"""),
-    FigureTemplate("axpattern", "الگویابی شکلی/عددی", """{"k":"g","t":"axpattern","X":{"seq":"●,▲,●,▲,●,?"}}"""),
+    FigureTemplate("axsaw", "جدول شگفت‌انگیز و سودوکو", """{"k":"g","t":"axsaw","X":{"size":4,"vals":"1,2,3,4;3,4,?,2;2,?,4,3;4,3,2,1","mode":"shape"}}"""),
+    FigureTemplate("axpattern", "الگویابی رنگی/شکلی/عددی", """{"k":"g","t":"axpattern","X":{"seq":"●,▲,●,▲,●,?","mode":"shape"}}"""),
     // V315.0 — ۸ ابزار جدید ریاضی و علوم ابتدایی
     FigureTemplate("axtenframe", "قاب ده‌تایی", """{"k":"g","t":"axtenframe","X":{"a":7,"b":5,"frames":2}}"""),
     FigureTemplate("axsym", "تقارن شطرنجی", """{"k":"g","t":"axsym","X":{"cells":"1,1;2,1;2,2;3,2","axis":"v","mirror":1}}"""),
@@ -101,7 +101,14 @@ val AXIS_FIGURES: List<FigureTemplate> = listOf(
     FigureTemplate("axgeoboard", "ژئوبرد (تختهٔ میخی)", """{"k":"g","t":"axgeoboard","X":{"pts":"1,1;4,1;4,3;1,3","grid":5}}"""),
     FigureTemplate("axdice", "تاس و مکعب شمارش", """{"k":"g","t":"axdice","X":{"dice":"4,6","sum":1}}"""),
     FigureTemplate("axmularea", "ضرب مساحتی (مستطیلی)", """{"k":"g","t":"axmularea","X":{"a":24,"b":13,"blank":0}}"""),
-    FigureTemplate("axvenn", "نمودار ون (مجموعه‌ها)", """{"k":"g","t":"axvenn","X":{"left":"پرنده: کبوتر، گنجشک","right":"آبزی: ماهی، میگو","mid":"اردک"}}""")
+    FigureTemplate("axvenn", "نمودار ون (مجموعه‌ها)", """{"k":"g","t":"axvenn","X":{"left":"پرنده: کبوتر، گنجشک","right":"آبزی: ماهی، میگو","mid":"اردک"}}"""),
+    // V317.0 — ۶ ابزار پیشرفتهٔ جدید ریاضی ابتدایی (اول تا ششم)
+    FigureTemplate("axnumgrid", "جدول صدتایی و الگوهای عددی", """{"k":"g","t":"axnumgrid","X":{"start":1,"cols":"10","rows":"10","rule":"5","blanks":"15,35,60,85"}}"""),
+    FigureTemplate("axfacttree", "درخت تجزیهٔ عوامل اول", """{"k":"g","t":"axfacttree","X":{"n":36,"blank":0}}"""),
+    FigureTemplate("axfnmachine", "ماشین ورودی و خروجی", """{"k":"g","t":"axfnmachine","X":{"in":"2,4,6,8","op1":"+ 3","op2":"× 2","blank":1}}"""),
+    FigureTemplate("axfracwall", "دیوار کسرها (مقایسه و تساوی)", """{"k":"g","t":"axfracwall","X":{"dens":"1,2,3,4,6,8","fills":"1,1,2,2,3,4","mode":"label"}}"""),
+    FigureTemplate("axtangram", "تانگرام (پازل ۷ تکه)", """{"k":"g","t":"axtangram","X":{"shape":"square","mode":"color"}}"""),
+    FigureTemplate("axangle", "نقاله و اندازه‌گیری زاویه", """{"k":"g","t":"axangle","X":{"deg":65,"pro":1,"label":"1"}}""")
 )
 
 /** V304 — اولین شناسهٔ بخش «ابزار ریاضی ابتدایی» در AXIS_FIGURES (برای سرتیتر جدا در انتخابگر). */

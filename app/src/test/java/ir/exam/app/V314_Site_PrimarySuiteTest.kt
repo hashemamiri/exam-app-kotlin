@@ -28,10 +28,11 @@ class V314_Site_PrimarySuiteTest {
         assertTrue(student.contains("function syllableAnswer("))
         assertTrue(student.contains("function bucketAnswer("))
 
-        // ۲) ۱۴ ابزار جدید ریاضی/علوم ابتدایی در graph_fig.js (۶ ابزار V314 + ۸ ابزار V315)
+        // ۲) ۲۰ ابزار جدید ریاضی/علوم ابتدایی در graph_fig.js (۶ ابزار V314 + ۸ ابزار V315 + ۶ ابزار V317)
         for (k in listOf(
             "axabacus", "axjump", "axbalance", "axthermo", "axsaw", "axpattern",
-            "axtenframe", "axsym", "axspin", "axbeaker", "axgeoboard", "axdice", "axmularea", "axvenn"
+            "axtenframe", "axsym", "axspin", "axbeaker", "axgeoboard", "axdice", "axmularea", "axvenn",
+            "axnumgrid", "axfacttree", "axfnmachine", "axfracwall", "axtangram", "axangle"
         )) {
             assertTrue("Missing $k in graph_fig.js", graphFig.contains(k))
         }
@@ -49,6 +50,7 @@ class V314_Site_PrimarySuiteTest {
         assertTrue(graphFig.contains("if (t === 'axabacus')"))
         assertTrue(graphFig.contains("if (t === 'axthermo')"))
         assertTrue(graphFig.contains("var GF_DROPDOWNS ="))
+        assertTrue(graphFig.contains("'axsaw:X.size'"))
         assertTrue(graphFig.contains("'axsaw:X.mode'"))
         assertTrue(graphFig.contains("'axsym:X.axis'"))
         assertTrue(graphFig.contains("'axbeaker:X.unit'"))

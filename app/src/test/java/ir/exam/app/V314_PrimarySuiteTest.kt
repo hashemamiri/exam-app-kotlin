@@ -72,7 +72,8 @@ class V314_PrimarySuiteTest {
         val ids = AXIS_FIGURES.map { it.id }.toSet()
         val allNew = listOf(
             "axabacus", "axjump", "axbalance", "axthermo", "axsaw", "axpattern",
-            "axtenframe", "axsym", "axspin", "axbeaker", "axgeoboard", "axdice", "axmularea", "axvenn"
+            "axtenframe", "axsym", "axspin", "axbeaker", "axgeoboard", "axdice", "axmularea", "axvenn",
+            "axnumgrid", "axfacttree", "axfnmachine", "axfracwall", "axtangram", "axangle"
         )
         for (k in allNew) {
             assertTrue("Missing $k in AXIS_FIGURES", k in ids)
@@ -109,6 +110,7 @@ class V314_PrimarySuiteTest {
             "axclock", "axfrac", "axabacus", "axthermo", "axtenframe", "axspin", "axbeaker",
             "axtally", "axbase10", "axplace", "axruler", "axmoney", "axjump", "axbalance",
             "axsaw", "axpattern", "axsym", "axgeoboard", "axdice", "axmularea", "axvenn",
+            "axnumgrid", "axfacttree", "axfnmachine", "axfracwall", "axtangram", "axangle",
             "axnumpts", "axnumint", "axnumineq", "axxypts", "axxyline", "axxyvec", "axxycirc", "axpolpts",
             "gauge", "ang", "sec", "arc", "segm", "parll", "ngon"
         )) {
@@ -116,7 +118,10 @@ class V314_PrimarySuiteTest {
         }
         val picker = File(root(), "app/src/main/java/ir/exam/app/ui/figure/FigurePickerDialog.kt").readText()
         assertTrue(picker.contains("dropdownOptionsFor("))
+        assertTrue(picker.contains("\"axsaw\" to \"size\""))
         assertTrue(picker.contains("\"axsaw\" to \"mode\""))
+        assertTrue(picker.contains("\"color\" to \"رنگی — ویژهٔ اول ابتدایی (خانه‌های رنگی)\""))
+        assertTrue(picker.contains("\"9\" to \"۹×۹ (سودوکوی کامل — بلوک ۳×۳)\""))
         assertTrue(picker.contains("\"axbeaker\" to \"unit\""))
         assertTrue(picker.contains("\"axnumint\" to \"lc\""))
         assertTrue(picker.contains("\"axnumineq\" to \"dir\""))

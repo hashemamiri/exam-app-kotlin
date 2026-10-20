@@ -532,8 +532,8 @@ private fun paramFields(type: String): List<Pair<String, String>> = when (type) 
     "axjump" -> listOf("start" to "نقطهٔ شروع", "step" to "طول هر پرش", "jumps" to "تعداد پرش", "max" to "انتهای محور", "label" to "نمایش عبارت جمع/ضرب (۱/۰)")
     "axbalance" -> listOf("left" to "وزنهٔ کفهٔ چپ", "right" to "وزنهٔ کفهٔ راست", "unit" to "واحد جرم", "label" to "نمایش علامت مقایسه")
     "axthermo" -> listOf("val" to "دما (°C)", "min" to "کمینهٔ دما", "max" to "بیشینهٔ دما")
-    "axsaw" -> listOf("vals" to "سطرها با ; و خانه‌ها با , (جای خالی = ?)", "mode" to "نمایش (shape=شکل / num=عدد)")
-    "axpattern" -> listOf("seq" to "دنباله با ویرگول (مثلاً ●,▲,●,▲,?)")
+    "axsaw" -> listOf("size" to "اندازهٔ جدول (۳×۳ تا ۹×۹)", "mode" to "نمایش (رنگ / شکل / عدد)", "vals" to "سطرها با ; و خانه‌ها با , (جای خالی = ?)")
+    "axpattern" -> listOf("seq" to "دنباله با ویرگول (مثلاً ●,▲,●,▲,?)", "mode" to "نوع نمایش الگو (شکل / رنگ / مهره)")
     // V315.0 — ۸ ابزار جدید ریاضی و علوم ابتدایی
     "axtenframe" -> listOf("a" to "مهره‌های قرمز", "b" to "مهره‌های آبی", "frames" to "تعداد قاب (۱ یا ۲)", "label" to "نمایش عبارت جمع")
     "axsym" -> listOf("cells" to "خانه‌ها (ردیف,ستون با ;)", "axis" to "خط تقارن (v عمودی / h افقی)", "mirror" to "نمایش قرینه (۱=بله، ۰=؟)")
@@ -543,6 +543,13 @@ private fun paramFields(type: String): List<Pair<String, String>> = when (type) 
     "axdice" -> listOf("dice" to "اعداد تاس‌ها (با کاما)", "sum" to "نمایش جمع (۱=جمع، ۲=؟، ۰=خیر)")
     "axmularea" -> listOf("a" to "عدد اول (افقی)", "b" to "عدد دوم (عمودی)", "blank" to "مخفی کردن حاصل‌ها (۰ یا ۱)")
     "axvenn" -> listOf("left" to "دایرهٔ چپ", "right" to "دایرهٔ راست", "mid" to "بخش مشترک (وسط)")
+    // V317.0 — ۶ ابزار پیشرفتهٔ جدید ریاضی ابتدایی
+    "axnumgrid" -> listOf("start" to "عدد شروع", "cols" to "تعداد ستون", "rows" to "تعداد سطر", "rule" to "رنگ‌آمیزی مضرب/الگو", "blanks" to "خانه‌های جای خالی (با ویرگول)")
+    "axfacttree" -> listOf("n" to "عدد مورد تجزیه (۴ تا ۹۹۹)", "blank" to "حالت جای خالی (؟)")
+    "axfnmachine" -> listOf("in" to "ورودی‌ها (با ویرگول)", "op1" to "عملگر مرحلهٔ اول", "op2" to "عملگر مرحلهٔ دوم (اختیاری)", "blank" to "حالت جای خالی (؟)")
+    "axfracwall" -> listOf("dens" to "مخرج ردیف‌ها (با ویرگول)", "fills" to "تعداد رنگ‌شدهٔ هر ردیف", "mode" to "نحوهٔ نمایش کسرها")
+    "axtangram" -> listOf("shape" to "طرح تانگرام (۷ تکه)", "mode" to "حالت نمایش قطعات")
+    "axangle" -> listOf("deg" to "زاویه (۰ تا ۱۸۰ درجه)", "pro" to "نمایش نقاله", "label" to "نمایش اندازهٔ زاویه")
     "axpolpts" -> listOf("xmax" to "تعداد حلقه", "pts" to "نقطه‌ها (r,θ;r,θ)", "labs" to "نام نقطه‌ها")
     "ax3dpt" -> listOf("xmax" to "تعداد تیک", "step" to "گام", "x1" to "x نقطه", "y1" to "y نقطه", "z1" to "z نقطه", "labs" to "نام نقطه")
     "flow" -> listOf("labs" to "مراحل (با ویرگول)")
@@ -581,6 +588,7 @@ private fun paramFields(type: String): List<Pair<String, String>> = when (type) 
 private val TEXT_PARAM_KEYS = setOf(
     "shape", "unit", "notes", "coins", "op2", "op3", "n2", "n3", "mode", "seq", // V304 — V310.8/V310.9/V314.0: کلیدهای متنی ابزارهای ابتدایی
     "cells", "axis", "parts", "dice", "left", "right", "mid", // V315.0: کلیدهای متنی ۸ ابزار جدید ابتدایی
+    "rule", "blanks", "in", "op1", "dens", "fills", "label", // V317.0: کلیدهای متنی ابزارهای پیشرفتهٔ ابتدایی
     "labs", "labs2", "vals", "vals2", "vals3", "xs", "ys", "zs", "s1", "s2", "s3",
     // V54.2 — فهرست‌های عددی چندتایی و مقادیر آزاد مرحلهٔ دوم متنی ذخیره می‌شوند
     // (همان قرارداد رشته‌ای مرجع).
@@ -650,7 +658,50 @@ private fun trimNum(value: Float): String =
 /** V315.1 / V315.2 — گزینه‌های منوی کشویی برای پارامترهای چندحالتهٔ ابزارهای ریاضی/علوم ابتدایی، محورها، نمودارها و هندسه. */
 private fun dropdownOptionsFor(type: String, key: String): List<Pair<String, String>>? = when (type to key) {
     "axfrac" to "shape" -> listOf("circle" to "دایره‌ای (قطاع)", "ring" to "حلقه‌ای", "bar" to "نواری", "square" to "مربعی (شبکه)")
-    "axsaw" to "mode" -> listOf("shape" to "شکلی (● ▲ ■ ★)", "num" to "عددی (۱ تا ۴)")
+    "axsaw" to "size" -> listOf(
+        "3" to "۳×۳ (پایهٔ اول — ۳ خانه)",
+        "4" to "۴×۴ (استاندارد ابتدایی — بلوک ۲×۲)",
+        "5" to "۵×۵ (پنج‌تایی)",
+        "6" to "۶×۶ (پیشرفته — بلوک ۲×۳)",
+        "7" to "۷×۷ (هفت‌تایی)",
+        "8" to "۸×۸ (هشت‌تایی)",
+        "9" to "۹×۹ (سودوکوی کامل — بلوک ۳×۳)"
+    )
+    "axsaw" to "mode" -> listOf(
+        "color" to "رنگی — ویژهٔ اول ابتدایی (خانه‌های رنگی)",
+        "shape" to "شکلی (● ▲ ■ ★ ◆ ♥ ⬢ ✿ ▼)",
+        "color_shape" to "رنگ و شکل با هم (خانهٔ رنگی + شکل)",
+        "num" to "عددی (۱ تا ۹)"
+    )
+    "axpattern" to "mode" -> listOf(
+        "shape" to "شکلی و عددی (● ▲ ■ ★)",
+        "color" to "الگوی رنگ‌آمیزی — ویژهٔ اول ابتدایی",
+        "bead" to "نخ و مهره‌های رنگی"
+    )
+    "axnumgrid" to "cols" -> listOf("10" to "۱۰ ستون (جدول صدتایی)", "5" to "۵ ستون", "6" to "۶ ستون", "8" to "۸ ستون")
+    "axnumgrid" to "rows" -> listOf("10" to "۱۰ سطر (جدول صدتایی)", "5" to "۵ سطر (۵۰تایی)", "6" to "۶ سطر", "8" to "۸ سطر")
+    "axnumgrid" to "rule" -> listOf(
+        "0" to "بدون رنگ‌آمیزی الگو",
+        "2" to "مضرب‌های ۲ (شمارش دو تا دو تا)",
+        "3" to "مضرب‌های ۳ (شمارش سه تا سه تا)",
+        "5" to "مضرب‌های ۵ (شمارش پنج تا پنج تا)",
+        "10" to "مضرب‌های ۱۰ (شمارش ده تا ده تا)",
+        "prime" to "اعداد اول (غربال اراتستن)",
+        "odd" to "اعداد فرد"
+    )
+    "axfacttree" to "blank" -> listOf(
+        "0" to "نمایش کامل همهٔ عوامل",
+        "1" to "جای خالی عوامل اول انتهایی (؟)",
+        "2" to "جای خالی شاخه‌های میانی (؟)"
+    )
+    "axfnmachine" to "op1" -> listOf("+ 3" to "+ 3 (جمع با ۳)", "+ 5" to "+ 5 (جمع با ۵)", "- 2" to "- 2 (تفریق ۲)", "× 2" to "× 2 (ضرب در ۲)", "× 3" to "× 3 (ضرب در ۳)", "÷ 2" to "÷ 2 (تقسیم بر ۲)")
+    "axfnmachine" to "op2" -> listOf("" to "ندارد (ماشین یک‌مرحله‌ای)", "+ 1" to "+ 1", "- 1" to "- 1", "× 2" to "× 2", "+ 5" to "+ 5")
+    "axfnmachine" to "blank" -> listOf("1" to "جای خالی در خروجی‌ها (؟)", "2" to "جای خالی قانون ماشین (؟)", "0" to "نمایش کامل ورودی و خروجی")
+    "axfracwall" to "mode" -> listOf("label" to "نمایش کسر و رنگ", "color" to "فقط رنگ‌آمیزی (بدون نوشته)", "blank" to "جای خالی کسرهای مساوی (؟)")
+    "axtangram" to "shape" -> listOf("square" to "مربع ۷ تکه (کلاسیک)", "house" to "خانه", "boat" to "قایق", "cat" to "گربه")
+    "axtangram" to "mode" -> listOf("color" to "رنگی کامل", "num" to "رنگی با شمارهٔ قطعات (۱ تا ۷)", "outline" to "سفید خط‌چین (برای رنگ‌آمیزی)", "blank" to "جای خالی شمارهٔ قطعات (؟)")
+    "axangle" to "pro" -> listOf("1" to "همراه با نقالهٔ مدرج", "0" to "فقط دو ضلع و کمان زاویه")
+    "axangle" to "label" -> listOf("1" to "نمایش درجه و نوع زاویه", "2" to "نمایش با جای خالی (؟°)", "0" to "بدون برچسب")
     "axsym" to "axis" -> listOf("v" to "عمودی (چپ و راست)", "h" to "افقی (بالا و پایین)")
     "axsym" to "mirror" -> listOf("1" to "نمایش کامل شکل قرینه", "0" to "جای خالی (؟) برای سؤال")
     "axplace" to "op2", "axplace" to "op3" -> listOf("" to "ندارد", "+" to "جمع (+)", "-" to "تفریق (−)")

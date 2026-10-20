@@ -20,7 +20,8 @@ object PrimaryMathSvgRenderer {
     val SUPPORTED: Set<String> = setOf(
         "axtally", "axbase10", "axplace", "axclock", "axruler", "axfrac", "axmoney",
         "axabacus", "axjump", "axbalance", "axthermo", "axsaw", "axpattern",
-        "axtenframe", "axsym", "axspin", "axbeaker", "axgeoboard", "axdice", "axmularea", "axvenn"
+        "axtenframe", "axsym", "axspin", "axbeaker", "axgeoboard", "axdice", "axmularea", "axvenn",
+        "axnumgrid", "axfacttree", "axfnmachine", "axfracwall", "axtangram", "axangle"
     )
 
     private const val ST = "#2c3a50"
@@ -56,6 +57,12 @@ object PrimaryMathSvgRenderer {
             "axdice" -> dicePair(spec)
             "axmularea" -> areaModelMultiply(spec)
             "axvenn" -> vennDiagram(spec)
+            "axnumgrid" -> hundredChart(spec)
+            "axfacttree" -> factorTree(spec)
+            "axfnmachine" -> functionMachine(spec)
+            "axfracwall" -> fractionWall(spec)
+            "axtangram" -> tangramPuzzle(spec)
+            "axangle" -> protractorAngle(spec)
             else -> ""
         }
     }
@@ -536,57 +543,171 @@ object PrimaryMathSvgRenderer {
         return sb.toString()
     }
 
-    // ------------------------------------ V314.0 — جدول شگفت‌انگیز (سودوکو ۴×۴)
+    // --------------- V314.0 / V317.0 — جدول شگفت‌انگیز و سودوکو (۳×۳ تا ۹×۹ + رنگی/شکلی/عددی)
+    private class SawToken(val sym: String, val hex: String, val tint: String, val nameFa: String)
+
+    private val SAW_PALETTE = mapOf(
+        "1" to SawToken("●", "#e53935", "#ffebee", "قرمز"),
+        "2" to SawToken("▲", "#1e88e5", "#e3f2fd", "آبی"),
+        "3" to SawToken("■", "#43a047", "#e8f5e9", "سبز"),
+        "4" to SawToken("★", "#fbc02d", "#fffde7", "زرد"),
+        "5" to SawToken("◆", "#8e24aa", "#f3e5f5", "بنفش"),
+        "6" to SawToken("♥", "#fb8c00", "#fff3e0", "نارنجی"),
+        "7" to SawToken("⬢", "#00acc1", "#e0f7fa", "فیروزه‌ای"),
+        "8" to SawToken("✿", "#ec407a", "#fce4ec", "صورتی"),
+        "9" to SawToken("▼", "#6d4c41", "#efebe9", "قهوه‌ای")
+    )
+
+    private fun normalizeSawCell(rawCell: String): String {
+        val c = faEnDigits(rawCell.trim())
+        if (c.isEmpty() || c == "?" || c == "؟") return "?"
+        if (c in SAW_PALETTE) return c
+        return when {
+            "قرمز" in c || "سرخ" in c || c == "●" -> "1"
+            "آبی" in c || c == "▲" -> "2"
+            "سبز" in c || c == "■" -> "3"
+            "زرد" in c || c == "★" -> "4"
+            "بنفش" in c || c == "◆" -> "5"
+            "نارنجی" in c || c == "♥" -> "6"
+            "فیروزه" in c || c == "⬢" -> "7"
+            "صورتی" in c || c == "✿" -> "8"
+            "قهوه" in c || c == "▼" -> "9"
+            else -> c
+        }
+    }
+
+    internal fun defaultSudokuRows(n: Int): List<List<String>> {
+        val sz = n.coerceIn(3, 9)
+        if (sz == 4) {
+            return "1,2,3,4;3,4,?,2;2,?,4,3;4,3,2,1".split(';').map { it.split(',') }
+        }
+        return List(sz) { r ->
+            List(sz) { c ->
+                val v = when (sz) {
+                    9 -> ((r * 3 + r / 3 + c) % 9) + 1
+                    6 -> ((r * 3 + r / 2 + c) % 6) + 1
+                    else -> ((r + c) % sz) + 1
+                }
+                if ((r * 2 + c + 1) % (sz + 1) == 0) "?" else v.toString()
+            }
+        }
+    }
+
     private fun magicGrid(spec: FigureSpec): String {
         val raw = spec.xStr("vals", "1,2,3,4;3,4,?,2;2,?,4,3;4,3,2,1")
-        val shapeMode = spec.xStr("mode", "shape") == "shape"
-        val shapes = mapOf("1" to ("●" to "#ef5350"), "2" to ("▲" to "#42a5f5"), "3" to ("■" to "#66bb6a"), "4" to ("★" to "#ffa726"))
-        val rows = raw.split(';').map { it.split(',').map { c -> faEnDigits(c.trim()) } }
+        val parsedRows = raw.split(';', '؛').map { it.split(',', '،').map { c -> normalizeSawCell(c) } }.filter { it.isNotEmpty() }
+        val explicitSize = spec.xNum("size", 0f).toInt()
+        val n = (if (explicitSize in 3..9) explicitSize else parsedRows.size.coerceIn(3, 9)).coerceIn(3, 9)
+        val rows = if (parsedRows.size == n && parsedRows.all { it.size >= n }) parsedRows else defaultSudokuRows(n)
+        val mode = spec.xStr("mode", "shape").lowercase()
+        val showLegend = mode == "color" || mode == "color_shape"
+        val maxGridPx = if (showLegend) 196f else 216f
+        val cs = min(52f, maxGridPx / n)
+        val gw = cs * n
+        val x0 = (360f - gw) / 2f
+        val y0 = (if (showLegend) 24f else 28f) + (maxGridPx - gw) / 2f
         val sb = StringBuilder()
-        val x0 = 80f
-        val y0 = 36f
-        val cs = 50f
-        for (r in 0 until 4) {
-            for (c in 0 until 4) {
+        val fontSz = when {
+            n <= 4 -> 21
+            n <= 6 -> 16
+            else -> 12
+        }
+        for (r in 0 until n) {
+            for (c in 0 until n) {
                 val cell = rows.getOrNull(r)?.getOrNull(c).orEmpty().ifBlank { "?" }
                 val x = x0 + c * cs
                 val y = y0 + r * cs
-                val isQ = cell == "?"
-                sb.append(rect(x, y, cs, cs, if (isQ) "#fff8e1" else "#ffffff", ST, 1.2f))
+                val isQ = cell == "?" || cell == "؟"
+                val tok = SAW_PALETTE[cell]
+                val cellBg = when {
+                    isQ -> "#fff8e1"
+                    mode == "color" && tok != null -> tok.tint
+                    mode == "color_shape" && tok != null -> tok.tint
+                    else -> "#ffffff"
+                }
+                sb.append(rect(x, y, cs, cs, cellBg, "#cbd5e1", 1f))
                 if (isQ) {
-                    sb.append(text(x + cs / 2f, y + 32f, "؟", PINK, "middle", bold = true, size = 22))
-                } else if (shapeMode && cell in shapes) {
-                    val pair = shapes.getValue(cell)
-                    sb.append(text(x + cs / 2f, y + 33f, pair.first, pair.second, "middle", bold = true, size = 24))
+                    sb.append(text(x + cs / 2f, y + cs * 0.66f, "؟", PINK, "middle", bold = true, size = fontSz))
+                } else if (mode == "color" && tok != null) {
+                    val pad = max(3.5f, cs * 0.16f)
+                    sb.append(rect(x + pad, y + pad, cs - pad * 2f, cs - pad * 2f, tok.hex, ST, 1.2f, rx = max(3f, cs * 0.16f)))
+                } else if ((mode == "shape" || mode == "color_shape") && tok != null) {
+                    sb.append(text(x + cs / 2f, y + cs * 0.68f, tok.sym, tok.hex, "middle", bold = true, size = fontSz + 2))
                 } else {
-                    sb.append(text(x + cs / 2f, y + 32f, cell, ST, "middle", bold = true, size = 20))
+                    sb.append(text(x + cs / 2f, y + cs * 0.66f, cell, ST, "middle", bold = true, size = fontSz))
                 }
             }
         }
-        sb.append(rect(x0, y0, cs * 4f, cs * 4f, "none", ST, 2.8f))
-        sb.append(line(x0 + cs * 2f, y0, x0 + cs * 2f, y0 + cs * 4f, ST, 2.6f))
-        sb.append(line(x0, y0 + cs * 2f, x0 + cs * 4f, y0 + cs * 2f, ST, 2.6f))
+        val boxR = when (n) { 9 -> 3; 6 -> 2; 4 -> 2; else -> n }
+        val boxC = when (n) { 9 -> 3; 6 -> 3; 4 -> 2; else -> n }
+        for (r in 1 until n) {
+            val thick = r % boxR == 0
+            sb.append(line(x0, y0 + r * cs, x0 + gw, y0 + r * cs, ST, if (thick) 2.5f else 0.9f))
+        }
+        for (c in 1 until n) {
+            val thick = c % boxC == 0
+            sb.append(line(x0 + c * cs, y0, x0 + c * cs, y0 + gw, ST, if (thick) 2.5f else 0.9f))
+        }
+        sb.append(rect(x0, y0, gw, gw, "none", ST, 2.8f))
+        if (showLegend) {
+            val itemW = min(36f, 320f / n)
+            val totalLW = itemW * n
+            val lx0 = (360f - totalLW) / 2f
+            val ly = 246f
+            for (i in 1..n) {
+                val tok = SAW_PALETTE[i.toString()] ?: continue
+                val cx = lx0 + (i - 0.5f) * itemW
+                sb.append("<circle cx=\"${f(cx)}\" cy=\"${f(ly)}\" r=\"7.5\" fill=\"${tok.hex}\" stroke=\"$ST\" stroke-width=\"1.2\"/>")
+                if (n <= 6) {
+                    sb.append(text(cx, ly + 19f, tok.nameFa, MU, "middle", bold = true, size = 9))
+                } else {
+                    sb.append(text(cx, ly + 18f, i.toString(), MU, "middle", bold = true, size = 9))
+                }
+            }
+        }
         return sb.toString()
     }
 
-    // ----------------------------------------- V314.0 — الگویابی شکلی و عددی
+    // ----------------------------- V314.0 / V317.0 — الگویابی رنگی، شکلی و عددی
     private fun patternTrain(spec: FigureSpec): String {
-        val items = spec.xList("seq", "●,▲,●,▲,●,?").map { it.trim() }.filter { it.isNotEmpty() }.take(8)
+        val items = spec.xList("seq", "●,▲,●,▲,●,?").map { it.trim() }.filter { it.isNotEmpty() }.take(12)
         if (items.isEmpty()) return ""
+        val mode = spec.xStr("mode", "shape").lowercase()
         val sb = StringBuilder()
         val n = items.size
-        val cw = min(42f, 290f / n)
-        val gap = 6f
+        val cw = min(42f, 300f / n)
+        val gap = if (n <= 8) 6f else 4f
         val totalW = n * cw + (n - 1) * gap
         val x0 = (360f - totalW) / 2f
         val y0 = 112f
-        val palette = listOf("#6c63f5", "#27c4a8", "#f0a202", "#d6336c", "#42a5f5")
+        val palette = listOf("#e53935", "#1e88e5", "#43a047", "#fbc02d", "#8e24aa", "#fb8c00")
+        if (mode == "bead") {
+            sb.append(line(x0 - 14f, y0 + 27f, x0 + totalW + 14f, y0 + 27f, ST, 3f))
+        }
         items.forEachIndexed { i, it ->
             val x = x0 + i * (cw + gap)
             val isQ = it == "?" || it == "؟"
-            val col = if (isQ) PINK else palette[i % palette.size]
-            sb.append(rect(x, y0, cw, 54f, if (isQ) "#fff8e1" else "rgba(108,99,245,.10)", col, 2f, rx = 9f))
-            sb.append(text(x + cw / 2f, y0 + 34f, if (isQ) "؟" else it, col, "middle", bold = true, size = 20))
+            val norm = normalizeSawCell(it)
+            val tok = SAW_PALETTE[norm]
+            val col = when {
+                isQ -> PINK
+                tok != null -> tok.hex
+                else -> palette[i % palette.size]
+            }
+            if (mode == "bead") {
+                val r = min(20f, cw * 0.45f)
+                val cx = x + cw / 2f
+                val cy = y0 + 27f
+                sb.append("<circle cx=\"${f(cx)}\" cy=\"${f(cy)}\" r=\"${f(r)}\" fill=\"${if (isQ) "#fff8e1" else col}\" stroke=\"$ST\" stroke-width=\"2\"/>")
+                if (isQ) sb.append(text(cx, cy + 6f, "؟", PINK, "middle", bold = true, size = 16))
+            } else if (mode == "color") {
+                sb.append(rect(x, y0, cw, 54f, if (isQ) "#fff8e1" else col, ST, 2f, rx = 10f))
+                if (isQ) sb.append(text(x + cw / 2f, y0 + 34f, "؟", PINK, "middle", bold = true, size = 20))
+            } else {
+                sb.append(rect(x, y0, cw, 54f, if (isQ) "#fff8e1" else "rgba(108,99,245,.10)", col, 2f, rx = 9f))
+                val label = if (isQ) "؟" else if (tok != null && it in SAW_PALETTE.keys) tok.sym else it
+                sb.append(text(x + cw / 2f, y0 + 34f, label, col, "middle", bold = true, size = if (n > 8) 15 else 20))
+            }
         }
         return sb.toString()
     }
@@ -880,6 +1001,342 @@ object PrimaryMathSvgRenderer {
         val midStartY = 154f - (midItems.size - 1) * 11f
         midItems.forEachIndexed { idx, ln ->
             sb.append(text(180f, midStartY + idx * 22f, ln, PINK, "middle", bold = true, size = 12))
+        }
+        return sb.toString()
+    }
+
+    // ----------------------------- V317.0 — جدول صدتایی و الگوهای عددی (۱ تا ۱۰۰)
+    private fun isPrime(v: Int): Boolean {
+        if (v < 2) return false
+        var d = 2
+        while (d * d <= v) {
+            if (v % d == 0) return false
+            d++
+        }
+        return true
+    }
+
+    private fun hundredChart(spec: FigureSpec): String {
+        val start = spec.xNum("start", 1f).toInt().coerceIn(0, 900)
+        val cols = faEnDigits(spec.xStr("cols", "10")).toIntOrNull()?.coerceIn(4, 10) ?: 10
+        val rows = faEnDigits(spec.xStr("rows", "10")).toIntOrNull()?.coerceIn(3, 10) ?: 10
+        val rule = faEnDigits(spec.xStr("rule", "5")).trim().lowercase()
+        val stepVal = rule.toIntOrNull() ?: 0
+        val blanks = spec.xStr("blanks", "15,35,60,85")
+            .split(',', '،', ';', ' ')
+            .mapNotNull { faEnDigits(it.trim()).toIntOrNull() }
+            .toSet()
+        val cs = min(280f / cols, 218f / rows)
+        val gw = cs * cols
+        val gh = cs * rows
+        val x0 = (360f - gw) / 2f
+        val y0 = 26f + (222f - gh) / 2f
+        val fontSz = if (max(cols, rows) >= 9) 10 else 13
+        val sb = StringBuilder()
+        for (r in 0 until rows) {
+            for (c in 0 until cols) {
+                val num = start + r * cols + c
+                val x = x0 + c * cs
+                val y = y0 + r * cs
+                val isBlank = num in blanks
+                val highlighted = when {
+                    rule == "prime" -> isPrime(num)
+                    rule == "even" -> num % 2 == 0
+                    rule == "odd" -> num % 2 != 0
+                    stepVal > 0 -> num > 0 && num % stepVal == 0
+                    else -> false
+                }
+                val bg = when {
+                    isBlank -> "#fff8e1"
+                    highlighted -> "rgba(39,196,168,.26)"
+                    else -> "#ffffff"
+                }
+                sb.append(rect(x, y, cs, cs, bg, "#cbd5e1", 0.9f))
+                if (isBlank) {
+                    sb.append(text(x + cs / 2f, y + cs * 0.68f, "؟", PINK, "middle", bold = true, size = fontSz + 1))
+                } else {
+                    val col = if (highlighted) "#00796b" else ST
+                    sb.append(text(x + cs / 2f, y + cs * 0.68f, num.toString(), col, "middle", bold = highlighted, size = fontSz))
+                }
+            }
+        }
+        sb.append(rect(x0, y0, gw, gh, "none", ST, 2.2f))
+        return sb.toString()
+    }
+
+    // ----------------------------------- V317.0 — درخت تجزیهٔ عوامل اول
+    private fun smallestFactor(n: Int): Int {
+        if (n % 2 == 0) return 2
+        var d = 3
+        while (d * d <= n) {
+            if (n % d == 0) return d
+            d += 2
+        }
+        return n
+    }
+
+    private fun factorTree(spec: FigureSpec): String {
+        val n = spec.xNum("n", 36f).toInt().coerceIn(4, 999)
+        val blankMode = spec.xNum("blank", 0f).toInt().coerceIn(0, 2)
+        val sb = StringBuilder()
+
+        fun splitBalanced(v: Int): Pair<Int, Int>? {
+            if (isPrime(v) || v < 4) return null
+            var best = smallestFactor(v)
+            var d = 2
+            while (d * d <= v) {
+                if (v % d == 0) best = d
+                d++
+            }
+            return best to (v / best)
+        }
+
+        fun drawNode(v: Int, cx: Float, cy: Float, spread: Float, depth: Int) {
+            val sp = if (depth < 3) splitBalanced(v) else null
+            if (sp != null) {
+                val lx = cx - spread
+                val rx = cx + spread
+                val ny = cy + 62f
+                sb.append(line(cx, cy + 16f, lx, ny - 16f, ST, 2f))
+                sb.append(line(cx, cy + 16f, rx, ny - 16f, ST, 2f))
+                drawNode(sp.first, lx, ny, spread * 0.52f, depth + 1)
+                drawNode(sp.second, rx, ny, spread * 0.52f, depth + 1)
+            }
+            val leaf = sp == null
+            val hide = (blankMode == 1 && leaf) || (blankMode == 2 && depth > 0 && !leaf)
+            val fill = when {
+                hide -> "#fff8e1"
+                depth == 0 -> "rgba(108,99,245,.18)"
+                leaf -> "rgba(39,196,168,.24)"
+                else -> "#ffffff"
+            }
+            val stroke = if (hide) PINK else if (leaf) "#00897b" else ST
+            if (leaf) {
+                sb.append("<circle cx=\"${f(cx)}\" cy=\"${f(cy)}\" r=\"17\" fill=\"$fill\" stroke=\"$stroke\" stroke-width=\"2\"/>")
+            } else {
+                sb.append(rect(cx - 21f, cy - 15f, 42f, 30f, fill, stroke, 2f, rx = 8f))
+            }
+            sb.append(text(cx, cy + 5f, if (hide) "؟" else v.toString(), if (hide) PINK else ST, "middle", bold = true, size = 13))
+        }
+
+        drawNode(n, 180f, 44f, 78f, 0)
+        return sb.toString()
+    }
+
+    // ----------------------------- V317.0 — ماشین ورودی و خروجی (یک و دو مرحله‌ای)
+    private fun applyOp(v: Int, opRaw: String): Int {
+        val s = faEnDigits(opRaw).trim()
+        if (s.isEmpty()) return v
+        val num = Regex("""-?\d+""").find(s)?.value?.toIntOrNull() ?: 0
+        return when {
+            s.startsWith("×") || s.startsWith("*") -> v * num
+            s.startsWith("÷") || s.startsWith("/") -> if (num != 0) v / num else v
+            s.startsWith("-") || s.startsWith("−") -> v - kotlin.math.abs(num)
+            else -> v + num
+        }
+    }
+
+    private fun functionMachine(spec: FigureSpec): String {
+        val inputs = spec.xStr("in", "2,4,6,8")
+            .split(',', '،', ';')
+            .mapNotNull { faEnDigits(it.trim()).toIntOrNull() }
+            .ifEmpty { listOf(2, 4, 6, 8) }
+            .take(5)
+        val op1 = spec.xStr("op1", "+ 3").trim()
+        val op2 = spec.xStr("op2", "").trim()
+        val blank = spec.xNum("blank", 1f).toInt().coerceIn(0, 2)
+        val sb = StringBuilder()
+        val twoStep = op2.isNotEmpty()
+        // کادر ماشین در بالا
+        sb.append(text(40f, 64f, "ورودی", MU, "middle", bold = true, size = 11))
+        sb.append(line(62f, 60f, 92f, 60f, ST, 2.2f))
+        if (twoStep) {
+            sb.append(rect(94f, 38f, 74f, 44f, "rgba(108,99,245,.15)", ACC, 2.2f, rx = 10f))
+            sb.append(text(131f, 65f, if (blank == 2) "؟" else op1, if (blank == 2) PINK else ACC, "middle", bold = true, size = 15))
+            sb.append(line(170f, 60f, 192f, 60f, ST, 2.2f))
+            sb.append(rect(194f, 38f, 74f, 44f, "rgba(39,196,168,.18)", "#00897b", 2.2f, rx = 10f))
+            sb.append(text(231f, 65f, if (blank == 2) "؟" else op2, if (blank == 2) PINK else "#00897b", "middle", bold = true, size = 15))
+            sb.append(line(270f, 60f, 298f, 60f, ST, 2.2f))
+        } else {
+            sb.append(rect(112f, 36f, 136f, 48f, "rgba(108,99,245,.15)", ACC, 2.2f, rx = 12f))
+            sb.append(text(180f, 66f, if (blank == 2) "؟" else op1, if (blank == 2) PINK else ACC, "middle", bold = true, size = 17))
+            sb.append(line(62f, 60f, 110f, 60f, ST, 2.2f))
+            sb.append(line(250f, 60f, 298f, 60f, ST, 2.2f))
+        }
+        sb.append(text(322f, 64f, "خروجی", MU, "middle", bold = true, size = 11))
+
+        // جدول ورودی و خروجی در پایین
+        val cols = inputs.size + 1
+        val cw = min(52f, 290f / cols)
+        val tw = cw * cols
+        val x0 = (360f - tw) / 2f
+        val y0 = 116f
+        val rh = 44f
+        sb.append(rect(x0, y0, tw, rh * 2f, "#ffffff", ST, 2f, rx = 8f))
+        sb.append(line(x0, y0 + rh, x0 + tw, y0 + rh, ST, 1.6f))
+        sb.append(text(x0 + cw / 2f, y0 + 27f, "ورودی", ACC, "middle", bold = true, size = 12))
+        sb.append(text(x0 + cw / 2f, y0 + rh + 27f, "خروجی", "#00897b", "middle", bold = true, size = 12))
+        inputs.forEachIndexed { idx, inp ->
+            val cx = x0 + (idx + 1) * cw
+            sb.append(line(cx, y0, cx, y0 + rh * 2f, ST, 1.2f))
+            val out = applyOp(applyOp(inp, op1), op2)
+            sb.append(text(cx + cw / 2f, y0 + 28f, inp.toString(), ST, "middle", bold = true, size = 14))
+            val hideOut = blank == 1 && idx >= inputs.size / 2
+            if (hideOut) {
+                sb.append(rect(cx + 3f, y0 + rh + 3f, cw - 6f, rh - 6f, "#fff8e1", "none", 0f, rx = 5f))
+                sb.append(text(cx + cw / 2f, y0 + rh + 28f, "؟", PINK, "middle", bold = true, size = 16))
+            } else {
+                sb.append(text(cx + cw / 2f, y0 + rh + 28f, out.toString(), ST, "middle", bold = true, size = 14))
+            }
+        }
+        return sb.toString()
+    }
+
+    // --------------------------------- V317.0 — دیوار کسرها (مقایسه و تساوی)
+    private fun fractionWall(spec: FigureSpec): String {
+        val dens = spec.xStr("dens", "1,2,3,4,6,8")
+            .split(',', '،', ';')
+            .mapNotNull { faEnDigits(it.trim()).toIntOrNull()?.coerceIn(1, 12) }
+            .ifEmpty { listOf(1, 2, 3, 4, 6, 8) }
+            .take(7)
+        val fills = spec.xStr("fills", "1,1,2,2,3,4")
+            .split(',', '،', ';')
+            .mapNotNull { faEnDigits(it.trim()).toIntOrNull() }
+        val mode = spec.xStr("mode", "label").lowercase()
+        val sb = StringBuilder()
+        val x0 = 30f
+        val totalW = 300f
+        val rh = min(34f, 210f / dens.size)
+        val y0 = 30f + (214f - rh * dens.size) / 2f
+        val rowPalette = listOf("#ef5350", "#42a5f5", "#66bb6a", "#ffa726", "#ab47bc", "#26a69a", "#ec407a")
+        dens.forEachIndexed { rIdx, den ->
+            val fillCnt = (fills.getOrElse(rIdx) { 1 }).coerceIn(0, den)
+            val partW = totalW / den
+            val ry = y0 + rIdx * rh
+            val col = rowPalette[rIdx % rowPalette.size]
+            for (c in 0 until den) {
+                val px = x0 + c * partW
+                val active = c < fillCnt
+                sb.append(rect(px, ry, partW, rh, if (active) col else "#ffffff", ST, 1.3f))
+                if (mode != "color") {
+                    val lbl = if (mode == "blank" && active && rIdx > 0) "؟" else if (den == 1) "۱" else "1/$den"
+                    val tCol = if (active) "#ffffff" else ST
+                    sb.append(text(px + partW / 2f, ry + rh * 0.66f, lbl, tCol, "middle", bold = true, size = if (den >= 8) 9 else 11))
+                }
+            }
+        }
+        sb.append(rect(x0, y0, totalW, rh * dens.size, "none", ST, 2.2f))
+        return sb.toString()
+    }
+
+    // -------------------------------------- V317.0 — تانگرام (پازل ۷ تکهٔ هندسی)
+    private fun tangramPuzzle(spec: FigureSpec): String {
+        val shape = spec.xStr("shape", "square").lowercase()
+        val mode = spec.xStr("mode", "color").lowercase()
+        val colors = listOf("#ef5350", "#42a5f5", "#66bb6a", "#fdd835", "#ab47bc", "#fb8c00", "#26a69a")
+        val polys: List<Pair<String, Pair<Float, Float>>> = when (shape) {
+            "house" -> listOf(
+                "110,120 180,50 250,120" to (180f to 96f),
+                "110,120 180,120 110,190" to (132f to 144f),
+                "180,120 250,120 250,190" to (226f to 144f),
+                "110,190 180,120 250,190" to (180f to 168f),
+                "110,190 155,190 155,235 110,235" to (132f to 216f),
+                "155,190 250,190 225,235 155,235" to (198f to 216f),
+                "205,65 230,65 230,100 205,75" to (218f to 78f)
+            )
+            "boat" -> listOf(
+                "175,45 175,155 105,155" to (152f to 122f),
+                "183,65 245,155 183,155" to (204f to 128f),
+                "90,165 270,165 235,210 125,210" to (180f to 192f),
+                "125,210 235,210 210,235 150,235" to (180f to 226f),
+                "175,45 198,45 175,68" to (183f to 54f),
+                "105,155 135,130 135,155" to (125f to 148f),
+                "245,155 268,140 258,165" to (255f to 154f)
+            )
+            "cat" -> listOf(
+                "145,55 165,85 145,85" to (152f to 76f),
+                "195,55 195,85 175,85" to (188f to 76f),
+                "145,85 195,85 195,125 145,125" to (170f to 108f),
+                "170,125 225,175 145,175" to (180f to 158f),
+                "145,175 225,175 185,225" to (185f to 196f),
+                "185,225 235,195 235,235" to (218f to 218f),
+                "235,215 278,185 268,225 225,235" to (252f to 215f)
+            )
+            else -> listOf(
+                "90,46 270,46 180,136" to (180f to 82f),
+                "90,46 180,136 90,226" to (124f to 136f),
+                "270,46 270,136 225,91" to (252f to 91f),
+                "180,136 225,91 270,136 225,181" to (225f to 140f),
+                "135,181 180,136 225,181" to (180f to 166f),
+                "90,226 135,181 225,181 180,226" to (158f to 206f),
+                "180,226 270,136 270,226" to (238f to 198f)
+            )
+        }
+        val sb = StringBuilder()
+        polys.forEachIndexed { idx, (pts, center) ->
+            val fill = if (mode == "outline") "#ffffff" else colors[idx % colors.size]
+            sb.append("<polygon points=\"$pts\" fill=\"$fill\" stroke=\"$ST\" stroke-width=\"2\" stroke-linejoin=\"round\"/>")
+            if (mode == "num" || mode == "blank") {
+                val lbl = if (mode == "blank" && idx % 2 == 1) "؟" else (idx + 1).toString()
+                val tCol = if (mode == "outline") ST else "#ffffff"
+                sb.append(text(center.first, center.second, lbl, tCol, "middle", bold = true, size = 13))
+            }
+        }
+        return sb.toString()
+    }
+
+    // ---------------------------------- V317.0 — نقاله و اندازه‌گیری زاویه
+    private fun protractorAngle(spec: FigureSpec): String {
+        val deg = spec.xNum("deg", 65f).coerceIn(0f, 180f)
+        val showPro = spec.xNum("pro", 1f).toInt() != 0
+        val labelMode = spec.xStr("label", "1")
+        val cx = 180f
+        val cy = 212f
+        val r = 132f
+        val sb = StringBuilder()
+        if (showPro) {
+            sb.append("<path d=\"M ${f(cx - r)} ${f(cy)} A ${f(r)} ${f(r)} 0 0 1 ${f(cx + r)} ${f(cy)} Z\" fill=\"rgba(227,242,253,.55)\" stroke=\"#1e88e5\" stroke-width=\"1.8\"/>")
+            sb.append("<path d=\"M ${f(cx - r * 0.55f)} ${f(cy)} A ${f(r * 0.55f)} ${f(r * 0.55f)} 0 0 1 ${f(cx + r * 0.55f)} ${f(cy)} Z\" fill=\"#ffffff\" stroke=\"#90caf9\" stroke-width=\"1.2\"/>")
+            for (d in 0..180 step 10) {
+                val rad = d * PI / 180.0
+                val x1 = cx + (r - (if (d % 30 == 0) 12f else 6f)) * cos(rad).toFloat()
+                val y1 = cy - (r - (if (d % 30 == 0) 12f else 6f)) * sin(rad).toFloat()
+                val x2 = cx + r * cos(rad).toFloat()
+                val y2 = cy - r * sin(rad).toFloat()
+                sb.append(line(x1, y1, x2, y2, "#1565c0", if (d % 30 == 0) 1.6f else 0.9f))
+                if (d % 30 == 0) {
+                    val tx = cx + (r - 24f) * cos(rad).toFloat()
+                    val ty = cy - (r - 24f) * sin(rad).toFloat() + 4f
+                    sb.append(text(tx, ty, d.toString(), "#1565c0", "middle", bold = true, size = 10))
+                }
+            }
+        }
+        val rad = deg * PI / 180.0
+        val rx = cx + (r + 10f) * cos(rad).toFloat()
+        val ry = cy - (r + 10f) * sin(rad).toFloat()
+        // کمان زاویه
+        val ar = 38f
+        val ax = cx + ar * cos(rad).toFloat()
+        val ay = cy - ar * sin(rad).toFloat()
+        if (kotlin.math.abs(deg - 90f) < 0.5f) {
+            sb.append(rect(cx, cy - 22f, 22f, 22f, "rgba(214,51,108,.16)", PINK, 1.8f))
+        } else if (deg > 0.5f) {
+            sb.append("<path d=\"M ${f(cx + ar)} ${f(cy)} A ${f(ar)} ${f(ar)} 0 0 0 ${f(ax)} ${f(ay)} L ${f(cx)} ${f(cy)} Z\" fill=\"rgba(214,51,108,.18)\" stroke=\"$PINK\" stroke-width=\"1.8\"/>")
+        }
+        // دو ضلع زاویه
+        sb.append(line(cx, cy, cx + r + 10f, cy, ST, 3f))
+        sb.append(line(cx, cy, rx, ry, PINK, 3f))
+        sb.append("<circle cx=\"${f(cx)}\" cy=\"${f(cy)}\" r=\"4.5\" fill=\"$ST\"/>")
+        val kindFa = when {
+            kotlin.math.abs(deg - 90f) < 0.5f -> "زاویهٔ راست (قائمه)"
+            kotlin.math.abs(deg - 180f) < 0.5f -> "زاویهٔ نیم‌صفحه"
+            deg < 90f -> "زاویهٔ تند"
+            else -> "زاویهٔ باز"
+        }
+        if (labelMode == "2") {
+            sb.append(text(180f, 254f, "اندازهٔ زاویه = ؟°", PINK, "middle", bold = true, size = 14))
+        } else if (labelMode != "0") {
+            sb.append(text(180f, 254f, "${deg.toInt()}° ($kindFa)", ST, "middle", bold = true, size = 14))
         }
         return sb.toString()
     }
