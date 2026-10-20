@@ -63,5 +63,8 @@ class V321_App_SpeedDarkTest {
         assertTrue("appearancePrefs.setTheme(next)" in app)
         // V321.1 — اعلان‌ها باید در همان composable‌ای باشند که منو را می‌سازد (AuthenticatedShell)
         assertTrue("val themeScope = rememberCoroutineScope()" in app)
+        // V321.2 — LocalContext.current خودش @Composable است و داخل بلوک remember مجاز نیست
+        assertTrue("val themeAppContext = LocalContext.current.applicationContext" in app)
+        assertTrue("remember(LocalContext.current" !in app)
     }
 }

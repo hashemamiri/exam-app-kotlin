@@ -1079,9 +1079,9 @@ private fun AuthenticatedShell(
     // V321 — کلید سریع حالت تیره/روشن در کارت پروفایل (همان تنظیمِ ظاهر، فقط یک لمس).
     // (باید در همین composable باشد که Design69MainMenuScreen را می‌سازد.)
     val themeScope = rememberCoroutineScope()
-    val appearancePrefs = remember(LocalContext.current.applicationContext) {
-        AppearancePreferences(LocalContext.current.applicationContext)
-    }
+    // V321.2 — `LocalContext.current` خودش @Composable است؛ نباید داخل بلوک remember صدا زده شود
+    val themeAppContext = LocalContext.current.applicationContext
+    val appearancePrefs = remember(themeAppContext) { AppearancePreferences(themeAppContext) }
     val darkActive = when (appearance.themeMode) {
         ThemeMode.DARK -> true
         ThemeMode.LIGHT -> false
