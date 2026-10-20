@@ -1613,7 +1613,7 @@ object AdvancedMathSvgRenderer {
             sb.append(tx(180f, 258f, "مدل IS-LM — تعادل هم‌زمان بازار کالا و پول", MU, "middle", bold = true, size = 12))
             return sb.toString()
         }
-        var m = spec.xStr("m", "3,0;5,1").split(Regex("[;؛]")).map { rw -> rw.split(Regex("[,،]")).map { it.trim() } }.take(2)
+        var m = spec.xStr("mat").ifBlank { spec.xStr("m", "3,0;5,1") }.split(Regex("[;؛]")).map { rw -> rw.split(Regex("[,،]")).map { it.trim() } }.take(2)
         if (m.size < 2) m = listOf(listOf("3", "0"), listOf("5", "1"))
         val cell = min(62f, 240f / 3)
         val x0 = 180f - cell * 1.5f

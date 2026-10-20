@@ -54,7 +54,30 @@ private val ADV_CYCLE_PARAMS: Map<String, Pair<String, List<String>>> = mapOf(
     "axpv" to ("kind" to listOf("carnot", "otto", "diesel", "rankine")),
     "axbenzene" to ("kind" to listOf("kekule", "chair", "newman", "fischer")),
     "axsupply" to ("kind" to listOf("equilibrium", "shift", "ceiling")),
-    "axgame" to ("kind" to listOf("game", "islm"))
+    "axgame" to ("kind" to listOf("game", "islm")),
+    "axunitconv" to ("kind" to listOf("len", "mass", "area")),
+    "axperimeter" to ("shape" to listOf("rect", "tri", "circle", "poly")),
+    "axpictograph" to ("mode" to listOf("picto", "bar")),
+    "axrounding" to ("mode" to listOf("ten", "hundred")),
+    "axdivision" to ("b" to listOf("2", "3", "4", "5", "6", "7", "8", "9", "10")),
+    "axshapeid" to ("kind" to listOf("tri", "square", "rect", "circle", "poly")),
+    "axcircleparts" to ("show" to listOf("all", "radius", "diameter", "chord", "tangent", "arc")),
+    "axcylinder" to ("kind" to listOf("cylinder", "cone")),
+    "axproportion" to ("a" to listOf("1", "2", "3", "4", "5", "6", "8", "10")),
+    "axbarchart" to ("show" to listOf("mean", "median", "none")),
+    "axinthales" to ("ang" to listOf("30", "45", "60", "90", "120", "150")),
+    "axpendulum" to ("amp" to listOf("10", "20", "30", "40")),
+    "axincline" to ("ang" to listOf("15", "30", "45", "60")),
+    "axcircuit" to ("mode" to listOf("series", "parallel")),
+    "axoptics" to ("kind" to listOf("convex", "concave")),
+    "axdna" to ("mode" to listOf("helix", "flat")),
+    "axcell" to ("kind" to listOf("animal", "plant")),
+    "axmapgeo" to ("kind" to listOf("compass", "map")),
+    "axsentence" to ("mode" to listOf("verbal", "nominal")),
+    "axvectors" to ("mode" to listOf("sum", "diff")),
+    "axintegral" to ("f" to listOf("quad", "sin", "line")),
+    "axstack" to ("mode" to listOf("stack", "queue")),
+    "axsort" to ("step" to listOf("0", "1", "2", "3"))
 
 )
 
@@ -62,7 +85,22 @@ private val ADV_CYCLE_PARAMS: Map<String, Pair<String, List<String>>> = mapOf(
 private val ADV_NUM_PARAMS: Map<String, Triple<String, Float, ClosedFloatingPointRange<Float>>> = mapOf(
     "axcaliper" to Triple("val", 1f, 0f..50f),
     "axorbital" to Triple("z", 1f, 1f..36f),
-    "axmohr" to Triple("txy", 5f, 0f..120f)
+    "axmohr" to Triple("txy", 5f, 0f..120f),
+    "axunitconv" to Triple("val", 1f, 1f..20f),
+    "axperimeter" to Triple("w", 1f, 1f..12f),
+    "axrounding" to Triple("n", 10f, 10f..990f),
+    "axdivision" to Triple("a", 1f, 0f..60f),
+    "axshapeid" to Triple("n", 1f, 3f..8f),
+    "axcylinder" to Triple("r", 1f, 1f..8f),
+    "axproportion" to Triple("c", 1f, 1f..20f),
+    "axlinear" to Triple("b1", 1f, -5f..5f),
+    "axparabola" to Triple("c", 1f, -6f..6f),
+    "axinthales" to Triple("ang", 10f, 20f..160f),
+    "axpendulum" to Triple("len", 1f, 1f..3f),
+    "axincline" to Triple("ang", 5f, 10f..60f),
+    "axcircuit" to Triple("r1", 1f, 1f..20f),
+    "axoptics" to Triple("d", 5f, 10f..60f),
+    "axsort" to Triple("step", 1f, 0f..4f)
 
 )
 
@@ -85,6 +123,8 @@ fun AdjustableFigure(
         "axtally", "axbase10", "axplace", "axruler", "axmoney", "axjump", "axbalance",
         "axsaw", "axpattern", "axsym", "axgeoboard", "axdice", "axmularea", "axvenn",
         "axnumgrid", "axfacttree", "axfnmachine", "axfracwall", "axtangram", "axangle",
+        // V319
+        "axunitconv", "axperimeter", "axpictograph", "axrounding", "axdivision", "axshapeid", "axcircleparts", "axcylinder", "axproportion", "axlinear", "axbarchart", "axparabola", "axinthales", "axpendulum", "axincline", "axcircuit", "axoptics", "axheatcurve", "axdna", "axcell", "axtimeline", "axmapgeo", "axsentence", "axvectors", "axmatrix", "axintegral", "axflowchart", "axstack", "axsort", "axregression",
         "axrod", "axtower", "axmulwheel", "axmultgrid", "axnet", "axcubes", "axcalendar", "axlever", "axcycle", "axwordtrain", "axtiles", "axkenken", "axdicefold", "axtransform", "axcaliper", "axsigntable", "axtrigcircle", "axmapping", "axprobtree", "axconic", "axorbital", "axpunnett", "axecg", "axprosody", "axtruthtable", "axledger", "axstaff", "axkmap", "axgate", "axdfa", "axbst", "axbode", "axbeam", "axmohr", "axpv", "axpert", "axbenzene", "axnormal", "axsupply", "axgame",
         "axnumpts", "axnumint", "axnumineq", "axxypts", "axxyline", "axxyvec", "axxycirc", "axpolpts",
         "gauge", "ang", "sec", "arc", "segm", "parll", "ngon"

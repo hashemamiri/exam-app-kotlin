@@ -22,7 +22,7 @@ object PrimaryMathSvgRenderer {
         "axabacus", "axjump", "axbalance", "axthermo", "axsaw", "axpattern",
         "axtenframe", "axsym", "axspin", "axbeaker", "axgeoboard", "axdice", "axmularea", "axvenn",
         "axnumgrid", "axfacttree", "axfnmachine", "axfracwall", "axtangram", "axangle"
-    ) + AdvancedMathSvgRenderer.SUPPORTED
+    ) + AdvancedMathSvgRenderer.SUPPORTED + NextMathSvgRenderer.SUPPORTED
 
     private const val ST = "#2c3a50"
     private const val MU = "#4a5870"
@@ -63,7 +63,7 @@ object PrimaryMathSvgRenderer {
             "axfracwall" -> fractionWall(spec)
             "axtangram" -> tangramPuzzle(spec)
             "axangle" -> protractorAngle(spec)
-            else -> AdvancedMathSvgRenderer.body(spec)
+            else -> NextMathSvgRenderer.body(spec)
         }
     }
 

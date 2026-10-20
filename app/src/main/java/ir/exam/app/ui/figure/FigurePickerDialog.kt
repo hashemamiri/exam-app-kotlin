@@ -589,7 +589,37 @@ private fun paramFields(type: String): List<Pair<String, String>> = when (type) 
     "axbenzene" -> listOf("kind" to "نوع ساختار", "mode" to "نمایش حلقه")
     "axnormal" -> listOf("lo" to "کران پایین", "hi" to "کران بالا", "mu" to "میانگین μ", "sd" to "انحراف معیار σ")
     "axsupply" -> listOf("kind" to "نوع نمودار", "shift" to "مقدار جابه‌جایی", "ceiling" to "سقف قیمت (۰ = ندارد)")
-    "axgame" -> listOf("kind" to "نوع", "m" to "ماتریس سود (سطرها با ;)")
+    "axgame" -> listOf("kind" to "نوع", "mat" to "ماتریس سود (سطرها با ;)")
+    "axunitconv" -> listOf("kind" to "نوع واحد", "val" to "مقدار")
+    "axperimeter" -> listOf("shape" to "شکل", "w" to "عرض / شعاع", "h" to "ارتفاع", "n" to "تعداد ضلع چندضلعی")
+    "axpictograph" -> listOf("mode" to "نوع نمودار", "data" to "داده‌ها (با ویرگول)", "labs" to "نام دسته‌ها")
+    "axrounding" -> listOf("n" to "عدد", "mode" to "گرد به")
+    "axdivision" -> listOf("a" to "عدد کل", "b" to "تعداد هر گروه")
+    "axshapeid" -> listOf("kind" to "شکل", "n" to "تعداد ضلع (چندضلعی)")
+    "axcircleparts" -> listOf("show" to "بخش نمایش‌داده‌شده")
+    "axcylinder" -> listOf("kind" to "نوع جسم", "r" to "شعاع قاعده", "h" to "ارتفاع")
+    "axproportion" -> listOf("a" to "مخرج معلوم", "b" to "صورت معلوم", "c" to "مقدار متناظر")
+    "axlinear" -> listOf("m1" to "شیب خط اول", "b1" to "عرض از مبدأ اول", "m2" to "شیب خط دوم", "b2" to "عرض از مبدأ دوم")
+    "axbarchart" -> listOf("data" to "داده‌ها", "labs" to "برچسب‌ها", "show" to "نمایش شاخص")
+    "axparabola" -> listOf("a" to "ضریب a", "b" to "ضریب b", "c" to "جملهٔ ثابت c")
+    "axinthales" -> listOf("ang" to "زاویهٔ مرکزی (درجه)")
+    "axpendulum" -> listOf("len" to "طول نخ (متر)", "amp" to "دامنه (درجه)")
+    "axincline" -> listOf("ang" to "زاویهٔ شیب (درجه)", "mass" to "جرم (kg)")
+    "axcircuit" -> listOf("mode" to "نوع مدار", "r1" to "مقاومت ۱ (Ω)", "r2" to "مقاومت ۲ (Ω)", "v" to "ولتاژ باتری")
+    "axoptics" -> listOf("kind" to "نوع عدسی", "f" to "فاصلهٔ کانونی (cm)", "d" to "فاصلهٔ جسم (cm)")
+    "axheatcurve" -> listOf()
+    "axdna" -> listOf("mode" to "نمایش", "seq" to "توالی بازها (A/T/G/C)")
+    "axcell" -> listOf("kind" to "نوع سلول")
+    "axtimeline" -> listOf("events" to "رویدادها (سال:عنوان)")
+    "axmapgeo" -> listOf("kind" to "نوع نمایش")
+    "axsentence" -> listOf("subj" to "نهاد", "verb" to "گزاره", "obj" to "مفعول (اختیاری)", "mode" to "نوع جمله")
+    "axvectors" -> listOf("ax1" to "مؤلفهٔ x بردار a", "ay1" to "مؤلفهٔ y بردار a", "bx" to "مؤلفهٔ x بردار b", "by" to "مؤلفهٔ y بردار b", "mode" to "عمل")
+    "axmatrix" -> listOf("a" to "ماتریس A (سطرها با ;)", "b" to "ماتریس B (سطرها با ;)")
+    "axintegral" -> listOf("f" to "تابع", "lo" to "کران پایین a", "hi" to "کران بالا b")
+    "axflowchart" -> listOf("steps" to "مراحل (با ویرگول)")
+    "axstack" -> listOf("mode" to "ساختار", "items" to "عناصر", "op" to "عملیات")
+    "axsort" -> listOf("vals" to "اعداد آرایه", "step" to "شمارهٔ دور")
+    "axregression" -> listOf("pts" to "نقطه‌ها (x,y;x,y)")
     "axpolpts" -> listOf("xmax" to "تعداد حلقه", "pts" to "نقطه‌ها (r,θ;r,θ)", "labs" to "نام نقطه‌ها")
     "ax3dpt" -> listOf("xmax" to "تعداد تیک", "step" to "گام", "x1" to "x نقطه", "y1" to "y نقطه", "z1" to "z نقطه", "labs" to "نام نقطه")
     "flow" -> listOf("labs" to "مراحل (با ویرگول)")
@@ -632,6 +662,9 @@ private val TEXT_PARAM_KEYS = setOf(
     "month", "mark", "syll", "word", "from", "to", "arrows", "first", "second", "sym",
     "p1", "p2", "states", "accept", "edges", "line", "expr", "title", "debit", "credit",
     "ones", "groups", "cages", "nums", "base", "map", "mat", // V318.0: کلیدهای متنی ۴۰ ابزار جامع
+    "val", "data", "n", "a", "b", "c", "show", "kind", "mode", "seq", "subj", "verb", "obj",
+    "ax1", "ay1", "bx", "by", "f", "lo", "hi", "steps", "items", "op", "pts", "events", "labs", "w", "h",
+    "shape", "r", "m1", "b1", "m2", "b2", // V319.1: کلیدهای متنی ۳۰ ابزار جدید
     "labs", "labs2", "vals", "vals2", "vals3", "xs", "ys", "zs", "s1", "s2", "s3",
     // V54.2 — فهرست‌های عددی چندتایی و مقادیر آزاد مرحلهٔ دوم متنی ذخیره می‌شوند
     // (همان قرارداد رشته‌ای مرجع).
@@ -825,6 +858,24 @@ private fun dropdownOptionsFor(type: String, key: String): List<Pair<String, Str
     // شکل‌های هندسی
     "ngon" to "X:n" -> listOf("3" to "۳ضلعی", "4" to "۴ضلعی", "5" to "۵ضلعی", "6" to "۶ضلعی", "7" to "۷ضلعی", "8" to "۸ضلعی", "9" to "۹ضلعی", "10" to "۱۰ضلعی", "12" to "۱۲ضلعی")
     "parll" to "X:n" -> listOf("1" to "۱ خط مورب", "2" to "۲ خط مورب", "3" to "۳ خط مورب", "4" to "۴ خط مورب")
+    "axunitconv" to "kind" -> listOf("len" to "طول: کیلومتر → متر → میلی‌متر", "mass" to "جرم: تن → کیلوگرم → گرم", "area" to "مساحت: m² → dm² → cm²")
+    "axperimeter" to "shape" -> listOf("rect" to "مستطیل", "tri" to "مثلث قائم‌الزاویه", "circle" to "دایره", "poly" to "چندضلعی منتظم")
+    "axpictograph" to "mode" -> listOf("picto" to "تصویری (شکل‌ها)", "bar" to "میله‌ای")
+    "axrounding" to "mode" -> listOf("ten" to "دهگان", "hundred" to "صدگان")
+    "axshapeid" to "kind" -> listOf("tri" to "مثلث", "square" to "مربع", "rect" to "مستطیل", "circle" to "دایره", "poly" to "چندضلعی منتظم")
+    "axcircleparts" to "show" -> listOf("all" to "همهٔ اجزا", "radius" to "شعاع", "diameter" to "قطر", "chord" to "وتر", "tangent" to "مماس", "arc" to "کمان")
+    "axcylinder" to "kind" -> listOf("cylinder" to "استوانه", "cone" to "مخروط")
+    "axbarchart" to "show" -> listOf("mean" to "میانگین", "median" to "میانه", "none" to "بدون شاخص")
+    "axcircuit" to "mode" -> listOf("series" to "سری", "parallel" to "موازی")
+    "axoptics" to "kind" -> listOf("convex" to "محدب (همگرا)", "concave" to "مقعر (واگرا)")
+    "axdna" to "mode" -> listOf("helix" to "مارپیچ دوگانه", "flat" to "نردبان صاف")
+    "axcell" to "kind" -> listOf("animal" to "سلول جانوری", "plant" to "سلول گیاهی")
+    "axmapgeo" to "kind" -> listOf("compass" to "گل‌آویز جهت‌ها", "map" to "نقشه و مقیاس")
+    "axsentence" to "mode" -> listOf("verbal" to "جملهٔ فعلیه", "nominal" to "جملهٔ اسمیه")
+    "axvectors" to "mode" -> listOf("sum" to "جمع a + b", "diff" to "تفاضل a − b")
+    "axintegral" to "f" -> listOf("quad" to "f(x) = ¼x²", "sin" to "f(x) = sin x", "line" to "f(x) = ۰٫۶x + ۰٫۴")
+    "axstack" to "mode" -> listOf("stack" to "پشته (LIFO)", "queue" to "صف (FIFO)")
+    "axstack" to "op" -> listOf("push" to "افزودن", "pop" to "حذف")
     else -> null
 }
 
