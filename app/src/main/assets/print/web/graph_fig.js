@@ -361,7 +361,16 @@
     var AL = 40, AT = 26, AR = 336, AB = 246, ST = '#2c3a50', GR = '#d5dce6', MU = '#4a5870', PT = '#d6336c';
     function f2(v) { return String(Math.round(v * 100) / 100); }
     function ln(x1, y1, x2, y2, c, w, dash) { return '<line x1="' + f2(x1) + '" y1="' + f2(y1) + '" x2="' + f2(x2) + '" y2="' + f2(y2) + '" stroke="' + c + '" stroke-width="' + w + '"' + (dash ? ' stroke-dasharray="4 3"' : '') + '/>'; }
-    function tx(x, y, s, c, an, bold, sz) { if (s == null || String(s).trim() === '') return ''; return '<text x="' + f2(x) + '" y="' + f2(y) + '" direction="ltr" font-family="sans-serif" font-size="' + (sz || 11) + '"' + (bold ? ' font-weight="700"' : '') + ' fill="' + c + '" text-anchor="' + an + '" style="font:' + (bold ? '700 ' : '400 ') + (sz || 11) + 'px sans-serif;direction:ltr;unicode-bidi:embed">' + esc(s) + '</text>'; }
+    // V322 — جاگیری خودکار برچسب: متنِ بلندتر از بوم کوچک و در نهایت با «…» کوتاه می‌شود و مختصات داخل بوم مهار می‌شود.
+    function fitTxt(x, s, an, sz) {
+      var maxW = 344, txt = String(s), fs = sz || 11, est = txt.length * fs * 0.55, keep;
+      if (est > maxW) { fs = Math.max(7, Math.floor(maxW / (txt.length * 0.55) * fs)); est = txt.length * fs * 0.55; }
+      if (est > maxW) { keep = Math.max(2, Math.floor(maxW / (fs * 0.55)) - 1); txt = txt.slice(0, keep) + '…'; est = txt.length * fs * 0.55; }
+      var half = est / 2, lo = an === 'middle' ? half + 3 : an === 'end' ? est + 3 : 3, hi = an === 'middle' ? 357 - half : an === 'end' ? 357 : 357 - est;
+      var xx = lo <= hi ? Math.min(Math.max(x, lo), hi) : Math.min(Math.max(x, 3), 357);
+      return [xx, txt, fs];
+    }
+    function tx(x, y, s, c, an, bold, sz) { if (s == null || String(s).trim() === '') return ''; var ft = fitTxt(x, s, an, sz); return '<text x="' + f2(ft[0]) + '" y="' + f2(y) + '" direction="ltr" font-family="sans-serif" font-size="' + ft[2] + '"' + (bold ? ' font-weight="700"' : '') + ' fill="' + c + '" text-anchor="' + an + '" style="font:' + (bold ? '700 ' : '400 ') + ft[2] + 'px sans-serif;direction:ltr;unicode-bidi:embed">' + esc(ft[1]) + '</text>'; }
     function poly(pts, c) { return '<polygon points="' + pts + '" fill="' + c + '"/>'; }
     function arR(x, y, c) { return poly(f2(x) + ',' + f2(y) + ' ' + f2(x - 8) + ',' + f2(y - 4.5) + ' ' + f2(x - 8) + ',' + f2(y + 4.5), c || ST); }
     function arL(x, y) { return poly(f2(x) + ',' + f2(y) + ' ' + f2(x + 8) + ',' + f2(y - 4.5) + ' ' + f2(x + 8) + ',' + f2(y + 4.5), ST); }
@@ -429,6 +438,15 @@
     if (t === 'axxypts' || t === 'axxyline' || t === 'axxyvec' || t === 'axxycirc' || t === 'axxynogrid' || t === 'axxyquads' || t === 'axxyblank') {
       var cxmin = num(X.xmin, -5), cxmax = num(X.xmax, 5); if (cxmax <= cxmin) cxmax = cxmin + 2;
       var cymin = num(X.ymin, -4), cymax = num(X.ymax, 4); if (cymax <= cymin) cymax = cymin + 2;
+      // V322 — اگر نقطه/بردار/دایره بیرون از بازهٔ محور باشد، بازه خودکار گسترده می‌شود تا شکل ناپدید نشود.
+      if (t === 'axxyvec') {
+        [num(X.x1, 0), num(X.x2, 3)].forEach(function (vxv) { cxmin = Math.min(cxmin, vxv - 1); cxmax = Math.max(cxmax, vxv + 1); });
+        [num(X.y1, 0), num(X.y2, 2)].forEach(function (vyv) { cymin = Math.min(cymin, vyv - 1); cymax = Math.max(cymax, vyv + 1); });
+      } else if (t === 'axxycirc') {
+        var ecx = num(X.cx, 1), ecy = num(X.cy, 1), ecr = Math.abs(num(X.r, 2));
+        cxmin = Math.min(cxmin, ecx - ecr - 1); cxmax = Math.max(cxmax, ecx + ecr + 1);
+        cymin = Math.min(cymin, ecy - ecr - 1); cymax = Math.max(cymax, ecy + ecr + 1);
+      }
       var csx = stepOf(cxmax - cxmin), csy = stepOf(cymax - cymin);
       var pp = cartBase(cxmin, cxmax, cymin, cymax, csx, csy, t !== 'axxynogrid', t !== 'axxyblank', t === 'axxyquads'), cpx = pp[0], cpy = pp[1];
       if (t === 'axxypts') { var pl = xl('labs'); pairs(xs('pts', '1,2;-3,1;2,-2')).forEach(function (p, j) { if (p[0] >= cxmin && p[0] <= cxmax && p[1] >= cymin && p[1] <= cymax) s += dot(cpx(p[0]), cpy(p[1])) + tx(cpx(p[0]) + 6, cpy(p[1]) - 6, pl[j] || ('(' + nm(p[0]) + ', ' + nm(p[1]) + ')'), PT, 'start', true, 10); }); }
@@ -481,7 +499,9 @@
       s += tx(cx + len + 4, cy + 4, 'x', ST, 'start', true, 12) + tx(cx + 6, cy - len - 2, 'y', ST, 'start', true, 12) + tx(zx - 4, zy + 12, 'z', ST, 'end', true, 12) + tx(cx - 6, cy + 14, 'O', MU, 'end', false, 10);
       var st3 = Math.max(0.5, num(X.step, 1)), n3 = clamp(Math.floor(num(X.xmax, 4)), 1, 10);
       for (i = 1; i <= n3; i++) { d = len * i / (n3 + 0.6); s += ln(cx + d, cy - 3, cx + d, cy + 3, ST, 1.1) + tx(cx + d, cy + 13, nm(i * st3), MU, 'middle', false, 9) + ln(cx - 3, cy - d, cx + 3, cy - d, ST, 1.1) + tx(cx - 6, cy - d + 3, nm(i * st3), MU, 'end', false, 9); var t3x = cx - d * 0.62, t3y = cy + d * 0.62; s += ln(t3x - 2.5, t3y - 2.5, t3x + 2.5, t3y + 2.5, ST, 1.1); }
-      var unit = len / (n3 + 0.6) / st3, p3x = num(X.x1, 3) * unit, p3y = num(X.y1, 2) * unit, p3z = num(X.z1, 2) * unit, b3x = cx + p3x - p3z * 0.62, b3y = cy + p3z * 0.62, q3x = b3x, q3y = b3y - p3y;
+      // V322 — نقطهٔ بیرون از بازهٔ محورها بیرون از بوم رسم می‌شد.
+      var axMax3 = n3 * st3;
+      var unit = len / (n3 + 0.6) / st3, p3x = clamp(num(X.x1, 3), -axMax3, axMax3) * unit, p3y = clamp(num(X.y1, 2), -axMax3, axMax3) * unit, p3z = clamp(num(X.z1, 2), -axMax3, axMax3) * unit, b3x = cx + p3x - p3z * 0.62, b3y = cy + p3z * 0.62, q3x = b3x, q3y = b3y - p3y;
       s += ln(cx + p3x, cy, b3x, b3y, PT, 1, true) + ln(cx - p3z * 0.62, cy + p3z * 0.62, b3x, b3y, PT, 1, true) + ln(b3x, b3y, q3x, q3y, PT, 1, true) + ln(cx, cy - p3y, q3x, q3y, PT, 1, true) + ln(cx, cy, q3x, q3y, PT, 1.6) + dot(q3x, q3y);
       s += tx(q3x + 7, q3y - 6, xs('labs') || ('P(' + nm(num(X.x1, 3)) + ', ' + nm(num(X.y1, 2)) + ', ' + nm(num(X.z1, 2)) + ')'), PT, 'start', true, 10);
       return wrap(s);
@@ -1129,7 +1149,8 @@
       return ln(x1, y1, x2, y2, c, w || 1.8) + pfxPoly(f2(x2) + ',' + f2(y2) + ' ' + f2(x2 - hd * Math.cos(an - 0.42)) + ',' + f2(y2 - hd * Math.sin(an - 0.42)) + ' ' + f2(x2 - hd * Math.cos(an + 0.42)) + ',' + f2(y2 - hd * Math.sin(an + 0.42)), c);
     }
     if (t === 'axrod') {
-      var rdList = ilist('nums', '1,2,3,4,5,6,7,8,9,10');
+      // V322 — ilist به ۸ عدد محدود است و دو میلهٔ آخر (۹ و ۱۰) هرگز رسم نمی‌شدند.
+      var rdList = xs('nums', '1,2,3,4,5,6,7,8,9,10').split(/[,،;؛\n]+/).map(function (qrd) { return parseInt(faEn(qrd.trim()), 10); }).filter(function (qrd) { return !isNaN(qrd); }).slice(0, 10);
       if (!rdList.length) rdList = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
       var rdBlank = xs('blank', '0') === '1';
       var rdPal = ['#ffffff', '#e53935', '#8bc34a', '#8e24aa', '#fdd835', '#1b5e20', '#37474f', '#6d4c41', '#1e88e5', '#fb8c00'];
@@ -1413,7 +1434,8 @@
     }
     if (t === 'axtransform') {
       var tfOp = xs('op', 'translate').toLowerCase(), tfShape = xs('shape', 'tri').toLowerCase(), tfGrid = clamp(Math.floor(num(X.grid, 8)), 4, 10);
-      var tfDx = num(X.dx, 3), tfDy = num(X.dy, 2), tfAng = num(X.ang, 90), tfAxis = xs('axis', 'y').toLowerCase();
+      // V322 — جابه‌جایی بزرگ شکل را بیرون از بوم می‌برد؛ به اندازهٔ شبکه مهار می‌شود.
+      var tfDx = clamp(num(X.dx, 3), -4, 4), tfDy = clamp(num(X.dy, 2), -4, 4), tfAng = num(X.ang, 90), tfAxis = xs('axis', 'y').toLowerCase();
       var tfU = Math.min(26, 240 / tfGrid), tfOx = 180 - tfU * tfGrid / 2, tfOy = 26 + (220 - tfU * tfGrid) / 2 + tfU * tfGrid;
       for (var gi = 0; gi <= tfGrid; gi++) {
         s += lnr(tfOx + gi * tfU, tfOy - tfGrid * tfU, tfOx + gi * tfU, tfOy, '#e3e9f2', 1) + lnr(tfOx, tfOy - gi * tfU, tfOx + tfGrid * tfU, tfOy - gi * tfU, '#e3e9f2', 1);
@@ -1442,7 +1464,8 @@
       return wrap(s);
     }
     if (t === 'axcaliper') {
-      var cpKind = xs('kind', 'vernier').toLowerCase(), cpVal = Math.max(0, num(X.val, 23.4)), cpMax = Math.max(10, num(X.max, 50));
+      // V322 — مقدار خوانده‌شده بزرگ‌تر از حداکثر، عقربه/درجه را بیرون از خط‌کش می‌برد.
+      var cpKind = xs('kind', 'vernier').toLowerCase(), cpMax = Math.min(999, Math.max(10, num(X.max, 50))), cpVal = Math.min(cpMax, Math.max(0, num(X.val, 23.4)));
       if (cpKind === 'micrometer') {
         s += rc(40, 96, 200, 30, 'rgba(108,99,245,.14)', ST, 2, 4) + rc(240, 86, 46, 50, 'rgba(39,196,168,.18)', ST, 2, 4);
         s += lnr(40, 126, 40, 126, ST, 3) + rc(28, 86, 14, 50, ST, 'none', 0, 3) + lnr(286, 96, 312, 96, ST, 6) + lnr(286, 116, 312, 116, ST, 6);
@@ -1799,6 +1822,8 @@
       var stfClef = xs('clef', 'treble').toLowerCase();
       var stfNotes = String(xs('notes', '60,62,64,65,67')).split(/[,،]/).map(function (q9) { return parseInt(faEn(q9.trim()), 10); }).filter(function (q9) { return isFinite(q9); }).slice(0, 8);
       if (!stfNotes.length) stfNotes = [60, 62, 64, 65, 67];
+      // V322 — شمارهٔ نت نامعتبر نُت را بیرون از حامل می‌کشید.
+      stfNotes = stfNotes.map(function (nst) { return clamp(nst, 53, 74); });
       var stX0 = 40, stX1 = 330, stTop = 84, stGap = 14;
       for (var sl = 0; sl < 5; sl++) s += lnr(stX0, stTop + sl * stGap, stX1, stTop + sl * stGap, ST, 1.4);
       s += pfxPath('M ' + stX0 + ' ' + (stTop + 4 * stGap) + ' V ' + stTop, ST, 'none', 2);
@@ -2134,6 +2159,8 @@
     if (t === 'axnormal') {
       var nrMu = num(X.mu, 0), nrSd = Math.max(0.1, num(X.sd, 1)), nrLo = num(X.lo, -1), nrHi = num(X.hi, 1);
       var nrX0 = 34, nrX1 = 326, nrY = 206, nrH = 140, nrMin = nrMu - 3.4 * nrSd, nrMax = nrMu + 3.4 * nrSd;
+      // V322 — lo/hi بیرون از ناحیهٔ رسم، خط و نقطهٔ بیرون از بوم می‌ساخت.
+      nrLo = clamp(nrLo, nrMin, nrMax); nrHi = clamp(nrHi, nrMin, nrMax);
       var nrPx = function (v9) { return nrX0 + (v9 - nrMin) / (nrMax - nrMin) * (nrX1 - nrX0); };
       var nrPdf = function (v9) { var z5 = (v9 - nrMu) / nrSd; return Math.exp(-z5 * z5 / 2); };
       var shade = '';
@@ -2170,7 +2197,7 @@
         s += pfxArrow(spX0 + 60, spDem(0.2), spX1 - 60, spY0 - 162, 'rgba(214,51,108,.45)', 2, 8) + tx(240, 72, 'تقاضای جدید', PT, 'middle', false, 10);
       }
       if (spCeil > 0) {
-        var cy4 = spY0 - 40 - spCeil * 12;
+        var cy4 = clamp(spY0 - 40 - spCeil * 12, spY1 + 40, spY0 - 30);
         s += lnr(spX0, cy4, spX1 - 10, cy4, ACC, 1.8, '6 4') + tx(spX1 - 14, cy4 - 6, 'سقف قیمت', ACC, 'end', true, 10);
       }
       s += pfxCls(spX0 + 118, spY0 - 118, 5, ST, 'none', 0) + tx(spX0 + 130, spY0 - 122, 'تعادل', ST, 'start', true, 11);
@@ -2420,11 +2447,13 @@
       s += lnr(46, loy, 322, loy, ST, 1.8) + arR(322, loy) + lnr(lox, 254, lox, 42, ST, 1.8) + arU(lox, 42);
       s += v319txt(326, loy + 14, 'x', ST, 'middle', true, 12) + v319txt(lox - 12, 40, 'y', ST, 'middle', true, 12);
       var lpx = function (v3) { return lox + v3 * lsc; }, lpy = function (v3) { return loy - v3 * lsc; };
-      s += lnr(lpx(-6), lpy(lm1 * -6 + lb1), lpx(6), lpy(lm1 * 6 + lb1), ACC, 2.2);
-      s += lnr(lpx(-6), lpy(lm2 * -6 + lb2), lpx(6), lpy(lm2 * 6 + lb2), PT, 2.2);
+      // V322 — با شیب/عرض از مبدأ بزرگ، سرِ خطوط بیرون از بوم می‌افتاد؛ حالا در کادر برش می‌خورند.
+      var lpcx = function (v3) { return clamp(lpx(v3), 46, 326); }, lpcy = function (v3) { return clamp(lpy(v3), 44, 254); };
+      s += lnr(lpcx(-6), lpcy(lm1 * -6 + lb1), lpcx(6), lpcy(lm1 * 6 + lb1), ACC, 2.2);
+      s += lnr(lpcx(-6), lpcy(lm2 * -6 + lb2), lpcx(6), lpcy(lm2 * 6 + lb2), PT, 2.2);
       var lden = lm1 - lm2, lix = Math.abs(lden) < 1e-6 ? 0 : (lb2 - lb1) / lden, liy = lm1 * lix + lb1;
       if (Math.abs(lden) > 1e-6) {
-        s += dot(lpx(lix), lpy(liy), '#1f8f7a', 5.5);
+        s += dot(clamp(lpx(lix), 50, 322), clamp(lpy(liy), 48, 250), '#1f8f7a', 5.5);
         s += v319txt(clamp(lpx(lix) + 8, 60, 300), clamp(lpy(liy) - 10, 56, 240), '(' + nm(Math.round(lix * 100) / 100) + ', ' + nm(Math.round(liy * 100) / 100) + ')', '#1f8f7a', 'start', true, 11);
         s += v319txt(180, 268, 'نقطهٔ تقاطع — جواب دستگاه', '#1f8f7a', 'middle', true, 11);
       } else {
@@ -2438,6 +2467,8 @@
     if (t === 'axbarchart') {
       var bcData = ilist('data', '4,7,3,6,5'), bcLabs = xl('labs');
       if (!bcData.length) bcData = [4, 7, 3, 6, 5];
+      // V322 — دادهٔ منفی ارتفاع منفی می‌ساخت؛ به بازهٔ مجاز محدود می‌شود.
+      bcData = bcData.map(function (vbc) { return clamp(vbc, 0, 999); });
       var bcShow = xs('show', 'mean'), bcN = bcData.length, bcMax = 1, bci;
       for (bci = 0; bci < bcN; bci++) bcMax = Math.max(bcMax, bcData[bci]);
       var bcX0 = 66, bcY0 = 216, bcW = 260, bcH = 150, bcBw = Math.min(34, bcW / (bcN * 1.6));
@@ -2478,7 +2509,7 @@
         s += dot(pFX(pvx), pFY(pvy), PT, 5);
         s += v319txt(clamp(pFX(pvx) + 8, 60, 280), clamp(pFY(pvy) - 10, 40, 250), 'رأس (' + nm(Math.round(pvx * 100) / 100) + ', ' + nm(Math.round(pvy * 100) / 100) + ')', PT, 'start', true, 10);
       }
-      s += lnr(pFX(pvx), 258, pFX(pvx), 34, GLD, 1.4, '5 4');
+      if (Math.abs(pvx) <= 6.2) s += lnr(pFX(pvx), 258, pFX(pvx), 34, GLD, 1.4, '5 4');
       var pdel = pqb * pqb - 4 * pqa * pqc, proot = '';
       if (pdel > 0) {
         var pr1 = (-pqb + Math.sqrt(pdel)) / (2 * pqa), pr2 = (-pqb - Math.sqrt(pdel)) / (2 * pqa);
@@ -2581,25 +2612,35 @@
 
     if (t === 'axoptics') {
       var opF = Math.max(2, num(X.f, 10)), opD = Math.max(1, num(X.d, 30)), opKind = xs('kind', 'convex');
-      var opCx = 190, opCy = 152, opS = 2.4, opDi = (opKind === 'concave') ? (opF * opD) / (opD + opF) : (opF * opD) / (opD - opF);
+      var opCx = 190, opCy = 152, opS = 2.4;
+      // V322 — d = f مخرج را صفر می‌کرد و «Infinity» در SVG می‌نشست؛ حالا حالت «تصویر در بی‌نهایت» صریح است.
+      var opAtFocus = opKind !== 'concave' && Math.abs(opD - opF) < 0.05;
+      var opDi = opAtFocus ? Infinity : ((opKind === 'concave') ? (opF * opD) / (opD + opF) : (opF * opD) / (opD - opF));
+      var opFp = clamp(opF * opS, 12, 120);
       s += lnr(36, opCy, 330, opCy, ST, 1.6) + arR(330, opCy);
       s += v319path('M ' + opCx + ' ' + (opCy - 74) + ' Q ' + (opCx + (opKind === 'concave' ? 22 : 22)) + ' ' + opCy + ' ' + opCx + ' ' + (opCy + 74), 'none', ACC, 2.4);
       if (opKind === 'concave') s += v319path('M ' + opCx + ' ' + (opCy - 74) + ' Q ' + (opCx + 10) + ' ' + opCy + ' ' + opCx + ' ' + (opCy + 74), 'none', ACC, 2.4);
       s += v319txt(opCx + 26, opCy - 82, opKind === 'concave' ? 'عدسی مقعر' : 'عدسی محدب', ACC, 'middle', true, 11);
-      var opFx = opCx + opF * opS;
-      s += dot(opCx - opF * opS, opCy, PT, 3.4) + dot(opFx, opCy, PT, 3.4);
-      s += v319txt(opCx - opF * opS, opCy + 16, 'F', PT, 'middle', true, 11) + v319txt(opFx, opCy + 16, "F'", PT, 'middle', true, 11);
-      var opOx = opCx - opD * opS, opOh = 46;
+      var opFx = opCx + opFp;
+      s += dot(opCx - opFp, opCy, PT, 3.4) + dot(opFx, opCy, PT, 3.4);
+      s += v319txt(opCx - opFp, opCy + 16, 'F', PT, 'middle', true, 11) + v319txt(opFx, opCy + 16, "F'", PT, 'middle', true, 11);
+      var opOx = clamp(opCx - opD * opS, 24, opCx - 12), opOh = 46;
       s += lnr(opOx, opCy, opOx, opCy - opOh, '#1f8f7a', 2.4) + poly(f2(opOx - 4) + ',' + f2(opCy - opOh + 8) + ' ' + f2(opOx + 4) + ',' + f2(opCy - opOh + 8) + ' ' + f2(opOx) + ',' + f2(opCy - opOh), '#1f8f7a');
       s += v319txt(opOx, opCy + 18, 'جسم', '#1f8f7a', 'middle', true, 10);
-      var opIx = opCx + opDi * opS, opIh = opOh * (opDi / opD);
-      s += lnr(opIx, opCy, opIx, opCy + opIh, GLD, 2.4) + poly(f2(opIx - 4) + ',' + f2(opCy + opIh - 8) + ' ' + f2(opIx + 4) + ',' + f2(opCy + opIh - 8) + ' ' + f2(opIx) + ',' + f2(opCy + opIh), GLD);
-      s += v319txt(opIx, opCy - 8, 'تصویر', GLD, 'middle', true, 10);
+      if (!opAtFocus) {
+        var opIx = clamp(opCx + opDi * opS, 28, 332), opIh = clamp(opOh * (opDi / opD), -120, 120);
+        s += lnr(opIx, opCy, opIx, opCy + opIh, GLD, 2.4) + poly(f2(opIx - 4) + ',' + f2(opCy + opIh - 8) + ' ' + f2(opIx + 4) + ',' + f2(opCy + opIh - 8) + ' ' + f2(opIx) + ',' + f2(opCy + opIh), GLD);
+        s += v319txt(opIx, opCy - 8, 'تصویر', GLD, 'middle', true, 10);
+      } else {
+        s += v319txt(180, 126, 'جسم روی کانون — تصویر در بی‌نهایت', PT, 'middle', true, 11);
+      }
       s += lnr(opOx, opCy - opOh, opCx, opCy - opOh, MU, 1.1, '4 4') + lnr(opCx, opCy - opOh, opFx, opCy, MU, 1.1, '4 4');
       s += lnr(opOx, opCy - opOh, opCx, opCy, MU, 1.2);
       s += v319txt(180, 234, '۱/f = ۱/فاصلهٔ جسم + ۱/فاصلهٔ تصویر', ST, 'middle', true, 12);
-      s += v319txt(180, 254, 'f = ' + nm(opF) + ' cm · d = ' + nm(opD) + ' cm → تصویر در ' + nm(Math.round(opDi * 100) / 100) + ' cm', ACC, 'middle', true, 11);
-      s += v319txt(180, 272, 'بزرگنمایی = ' + nm(Math.round(Math.abs(opDi / opD) * 100) / 100) + ' برابر', MU, 'middle', false, 10);
+      var opDiTxt = opAtFocus ? 'بی‌نهایت' : nm(Math.round(opDi * 100) / 100) + ' cm';
+      var opMag = opAtFocus ? '—' : nm(Math.round(Math.abs(opDi / opD) * 100) / 100) + ' برابر';
+      s += v319txt(180, 254, 'f = ' + nm(opF) + ' cm · d = ' + nm(opD) + ' cm → تصویر در ' + opDiTxt, ACC, 'middle', true, 11);
+      s += v319txt(180, 272, 'بزرگنمایی = ' + opMag, MU, 'middle', false, 10);
       return wrap(s);
     }
 
@@ -2753,9 +2794,10 @@
         if (i === 0) continue;
         s += v319txt(vox + i * vsc, voy + 13, String(i), MU, 'middle', false, 8) + v319txt(vox - 10, voy - i * vsc + 3, String(i), MU, 'end', false, 8);
       }
-      var vAx = vox + v1x * vsc, vAy = voy - v1y * vsc, vBx2 = vox + v2x * vsc, vBy2 = voy - v2y * vsc;
-      var vRx = vmode === 'diff' ? vox + (v1x - v2x) * vsc : vox + (v1x + v2x) * vsc;
-      var vRy = vmode === 'diff' ? voy - (v1y - v2y) * vsc : voy - (v1y + v2y) * vsc;
+      // V322 — مؤلفهٔ بزرگ، نوک پیکان را با مختصات ده‌ها هزار بیرون از بوم می‌کشید؛ حالا در کادر مهار می‌شود.
+      var vAx = clamp(vox + v1x * vsc, 56, 318), vAy = clamp(voy - v1y * vsc, 48, 258), vBx2 = clamp(vox + v2x * vsc, 56, 318), vBy2 = clamp(voy - v2y * vsc, 48, 258);
+      var vRx = clamp(vmode === 'diff' ? vox + (v1x - v2x) * vsc : vox + (v1x + v2x) * vsc, 56, 318);
+      var vRy = clamp(vmode === 'diff' ? voy - (v1y - v2y) * vsc : voy - (v1y + v2y) * vsc, 48, 258);
       s += lnr(vox, voy, vRx, vRy, 'rgba(39,196,168,.35)', 8);
       s += lnr(vox, voy, vAx, vAy, ACC, 2.4) + poly(f2(vAx) + ',' + f2(vAy) + ' ' + f2(vAx - 9) + ',' + f2(vAy + 4) + ' ' + f2(vAx - 5) + ',' + f2(vAy + 10), ACC);
       s += lnr(vox, voy, vBx2, vBy2, GLD, 2.4) + poly(f2(vBx2) + ',' + f2(vBy2) + ' ' + f2(vBx2 - 9) + ',' + f2(vBy2 + 4) + ' ' + f2(vBx2 - 5) + ',' + f2(vBy2 + 10), GLD);
@@ -2794,7 +2836,8 @@
     }
 
     if (t === 'axintegral') {
-      var inf = xs('f', 'quad'), inA = num(X.lo, 0), inB = num(X.hi, 2);
+      // V322 — بازهٔ منفی/بزرگ نقاط سایه‌زنی را بیرون از بوم می‌گذاشت.
+      var inf = xs('f', 'quad'), inA = clamp(num(X.lo, 0), 0, 20), inB = clamp(num(X.hi, 2), 0, 20);
       if (inB <= inA) inB = inA + 1;
       var inFn = function (v7) { return inf === 'sin' ? Math.sin(v7) : inf === 'line' ? 0.6 * v7 + 0.4 : 0.25 * v7 * v7; };
       var inX0 = 62, inY0 = 212, inW = 250, inH = 140, inMaxV = Math.max(inB, 1);
@@ -2880,8 +2923,10 @@
         }
       }
       var soBw = Math.min(54, 220 / Math.max(1, soVals.length)), soX0 = 180 - (soVals.length * soBw) / 2;
+      // V322 — پیش‌تر ارتفاع = ۲۶ + |v|×۶ بود و مقدار ۹۹۹ میله را هزاران پیکسل بالا می‌برد.
+      var soMaxAbs = 1; soVals.forEach(function (vso) { soMaxAbs = Math.max(soMaxAbs, Math.abs(vso)); });
       for (soI = 0; soI < soVals.length; soI++) {
-        var soh = 26 + Math.abs(soVals[soI]) * 6, soC = soStep === 0 && soI < 2 ? 'rgba(214,51,108,.22)' : 'rgba(108,99,245,.18)';
+        var soh = 26 + Math.abs(soVals[soI]) / soMaxAbs * 110, soC = soStep === 0 && soI < 2 ? 'rgba(214,51,108,.22)' : 'rgba(108,99,245,.18)';
         s += rc(soX0 + soI * soBw + 3, 200 - soh, soBw - 6, soh, soC, soStep === 0 && soI < 2 ? PT : ACC, 1.8, 5);
         s += v319txt(soX0 + soI * soBw + soBw / 2, 200 - soh / 2 + 5, String(soVals[soI]), ST, 'middle', true, 14);
       }

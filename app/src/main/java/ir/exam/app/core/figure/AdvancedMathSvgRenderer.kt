@@ -537,8 +537,9 @@ object AdvancedMathSvgRenderer {
         val op = spec.xStr("op", "translate").lowercase()
         val shape = spec.xStr("shape", "tri").lowercase()
         val grid = spec.xNum("grid", 8f).toInt().coerceIn(4, 10)
-        val dx = spec.xNum("dx", 3f)
-        val dy = spec.xNum("dy", 2f)
+        // V322 — جابه‌جایی بزرگ شکل را با مختصات ده‌ها هزار بیرون از بوم می‌برد؛ به اندازهٔ شبکه مهار می‌شود.
+        val dx = spec.xNum("dx", 3f).coerceIn(-4f, 4f)
+        val dy = spec.xNum("dy", 2f).coerceIn(-4f, 4f)
         val ang = spec.xNum("ang", 90f)
         val axis = spec.xStr("axis", "y").lowercase()
         val u = min(26f, 240f / grid)
@@ -592,8 +593,9 @@ object AdvancedMathSvgRenderer {
 
     private fun caliper(spec: FigureSpec): String {
         val kind = spec.xStr("kind", "vernier").lowercase()
-        val v = max(0f, spec.xNum("val", 23.4f))
-        val mx = max(10f, spec.xNum("max", 50f))
+        // V322 — مقدار خوانده‌شده بزرگ‌تر از «حداکثر» عقربه/درجه را بیرون از خط‌کش می‌برد؛ حالا مهار می‌شود.
+        val mx = max(10f, spec.xNum("max", 50f)).coerceAtMost(999f)
+        val v = max(0f, spec.xNum("val", 23.4f)).coerceAtMost(mx)
         val sb = StringBuilder()
         if (kind == "micrometer") {
             sb.append(rc(40f, 96f, 200f, 30f, "rgba(108,99,245,.14)", ST, 2f, 4f))
@@ -1082,7 +1084,8 @@ object AdvancedMathSvgRenderer {
             return sb.toString()
         }
         val clef = spec.xStr("clef", "treble").lowercase()
-        val notes = ints(spec, "notes", "60,62,64,65,67").take(8).ifEmpty { listOf(60, 62, 64, 65, 67) }
+        // V322 — شمارهٔ نتِ نامعتبر (۰ یا ۹۹۹) نُت را بیرون از حامل می‌کشید؛ حالا در بازهٔ نمایش مهار می‌شود.
+        val notes = ints(spec, "notes", "60,62,64,65,67").take(8).ifEmpty { listOf(60, 62, 64, 65, 67) }.map { it.coerceIn(53, 74) }
         val x0 = 40f; val x1 = 330f; val top = 84f; val gap = 14f
         for (i in 0 until 5) sb.append(ln(x0, top + i * gap, x1, top + i * gap, ST, 1.4f))
         sb.append(ln(x0, top + 4 * gap, x0, top, ST, 2f))
@@ -1521,6 +1524,10 @@ object AdvancedMathSvgRenderer {
                     val ox = inx / il * 9f; val oy = iny / il * 9f
                     sb.append(ln(mxp - (q2.first - q1.first) / 2f * 0.55f + ox, myp - (q2.second - q1.second) / 2f * 0.55f + oy, mxp + (q2.first - q1.first) / 2f * 0.55f + ox, myp + (q2.second - q1.second) / 2f * 0.55f + oy, ACC, 2.6f))
                 }
+                // V322 — برچسب اتم‌های کربن (C) که موتور وب می‌کشید در اپ غایب بود.
+                if (mode != "circle") pts.forEach { p ->
+                    sb.append(tx(p.first + (p.first - cx) * 0.22f, p.second + (p.second - cy) * 0.22f + 4f, "C", MU, "middle", size = 10))
+                }
                 sb.append(tx(180f, 250f, if (mode == "circle") "بنزن — نمایش حلقهٔ آروماتیک" else "بنزن — ساختار ککوله", ST, "middle", bold = true, size = 13))
             }
         }
@@ -1535,16 +1542,19 @@ object AdvancedMathSvgRenderer {
         val x0 = 34f; val x1 = 326f; val y = 206f; val h = 140f
         val vmin = mu - 3.4f * sd
         val vmax = mu + 3.4f * sd
+        // V322 — بازهٔ سایه‌زنی به ناحیهٔ رسم محدود می‌شود (پیش‌تر lo/hi بیرون از بوم خط و نقطه می‌ساخت).
+        val loC = lo.coerceIn(vmin, vmax)
+        val hiC = hi.coerceIn(vmin, vmax)
         fun px(v: Float) = x0 + (v - vmin) / (vmax - vmin) * (x1 - x0)
         fun pdf(v: Float): Float { val z = (v - mu) / sd; return exp(-(z * z) / 2f) }
         val sb = StringBuilder()
         val shade = StringBuilder()
         for (i in 0..120) {
             val v = vmin + (vmax - vmin) * i / 120f
-            if (v >= lo && v <= hi) shade.append("${f(px(v))},${f(y - pdf(v) * h)} ")
+            if (v >= loC && v <= hiC) shade.append("${f(px(v))},${f(y - pdf(v) * h)} ")
         }
         if (shade.isNotEmpty()) {
-            sb.append("<polygon points=\"${f(px(max(lo, vmin)))},$y $shade${f(px(min(hi, vmax)))},$y\" fill=\"rgba(39,196,168,.26)\"/>")
+            sb.append("<polygon points=\"${f(px(loC))},$y $shade${f(px(hiC))},$y\" fill=\"rgba(39,196,168,.26)\"/>")
         }
         val curve = StringBuilder()
         for (i in 0..140) {
@@ -1559,8 +1569,8 @@ object AdvancedMathSvgRenderer {
             sb.append(tx(px(v), y + 20f, i.toString(), MU, "middle", size = 10))
         }
         sb.append(tx(px(mu), y + 38f, "μ = ${num(mu)}", ST, "middle", bold = true, size = 11))
-        sb.append(ln(px(lo), y, px(lo), y - pdf(lo) * h, PT, 1.4f, "4 3"))
-        sb.append(ln(px(hi), y, px(hi), y - pdf(hi) * h, PT, 1.4f, "4 3"))
+        sb.append(ln(px(loC), y, px(loC), y - pdf(loC) * h, PT, 1.4f, "4 3"))
+        sb.append(ln(px(hiC), y, px(hiC), y - pdf(hiC) * h, PT, 1.4f, "4 3"))
         sb.append(tx(180f, 262f, "منحنی نرمال — احتمال بین ${num(lo)} و ${num(hi)}", MU, "middle", bold = true, size = 12))
         return sb.toString()
     }
@@ -1580,7 +1590,8 @@ object AdvancedMathSvgRenderer {
         sb.append(tx(x1 - 30f, y1 + 60f, "عرضه", "#00796b", "end", bold = true, size = 11))
         if (kind == "shift") sb.append(arrow(x0 + 60f, y0 - 55f, x1 - 60f, y0 - 162f, "rgba(214,51,108,.45)", 2f, 8f))
         if (ceiling > 0) {
-            val cy = y0 - 40f - ceiling * 12f
+            // V322 — سقف قیمت بزرگ خط را از کادر بیرون می‌برد؛ حالا در ناحیهٔ نمودار مهار می‌شود.
+            val cy = (y0 - 40f - ceiling * 12f).coerceIn(y1 + 40f, y0 - 30f)
             sb.append(ln(x0, cy, x1 - 10f, cy, ACC, 1.8f, "6 4"))
             sb.append(tx(x1 - 14f, cy - 6f, "سقف قیمت", ACC, "end", bold = true, size = 10))
         }
@@ -1684,6 +1695,31 @@ object AdvancedMathSvgRenderer {
     private fun tx(x: Float, y: Float, s: String, color: String, anchor: String, bold: Boolean = false, size: Int = 11): String {
         if (s.isBlank()) return ""
         val weight = if (bold) " font-weight=\"700\"" else ""
-        return "<text x=\"${f(x)}\" y=\"${f(y)}\" direction=\"ltr\" font-family=\"sans-serif\" font-size=\"$size\"$weight fill=\"$color\" text-anchor=\"$anchor\">${esc(FigureDigits.apply(s))}</text>"
+        // V322 — جاگیری خودکار برچسب: اگر متن با اندازهٔ خواسته‌شده از بوم بیرون بزند، فونت تا ۷ کوچک و در
+        // نهایت با «…» کوتاه می‌شود؛ مختصات هم داخل بوم مهار می‌شود تا هیچ برچسبی بریده نشود.
+        val fit = fitLabel(x, s, anchor, size)
+        return "<text x=\"${f(fit.first)}\" y=\"${f(y)}\" direction=\"ltr\" font-family=\"sans-serif\" font-size=\"${fit.third}\"$weight fill=\"$color\" text-anchor=\"$anchor\">${esc(FigureDigits.apply(fit.second))}</text>"
+    }
+
+    /** (x نهایی، متن نهایی، اندازهٔ فونت) برای جا شدن برچسب در بوم ۳۶۰ پیکسلی. */
+    private fun fitLabel(x: Float, s: String, anchor: String, size: Int): Triple<Float, String, Int> {
+        val maxW = 344f
+        var txt = s
+        var fs = size
+        var est = txt.length * fs * 0.55f
+        if (est > maxW) {
+            fs = max(7, (maxW / (txt.length * 0.55f) * fs).toInt())
+            est = txt.length * fs * 0.55f
+        }
+        if (est > maxW) {
+            val keep = max(2, (maxW / (fs * 0.55f)).toInt() - 1)
+            txt = txt.take(keep) + "…"
+            est = txt.length * fs * 0.55f
+        }
+        val half = est / 2f
+        val lo = when (anchor) { "middle" -> half + 3f; "end" -> est + 3f; else -> 3f }
+        val hi = when (anchor) { "middle" -> 357f - half; "end" -> 357f; else -> 357f - est }
+        val xx = if (lo <= hi) x.coerceIn(lo, hi) else x.coerceIn(3f, 357f)
+        return Triple(xx, txt, fs)
     }
 }

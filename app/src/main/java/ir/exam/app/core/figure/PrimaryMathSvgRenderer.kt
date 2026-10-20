@@ -802,8 +802,11 @@ object PrimaryMathSvgRenderer {
 
     // ------------------------------------------------- V315.0 — چرخندهٔ احتمال
     private fun probabilitySpinner(spec: FigureSpec): String {
-        val parts = spec.xStr("parts", "قرمز,آبی,سبز,زرد,قرمز,آبی").split(',', '،').map { it.trim() }.filter { it.isNotEmpty() }.ifEmpty { listOf("قرمز", "آبی", "سبز", "زرد") }.take(12)
-        val n = parts.size.coerceAtLeast(2)
+        // V322 — اگر فهرست بخش‌ها فقط یک عضو داشته باشد (کاربر تنها یک رنگ بنویسد)، قبلاً n=2 می‌شد و
+        // parts[1] با IndexOutOfBoundsException اپ را کرش می‌کرد. حالا مثل موتور وب به فهرست پیش‌فرض برمی‌گردیم.
+        var parts = spec.xStr("parts", "قرمز,آبی,سبز,زرد,قرمز,آبی").split(',', '،').map { it.trim() }.filter { it.isNotEmpty() }.take(12)
+        if (parts.size < 2) parts = listOf("قرمز", "آبی", "سبز", "زرد")
+        val n = parts.size
         val arrowIdx = (spec.xNum("arrow", 1f).toInt() - 1).mod(n)
         val cx = 180f
         val cy = 142f

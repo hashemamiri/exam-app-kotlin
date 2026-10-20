@@ -391,13 +391,16 @@ object NextMathSvgRenderer {
         sb.append(tx(ox - 12f, 40f, "y", ST, "middle", true, 12))
         fun px(v: Float) = ox + v * sc
         fun py(v: Float) = oy - v * sc
-        sb.append(ln(px(-6f), py(m1 * -6f + b1), px(6f), py(m1 * 6f + b1), ACC, 2.2f))
-        sb.append(ln(px(-6f), py(m2 * -6f + b2), px(6f), py(m2 * 6f + b2), PT, 2.2f))
+        // V322 — با شیب/عرض از مبدأ بزرگ، سرِ خطوط بیرون از بوم می‌افتاد؛ حالا در کادر برش می‌خورند.
+        fun pyc(v: Float) = py(v).coerceIn(44f, 254f)
+        fun pxc(v: Float) = px(v).coerceIn(46f, 326f)
+        sb.append(ln(pxc(-6f), pyc(m1 * -6f + b1), pxc(6f), pyc(m1 * 6f + b1), ACC, 2.2f))
+        sb.append(ln(pxc(-6f), pyc(m2 * -6f + b2), pxc(6f), pyc(m2 * 6f + b2), PT, 2.2f))
         val den = m1 - m2
         if (abs(den) > 1e-6f) {
             val ix = (b2 - b1) / den
             val iy = m1 * ix + b1
-            sb.append(cls(px(ix), py(iy), 5.5f, "#1f8f7a", "#ffffff", 1.2f))
+            sb.append(cls(px(ix).coerceIn(50f, 322f), py(iy).coerceIn(48f, 250f), 5.5f, "#1f8f7a", "#ffffff", 1.2f))
             sb.append(tx(min(max(px(ix) + 8f, 60f), 300f), min(max(py(iy) - 10f, 56f), 240f),
                 "(" + num((ix * 100).roundToInt() / 100f) + ", " + num((iy * 100).roundToInt() / 100f) + ")", "#1f8f7a", "start", true, 11))
             sb.append(tx(180f, 268f, "نقطهٔ تقاطع — جواب دستگاه", "#1f8f7a", "middle", true, 11))
@@ -413,6 +416,8 @@ object NextMathSvgRenderer {
     private fun barStats(spec: FigureSpec): String {
         var data = ints(spec, "data", "4,7,3,6,5")
         if (data.isEmpty()) data = listOf(4, 7, 3, 6, 5)
+        // V322 — دادهٔ منفی ارتفاع منفی (rect نامعتبر) و میلهٔ بیرون از بوم می‌ساخت؛ حالا به بازهٔ مجاز محدود می‌شود.
+        data = data.map { it.coerceIn(0, 999) }
         val labs = splitList(spec.xStr("labs", "الف,ب,ج,د,ه"))
         val show = spec.xStr("show", "mean")
         val n = data.size
@@ -472,7 +477,8 @@ object NextMathSvgRenderer {
             sb.append(tx(min(max(ox + vx * sc + 8f, 60f), 280f), min(max(oy - vy * sc - 10f, 40f), 250f),
                 "رأس (" + num((vx * 100).roundToInt() / 100f) + ", " + num((vy * 100).roundToInt() / 100f) + ")", PT, "start", true, 10))
         }
-        sb.append(ln(ox + vx * sc, 258f, ox + vx * sc, 34f, GLD, 1.4f, "5 4"))
+        // V322 — با b بزرگ، محور تقارن با مختصات هزاران پیکسل بیرون از بوم رسم می‌شد.
+        if (abs(vx) <= 6.2f) sb.append(ln(ox + vx * sc, 258f, ox + vx * sc, 34f, GLD, 1.4f, "5 4"))
         val delta = b * b - 4 * a * c
         val note: String
         if (delta > 0) {
@@ -603,30 +609,45 @@ object NextMathSvgRenderer {
         val f = max(2f, spec.xNum("f", 10f))
         val d = max(1f, spec.xNum("d", 30f))
         val cx = 190f; val cy = 152f; val s = 2.4f
-        val di = if (concave) (f * d) / (d + f) else (f * d) / (d - f)
+        // V322 — وقتی فاصلهٔ جسم برابر فاصلهٔ کانونی بود (d = f) مخرج صفر می‌شد و موتور وب «Infinity» و
+        // موتور بومی مختصات ۲۱٬۴۷۴٬۸۳۶ تولید می‌کرد. حالا حالت «تصویر در بی‌نهایت» صریح نمایش داده می‌شود.
+        val atFocus = !concave && abs(d - f) < 0.05f
+        val di = when {
+            atFocus -> Float.POSITIVE_INFINITY
+            concave -> (f * d) / (d + f)
+            else -> (f * d) / (d - f)
+        }
         val sb = StringBuilder()
         sb.append(ln(36f, cy, 330f, cy, ST, 1.6f)).append(arrowHeadRight(330f, cy))
         sb.append(path("M $cx ${f(cy - 74f)} Q ${f(cx + 22f)} ${f(cy)} $cx ${f(cy + 74f)}", "none", ACC, 2.4f))
         if (concave) sb.append(path("M $cx ${f(cy - 74f)} Q ${f(cx + 10f)} ${f(cy)} $cx ${f(cy + 74f)}", "none", ACC, 2.4f))
         sb.append(tx(cx + 26f, cy - 82f, if (concave) "عدسی مقعر" else "عدسی محدب", ACC, "middle", true, 11))
-        sb.append(cls(cx - f * s, cy, 3.4f, PT, "none", 0f)).append(cls(cx + f * s, cy, 3.4f, PT, "none", 0f))
-        sb.append(tx(cx - f * s, cy + 16f, "F", PT, "middle", true, 11)).append(tx(cx + f * s, cy + 16f, "F'", PT, "middle", true, 11))
-        val ox = cx - d * s
+        // V322 — با فاصلهٔ کانونی/جسم بزرگ، کانون‌ها و جسم بیرون از بوم می‌افتادند؛ به عرض بوم مهار می‌شوند.
+        val fp = (f * s).coerceIn(12f, 120f)
+        sb.append(cls(cx - fp, cy, 3.4f, PT, "none", 0f)).append(cls(cx + fp, cy, 3.4f, PT, "none", 0f))
+        sb.append(tx(cx - fp, cy + 16f, "F", PT, "middle", true, 11)).append(tx(cx + fp, cy + 16f, "F'", PT, "middle", true, 11))
+        val ox = (cx - d * s).coerceIn(24f, cx - 12f)
         val oh = 46f
         sb.append(ln(ox, cy, ox, cy - oh, "#1f8f7a", 2.4f))
         sb.append(poly("${f(ox - 4f)},${f(cy - oh + 8f)} ${f(ox + 4f)},${f(cy - oh + 8f)} ${f(ox)},${f(cy - oh)}", "#1f8f7a", "none", 0f))
         sb.append(tx(ox, cy + 18f, "جسم", "#1f8f7a", "middle", true, 10))
-        val ix = cx + di * s
-        val ih = oh * (di / d)
-        sb.append(ln(ix, cy, ix, cy + ih, GLD, 2.4f))
-        sb.append(poly("${f(ix - 4f)},${f(cy + ih - 8f)} ${f(ix + 4f)},${f(cy + ih - 8f)} ${f(ix)},${f(cy + ih)}", GLD, "none", 0f))
-        sb.append(tx(ix, cy - 8f, "تصویر", GLD, "middle", true, 10))
+        if (!atFocus) {
+            val ix = (cx + di * s).coerceIn(28f, 332f)
+            val ih = (oh * (di / d)).coerceIn(-120f, 120f)
+            sb.append(ln(ix, cy, ix, cy + ih, GLD, 2.4f))
+            sb.append(poly("${f(ix - 4f)},${f(cy + ih - 8f)} ${f(ix + 4f)},${f(cy + ih - 8f)} ${f(ix)},${f(cy + ih)}", GLD, "none", 0f))
+            sb.append(tx(ix, cy - 8f, "تصویر", GLD, "middle", true, 10))
+        } else {
+            sb.append(tx(180f, 126f, "جسم روی کانون — تصویر در بی‌نهایت", PT, "middle", true, 11))
+        }
         sb.append(ln(ox, cy - oh, cx, cy - oh, MU, 1.1f, "4 4"))
-        sb.append(ln(cx, cy - oh, cx + f * s, cy, MU, 1.1f, "4 4"))
+        sb.append(ln(cx, cy - oh, cx + fp, cy, MU, 1.1f, "4 4"))
         sb.append(ln(ox, cy - oh, cx, cy, MU, 1.2f))
         sb.append(tx(180f, 234f, "۱/f = ۱/فاصلهٔ جسم + ۱/فاصلهٔ تصویر", ST, "middle", true, 12))
-        sb.append(tx(180f, 254f, "f = " + num(f) + " cm · d = " + num(d) + " cm → تصویر در " + num((di * 100).roundToInt() / 100f) + " cm", ACC, "middle", true, 11))
-        sb.append(tx(180f, 272f, "بزرگنمایی = " + num((abs(di / d) * 100).roundToInt() / 100f) + " برابر", MU, "middle", false, 10))
+        val diText = if (atFocus) "بی‌نهایت" else num((di * 100).roundToInt() / 100f) + " cm"
+        val magText = if (atFocus) "—" else num((abs(di / d) * 100).roundToInt() / 100f) + " برابر"
+        sb.append(tx(180f, 254f, "f = " + num(f) + " cm · d = " + num(d) + " cm → تصویر در " + diText, ACC, "middle", true, 11))
+        sb.append(tx(180f, 272f, "بزرگنمایی = " + magText, MU, "middle", false, 10))
         return sb.toString()
     }
 
@@ -812,10 +833,11 @@ object NextMathSvgRenderer {
             sb.append(tx(ox + i * sc, oy + 13f, i.toString(), MU, "middle", false, 8))
             sb.append(tx(ox - 10f, oy - i * sc + 3f, i.toString(), MU, "end", false, 8))
         }
-        val axx = ox + ax1 * sc; val ayy = oy - ay1 * sc
-        val bxx = ox + bx * sc; val byy = oy - by * sc
-        val rx = ox + (if (diff) ax1 - bx else ax1 + bx) * sc
-        val ry = oy - (if (diff) ay1 - by else ay1 + by) * sc
+        // V322 — مؤلفه‌های بزرگ پیکان را با مختصات ده‌ها هزار بیرون از بوم می‌کشیدند؛ حالا نوک‌ها در کادر مهار می‌شوند.
+        val axx = (ox + ax1 * sc).coerceIn(56f, 318f); val ayy = (oy - ay1 * sc).coerceIn(48f, 258f)
+        val bxx = (ox + bx * sc).coerceIn(56f, 318f); val byy = (oy - by * sc).coerceIn(48f, 258f)
+        val rx = (ox + (if (diff) ax1 - bx else ax1 + bx) * sc).coerceIn(56f, 318f)
+        val ry = (oy - (if (diff) ay1 - by else ay1 + by) * sc).coerceIn(48f, 258f)
         sb.append(ln(ox, oy, rx, ry, "rgba(39,196,168,.35)", 8f))
         sb.append(ln(ox, oy, axx, ayy, ACC, 2.4f))
         sb.append(poly("${f(axx)},${f(ayy)} ${f(axx - 9f)},${f(ayy + 4f)} ${f(axx - 5f)},${f(ayy + 10f)}", ACC, "none", 0f))
@@ -867,8 +889,9 @@ object NextMathSvgRenderer {
 
     private fun definiteIntegral(spec: FigureSpec): String {
         val fn = spec.xStr("f", "quad").lowercase()
-        var lo = spec.xNum("lo", 0f)
-        var hi = spec.xNum("hi", 2f)
+        // V322 — بازهٔ منفی/بزرگ نقاط سایه‌زنی را بیرون از بوم می‌گذاشت؛ حالا بازه در ناحیهٔ رسم مهار می‌شود.
+        var lo = spec.xNum("lo", 0f).coerceIn(0f, 20f)
+        var hi = spec.xNum("hi", 2f).coerceIn(0f, 20f)
         if (hi <= lo) hi = lo + 1f
         fun fx(v: Float): Float = when (fn) {
             "sin" -> sin(v)
@@ -980,10 +1003,13 @@ object NextMathSvgRenderer {
             }
         }
         val bw = min(54f, 220f / max(1, arr.size))
+        // V322 — پیش‌تر ارتفاع = ۲۶ + |v|×۶ بود و مقدار ۹۹۹ میله را هزاران پیکسل بالا می‌برد؛
+        // حالا تناسب حفظ می‌شود ولی بلندترین میله در ۱۳۶ پیکسل می‌ماند.
+        val maxAbs = max(1, arr.maxOfOrNull { abs(it) } ?: 1)
         val x0 = 180f - (arr.size * bw) / 2f
         val sb = StringBuilder()
         arr.forEachIndexed { i, v ->
-            val h = 26f + abs(v) * 6f
+            val h = 26f + abs(v) / maxAbs.toFloat() * 110f
             val active = step == 0 && i < 2
             sb.append(rc(x0 + i * bw + 3f, 200f - h, bw - 6f, h, if (active) "rgba(214,51,108,.22)" else "rgba(108,99,245,.18)", if (active) PT else ACC, 1.8f, 5f))
             sb.append(tx(x0 + i * bw + bw / 2f, 200f - h / 2f + 5f, v.toString(), ST, "middle", true, 14))
@@ -1075,7 +1101,31 @@ object NextMathSvgRenderer {
     private fun tx(x: Float, y: Float, s: String, color: String, anchor: String, bold: Boolean = false, size: Int = 11): String {
         if (s.isBlank()) return ""
         val weight = if (bold) " font-weight=\"700\"" else ""
-        return "<text x=\"${f(x)}\" y=\"${f(y)}\" direction=\"ltr\" font-family=\"sans-serif\" font-size=\"$size\"" +
-            "$weight fill=\"$color\" text-anchor=\"$anchor\">${esc(FigureDigits.apply(s))}</text>"
+        // V322 — همان جاگیری خودکار برچسب (کوچک‌سازی، کوتاه‌سازی با «…» و مهار مختصات در بوم).
+        val fit = fitLabel(x, s, anchor, size)
+        return "<text x=\"${f(fit.first)}\" y=\"${f(y)}\" direction=\"ltr\" font-family=\"sans-serif\" font-size=\"${fit.third}\"" +
+            "$weight fill=\"$color\" text-anchor=\"$anchor\">${esc(FigureDigits.apply(fit.second))}</text>"
+    }
+
+    /** (x نهایی، متن نهایی، اندازهٔ فونت) برای جا شدن برچسب در بوم ۳۶۰ پیکسلی. */
+    private fun fitLabel(x: Float, s: String, anchor: String, size: Int): Triple<Float, String, Int> {
+        val maxW = 344f
+        var txt = s
+        var fs = size
+        var est = txt.length * fs * 0.55f
+        if (est > maxW) {
+            fs = max(7, (maxW / (txt.length * 0.55f) * fs).toInt())
+            est = txt.length * fs * 0.55f
+        }
+        if (est > maxW) {
+            val keep = max(2, (maxW / (fs * 0.55f)).toInt() - 1)
+            txt = txt.take(keep) + "…"
+            est = txt.length * fs * 0.55f
+        }
+        val half = est / 2f
+        val lo = when (anchor) { "middle" -> half + 3f; "end" -> est + 3f; else -> 3f }
+        val hi = when (anchor) { "middle" -> 357f - half; "end" -> 357f; else -> 357f - est }
+        val xx = if (lo <= hi) x.coerceIn(lo, hi) else x.coerceIn(3f, 357f)
+        return Triple(xx, txt, fs)
     }
 }

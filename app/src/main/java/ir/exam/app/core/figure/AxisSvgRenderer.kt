@@ -2,7 +2,10 @@ package ir.exam.app.core.figure
 
 import java.util.Locale
 import kotlin.math.PI
+import kotlin.math.abs
 import kotlin.math.cos
+import kotlin.math.max
+import kotlin.math.min
 import kotlin.math.sin
 
 /**
@@ -207,7 +210,11 @@ internal object AxisSvgRenderer {
         if (withPoint) {
             // V137.2 — نقطهٔ P(x1,y1,z1) با خط‌چین‌های تصویر روی محورها.
             val unit = len / (n + 0.6f) / step
-            val px = spec.xNum("x1", 3f) * unit; val py = spec.xNum("y1", 2f) * unit; val pz = spec.xNum("z1", 2f) * unit
+            // V322 — نقطهٔ بیرون از بازهٔ محورها بیرون از بوم رسم می‌شد؛ حالا به بازهٔ محور مهار می‌شود.
+            val axisMax = n * step
+            val px = spec.xNum("x1", 3f).coerceIn(-axisMax, axisMax) * unit
+            val py = spec.xNum("y1", 2f).coerceIn(-axisMax, axisMax) * unit
+            val pz = spec.xNum("z1", 2f).coerceIn(-axisMax, axisMax) * unit
             val bx = cx + px - pz * 0.62f; val by = cy + pz * 0.62f       // (x,0,z) روی کف
             val qx = bx; val qy = by - py                                  // P
             val dash = " stroke-dasharray=\"4 3\""
@@ -411,10 +418,20 @@ internal object AxisSvgRenderer {
 
     private fun cartesianEx(spec: FigureSpec): String {
         val type = spec.type
-        val xmin = spec.xNum("xmin", -5f)
-        val xmax = spec.xNum("xmax", 5f).let { if (it <= xmin) xmin + 2f else it }
-        val ymin = spec.xNum("ymin", -4f)
-        val ymax = spec.xNum("ymax", 4f).let { if (it <= ymin) ymin + 2f else it }
+        var xmin = spec.xNum("xmin", -5f)
+        var xmax = spec.xNum("xmax", 5f).let { if (it <= xmin) xmin + 2f else it }
+        var ymin = spec.xNum("ymin", -4f)
+        var ymax = spec.xNum("ymax", 4f).let { if (it <= ymin) ymin + 2f else it }
+        // V322 — اگر نقطه/بردار/دایرهٔ درخواستی بیرون از بازهٔ محور باشد، قبلاً در مختصات ده‌ها هزار رسم می‌شد
+        // و عملاً ناپدید بود؛ حالا بازهٔ محور خودکار گسترده می‌شود تا شکل همیشه دیده شود.
+        if (type == "axxyvec") {
+            listOf(spec.xNum("x1", 0f), spec.xNum("x2", 3f)).forEach { xmin = min(xmin, it - 1f); xmax = max(xmax, it + 1f) }
+            listOf(spec.xNum("y1", 0f), spec.xNum("y2", 2f)).forEach { ymin = min(ymin, it - 1f); ymax = max(ymax, it + 1f) }
+        } else if (type == "axxycirc") {
+            val ccx = spec.xNum("cx", 1f); val ccy = spec.xNum("cy", 1f); val cr = abs(spec.xNum("r", 2f))
+            xmin = min(xmin, ccx - cr - 1f); xmax = max(xmax, ccx + cr + 1f)
+            ymin = min(ymin, ccy - cr - 1f); ymax = max(ymax, ccy + cr + 1f)
+        }
         val sx = stepOf(spec, xmax - xmin); val sy = stepOf(spec, ymax - ymin)
         val sb = StringBuilder()
         val (px, py) = cartesianBase(
@@ -582,7 +599,25 @@ internal object AxisSvgRenderer {
     private fun text(x: Float, y: Float, s: String, color: String, anchor: String, bold: Boolean = false, size: Int = 11): String {
         if (s.isBlank()) return ""
         val weight = if (bold) " font-weight=\"700\"" else ""
-        val esc = FigureDigits.apply(s).replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace("\"", "&quot;")
-        return "<text x=\"${f(x)}\" y=\"${f(y)}\" direction=\"ltr\" font-family=\"sans-serif\" font-size=\"$size\"$weight fill=\"$color\" text-anchor=\"$anchor\">$esc</text>"
+        // V322 — جاگیری خودکار برچسب محورها: کوچک‌سازی، کوتاه‌سازی با «…» و مهار مختصات در بوم.
+        val maxW = 344f
+        var txt = s
+        var fs = size
+        var est = txt.length * fs * 0.55f
+        if (est > maxW) {
+            fs = max(7, (maxW / (txt.length * 0.55f) * fs).toInt())
+            est = txt.length * fs * 0.55f
+        }
+        if (est > maxW) {
+            val keep = max(2, (maxW / (fs * 0.55f)).toInt() - 1)
+            txt = txt.take(keep) + "…"
+            est = txt.length * fs * 0.55f
+        }
+        val half = est / 2f
+        val lo = when (anchor) { "middle" -> half + 3f; "end" -> est + 3f; else -> 3f }
+        val hi = when (anchor) { "middle" -> 357f - half; "end" -> 357f; else -> 357f - est }
+        val xx = if (lo <= hi) x.coerceIn(lo, hi) else x.coerceIn(3f, 357f)
+        val esc = FigureDigits.apply(txt).replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace("\"", "&quot;")
+        return "<text x=\"${f(xx)}\" y=\"${f(y)}\" direction=\"ltr\" font-family=\"sans-serif\" font-size=\"$fs\"$weight fill=\"$color\" text-anchor=\"$anchor\">$esc</text>"
     }
 }
