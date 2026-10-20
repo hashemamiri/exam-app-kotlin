@@ -109,6 +109,11 @@ class V325_SettingsUpgradeTest {
         assertTrue("بخش‌های تازه به کارت وصل نشده‌اند",
             "LocalStorageBlock(LocalContext.current, viewModel.currentUserId())" in screen &&
                 "NotificationCategoriesBlock(pushCtx)" in screen)
+        assertTrue("بخش‌ها باید در فایل مستقل و سطح‌بالا باشند",
+            "\ninternal fun NotificationCategoriesBlock(" in blocks && "\ninternal fun LocalStorageBlock(" in blocks)
+        val tail = screen.trimEnd().lines().takeLast(2).map { it.trim() }
+        assertTrue("آکولاد پایانی کارت/تابع در صفحهٔ تنظیمات جا افتاده است (خطای CI: Expecting '}')",
+            tail.size == 2 && tail[0] == "}" && tail[1] == "}" && screen.trimEnd().lines().takeLast(2)[0].startsWith("    "))
         assertTrue("حالت درس‌آزمون", "حالت درس‌آزمون" in blocks)
         assertTrue("ساعت سکوت در اپ", "ساعت سکوت" in blocks)
         assertTrue("ثبت تاریخ پشتیبان پس از خروجی اپ", "LocalStorageTools.markBackupNow(context)" in

@@ -1195,4 +1195,5 @@ private fun ManagerBackupSection() {
         if (loading) CircularProgressIndicator()
         message?.let { Text(it, color = MaterialTheme.colorScheme.primary) }
         error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+    }
 }
