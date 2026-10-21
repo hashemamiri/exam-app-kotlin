@@ -12,6 +12,8 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.horizontalScroll
@@ -30,6 +32,8 @@ import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.border
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.nativeCanvas
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.zIndex
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
@@ -90,6 +94,15 @@ import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import kotlinx.coroutines.delay
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.doubleOrNull
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.put
 import java.io.File
 import java.io.FileOutputStream
 import ir.exam.app.core.figure.AtlasBlankAnswerCodec
@@ -281,6 +294,9 @@ fun StudentExamContent(
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 OutlinedButton(onClick = { showExit = true }) { Text("خروج") }
+                if (state.activeSectionTitle.isNotBlank() && state.sectionRemainingSeconds != UNLIMITED_TIME) {
+                    Text("${state.activeSectionTitle}: ${formatRemaining(state.sectionRemainingSeconds)}", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.error)
+                }
                 // V301 — ابتدایی: زمان‌سنج کم‌رنگ و کوچک (بدون استرس)
                 if (primary) Box(Modifier.alpha(0.55f)) {
                     ExamCountdownText(initialRemainingSeconds = state.remainingSeconds, totalSeconds = state.totalSeconds, paused = state.timerPaused)
@@ -375,7 +391,8 @@ fun StudentExamContent(
                         Card(Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.tertiaryContainer)) {
                             Column(Modifier.fillMaxWidth().padding(10.dp), verticalArrangement = Arrangement.spacedBy(3.dp)) {
                                 Text(question.sectionTitle, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                                Text("${sectionQuestions.size} سؤال · جمع بارم ${sectionScore}", style = MaterialTheme.typography.bodySmall)
+                                val sectionMinutes = exam.sectionDurationsMinutes[question.sectionTitle.trim()]
+                                Text("${sectionQuestions.size} سؤال · جمع بارم ${sectionScore}" + (sectionMinutes?.let { " · زمان مجاز ${it} دقیقه" } ?: ""), style = MaterialTheme.typography.bodySmall)
                             }
                         }
                     }
@@ -434,7 +451,11 @@ fun StudentExamContent(
             }
             item {
                 when (question) {
-                    is EssayQuestion -> if (question.answerMode == "steps" || question.answerMode == "proof") {
+                    is EssayQuestion -> if (question.answerMode == "construct" && question.constructionLabels.isNotEmpty()) {
+                        StudentConstructionAnswer(question, (state.answers[question.id] as? TextAnswer)?.value.orEmpty()) {
+                            onAnswer(TextAnswer(question.id, it))
+                        }
+                    } else if (question.assessmentParts.isNotEmpty() || question.answerMode == "steps" || question.answerMode == "proof") {
                         StepwiseEssayAnswer(question, (state.answers[question.id] as? TextAnswer)?.value.orEmpty()) {
                             onAnswer(TextAnswer(question.id, it))
                         }
@@ -1222,7 +1243,54 @@ private fun PrimaryBucketAnswer(
 /** V328 — یک پاسخ مستقل برای هر گام؛ متن پاسخ به‌صورت خط‌به‌خط ذخیره می‌شود. */
 @Composable
 private fun StepwiseEssayAnswer(question: EssayQuestion, saved: String, onChange: (String) -> Unit) {
-    val prompts = question.solutionSteps.ifEmpty { listOf("گام اول", "گام دوم", "پاسخ نهایی") }
+    val parts = question.assessmentParts
+    if (question.answerMode == "proof" && parts.isNotEmpty()) {
+        val proofAnswers = remember(question.id, saved) {
+            runCatching {
+                val root = Json.parseToJsonElement(saved).jsonObject
+                val data = root["parts"]?.jsonObject ?: JsonObject(emptyMap())
+                parts.associate { part ->
+                    val value = data[part.id]?.jsonObject
+                    part.id to ((value?.get("answer") as? JsonPrimitive)?.contentOrNull.orEmpty() to (value?.get("reason") as? JsonPrimitive)?.contentOrNull.orEmpty())
+                }
+            }.getOrElse {
+                val oldLines = saved.split("\n")
+                parts.mapIndexed { index, part -> part.id to (oldLines.getOrElse(index) { "" } to "") }.toMap()
+            }
+        }
+        fun emit(updated: Map<String, Pair<String, String>>) {
+            onChange(buildJsonObject {
+                put("parts", buildJsonObject {
+                    parts.forEach { part ->
+                        val pair = updated[part.id] ?: ("" to "")
+                        put(part.id, buildJsonObject { put("answer", JsonPrimitive(pair.first)); put("reason", JsonPrimitive(pair.second)) })
+                    }
+                })
+            }.toString())
+        }
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            if (question.proofAssumptions.isNotBlank()) Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)) {
+                Column(Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) { Text("فرض‌ها / داده‌ها", fontWeight = FontWeight.Bold); NativeMathText(question.proofAssumptions) }
+            }
+            if (question.proofGoal.isNotBlank()) Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.tertiaryContainer)) {
+                Column(Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) { Text("خواسته", fontWeight = FontWeight.Bold); NativeMathText(question.proofGoal) }
+            }
+            parts.forEachIndexed { index, part ->
+                val values = proofAnswers[part.id] ?: ("" to "")
+                Card(Modifier.fillMaxWidth()) {
+                    Column(Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Text("گام ${part.label.ifBlank { (index + 1).toString() }}: ${part.prompt}", fontWeight = FontWeight.Bold)
+                        OutlinedTextField(values.first, { next -> emit(proofAnswers + (part.id to (next to values.second))) }, label = { Text("نتیجه / گزارهٔ این گام") }, minLines = 2, modifier = Modifier.fillMaxWidth())
+                        if (part.requiresReason) OutlinedTextField(values.second, { next -> emit(proofAnswers + (part.id to (values.first to next))) }, label = { Text(part.reasonPrompt.ifBlank { "دلیل این گام" }) }, minLines = 2, modifier = Modifier.fillMaxWidth())
+                        if (part.carriesForward && index > 0) Text("می‌توانید از نتیجهٔ گام قبلی استفاده کنید.", style = MaterialTheme.typography.bodySmall)
+                    }
+                }
+            }
+        }
+        return
+    }
+    val prompts = parts.map { part -> listOf(part.label, part.prompt).filter(String::isNotBlank).joinToString(" · ").ifBlank { "زیرسؤال" } }
+        .ifEmpty { question.solutionSteps.ifEmpty { listOf("گام اول", "گام دوم", "پاسخ نهایی") } }
     val values = remember(question.id, saved, prompts.size) {
         val parts = saved.split("\n")
         List(prompts.size) { parts.getOrElse(it) { "" } }
@@ -1237,9 +1305,74 @@ private fun StepwiseEssayAnswer(question: EssayQuestion, saved: String, onChange
                     onChange(updated.joinToString("\n"))
                 },
                 label = { Text(prompt.ifBlank { "گام ${index + 1}" }) },
+                supportingText = if (parts.getOrNull(index)?.carriesForward == true && index > 0) ({ Text("در صورت نیاز، نتیجهٔ بخش قبلی را اینجا به‌کار ببر.") }) else null,
                 minLines = 2,
                 modifier = Modifier.fillMaxWidth()
             )
+        }
+    }
+}
+
+/** نمودار مختصاتی تعاملی: لمس صفحه نقاط را ثبت می‌کند؛ مختصات هدف هرگز به دانش‌آموز ارسال نمی‌شود. */
+@Composable
+private fun StudentConstructionAnswer(question: EssayQuestion, saved: String, onChange: (String) -> Unit) {
+    val labels = question.constructionLabels.take(8)
+    var selectedLabel by remember(question.id) { mutableStateOf<String?>(null) }
+    val points = remember(question.id, saved) {
+        runCatching {
+            val root = Json.parseToJsonElement(saved).jsonObject
+            labels.mapNotNull { label ->
+                val entry = root[label]?.jsonObject ?: return@mapNotNull null
+                val x = entry["x"]?.jsonPrimitive?.doubleOrNull?.toFloat() ?: return@mapNotNull null
+                val y = entry["y"]?.jsonPrimitive?.doubleOrNull?.toFloat() ?: return@mapNotNull null
+                label to Offset(x.coerceIn(-5f, 5f), y.coerceIn(-5f, 5f))
+            }.toMap()
+        }.getOrDefault(emptyMap())
+    }
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text(question.constructionPrompt.ifBlank { "نقاط خواسته‌شده را روی صفحهٔ مختصات مشخص کنید." }, style = MaterialTheme.typography.bodyLarge)
+        Text("برای ثبت نقطه روی نمودار بزنید؛ برای جابه‌جایی، برچسب نقطه را انتخاب و محل تازه را لمس کنید. مختصات از −۵ تا ۵ است.", style = MaterialTheme.typography.bodySmall)
+        Canvas(
+            Modifier.fillMaxWidth().height(280.dp).border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(8.dp))
+                .pointerInput(question.id, labels, points, selectedLabel) {
+                    detectTapGestures { tap ->
+                        val margin = 24f
+                        val width = (size.width - 2 * margin).coerceAtLeast(1f)
+                        val height = (size.height - 2 * margin).coerceAtLeast(1f)
+                        val label = selectedLabel ?: labels.firstOrNull { it !in points } ?: labels.lastOrNull() ?: return@detectTapGestures
+                        val x = (((tap.x - margin) / width) * 10f - 5f).coerceIn(-5f, 5f)
+                        val y = (5f - ((tap.y - margin) / height) * 10f).coerceIn(-5f, 5f)
+                        val next = points + (label to Offset(x, y))
+                        onChange(buildJsonObject {
+                            next.forEach { (key, value) -> put(key, buildJsonObject { put("x", JsonPrimitive(value.x)); put("y", JsonPrimitive(value.y)) }) }
+                        }.toString())
+                    }
+                }
+        ) {
+            val margin = 24f
+            val w = (size.width - 2 * margin).coerceAtLeast(1f)
+            val h = (size.height - 2 * margin).coerceAtLeast(1f)
+            fun px(x: Float) = margin + (x + 5f) / 10f * w
+            fun py(y: Float) = margin + (5f - y) / 10f * h
+            val grid = Color.Gray.copy(alpha = 0.25f)
+            for (tick in -5..5) {
+                val x = px(tick.toFloat()); val y = py(tick.toFloat())
+                drawLine(grid, Offset(x, margin), Offset(x, margin + h), 1.dp.toPx())
+                drawLine(grid, Offset(margin, y), Offset(margin + w, y), 1.dp.toPx())
+            }
+            drawLine(Color.DarkGray, Offset(px(0f), margin), Offset(px(0f), margin + h), 2.dp.toPx())
+            drawLine(Color.DarkGray, Offset(margin, py(0f)), Offset(margin + w, py(0f)), 2.dp.toPx())
+            val paint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply { color = android.graphics.Color.rgb(30, 83, 170); textSize = 15.dp.toPx(); typeface = android.graphics.Typeface.DEFAULT_BOLD }
+            points.forEach { (label, point) ->
+                val cx = px(point.x); val cy = py(point.y)
+                drawCircle(Color(0xFF1E53AA), radius = 7.dp.toPx(), center = Offset(cx, cy))
+                drawContext.canvas.nativeCanvas.drawText(label, cx + 8.dp.toPx(), cy - 8.dp.toPx(), paint)
+            }
+        }
+        Text("ثبت‌شده: ${points.size} از ${labels.size}", style = MaterialTheme.typography.labelMedium)
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+            labels.forEach { label -> FilterChip(selected = selectedLabel == label, onClick = { selectedLabel = if (selectedLabel == label) null else label }, label = { Text("$label${points[label]?.let { " (${"%.1f".format(it.x)}, ${"%.1f".format(it.y)})" } ?: " —"}") }) }
+            TextButton(onClick = { selectedLabel = null; onChange("{}") }, enabled = points.isNotEmpty()) { Text("پاک‌کردن") }
         }
     }
 }

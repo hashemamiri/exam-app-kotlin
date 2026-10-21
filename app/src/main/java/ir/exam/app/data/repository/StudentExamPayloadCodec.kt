@@ -1,5 +1,6 @@
 package ir.exam.app.data.repository
 
+import ir.exam.app.domain.model.AssessmentPart
 import ir.exam.app.domain.model.EssayQuestion
 import ir.exam.app.domain.model.Exam
 import ir.exam.app.domain.model.FillBlankQuestion
@@ -104,7 +105,10 @@ internal object StudentExamPayloadCodec {
             attemptsRemaining = raw.int("attempts_remaining"),
             questionPresentation = presentations,
             // V301 — options.primary (سرور بدون SQL V301 این کلید را نمی‌فرستد → false)
-            primaryMode = (raw["options"] as? JsonObject)?.boolean("primary") == true
+            primaryMode = (raw["options"] as? JsonObject)?.boolean("primary") == true,
+            sectionDurationsMinutes = ((raw["options"] as? JsonObject)?.get("sectionDurations") as? JsonObject)
+                ?.mapNotNull { (title, value) -> (value as? JsonPrimitive)?.intOrNull?.takeIf { it in 1..1440 }?.let { title to it } }
+                ?.toMap().orEmpty()
         )
     }
 
@@ -222,7 +226,15 @@ internal object StudentExamPayloadCodec {
                 passage = passage,
                 sectionTitle = sectionTitle,
                 topic = topic,
-                solutionSteps = obj["solutionSteps"].arrayStrings().take(10)
+                solutionSteps = obj["solutionSteps"].arrayStrings().take(10),
+                assessmentParts = obj["assessmentParts"].asArrayOrEmpty().mapIndexedNotNull { index, rawPart ->
+                    val part = rawPart as? JsonObject ?: return@mapIndexedNotNull null
+                    AssessmentPart(part.text("id") ?: "$id-part-$index", part.text("label").orEmpty(), part.text("prompt").orEmpty(), part.double("score") ?: 0.0, part["carriesForward"]?.jsonPrimitive?.booleanOrNull ?: false, part.text("reasonPrompt").orEmpty(), part["requiresReason"]?.jsonPrimitive?.booleanOrNull ?: false)
+                },
+                proofAssumptions = obj.text("proofAssumptions").orEmpty(),
+                proofGoal = obj.text("proofGoal").orEmpty(),
+                constructionPrompt = obj.text("constructionPrompt").orEmpty(),
+                constructionLabels = obj["constructionLabels"].arrayStrings().take(8)
             )
         }
     }

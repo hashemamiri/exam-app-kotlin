@@ -19,7 +19,7 @@ class V141_SitePhase4Test {
         assertTrue("extend_student_time" in js && "reset_student_attempt" in js)
         assertTrue("native_question_analysis_v1" in js && "native_bulk_save_question_grades_v1" in js && "native_finalize_bulk_grades_v1" in js)
         assertTrue("approve_auto_grades" in js && "exam_autograde_info" in js)
-        assertTrue("native_my_answer_detail_v1" in js)
+        assertTrue("native_my_answer_detail_parts_v1" in js)
         assertTrue("wallet-payment" in js && "amount_toman" in js)
         assertTrue("cal_month" in js && "holidays_for" in js && "cal_save_note" in js && "cal_delete_note" in js && "cal_mark_seen_v59" in js)
         assertTrue("native_manager_teachers_v37" in js && "native_manager_transfer_wallet_v38" in js && "p_operation" in js)

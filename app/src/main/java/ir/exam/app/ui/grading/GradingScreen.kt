@@ -53,6 +53,10 @@ import ir.exam.app.ui.audio.isAnswerAudioUrl
 import ir.exam.app.domain.model.AttendanceRow
 import ir.exam.app.domain.model.GradingQuestion
 import ir.exam.app.domain.model.GradingSubmission
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
@@ -227,6 +231,7 @@ fun GradingScreen(
                         state.feedbackBank.map { it.text },
                         state.scoreInputs,
                         state.scoreErrors,
+                        state.partScoreErrors,
                         viewModel
                     )
                 }
@@ -262,6 +267,7 @@ private fun SubmissionCard(
     feedbackPhrases: List<String>,
     scoreInputs: Map<String, String>,
     scoreErrors: Set<String>,
+    partScoreErrors: Set<String>,
     viewModel: GradingViewModel
 ) {
     if (edit == null) return
@@ -274,16 +280,52 @@ private fun SubmissionCard(
                     Column(Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
                         if (question.sectionTitle.isNotBlank()) Text(question.sectionTitle, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
                         NativeMathText("سؤال ${index + 1}: ${question.text}")
+                        if (question.constructionTargets.isNotEmpty()) Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)) {
+                            Column(Modifier.padding(8.dp), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                                Text(question.constructionPrompt.ifBlank { "نقاط هدف" }, fontWeight = FontWeight.Bold)
+                                question.constructionTargets.forEach { target -> Text("${target.label}: (${target.x}, ${target.y}) ± ${target.tolerance} · بارم ${target.score}", style = MaterialTheme.typography.bodySmall) }
+                            }
+                        }
                         if (question.rubric.isNotBlank()) Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.tertiaryContainer)) {
                             Column(Modifier.padding(8.dp)) {
                                 Text("راهنمای نمره‌دهی دبیر", fontWeight = FontWeight.Bold)
                                 NativeMathText(question.rubric)
                             }
                         }
-                        Text("پاسخ: ${submission.responses.getOrNull(index).displayText()}")
+                        if (question.answerMode == "proof" && question.assessmentParts.isNotEmpty()) {
+                            val responseText = submission.responses.getOrNull(index).displayText()
+                            if (question.proofAssumptions.isNotBlank()) Text("فرض‌ها: ${question.proofAssumptions}")
+                            if (question.proofGoal.isNotBlank()) Text("خواسته: ${question.proofGoal}")
+                            question.assessmentParts.forEachIndexed { proofIndex, proofPart ->
+                                Text("گام ${proofPart.label.ifBlank { (proofIndex + 1).toString() }} — ${proofPart.prompt}", fontWeight = FontWeight.SemiBold)
+                                Text("نتیجه: ${proofPartAnswer(responseText, proofPart.id, "answer")}")
+                                if (proofPart.requiresReason) Text("دلیل: ${proofPartAnswer(responseText, proofPart.id, "reason")}")
+                            }
+                        } else Text("پاسخ: ${submission.responses.getOrNull(index).displayText()}")
                         AnswerImagesRow(submission.answerImagesFor(question.id, index))
                         val scoreKey = "${submission.id}:$index"
-                        OutlinedTextField(
+                        question.assessmentParts.forEachIndexed { partIndex, part ->
+                            val partKey = "${submission.id}:$index:$partIndex"
+                            Text("${part.label}: ${part.prompt} · سقف ${part.score}", style = MaterialTheme.typography.bodySmall)
+                            if (part.rubric.isNotBlank()) Text("معیار این گام: ${part.rubric}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
+                            OutlinedTextField(
+                                value = scoreInputs[partKey] ?: edit.partGrades["$index:$partIndex"]?.toString().orEmpty(),
+                                onValueChange = { viewModel.setPartScore(submission.id, index, partIndex, it) },
+                                isError = partKey in partScoreErrors,
+                                supportingText = if (partKey in partScoreErrors) ({ Text("بارم این زیربخش ${part.score} است؛ جمع زیربخش‌ها نباید از بارم سؤال بیشتر شود.") }) else null,
+                                label = { Text("نمرهٔ ${part.label} از ${part.score}") },
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                            OutlinedTextField(
+                                value = edit.partFeedback["$index:$partIndex"].orEmpty(),
+                                onValueChange = { viewModel.setPartFeedback(submission.id, index, partIndex, it) },
+                                label = { Text("بازخورد ${part.label}") },
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                        }
+                        if (question.assessmentParts.isNotEmpty()) {
+                            Text("جمع نمرهٔ زیربخش‌ها: ${edit.grades.getOrElse(index) { 0.0 }} از ${question.score}", fontWeight = FontWeight.Bold)
+                        } else OutlinedTextField(
                             value = scoreInputs[scoreKey] ?: edit.grades.getOrElse(index) { 0.0 }.toString(),
                             onValueChange = { viewModel.setScore(submission.id, index, it) },
                             isError = scoreKey in scoreErrors,
@@ -431,6 +473,10 @@ private fun AttendanceContent(rows: List<AttendanceRow>, live:JsonObject?,viewMo
         }
     }
 }
+
+private fun proofPartAnswer(raw: String, id: String, field: String): String = runCatching {
+    Json.parseToJsonElement(raw).jsonObject["parts"]?.jsonObject?.get(id)?.jsonObject?.get(field)?.jsonPrimitive?.contentOrNull.orEmpty()
+}.getOrDefault("")
 
 private fun JsonElement?.displayText(): String = when (this) {
     null -> "بدون پاسخ"

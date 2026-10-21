@@ -16,6 +16,8 @@ data class AnswerDto(
     val grades: JsonElement? = null,
     @SerialName("total_grade") val totalGrade: Double = 0.0,
     val feedback: String = "",
+    @SerialName("part_grades") val partGrades: JsonElement? = null,
+    @SerialName("part_feedback") val partFeedback: JsonElement? = null,
     val graded: Boolean = false,
     @SerialName("auto_graded") val autoGraded: Boolean = false,
     @SerialName("response_images") val responseImages: JsonElement = JsonObject(emptyMap()),

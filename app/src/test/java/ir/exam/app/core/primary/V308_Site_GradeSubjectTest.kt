@@ -17,7 +17,7 @@ class V308_Site_GradeSubjectTest {
         val screen = File(root(), "app/src/main/java/ir/exam/app/ui/builder/ExamBuilderScreen.kt").readText()
         assertTrue(screen.contains("if (primary) PrimaryTagEditor(question, viewModel)"))
         assertTrue(screen.contains("item.question.grade == tagGrade"))
-        assertTrue(screen.contains("item.question.subject == tagSubject"))
+        assertTrue(screen.contains("item.question.subject.orEmpty().equals(tagSubject, ignoreCase = true)"))
         val codec = File(root(), "app/src/main/java/ir/exam/app/data/repository/ExamQuestionCodec.kt").readText()
         assertTrue(codec.contains("if (question.grade in 1..6) values[\"grade\"] = JsonPrimitive(question.grade)"))
     }
@@ -28,6 +28,6 @@ class V308_Site_GradeSubjectTest {
         assertTrue(builder.contains("q.grade = Math.max(0, Math.min(6, Number(obj.grade) || 0)); q.subject = obj.subject ? String(obj.subject) : '';"))
         assertTrue(builder.contains("if (q.grade >= 1 && q.grade <= 6) v.grade = q.grade; else delete v.grade;"))
         assertTrue(builder.contains("function primaryTagEditor(q, redraw)"))
-        assertTrue(builder.contains("(!gs.value || Number(qq.grade) === Number(gs.value)) && (!ss.value || qq.subject === ss.value)"))
+        assertTrue(builder.contains("(!state.primaryMode || !gs.value || Number(qq.grade) === Number(gs.value)) && (!ss.value || subject === ss.value)"))
     }
 }

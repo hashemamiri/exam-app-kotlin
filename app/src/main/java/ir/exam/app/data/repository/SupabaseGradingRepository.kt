@@ -26,6 +26,7 @@ import ir.exam.app.domain.model.StudentAnswerSummary
 import ir.exam.app.ui.builder.QuestionDraft
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
@@ -79,11 +80,13 @@ class SupabaseGradingRepository {
         }.decodeList<AnswerStatDto>()
     }
 
-    suspend fun saveGrade(answerId: String, grades: List<Double>, feedback: String): Result<Unit> = runCatching {
-        rpcObject("native_save_grade", buildJsonObject {
+    suspend fun saveGrade(answerId: String, grades: List<Double>, feedback: String, partGrades: Map<String, Double> = emptyMap(), partFeedback: Map<String, String> = emptyMap()): Result<Unit> = runCatching {
+        rpcObject("native_save_grade_parts_v1", buildJsonObject {
             put("p_answer", answerId)
             put("p_grades", JsonArray(grades.map(::JsonPrimitive)))
             put("p_feedback", feedback.trim())
+            put("p_part_grades", JsonObject(partGrades.mapValues { JsonPrimitive(it.value) }))
+            put("p_part_feedback", JsonObject(partFeedback.mapValues { JsonPrimitive(it.value) }))
         }).throwRpcError()
     }
 
@@ -321,18 +324,26 @@ class SupabaseGradingRepository {
 
     suspend fun myAnswerDetail(answerId: String): Result<StudentAnswerReview> = runCatching {
         val raw = rpcObject(
-            "native_my_answer_detail_v1",
+            "native_my_answer_detail_parts_v1",
             buildJsonObject { put("p_answer", answerId) }
         ).throwRpcError()
         val graded = raw.boolean("graded")
         val responses = raw["responses"] as? JsonArray ?: JsonArray(emptyList())
         val grades = raw["grades"] as? JsonArray ?: JsonArray(emptyList())
         val responseImages = raw["response_images"] as? JsonObject ?: JsonObject(emptyMap())
+        val partFeedback = raw["part_feedback"] as? JsonObject ?: JsonObject(emptyMap())
         val questions = (raw["questions"] as? JsonArray).orEmpty().mapIndexedNotNull { index, item ->
             val question = item as? JsonObject ?: return@mapIndexedNotNull null
             val questionId = question.text("id") ?: "q-$index"
+            val originalIndex = question["i"]?.jsonPrimitive?.intOrNull ?: index
+            val answerValue = responses.getOrNull(index)
+            val proofValues = if (question.text("mode") == "proof") runCatching {
+                val rawText = (answerValue as? JsonPrimitive)?.contentOrNull.orEmpty()
+                Json.parseToJsonElement(rawText).jsonObject["parts"] as? JsonObject ?: JsonObject(emptyMap())
+            }.getOrDefault(JsonObject(emptyMap())) else JsonObject(emptyMap())
+            val answerPartMetadata = (question["assessmentParts"] as? JsonArray).orEmpty()
             StudentAnswerReviewQuestion(
-                index = index,
+                index = originalIndex,
                 id = questionId,
                 type = question.text("type").orEmpty().lowercase(),
                 text = question.text("text").orEmpty(),
@@ -340,13 +351,34 @@ class SupabaseGradingRepository {
                 options = question["options"].strings(),
                 leftItems = question["leftItems"].strings(),
                 rightItems = question["rightItems"].strings(),
-                response = responses.getOrNull(index),
+                response = answerValue,
                 responseImages = responseImages[questionId].strings().ifEmpty {
                     responseImages[index.toString()].strings()
                 },
                 earnedScore = if (graded) grades.getOrNull(index)?.jsonPrimitive?.doubleOrNull else null,
                 correctAnswer = if (graded) question.correctAnswerText() else null,
-                explanation = if (graded) question.text("explanation")?.takeIf(String::isNotBlank) else null
+                explanation = if (graded) question.text("explanation")?.takeIf(String::isNotBlank) else null,
+                partFeedback = if (graded) answerPartMetadata.mapIndexedNotNull { partIndex, rawPart ->
+                    val part = rawPart as? JsonObject ?: return@mapIndexedNotNull null
+                    val value = partFeedback["$originalIndex:$partIndex"]?.jsonPrimitive?.contentOrNull?.takeIf(String::isNotBlank) ?: return@mapIndexedNotNull null
+                    ir.exam.app.domain.model.PartFeedbackReview(part.text("label").orEmpty().ifBlank { "گام ${partIndex + 1}" }, value)
+                } else emptyList(),
+                answerMode = question.text("mode").orEmpty(),
+                proofAssumptions = question.text("proofAssumptions").orEmpty(),
+                proofGoal = question.text("proofGoal").orEmpty(),
+                proofSteps = if (graded && question.text("mode") == "proof") answerPartMetadata.mapIndexedNotNull { partIndex, rawPart ->
+                    val part = rawPart as? JsonObject ?: return@mapIndexedNotNull null
+                    val id = part.text("id") ?: return@mapIndexedNotNull null
+                    val values = proofValues[id] as? JsonObject
+                    ir.exam.app.domain.model.StudentProofStepReview(
+                        label = part.text("label").orEmpty().ifBlank { "گام ${partIndex + 1}" },
+                        prompt = part.text("prompt").orEmpty(),
+                        result = values?.text("answer").orEmpty(),
+                        reasonPrompt = part.text("reasonPrompt").orEmpty(),
+                        reason = values?.text("reason").orEmpty(),
+                        feedback = partFeedback["$originalIndex:$partIndex"]?.jsonPrimitive?.contentOrNull.orEmpty()
+                    )
+                } else emptyList()
             )
         }
         StudentAnswerReview(
@@ -380,7 +412,13 @@ private fun QuestionDraft.toGradingQuestion() = GradingQuestion(
     rubric = rubric,
     sectionTitle = sectionTitle,
     topic = topic,
-    solutionSteps = solutionSteps
+    solutionSteps = solutionSteps,
+    assessmentParts = assessmentParts.map { ir.exam.app.domain.model.AssessmentPart(it.id, it.label, it.prompt, it.score, it.carriesForward, it.reasonPrompt, it.requiresReason, it.rubric) },
+    constructionPrompt = constructionPrompt,
+    constructionTargets = constructionTargets.map { ir.exam.app.domain.model.GradingConstructionTarget(it.label, it.x, it.y, it.tolerance, it.score) },
+    proofAssumptions = proofAssumptions,
+    proofGoal = proofGoal,
+    answerMode = mode
 )
 
 private fun AnswerDto.toDomain(): GradingSubmission {
@@ -396,7 +434,9 @@ private fun AnswerDto.toDomain(): GradingSubmission {
     return GradingSubmission(
         id, examId, studentId, studentName, responseList, imageMap, gradeList,
         totalGrade, feedback, graded, autoGraded, attemptNo, submittedAt,
-        shownQuestions = shown, maxScore = maxScore
+        shownQuestions = shown, maxScore = maxScore,
+        partGrades = (partGrades as? JsonObject)?.mapNotNull { (key, value) -> value.jsonPrimitive.doubleOrNull?.let { key to it } }?.toMap().orEmpty(),
+        partFeedback = (partFeedback as? JsonObject)?.mapNotNull { (key, value) -> value.jsonPrimitive.contentOrNull?.let { key to it } }?.toMap().orEmpty()
     )
 }
 

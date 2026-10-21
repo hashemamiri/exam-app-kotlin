@@ -34,6 +34,7 @@ data class ExamBuilderDraftPayload(
     val pickCount: String = "",
     // V272 — قاعده‌های نوع سؤال؛ default برای پیش‌نویس‌های قدیمی.
     val pickRules: Map<String, Int> = emptyMap(),
+    val sectionDurations: Map<String, String> = emptyMap(),
     val primaryMode: Boolean = false, // V301
     val levelThresholds: String = "", // V305
     val savedAt: Long
@@ -74,6 +75,7 @@ class ExamBuilderDraftStore(private val dao: ExamBuilderDraftDao) {
             audienceSchools = state.audienceSchools,
             pickCount = state.pickCount,
             pickRules = state.pickRules,
+            sectionDurations = state.sectionDurations,
             primaryMode = state.primaryMode, // V301
             levelThresholds = state.levelThresholds, // V305
             savedAt = now

@@ -21,6 +21,8 @@ data class StudentReport(
     val percent: Double
 )
 
+data class GradingConstructionTarget(val label: String, val x: Double, val y: Double, val tolerance: Double, val score: Double)
+
 data class GradingQuestion(
     val id: String,
     val type: String,
@@ -31,7 +33,13 @@ data class GradingQuestion(
     val rubric: String = "",
     val sectionTitle: String = "",
     val topic: String = "",
-    val solutionSteps: List<String> = emptyList()
+    val solutionSteps: List<String> = emptyList(),
+    val assessmentParts: List<AssessmentPart> = emptyList(),
+    val constructionPrompt: String = "",
+    val constructionTargets: List<GradingConstructionTarget> = emptyList(),
+    val proofAssumptions: String = "",
+    val proofGoal: String = "",
+    val answerMode: String = ""
 )
 
 data class GradingExam(
@@ -58,7 +66,9 @@ data class GradingSubmission(
     val submittedAt: String?,
     // V255 — پیک تصادفی: شاخص سؤال‌های نمایش‌داده‌شده و سقف نمرهٔ همین پاسخ (null = همهٔ سؤال‌ها/بارم کل آزمون).
     val shownQuestions: Set<Int>? = null,
-    val maxScore: Double? = null
+    val maxScore: Double? = null,
+    val partGrades: Map<String, Double> = emptyMap(),
+    val partFeedback: Map<String, String> = emptyMap()
 ) {
     fun isShown(index: Int): Boolean = shownQuestions == null || index in shownQuestions
 }

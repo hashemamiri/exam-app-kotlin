@@ -80,6 +80,7 @@ class ExamBuilderViewModel(
                         attemptCooldown = imported.attemptCooldown.takeUnless { it == 0 }?.toString().orEmpty(),
                         pickCount = imported.pickCount.takeUnless { it == 0 }?.toString().orEmpty(),
                         pickRules = imported.pickRules, // V272
+                        sectionDurations = imported.sectionDurations,
                         questions = imported.questions,
                         importedBy = imported.exportedBy
                     )
@@ -196,7 +197,24 @@ class ExamBuilderViewModel(
     /** V328 — بخش/مبحث، rubric دبیر و گام‌های پاسخ. */
     fun setQuestionGrouping(id: String, section: String, topic: String) = update(id) { q -> q.copy(sectionTitle = section.take(100), topic = topic.take(100)) }
     fun setRubric(id: String, value: String) = update(id) { it.copy(rubric = value.take(4000)) }
+    fun setLearningTags(id: String, difficulty: Int, objective: String) = update(id) { it.copy(difficulty = difficulty.coerceIn(0, 3), learningObjective = objective.take(160)) }
     fun setSolutionSteps(id: String, value: List<String>) = update(id) { it.copy(solutionSteps = value.map(String::trim).filter(String::isNotBlank).take(10)) }
+    fun addAssessmentPart(id: String, requireReason: Boolean = false) = update(id) { q ->
+        if (q.assessmentParts.size >= 12) q else q.copy(assessmentParts = q.assessmentParts + AssessmentPartDraft(label = "${q.assessmentParts.size + 1}", reasonPrompt = if (requireReason) "دلیل این گام" else "", requiresReason = requireReason))
+    }
+    fun updateAssessmentPart(id: String, index: Int, transform: (AssessmentPartDraft) -> AssessmentPartDraft) = update(id) { q ->
+        q.copy(assessmentParts = q.assessmentParts.mapIndexed { i, part -> if (i == index) transform(part) else part })
+    }
+    fun removeAssessmentPart(id: String, index: Int) = update(id) { q -> q.copy(assessmentParts = q.assessmentParts.filterIndexed { i, _ -> i != index }) }
+    fun setProofContext(id: String, assumptions: String, goal: String) = update(id) { it.copy(proofAssumptions = assumptions.take(1000), proofGoal = goal.take(1000)) }
+    fun setConstructionPrompt(id: String, value: String) = update(id) { it.copy(constructionPrompt = value.take(500)) }
+    fun addConstructionTarget(id: String) = update(id) { q ->
+        if (q.constructionTargets.size >= 8) q else q.copy(constructionTargets = q.constructionTargets + ConstructionTargetDraft(label = ('A'.code + q.constructionTargets.size).toChar().toString()))
+    }
+    fun updateConstructionTarget(id: String, index: Int, transform: (ConstructionTargetDraft) -> ConstructionTargetDraft) = update(id) { q ->
+        q.copy(constructionTargets = q.constructionTargets.mapIndexed { i, target -> if (i == index) transform(target) else target })
+    }
+    fun removeConstructionTarget(id: String, index: Int) = update(id) { q -> q.copy(constructionTargets = q.constructionTargets.filterIndexed { i, _ -> i != index }) }
 
 
     /** V327 — متن روخوانی مشترک: شناسهٔ گروه متن بین پرسش‌های وابسته مشترک است. */
@@ -241,6 +259,17 @@ class ExamBuilderViewModel(
             st.copy(pickRules = rules)
         }
     }
+    fun setSectionDuration(title: String, value: String) {
+        val key = title.trim().take(100)
+        if (key.isBlank()) return
+        _state.update { st ->
+            val durations = st.sectionDurations.toMutableMap()
+            val minutes = value.filter(Char::isDigit).take(4).toIntOrNull()
+            if (minutes == null || minutes <= 0) durations.remove(key) else durations[key] = minutes.coerceAtMost(1440).toString()
+            st.copy(sectionDurations = durations)
+        }
+    }
+
     /** V328 — برداشت تصادفی N سؤال از هر مبحث/بخش؛ خالی = همهٔ همان گروه. */
     fun setPickGroupRule(key: String, value: String) {
         if (!key.startsWith("topic:") && !key.startsWith("section:")) return
@@ -903,6 +932,7 @@ private fun draftFingerprint(state: ExamBuilderState): Int = listOf(
     state.attemptCooldown,
     state.pickCount,
     state.pickRules,
+    state.sectionDurations,
     state.primaryMode, // V301
     state.levelThresholds, // V305
     state.audienceMode,

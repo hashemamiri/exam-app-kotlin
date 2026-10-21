@@ -1,6 +1,8 @@
 package ir.exam.app.data.repository
 
 import ir.exam.app.ui.builder.AlignSpan
+import ir.exam.app.ui.builder.AssessmentPartDraft
+import ir.exam.app.ui.builder.ConstructionTargetDraft
 import ir.exam.app.ui.builder.QuestionDraft
 import ir.exam.app.ui.builder.QuestionType
 import kotlinx.serialization.json.JsonArray
@@ -100,4 +102,52 @@ class ExamQuestionCodecTest {
         assertEquals(1, decoded.images.size)
         assertTrue(decoded.images.first().uri.startsWith("https://"))
     }
+    @Test
+    fun `assessment parts and private rubrics round trip without exposing rubrics`() {
+        val source = QuestionDraft(
+            type = QuestionType.ESSAY,
+            text = "به پرسش‌های زیر پاسخ دهید.",
+            score = 5.0,
+            mode = "proof",
+            proofAssumptions = "AB = AC",
+            proofGoal = "زاویه‌های پایه برابرند",
+            assessmentParts = listOf(
+                AssessmentPartDraft(id = "p-a", label = "الف", prompt = "معادله را حل کنید", score = 2.0, rubric = "روش درست", carriesForward = false, reasonPrompt = "دلیل", requiresReason = true),
+                AssessmentPartDraft(id = "p-b", label = "ب", prompt = "نتیجهٔ بخش قبل را به‌کار ببرید", score = 3.0, rubric = "استدلال کامل", carriesForward = true, reasonPrompt = "قضیه", requiresReason = true)
+            )
+        )
+        val encoded = ExamQuestionCodec.encode(listOf(source))
+        val public = encoded.publicQuestions.single() as JsonObject
+        val key = encoded.answerKey.single() as JsonObject
+        assertTrue(public.containsKey("assessmentParts"))
+        assertEquals("AB = AC", (public["proofAssumptions"] as JsonPrimitive).content)
+        assertEquals("زاویه‌های پایه برابرند", (public["proofGoal"] as JsonPrimitive).content)
+        assertTrue(((public["assessmentParts"] as JsonArray).first() as JsonObject).containsKey("reasonPrompt"))
+        assertFalse(((public["assessmentParts"] as JsonArray).first() as JsonObject).containsKey("rubric"))
+        assertFalse(public.containsKey("partRubrics"))
+        assertEquals(listOf("روش درست", "استدلال کامل"), (key["partRubrics"] as JsonArray).map { (it as JsonPrimitive).content })
+        val decoded = ExamQuestionCodec.decode(encoded.publicQuestions, encoded.answerKey).single()
+        assertEquals(source.assessmentParts, decoded.assessmentParts)
+    }
+
+    @Test
+    fun `construction point targets remain private and round trip through answer key`() {
+        val source = QuestionDraft(
+            type = QuestionType.ESSAY,
+            text = "نقطهٔ A را روی دستگاه مختصات مشخص کنید.",
+            score = 2.0,
+            mode = "construct",
+            constructionPrompt = "نقطه‌ها را دقیق روی نمودار بگذارید.",
+            constructionTargets = listOf(ConstructionTargetDraft(label = "A", x = 2.0, y = -1.0, tolerance = 0.35, score = 2.0))
+        )
+        val encoded = ExamQuestionCodec.encode(listOf(source))
+        val public = encoded.publicQuestions.single() as JsonObject
+        val key = encoded.answerKey.single() as JsonObject
+        assertEquals(listOf("A"), (public["constructionLabels"] as JsonArray).map { (it as JsonPrimitive).content })
+        assertFalse(public.containsKey("constructionTargets"))
+        assertEquals(2.0, ((key["constructionTargets"] as JsonArray).single() as JsonObject)["x"]?.let { (it as JsonPrimitive).content.toDouble() } ?: 0.0, 0.0)
+        val decoded = ExamQuestionCodec.decode(encoded.publicQuestions, encoded.answerKey).single()
+        assertEquals(source.constructionTargets, decoded.constructionTargets)
+    }
+
 }

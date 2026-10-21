@@ -48,7 +48,7 @@
       var images = strs(obj.images); if (!images.length && obj.image) images = [String(obj.image)];
       var allow = obj.allowImages || obj.allow_images || null;
       var maxImg = (!allow || allow === 'no') ? 0 : Math.max(0, Math.min(10, Number(obj.maxImages != null ? obj.maxImages : (obj.max_images != null ? obj.max_images : 1))));
-      var q = {id: obj.id || ('q-' + oi), type: type, text: obj.text || '', sectionTitle: obj.sectionTitle || '', topic: obj.topic || '', passage: obj.passage || '', solutionSteps: Array.isArray(obj.solutionSteps) ? obj.solutionSteps.map(String) : [], mode: obj.mode || '', score: Number(obj.score) || 0, images: images, maxAnswerImages: maxImg, answerImagesRequired: allow === 'required', originalIndex: oi,
+      var q = {id: obj.id || ('q-' + oi), type: type, text: obj.text || '', sectionTitle: obj.sectionTitle || '', topic: obj.topic || '', passage: obj.passage || '', solutionSteps: Array.isArray(obj.solutionSteps) ? obj.solutionSteps.map(String) : [], assessmentParts: Array.isArray(obj.assessmentParts) ? obj.assessmentParts : [], proofAssumptions: String(obj.proofAssumptions||''), proofGoal: String(obj.proofGoal||''), constructionPrompt: String(obj.constructionPrompt||''), constructionLabels: Array.isArray(obj.constructionLabels)?obj.constructionLabels.map(String).slice(0,8):[], mode: obj.mode || '', score: Number(obj.score) || 0, images: images, maxAnswerImages: maxImg, answerImagesRequired: allow === 'required', originalIndex: oi,
         pres: {align: ['right', 'center', 'left', 'justify'].indexOf(obj.align) >= 0 ? obj.align : 'right', font: obj.font || 'default', fontSize: Math.max(8, Math.min(40, Number(obj.fontSize) || 16)), bold: obj.bold === true, italic: obj.italic === true, allowAnswerGraph: obj.allowAnswerGraph === true, audio: obj.audio || null, spans: obj.spans || [], alignSpans: obj.alignSpans || []}};
       if (type === 'multiple') {
         var opts = strs(obj.options), oimg = nstrs(obj.optionImages);
@@ -83,7 +83,8 @@
       if (exp != null) { var sn = parseMs(raw.server_now); deadline = now + (sn != null ? exp - sn : exp - now); }
       else deadline = duration > 0 ? now + duration * 60000 : null;
     }
-    return {id: examId, primary: !!(raw.options && raw.options.primary), /* V301 — حالت ابتدایی */ title: (raw.title || '').trim() || 'آزمون', code: raw.code || '', duration: duration, questions: ordered, subject: raw.subject || '', teacherMessage: (raw.teacher_message || '').trim() || null, deadline: deadline,
+    var sectionDurations = raw.options && raw.options.sectionDurations && typeof raw.options.sectionDurations === 'object' ? raw.options.sectionDurations : {};
+    return {id: examId, primary: !!(raw.options && raw.options.primary), sectionDurations: sectionDurations, /* V301 — حالت ابتدایی */ title: (raw.title || '').trim() || 'آزمون', code: raw.code || '', duration: duration, questions: ordered, subject: raw.subject || '', teacherMessage: (raw.teacher_message || '').trim() || null, deadline: deadline,
       attemptsAllowed: Math.max(1, Math.min(5, Number(raw.attempts_allowed) || 1)), attemptNumber: raw.attempt_no != null ? Number(raw.attempt_no) : (raw.attempt_number != null ? Number(raw.attempt_number) : null), attemptsRemaining: raw.attempts_remaining != null ? Number(raw.attempts_remaining) : null, raw: raw};
   }
 
@@ -356,7 +357,7 @@
   }
   function startExam(c, exam, resumed) {
     var d = exam.practice ? {answers: {}, images: {}} : draftGet(exam.id);
-    run = {exam: exam, practice: !!exam.practice, index: 0, answers: d.answers || {}, images: d.images || {}, started: true, finished: false, submitting: false, enteredAt: Date.now(), qEnter: {}, qTime: {}, qVisits: {}, events: {}, timer: null, monitorTimer: null};
+    run = {exam: exam, practice: !!exam.practice, index: 0, answers: d.answers || {}, images: d.images || {}, started: true, finished: false, submitting: false, enteredAt: Date.now(), qEnter: {}, qTime: {}, qVisits: {}, events: {}, sectionDeadlines: d.sectionDeadlines || {}, expiredSections: d.expiredSections || {}, timer: null, monitorTimer: null};
     run.qEnter[0] = Date.now(); run.qVisits[exam.questions[0] && exam.questions[0].id] = 1;
     document.addEventListener('visibilitychange', onVis);
     window.addEventListener('blur', onBlur);
@@ -402,6 +403,8 @@
     return S.rpcObj('native_monitor_upsert_v1', {p_exam: run.exam.id, p_report: monitorReport(final)}).catch(function () {});
   }
   function goTo(i) {
+    var target = run && run.exam.questions[Math.max(0, Math.min(run.exam.questions.length - 1, i))];
+    if (target && target.sectionTitle && run.expiredSections[String(target.sectionTitle).trim()]) { toast('زمان این بخش تمام شده است و امکان بازگشت نیست.', 'err'); return; }
     speechStop(); /* V302 */
     var now = Date.now(), q = run.exam.questions[run.index], ent = run.qEnter[run.index];
     if (q && ent != null) { run.qTime[q.id] = (run.qTime[q.id] || 0) + (now - ent); }
@@ -409,7 +412,7 @@
     run.qEnter[run.index] = now;
     var nq = run.exam.questions[run.index]; if (nq) run.qVisits[nq.id] = (run.qVisits[nq.id] || 0) + 1;
   }
-  function saveDraft() { if (run && !run.practice) draftSet(run.exam.id, {answers: run.answers, images: run.images}); }
+  function saveDraft() { if (run && !run.practice) draftSet(run.exam.id, {answers: run.answers, images: run.images, sectionDeadlines: run.sectionDeadlines, expiredSections: run.expiredSections}); }
   function stopAll() { guardsOff(); clearInterval(run.timer); clearInterval(run.monitorTimer); document.removeEventListener('visibilitychange', onVis); window.removeEventListener('blur', onBlur); }
 
   function examUI(c) {
@@ -445,9 +448,10 @@
     async function drawBody() {
       var q = ex.questions[run.index]; body.innerHTML = '';
       if (!q) return;
+      if (q.sectionTitle && run.expiredSections[String(q.sectionTitle).trim()]) { body.appendChild(el('div',{class:'alert warn',text:'زمان این بخش تمام شد؛ پاسخ‌های ثبت‌شده حفظ شده‌اند و امکان ویرایش یا بازگشت نیست.'})); return; }
       var p = q.pres;
       var txt = el('div', {class: 'st-qtext', style: 'text-align:' + p.align + ';font-size:' + p.fontSize + 'px;' + (p.bold ? 'font-weight:700;' : '') + (p.italic ? 'font-style:italic;' : '') + (p.font && p.font !== 'default' ? 'font-family:' + p.font + ',Vazirmatn;' : ''), html: esc(q.text).replace(/\n/g, '<br>')});
-      if (q.sectionTitle) { var sq = ex.questions.filter(function (x) { return x.sectionTitle === q.sectionTitle; }); var ss = sq.reduce(function (n, x) { return n + num(x.score); }, 0); body.appendChild(el('div', {class: 'card', style: 'padding:10px;margin-bottom:8px;color:var(--brand)'}, [el('b',{text:q.sectionTitle}),el('div',{class:'muted',style:'font-size:12px;margin-top:3px',text:fa(sq.length)+' سؤال · جمع بارم '+fa(S.fmtScore(ss))})])); }
+      if (q.sectionTitle) { var sq = ex.questions.filter(function (x) { return x.sectionTitle === q.sectionTitle; }); var ss = sq.reduce(function (n, x) { return n + num(x.score); }, 0); body.appendChild(el('div', {class: 'card', style: 'padding:10px;margin-bottom:8px;color:var(--brand)'}, [el('b',{text:q.sectionTitle}),el('div',{class:'muted',style:'font-size:12px;margin-top:3px',text:fa(sq.length)+' سؤال · جمع بارم '+fa(S.fmtScore(ss))+(ex.sectionDurations&&ex.sectionDurations[String(q.sectionTitle).trim()]?' · زمان '+fa(ex.sectionDurations[String(q.sectionTitle).trim()])+' دقیقه':'' )})])); }
       body.appendChild(el('div', {class: 'row', style: 'margin-bottom:10px'}, [el('span', {class: 'chip brand', text: 'سؤال ' + fa(run.index + 1)}), el('span', {class: 'chip', text: 'بارم ' + fa(S.fmtScore(q.score))}), el('span', {class: 'chip', text: {multiple: 'چندگزینه‌ای', truefalse: 'صحیح/غلط', fill: 'جای‌خالی', numeric: 'عددی', matching: 'جورکردنی', essay: 'تشریحی'}[q.type] || ''})]));
       body.appendChild(txt);
       richHtml(q.text).then(function (h) { if (ex.questions[run.index] === q) { txt.innerHTML = h; fitMath(txt); } });
@@ -618,6 +622,44 @@
       wrap.appendChild(grid);
       return wrap;
     }
+    function proofAnswer(q, saved, set) {
+      var data={};try{var parsed=JSON.parse(String(saved||'{}'));data=parsed.parts||{};}catch(_){data={};}
+      var wrap=el('div',{class:'st-proof'});
+      if(q.proofAssumptions)wrap.appendChild(el('div',{class:'card',style:'padding:9px;margin:6px 0'},[el('b',{text:'فرض‌ها / داده‌ها'}),el('div',{text:q.proofAssumptions})]));
+      if(q.proofGoal)wrap.appendChild(el('div',{class:'card',style:'padding:9px;margin:6px 0'},[el('b',{text:'خواسته'}),el('div',{text:q.proofGoal})]));
+      function save(){set(JSON.stringify({parts:data}));}
+      (q.assessmentParts||[]).forEach(function(part,pi){
+        var cur=data[part.id]||{answer:'',reason:''};
+        var card=el('div',{class:'card',style:'padding:9px;margin:7px 0'});
+        card.appendChild(el('b',{text:'گام '+(part.label||fa(pi+1))+': '+(part.prompt||'')}));
+        var answer=el('textarea',{class:'st-input',rows:2,placeholder:'نتیجه / گزارهٔ این گام'});answer.value=cur.answer||'';answer.addEventListener('input',function(){cur.answer=answer.value;data[part.id]=cur;save();});card.appendChild(answer);
+        if(part.requiresReason){var reason=el('textarea',{class:'st-input',rows:2,placeholder:part.reasonPrompt||'دلیل این گام'});reason.value=cur.reason||'';reason.addEventListener('input',function(){cur.reason=reason.value;data[part.id]=cur;save();});card.appendChild(reason);}
+        if(part.carriesForward&&pi>0)card.appendChild(el('small',{class:'muted',text:'می‌توانید از نتیجهٔ گام قبلی استفاده کنید.'}));
+        wrap.appendChild(card);
+      });
+      return wrap;
+    }
+
+    function constructionAnswer(q, saved, set) {
+      var labels=(q.constructionLabels||[]).slice(0,8), points={}, activeLabel=null;
+      try { points=JSON.parse(String(saved||'{}'))||{}; } catch (_) { points={}; }
+      var wrap=el('div',{class:'st-construct'});
+      wrap.appendChild(el('p',{class:'st-hint',text:q.constructionPrompt||'نقاط خواسته‌شده را روی صفحهٔ مختصات مشخص کنید.'}));
+      var canvas=el('canvas',{width:640,height:320,style:'width:100%;height:280px;border:1px solid #9aa5b1;border-radius:8px;touch-action:manipulation;background:#fff'});
+      var ctx=canvas.getContext('2d'), m=28, w=canvas.width-2*m, h=canvas.height-2*m;
+      function px(x){return m+(Number(x)+5)/10*w;} function py(y){return m+(5-Number(y))/10*h;}
+      ctx.clearRect(0,0,canvas.width,canvas.height);ctx.strokeStyle='#d9dee6';ctx.lineWidth=1;
+      for(var i=-5;i<=5;i++){ctx.beginPath();ctx.moveTo(px(i),m);ctx.lineTo(px(i),m+h);ctx.stroke();ctx.beginPath();ctx.moveTo(m,py(i));ctx.lineTo(m+w,py(i));ctx.stroke();}
+      ctx.strokeStyle='#263445';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(px(0),m);ctx.lineTo(px(0),m+h);ctx.stroke();ctx.beginPath();ctx.moveTo(m,py(0));ctx.lineTo(m+w,py(0));ctx.stroke();
+      labels.forEach(function(label){var p=points[label];if(!p)return;ctx.fillStyle='#1e53aa';ctx.beginPath();ctx.arc(px(p.x),py(p.y),7,0,Math.PI*2);ctx.fill();ctx.font='bold 17px sans-serif';ctx.fillText(label,px(p.x)+9,py(p.y)-8);});
+      canvas.addEventListener('pointerdown',function(ev){var r=canvas.getBoundingClientRect();var sx=(ev.clientX-r.left)*(canvas.width/r.width),sy=(ev.clientY-r.top)*(canvas.height/r.height);var label=activeLabel||labels.find(function(x){return !Object.prototype.hasOwnProperty.call(points,x);})||labels[labels.length-1];if(!label)return;points=Object.assign({},points);points[label]={x:Math.max(-5,Math.min(5,((sx-m)/w)*10-5)),y:Math.max(-5,Math.min(5,5-((sy-m)/h)*10))};set(JSON.stringify(points));wrap.replaceWith(answerArea(q));});
+      wrap.appendChild(canvas);wrap.appendChild(el('div',{class:'st-hint',text:'ثبت‌شده: '+fa(Object.keys(points).filter(function(k){return labels.indexOf(k)>=0;}).length)+' از '+fa(labels.length)}));
+      wrap.appendChild(el('div',{class:'st-hint',text:'برای جابه‌جایی، برچسب نقطه را انتخاب و محل تازه را روی نمودار لمس کنید.'}));
+      var chips=el('div',{class:'row'});labels.forEach(function(label){var p=points[label], chip=el('button',{type:'button',class:'chip'+(p?' brand':''),text:label+(p?' ('+fa(Number(p.x).toFixed(1))+', '+fa(Number(p.y).toFixed(1))+')':' —'),onclick:function(){activeLabel=activeLabel===label?null:label;Array.prototype.forEach.call(chips.children,function(x){x.classList.toggle('on',x.dataset.pointLabel===activeLabel);});}});chip.dataset.pointLabel=label;chips.appendChild(chip);});
+      chips.appendChild(el('button',{class:'btn light sm',text:'پاک‌کردن',onclick:function(){set('{}');wrap.replaceWith(answerArea(q));}}));wrap.appendChild(chips);
+      return wrap;
+    }
+
     function answerArea(q) {
       var box = el('div', {class: 'st-answer'});
       var a = run.answers[q.id];
@@ -688,14 +730,19 @@
           richHtml(l).then(function (h) { var g = row.querySelector('.grow'); g.innerHTML = '<b>' + fa(li + 1) + '.</b> ' + h; fitMath(g); });
           box.appendChild(row);
         });
-      } else if (q.type === 'essay' && (q.mode === 'steps' || q.mode === 'proof')) {
-        var prompts = q.solutionSteps && q.solutionSteps.length ? q.solutionSteps : ['گام اول','گام دوم','پاسخ نهایی'];
+      } else if (q.type === 'essay' && q.mode === 'construct' && q.constructionLabels && q.constructionLabels.length) {
+        box.appendChild(constructionAnswer(q, a, set));
+      } else if (q.type === 'essay' && q.mode === 'proof' && q.assessmentParts && q.assessmentParts.length) {
+        box.appendChild(proofAnswer(q,a,set));
+      } else if (q.type === 'essay' && ((q.assessmentParts && q.assessmentParts.length) || q.mode === 'steps' || q.mode === 'proof')) {
+        var prompts = q.assessmentParts && q.assessmentParts.length ? q.assessmentParts.map(function(p){return [p.label,p.prompt].filter(Boolean).join(' · ')||'زیربخش';}) : (q.solutionSteps && q.solutionSteps.length ? q.solutionSteps : ['گام اول','گام دوم','پاسخ نهایی']);
         var vals = String(a || '').split('\n');
         prompts.forEach(function (pr, si) {
           var st = el('textarea', {class:'st-input', rows:2, placeholder:pr || ('گام '+fa(si+1))});
           st.value = vals[si] || '';
           st.addEventListener('input', function () { vals[si] = st.value.replace(/\n/g,' '); set(vals.join('\n')); });
           box.appendChild(st);
+          if(q.assessmentParts&&q.assessmentParts[si]&&q.assessmentParts[si].carriesForward)box.appendChild(el('small',{class:'muted',text:'در صورت نیاز، نتیجهٔ بخش قبلی را اینجا به‌کار ببر.'}));
         });
       } else if (ex.primary && q.type === 'essay' && q.mode === 'voice') {
         /* V309 — پاسخ صوتی: ضبط با سقف مدت معلم */
@@ -780,11 +827,26 @@
     function drawAll() { drawNav(); drawBody(); drawFoot(); }
     function tick() {
       if (!run || run.finished) return;
-      if (ex.deadline == null) { timerEl.textContent = '⏱ بدون محدودیت'; return; }
-      var rem = Math.max(0, ex.deadline - Date.now()); var m = Math.floor(rem / 60000), s = Math.floor(rem % 60000 / 1000);
-      timerEl.textContent = '⏱ ' + fa((m < 10 ? '0' : '') + m + ':' + (s < 10 ? '0' : '') + s);
+      var now = Date.now(), q = ex.questions[run.index], title = q && String(q.sectionTitle || '').trim(), sectionMinutes = title ? Number(ex.sectionDurations && ex.sectionDurations[title]) || 0 : 0;
+      var sectionRem = null;
+      if (title && sectionMinutes > 0 && !run.expiredSections[title]) {
+        if (!run.sectionDeadlines[title]) { run.sectionDeadlines[title] = now + Math.min(1440, sectionMinutes) * 60000; saveDraft(); }
+        sectionRem = Math.max(0, run.sectionDeadlines[title] - now);
+        if (sectionRem <= 0) {
+          run.expiredSections[title] = true; saveDraft();
+          toast('زمان بخش «' + title + '» تمام شد؛ پاسخ‌های ثبت‌شده حفظ شدند.', 'err');
+          var next = ex.questions.findIndex(function(x,i){return i>run.index && String(x.sectionTitle||'').trim()!==title && !(x.sectionTitle && run.expiredSections[String(x.sectionTitle).trim()]);});
+          if (next < 0) next = ex.questions.findIndex(function(x){return !(x.sectionTitle && run.expiredSections[String(x.sectionTitle).trim()]);});
+          if (next < 0) { submit(c, true); return; }
+          goTo(next); drawAll(); tick(); return;
+        }
+      }
+      var globalRem = ex.deadline == null ? null : Math.max(0, ex.deadline - now), rem = globalRem == null ? sectionRem : (sectionRem == null ? globalRem : Math.min(globalRem, sectionRem));
+      if (rem == null) { timerEl.textContent = '⏱ بدون محدودیت'; return; }
+      var m = Math.floor(rem / 60000), s = Math.floor(rem % 60000 / 1000);
+      timerEl.textContent = (sectionRem != null ? '⏱ بخش ' : '⏱ ') + fa((m < 10 ? '0' : '') + m + ':' + (s < 10 ? '0' : '') + s);
       timerEl.classList.toggle('danger', rem < 120000);
-      if (rem <= 0) { clearInterval(run.timer); toast('زمان آزمون تمام شد؛ پاسخ‌ها ارسال می‌شود.', 'err'); submit(c, true); }
+      if (globalRem != null && globalRem <= 0) { clearInterval(run.timer); toast('زمان آزمون تمام شد؛ پاسخ‌ها ارسال می‌شود.', 'err'); submit(c, true); }
     }
     run.timer = setInterval(tick, 1000); tick();
     mathCss(); drawAll();

@@ -268,6 +268,28 @@ object StyleSpanOps {
 }
 
 @Serializable
+data class ConstructionTargetDraft(
+    val id: String = UUID.randomUUID().toString(),
+    val label: String = "A",
+    val x: Double = 0.0,
+    val y: Double = 0.0,
+    val tolerance: Double = 0.5,
+    val score: Double = 1.0
+)
+
+@Serializable
+data class AssessmentPartDraft(
+    val id: String = UUID.randomUUID().toString(),
+    val label: String = "",
+    val prompt: String = "",
+    val score: Double = 1.0,
+    val rubric: String = "",
+    val carriesForward: Boolean = false,
+    val reasonPrompt: String = "",
+    val requiresReason: Boolean = false
+)
+
+@Serializable
 data class QuestionDraft(
     val id: String = UUID.randomUUID().toString(),
     val type: QuestionType,
@@ -338,8 +360,18 @@ data class QuestionDraft(
     // V328 — بخش‌بندی آزمون، برچسب مبحث، معیار تصحیح و گام‌های پاسخ.
     val sectionTitle: String = "",
     val topic: String = "",
+    /** V329 — سطح دشواری: 1 ساده، 2 متوسط، 3 دشوار؛ صفر یعنی تعیین‌نشده. */
+    val difficulty: Int = 0,
+    /** V329 — هدف یادگیری کوتاه برای پالایش بانک سؤال. */
+    val learningObjective: String = "",
     val rubric: String = "",
     val solutionSteps: List<String> = emptyList(),
+    /** V329 — زیرسؤال‌های ساختاریافته؛ متن اصلی فقط یک‌بار ثبت می‌شود. */
+    val assessmentParts: List<AssessmentPartDraft> = emptyList(),
+    val proofAssumptions: String = "",
+    val proofGoal: String = "",
+    val constructionPrompt: String = "",
+    val constructionTargets: List<ConstructionTargetDraft> = emptyList(),
     // V327 — متن مشترک روخوانی/درک مطلب؛ چند سؤال می‌توانند passage یکسان داشته باشند.
     val passage: String = "",
     // V327 — سکوت و تعداد تکرار در قالب املا؛ برای داده‌های قدیمی پیش‌فرض امن.
@@ -419,6 +451,7 @@ data class ExamBuilderState(
     val pickCount: String = "",
     // V272 — قاعده‌های بخش‌بندی‌شده: نوع سؤال (essay/multiple/…) → چند تا تصادفی؛ نوع بدون قاعده = همه. بر pickCount مقدم است.
     val pickRules: Map<String, Int> = emptyMap(),
+    val sectionDurations: Map<String, String> = emptyMap(),
     // V301 — «حالت ابتدایی» (پایهٔ اول تا ششم): نمای درشت و سادهٔ دانش‌آموز؛ ذخیره در exams.options.primary
     val primaryMode: Boolean = false,
     // V305 — آستانه‌های کارنامهٔ توصیفی ۴ سطحی (درصد؛ «خیلی خوب,خوب,قابل قبول»)؛ خالی = پیش‌فرض ۸۵,۷۰,۵۰؛ ذخیره در exams.options.levels

@@ -17,7 +17,9 @@ data class Exam(
     val attemptsRemaining: Int? = null,
     val questionPresentation: Map<String, QuestionPresentation> = emptyMap(),
     /** V301 — «حالت ابتدایی»: نمای درشت و ساده برای پایهٔ اول تا ششم (exams.options.primary). */
-    val primaryMode: Boolean = false
+    val primaryMode: Boolean = false,
+    /** مهلت مستقل هر بخش، برحسب دقیقه؛ کلید همان sectionTitle است. */
+    val sectionDurationsMinutes: Map<String, Int> = emptyMap()
 )
 
 data class QuestionPresentation(
@@ -52,14 +54,11 @@ sealed interface Question {
     val answerImagesRequired: Boolean
     /** اندیس اصلی سرور؛ پاسخ‌های آرایه‌ای همیشه با این ترتیب ارسال می‌شوند. */
     val originalIndex: Int
-    /**
-     * V327 — «متن روخوانی»: متنِ مشترکی که بالای سؤال نمایش داده می‌شود
-     * (درکِ متن/روخوانی دبستان). خالی = سؤال بدون متن.
-     */
     val passage: String
-    /** V328 — نام بخش و مبحث آزمون. */
     val sectionTitle: String
     val topic: String
+    val rubric: String get() = ""
+    val assessmentParts: List<AssessmentPart> get() = emptyList()
 }
 
 data class EssayQuestion(
@@ -70,16 +69,18 @@ data class EssayQuestion(
     override val maxAnswerImages: Int = 0,
     override val answerImagesRequired: Boolean = false,
     override val originalIndex: Int = 0,
-    /** V306 — حالت پاسخ: "text" (پیش‌فرض) یا "draw" (پاسخ با تخته/نقاشی بزرگ، حالت ابتدایی). */
     val answerMode: String = "text",
-    /** V309 — سقف مدت ضبط پاسخ صوتی (ثانیه)؛ فقط وقتی answerMode = "voice" است. */
     val voiceMaxSeconds: Int = 0,
     override val passage: String = "",
     override val sectionTitle: String = "",
     override val topic: String = "",
-    /** V328 — solution mode: configured prompts for proof/stepwise answers. */
     val solutionSteps: List<String> = emptyList(),
-    val rubric: String = ""
+    override val rubric: String = "",
+    override val assessmentParts: List<AssessmentPart> = emptyList(),
+    val proofAssumptions: String = "",
+    val proofGoal: String = "",
+    val constructionPrompt: String = "",
+    val constructionLabels: List<String> = emptyList()
 ) : Question
 
 data class MultipleChoiceQuestion(
@@ -188,7 +189,9 @@ data class StudentDraft(
     val answers: Map<String, StudentAnswer> = emptyMap(),
     val responseImages: Map<String, List<String>> = emptyMap(),
     val flaggedQuestionIds: Set<String> = emptySet(),
-    val lastQuestionIndex: Int = 0
+    val lastQuestionIndex: Int = 0,
+    val sectionStartedAtEpochMs: Map<String, Long> = emptyMap(),
+    val expiredSections: Set<String> = emptySet()
 )
 
 data class SubmittedExam(

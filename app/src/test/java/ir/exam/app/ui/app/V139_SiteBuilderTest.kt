@@ -21,7 +21,7 @@ class V139_SiteBuilderTest {
         listOf("my_classes", "my_students_for_pick", "native_teacher_schools_v61", "get_exam_audience", "native_exam_audience_schools_v61",
             "native_bank_snapshot_v1", "native_bank_add_v2").forEach { assertTrue(it, "'$it'" in js) }
         // ExamQuestionCodec: کلیدهای پاسخ در سؤال عمومی نمی‌مانند
-        assertTrue("['correctOption', 'correctAnswer', 'accept', 'answer', 'tolerance', 'caseSensitive', 'matchAnswer', 'pairs', 'rubric']" in js)
+        assertTrue("['correctOption', 'correctAnswer', 'accept', 'answer', 'tolerance', 'caseSensitive', 'matchAnswer', 'pairs', 'rubric', 'constructionTargets', 'partRubrics']" in js)
         assertTrue("k.correctOption = q.correctIndex" in js && "k.matchAnswer = {}" in js && "k.accept = q.expectedText.split('|')" in js)
         // آپلود تصویر (V144): از طریق S.uploadMedia — همان پوشه‌ها/باکت SupabaseQuestionImageUploader در مسیر fallback
         assertTrue("S.uploadMedia(blob, 'image', folder, examId, 'webp', 'image/webp')" in js)

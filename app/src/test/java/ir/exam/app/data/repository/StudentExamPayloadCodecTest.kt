@@ -18,6 +18,7 @@ class StudentExamPayloadCodecTest {
         {
           "id":"exam-1","title":"آزمون","subject":"ریاضی","code":"ABC123","duration":20,
           "teacher_message":"با دقت پاسخ دهید","shuffle_q":true,"shuffle_opt":true,
+          "options":{"primary":false,"sectionDurations":{"بخش یک":7}},
           "server_now":"2026-08-12T10:00:00Z","expires_at":"2026-08-12T10:10:00Z",
           "questions":[
             {"i":0,"id":"q0","type":"essay","text":"تشریحی","score":2,"correctAnswer":"LEAK"},
@@ -41,6 +42,7 @@ class StudentExamPayloadCodecTest {
         assertEquals("با دقت پاسخ دهید", first.teacherMessage)
         assertTrue(first.shuffleQuestions)
         assertTrue(first.shuffleOptions)
+        assertEquals(7, first.sectionDurationsMinutes["بخش یک"])
 
         val multiple = first.questions.filterIsInstance<MultipleChoiceQuestion>().single()
         assertEquals((0..3).toSet(), multiple.optionOriginalIndices.toSet())

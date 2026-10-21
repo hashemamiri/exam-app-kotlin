@@ -4,6 +4,8 @@ import ir.exam.app.ui.builder.AlignSpan
 import ir.exam.app.ui.builder.HotspotRect
 import ir.exam.app.ui.builder.MediaDraft
 import ir.exam.app.ui.builder.OptionStyle
+import ir.exam.app.ui.builder.AssessmentPartDraft
+import ir.exam.app.ui.builder.ConstructionTargetDraft
 import ir.exam.app.ui.builder.QuestionDraft
 import ir.exam.app.ui.builder.StyleSpan
 import ir.exam.app.ui.builder.QuestionType
@@ -125,8 +127,37 @@ internal object ExamQuestionCodec {
                 passage = obj["passage"]?.asString().orEmpty(),
                 sectionTitle = obj["sectionTitle"]?.asString().orEmpty(),
                 topic = obj["topic"]?.asString().orEmpty(),
+                difficulty = obj["difficulty"]?.asInt()?.coerceIn(1, 3) ?: 0,
+                learningObjective = obj["learningObjective"]?.asString().orEmpty(),
+                proofAssumptions = obj["proofAssumptions"]?.asString().orEmpty(),
+                proofGoal = obj["proofGoal"]?.asString().orEmpty(),
+                constructionPrompt = obj["constructionPrompt"]?.asString().orEmpty(),
+                constructionTargets = key["constructionTargets"].asArrayOrEmpty().mapIndexedNotNull { targetIndex, rawTarget ->
+                    val target = rawTarget as? JsonObject ?: return@mapIndexedNotNull null
+                    ConstructionTargetDraft(
+                        id = target["id"]?.asString() ?: "${obj["id"]?.asString().orEmpty()}-target-$targetIndex",
+                        label = target["label"]?.asString() ?: "${('A'.code + targetIndex).toChar()}",
+                        x = target["x"]?.asDouble() ?: 0.0,
+                        y = target["y"]?.asDouble() ?: 0.0,
+                        tolerance = target["tolerance"]?.asDouble() ?: 0.5,
+                        score = target["score"]?.asDouble() ?: 1.0
+                    )
+                },
                 rubric = key["rubric"]?.asString().orEmpty(),
                 solutionSteps = obj["solutionSteps"].asArrayOrEmpty().mapNotNull { it.asString() },
+                assessmentParts = obj["assessmentParts"].asArrayOrEmpty().mapIndexedNotNull { partIndex, rawPart ->
+                    val part = rawPart as? JsonObject ?: return@mapIndexedNotNull null
+                    AssessmentPartDraft(
+                        id = part["id"]?.asString() ?: "${obj["id"]?.asString().orEmpty()}-part-$partIndex",
+                        label = part["label"]?.asString().orEmpty(),
+                        prompt = part["prompt"]?.asString().orEmpty(),
+                        score = part["score"]?.asDouble() ?: 0.0,
+                        rubric = key["partRubrics"].asArrayOrEmpty().getOrNull(partIndex)?.asString().orEmpty(),
+                        carriesForward = part["carriesForward"]?.asBoolean() ?: false,
+                        reasonPrompt = part["reasonPrompt"]?.asString().orEmpty(),
+                        requiresReason = part["requiresReason"]?.asBoolean() ?: false
+                    )
+                },
                 score = obj["score"]?.asDouble() ?: 1.0,
                 grade = obj["grade"]?.asInt()?.coerceIn(0, 6) ?: 0,
                 subject = obj["subject"]?.asString().orEmpty(),
@@ -223,8 +254,17 @@ internal object ExamQuestionCodec {
             if (question.passage.isNotBlank()) values["passage"] = JsonPrimitive(question.passage) else values.remove("passage")
             if (question.sectionTitle.isNotBlank()) values["sectionTitle"] = JsonPrimitive(question.sectionTitle) else values.remove("sectionTitle")
             if (question.topic.isNotBlank()) values["topic"] = JsonPrimitive(question.topic) else values.remove("topic")
+            if (question.difficulty in 1..3) values["difficulty"] = JsonPrimitive(question.difficulty) else values.remove("difficulty")
+            if (question.learningObjective.isNotBlank()) values["learningObjective"] = JsonPrimitive(question.learningObjective.trim()) else values.remove("learningObjective")
             values.remove("rubric")
             if (question.solutionSteps.isNotEmpty()) values["solutionSteps"] = JsonArray(question.solutionSteps.map(::JsonPrimitive)) else values.remove("solutionSteps")
+            if (question.assessmentParts.isNotEmpty()) values["assessmentParts"] = JsonArray(question.assessmentParts.map { part ->
+                JsonObject(mapOf("id" to JsonPrimitive(part.id), "label" to JsonPrimitive(part.label), "prompt" to JsonPrimitive(part.prompt), "score" to JsonPrimitive(part.score), "carriesForward" to JsonPrimitive(part.carriesForward), "reasonPrompt" to JsonPrimitive(part.reasonPrompt), "requiresReason" to JsonPrimitive(part.requiresReason)))
+            }) else values.remove("assessmentParts")
+            if (question.proofAssumptions.isNotBlank()) values["proofAssumptions"] = JsonPrimitive(question.proofAssumptions) else values.remove("proofAssumptions")
+            if (question.proofGoal.isNotBlank()) values["proofGoal"] = JsonPrimitive(question.proofGoal) else values.remove("proofGoal")
+            if (question.constructionPrompt.isNotBlank()) values["constructionPrompt"] = JsonPrimitive(question.constructionPrompt) else values.remove("constructionPrompt")
+            if (question.constructionTargets.isNotEmpty()) values["constructionLabels"] = JsonArray(question.constructionTargets.map { JsonPrimitive(it.label) }) else values.remove("constructionLabels")
             // V308 / ۱۴ — برچسب پایه/درس فقط وقتی پر است نوشته می‌شود
             if (question.grade in 1..6) values["grade"] = JsonPrimitive(question.grade)
             if (question.subject.isNotBlank()) values["subject"] = JsonPrimitive(question.subject.trim())
@@ -353,6 +393,8 @@ internal object ExamQuestionCodec {
             val values = question.rawAnswer.toMutableMap()
             values["i"] = JsonPrimitive(index)
             if (question.rubric.isNotBlank()) values["rubric"] = JsonPrimitive(question.rubric) else values.remove("rubric")
+            if (question.assessmentParts.isNotEmpty()) values["partRubrics"] = JsonArray(question.assessmentParts.map { JsonPrimitive(it.rubric) }) else values.remove("partRubrics")
+            if (question.constructionTargets.isNotEmpty()) values["constructionTargets"] = JsonArray(question.constructionTargets.map { target -> JsonObject(mapOf("id" to JsonPrimitive(target.id), "label" to JsonPrimitive(target.label), "x" to JsonPrimitive(target.x), "y" to JsonPrimitive(target.y), "tolerance" to JsonPrimitive(target.tolerance), "score" to JsonPrimitive(target.score))) }) else values.remove("constructionTargets")
             when (question.type) {
                 QuestionType.MULTIPLE_CHOICE -> values["correctOption"] = JsonPrimitive(question.correctIndex ?: 0)
                 QuestionType.TRUE_FALSE -> values["correctAnswer"] = JsonPrimitive(question.expectedText.toBooleanStrictOrNull() ?: false)

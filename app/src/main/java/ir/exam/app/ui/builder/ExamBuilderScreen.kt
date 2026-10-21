@@ -529,6 +529,7 @@ fun ExamBuilderScreen(
                         placementSpec = tween(260, easing = FastOutSlowInEasing)
                     ),
                     question = question,
+                    allQuestions = state.questions,
                     index = index,
                     expanded = expandedQuestionId == question.id,
                     printMode = printMode,
@@ -1029,6 +1030,13 @@ private fun ExamSettingsCard(state: ExamBuilderState, viewModel: ExamBuilderView
                         OutlinedTextField(state.pickRules[key]?.toString().orEmpty(), { viewModel.setPickGroupRule(key, it) },
                             label = { Text("$label ($count سؤال)") }, placeholder = { Text("همه") }, singleLine = true, modifier = Modifier.fillMaxWidth())
                     }
+                    if (sectionCounts.isNotEmpty()) {
+                        Text("زمان مجاز هر بخش (دقیقه؛ خالی = بدون زمان جداگانه)", style = MaterialTheme.typography.labelLarge)
+                        sectionCounts.keys.forEach { title ->
+                            OutlinedTextField(state.sectionDurations[title].orEmpty(), { viewModel.setSectionDuration(title, it) },
+                                label = { Text("بخش: $title") }, placeholder = { Text("بدون محدودیت") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                        }
+                    }
                 }
                 if (state.pickRules.isNotEmpty()) {
                     Text(
@@ -1101,9 +1109,17 @@ private fun BuilderQuestionBankDialog(
     // V308 / ۱۴ — فیلتر پایه و درس فقط در حالت ابتدایی
     var tagGrade by remember { mutableIntStateOf(0) }
     var tagSubject by remember { mutableStateOf("") }
+    var tagDifficulty by remember { mutableIntStateOf(0) }
+    var tagObjective by remember { mutableStateOf("") }
+    var tagTopic by remember { mutableStateOf("") }
+    val bankTopics = state.bankQuestions.map { it.question.topic.trim() }.filter(String::isNotBlank).distinct().sorted()
+    val bankSubjects = state.bankQuestions.map { it.question.subject.orEmpty().trim() }.filter(String::isNotBlank).distinct().sorted()
     val visible = state.bankQuestions.filter { item ->
         (!state.primaryMode || tagGrade == 0 || item.question.grade == tagGrade) &&
-        (!state.primaryMode || tagSubject.isEmpty() || item.question.subject == tagSubject) &&
+        (tagDifficulty == 0 || item.question.difficulty == tagDifficulty) &&
+        (tagObjective.isBlank() || item.question.learningObjective.contains(tagObjective, ignoreCase = true)) &&
+        (tagTopic.isBlank() || item.question.topic.equals(tagTopic, ignoreCase = true)) &&
+        (tagSubject.isEmpty() || item.question.subject.orEmpty().equals(tagSubject, ignoreCase = true)) &&
         (state.selectedBankCategory == null || state.selectedBankCategory in item.categoryIds) &&
             (query.isBlank() || item.question.text.lowercase().contains(query) ||
                 item.question.topic.lowercase().contains(query) ||
@@ -1157,10 +1173,18 @@ private fun BuilderQuestionBankDialog(
                 OutlinedTextField(
                     state.bankQuery,
                     viewModel::setBankQuery,
-                    label = { Text("جست‌وجوی سؤال، درس یا عنوان آزمون") },
+                    label = { Text("جست‌وجوی سؤال، فصل/مبحث، درس یا عنوان آزمون") },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
+                if (!state.primaryMode) {
+                    PrimaryDropdown(selectedValue = tagSubject, options = listOf("" to "همهٔ درس‌ها") + bankSubjects.map { it to it }, onSelect = { tagSubject = it }, modifier = Modifier.fillMaxWidth())
+                }
+                if (bankTopics.isNotEmpty()) PrimaryDropdown(selectedValue = tagTopic, options = listOf("" to "همهٔ فصل‌ها/مباحث") + bankTopics.map { it to it }, onSelect = { tagTopic = it }, modifier = Modifier.fillMaxWidth())
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    PrimaryDropdown(selectedValue = tagDifficulty.toString(), options = listOf("0" to "همهٔ سطوح", "1" to "ساده", "2" to "متوسط", "3" to "دشوار"), onSelect = { tagDifficulty = it.toIntOrNull() ?: 0 }, modifier = Modifier.weight(1f))
+                    OutlinedTextField(tagObjective, { tagObjective = it }, label = { Text("هدف یادگیری") }, singleLine = true, modifier = Modifier.weight(1f))
+                }
                 Row(
                     Modifier.fillMaxWidth().padding(vertical = 6.dp),
                     horizontalArrangement = Arrangement.spacedBy(5.dp)
@@ -1357,6 +1381,7 @@ private fun PrimaryDropdown(
 private fun QuestionEditor(
     modifier: Modifier = Modifier,
     question: QuestionDraft,
+    allQuestions: List<QuestionDraft>,
     index: Int,
     expanded: Boolean,
     printMode: Boolean = false,
@@ -1702,7 +1727,7 @@ private fun QuestionEditor(
                 }
             }
             // V328 — گروه‌بندی و برچسب فصل/مبحث برای سؤال‌های متوسطه و فیلتر بانک.
-            SecondaryQuestionControls(question, viewModel)
+            SecondaryQuestionControls(question, allQuestions, viewModel)
             // V327/V328 — متن مشترک روخوانی و صورت چندبخشی.
             OutlinedTextField(
                     value = question.passage,
@@ -2383,21 +2408,98 @@ private fun QuestionType.faLabel(): String = when (this) {
  * ============================================================ */
 
 /** انتخاب نوع ویژهٔ سؤال: جای‌خالی → مرتب‌سازی؛ چندگزینه‌ای → انتخاب روی تصویر. */
+/** زیرسؤال‌های مستقل با بارم و ارجاع نتیجهٔ بخش قبلی. */
+@Composable
+private fun AssessmentPartsEditor(question: QuestionDraft, viewModel: ExamBuilderViewModel) {
+    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Text("زیرسؤال‌ها (صورت مشترک در متن اصلی سؤال)", style = MaterialTheme.typography.labelLarge)
+        question.assessmentParts.forEachIndexed { index, part ->
+            Card(Modifier.fillMaxWidth()) {
+                Column(Modifier.padding(8.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+                        OutlinedTextField(part.label, { value -> viewModel.updateAssessmentPart(question.id, index) { it.copy(label = value.take(30)) } }, label = { Text("برچسب؛ مثل الف") }, modifier = Modifier.weight(1f))
+                        OutlinedTextField(part.prompt, { value -> viewModel.updateAssessmentPart(question.id, index) { it.copy(prompt = value.take(500)) } }, label = { Text("دستور این زیرسؤال") }, modifier = Modifier.weight(2f))
+                        OutlinedTextField(part.score.toString(), { value -> value.toDoubleOrNull()?.takeIf { it >= 0 }?.let { score -> viewModel.updateAssessmentPart(question.id, index) { it.copy(score = score) } } }, label = { Text("بارم") }, modifier = Modifier.weight(.7f))
+                        TextButton(onClick = { viewModel.removeAssessmentPart(question.id, index) }) { Text("حذف") }
+                    }
+                    if (question.mode == "proof") {
+                        OutlinedTextField(part.reasonPrompt, { value -> viewModel.updateAssessmentPart(question.id, index) { it.copy(reasonPrompt = value.take(160)) } }, label = { Text("عنوان کادر دلیل") }, modifier = Modifier.fillMaxWidth())
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Checkbox(part.requiresReason, { checked -> viewModel.updateAssessmentPart(question.id, index) { it.copy(requiresReason = checked) } })
+                            Text("برای این گام، دلیل جداگانه الزامی باشد")
+                        }
+                    }
+                    OutlinedTextField(part.rubric, { value -> viewModel.updateAssessmentPart(question.id, index) { it.copy(rubric = value.take(1000)) } }, label = { Text("معیار نمره‌دهی این بخش (محرمانه)") }, modifier = Modifier.fillMaxWidth())
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Checkbox(part.carriesForward, { checked -> viewModel.updateAssessmentPart(question.id, index) { it.copy(carriesForward = checked) } })
+                        Text("می‌تواند به نتیجهٔ بخش قبلی ارجاع دهد")
+                    }
+                }
+            }
+        }
+        TextButton(onClick = { viewModel.addAssessmentPart(question.id, requireReason = question.mode == "proof") }, enabled = question.assessmentParts.size < 12) { Text(if (question.mode == "proof") "افزودن گام اثبات" else "افزودن زیربخش") }
+        if (question.assessmentParts.isNotEmpty()) {
+            val partsTotal = question.assessmentParts.sumOf { it.score }
+            Text("جمع بارم زیربخش‌ها: ${compactScore(partsTotal)}", style = MaterialTheme.typography.bodySmall)
+            if (kotlin.math.abs(partsTotal - question.score) > 0.001) Text("بارم کل سؤال را هم به ${compactScore(partsTotal)} تنظیم کنید.", color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+        }
+    }
+}
+
 /** V328 — بخش، فصل، حالت پاسخ مرحله‌ای/اثبات/ساخت و راهنمای rubric. */
 @Composable
-private fun SecondaryQuestionControls(question: QuestionDraft, viewModel: ExamBuilderViewModel) {
+private fun SecondaryQuestionControls(question: QuestionDraft, allQuestions: List<QuestionDraft>, viewModel: ExamBuilderViewModel) {
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             OutlinedTextField(question.sectionTitle, { viewModel.setQuestionGrouping(question.id, it, question.topic) }, label = { Text("بخش آزمون / صورت مشترک") }, modifier = Modifier.weight(1f))
             OutlinedTextField(question.topic, { viewModel.setQuestionGrouping(question.id, question.sectionTitle, it) }, label = { Text("فصل یا مبحث (بانک)") }, modifier = Modifier.weight(1f))
         }
+        if (question.sectionTitle.isNotBlank()) {
+            val sectionItems = allQuestions.filter { it.sectionTitle.trim() == question.sectionTitle.trim() }
+            Text("بخش «${question.sectionTitle}»: ${sectionItems.size} سؤال · جمع بارم ${compactScore(sectionItems.sumOf { it.score })}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+            PrimaryDropdown(selectedValue = question.difficulty.toString(), options = listOf("0" to "سطح تعیین‌نشده", "1" to "ساده", "2" to "متوسط", "3" to "دشوار"), onSelect = { viewModel.setLearningTags(question.id, it.toIntOrNull() ?: 0, question.learningObjective) }, modifier = Modifier.weight(1f))
+            OutlinedTextField(question.learningObjective, { viewModel.setLearningTags(question.id, question.difficulty, it) }, label = { Text("هدف یادگیری") }, modifier = Modifier.weight(1f))
+        }
         if (question.type == QuestionType.ESSAY) {
+            AssessmentPartsEditor(question, viewModel)
             PrimaryDropdown(
                 selectedValue = question.mode,
                 options = listOf("" to "پاسخ متنی", "steps" to "حل مرحله‌ای", "proof" to "اثبات با گام‌ها", "construct" to "رسم/ساخت روی تخته", "draw" to "نقاشی آزاد", "voice" to "پاسخ صوتی"),
                 onSelect = { viewModel.setQuestionMode(question.id, it) },
                 modifier = Modifier.fillMaxWidth()
             )
+            if (question.mode == "proof") {
+                OutlinedTextField(question.proofAssumptions, { viewModel.setProofContext(question.id, it, question.proofGoal) }, label = { Text("فرض‌ها / داده‌های مسئله") }, minLines = 2, modifier = Modifier.fillMaxWidth())
+                OutlinedTextField(question.proofGoal, { viewModel.setProofContext(question.id, question.proofAssumptions, it) }, label = { Text("خواسته / نتیجه‌ای که باید اثبات شود") }, minLines = 2, modifier = Modifier.fillMaxWidth())
+                Text("هر گام پاسخ، نتیجه و در صورت نیاز دلیل جداگانه دارد. نمرهٔ هر گام بر اساس rubric همان گام ثبت می‌شود.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
+            }
+            if (question.mode == "construct") {
+                OutlinedTextField(question.constructionPrompt, { viewModel.setConstructionPrompt(question.id, it) }, label = { Text("دستور ساخت") }, supportingText = { Text("دانش‌آموز نقاط خواسته‌شده را روی صفحهٔ مختصات می‌گذارد؛ مختصات هدف در کلید محرمانه می‌ماند.") }, modifier = Modifier.fillMaxWidth())
+                question.constructionTargets.forEachIndexed { targetIndex, target ->
+                    Card(Modifier.fillMaxWidth()) {
+                        Column(Modifier.padding(8.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                            Text("نقطهٔ هدف ${target.label}", style = MaterialTheme.typography.labelLarge)
+                            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                OutlinedTextField(target.label, { value -> viewModel.updateConstructionTarget(question.id, targetIndex) { it.copy(label = value.take(8)) } }, label = { Text("برچسب") }, modifier = Modifier.weight(1f))
+                                OutlinedTextField(target.x.toString(), { value -> value.toDoubleOrNull()?.takeIf { it in -5.0..5.0 }?.let { x -> viewModel.updateConstructionTarget(question.id, targetIndex) { it.copy(x = x) } } }, label = { Text("x (−۵ تا ۵)") }, modifier = Modifier.weight(1f))
+                                OutlinedTextField(target.y.toString(), { value -> value.toDoubleOrNull()?.takeIf { it in -5.0..5.0 }?.let { y -> viewModel.updateConstructionTarget(question.id, targetIndex) { it.copy(y = y) } } }, label = { Text("y (−۵ تا ۵)") }, modifier = Modifier.weight(1f))
+                            }
+                            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                OutlinedTextField(target.tolerance.toString(), { value -> value.toDoubleOrNull()?.takeIf { it > 0.0 && it <= 5.0 }?.let { tol -> viewModel.updateConstructionTarget(question.id, targetIndex) { it.copy(tolerance = tol) } } }, label = { Text("تلورانس مختصات") }, modifier = Modifier.weight(1f))
+                                OutlinedTextField(target.score.toString(), { value -> value.toDoubleOrNull()?.takeIf { it >= 0.0 }?.let { score -> viewModel.updateConstructionTarget(question.id, targetIndex) { it.copy(score = score) } } }, label = { Text("بارم نقطه") }, modifier = Modifier.weight(1f))
+                                TextButton(onClick = { viewModel.removeConstructionTarget(question.id, targetIndex) }) { Text("حذف") }
+                            }
+                        }
+                    }
+                }
+                TextButton(onClick = { viewModel.addConstructionTarget(question.id) }, enabled = question.constructionTargets.size < 8) { Text("افزودن نقطهٔ هدف") }
+                if (question.constructionTargets.isNotEmpty()) {
+                    val targetScore = question.constructionTargets.sumOf { it.score }
+                    Text("جمع بارم نقاط: ${compactScore(targetScore)} از بارم سؤال ${compactScore(question.score)}", style = MaterialTheme.typography.bodySmall)
+                }
+            }
             if (question.mode in setOf("steps", "proof")) {
                 OutlinedTextField(
                     value = question.solutionSteps.joinToString("\n"),

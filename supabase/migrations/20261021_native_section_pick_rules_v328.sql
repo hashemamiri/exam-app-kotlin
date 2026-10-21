@@ -176,6 +176,7 @@ begin
     'grade_policy', coalesce(v_exam.grade_policy,'last'),
     'pick_count', v_pick,
     'pick_rules', v_rules,
+    'options', coalesce(v_exam.options, '{}'::jsonb),
     'question_total', v_n,
     'shown_q', v_shown,
     'server_now', now());

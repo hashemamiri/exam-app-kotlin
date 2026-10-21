@@ -14,6 +14,9 @@ data class StudentAnswerSummary(
     val feedback: String
 )
 
+data class PartFeedbackReview(val label: String, val text: String)
+data class StudentProofStepReview(val label: String, val prompt: String, val result: String, val reasonPrompt: String, val reason: String, val feedback: String)
+
 data class StudentAnswerReviewQuestion(
     val index: Int,
     val id: String,
@@ -28,7 +31,12 @@ data class StudentAnswerReviewQuestion(
     val earnedScore: Double?,
     /** فقط RPC بعد از graded=true آن را تولید می‌کند. */
     val correctAnswer: String?,
-    val explanation: String?
+    val explanation: String?,
+    val partFeedback: List<PartFeedbackReview> = emptyList(),
+    val answerMode: String = "",
+    val proofAssumptions: String = "",
+    val proofGoal: String = "",
+    val proofSteps: List<StudentProofStepReview> = emptyList()
 )
 
 data class StudentAnswerReview(

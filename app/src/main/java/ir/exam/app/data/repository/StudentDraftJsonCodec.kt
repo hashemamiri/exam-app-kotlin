@@ -15,6 +15,7 @@ import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.intOrNull
+import kotlinx.serialization.json.longOrNull
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
@@ -39,7 +40,9 @@ internal object StudentDraftJsonCodec {
             "answers" to answers,
             "images" to images,
             "flagged" to JsonArray(draft.flaggedQuestionIds.sorted().map(::JsonPrimitive)),
-            "last_index" to JsonPrimitive(draft.lastQuestionIndex)
+            "last_index" to JsonPrimitive(draft.lastQuestionIndex),
+            "section_started_at" to JsonObject(draft.sectionStartedAtEpochMs.mapValues { JsonPrimitive(it.value) }),
+            "expired_sections" to JsonArray(draft.expiredSections.sorted().map(::JsonPrimitive))
         )).toString()
     }
 
@@ -70,6 +73,8 @@ internal object StudentDraftJsonCodec {
         }
         val flagged=(root["flagged"] as? JsonArray)?.mapNotNull { it.jsonPrimitive.contentOrNull }?.toSet().orEmpty()
         val lastIndex=root["last_index"]?.jsonPrimitive?.intOrNull ?: 0
-        return StudentDraft(answers, images, flagged, lastIndex)
+        val sectionStarts=(root["section_started_at"] as? JsonObject)?.mapNotNull { (name, value) -> value.jsonPrimitive.longOrNull?.let { name to it } }?.toMap().orEmpty()
+        val expired=(root["expired_sections"] as? JsonArray)?.mapNotNull { it.jsonPrimitive.contentOrNull }?.toSet().orEmpty()
+        return StudentDraft(answers, images, flagged, lastIndex, sectionStarts, expired)
     }
 }

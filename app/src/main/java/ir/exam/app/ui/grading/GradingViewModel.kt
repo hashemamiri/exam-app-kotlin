@@ -23,7 +23,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.JsonObject
 
-data class GradingEdit(val grades: List<Double>, val feedback: String)
+data class GradingEdit(val grades: List<Double>, val feedback: String, val partGrades: Map<String, Double> = emptyMap(), val partFeedback: Map<String, String> = emptyMap())
 
 /**
  * V130 — آمارِ هر آزمون برای رنگِ کارت‌ها: تعدادِ دانش‌آموزانِ آزمون (فهرستِ حضور)،
@@ -59,6 +59,8 @@ data class GradingUiState(
     val edits: Map<String, GradingEdit> = emptyMap(),
     val scoreInputs: Map<String, String> = emptyMap(),
     val scoreErrors: Set<String> = emptySet(),
+    val partScoreInputs: Map<String, String> = emptyMap(),
+    val partScoreErrors: Set<String> = emptySet(),
     val feedbackBank: List<FeedbackPhrase> = emptyList(),
     val attendance: List<AttendanceRow> = emptyList(),
     val liveStatus: JsonObject? = null,
@@ -154,7 +156,7 @@ class GradingViewModel(
         val submissions = repository.getAnswers(id).getOrElse { return@launch fail(it) }
         val edits = submissions.associate { answer ->
             val grades = exam.questions.indices.map { index -> answer.grades.getOrElse(index) { 0.0 } }
-            answer.id to GradingEdit(grades, answer.feedback)
+            answer.id to GradingEdit(grades, answer.feedback, answer.partGrades, answer.partFeedback)
         }
         val inputs = submissions.flatMap { answer ->
             exam.questions.indices.map { index -> scoreKey(answer.id, index) to edits.getValue(answer.id).grades[index].toString() }
@@ -233,6 +235,35 @@ class GradingViewModel(
         }
     }
 
+    fun setPartScore(answerId: String, questionIndex: Int, partIndex: Int, raw: String) {
+        val exam = state.value.selectedExam ?: return
+        val q = exam.questions.getOrNull(questionIndex) ?: return
+        val part = q.assessmentParts.getOrNull(partIndex) ?: return
+        val key = "$answerId:$questionIndex:$partIndex"
+        val normalized = ir.exam.app.core.calendar.PersianDigits.latin(raw).trim()
+        val value = normalized.toDoubleOrNull()
+        _state.update { old ->
+            val inputs = old.partScoreInputs + (key to raw)
+            val errorKey = key
+            val edit = old.edits[answerId] ?: return@update old.copy(partScoreInputs = inputs)
+            val scores = edit.partGrades + ("$questionIndex:$partIndex" to (value ?: 0.0))
+            val total = q.assessmentParts.indices.sumOf { pi -> scores["$questionIndex:$pi"] ?: 0.0 }
+            val invalid = value == null || value < 0.0 || value > part.score || total > q.score + 1e-9
+            if (invalid) return@update old.copy(partScoreInputs = inputs, partScoreErrors = old.partScoreErrors + errorKey)
+            val grades = edit.grades.mapIndexed { index, current -> if (index == questionIndex) total else current }
+            old.copy(edits = old.edits + (answerId to edit.copy(grades = grades, partGrades = scores)), partScoreInputs = inputs, partScoreErrors = old.partScoreErrors - errorKey, scoreInputs = old.scoreInputs + (scoreKey(answerId, questionIndex) to total.toString()))
+        }
+    }
+
+    fun setPartFeedback(answerId: String, questionIndex: Int, partIndex: Int, value: String) {
+        val key = "$questionIndex:$partIndex"
+        _state.update { old ->
+            val edit = old.edits[answerId] ?: return@update old
+            val feedback = edit.partFeedback + (key to value.take(1000))
+            old.copy(edits = old.edits + (answerId to edit.copy(partFeedback = feedback)))
+        }
+    }
+
     fun setFeedback(answerId: String, value: String) {
         _state.update { old ->
             val edit = old.edits[answerId] ?: return@update old
@@ -246,16 +277,18 @@ class GradingViewModel(
     }
 
     fun save(answerId: String) = action("نمره و بازخورد ذخیره شد.") {
-        require(state.value.scoreErrors.none { it.startsWith("$answerId:") }) { "یک یا چند نمره نامعتبر است." }
+        require(state.value.scoreErrors.none { it.startsWith("$answerId:") } && state.value.partScoreErrors.none { it.startsWith("$answerId:") }) { "یک یا چند نمره نامعتبر است." }
         val edit = state.value.edits[answerId] ?: error("داده نمره پیدا نشد.")
-        repository.saveGrade(answerId, edit.grades, edit.feedback).getOrThrow()
+        repository.saveGrade(answerId, edit.grades, edit.feedback, edit.partGrades, edit.partFeedback).getOrThrow()
         reloadSelected()
     }
 
     fun saveCurrentQuestionForAll() = action("نمره این سؤال برای همه پاسخ‌ها اتمیک ذخیره شد.") {
         val exam = state.value.selectedExam ?: error("آزمون انتخاب نشده است.")
         val index = state.value.selectedQuestionIndex
-        val max = exam.questions.getOrNull(index)?.score ?: error("سؤال انتخاب‌شده معتبر نیست.")
+        val selectedQuestion = exam.questions.getOrNull(index) ?: error("سؤال انتخاب‌شده معتبر نیست.")
+        require(selectedQuestion.assessmentParts.isEmpty()) { "سؤال چندبخشی باید برای هر دانش‌آموز جداگانه تصحیح شود تا نمرهٔ هر زیربخش حفظ شود." }
+        val max = selectedQuestion.score
         require(state.value.scoreErrors.none { it.endsWith(":$index") }) { "یک یا چند نمره این سؤال نامعتبر است؛ هیچ نمره‌ای ذخیره نشد." }
         val scores = state.value.submissions.associate { submission ->
             val score = state.value.edits[submission.id]?.grades?.getOrNull(index)
@@ -348,7 +381,7 @@ class GradingViewModel(
             exam.questions.indices.map { index -> scoreKey(answer.id, index) to edits.getValue(answer.id).grades[index].toString() }
         }.toMap()
         _state.update {
-            it.copy(submissions = submissions, edits = edits, scoreInputs = inputs, scoreErrors = emptySet())
+            it.copy(submissions = submissions, edits = edits, scoreInputs = inputs, scoreErrors = emptySet(), partScoreInputs = emptyMap(), partScoreErrors = emptySet())
         }
     }
 

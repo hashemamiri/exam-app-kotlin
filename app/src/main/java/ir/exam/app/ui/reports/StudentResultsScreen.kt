@@ -188,7 +188,16 @@ private fun AnswerQuestionCard(question: StudentAnswerReviewQuestion, graded: Bo
                 } else Text("بارم ${question.score}")
             }
             NativeMathText(question.text)
-            Text("پاسخ شما: ${question.displayResponse()}")
+            if (graded && question.answerMode == "proof" && question.proofSteps.isNotEmpty()) {
+                if (question.proofAssumptions.isNotBlank()) NativeMathText("فرض‌ها: ${question.proofAssumptions}")
+                if (question.proofGoal.isNotBlank()) NativeMathText("خواسته: ${question.proofGoal}")
+                question.proofSteps.forEach { step ->
+                    Text("${step.label}: ${step.prompt}", fontWeight = FontWeight.SemiBold)
+                    Text("نتیجه: ${step.result.ifBlank { "بدون پاسخ" }}")
+                    if (step.reasonPrompt.isNotBlank()) Text("${step.reasonPrompt}: ${step.reason.ifBlank { "بدون پاسخ" }}")
+                    if (step.feedback.isNotBlank()) Text("بازخورد معلم: ${step.feedback}", color = MaterialTheme.colorScheme.primary)
+                }
+            } else Text("پاسخ شما: ${question.displayResponse()}")
             question.responseImages.forEach { url ->
                 if (isAnswerAudioUrl(url)) AnswerAudioPlayer(url) else AsyncImage(
                     model = url,
@@ -196,6 +205,7 @@ private fun AnswerQuestionCard(question: StudentAnswerReviewQuestion, graded: Bo
                     modifier = Modifier.size(180.dp)
                 )
             }
+            if (question.answerMode != "proof") question.partFeedback.forEach { Text("بازخورد ${it.label}: ${it.text}", color = MaterialTheme.colorScheme.primary) }
             question.correctAnswer?.let { Text("پاسخ صحیح: $it", color = MaterialTheme.colorScheme.primary) }
             question.explanation?.let { NativeMathText("توضیح: $it") }
         }

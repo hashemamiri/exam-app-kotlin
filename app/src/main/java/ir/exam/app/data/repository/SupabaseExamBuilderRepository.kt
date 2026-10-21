@@ -116,6 +116,7 @@ class SupabaseExamBuilderRepository(context: Context) {
                 pickRules = exam.pickRules.filterValues { it > 0 }, // V272
                 primaryMode = exam.options?.get("primary")?.let { (it as? kotlinx.serialization.json.JsonPrimitive)?.content == "true" } ?: false, // V301
                 // V305 — آستانه‌های کارنامهٔ ۴ سطحی ([85,70,50] → "85,70,50")
+                sectionDurations = (exam.options?.get("sectionDurations") as? kotlinx.serialization.json.JsonObject)?.mapValues { (_, v) -> (v as? kotlinx.serialization.json.JsonPrimitive)?.content.orEmpty() }.orEmpty(),
                 levelThresholds = (exam.options?.get("levels") as? kotlinx.serialization.json.JsonArray)
                     ?.mapNotNull { (it as? kotlinx.serialization.json.JsonPrimitive)?.content?.toDoubleOrNull()?.let { d -> if (d == d.toLong().toDouble()) d.toLong().toString() else d.toString() } }
                     ?.joinToString(",").orEmpty(),
@@ -185,6 +186,7 @@ class SupabaseExamBuilderRepository(context: Context) {
             // V301 — تنظیمات نمایشی؛ سرور (SQL V301) آن را در exams.options نگه می‌دارد و به دانش‌آموز می‌دهد.
             put("options", buildJsonObject {
                 put("primary", state.primaryMode)
+                put("sectionDurations", buildJsonObject { state.sectionDurations.forEach { (k, v) -> v.toIntOrNull()?.takeIf { it in 1..1440 }?.let { put(k, it) } } })
                 // V305 — آستانه‌های کارنامهٔ ۴ سطحی؛ فقط وقتی معتبر و غیرپیش‌فرض
                 ir.exam.app.core.report.PrimaryLevels.parseThresholds(state.levelThresholds)?.let { t ->
                     put("levels", kotlinx.serialization.json.JsonArray(t.map { kotlinx.serialization.json.JsonPrimitive(it) }))
