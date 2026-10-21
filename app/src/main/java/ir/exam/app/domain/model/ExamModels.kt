@@ -45,6 +45,18 @@ data class QuestionMediaPresentation(
     val widthMm: Float = 55f
 )
 
+/** تعریف امن زیربخش سؤال؛ rubric فقط در کلید پاسخ/مدل تصحیح تکمیل می‌شود. */
+data class AssessmentPart(
+    val id: String,
+    val label: String,
+    val prompt: String,
+    val score: Double,
+    val carriesForward: Boolean = false,
+    val reasonPrompt: String = "",
+    val requiresReason: Boolean = false,
+    val rubric: String = ""
+)
+
 sealed interface Question {
     val id: String
     val text: String

@@ -67,6 +67,7 @@ class SupabasePortabilityRepository {
                 attemptCooldown = exam.attemptCooldown,
                 pickCount = exam.pickCount,
                 pickRules = exam.pickRules, // V272
+                sectionDurations = (exam.options?.get("sectionDurations") as? JsonObject)?.mapNotNull { (k, v) -> v.jsonPrimitive.intOrNull?.takeIf { it in 1..1440 }?.let { k to it } }?.toMap().orEmpty(),
                 questions = questions,
                 by = profile.displayName?.takeIf(String::isNotBlank) ?: profile.fullName.orEmpty(),
                 opensAtIso = exam.opensAt,

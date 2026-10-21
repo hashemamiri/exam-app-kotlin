@@ -227,7 +227,7 @@ internal object StudentExamPayloadCodec {
                 sectionTitle = sectionTitle,
                 topic = topic,
                 solutionSteps = obj["solutionSteps"].arrayStrings().take(10),
-                assessmentParts = obj["assessmentParts"].asArrayOrEmpty().mapIndexedNotNull { index, rawPart ->
+                assessmentParts = ((obj["assessmentParts"] as? JsonArray) ?: JsonArray(emptyList())).mapIndexedNotNull { index, rawPart ->
                     val part = rawPart as? JsonObject ?: return@mapIndexedNotNull null
                     AssessmentPart(part.text("id") ?: "$id-part-$index", part.text("label").orEmpty(), part.text("prompt").orEmpty(), part.double("score") ?: 0.0, part["carriesForward"]?.jsonPrimitive?.booleanOrNull ?: false, part.text("reasonPrompt").orEmpty(), part["requiresReason"]?.jsonPrimitive?.booleanOrNull ?: false)
                 },

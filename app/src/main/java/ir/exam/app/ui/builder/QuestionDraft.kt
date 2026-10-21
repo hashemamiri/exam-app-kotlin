@@ -554,6 +554,7 @@ data class ExamImportDraft(
     val opensAtIso: String? = null,
     val pickCount: Int = 0,
     val pickRules: Map<String, Int> = emptyMap(), // V272
+    val sectionDurations: Map<String, Int> = emptyMap(),
     val closesAtIso: String? = null,
     val exportedBy: String? = null,
     // V101 — اگر این import یک «آزمون چاپیِ محلی» است، شناسهٔ رکوردش:

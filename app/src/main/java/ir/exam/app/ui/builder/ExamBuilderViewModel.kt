@@ -80,7 +80,7 @@ class ExamBuilderViewModel(
                         attemptCooldown = imported.attemptCooldown.takeUnless { it == 0 }?.toString().orEmpty(),
                         pickCount = imported.pickCount.takeUnless { it == 0 }?.toString().orEmpty(),
                         pickRules = imported.pickRules, // V272
-                        sectionDurations = imported.sectionDurations,
+                        sectionDurations = imported.sectionDurations.mapValues { it.value.toString() },
                         questions = imported.questions,
                         importedBy = imported.exportedBy
                     )
@@ -349,6 +349,7 @@ class ExamBuilderViewModel(
                 attemptCooldown = imported.attemptCooldown.takeUnless { it == 0 }?.toString().orEmpty(),
                         pickCount = imported.pickCount.takeUnless { it == 0 }?.toString().orEmpty(),
                 pickRules = imported.pickRules, // V272
+                sectionDurations = imported.sectionDurations.mapValues { it.value.toString() },
                 questions = imported.questions.map {
                     it.copy(id = UUID.randomUUID().toString()).ensureEditorIds()
                 },
