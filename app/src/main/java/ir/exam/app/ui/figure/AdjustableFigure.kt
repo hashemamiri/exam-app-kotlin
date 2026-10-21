@@ -35,6 +35,9 @@ private val ADV_CYCLE_PARAMS: Map<String, Pair<String, List<String>>> = mapOf(
     "axlever" to ("kind" to listOf("lever1", "lever2", "lever3", "pulley", "gears")),
     "axcycle" to ("kind" to listOf("water", "plant", "frog", "food")),
     "axwordtrain" to ("mode" to listOf("join", "blank")),
+    // V327
+    "axmagnet" to ("mode" to listOf("attract", "repel")),
+    "axpaintgrid" to ("goal" to listOf("1", "2", "3", "4", "5", "6", "8", "10", "12")),
     "axtiles" to ("x" to listOf("0", "1", "2", "3", "4", "5", "6", "7", "8")),
     "axkenken" to ("size" to listOf("3", "4", "5", "6")),
     "axdicefold" to ("top" to listOf("1", "2", "3", "4", "5", "6")),
@@ -125,7 +128,9 @@ fun AdjustableFigure(
         "axnumgrid", "axfacttree", "axfnmachine", "axfracwall", "axtangram", "axangle",
         // V319
         "axunitconv", "axperimeter", "axpictograph", "axrounding", "axdivision", "axshapeid", "axcircleparts", "axcylinder", "axproportion", "axlinear", "axbarchart", "axparabola", "axinthales", "axpendulum", "axincline", "axcircuit", "axoptics", "axheatcurve", "axdna", "axcell", "axtimeline", "axmapgeo", "axsentence", "axvectors", "axmatrix", "axintegral", "axflowchart", "axstack", "axsort", "axregression",
-        "axrod", "axtower", "axmulwheel", "axmultgrid", "axnet", "axcubes", "axcalendar", "axlever", "axcycle", "axwordtrain", "axtiles", "axkenken", "axdicefold", "axtransform", "axcaliper", "axsigntable", "axtrigcircle", "axmapping", "axprobtree", "axconic", "axorbital", "axpunnett", "axecg", "axprosody", "axtruthtable", "axledger", "axstaff", "axkmap", "axgate", "axdfa", "axbst", "axbode", "axbeam", "axmohr", "axpv", "axpert", "axbenzene", "axnormal", "axsupply", "axgame",
+        "axrod", "axtower", "axmulwheel", "axmultgrid", "axnet", "axcubes", "axcalendar", "axlever", "axcycle", "axwordtrain",
+        "axpaintgrid", "axletterforms", "axsyllablechart", "axmagnet", "axsenses", "axseedgrow", "axbodyparts",
+        "axtiles", "axkenken", "axdicefold", "axtransform", "axcaliper", "axsigntable", "axtrigcircle", "axmapping", "axprobtree", "axconic", "axorbital", "axpunnett", "axecg", "axprosody", "axtruthtable", "axledger", "axstaff", "axkmap", "axgate", "axdfa", "axbst", "axbode", "axbeam", "axmohr", "axpv", "axpert", "axbenzene", "axnormal", "axsupply", "axgame",
         "axnumpts", "axnumint", "axnumineq", "axxypts", "axxyline", "axxyvec", "axxycirc", "axpolpts",
         "gauge", "ang", "sec", "arc", "segm", "parll", "ngon"
     )

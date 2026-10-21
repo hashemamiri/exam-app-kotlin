@@ -185,7 +185,7 @@ class ExamBuilderViewModel(
     fun setQuestionMode(id: String, mode: String) = update(id) { q ->
         when (mode) {
             "order" -> q.copy(mode = mode, orderItems = q.orderItems.ifEmpty { listOf("", "", "") })
-            "draw", "dictation", "voice" -> q.copy(mode = mode)
+            "draw", "dictation", "voice", "paint" -> q.copy(mode = mode)
             "hotspot" -> q.copy(mode = mode, hotspots = q.hotspots.takeIf { it.size == q.options.size } ?: List(q.options.size) { ir.exam.app.ui.builder.HotspotRect(0f, 0f, 0f, 0f) })
             else -> q.copy(mode = "")
         }
@@ -193,6 +193,19 @@ class ExamBuilderViewModel(
 
     /** V308 / ۱۴ — برچسب پایه/درس سؤال (حالت ابتدایی). */
     fun setQuestionTags(id: String, grade: Int, subject: String) = update(id) { q -> q.copy(grade = grade, subject = subject) }
+
+    /** V327 — متن روخوانی مشترک: شناسهٔ گروه متن بین پرسش‌های وابسته مشترک است. */
+    fun setPassage(id: String, value: String) = update(id) { q -> q.copy(passage = value.take(4000)) }
+    /** V327 — تنظیمات املا، فاصلهٔ بین واژه‌ها و دفعات تکرار. */
+    fun setDictationSettings(id: String, gap: Int, repeats: Int, words: String? = null) = update(id) { q ->
+        q.copy(dictationGap = gap.coerceIn(3, 20), dictationRepeats = repeats.coerceIn(1, 3), dictationWords = words?.take(2000) ?: q.dictationWords)
+    }
+    /** V327 — تنظیم شبکهٔ رنگ‌آمیزی و تعداد خانهٔ هدف. */
+    fun setPaintSettings(id: String, rows: Int, cols: Int, goal: Int) = update(id) { q ->
+        val r = rows.coerceIn(1, 8); val c = cols.coerceIn(1, 8)
+        q.copy(paintRows = r, paintCols = c, paintGoal = goal.coerceIn(1, r * c))
+    }
+
 
     /** V309 — سقف مدت ضبط پاسخ صوتی (ثانیه) برای سؤال. */
     fun setVoiceMaxSeconds(id: String, seconds: Int) = update(id) { q -> q.copy(voiceMaxSeconds = seconds.coerceIn(10, 300)) }

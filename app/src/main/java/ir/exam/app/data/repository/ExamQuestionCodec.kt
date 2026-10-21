@@ -121,6 +121,8 @@ internal object ExamQuestionCodec {
                 id = obj["id"]?.asString() ?: UUID.randomUUID().toString(),
                 type = type,
                 text = obj["text"]?.asString().orEmpty(),
+                // V327 — passage مشترك برای سؤال‌های درک مطلب؛ برای دادهٔ قدیمی غایب است.
+                passage = obj["passage"]?.asString().orEmpty(),
                 score = obj["score"]?.asDouble() ?: 1.0,
                 grade = obj["grade"]?.asInt()?.coerceIn(0, 6) ?: 0,
                 subject = obj["subject"]?.asString().orEmpty(),
@@ -182,7 +184,14 @@ internal object ExamQuestionCodec {
                 audioBytes = (obj["audioBytes"] as? JsonPrimitive)?.longOrNull ?: 0L,
                 audioMs = (obj["audioMs"] as? JsonPrimitive)?.longOrNull ?: 0L,
                 // V305 / V314.0 — حالت ویژهٔ ابتدایی (مرتب‌سازی / انتخاب روی تصویر / بخش‌کردن / سبد)
-                mode = obj["mode"]?.asString()?.takeIf { it in setOf("order", "hotspot", "draw", "dictation", "voice", "syllable", "bucket") }.orEmpty(),
+                mode = obj["mode"]?.asString()?.takeIf { it in setOf("order", "hotspot", "draw", "dictation", "voice", "syllable", "bucket", "paint") }.orEmpty(),
+                // V327 — تنظیم‌های رنگ‌آمیزی و املا
+                paintRows = (obj["paintRows"]?.asInt() ?: 4).coerceIn(1, 8),
+                paintCols = (obj["paintCols"]?.asInt() ?: 4).coerceIn(1, 8),
+                paintGoal = (obj["paintGoal"]?.asInt() ?: 1).coerceAtLeast(1),
+                dictationGap = (obj["dict_gap"]?.asInt() ?: 6).coerceIn(3, 20),
+                dictationRepeats = (obj["dict_repeat"]?.asInt() ?: 2).coerceIn(1, 3),
+                dictationWords = obj["speak"]?.asString().orEmpty(),
                 // ترتیب درست فقط در کلید پاسخ (accept[0]) است؛ public items بُرخورده است.
                 orderItems = if (obj["mode"]?.asString() != "order") emptyList() else key["accept"].asArrayOrEmpty().firstOrNull()?.asString()
                     ?.split(',')?.map { it.trim() }?.filter { it.isNotBlank() }
@@ -206,6 +215,8 @@ internal object ExamQuestionCodec {
             values["type"] = JsonPrimitive(typeValue(question.type))
             values["text"] = JsonPrimitive(question.text.trim())
             values["score"] = JsonPrimitive(question.score)
+            // V327 — متن روخوانی مشترک (درک مطلب); مقدار خالی کلید را حذف می‌کند.
+            if (question.passage.isNotBlank()) values["passage"] = JsonPrimitive(question.passage) else values.remove("passage")
             // V308 / ۱۴ — برچسب پایه/درس فقط وقتی پر است نوشته می‌شود
             if (question.grade in 1..6) values["grade"] = JsonPrimitive(question.grade)
             if (question.subject.isNotBlank()) values["subject"] = JsonPrimitive(question.subject.trim())
@@ -258,6 +269,7 @@ internal object ExamQuestionCodec {
             }
             // V305 / V314.0 — حالت ویژه: mode/items/hotspots/buckets/syllableCount فقط وقتی فعال است نوشته می‌شود
             values.remove("mode"); values.remove("items"); values.remove("hotspots"); values.remove("speak"); values.remove("buckets"); values.remove("syllableCount")
+            values.remove("paintRows"); values.remove("paintCols"); values.remove("paintGoal"); values.remove("dict_gap"); values.remove("dict_repeat")
             // V306 — پاسخ با تخته: فقط نشانهٔ حالت؛ پاسخ دانش‌آموز تصویر تخته است.
             if (question.type == QuestionType.ESSAY && question.mode == "draw") values["mode"] = JsonPrimitive("draw")
             // V309 — پاسخ صوتی: حالت و سقف ضبط (ثانیه) نوشته می‌شود
@@ -268,7 +280,16 @@ internal object ExamQuestionCodec {
             // V306 — املا: صدای معلم اولویت دارد؛ اگر صدا نباشد، متن املا برای «بخوان» (TTS دستگاه) در سؤال عمومی می‌آید.
             if (question.type == QuestionType.FILL_BLANK && question.mode == "dictation") {
                 values["mode"] = JsonPrimitive("dictation")
-                if (question.audioUri.isNullOrBlank()) values["speak"] = JsonPrimitive(question.expectedText.split('|').first().trim())
+                values["dict_gap"] = JsonPrimitive(question.dictationGap.coerceIn(3, 20))
+                values["dict_repeat"] = JsonPrimitive(question.dictationRepeats.coerceIn(1, 3))
+                if (question.audioUri.isNullOrBlank()) values["speak"] = JsonPrimitive(question.dictationWords.ifBlank { question.expectedText.split('|').first().trim() })
+            }
+            // V327 — رنگ‌آمیزی خانه‌های شبکه: ابعاد و هدف در دادهٔ عمومی؛ پاسخ درست فقط در کلید.
+            if (question.type == QuestionType.FILL_BLANK && question.mode == "paint") {
+                values["mode"] = JsonPrimitive("paint")
+                values["paintRows"] = JsonPrimitive(question.paintRows.coerceIn(1, 8))
+                values["paintCols"] = JsonPrimitive(question.paintCols.coerceIn(1, 8))
+                values["paintGoal"] = JsonPrimitive(question.paintGoal.coerceIn(1, question.paintRows.coerceIn(1, 8) * question.paintCols.coerceIn(1, 8)))
             }
             if (question.type == QuestionType.FILL_BLANK && question.mode == "order") {
                 values["mode"] = JsonPrimitive("order")

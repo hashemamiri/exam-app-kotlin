@@ -34,7 +34,9 @@ object AdvancedMathSvgRenderer {
         "axcycle", "axwordtrain", "axtiles", "axkenken", "axdicefold", "axtransform", "axcaliper",
         "axsigntable", "axtrigcircle", "axmapping", "axprobtree", "axconic", "axorbital", "axpunnett",
         "axecg", "axprosody", "axtruthtable", "axledger", "axstaff", "axkmap", "axgate", "axdfa",
-        "axbst", "axbode", "axbeam", "axmohr", "axpv", "axpert", "axbenzene", "axnormal", "axsupply", "axgame"
+        "axbst", "axbode", "axbeam", "axmohr", "axpv", "axpert", "axbenzene", "axnormal", "axsupply", "axgame",
+        // V327 — رنگ‌آمیزی، فارسی و علوم دبستان
+        "axpaintgrid", "axletterforms", "axsyllablechart", "axmagnet", "axsenses", "axseedgrow", "axbodyparts"
     )
 
     private const val ST = "#2c3a50"
@@ -58,6 +60,14 @@ object AdvancedMathSvgRenderer {
             "axlever" -> simpleMachine(spec)
             "axcycle" -> scienceCycle(spec)
             "axwordtrain" -> wordTrain(spec)
+            // V327 — ابزارهای تازهٔ دبستان
+            "axpaintgrid" -> paintGrid(spec)
+            "axletterforms" -> letterForms(spec)
+            "axsyllablechart" -> syllableChart(spec)
+            "axmagnet" -> magnetSpec(spec)
+            "axsenses" -> fiveSenses(spec)
+            "axseedgrow" -> seedGrow(spec)
+            "axbodyparts" -> bodyParts(spec)
             "axtiles" -> algebraTiles(spec)
             "axkenken" -> kenKen(spec)
             "axdicefold" -> diceFold(spec)
@@ -1497,6 +1507,192 @@ object AdvancedMathSvgRenderer {
         }
         nodes.forEach { k -> val p = pos[k]!!; sb.append(cls(p.first, p.second, 14f, "#ffffff", ST, 2f)); sb.append(tx(p.first, p.second + 4f, k, ST, "middle", bold = true, size = 10)) }
         sb.append(tx(180f, 262f, "شبکهٔ فعالیت‌ها (CPM/PERT) — ${list.size} فعالیت", MU, "middle", bold = true, size = 11))
+        return sb.toString()
+    }
+
+
+    /** V327 — عددهای فارسی (۰ تا ۹) برای ابزارهای دبستان. */
+    private fun pFa(v: Int): String = v.toString().map { c ->
+        when (c) {
+            '0' -> '۰'; '1' -> '۱'; '2' -> '۲'; '3' -> '۳'; '4' -> '۴'
+            '5' -> '۵'; '6' -> '۶'; '7' -> '۷'; '8' -> '۸'; '9' -> '۹'
+            else -> c
+        }
+    }.joinToString("")
+
+    /**
+     * V327 — شبکهٔ رنگ‌آمیزی.
+     * دانش‌آموز «n خانه» را رنگ می‌کند؛ همان مختصات خانه‌ها در پاسخ لمسیِ اپ (حالت paint) استفاده می‌شود،
+     * پس شبکه این‌جا باید دقیقاً با آن هم‌شکل باشد: خانه‌ها از بالا-چپ، شمارهٔ سطر/ستون از ۱.
+     */
+    private fun paintGrid(spec: FigureSpec): String {
+        val rows = spec.xStr("rows", "4").toFloatOrNull()?.toInt()?.coerceIn(1, 8) ?: 4
+        val cols = spec.xStr("cols", "4").toFloatOrNull()?.toInt()?.coerceIn(1, 8) ?: 4
+        val goal = spec.xStr("goal", "1").toFloatOrNull()?.toInt()?.coerceIn(0, rows * cols) ?: 1
+        val cells = spec.xStr("cells", "").split(Regex("[;؛]")).mapNotNull { chunk ->
+            val a = chunk.split(",")
+            val r = a.getOrNull(0)?.trim()?.toFloatOrNull()?.toInt()
+            val c = a.getOrNull(1)?.trim()?.toFloatOrNull()?.toInt()
+            if (r != null && c != null && r in 1..rows && c in 1..cols) r to c else null
+        }
+        val w = min(300f, cols * 42f)
+        val h = min(150f, rows * 34f)
+        val cw = w / cols
+        val ch = h / rows
+        val x0 = (360f - w) / 2f
+        val y0 = 66f + (150f - h) / 2f
+        val sb = StringBuilder()
+        sb.append(tx(180f, 40f, "خانه‌ها را رنگ کن", ST, "middle", bold = true, size = 13))
+        for (r in 0 until rows) for (c in 0 until cols) {
+            val on = cells.any { it.first == r + 1 && it.second == c + 1 }
+            sb.append(rc(x0 + c * cw, y0 + r * ch, cw, ch, if (on) "rgba(108,99,245,.55)" else "#ffffff", ST, 1.4f, 4f))
+        }
+        if (goal > 0) sb.append(tx(180f, y0 + h + 28f, "دقیقاً ${pFa(goal)} خانه را رنگ کن", ACC, "middle", bold = true, size = 12))
+        sb.append(tx(180f, 258f, "رنگ‌آمیزی روی شکل — پاسخ با لمس خانه‌ها ثبت می‌شود", MU, "middle", size = 10))
+        return sb.toString()
+    }
+
+    /** V327 — نویسه‌های حرف فارسی: تنها، آغازین، میانی، پایانی. */
+    private val LETTER_FORMS: Map<String, List<String>> = mapOf(
+        "ب" to listOf("ب", "بـ", "ـبـ", "ـب"), "پ" to listOf("پ", "پـ", "ـپـ", "ـپ"),
+        "ت" to listOf("ت", "تـ", "ـتـ", "ـت"), "ث" to listOf("ث", "ثـ", "ـثـ", "ـث"),
+        "ج" to listOf("ج", "جـ", "ـجـ", "ـج"), "چ" to listOf("چ", "چـ", "ـچـ", "ـچ"),
+        "ح" to listOf("ح", "حـ", "ـحـ", "ـح"), "خ" to listOf("خ", "خـ", "ـخـ", "ـخ"),
+        "س" to listOf("س", "سـ", "ـسـ", "ـس"), "ش" to listOf("ش", "شـ", "ـشـ", "ـش"),
+        "ص" to listOf("ص", "صـ", "ـصـ", "ـص"), "ض" to listOf("ض", "ضـ", "ـضـ", "ـض"),
+        "ع" to listOf("ع", "عـ", "ـعـ", "ـع"), "غ" to listOf("غ", "غـ", "ـغـ", "ـغ"),
+        "ف" to listOf("ف", "فـ", "ـفـ", "ـف"), "ق" to listOf("ق", "قـ", "ـقـ", "ـق"),
+        "ک" to listOf("ک", "کـ", "ـکـ", "ـک"), "گ" to listOf("گ", "گـ", "ـگـ", "ـگ"),
+        "ل" to listOf("ل", "لـ", "ـلـ", "ـل"), "م" to listOf("م", "مـ", "ـمـ", "ـم"),
+        "ن" to listOf("ن", "نـ", "ـنـ", "ـن"), "ه" to listOf("ه", "هـ", "ـهـ", "ـه"),
+        "ی" to listOf("ی", "یـ", "ـیـ", "ـی")
+    )
+
+    private fun letterForms(spec: FigureSpec): String {
+        val ch = spec.xStr("ch", "ب").trim().firstOrNull()?.toString() ?: "ب"
+        val forms = LETTER_FORMS[ch] ?: listOf(ch, "$chـ", "ـ$chـ", "ـ$ch")
+        val caps = listOf("تنها", "آغازین", "میانی", "پایانی")
+        val sb = StringBuilder()
+        sb.append(tx(180f, 34f, "نویسه‌های حرف «$ch»", ST, "middle", bold = true, size = 13))
+        for (i in 0 until 4) {
+            val x = 306f - i * 72f
+            sb.append(rc(x - 30f, 84f, 60f, 60f, "rgba(108,99,245,.10)", ACC, 1.6f, 10f))
+            sb.append(tx(x, 124f, forms[i], ST, "middle", bold = true, size = 26))
+            sb.append(tx(x, 164f, caps[i], MU, "middle", size = 11))
+        }
+        sb.append(tx(180f, 206f, "حرف در اول، میان و آخر کلمه شکلش عوض می‌شود", MU, "middle", size = 10))
+        return sb.toString()
+    }
+
+    /** V327 — هجاهای کلمه (کلمه با «-» به هجاها شکسته می‌شود). */
+    private fun syllableChart(spec: FigureSpec): String {
+        val word = spec.xStr("word", "با-با").ifBlank { "با-با" }
+        val list = word.split(Regex("[-–—]")).map { it.trim() }.filter { it.isNotEmpty() }.take(6)
+            .ifEmpty { listOf("با", "با") }
+        val n = list.size
+        val w = min(72f, 300f / n)
+        val x0 = 180f + (n * (w + 8f)) / 2f
+        val sb = StringBuilder()
+        sb.append(tx(180f, 40f, "هجاهای کلمه", ST, "middle", bold = true, size = 13))
+        list.forEachIndexed { i, syl ->
+            val bx = x0 - (i + 1) * (w + 8f)
+            sb.append(rc(bx, 74f, w, 52f, "rgba(39,196,168,.16)", "#1f8a78", 1.6f, 10f))
+            sb.append(tx(bx + w / 2f, 108f, syl, ST, "middle", bold = true, size = 18))
+            sb.append(cls(bx + w / 2f, 146f, 4f, "#1f8a78", "none", 0f))
+        }
+        sb.append(tx(180f, 174f, "تعداد هجا: ${pFa(n)}", ACC, "middle", bold = true, size = 12))
+        sb.append(tx(180f, 202f, "هر هجا را با یک دست‌زدن بشمار", MU, "middle", size = 10))
+        return sb.toString()
+    }
+
+    /** V327 — آهنربا: جذب/دفع دو قطب. */
+    private fun magnetSpec(spec: FigureSpec): String {
+        val repel = spec.xStr("mode", "attract").lowercase() == "repel"
+        val sb = StringBuilder()
+        sb.append(tx(180f, 36f, if (repel) "دو قطب هم‌نام — دفع" else "دو قطب ناهم‌نام — جذب", ST, "middle", bold = true, size = 13))
+        val left = 96f
+        val right = 264f
+        val y = 150f
+        listOf(left to "N", right to "S").forEach { (x, pole) ->
+            sb.append(rc(x - 46f, y - 26f, 92f, 52f, "#e8eaf6", ST, 1.8f, 6f))
+            val wx = if (pole == "N") x + 18f else x - 46f
+            sb.append(rc(wx, y - 26f, 28f, 52f, if (pole == "N") "#e53935" else "#1e88e5", "#ffffff", 1f, 4f))
+            sb.append(tx(x + if (pole == "N") 32f else -32f, y + 7f, pole, "#ffffff", "middle", bold = true, size = 16))
+        }
+        if (!repel) {
+            sb.append(arrow(left + 50f, y, left + 78f, y, "#1f8a78", 2f, 8f))
+            sb.append(arrow(right - 50f, y, right - 78f, y, "#1f8a78", 2f, 8f))
+            sb.append(tx(180f, y - 48f, "جذب", "#1f8a78", "middle", bold = true, size = 12))
+        } else {
+            sb.append(arrow(left + 78f, y, left + 40f, y, PT, 2f, 8f))
+            sb.append(arrow(right - 78f, y, right - 40f, y, PT, 2f, 8f))
+            sb.append(tx(180f, y - 48f, "دفع", PT, "middle", bold = true, size = 12))
+        }
+        sb.append(tx(180f, 232f, "قطب‌های هم‌نام یکدیگر را می‌رانند و ناهم‌نام‌ها جذب می‌شوند", MU, "middle", size = 10))
+        return sb.toString()
+    }
+
+    /** V327 — حواس پنج‌گانه: هر حس با اندامش. */
+    private fun fiveSenses(spec: FigureSpec): String {
+        val items = listOf("بینایی" to "چشم", "شنوایی" to "گوش", "بویایی" to "بینی", "چشایی" to "زبان", "لامسه" to "پوست")
+        val pos = listOf(180f to 62f, 92f to 112f, 268f to 112f, 112f to 188f, 248f to 188f)
+        val lab = listOf(180f to 26f, 92f to 152f, 268f to 152f, 112f to 224f, 248f to 224f)
+        val sb = StringBuilder()
+        sb.append(cls(180f, 138f, 34f, "rgba(108,99,245,.12)", ACC, 1.8f))
+        sb.append(tx(180f, 144f, "حواس", ST, "middle", bold = true, size = 12))
+        items.forEachIndexed { i, (sense, organ) ->
+            val (px, py) = pos[i]
+            val (lx, ly) = lab[i]
+            sb.append(ln(180f, 138f, px, py, "#b9c2d0", 1.3f))
+            sb.append(cls(px, py, 22f, "rgba(108,99,245,.16)", ACC, 1.8f))
+            sb.append(tx(px, py + 5f, pFa(i + 1), ACC, "middle", bold = true, size = 12))
+            sb.append(tx(lx, ly, "$sense — $organ", ST, "middle", bold = true, size = 10))
+        }
+        sb.append(tx(180f, 246f, "پنج حس بدن و اندام هر حس", MU, "middle", size = 10))
+        return sb.toString()
+    }
+
+    /** V327 — مراحل رشد دانه (دانه → جوانه → گیاه کوچک → گیاه گل‌دار). */
+    private fun seedGrow(spec: FigureSpec): String {
+        val stages = listOf("دانه", "جوانه", "گیاه کوچک", "گیاه گل‌دار")
+        val sb = StringBuilder()
+        sb.append(tx(180f, 40f, "مراحل رشد دانه", ST, "middle", bold = true, size = 13))
+        sb.append(ln(40f, 190f, 320f, 190f, "#8d6e63", 3f))
+        stages.forEachIndexed { i, label ->
+            val x = 300f - i * 76f
+            if (i == 0) {
+                sb.append("<ellipse cx=\"${f(x)}\" cy=\"184\" rx=\"9\" ry=\"6\" fill=\"#a1887f\" stroke=\"$ST\" stroke-width=\"1.2\"/>")
+            } else {
+                val hgt = 14f + i * 26f
+                sb.append(ln(x, 190f, x, 190f - hgt, "#2e7d32", 2.6f))
+                for (lv in 0 until i) {
+                    val ly = 190f - 14f - lv * 20f
+                    sb.append("<path d=\"M${f(x)},${f(ly)} q-16,-9 -22,2 q12,7 22,-2\" fill=\"rgba(46,125,50,.35)\" stroke=\"#2e7d32\" stroke-width=\"1.2\"/>")
+                    sb.append("<path d=\"M${f(x)},${f(ly)} q16,-9 22,2 q-12,7 -22,-2\" fill=\"rgba(46,125,50,.25)\" stroke=\"#2e7d32\" stroke-width=\"1.2\"/>")
+                }
+                if (i == 3) sb.append(cls(x, 190f - hgt - 10f, 7f, "#e91e63", "#e91e63", 1.2f))
+            }
+            sb.append(tx(x, 216f, label, ST, "middle", bold = true, size = 10))
+        }
+        sb.append(tx(180f, 250f, "از دانه تا گیاه گل‌دار — ترتیب مراحل", MU, "middle", size = 10))
+        return sb.toString()
+    }
+
+    /** V327 — اندام‌های بدن (نمای ساده با برچسب). */
+    private fun bodyParts(spec: FigureSpec): String {
+        val sb = StringBuilder()
+        sb.append(tx(180f, 40f, "اندام‌های بدن", ST, "middle", bold = true, size = 13))
+        sb.append(cls(180f, 74f, 24f, "#ffe0b2", ST, 1.8f))
+        sb.append("<path d=\"M180,98 L180,168\" stroke=\"$ST\" stroke-width=\"16\" stroke-linecap=\"round\"/>")
+        sb.append("<path d=\"M146,142 L180,120 L214,142\" fill=\"none\" stroke=\"$ST\" stroke-width=\"8\" stroke-linecap=\"round\"/>")
+        sb.append("<path d=\"M180,168 L158,214 M180,168 L202,214\" stroke=\"$ST\" stroke-width=\"9\" stroke-linecap=\"round\"/>")
+        sb.append(cls(180f, 70f, 3f, ST, "none", 0f))
+        listOf("سر" to (236f to 74f), "دست" to (252f to 146f), "شکم" to (236f to 160f), "پا" to (250f to 214f)).forEach { (label, p) ->
+            sb.append(ln(180f, p.second, p.first - 10f, p.second, "#b9c2d0", 1.1f))
+            sb.append(cls(p.first, p.second, 3f, ACC, "none", 0f))
+            sb.append(tx(p.first + 6f, p.second + 4f, label, ST, "start", bold = true, size = 11))
+        }
+        sb.append(tx(180f, 252f, "هر اندام را نام‌گذاری کنید", MU, "middle", size = 10))
         return sb.toString()
     }
 

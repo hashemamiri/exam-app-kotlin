@@ -30,7 +30,9 @@ const GRAPH_IDS = [
   'axbeam', 'axmohr', 'axpv', 'axpert', 'axbenzene', 'axnormal', 'axsupply', 'axgame', 'axunitconv',
   'axperimeter', 'axpictograph', 'axrounding', 'axdivision', 'axshapeid', 'axcircleparts', 'axcylinder',
   'axproportion', 'axlinear', 'axbarchart', 'axparabola', 'axinthales', 'axpendulum', 'axincline', 'axcircuit',
-  'axoptics', 'axheatcurve', 'axdna'
+  'axoptics', 'axheatcurve', 'axdna',
+  // V327 — ابزارهای تازهٔ دبستان
+  'axpaintgrid', 'axletterforms', 'axsyllablechart', 'axmagnet', 'axsenses', 'axseedgrow', 'axbodyparts'
 ];
 
 const args = process.argv.slice(2);

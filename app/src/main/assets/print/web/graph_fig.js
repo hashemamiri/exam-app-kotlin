@@ -219,7 +219,9 @@
     'axtally', 'axbase10', 'axplace', 'axclock', 'axruler', 'axfrac', 'axmoney',
     'axabacus', 'axjump', 'axbalance', 'axthermo', 'axsaw', 'axpattern',
     'axtenframe', 'axsym', 'axspin', 'axbeaker', 'axgeoboard', 'axdice', 'axmularea', 'axvenn',
-    'axnumgrid', 'axfacttree', 'axfnmachine', 'axfracwall', 'axtangram', 'axangle', 'axrod', 'axtower', 'axmulwheel', 'axmultgrid', 'axnet', 'axcubes', 'axcalendar', 'axlever', 'axcycle', 'axwordtrain', 'axtiles', 'axkenken', 'axdicefold', 'axtransform', 'axcaliper', 'axsigntable', 'axtrigcircle', 'axmapping', 'axprobtree', 'axconic', 'axorbital', 'axpunnett', 'axecg', 'axprosody', 'axtruthtable', 'axledger', 'axstaff', 'axkmap', 'axgate', 'axdfa', 'axbst', 'axbode', 'axbeam', 'axmohr', 'axpv', 'axpert', 'axbenzene', 'axnormal', 'axsupply', 'axgame',
+    'axnumgrid', 'axfacttree', 'axfnmachine', 'axfracwall', 'axtangram', 'axangle', 'axrod', 'axtower', 'axmulwheel', 'axmultgrid', 'axnet', 'axcubes', 'axcalendar', 'axlever', 'axcycle', 'axwordtrain',
+    // V327 — رنگ‌آمیزی، فارسی و علوم دبستان
+    'axpaintgrid', 'axletterforms', 'axsyllablechart', 'axmagnet', 'axsenses', 'axseedgrow', 'axbodyparts', 'axtiles', 'axkenken', 'axdicefold', 'axtransform', 'axcaliper', 'axsigntable', 'axtrigcircle', 'axmapping', 'axprobtree', 'axconic', 'axorbital', 'axpunnett', 'axecg', 'axprosody', 'axtruthtable', 'axledger', 'axstaff', 'axkmap', 'axgate', 'axdfa', 'axbst', 'axbode', 'axbeam', 'axmohr', 'axpv', 'axpert', 'axbenzene', 'axnormal', 'axsupply', 'axgame',
     // V319 — بستهٔ سوم ابزار آموزشی (دبستان تا دانشگاه)
     'axunitconv', 'axperimeter', 'axpictograph', 'axrounding', 'axdivision', 'axshapeid', 'axcircleparts', 'axcylinder', 'axproportion', 'axlinear', 'axbarchart', 'axparabola', 'axinthales', 'axpendulum', 'axincline', 'axcircuit', 'axoptics', 'axheatcurve', 'axdna', 'axcell', 'axtimeline', 'axmapgeo', 'axsentence', 'axvectors', 'axmatrix', 'axintegral', 'axflowchart', 'axstack', 'axsort', 'axregression'];
   var PRIMARY_MATH_FIRST_ID = 'axtally';
@@ -293,6 +295,14 @@
     { id: 'axlever', name: 'اهرم و ماشین‌های ساده', X: { kind: 'lever1', load: '60', effort: '20', l1: '2', l2: '1' } },
     { id: 'axcycle', name: 'چرخه‌های علوم (آب، گیاه، جانور)', X: { kind: 'water' } },
     { id: 'axwordtrain', name: 'قطار کلمه‌سازی', X: { syll: 'با,با,با', word: 'بابا', mode: 'join' } },
+    // V327 — ابزارهای تازهٔ دبستان
+    { id: 'axpaintgrid', name: 'شبکهٔ رنگ‌آمیزی', X: { rows: '4', cols: '4', goal: '4', cells: '' } },
+    { id: 'axletterforms', name: 'نویسه‌های حرف (فارسی)', X: { ch: 'ب' } },
+    { id: 'axsyllablechart', name: 'هجاهای کلمه', X: { word: 'با-با' } },
+    { id: 'axmagnet', name: 'آهنربا و قطب‌ها', X: { mode: 'attract' } },
+    { id: 'axsenses', name: 'حواس پنج‌گانه', X: {} },
+    { id: 'axseedgrow', name: 'مراحل رشد دانه', X: {} },
+    { id: 'axbodyparts', name: 'اندام‌های بدن', X: {} },
     { id: 'axtiles', name: 'کاشی‌های جبر', X: { x2: '1', x: '2', k: '3', neg: '0' } },
     { id: 'axkenken', name: 'کن‌کن و کاکورو (هوش ریاضی)', X: { size: '4', cages: '11,12|6|+;13,14|7|+;21,22|3|×;23,24,31,32|10|+;33,34|4|×;41,42,43,44|10|+' } },
     { id: 'axdicefold', name: 'گستردهٔ تاس و وجه مقابل', X: { mode: 'dots', top: '1', ask: '0' } },
@@ -1345,6 +1355,161 @@
       s += tx(180, 262, cyKind === 'water' ? 'چرخهٔ آب در طبیعت' : cyKind === 'frog' ? 'دگردیسی قورباغه' : cyKind === 'plant' ? 'مراحل رشد گیاه' : 'زنجیرهٔ غذایی', MU, 'middle', true, 12);
       return wrap(s);
     }
+
+    // ===== V327 — ابزارهای تازهٔ دبستان: رنگ‌آمیزی، فارسی و علوم =====
+    var pFa = function (v) { return String(v).replace(/[0-9]/g, function (d) { return '۰۱۲۳۴۵۶۷۸۹'[+d]; }); };
+
+    if (t === 'axpaintgrid') {
+      /* شبکهٔ رنگ‌آمیزی: دانش‌آموز «n خانه» را رنگ می‌کند (پاسخ با لمس خانه‌ها). */
+      var pgRows = clamp(Math.round(num(xs('rows', '4'), 4)), 1, 8);
+      var pgCols = clamp(Math.round(num(xs('cols', '4'), 4)), 1, 8);
+      var pgGoal = clamp(Math.round(num(xs('goal', '1'), 1)), 0, pgRows * pgCols);
+      var pgCells = String(xs('cells', '')).split(/[;؛]/).map(function (q) {
+        var a2 = q.split(',');
+        return a2.length === 2 ? [Math.round(+a2[0]), Math.round(+a2[1])] : null;
+      }).filter(function (c3) { return c3 && c3[0] >= 1 && c3[0] <= pgRows && c3[1] >= 1 && c3[1] <= pgCols; });
+      var pgW = Math.min(300, pgCols * 42), pgH = Math.min(150, pgRows * 34);
+      var pgCw = pgW / pgCols, pgCh = pgH / pgRows, pgX0 = (360 - pgW) / 2, pgY0 = 66 + (150 - pgH) / 2;
+      s += tx(180, 40, 'خانه‌ها را رنگ کن', ST, 'middle', true, 13);
+      for (var pr = 0; pr < pgRows; pr++) {
+        for (var pc = 0; pc < pgCols; pc++) {
+          var onCell = pgCells.some(function (c4) { return c4[0] === pr + 1 && c4[1] === pc + 1; });
+          s += rc(pgX0 + pc * pgCw, pgY0 + pr * pgCh, pgCw, pgCh,
+            onCell ? 'rgba(108,99,245,.55)' : '#ffffff', ST, 1.4, 4);
+        }
+      }
+      if (pgGoal > 0) s += tx(180, pgY0 + pgH + 28, 'دقیقاً ' + pFa(pgGoal) + ' خانه را رنگ کن', ACC, 'middle', true, 12);
+      s += tx(180, 258, 'رنگ‌آمیزی روی شکل — پاسخ با لمس خانه‌ها ثبت می‌شود', MU, 'middle', false, 10);
+      return wrap(s);
+    }
+
+    if (t === 'axletterforms') {
+      /* نویسه‌های حرف: تنها، آغازین، میانی، پایانی */
+      var lfCh = String(xs('ch', 'ب')).trim().charAt(0) || 'ب';
+      var LF = {
+        'ب': ['ب', 'بـ', 'ـبـ', 'ـب'], 'پ': ['پ', 'پـ', 'ـپـ', 'ـپ'], 'ت': ['ت', 'تـ', 'ـتـ', 'ـت'],
+        'ث': ['ث', 'ثـ', 'ـثـ', 'ـث'], 'ج': ['ج', 'جـ', 'ـجـ', 'ـج'], 'چ': ['چ', 'چـ', 'ـچـ', 'ـچ'],
+        'ح': ['ح', 'حـ', 'ـحـ', 'ـح'], 'خ': ['خ', 'خـ', 'ـخـ', 'ـخ'], 'س': ['س', 'سـ', 'ـسـ', 'ـس'],
+        'ش': ['ش', 'شـ', 'ـشـ', 'ـش'], 'ص': ['ص', 'صـ', 'ـصـ', 'ـص'], 'ض': ['ض', 'ضـ', 'ـضـ', 'ـض'],
+        'ع': ['ع', 'عـ', 'ـعـ', 'ـع'], 'غ': ['غ', 'غـ', 'ـغـ', 'ـغ'], 'ف': ['ف', 'فـ', 'ـفـ', 'ـف'],
+        'ق': ['ق', 'قـ', 'ـقـ', 'ـق'], 'ک': ['ک', 'کـ', 'ـکـ', 'ـک'], 'گ': ['گ', 'گـ', 'ـگـ', 'ـگ'],
+        'ل': ['ل', 'لـ', 'ـلـ', 'ـل'], 'م': ['م', 'مـ', 'ـمـ', 'ـم'], 'ن': ['ن', 'نـ', 'ـنـ', 'ـن'],
+        'ه': ['ه', 'هـ', 'ـهـ', 'ـه'], 'ی': ['ی', 'یـ', 'ـیـ', 'ـی']
+      };
+      var lfForms = LF[lfCh] || [lfCh, lfCh + 'ـ', 'ـ' + lfCh + 'ـ', 'ـ' + lfCh];
+      var lfCap = ['تنها', 'آغازین', 'میانی', 'پایانی'];
+      for (var li = 0; li < 4; li++) {
+        var lfx = 306 - li * 72;
+        s += rc(lfx - 30, 84, 60, 60, 'rgba(108,99,245,.10)', ACC, 1.6, 10);
+        s += tx(lfx, 124, lfForms[li], ST, 'middle', true, 26);
+        s += tx(lfx, 164, lfCap[li], MU, 'middle', false, 11);
+      }
+      s += tx(180, 34, 'نویسه‌های حرف «' + lfCh + '»', ST, 'middle', true, 13);
+      s += tx(180, 206, 'حرف در اول، میان و آخر کلمه شکلش عوض می‌شود', MU, 'middle', false, 10);
+      return wrap(s);
+    }
+
+    if (t === 'axsyllablechart') {
+      /* هجاهای کلمه: هر هجا یک کارت + شمارش با دست‌زدن */
+      var syWord = String(xs('word', 'با-با')).trim() || 'با-با';
+      var syList = syWord.split(/[-–—]/).map(function (q5) { return q5.trim(); }).filter(Boolean).slice(0, 6);
+      var syN = Math.max(1, syList.length), syW = Math.min(72, 300 / syN), syX0 = 180 + (syN * (syW + 8)) / 2;
+      s += tx(180, 40, 'هجاهای کلمه', ST, 'middle', true, 13);
+      syList.forEach(function (sy2, si2) {
+        var bx = syX0 - (si2 + 1) * (syW + 8);
+        s += rc(bx, 74, syW, 52, 'rgba(39,196,168,.16)', '#1f8a78', 1.6, 10);
+        s += tx(bx + syW / 2, 108, sy2, ST, 'middle', true, 18);
+        s += pfxCls(bx + syW / 2, 146, 4, '#1f8a78', 'none', 0);
+      });
+      s += tx(180, 174, 'تعداد هجا: ' + pFa(syN), ACC, 'middle', true, 12);
+      s += tx(180, 202, 'هر هجا را با یک دست‌زدن بشمار', MU, 'middle', false, 10);
+      return wrap(s);
+    }
+
+    if (t === 'axmagnet') {
+      /* آهنربا: جذب یا دفع دو قطب */
+      var mgMode = xs('mode', 'attract').toLowerCase() === 'repel' ? 'repel' : 'attract';
+      s += tx(180, 36, mgMode === 'attract' ? 'دو قطب ناهم‌نام — جذب' : 'دو قطب هم‌نام — دفع', ST, 'middle', true, 13);
+      var mgL = 96, mgR = 264, mgY = 150;
+      [[mgL, 'N'], [mgR, 'S']].forEach(function (m1) {
+        var mx1 = m1[0];
+        s += rc(mx1 - 46, mgY - 26, 92, 52, '#e8eaf6', ST, 1.8, 6);
+        s += rc(mx1 + (m1[1] === 'N' ? 18 : -46), mgY - 26, 28, 52, m1[1] === 'N' ? '#e53935' : '#1e88e5', '#ffffff', 1, 4);
+        s += tx(mx1 + (m1[1] === 'N' ? 32 : -32), mgY + 7, m1[1], '#ffffff', 'middle', true, 16);
+      });
+      if (mgMode === 'attract') {
+        s += pfxArrow(mgL + 50, mgY, mgL + 78, mgY, '#1f8a78', 2, 8) + pfxArrow(mgR - 50, mgY, mgR - 78, mgY, '#1f8a78', 2, 8);
+        s += tx(180, mgY - 48, 'جذب', '#1f8a78', 'middle', true, 12);
+      } else {
+        s += pfxArrow(mgL + 78, mgY, mgL + 40, mgY, PT, 2, 8) + pfxArrow(mgR - 78, mgY, mgR - 40, mgY, PT, 2, 8);
+        s += tx(180, mgY - 48, 'دفع', PT, 'middle', true, 12);
+      }
+      s += tx(180, 232, 'قطب‌های هم‌نام یکدیگر را می‌رانند و ناهم‌نام‌ها جذب می‌شوند', MU, 'middle', false, 10);
+      return wrap(s);
+    }
+
+    if (t === 'axsenses') {
+      /* حواس پنج‌گانه: پنج حس با اندام مربوط */
+      var snItems = [['بینایی', 'چشم'], ['شنوایی', 'گوش'], ['بویایی', 'بینی'], ['چشایی', 'زبان'], ['لامسه', 'پوست']];
+      s += pfxCls(180, 138, 34, 'rgba(108,99,245,.12)', ACC, 1.8);
+      s += tx(180, 144, 'حواس', ST, 'middle', true, 12);
+      var snPos = [[180, 62], [92, 112], [268, 112], [112, 188], [248, 188]];
+      var snLab = [[180, 26, 'middle'], [92, 152, 'middle'], [268, 152, 'middle'], [112, 224, 'middle'], [248, 224, 'middle']];
+      snItems.forEach(function (it2, si3) {
+        var p6 = snPos[si3], l6 = snLab[si3];
+        s += lnr(180, 138, p6[0], p6[1], '#b9c2d0', 1.3);
+        s += pfxCls(p6[0], p6[1], 22, 'rgba(108,99,245,.16)', ACC, 1.8);
+        s += tx(p6[0], p6[1] + 5, pFa(si3 + 1), ACC, 'middle', true, 12);
+        s += tx(l6[0], l6[1], it2[0] + ' — ' + it2[1], ST, l6[2], true, 10.5);
+      });
+      s += tx(180, 246, 'پنج حس بدن و اندام هر حس', MU, 'middle', false, 10);
+      return wrap(s);
+    }
+
+    if (t === 'axseedgrow') {
+      /* مراحل رشد دانه */
+      var sgStages = [['دانه', 0], ['جوانه', 1], ['گیاه کوچک', 2], ['گیاه گلدار', 3]];
+      s += lnr(40, 190, 320, 190, '#8d6e63', 3);
+      sgStages.forEach(function (st2, si4) {
+        var sx4 = 300 - si4 * 76;
+        if (st2[1] === 0) {
+          s += '<ellipse cx="' + sx4 + '" cy="184" rx="9" ry="6" fill="#a1887f" stroke="' + ST + '" stroke-width="1.2"/>';
+        } else {
+          var hgt = 14 + st2[1] * 26;
+          s += lnr(sx4, 190, sx4, 190 - hgt, '#2e7d32', 2.6);
+          for (var lv = 0; lv < st2[1]; lv++) {
+            var ly = 190 - 14 - lv * 20;
+            s += '<path d="M' + sx4 + ',' + ly + ' q-16,-9 -22,2 q12,7 22,-2" fill="rgba(46,125,50,.35)" stroke="#2e7d32" stroke-width="1.2"/>';
+            s += '<path d="M' + sx4 + ',' + ly + ' q16,-9 22,2 q-12,7 -22,-2" fill="rgba(46,125,50,.25)" stroke="#2e7d32" stroke-width="1.2"/>';
+          }
+          if (st2[1] === 3) s += pfxCls(sx4, 190 - hgt - 10, 7, '#e91e63', '#e91e63', 1.2);
+        }
+        s += tx(sx4, 216, st2[0], ST, 'middle', true, 10);
+      });
+      s += tx(180, 40, 'مراحل رشد دانه', ST, 'middle', true, 13);
+      s += tx(180, 250, 'از دانه تا گیاه گل‌دار — ترتیب مراحل', MU, 'middle', false, 10);
+      return wrap(s);
+    }
+
+    if (t === 'axbodyparts') {
+      /* اندام‌های بدن (نمای ساده) */
+      s += pfxCls(180, 74, 24, '#ffe0b2', ST, 1.8);
+      s += '<path d="M180,98 L180,168" stroke="' + ST + '" stroke-width="16" stroke-linecap="round"/>';
+      s += '<path d="M146,142 L180,120 L214,142" fill="none" stroke="' + ST + '" stroke-width="8" stroke-linecap="round"/>';
+      s += '<path d="M180,168 L158,214 M180,168 L202,214" stroke="' + ST + '" stroke-width="9" stroke-linecap="round"/>';
+      s += pfxCls(180, 70, 3, ST, 'none', 0);
+      var bpLabs = [['سر', 236, 74], ['دست', 252, 146], ['شکم', 236, 160], ['پا', 250, 214]];
+      bpLabs.forEach(function (b2) {
+        var lx = b2[1], ly2 = b2[2];
+        s += lnr(180, ly2, lx - 10, ly2, '#b9c2d0', 1.1);
+        s += pfxCls(lx, ly2, 3, ACC, 'none', 0);
+        s += tx(lx + 6, ly2 + 4, b2[0], ST, 'start', true, 11);
+      });
+      s += tx(180, 40, 'اندام‌های بدن', ST, 'middle', true, 13);
+      s += tx(180, 252, 'هر اندام را نام‌گذاری کنید', MU, 'middle', false, 10);
+      return wrap(s);
+    }
+
     if (t === 'axwordtrain') {
       var wtSyl = String(xs('syll', 'با,با,با')).split(/[,،]/).map(function (q4) { return q4.trim(); }).filter(Boolean).slice(0, 5);
       if (!wtSyl.length) wtSyl = ['با', 'با', 'با'];
@@ -4754,6 +4919,13 @@
       axcalendar: '<rect x="4" y="7" width="28" height="20" rx="2" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M4,13 H32 M11,7 V10 M25,7 V10" stroke="currentColor" stroke-width="1.2"/><circle cx="11" cy="19" r="1.6" fill="currentColor"/><circle cx="18" cy="19" r="1.6" fill="currentColor"/><circle cx="25" cy="24" r="1.6" fill="currentColor"/>',
       axlever: '<path d="M4,22 H32" stroke="currentColor" stroke-width="2.5"/><path d="M18,22 L14,28 H22 Z" fill="currentColor"/><path d="M6,12 H30" stroke="currentColor" stroke-width="1.4"/>',
       axcycle: '<path d="M10,15 A8,8 0 1 1 15,24" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M15,24 L12,20 L17,21 Z" fill="currentColor"/>',
+      axpaintgrid: '<rect x="4" y="4" width="28" height="24" rx="2" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M13,4 V28 M22,4 V28 M4,12 H32 M4,20 H32" stroke="currentColor" stroke-width="1"/><rect x="13" y="12" width="9" height="8" fill="currentColor" opacity=".55"/>',
+      axletterforms: '<path d="M5,25 V11 q0,-3 3,-3 h5" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M20,8 h6 v6 q0,3 -3,3" fill="none" stroke="currentColor" stroke-width="1.8"/><circle cx="27" cy="25" r="1.6" fill="currentColor"/>',
+      axsyllablechart: '<rect x="3" y="10" width="12" height="9" rx="2" fill="none" stroke="currentColor" stroke-width="1.4"/><rect x="18" y="10" width="12" height="9" rx="2" fill="none" stroke="currentColor" stroke-width="1.4"/><circle cx="9" cy="25" r="2" fill="currentColor"/><circle cx="24" cy="25" r="2" fill="currentColor"/>',
+      axmagnet: '<path d="M8,6 v12 a8,8 0 0 0 16,0 V6" fill="none" stroke="currentColor" stroke-width="3"/><path d="M8,6 h5 M23,6 h5" stroke="currentColor" stroke-width="3"/>',
+      axsenses: '<circle cx="18" cy="15" r="8" fill="none" stroke="currentColor" stroke-width="1.6"/><circle cx="15" cy="13" r="1.4" fill="currentColor"/><circle cx="21" cy="13" r="1.4" fill="currentColor"/><path d="M15,19 q3,2 6,0" fill="none" stroke="currentColor" stroke-width="1.3"/>',
+      axseedgrow: '<path d="M18,26 V14" stroke="currentColor" stroke-width="2"/><path d="M18,18 q-9,-2 -10,-9 q9,0 10,9" fill="currentColor" opacity=".55"/><path d="M18,15 q9,-3 10,-10 q-9,1 -10,10" fill="currentColor" opacity=".35"/><path d="M8,26 h20" stroke="currentColor" stroke-width="2"/>',
+      axbodyparts: '<circle cx="18" cy="7" r="4" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M18,11 V21 M18,14 L11,18 M18,14 L25,18 M18,21 L13,28 M18,21 L23,28" stroke="currentColor" stroke-width="1.6"/>',
       axwordtrain: '<rect x="3" y="10" width="12" height="10" rx="2" fill="none" stroke="currentColor" stroke-width="1.4"/><rect x="17" y="10" width="12" height="10" rx="2" fill="none" stroke="currentColor" stroke-width="1.4"/><circle cx="8" cy="23" r="2" fill="currentColor"/><circle cx="24" cy="23" r="2" fill="currentColor"/>',
       axtiles: '<rect x="3" y="4" width="16" height="16" rx="2" fill="none" stroke="currentColor" stroke-width="1.4"/><rect x="21" y="4" width="12" height="5" fill="currentColor" opacity=".6"/><rect x="21" y="12" width="5" height="5" fill="currentColor" opacity=".4"/><rect x="28" y="12" width="5" height="5" fill="currentColor" opacity=".4"/>',
       axkenken: '<rect x="4" y="4" width="28" height="24" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M4,12 H22 M4,20 H22 M12,4 V28 M22,4 V28 M22,12 H32" stroke="currentColor" stroke-width="1.6"/>',
@@ -4889,6 +5061,13 @@
       axlever: [['kind', 'نوع ماشین'], ['load', 'نیروی بار (N)'], ['effort', 'نیروی محرک (N)'], ['l1', 'بازوی بار'], ['l2', 'بازوی نیرو']],
       axcycle: [['kind', 'نوع چرخه']],
       axwordtrain: [['syll', 'هجاها (با ویرگول)'], ['word', 'کلمهٔ ساخته‌شده'], ['mode', 'حالت']],
+      axpaintgrid: [['rows', 'تعداد سطر'], ['cols', 'تعداد ستون'], ['goal', 'چند خانه رنگ شود'], ['cells', 'خانه‌های رنگ‌شدهٔ نمونه (سطر,ستون)']],
+      axletterforms: [['ch', 'حرف']],
+      axsyllablechart: [['word', 'کلمه با هجاها (با - جدا کنید)']],
+      axmagnet: [['mode', 'حالت (attract/repel)']],
+      axsenses: [],
+      axseedgrow: [],
+      axbodyparts: [],
       axtiles: [['x2', 'تعداد کاشی x²'], ['x', 'تعداد کاشی x'], ['k', 'تعداد کاشی ۱'], ['neg', 'منفی (۱/۰)']],
       axkenken: [['size', 'ابعاد جدول (۳ تا ۶)'], ['cages', 'قفس‌ها (خانه‌ها|هدف|عمل با ;)']],
       axdicefold: [['mode', 'نمایش وجه‌ها'], ['top', 'شمارهٔ وجه بالا'], ['ask', 'پرسش وجه مقابل (۱/۰)']],
@@ -5957,7 +6136,7 @@
   function isMathType(t) { var sp = mathSplit(); for (var i = 0; i < AXIS_TYPES.length; i++) if (AXIS_TYPES[i].id === t) return i >= sp; return false; }
   // V320 — دسته‌بندی ابزارهای ریاضی (هم‌تراز با MathToolCatalog.kt)
   var MATH_CATS = [
-    { id: 'elementary', name: '🧮 دبستان', hint: 'پایهٔ اول تا ششم — شمارش، جمع و تفریق، ضرب، شکل و اندازه', ids: ['axtally', 'axbase10', 'axplace', 'axclock', 'axruler', 'axfrac', 'axmoney', 'axabacus', 'axjump', 'axbalance', 'axthermo', 'axsaw', 'axpattern', 'axtenframe', 'axsym', 'axspin', 'axbeaker', 'axgeoboard', 'axdice', 'axmularea', 'axvenn', 'axnumgrid', 'axfacttree', 'axfnmachine', 'axfracwall', 'axtangram', 'axangle', 'axrod', 'axtower', 'axmulwheel', 'axmultgrid', 'axnet', 'axcubes', 'axcalendar', 'axlever', 'axcycle', 'axwordtrain'] },
+    { id: 'elementary', name: '🧮 دبستان', hint: 'پایهٔ اول تا ششم — شمارش، جمع و تفریق، ضرب، شکل و اندازه', ids: ['axtally', 'axbase10', 'axplace', 'axclock', 'axruler', 'axfrac', 'axmoney', 'axabacus', 'axjump', 'axbalance', 'axthermo', 'axsaw', 'axpattern', 'axtenframe', 'axsym', 'axspin', 'axbeaker', 'axgeoboard', 'axdice', 'axmularea', 'axvenn', 'axnumgrid', 'axfacttree', 'axfnmachine', 'axfracwall', 'axtangram', 'axangle', 'axrod', 'axtower', 'axmulwheel', 'axmultgrid', 'axnet', 'axcubes', 'axcalendar', 'axlever', 'axcycle', 'axwordtrain', 'axpaintgrid', 'axletterforms', 'axsyllablechart', 'axmagnet', 'axsenses', 'axseedgrow', 'axbodyparts'] },
     { id: 'middle', name: '📐 متوسطهٔ اول', hint: 'پایهٔ هفتم تا نهم — جبر، هندسه، اندازه‌گیری و آمار مقدماتی', ids: ['axtiles', 'axkenken', 'axdicefold', 'axtransform', 'axcaliper', 'axunitconv', 'axperimeter', 'axpictograph', 'axrounding', 'axdivision', 'axshapeid', 'axcircleparts', 'axcylinder', 'axproportion', 'axlinear'] },
     { id: 'high', name: '🧪 متوسطهٔ دوم و کنکور', hint: 'ریاضی، فیزیک، شیمی و زیست — از تابع و مثلثات تا مدار و سلول', ids: ['axsigntable', 'axtrigcircle', 'axmapping', 'axprobtree', 'axconic', 'axorbital', 'axpunnett', 'axecg', 'axprosody', 'axtruthtable', 'axledger', 'axstaff', 'axbarchart', 'axparabola', 'axinthales', 'axpendulum', 'axincline', 'axcircuit', 'axoptics', 'axheatcurve', 'axdna', 'axcell'] },
     { id: 'university', name: '🎓 انسانی و دانشگاه', hint: 'انسانی، هنر، فنی و دانشگاه — از عروض و حسابداری تا منطق دیجیتال و الگوریتم', ids: ['axkmap', 'axgate', 'axdfa', 'axbst', 'axbode', 'axbeam', 'axmohr', 'axpv', 'axpert', 'axbenzene', 'axnormal', 'axsupply', 'axgame', 'axtimeline', 'axmapgeo', 'axsentence', 'axvectors', 'axmatrix', 'axintegral', 'axflowchart', 'axstack', 'axsort', 'axregression'] }

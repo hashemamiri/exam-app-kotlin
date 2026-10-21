@@ -4,6 +4,7 @@ import android.app.Activity
 import android.content.Context
 import android.content.ContextWrapper
 import android.content.Intent
+import android.graphics.Bitmap
 import android.net.Uri
 import android.view.WindowManager
 import androidx.activity.compose.BackHandler
@@ -88,6 +89,8 @@ import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import kotlinx.coroutines.delay
+import java.io.File
+import java.io.FileOutputStream
 import ir.exam.app.core.figure.AtlasBlankAnswerCodec
 import ir.exam.app.domain.model.BooleanAnswer
 import ir.exam.app.domain.model.ChoiceAnswer
@@ -365,6 +368,16 @@ fun StudentExamContent(
                 var zoomImage by remember(question.id) { mutableStateOf<String?>(null) }
                 val answerText = (state.answers[question.id] as? TextAnswer)?.value.orEmpty()
                 Column(verticalArrangement=Arrangement.spacedBy(6.dp)) {
+                    // V327 — متن مشترک درک مطلب فقط یک بار بالای اولین سؤالِ وابسته نشان داده می‌شود.
+                    if (question.passage.isNotBlank()) {
+                        Card(Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)) {
+                            Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                Text("متن روخوانی", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                                NativeMathText(question.passage, fontSize = if (primary) 22.sp else 18.sp)
+                                if (primary) ir.exam.app.ui.audio.ReadAloudButton(text = question.passage, modifier = Modifier.fillMaxWidth(), key = "passage-${question.id}")
+                            }
+                        }
+                    }
                     // V135 — فایل صوتی سؤال: پلی/پاز + نوار جلو/عقب
                     presentation.audioUrl?.let { audio ->
                         ir.exam.app.ui.audio.QuestionAudioPlayer(url = audio, durationMs = presentation.audioMs, modifier = Modifier.fillMaxWidth())
@@ -372,10 +385,13 @@ fun StudentExamContent(
                     // V302 — ابتدایی: اگر معلم صدا ضبط نکرده، دکمهٔ بزرگ «بخوان» با TTS دستگاه
                     if ((primary || (question as? FillBlankQuestion)?.dictationText != null) && presentation.audioUrl == null) {
                         ir.exam.app.ui.audio.ReadAloudButton(
-                            // V306 — املا: «بخوان» فقط متن املا را می‌خواند
+                            // V306/V327 — املا: واژه‌ها جدا، تکرار و سکوت مطابق تنظیم معلم.
                             text = remember(question.id) { (question as? FillBlankQuestion)?.dictationText ?: ir.exam.app.core.speech.ReadAloudText.forQuestion(question) },
                             modifier = Modifier.fillMaxWidth(),
-                            key = question.id
+                            key = question.id,
+                            dictation = (question as? FillBlankQuestion)?.dictationText != null,
+                            gapSeconds = (question as? FillBlankQuestion)?.dictationGap ?: 6,
+                            repeats = (question as? FillBlankQuestion)?.dictationRepeats ?: 2
                         )
                     }
                     if(presentation.imagePosition=="above") question.images.forEach { img ->
@@ -443,7 +459,10 @@ fun StudentExamContent(
                         )
                     }
                     // V264 — صفحه‌کلید ریاضی (آیتم ۱۲) کنار کادر پاسخ جای خالی/عددی؛ با دکمهٔ ماشین‌حساب باز/بسته می‌شود
-                    is FillBlankQuestion -> if (primary && question.orderItems.isNotEmpty()) {
+                    is FillBlankQuestion -> if (primary && question.paintRows > 0 && question.paintCols > 0) {
+                        val saved = (state.answers[question.id] as? TextAnswer)?.value.orEmpty()
+                        PrimaryPaintAnswer(question, saved) { onAnswer(TextAnswer(question.id, it)) }
+                    } else if (primary && question.orderItems.isNotEmpty()) {
                         // V305 — ابتدایی: مرتب‌سازی با کشیدن؛ پاسخ = ترتیب فعلی موارد با «,»
                         val saved = (state.answers[question.id] as? TextAnswer)?.value.orEmpty()
                         val order = orderFromAnswer(saved, question.orderItems)
@@ -804,8 +823,17 @@ private fun ResponseImages(
         uris.forEach(::persist)
         editQueue=uris
     }
+    // V327 — عکس مستقیم با دوربین، سپس همان ویرایشگر تصویر پاسخ.
+    val camera = rememberLauncherForActivityResult(ActivityResultContracts.TakePicturePreview()) { bitmap ->
+        if (bitmap != null) runCatching {
+            val file = File(context.cacheDir, "answer_${questionId}_${System.currentTimeMillis()}.jpg")
+            FileOutputStream(file).use { out -> bitmap.compress(Bitmap.CompressFormat.JPEG, 88, out) }
+            editQueue = listOf(Uri.fromFile(file))
+        }
+    }
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text("تصاویر پاسخ (${values.size} از $max)")
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         Button(
             enabled = values.size < max,
             onClick = {
@@ -814,7 +842,12 @@ private fun ResponseImages(
                 ExamLeaveGuard.suppressNext()
                 if (max - values.size <= 1) singlePicker.launch(request) else multiplePicker.launch(request)
             }
-        ) { Text("افزودن تصویر پاسخ") }
+        ) { Text("انتخاب از گالری") }
+        Button(enabled = values.size < max, onClick = {
+            ExamLeaveGuard.suppressNext()
+            camera.launch(null)
+        }) { Text("عکس بگیر") }
+        }
         values.forEach { uri ->
             Row(verticalAlignment = Alignment.CenterVertically) {
                 StudentCachedImage(uri, "تصویر پاسخ", Modifier.size(100.dp))
@@ -1168,6 +1201,40 @@ private fun PrimaryBucketAnswer(
                 }
             }
         }
+    }
+}
+
+/** V327 — دانش‌آموز خانه‌ها را لمس می‌کند؛ پاسخ، مختصات مرتب‌شده است. */
+@Composable
+private fun PrimaryPaintAnswer(question: FillBlankQuestion, saved: String, onChange: (String) -> Unit) {
+    val selected = remember(question.id, saved) {
+        saved.split(';').mapNotNull { part ->
+            val xy = part.split(',')
+            val r = xy.getOrNull(0)?.toIntOrNull()
+            val c = xy.getOrNull(1)?.toIntOrNull()
+            if (r != null && c != null) r to c else null
+        }.toSet()
+    }
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+        Text("خانه‌ها را رنگ کن · ${selected.size} از ${question.paintGoal}", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+        repeat(question.paintRows) { ri ->
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                repeat(question.paintCols) { ci ->
+                    val cell = (ri + 1) to (ci + 1)
+                    val active = cell in selected
+                    Card(
+                        modifier = Modifier.size(48.dp).clickable {
+                            val next = selected.toMutableSet()
+                            if (active) next.remove(cell) else if (next.size < question.paintGoal) next.add(cell)
+                            onChange(next.sortedWith(compareBy<Pair<Int, Int>> { it.first }.thenBy { it.second }).joinToString(";") { "${it.first},${it.second}" })
+                        },
+                        colors = CardDefaults.cardColors(containerColor = if (active) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.primary)
+                    ) { Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { if (active) Text("✓", color = MaterialTheme.colorScheme.onPrimary, fontSize = 22.sp) } }
+                }
+            }
+        }
+        Text("برای پاک‌کردن، دوباره روی همان خانه بزن.", style = MaterialTheme.typography.bodySmall)
     }
 }
 

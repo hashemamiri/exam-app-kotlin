@@ -125,6 +125,8 @@ internal object StudentExamPayloadCodec {
         val maxAnswerImages = if (allowImages == null || allowImages == "no") 0
             else (obj.int("maxImages") ?: obj.int("max_images") ?: 1).coerceIn(0, 10)
         val answerImagesRequired = allowImages == "required"
+        // V327 — متن روخوانیِ مشترک (خالی = بدون متن)
+        val passage = obj.text("passage").orEmpty()
 
         return when (obj.text("type")?.lowercase()) {
             "multiple", "multiple_choice", "multiplechoice" -> {
@@ -145,6 +147,7 @@ internal object StudentExamPayloadCodec {
                     originalIndex = originalIndex,
                     optionOriginalIndices = order,
                     // V305 — انتخاب روی تصویر: ناحیه‌ها به اندیس اصلی (بدون بُرخوردن)
+                    passage = passage,
                     hotspots = if (obj.text("mode") == "hotspot") obj["hotspots"].arrayOrEmpty().mapNotNull { h ->
                         (h as? JsonObject)?.let { o ->
                             HotspotZone(o.double("x")?.toFloat() ?: 0f, o.double("y")?.toFloat() ?: 0f, o.double("w")?.toFloat() ?: 0f, o.double("h")?.toFloat() ?: 0f)
@@ -153,7 +156,7 @@ internal object StudentExamPayloadCodec {
                 )
             }
             "truefalse", "true_false" -> TrueFalseQuestion(
-                id, text, score, images, maxAnswerImages, answerImagesRequired, originalIndex
+                id, text, score, images, maxAnswerImages, answerImagesRequired, originalIndex, passage
             )
             "fill", "fill_blank" -> FillBlankQuestion(
                 id, text, score, images, maxAnswerImages, answerImagesRequired, originalIndex,
@@ -164,10 +167,21 @@ internal object StudentExamPayloadCodec {
                 // V314.0 — بخش‌کردن و صداکشی + دسته‌بندی در سبد
                 syllableCount = if (obj.text("mode") == "syllable") (obj.int("syllableCount") ?: 2).coerceIn(2, 10) else 0,
                 buckets = if (obj.text("mode") == "bucket") obj["buckets"].arrayStrings().filter { it.isNotBlank() } else emptyList(),
-                bucketItems = if (obj.text("mode") == "bucket") shuffledOrderItems(obj["items"].arrayStrings().filter { it.isNotBlank() }, "$optionSeed:$originalIndex:bucket") else emptyList()
+                bucketItems = if (obj.text("mode") == "bucket") shuffledOrderItems(obj["items"].arrayStrings().filter { it.isNotBlank() }, "$optionSeed:$originalIndex:bucket") else emptyList(),
+                // V327 — املا: سکوت بین کلمه‌ها و تعداد تکرار؛ رنگ‌آمیزی: ابعاد شبکه
+                dictationGap = (obj.int("dict_gap") ?: 6).coerceIn(3, 20),
+                dictationRepeats = (obj.int("dict_repeat") ?: 2).coerceIn(1, 3),
+                paintRows = if (obj.text("mode") == "paint") (obj.int("paintRows") ?: 4).coerceIn(1, 8) else 0,
+                paintCols = if (obj.text("mode") == "paint") (obj.int("paintCols") ?: 4).coerceIn(1, 8) else 0,
+                paintGoal = if (obj.text("mode") == "paint") {
+                    val pr = (obj.int("paintRows") ?: 4).coerceIn(1, 8)
+                    val pc = (obj.int("paintCols") ?: 4).coerceIn(1, 8)
+                    (obj.int("paintGoal") ?: 1).coerceIn(1, pr * pc)
+                } else 0,
+                passage = passage
             )
             "numeric", "number" -> NumericQuestion(
-                id, text, score, images, maxAnswerImages, answerImagesRequired, originalIndex
+                id, text, score, images, maxAnswerImages, answerImagesRequired, originalIndex, passage
             )
             "matching", "match" -> {
                 val right = obj["rightItems"].arrayStrings()
@@ -187,7 +201,8 @@ internal object StudentExamPayloadCodec {
                     maxAnswerImages = maxAnswerImages,
                     answerImagesRequired = answerImagesRequired,
                     originalIndex = originalIndex,
-                    rightOriginalIndices = rightOrder
+                    rightOriginalIndices = rightOrder,
+                    passage = passage
                 )
             }
             else -> EssayQuestion(
@@ -195,7 +210,8 @@ internal object StudentExamPayloadCodec {
                 // V306 — پاسخ با تخته (حالت ابتدایی)
                 answerMode = if (obj.text("mode") == "draw") "draw" else if (obj.text("mode") == "voice") "voice" else "text",
                 // V309 — سقف ضبط پاسخ صوتی
-                voiceMaxSeconds = obj.int("voice_max_seconds") ?: 0
+                voiceMaxSeconds = obj.int("voice_max_seconds") ?: 0,
+                passage = passage
             )
         }
     }

@@ -52,6 +52,11 @@ sealed interface Question {
     val answerImagesRequired: Boolean
     /** اندیس اصلی سرور؛ پاسخ‌های آرایه‌ای همیشه با این ترتیب ارسال می‌شوند. */
     val originalIndex: Int
+    /**
+     * V327 — «متن روخوانی»: متنِ مشترکی که بالای سؤال نمایش داده می‌شود
+     * (درکِ متن/روخوانی دبستان). خالی = سؤال بدون متن.
+     */
+    val passage: String
 }
 
 data class EssayQuestion(
@@ -65,7 +70,8 @@ data class EssayQuestion(
     /** V306 — حالت پاسخ: "text" (پیش‌فرض) یا "draw" (پاسخ با تخته/نقاشی بزرگ، حالت ابتدایی). */
     val answerMode: String = "text",
     /** V309 — سقف مدت ضبط پاسخ صوتی (ثانیه)؛ فقط وقتی answerMode = "voice" است. */
-    val voiceMaxSeconds: Int = 0
+    val voiceMaxSeconds: Int = 0,
+    override val passage: String = ""
 ) : Question
 
 data class MultipleChoiceQuestion(
@@ -81,7 +87,8 @@ data class MultipleChoiceQuestion(
     /** هر گزینه نمایشی به کدام اندیس اصلی سرور اشاره می‌کند. */
     val optionOriginalIndices: List<Int> = options.indices.toList(),
     /** V305 — انتخاب روی تصویر: ناحیهٔ هر گزینه به «اندیس اصلی» (درصد x,y,w,h)؛ خالی = حالت عادی. */
-    val hotspots: List<HotspotZone> = emptyList()
+    val hotspots: List<HotspotZone> = emptyList(),
+    override val passage: String = ""
 ) : Question
 
 /** V305 — ناحیهٔ Hotspot (درصد نسبت به تصویر). */
@@ -94,7 +101,8 @@ data class TrueFalseQuestion(
     override val images: List<String> = emptyList(),
     override val maxAnswerImages: Int = 0,
     override val answerImagesRequired: Boolean = false,
-    override val originalIndex: Int = 0
+    override val originalIndex: Int = 0,
+    override val passage: String = ""
 ) : Question
 
 data class FillBlankQuestion(
@@ -113,7 +121,15 @@ data class FillBlankQuestion(
     val syllableCount: Int = 0,
     /** V314.0 — دسته‌بندی در سبد: نام سبدها و فهرست موارد بُرخورده. */
     val buckets: List<String> = emptyList(),
-    val bucketItems: List<String> = emptyList()
+    val bucketItems: List<String> = emptyList(),
+    /** V327 — املا: فاصلهٔ سکوت بین کلمه‌ها (ثانیه) و تعداد تکرار هر کلمه. */
+    val dictationGap: Int = 6,
+    val dictationRepeats: Int = 2,
+    /** V327 — رنگ‌آمیزی روی شکل: ابعاد شبکه و چند خانه باید رنگ شود (۰ = غیرفعال). */
+    val paintRows: Int = 0,
+    val paintCols: Int = 0,
+    val paintGoal: Int = 0,
+    override val passage: String = ""
 ) : Question
 
 data class NumericQuestion(
@@ -123,7 +139,8 @@ data class NumericQuestion(
     override val images: List<String> = emptyList(),
     override val maxAnswerImages: Int = 0,
     override val answerImagesRequired: Boolean = false,
-    override val originalIndex: Int = 0
+    override val originalIndex: Int = 0,
+    override val passage: String = ""
 ) : Question
 
 data class MatchingQuestion(
@@ -139,7 +156,8 @@ data class MatchingQuestion(
     override val answerImagesRequired: Boolean = false,
     override val originalIndex: Int = 0,
     /** هر عضو نمایشی ستون راست به کدام اندیس اصلی کلید پاسخ اشاره می‌کند. */
-    val rightOriginalIndices: List<Int> = rightItems.indices.toList()
+    val rightOriginalIndices: List<Int> = rightItems.indices.toList(),
+    override val passage: String = ""
 ) : Question
 
 sealed interface StudentAnswer { val questionId: String }

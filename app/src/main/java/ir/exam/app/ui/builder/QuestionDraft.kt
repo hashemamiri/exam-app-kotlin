@@ -335,6 +335,17 @@ data class QuestionDraft(
      * "hotspot" (چندگزینه‌ای → انتخاب روی تصویر؛ هر گزینه یک ناحیه در hotspots). کلید سیمی: mode / items / hotspots.
      */
     val mode: String = "",
+    // V327 — متن مشترک روخوانی/درک مطلب؛ چند سؤال می‌توانند passage یکسان داشته باشند.
+    val passage: String = "",
+    // V327 — سکوت و تعداد تکرار در قالب املا؛ برای داده‌های قدیمی پیش‌فرض امن.
+    val dictationGap: Int = 6,
+    val dictationRepeats: Int = 2,
+    /** فهرست واژه‌هایی که خوانده می‌شوند؛ با | جدا می‌شود و از پاسخ درست مستقل است. */
+    val dictationWords: String = "",
+    // V327 — پاسخ‌رنگ‌آمیزی: ابعاد شبکه و تعداد خانهٔ هدف.
+    val paintRows: Int = 4,
+    val paintCols: Int = 4,
+    val paintGoal: Int = 1,
     // V308 / ۱۴ — برچسب پایه (۱ تا ۶؛ ۰ = بدون پایه) و درس؛ برای فیلتر بانک حالت ابتدایی
     val grade: Int = 0,
     val subject: String = "",

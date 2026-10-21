@@ -32,7 +32,14 @@ import java.util.Locale
  * پخش‌کنندهٔ صدای معلم (V135) می‌آید. با عوض شدن سؤال خواندن قطع می‌شود.
  */
 @Composable
-fun ReadAloudButton(text: String, modifier: Modifier = Modifier, key: Any? = text) {
+fun ReadAloudButton(
+    text: String,
+    modifier: Modifier = Modifier,
+    key: Any? = text,
+    dictation: Boolean = false,
+    gapSeconds: Int = 6,
+    repeats: Int = 2
+) {
     val context = LocalContext.current.applicationContext
     var ready by remember { mutableStateOf(false) }
     var speaking by remember { mutableStateOf(false) }
@@ -71,9 +78,22 @@ fun ReadAloudButton(text: String, modifier: Modifier = Modifier, key: Any? = tex
             if (speaking) { runCatching { tts.stop() }; speaking = false }
             else if (ready && text.isNotBlank()) {
                 speaking = true
-                val chunks = text.chunked(3500) // محدودیت موتورهای TTS ~۴۰۰۰ نویسه
-                chunks.forEachIndexed { i, c ->
-                    tts.speak(c, if (i == 0) TextToSpeech.QUEUE_FLUSH else TextToSpeech.QUEUE_ADD, null, "read-$i")
+                if (dictation) {
+                    // V327 — هر واژه جداگانه؛ تکرار محدود و سکوت قابل تنظیم بین نوبت‌ها.
+                    val words = text.split('|').map { it.trim() }.filter { it.isNotEmpty() }.take(80)
+                    var first = true
+                    words.forEachIndexed { wi, word ->
+                        repeat(repeats.coerceIn(1, 3)) { ri ->
+                            tts.speak(word, if (first) TextToSpeech.QUEUE_FLUSH else TextToSpeech.QUEUE_ADD, null, "dict-$wi-$ri")
+                            first = false
+                            tts.playSilentUtterance(gapSeconds.coerceIn(3, 20) * 1000L, TextToSpeech.QUEUE_ADD, "dict-gap-$wi-$ri")
+                        }
+                    }
+                } else {
+                    val chunks = text.chunked(3500) // محدودیت موتورهای TTS ~۴۰۰۰ نویسه
+                    chunks.forEachIndexed { i, c ->
+                        tts.speak(c, if (i == 0) TextToSpeech.QUEUE_FLUSH else TextToSpeech.QUEUE_ADD, null, "read-$i")
+                    }
                 }
             }
         },
@@ -83,7 +103,7 @@ fun ReadAloudButton(text: String, modifier: Modifier = Modifier, key: Any? = tex
     ) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             Text(if (speaking) "⏹" else "🔊", fontSize = 24.sp)
-            Text(if (speaking) "بس است" else "سؤال را برایم بخوان", fontWeight = FontWeight.Bold, fontSize = 18.sp)
+            Text(if (speaking) "بس است" else if (dictation) "شروع املا" else "سؤال را برایم بخوان", fontWeight = FontWeight.Bold, fontSize = 18.sp)
         }
     }
 }

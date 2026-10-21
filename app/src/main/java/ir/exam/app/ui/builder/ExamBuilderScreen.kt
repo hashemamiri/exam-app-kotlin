@@ -1672,6 +1672,23 @@ private fun QuestionEditor(
             // V310.1 — در آزمون چاپی هم مثل سایت نمایش داده می‌شود (قبلاً `!printMode` بود و املا در چاپ دیده نمی‌شد).
             if (primary && (question.type == QuestionType.FILL_BLANK || question.type == QuestionType.MULTIPLE_CHOICE || question.type == QuestionType.ESSAY)) {
                 PrimaryModeChooser(question, viewModel)
+                if (question.type == QuestionType.FILL_BLANK && question.mode == "paint") {
+                    PrimaryPaintSettings(question, viewModel)
+                }
+                if (question.type == QuestionType.FILL_BLANK && question.mode == "dictation") {
+                    PrimaryDictationSettings(question, viewModel)
+                }
+            }
+            // V327 — متن مشترک روخوانی/درک مطلب در هر سؤال وابسته وارد شود.
+            if (primary) {
+                OutlinedTextField(
+                    value = question.passage,
+                    onValueChange = { viewModel.setPassage(question.id, it) },
+                    label = { Text("متن روخوانی مشترک (اختیاری)") },
+                    supportingText = { Text("برای سؤال‌های مربوط به یک متن، همان متن را در هر سؤال کپی کنید؛ فقط یک‌بار در صفحهٔ دانش‌آموز نمایش داده می‌شود.") },
+                    minLines = 2,
+                    modifier = Modifier.fillMaxWidth()
+                )
             }
             // V308 / ۱۴ — برچسب پایه و درس روی هر سؤال (فقط حالت ابتدایی)
             if (primary) PrimaryTagEditor(question, viewModel) // V310.1 — مثل سایت، در چاپ هم
@@ -2381,7 +2398,8 @@ private fun PrimaryModeChooser(question: QuestionDraft, viewModel: ExamBuilderVi
             "order" to "مرتب‌سازی با کشیدن",
             "dictation" to "املا (گوش بده و بنویس)",
             "syllable" to "بخش‌کردن و صداکشی",
-            "bucket" to "دسته‌بندی در سبد"
+            "bucket" to "دسته‌بندی در سبد",
+            "paint" to "رنگ‌آمیزی خانه‌های شکل"
         )
         // V306 — پاسخ تشریحی: متنی یا نقاشی روی تخته
         QuestionType.ESSAY -> listOf("" to "پاسخ متنی", "draw" to "پاسخ با نقاشی (تخته بزرگ)", "voice" to "پاسخ صوتی (ضبط)")
@@ -2419,6 +2437,39 @@ private fun PrimaryModeChooser(question: QuestionDraft, viewModel: ExamBuilderVi
     }
     if (question.mode == "bucket") {
         Text("سبدها را در «پاسخ‌های قابل‌قبول» با فرمت «نام سبد ۱: مورد الف، مورد ب | نام سبد ۲: مورد ج، مورد د» بنویسید تا خودکار تصحیح شود.", style = MaterialTheme.typography.bodySmall)
+    }
+}
+
+/** V327 — تنظیمات شبکهٔ تعاملی رنگ‌آمیزی. */
+@Composable
+private fun PrimaryPaintSettings(question: QuestionDraft, viewModel: ExamBuilderViewModel) {
+    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Text("ابعاد شبکه و تعداد خانه‌هایی که دانش‌آموز باید رنگ کند")
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+            OutlinedTextField(question.paintRows.toString(), { viewModel.setPaintSettings(question.id, it.toIntOrNull() ?: 4, question.paintCols, question.paintGoal) }, label = { Text("سطر") }, modifier = Modifier.weight(1f))
+            OutlinedTextField(question.paintCols.toString(), { viewModel.setPaintSettings(question.id, question.paintRows, it.toIntOrNull() ?: 4, question.paintGoal) }, label = { Text("ستون") }, modifier = Modifier.weight(1f))
+            OutlinedTextField(question.paintGoal.toString(), { viewModel.setPaintSettings(question.id, question.paintRows, question.paintCols, it.toIntOrNull() ?: 1) }, label = { Text("خانهٔ هدف") }, modifier = Modifier.weight(1f))
+        }
+        Text("کلید درست در «پاسخ‌های قابل‌قبول» به شکل مختصات «۱,۱;۲,۳» ثبت می‌شود؛ اگر تعداد خانه‌ها مهم است، فقط تعداد درست را وارد کنید.", style = MaterialTheme.typography.bodySmall)
+    }
+}
+
+/** V327 — زمان سکوت و تعداد تکرار در قالب املا. */
+@Composable
+private fun PrimaryDictationSettings(question: QuestionDraft, viewModel: ExamBuilderViewModel) {
+    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Text("املا برای هر کلمه، با مکث و تکرار محدود پخش می‌شود.")
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            OutlinedTextField(question.dictationGap.toString(), { viewModel.setDictationSettings(question.id, it.toIntOrNull() ?: 6, question.dictationRepeats) }, label = { Text("مکث (ثانیه)") }, modifier = Modifier.weight(1f))
+            OutlinedTextField(question.dictationRepeats.toString(), { viewModel.setDictationSettings(question.id, question.dictationGap, it.toIntOrNull() ?: 2) }, label = { Text("تکرار (۱ تا ۳)") }, modifier = Modifier.weight(1f))
+        }
+        OutlinedTextField(
+            value = question.dictationWords,
+            onValueChange = { viewModel.setDictationSettings(question.id, question.dictationGap, question.dictationRepeats, it) },
+            label = { Text("واژه‌های خواندنی (با | جدا کنید)") },
+            supportingText = { Text("پاسخ درست جداگانه در کادر بالا ثبت می‌شود؛ اگر خالی بماند، همان پاسخ درست خوانده می‌شود." ) },
+            modifier = Modifier.fillMaxWidth()
+        )
     }
 }
 

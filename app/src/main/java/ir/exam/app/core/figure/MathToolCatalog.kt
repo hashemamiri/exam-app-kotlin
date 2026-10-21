@@ -31,7 +31,9 @@ val MATH_CATEGORIES: List<MathCategory> = listOf(
             "axtenframe", "axsym", "axspin", "axbeaker", "axgeoboard", "axdice", "axmularea", "axvenn",
             "axnumgrid", "axfacttree", "axfnmachine", "axfracwall", "axtangram", "axangle",
             "axrod", "axtower", "axmulwheel", "axmultgrid", "axnet", "axcubes", "axcalendar",
-            "axlever", "axcycle", "axwordtrain"
+            "axlever", "axcycle", "axwordtrain",
+            // V327 — رنگ‌آمیزی، فارسی و علوم دبستان
+            "axpaintgrid", "axletterforms", "axsyllablechart", "axmagnet", "axsenses", "axseedgrow", "axbodyparts"
         )
     ),
     MathCategory(
