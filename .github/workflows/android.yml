@@ -8,7 +8,21 @@ on:
     branches: [main, staging]
     # V261.2 — text/APP_VERSION.txt دیگر نادیده گرفته نمی‌شود: هر bump نسخه حتماً CI اپ را اجرا می‌کند (V261.1 فقط فایل‌های نادیده را تغییر داده بود و APK ساخته نشد)
     # V189 — تغییرات فقط-سایت (منبع سایت، تست‌های آینهٔ سایت، پل پرداخت، توابع Supabase، مستندات) CI اپ را اجرا نمی‌کنند
-    paths-ignore: ['site/**', 'docs/**', 'text/CHANGELOG_FA.txt', 'text/*.md', 'relay/**', 'supabase/**', '.github/workflows/site.yml', 'app/src/test/**/V1*_Site*Test.kt', 'app/src/test/**/V1*_Pay*Test.kt', 'app/src/test/**/V1*_Print*Test.kt', 'app/src/test/**/V*_Site*Test.kt']
+    # V330.2 — مسیرهای سایت‌محور عموماً CI اپ را اجرا نمی‌کنند؛ آزمون متوسطهٔ V328 هم کد Kotlin را بررسی و کامپایل می‌کند، پس مستثناست.
+    paths:
+      - '**'
+      - '!site/**'
+      - '!docs/**'
+      - '!text/CHANGELOG_FA.txt'
+      - '!text/*.md'
+      - '!relay/**'
+      - '!supabase/**'
+      - '!.github/workflows/site.yml'
+      - '!app/src/test/**/V1*_Site*Test.kt'
+      - '!app/src/test/**/V1*_Pay*Test.kt'
+      - '!app/src/test/**/V1*_Print*Test.kt'
+      - '!app/src/test/**/V*_Site*Test.kt'
+      - 'app/src/test/java/ir/exam/app/V328_Site_SecondaryAssessmentTest.kt'
   workflow_dispatch:
 
 permissions:

@@ -42,7 +42,7 @@ class V188_SiteQuestionBoxTest {
         val css = source("site/src/site.css")
         assertTrue(".b-chip.live{background:transparent" in css && ".dk .b-editor .b-live{display:none!important}" in css)
         val ci = source(".github/workflows/android.yml")
-        assertTrue("'relay/**', 'supabase/**'" in ci && "'app/src/test/**/V1*_Site*Test.kt'" in ci)
+        assertTrue("'!relay/**'" in ci && "'!supabase/**'" in ci && "'!app/src/test/**/V1*_Site*Test.kt'" in ci)
     }
 
     @Test

@@ -25,7 +25,7 @@ class V152_SiteMobileBuilderTest {
     @Test
     fun `android CI runs only manually for now`() {
         val ci = source(".github/workflows/android.yml")
-        // V160.7 — قاعدهٔ کاربر: CI اپ با تغییر اپ باز، با تغییر فقط-سایت بسته؛ تست فقط وجود اجرای دستی و paths-ignore سایت را می‌سنجد
-        assertTrue("  workflow_dispatch:" in ci && "paths-ignore: ['site/**'" in ci)
+        // V330.2 — مسیرهای سایت‌محور exclude می‌مانند؛ الگوی paths اجازه می‌دهد تست Kotlin متوسطه صریحاً برگردد.
+        assertTrue("  workflow_dispatch:" in ci && "paths:" in ci && "'!site/**'" in ci && "V328_Site_SecondaryAssessmentTest.kt" in ci)
     }
 }
