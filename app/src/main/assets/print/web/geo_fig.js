@@ -90,7 +90,7 @@
   function wrap(inner, vb) {
     vb = vb || '0 0 360 280';
     return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="' + vb + '" width="320" height="250" direction="ltr" overflow="hidden">' +
-      '<style>text{font:700 14px Vazirmatn,Tahoma,sans-serif;fill:#243044;direction:ltr;unicode-bidi:embed} .s{font:700 14px Times New Roman,serif;fill:#15607a} .a{font:700 13px Times New Roman,serif;fill:#5b52e0} .v{fill:#243044}</style>' +
+      '<style>text{font:700 14px Vazirmatn,Tahoma,sans-serif;fill:#243044;direction:ltr;unicode-bidi:embed;paint-order:stroke;stroke:#fff;stroke-width:3px;stroke-linejoin:round} .s{font:700 14px Times New Roman,serif;fill:#15607a} .a{font:700 13px Times New Roman,serif;fill:#5b52e0} .v{fill:#243044}</style>' +
       inner + '</svg>';
   }
   function stroke(pts) {
@@ -316,7 +316,7 @@
         '<line x1="180" y1="140" x2="258" y2="140" stroke="#1f8a78" stroke-width="1.8"/>' +
         '<circle cx="180" cy="140" r="3.2" fill="#2c3a50"/>' +
         txt(166, 132, V.O || 'O', 'class="v" text-anchor="middle"') +
-        txt(248, 118, X.r ? ('r=' + X.r) : 'r', 'class="s"')
+        txt(196, 132, X.r ? ('r=' + X.r) : 'r', 'class="s" text-anchor="start"')
       );
     }
     if (t === 'ang') {
@@ -350,10 +350,10 @@
       var n = clamp(Math.round(num(X.n, 1)), 1, 6);
       var y1 = 86, y2 = 196;
       var htmlP =
-        '<line x1="24" y1="' + y1 + '" x2="336" y2="' + y1 + '" stroke="#2c3a50" stroke-width="2.2"/>' +
-        '<line x1="24" y1="' + y2 + '" x2="336" y2="' + y2 + '" stroke="#2c3a50" stroke-width="2.2"/>' +
-        txt(346, y1 + 5, V.d1 || 'd₁', 'class="v"') +
-        txt(346, y2 + 5, V.d2 || 'd₂', 'class="v"');
+        '<line x1="24" y1="' + y1 + '" x2="320" y2="' + y1 + '" stroke="#2c3a50" stroke-width="2.2"/>' +
+        '<line x1="24" y1="' + y2 + '" x2="320" y2="' + y2 + '" stroke="#2c3a50" stroke-width="2.2"/>' +
+        txt(332, y1 + 5, V.d1 || 'd₁', 'class="v" text-anchor="start"') +
+        txt(332, y2 + 5, V.d2 || 'd₂', 'class="v" text-anchor="start"');
       var gap = n === 1 ? 0 : 190 / (n - 1);
       var x0 = n === 1 ? 180 : 80;
       for (var i = 0; i < n; i++) {
@@ -405,7 +405,7 @@
         '<ellipse cx="' + cx + '" cy="' + top + '" rx="' + rx + '" ry="' + ry + '" fill="rgba(39,196,168,.10)" stroke="#2c3a50" stroke-width="2"/>' +
         '<path d="M' + (cx - rx) + ',' + bot + ' A' + rx + ',' + ry + ' 0 0 0 ' + (cx + rx) + ',' + bot + '" fill="none" stroke="#2c3a50" stroke-width="1.4" stroke-dasharray="5 4"/>' +
         txt(cx + rx + 18, (top + bot) / 2, X.h || S.h || 'h', 'class="s"') +
-        txt(cx, bot + 28, X.r ? ('r=' + X.r) : 'r', 'class="s" text-anchor="middle"')
+        txt(cx + 22, bot + 34, X.r ? ('r=' + X.r) : 'r', 'class="s" text-anchor="start"')
       );
     }
     if (t === 'cone') {
@@ -536,8 +536,8 @@
         '<line x1="60" y1="140" x2="300" y2="140" stroke="#1f8a78" stroke-width="1.4"/>' +
         '<line x1="180" y1="78" x2="180" y2="202" stroke="#1f8a78" stroke-width="1.4"/>' +
         '<circle cx="180" cy="140" r="3" fill="#2c3a50"/>' +
-        txt(180, 156, V.O || 'O', 'class="v" text-anchor="middle"') +
-        txt(300, 128, X.a ? ('a=' + X.a) : 'a', 'class="s"') +
+        txt(162, 160, V.O || 'O', 'class="v" text-anchor="middle"') +
+        txt(292, 126, X.a ? ('a=' + X.a) : 'a', 'class="s"') +
         txt(192, 78, X.b ? ('b=' + X.b) : 'b', 'class="s"')
       );
     }
@@ -558,7 +558,7 @@
         '<line x1="70" y1="214" x2="118" y2="78" stroke="#2c3a50" stroke-width="2.1"/>' +
         '<line x1="290" y1="214" x2="242" y2="78" stroke="#2c3a50" stroke-width="2.1"/>' +
         '<ellipse cx="180" cy="78" rx="62" ry="16" fill="rgba(39,196,168,.10)" stroke="#2c3a50" stroke-width="2"/>' +
-        txt(180, 62, X.r ? ('r=' + X.r) : 'r', 'class="s" text-anchor="middle"') +
+        txt(240, 70, X.r ? ('r=' + X.r) : 'r', 'class="s" text-anchor="start"') +
         txt(180, 250, X.R ? ('R=' + X.R) : 'R', 'class="s" text-anchor="middle"') +
         txt(304, 146, X.h || 'h', 'class="s"')
       );
@@ -572,7 +572,7 @@
       var labs = 'ABCDEFGHIJKL';
       var h = stroke(PP) + dots(PP);
       for (var j = 0; j < n; j++) {
-        h += vertLabOut(PP[j], V[labs[j]] || labs[j], Pc, n > 8 ? 14 : 18);
+        h += vertLabOut(PP[j], V[labs[j]] || labs[j], Pc, n > 8 ? 22 : 20); /* V326 — برچسب بیرون‌تر تا روی ضلع نیفتد */
         if (j === 0) h += sideLabOut(PP[j], PP[(j + 1) % n], S.a || 'a', Pc, 16);
       }
       return wrap(h);
@@ -585,8 +585,8 @@
         '<line x1="180" y1="140" x2="228" y2="140" stroke="#6c63f5" stroke-width="1.5"/>' +
         '<circle cx="180" cy="140" r="3" fill="#2c3a50"/>' +
         txt(166, 132, V.O || 'O', 'class="v" text-anchor="middle"') +
-        txt(250, 128, X.R ? ('R=' + X.R) : 'R', 'class="s"') +
-        txt(204, 128, X.r ? ('r=' + X.r) : 'r', 'class="s"')
+        txt(240, 133, X.R ? ('R=' + X.R) : 'R', 'class="s" text-anchor="start"') +
+        txt(196, 156, X.r ? ('r=' + X.r) : 'r', 'class="s" text-anchor="start"')
       );
     }
     if (t === 'segm') {
@@ -721,10 +721,10 @@
         '<line x1="' + O[0] + '" y1="' + O[1] + '" x2="' + B[0] + '" y2="' + B[1] + '" stroke="#6c63f5" stroke-width="1.4"/>' +
         '<line x1="' + O[0] + '" y1="' + O[1] + '" x2="' + C[0] + '" y2="' + C[1] + '" stroke="#6c63f5" stroke-width="1.4"/>' +
         dots([O, A, B, C]) +
-        txt(O[0] + 8, O[1] + 16, V.O || 'O', 'class="v"') +
-        txt(A[0], A[1] - 10, V.A || 'A', 'class="v" text-anchor="middle"') +
-        txt(B[0] - 12, B[1] + 16, V.B || 'B', 'class="v"') +
-        txt(C[0] + 12, C[1] + 16, V.C || 'C', 'class="v"') +
+        txt(O[0] - 10, O[1] - 8, V.O || 'O', 'class="v" text-anchor="end"') +
+        txt(A[0], A[1] - 12, V.A || 'A', 'class="v" text-anchor="middle"') +
+        txt(B[0] - 16, B[1] + 20, V.B || 'B', 'class="v" text-anchor="end"') +
+        txt(C[0] + 16, C[1] + 20, V.C || 'C', 'class="v" text-anchor="start"') +
         angleArc(A, B, C, 18, Ang.A || '')
       );
     }
@@ -741,7 +741,7 @@
         dots([O, Tpt]) +
         rightOnly(Tpt, O, P1, '90') +
         txt(O[0] - 14, O[1] + 6, V.O || 'O', 'class="v"') +
-        txt(Tpt[0] + 12, Tpt[1] - 8, V.T || 'T', 'class="v"')
+        txt(Tpt[0] + 14, Tpt[1] - 12, V.T || 'T', 'class="v" text-anchor="start"')
       );
     }
 
@@ -777,7 +777,7 @@
         '<circle cx="180" cy="146" r="3" fill="#2c3a50"/>' +
         txt(168, 138, V.O || 'O', 'class="v"') +
         txt(250, 132, X.a ? ('a=' + X.a) : 'a', 'class="s"') +
-        txt(198, 88, X.b ? ('b=' + X.b) : 'b', 'class="s"') +
+        txt(194, 92, X.b ? ('b=' + X.b) : 'b', 'class="s" text-anchor="start"') +
         txt(318, 150, X.c ? ('c=' + X.c) : '', 'class="s"')
       );
     }

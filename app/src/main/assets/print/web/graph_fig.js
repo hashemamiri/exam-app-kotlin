@@ -80,7 +80,7 @@
   function wrap(inner, vh) {
     vh = vh || 280;
     return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 ' + vh + '" width="320" height="' + Math.round(250 * vh / 280) + '" direction="ltr" overflow="hidden">' +
-      '<style>text{font:700 12px Vazirmatn,Tahoma,sans-serif;fill:#243044;direction:ltr;unicode-bidi:embed}.tk{font:600 11px Vazirmatn,Tahoma,sans-serif;fill:#4a5870}.ttl{font:800 13px Vazirmatn,Tahoma,sans-serif;fill:#1a2433}.fa{font:700 11px Vazirmatn,Tahoma,sans-serif;fill:#1a2433}.lg{font:700 11px Vazirmatn,Tahoma,sans-serif;fill:#1a2433}.onf{font:800 11px Vazirmatn,Tahoma,sans-serif;fill:#fff;paint-order:stroke;stroke:#1a2433;stroke-width:2.6;stroke-linejoin:round}</style>' +
+      '<style>text{font:700 12px Vazirmatn,Tahoma,sans-serif;fill:#243044;direction:ltr;unicode-bidi:embed;paint-order:stroke;stroke:#fff;stroke-width:2.8px;stroke-linejoin:round}.tk{font:600 11px Vazirmatn,Tahoma,sans-serif;fill:#4a5870}.ttl{font:800 13px Vazirmatn,Tahoma,sans-serif;fill:#1a2433}.fa{font:700 11px Vazirmatn,Tahoma,sans-serif;fill:#1a2433}.lg{font:700 11px Vazirmatn,Tahoma,sans-serif;fill:#1a2433}.onf{font:800 11px Vazirmatn,Tahoma,sans-serif;fill:#fff;paint-order:stroke;stroke:#1a2433;stroke-width:2.6;stroke-linejoin:round}</style>' +
       inner + '</svg>';
   }
   function splitList(s) {
@@ -1469,7 +1469,7 @@
       if (cpKind === 'micrometer') {
         s += rc(40, 96, 200, 30, 'rgba(108,99,245,.14)', ST, 2, 4) + rc(240, 86, 46, 50, 'rgba(39,196,168,.18)', ST, 2, 4);
         s += lnr(40, 126, 40, 126, ST, 3) + rc(28, 86, 14, 50, ST, 'none', 0, 3) + lnr(286, 96, 312, 96, ST, 6) + lnr(286, 116, 312, 116, ST, 6);
-        for (var mi = 0; mi <= cpMax; mi += 5) { var mx2 = 40 + mi / cpMax * 200; s += lnr(mx2, 96, mx2, mi % 10 === 0 ? 112 : 104, ST, 1.2); if (mi % 10 === 0) s += tx(mx2, 90, String(mi), MU, 'middle', false, 9); }
+        for (var mi = 0; mi <= cpMax; mi += 5) { var mx2 = 40 + mi / cpMax * 200; s += lnr(mx2, 96, mx2, mi % 10 === 0 ? 112 : 104, ST, 1.2); if (mi % 10 === 0) s += tx(mx2, 88, String(mi), MU, 'middle', false, 9); }
         var mv3 = cpVal - Math.floor(cpVal);
         for (var mj = 0; mj < 50; mj++) { var ma2 = mj * Math.PI / 25; s += lnr(263 + 22 * Math.cos(ma2), 111 + 22 * Math.sin(ma2), 263 + 22 * Math.cos(ma2 + 0.02), 111 + 22 * Math.sin(ma2 + 0.02), ST, 1); }
         s += lnr(263 + 30 * Math.cos(mv3 * 2 * Math.PI), 111 + 30 * Math.sin(mv3 * 2 * Math.PI), 263, 111, PT, 2.4);
@@ -1546,12 +1546,13 @@
         s += pfxPath('M ' + f2(tcPx) + ' ' + f2(tcPy) + ' L ' + f2(tcPx) + ' ' + f2(tcCy) + ' L ' + f2(tcCx) + ' ' + f2(tcCy), 'none', GRN, 1.6, '4 3');
         s += lnr(tcPx, tcCy, tcPx, tcPy, 'rgba(39,196,168,.35)', 6);
         s += lnr(tcCx, tcCy, tcPx, tcCy, 'rgba(108,99,245,.35)', 6);
-        s += tx(tcPx + (tcPx >= tcCx ? 7 : -7), (tcPy + tcCy) / 2 + 4, 'sin', GRN, tcPx >= tcCx ? 'start' : 'end', true, 11);
+        var tcDir = tcPx <= tcCx ? 1 : -1;   /* V326 — برچسب به سمت مرکز، تا روی محیط نیفتد */
+        s += tx(tcPx + tcDir * 10, (tcPy + tcCy) / 2 + 4, 'sin', GRN, tcDir > 0 ? 'start' : 'end', true, 11);
         s += tx((tcCx + tcPx) / 2, tcCy - 7, 'cos', ACC, 'middle', true, 11);
       }
       s += pfxPath('M ' + f2(tcCx + 34) + ' ' + f2(tcCy) + ' A 34 34 0 0 0 ' + f2(tcCx + 34 * Math.cos(tcRad)) + ' ' + f2(tcCy - 34 * Math.sin(tcRad)), 'none', PT, 1.8);
       s += tx(tcCx + 48 * Math.cos(tcRad / 2), tcCy - 48 * Math.sin(tcRad / 2) + 4, Math.round(tcDeg) + '°', PT, 'middle', true, 11);
-      s += tx(tcCx - 12, tcCy + 16, 'O', MU, 'middle', true, 11) + tx(tcCx + tcR + 4, tcCy + 16, '(1,0)', MU, 'middle', false, 9);
+      s += tx(tcCx - 12, tcCy + 16, 'O', MU, 'middle', true, 11) + tx(tcCx + tcR + 10, tcCy + 24, '(1,0)', MU, 'start', false, 9);
       var tcSin = Math.round(Math.sin(tcRad) * 1000) / 1000, tcCos = Math.round(Math.cos(tcRad) * 1000) / 1000;
       s += tx(180, 254, 'sin ' + Math.round(tcDeg) + '° = ' + nm(tcSin) + '   •   cos ' + Math.round(tcDeg) + '° = ' + nm(tcCos), ST, 'middle', true, 12);
       return wrap(s);
@@ -1563,12 +1564,12 @@
       if (!mpFrom.length) mpFrom = ['1', '2', '3'];
       if (!mpTo.length) mpTo = ['a', 'b', 'c'];
       var mpLx = 96, mpRx = 264, mpCx2 = 180, mpTop = 44, mpStep = Math.min(44, 190 / Math.max(mpFrom.length, mpTo.length));
-      s += '<ellipse cx="' + mpLx + '" cy="' + (mpTop + 90) + '" rx="52" ry="104" fill="rgba(108,99,245,.10)" stroke="' + ACC + '" stroke-width="2"/>';
-      s += '<ellipse cx="' + mpRx + '" cy="' + (mpTop + 90) + '" rx="52" ry="104" fill="rgba(39,196,168,.10)" stroke="' + GRN + '" stroke-width="2"/>';
-      s += tx(mpLx, 30, 'دامنه', ACC, 'middle', true, 12) + tx(mpRx, 30, 'برد', '#00796b', 'middle', true, 12);
+      s += '<ellipse cx="' + mpLx + '" cy="' + (mpTop + 94) + '" rx="52" ry="94" fill="rgba(108,99,245,.10)" stroke="' + ACC + '" stroke-width="2"/>';
+      s += '<ellipse cx="' + mpRx + '" cy="' + (mpTop + 94) + '" rx="52" ry="94" fill="rgba(39,196,168,.10)" stroke="' + GRN + '" stroke-width="2"/>';
+      s += tx(mpLx, 20, 'دامنه', ACC, 'middle', true, 12) + tx(mpRx, 20, 'برد', '#00796b', 'middle', true, 12);
       var mpPos = {};
-      mpFrom.forEach(function (v3, i3) { var yy3 = mpTop + 30 + i3 * mpStep; mpPos[v3] = yy3; s += pfxCls(mpLx, yy3, 4, ACC, 'none', 0) + tx(mpLx + 10, yy3 + 5, v3, ST, 'start', true, 13); });
-      mpTo.forEach(function (v3, i3) { var yy3 = mpTop + 30 + i3 * mpStep; mpPos[v3] = yy3; s += pfxCls(mpRx, yy3, 4, GRN, 'none', 0) + tx(mpRx + 10, yy3 + 5, v3, ST, 'start', true, 13); });
+      mpFrom.forEach(function (v3, i3) { var yy3 = mpTop + 30 + i3 * mpStep; mpPos[v3] = yy3; s += pfxCls(mpLx, yy3, 4, ACC, 'none', 0) + tx(mpLx - 12, yy3 + 5, v3, ST, 'end', true, 13); });
+      mpTo.forEach(function (v3, i3) { var yy3 = mpTop + 30 + i3 * mpStep; mpPos[v3] = yy3; s += pfxCls(mpRx, yy3, 4, GRN, 'none', 0) + tx(mpRx + 12, yy3 + 5, v3, ST, 'start', true, 13); });
       var mpFn = true, mpSeen = {};
       mpArrows.forEach(function (pr) {
         var y1 = mpPos[pr[0]], y2 = mpPos[pr[1]];
@@ -1590,11 +1591,17 @@
       if (pbA.length === 1) pbY1 = [140];
       pbA.forEach(function (a3, i5) {
         var y1b = pbY1[i5];
-        s += pfxArrow(pbRoot[0], pbRoot[1], pbLv1X - 10, y1b, ST, 1.6, 7) + tx((pbRoot[0] + pbLv1X) / 2 - 6, (pbRoot[1] + y1b) / 2 - 6, a3, ST, 'middle', true, 11);
+        var pbdx = (pbLv1X - 10) - pbRoot[0], pbdy = y1b - pbRoot[1], pbl = Math.hypot(pbdx, pbdy) || 1;
+        var pbnx = -pbdy / pbl, pbny = pbdx / pbl;   /* V326 — برچسب عمود بر شاخه، نه روی آن */
+        s += pfxArrow(pbRoot[0], pbRoot[1], pbLv1X - 10, y1b, ST, 1.6, 7) +
+          tx((pbRoot[0] + pbLv1X) / 2 + pbnx * 16, (pbRoot[1] + y1b) / 2 + pbny * 16 + 4, a3, ST, 'middle', true, 11);
         var y2b = pbB.map(function (b3, j3) { return y1b + (j3 - (pbB.length - 1) / 2) * 40; });
         pbB.forEach(function (b3, j4) {
           s += pfxArrow(pbLv1X, y1b, pbLv2X - 12, y2b[j4], 'rgba(108,99,245,.8)', 1.4, 6);
-          s += tx((pbLv1X + pbLv2X) / 2 - 4, (y1b + y2b[j4]) / 2 - 5, b3, MU, 'middle', false, 10);
+          var qdx = (pbLv2X - 12) - pbLv1X, qdy = y2b[j4] - y1b, ql = Math.hypot(qdx, qdy) || 1;
+          var qlx = (pbLv1X + pbLv2X) / 2 - qdy / ql * 14, qly = (y1b + y2b[j4]) / 2 + qdx / ql * 14 + 4;
+          if (qly > 232) { qly = Math.min(y1b, y2b[j4]) - 2; qlx -= 20; }   /* V326 — نزدیک عنوان پایین و روی خط نرود */
+          s += tx(qlx, qly, b3, MU, 'middle', false, 10);
           var lab2 = pbShow ? nm(Math.round(100 / (pbA.length * pbB.length))) + '٪' : (a3 + ' , ' + b3);
           s += tx(pbLv2X + 4, y2b[j4] + 4, lab2, '#00796b', 'start', true, 10);
         });
@@ -1913,7 +1920,7 @@
       var dfCy = 132, dfR = 30, dfStep = Math.min(96, 280 / Math.max(1, dfStates.length));
       var dfPos = {};
       dfStates.forEach(function (st2, i6) { dfPos[st2] = [180 + (i6 - (dfStates.length - 1) / 2) * dfStep, dfCy]; });
-      s += pfxArrow(dfPos[dfStart] ? dfPos[dfStart][0] - dfR - 34 : 30, dfCy, dfPos[dfStart] ? dfPos[dfStart][0] - dfR - 4 : 60, dfCy, ST, 1.6, 8);
+      s += pfxArrow(dfPos[dfStart] ? dfPos[dfStart][0] - dfR - 34 : 30, dfCy, dfPos[dfStart] ? dfPos[dfStart][0] - dfR : 60, dfCy, ST, 1.6, 8);
       dfStates.forEach(function (st2) {
         var pp3 = dfPos[st2];
         s += pfxCls(pp3[0], pp3[1], dfR, dfAcc.indexOf(st2) >= 0 ? 'rgba(39,196,168,.18)' : '#ffffff', ST, 2);
@@ -1927,8 +1934,12 @@
         if (!dfPos[from] || !dfPos[to]) return;
         var p1 = dfPos[from], p2 = dfPos[to];
         if (from === to) {
-          s += pfxPath('M ' + f2(p1[0] - 12) + ',' + f2(p1[1] - dfR) + ' A 18 18 0 1 1 ' + f2(p1[0] + 12) + ',' + f2(p1[1] - dfR), 'none', ACC, 1.6);
-          s += tx(p1[0], p1[1] - dfR - 18, lab3, ACC, 'middle', true, 10);
+          /* V326 — دو سر حلقه دقیقاً روی محیط: ±۳۰ درجه از بالای گره */
+          var dfa = -Math.PI / 2, dfo = 0.52, dfr2 = 20;
+          var dfl1 = [p1[0] + dfR * Math.cos(dfa - dfo), p1[1] + dfR * Math.sin(dfa - dfo)];
+          var dfl2 = [p1[0] + dfR * Math.cos(dfa + dfo), p1[1] + dfR * Math.sin(dfa + dfo)];
+          s += pfxPath('M ' + f2(dfl1[0]) + ',' + f2(dfl1[1]) + ' A ' + dfr2 + ' ' + dfr2 + ' 0 1 1 ' + f2(dfl2[0]) + ',' + f2(dfl2[1]), 'none', ACC, 1.6);
+          s += tx(p1[0], p1[1] - dfR - 20, lab3, ACC, 'middle', true, 10);
           return;
         }
         var dxx = p2[0] - p1[0], dyy = p2[1] - p1[1], dl = Math.sqrt(dxx * dxx + dyy * dyy) || 1;
@@ -1957,9 +1968,15 @@
       var bsDraw = function (node, x6, d3, span) {
         if (!node) return;
         var y6 = 40 + d3 * bsRowH;
-        if (node.l) { s += lnr(x6, y6, x6 - span, y6 + bsRowH, ST, 1.4); bsDraw(node.l, x6 - span, d3 + 1, span / 2); }
-        if (node.r) { s += lnr(x6, y6, x6 + span, y6 + bsRowH, ST, 1.4); bsDraw(node.r, x6 + span, d3 + 1, span / 2); }
-        s += pfxCls(x6, y6, 15, 'rgba(108,99,245,.16)', ACC, 1.8) + tx(x6, y6 + 5, String(node.v), ST, 'middle', true, 11);
+        var bsR = 15;
+        var bsSeg = function (ax, ay, bx, by) {
+          var dx = bx - ax, dy = by - ay, len = Math.hypot(dx, dy) || 1;
+          return [ax + dx / len * (bsR + 1), ay + dy / len * (bsR + 1),
+                  bx - dx / len * (bsR + 1), by - dy / len * (bsR + 1)];
+        };
+        if (node.l) { var sl = bsSeg(x6, y6, x6 - span, y6 + bsRowH); s += lnr(sl[0], sl[1], sl[2], sl[3], ST, 1.4); bsDraw(node.l, x6 - span, d3 + 1, span / 2); }
+        if (node.r) { var sr = bsSeg(x6, y6, x6 + span, y6 + bsRowH); s += lnr(sr[0], sr[1], sr[2], sr[3], ST, 1.4); bsDraw(node.r, x6 + span, d3 + 1, span / 2); }
+        s += pfxCls(x6, y6, bsR, 'rgba(108,99,245,.16)', ACC, 1.8) + tx(x6, y6 + 4, String(node.v), ST, 'middle', true, 10.5);
       };
       bsDraw(bsTree, 180, 0, Math.min(84, 210 / Math.pow(2, Math.max(0, bsMaxD - 1))));
       s += tx(180, 258, bsMode === 'heap' ? 'درخت هرم (آرایه‌ای)' : 'درخت دودویی جستجو (BST)', MU, 'middle', true, 12);
@@ -2109,7 +2126,31 @@
         var d5 = Math.sqrt(Math.pow(p2b[0] - p1b[0], 2) + Math.pow(p2b[1] - p1b[1], 2)) || 1;
         var sxx = p1b[0] + (p2b[0] - p1b[0]) / d5 * 15, syy = p1b[1] + (p2b[1] - p1b[1]) / d5 * 15;
         var exx = p2b[0] - (p2b[0] - p1b[0]) / d5 * 15, eyy = p2b[1] - (p2b[1] - p1b[1]) / d5 * 15;
-        s += pfxArrow(sxx, syy, exx, eyy, ACC, 1.8, 8) + tx((sxx + exx) / 2, (syy + eyy) / 2 - 7, a5.name + ' (' + nm(a5.dur) + ')', '#0d47a1', 'middle', true, 10);
+        var wdx = exx - sxx, wdy = eyy - syy, wl = Math.hypot(wdx, wdy) || 1;
+        var wnx = -wdy / wl, wny = wdx / wl;
+        if (wny > 0) { wnx = -wnx; wny = -wny; }   /* همیشه بالای خط */
+        /* V326 — فعالیتی که از روی یک گره می‌پرد (مثل C: ۲→۴) با کمان بالای ردیف کشیده می‌شود
+           تا خط و برچسبش روی گرهٔ میانی نیفتد */
+        var jump = null;
+        if (Math.abs(wdy) < 6) {
+          ptOrder.forEach(function (k3) {
+            var pp5 = ptPos[k3];
+            if (!pp5 || Math.abs(pp5[1] - p1b[1]) > 12) return;
+            if (pp5[0] > Math.min(p1b[0], p2b[0]) + 14 && pp5[0] < Math.max(p1b[0], p2b[0]) - 14) jump = pp5;
+          });
+        }
+        if (jump) {
+          var jmx = (sxx + exx) / 2, jmy = Math.max(syy, eyy) + 44;
+          var apy = (syy + 2 * jmy + eyy) / 4;   /* پایین‌ترین نقطهٔ کمان */
+          var tdx = exx - jmx, tdy = eyy - jmy, tl = Math.hypot(tdx, tdy) || 1;
+          var tux = tdx / tl, tuy = tdy / tl, tbx = exx - tux * 8, tby = eyy - tuy * 8;
+          s += v319path('M ' + f2(sxx) + ' ' + f2(syy) + ' Q ' + f2(jmx) + ' ' + f2(jmy) + ' ' + f2(tbx) + ' ' + f2(tby), 'none', ACC, 1.8) +
+            v319path('M ' + f2(exx) + ' ' + f2(eyy) + ' L ' + f2(tbx - tuy * 4) + ' ' + f2(tby + tux * 4) + ' L ' + f2(tbx + tuy * 4) + ' ' + f2(tby - tux * 4) + ' Z', ACC, ACC, 1) +
+            tx(jmx, apy + 14, a5.name + ' (' + nm(a5.dur) + ')', '#0d47a1', 'middle', true, 10);
+        } else {
+          s += pfxArrow(sxx, syy, exx, eyy, ACC, 1.8, 8) +
+            tx((sxx + exx) / 2 + wnx * 13, (syy + eyy) / 2 + wny * 13 + 4, a5.name + ' (' + nm(a5.dur) + ')', '#0d47a1', 'middle', true, 10);
+        }
       });
       ptOrder.forEach(function (k2) { var pp4 = ptPos[k2]; s += pfxCls(pp4[0], pp4[1], 14, '#ffffff', ST, 2); s += tx(pp4[0], pp4[1] + 4, k2, ST, 'middle', true, 10); });
       s += tx(180, 262, 'شبکهٔ فعالیت‌ها (CPM/PERT) — ' + nm(ptList.length) + ' فعالیت', MU, 'middle', true, 11);
@@ -2192,7 +2233,7 @@
       var spSup = function (x7) { return spY0 - 26 - (1 - x7 / 1) * 0.15; };
       s += pfxArrow(spX0 + 16, spDem(0.06), spX1 - 22, spY0 - 150, PT, 2.4, 9);
       s += pfxArrow(spX0 + 16, spY0 - 32, spX1 - 22, spY1 + 40, '#00796b', 2.4, 9);
-      s += tx(spX0 + 22, spY0 - 34, 'تقاضا', PT, 'start', true, 11) + tx(spX1 - 30, spY1 + 60, 'عرضه', '#00796b', 'end', true, 11);
+      s += tx(spX0 + 34, spY0 - 62, 'تقاضا', PT, 'start', true, 11) + tx(spX1 - 34, spY1 + 74, 'عرضه', '#00796b', 'end', true, 11);
       if (spKind === 'shift') {
         s += pfxArrow(spX0 + 60, spDem(0.2), spX1 - 60, spY0 - 162, 'rgba(214,51,108,.45)', 2, 8) + tx(240, 72, 'تقاضای جدید', PT, 'middle', false, 10);
       }
@@ -2200,7 +2241,7 @@
         var cy4 = clamp(spY0 - 40 - spCeil * 12, spY1 + 40, spY0 - 30);
         s += lnr(spX0, cy4, spX1 - 10, cy4, ACC, 1.8, '6 4') + tx(spX1 - 14, cy4 - 6, 'سقف قیمت', ACC, 'end', true, 10);
       }
-      s += pfxCls(spX0 + 118, spY0 - 118, 5, ST, 'none', 0) + tx(spX0 + 130, spY0 - 122, 'تعادل', ST, 'start', true, 11);
+      s += pfxCls(spX0 + 118, spY0 - 118, 5, ST, 'none', 0) + tx(spX0 + 130, spY0 - 132, 'تعادل', ST, 'start', true, 11);
       var spName = spKind === 'shift' ? 'افزایش تقاضا — قیمت و مقدار تعادلی بالا می‌رود' : spKind === 'ceiling' ? 'سقف قیمت — کمبود عرضه' : 'تعادل بازار — تلاقی عرضه و تقاضا';
       s += tx(180, 258, spName, ST, 'middle', true, 11);
       return wrap(s);
@@ -2235,6 +2276,28 @@
     function v319circ(cx, cy, r, fill, stroke, w) { return '<circle cx="' + f2(cx) + '" cy="' + f2(cy) + '" r="' + f2(r) + '" fill="' + fill + '" stroke="' + stroke + '" stroke-width="' + (w || 1.2) + '"/>'; }
     function v319path(d, fill, stroke, w, dash) { return '<path d="' + d + '" fill="' + fill + '" stroke="' + stroke + '" stroke-width="' + w + '" stroke-linejoin="round" stroke-linecap="round"' + (dash ? ' stroke-dasharray="' + dash + '"' : '') + '/>'; }
     function v319txt(x, y, t2, c, an, b, sz) { return tx(x, y, t2, c || MU, an || 'middle', !!b, sz || 11); }
+    /* V326 — نقطه روی محیط دایره (درجهٔ چرخشی، ۰ = راست، ۹۰ = پایین چون y به سمت پایین است) */
+    function circPt(cx, cy, r, deg) { var a = deg * Math.PI / 180; return [cx + r * Math.cos(a), cy + r * Math.sin(a)]; }
+    /* V326 — برچسب بیرون دایره: کادر متن هرگز روی محیط یا داخل خط نمی‌افتد */
+    function circLabel(cx, cy, r, deg, t2, c, gap) {
+      var a = deg * Math.PI / 180, ux = Math.cos(a), uy = Math.sin(a);
+      var rr = r + (gap == null ? 15 : gap);
+      var an = ux > 0.3 ? 'start' : (ux < -0.3 ? 'end' : 'middle');
+      var dy = uy > 0.4 ? 11 : (uy < -0.4 ? -5 : 4);
+      return tx(cx + ux * rr, cy + uy * rr + dy, t2, c, an, true, 10.5);
+    }
+    /* V326 — برچسب داخل دایره در فاصلهٔ امن از محیط و از خطوط عبوری از مرکز */
+    function innerLabel(cx, cy, r, deg, t2, c, frac) {
+      var a = deg * Math.PI / 180, f = (frac == null ? 0.55 : frac) * r;
+      return tx(cx + Math.cos(a) * f, cy + Math.sin(a) * f + 4, t2, c, 'middle', true, 10.5);
+    }
+    /* V326 — کمانِ روی محیط (بدون جابه‌جایی) با فلش جهت */
+    function arcOnCircle(cx, cy, r, d0, d1, c, w) {
+      var p0 = circPt(cx, cy, r, d0), p1 = circPt(cx, cy, r, d1);
+      var span = ((d1 - d0) % 360 + 360) % 360, large = span > 180 ? 1 : 0;
+      return v319path('M ' + f2(p0[0]) + ' ' + f2(p0[1]) + ' A ' + f2(r) + ' ' + f2(r) + ' 0 ' + large + ' 1 ' + f2(p1[0]) + ' ' + f2(p1[1]),
+        'none', c, w || 3.2);
+    }
 
     if (t === 'axunitconv') {
       var uck = xs('kind', 'len'), ucv = num(X.val, 1);
@@ -2377,16 +2440,37 @@
     }
 
     if (t === 'axcircleparts') {
+      /* V326 — بازنویسی: همهٔ اجزا دقیقاً روی محیط می‌نشینند و برچسب‌ها بیرون/داخلِ امن می‌روند */
       var cpShow = xs('show', 'all'), cpOn = function (k2) { return cpShow === 'all' || cpShow === k2; };
-      var cpc = { x: 180, y: 138, r: 86 };
-      s += v319circ(cpc.x, cpc.y, cpc.r, 'rgba(108,99,245,.06)', ACC, 2.2) + dot(cpc.x, cpc.y, ST, 4);
-      s += v319txt(cpc.x, cpc.y + 16, 'O', ST, 'middle', true, 11);
-      if (cpOn('radius')) { s += lnr(cpc.x, cpc.y, cpc.x + cpc.r * Math.cos(-Math.PI / 4), cpc.y + cpc.r * Math.sin(-Math.PI / 4), PT, 2); s += v319txt(cpc.x + 36, cpc.y - 30, 'شعاع r', PT, 'start', true, 11); }
-      if (cpOn('diameter')) { s += lnr(cpc.x - cpc.r, cpc.y, cpc.x + cpc.r, cpc.y, '#1f8f7a', 2); s += v319txt(cpc.x - 62, cpc.y - 8, 'قطر 2r', '#1f8f7a', 'middle', true, 11); }
-      if (cpOn('chord')) { s += lnr(cpc.x - 66, cpc.y + 46, cpc.x + 30, cpc.y + 74, GLD, 2); s += v319txt(cpc.x - 34, cpc.y + 92, 'وتر', GLD, 'middle', true, 11); }
-      if (cpOn('tangent')) { s += lnr(cpc.x - 96, cpc.y + cpc.r, cpc.x + 96, cpc.y + cpc.r, '#8e44ad', 2, '5 4'); s += v319txt(cpc.x + 92, cpc.y + cpc.r + 14, 'خط مماس', '#8e44ad', 'end', true, 11); }
-      if (cpOn('arc')) { s += v319path('M ' + f2(cpc.x + cpc.r * Math.cos(Math.PI * 1.15)) + ' ' + f2(cpc.y + cpc.r * Math.sin(Math.PI * 1.15)) + ' A ' + cpc.r + ' ' + cpc.r + ' 0 0 1 ' + f2(cpc.x + cpc.r * Math.cos(Math.PI * 1.75)) + ' ' + f2(cpc.y + cpc.r * Math.sin(Math.PI * 1.75)), 'none', PT, 3.4); s += v319txt(cpc.x - 66, cpc.y - 40, 'کمان', PT, 'end', true, 11); }
-      s += v319txt(180, 250, 'اجزای دایره — مرکز، شعاع، قطر، وتر، مماس و کمان', MU, 'middle', true, 11);
+      var cpx = 180, cpy = 118, cpr = 74;
+      s += v319circ(cpx, cpy, cpr, 'rgba(108,99,245,.05)', ST, 2.2);
+      s += rc(12, 10, 336, 260, 'none', '#e2e8f0', 1, 10);
+      if (cpOn('radius')) {
+        var rp = circPt(cpx, cpy, cpr, -42);
+        s += lnr(cpx, cpy, rp[0], rp[1], PT, 2.2) + dot(rp[0], rp[1], PT, 3.6);
+        s += circLabel(cpx, cpy, cpr, -42, 'شعاع r', PT);
+      }
+      if (cpOn('diameter')) {
+        var dp = circPt(cpx, cpy, cpr, 180), dp2 = circPt(cpx, cpy, cpr, 0);
+        s += lnr(dp[0], dp[1], dp2[0], dp2[1], '#1f8f7a', 2.2);
+        s += v319txt(cpx - 34, cpy - 9, 'قطر 2r', '#1f8f7a', 'middle', true, 10.5);
+      }
+      if (cpOn('chord')) {
+        var c1 = circPt(cpx, cpy, cpr, 32), c2 = circPt(cpx, cpy, cpr, 148);
+        s += lnr(c1[0], c1[1], c2[0], c2[1], GLD, 2.2) + dot(c1[0], c1[1], GLD, 3.4) + dot(c2[0], c2[1], GLD, 3.4);
+        s += v319txt(cpx + 6, (c1[1] + c2[1]) / 2 - 8, 'وتر', GLD, 'start', true, 10.5);
+      }
+      if (cpOn('tangent')) {
+        s += lnr(cpx - 96, cpy + cpr, cpx + 96, cpy + cpr, '#8e44ad', 2.2, '6 4');
+        s += dot(cpx, cpy + cpr, '#8e44ad', 3.4);
+        s += v319txt(cpx + 100, cpy + cpr + 5, 'مماس', '#8e44ad', 'start', true, 10.5);
+      }
+      if (cpOn('arc')) {
+        s += arcOnCircle(cpx, cpy, cpr, 196, 250, PT, 4);
+        s += circLabel(cpx, cpy, cpr, 223, 'کمان', PT);
+      }
+      s += dot(cpx, cpy, ST, 3.6) + v319txt(cpx - 9, cpy + 15, 'O', ST, 'middle', true, 10.5);
+      s += v319txt(180, 258, 'اجزای دایره — مرکز، شعاع، قطر، وتر، مماس و کمان', MU, 'middle', true, 10.5);
       return wrap(s);
     }
 
@@ -2451,6 +2535,11 @@
       var lpcx = function (v3) { return clamp(lpx(v3), 46, 326); }, lpcy = function (v3) { return clamp(lpy(v3), 44, 254); };
       s += lnr(lpcx(-6), lpcy(lm1 * -6 + lb1), lpcx(6), lpcy(lm1 * 6 + lb1), ACC, 2.2);
       s += lnr(lpcx(-6), lpcy(lm2 * -6 + lb2), lpcx(6), lpcy(lm2 * 6 + lb2), PT, 2.2);
+      /* V326 — معادله‌ها در گوشه نوشته می‌شوند، نه روی خط‌ها */
+      var lmFmt = function (m6, b6) { return 'y = ' + (m6 === 1 ? '' : m6 === -1 ? '−' : nm(m6)) + 'x' + (b6 === 0 ? '' : (b6 < 0 ? ' − ' + Math.abs(b6) : ' + ' + b6)); };
+      s += rc(42, 184, 132, 54, '#ffffff', '#dbe3ee', 1.2, 8);   /* V326 — کادر راهنما روی خط‌ها */
+      s += v319txt(52, 204, lmFmt(lm1, lb1), ACC, 'start', true, 11);
+      s += v319txt(52, 224, lmFmt(lm2, lb2), PT, 'start', true, 11);
       var lden = lm1 - lm2, lix = Math.abs(lden) < 1e-6 ? 0 : (lb2 - lb1) / lden, liy = lm1 * lix + lb1;
       if (Math.abs(lden) > 1e-6) {
         s += dot(clamp(lpx(lix), 50, 322), clamp(lpy(liy), 48, 250), '#1f8f7a', 5.5);
@@ -2459,8 +2548,6 @@
       } else {
         s += v319txt(180, 268, 'دو خط موازی‌اند — دستگاه جواب ندارد', PT, 'middle', true, 11);
       }
-      s += v319txt(70, 56, 'y = ' + nm(lm1) + 'x + ' + nm(lb1), ACC, 'start', true, 11);
-      s += v319txt(70, 74, 'y = ' + nm(lm2) + 'x + ' + nm(lb2), PT, 'start', true, 11);
       return wrap(s);
     }
 
@@ -2484,7 +2571,7 @@
       var bcMean = bcSum / bcN, bcMed = bcN % 2 ? bcSorted[(bcN - 1) / 2] : (bcSorted[bcN / 2 - 1] + bcSorted[bcN / 2]) / 2;
       if (bcShow === 'mean') {
         var bcy = bcY0 - bcMean / bcMax * bcH;
-        s += lnr(bcX0 - 4, bcy, bcX0 + bcW, bcy, PT, 1.8, '6 4') + v319txt(bcX0 + bcW, bcy - 6, 'میانگین ' + nm(Math.round(bcMean * 100) / 100), PT, 'end', true, 10);
+        s += lnr(bcX0 - 4, bcy, bcX0 + bcW, bcy, PT, 1.8, '6 4') + v319txt(bcX0 + 4, bcy - 6, 'میانگین ' + nm(Math.round(bcMean * 100) / 100), PT, 'start', true, 10);
       }
       s += v319txt(180, 248, 'میانگین = ' + nm(Math.round(bcMean * 100) / 100) + '  ·  میانه = ' + nm(bcMed) + '  ·  بیشترین = ' + nm(bcMax), ST, 'middle', true, 11);
       s += v319txt(180, 268, 'نمودار میله‌ای داده‌های آماری', MU, 'middle', false, 10);
@@ -2495,7 +2582,7 @@
       var pqa = num(X.a, 1) || 1, pqb = num(X.b, -2), pqc = num(X.c, -3);
       var pox = 180, poy = 150, psc = 19, pg;
       for (pg = -6; pg <= 6; pg++) s += lnr(pox + pg * psc, 34, pox + pg * psc, 258, GR, 0.6) + lnr(48, poy - pg * psc, 322, poy - pg * psc, GR, 0.6);
-      s += lnr(42, poy, 322, poy, ST, 1.8) + arR(322, poy) + lnr(pox, 262, pox, 30, ST, 1.8) + arU(pox, 30);
+      s += lnr(42, poy, 322, poy, ST, 1.8) + arR(322, poy) + lnr(pox, 246, pox, 30, ST, 1.8) + arU(pox, 30);
       s += v319txt(326, poy + 14, 'x', ST, 'middle', true, 12) + v319txt(pox - 12, 28, 'y', ST, 'middle', true, 12);
       var pFX = function (v4) { return pox + v4 * psc; }, pFY = function (v4) { return poy - v4 * psc; }, pqd = '';
       for (pg = -70; pg <= 70; pg++) {
@@ -2518,13 +2605,14 @@
         proot = 'ریشه‌ها: ' + nm(Math.round(pr2 * 100) / 100) + ' و ' + nm(Math.round(pr1 * 100) / 100);
       } else if (pdel === 0) proot = 'یک ریشهٔ مضاعف: ' + nm(Math.round(pvx * 100) / 100);
       else proot = 'ریشهٔ حقیقی ندارد (Δ < 0)';
-      s += v319txt(180, 268, proot + '  ·  Δ = ' + nm(pdel), MU, 'middle', false, 10);
-      s += v319txt(66, 44, 'y = ' + nm(pqa) + 'x² + ' + nm(pqb) + 'x + ' + nm(pqc), ACC, 'start', true, 12);
+      s += v319txt(180, 262, proot + '  ·  Δ = ' + nm(pdel), MU, 'middle', false, 10);
+      var pqSign = function (v5) { v5 = Math.round(v5 * 100) / 100; return (v5 < 0 ? ' − ' + Math.abs(v5) : ' + ' + v5); };
+      s += v319txt(60, 40, 'y = ' + (pqa === 1 ? '' : nm(pqa)) + 'x²' + (pqb === 0 ? '' : pqSign(pqb) + 'x') + (pqc === 0 ? '' : pqSign(pqc)), ACC, 'start', true, 12);
       return wrap(s);
     }
 
     if (t === 'axinthales') {
-      var itDeg = Math.max(20, Math.min(160, num(X.ang, 60))), itcx = 180, itcy = 150, itr = 88;
+      var itDeg = Math.max(20, Math.min(160, num(X.ang, 60))), itcx = 180, itcy = 138, itr = 74;
       var ita0 = -Math.PI / 2 - itDeg * Math.PI / 360, ita1 = -Math.PI / 2 + itDeg * Math.PI / 360;
       var itAx = itcx + itr * Math.cos(ita0), itAy = itcy + itr * Math.sin(ita0);
       var itBx = itcx + itr * Math.cos(ita1), itBy = itcy + itr * Math.sin(ita1);
@@ -2534,12 +2622,13 @@
       s += lnr(itcx, itcy, itAx, itAy, ST, 1.8) + lnr(itcx, itcy, itBx, itBy, ST, 1.8);
       s += lnr(itCx, itCy, itAx, itAy, GLD, 1.8) + lnr(itCx, itCy, itBx, itBy, GLD, 1.8);
       s += dot(itcx, itcy, ST, 4) + dot(itAx, itAy, PT, 4.5) + dot(itBx, itBy, PT, 4.5) + dot(itCx, itCy, GLD, 4.5);
-      s += v319txt(itcx, itcy + 18, 'O', ST, 'middle', true, 11);
+      s += v319txt(itcx + 6, itcy + 28, 'O', ST, 'start', true, 11);
       s += v319txt(itAx - 10, itAy - 6, 'A', PT, 'end', true, 11) + v319txt(itBx + 10, itBy - 6, 'B', PT, 'start', true, 11);
-      s += v319txt(itCx, itCy + (itCy < itcy ? -10 : 18), 'C', GLD, 'middle', true, 11);
-      s += v319txt(180, 40, 'زاویهٔ مرکزی = ' + nm(itDeg) + '°', PT, 'middle', true, 12);
-      s += v319txt(180, 250, 'زاویهٔ محاطی = نصف زاویهٔ مرکزی = ' + nm(Math.round(itDeg / 2 * 10) / 10) + '°', GLD, 'middle', true, 12);
-      s += v319txt(180, 268, 'زاویه‌های محاطی روی یک کمان با هم برابرند', MU, 'middle', false, 10);
+      var itcu = [itCx - itcx, itCy - itcy], itcl = Math.hypot(itcu[0], itcu[1]) || 1;
+      s += v319txt(itCx + itcu[0] / itcl * 15, itCy + itcu[1] / itcl * 15 + 4, 'C', GLD, 'middle', true, 11);
+      s += v319txt(180, 34, 'زاویهٔ مرکزی = ' + nm(itDeg) + '°', PT, 'middle', true, 12);
+      s += v319txt(180, 244, 'زاویهٔ محاطی = نصف زاویهٔ مرکزی = ' + nm(Math.round(itDeg / 2 * 10) / 10) + '°', GLD, 'middle', true, 12);
+      s += v319txt(180, 264, 'زاویه‌های محاطی روی یک کمان با هم برابرند', MU, 'middle', false, 10);
       return wrap(s);
     }
 
@@ -2569,16 +2658,16 @@
       s += v319poly(f2(icpx - 9) + ',' + f2(icpy - 20) + ' ' + f2(icpx + 11) + ',' + f2(icpy - 6) + ' ' + f2(icpx + 2) + ',' + f2(icpy + 3) + ' ' + f2(icpx - 18) + ',' + f2(icpy - 11), 'rgba(240,162,2,.9)', '#8a5b00', 1.2);
       var icW = icM * 9.8, icSin = Math.sin(icRad), icCos = Math.cos(icRad);
       s += lnr(icpx, icpy, icpx, icpy + 34, PT, 1.8) + poly(f2(icpx - 4.5) + ',' + f2(icpy + 26) + ' ' + f2(icpx + 4.5) + ',' + f2(icpy + 26) + ' ' + f2(icpx) + ',' + f2(icpy + 34), PT);
-      s += v319txt(icpx, icpy + 48, 'mg = ' + nm(Math.round(icW * 10) / 10) + ' N', PT, 'middle', true, 10);
+      s += v319txt(icpx + 8, icpy + 40, 'mg = ' + nm(Math.round(icW * 10) / 10) + ' N', PT, 'start', true, 10);
       var icDx = -icSin * 40, icDy = icCos * 40;
       s += lnr(icpx, icpy, icpx - icSin * 44, icpy + icCos * 44, GLD, 1.8) + poly(f2(icpx - icSin * 44 - 4) + ',' + f2(icpy + icCos * 44 - 3) + ' ' + f2(icpx - icSin * 44 + 4) + ',' + f2(icpy + icCos * 44 + 3) + ' ' + f2(icpx - icSin * 44 + 1) + ',' + f2(icpy + icCos * 44 + 9), GLD);
-      s += v319txt(icpx - icSin * 62 - 14, icpy + icCos * 62 + 24, 'mg·sinθ = ' + nm(Math.round(icW * icSin * 10) / 10) + ' N', GLD, 'middle', true, 10);
+      s += v319txt(icpx - icSin * 52 - 8, icpy + icCos * 52 + 22, 'mg·sinθ = ' + nm(Math.round(icW * icSin * 10) / 10) + ' N', GLD, 'end', true, 10);
       s += lnr(icpx, icpy, icpx - icSin * 40, icpy - icCos * 40, '#1f8f7a', 1.8);
-      s += v319txt(icpx - icSin * 54 - 6, icpy - icCos * 54 - 8, 'N = ' + nm(Math.round(icW * icCos * 10) / 10) + ' N', '#1f8f7a', 'middle', true, 10);
+      s += v319txt(icpx - icSin * 46 + 10, icpy - icCos * 46 - 6, 'N = ' + nm(Math.round(icW * icCos * 10) / 10) + ' N', '#1f8f7a', 'start', true, 10);
       s += v319path('M ' + f2(icAx + 34) + ' ' + f2(icAy) + ' A 34 34 0 0 0 ' + f2(icAx + 34 * Math.cos(icRad)) + ' ' + f2(icAy - 34 * Math.sin(icRad)), 'none', ST, 1.4);
-      s += v319txt(icAx + 46, icAy - 8, 'θ = ' + nm(icAng) + '°', ST, 'start', true, 11);
-      s += v319txt(180, 236, 'نیروی موازی با سطح: F = mg·sinθ', ST, 'middle', true, 12);
-      s += v319txt(180, 258, 'نیروی عمود بر سطح: N = mg·cosθ   ·   m = ' + nm(icM) + ' kg', MU, 'middle', false, 10);
+      s += v319txt(icAx + 44, icAy - 10, 'θ = ' + nm(icAng) + '°', ST, 'start', true, 11);
+      s += v319txt(180, 246, 'نیروی موازی با سطح: F = mg·sinθ', ST, 'middle', true, 12);
+      s += v319txt(180, 266, 'نیروی عمود بر سطح: N = mg·cosθ   ·   m = ' + nm(icM) + ' kg', MU, 'middle', false, 10);
       return wrap(s);
     }
 
@@ -2588,19 +2677,19 @@
       s += rc(46, 96, 16, 84, '#ffffff', ST, 1.8, 3);
       s += lnr(46, 110, 62, 110, ST, 1.6) + lnr(46, 166, 62, 166, ST, 1.6);
       s += lnr(54, 120, 54, 156, ST, 1.4) + lnr(48, 124, 60, 124, ST, 1.4) + lnr(54, 134, 54, 142, ST, 1.4);
-      s += v319txt(38, 142, 'V=' + nm(cv) + 'V', MU, 'middle', true, 10);
+      s += v319txt(54, 82, 'V=' + nm(cv) + 'V', MU, 'middle', true, 10);
       if (cmMode === 'parallel') {
         s += lnr(62, 110, 320, 110, ST, 1.8) + lnr(62, 166, 320, 166, ST, 1.8);
         s += lnr(320, 110, 320, 166, ST, 1.8);
-        s += rc(128, 96, 64, 28, 'rgba(108,99,245,.16)', ACC, 1.8, 4) + v319txt(160, 114, 'R₁=' + nm(cr1) + 'Ω', ST, 'middle', true, 11);
-        s += rc(128, 152, 64, 28, 'rgba(39,196,168,.18)', '#1f8f7a', 1.8, 4) + v319txt(160, 170, 'R₂=' + nm(cr2) + 'Ω', ST, 'middle', true, 11);
+        s += rc(128, 96, 64, 28, '#eceafd', ACC, 1.8, 4) + v319txt(160, 114, 'R₁=' + nm(cr1) + 'Ω', ST, 'middle', true, 11);
+        s += rc(128, 152, 64, 28, '#dff5ef', '#1f8f7a', 1.8, 4) + v319txt(160, 170, 'R₂=' + nm(cr2) + 'Ω', ST, 'middle', true, 11);
         s += v319txt(240, 102, 'I₁=' + nm(Math.round(cv / cr1 * 100) / 100) + 'A', ACC, 'start', true, 10);
         s += v319txt(240, 186, 'I₂=' + nm(Math.round(cv / cr2 * 100) / 100) + 'A', '#1f8f7a', 'start', true, 10);
       } else {
         s += lnr(62, 110, 120, 110, ST, 1.8) + lnr(120, 96, 188, 96, ST, 1.8) + lnr(188, 110, 320, 110, ST, 1.8);
         s += lnr(62, 166, 320, 166, ST, 1.8) + lnr(320, 110, 320, 166, ST, 1.8);
-        s += rc(120, 82, 68, 28, 'rgba(108,99,245,.16)', ACC, 1.8, 4) + v319txt(154, 100, 'R₁=' + nm(cr1) + 'Ω', ST, 'middle', true, 11);
-        s += rc(212, 82, 68, 28, 'rgba(39,196,168,.18)', '#1f8f7a', 1.8, 4) + v319txt(246, 100, 'R₂=' + nm(cr2) + 'Ω', ST, 'middle', true, 11);
+        s += rc(120, 82, 68, 28, '#eceafd', ACC, 1.8, 4) + v319txt(154, 100, 'R₁=' + nm(cr1) + 'Ω', ST, 'middle', true, 11);
+        s += rc(212, 82, 68, 28, '#dff5ef', '#1f8f7a', 1.8, 4) + v319txt(246, 100, 'R₂=' + nm(cr2) + 'Ω', ST, 'middle', true, 11);
         s += lnr(188, 96, 212, 96, ST, 1.8);
         s += v319txt(262, 138, 'I = ' + nm(Math.round(ci * 100) / 100) + ' A', ST, 'middle', true, 11);
       }

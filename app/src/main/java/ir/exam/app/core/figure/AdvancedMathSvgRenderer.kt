@@ -1464,8 +1464,35 @@ object AdvancedMathSvgRenderer {
                 val syy = p1.second + (p2.second - p1.second) / d * 15f
                 val exx = p2.first - (p2.first - p1.first) / d * 15f
                 val eyy = p2.second - (p2.second - p1.second) / d * 15f
-                sb.append(arrow(sxx, syy, exx, eyy, ACC, 1.8f, 8f))
-                sb.append(tx((sxx + exx) / 2f, (syy + eyy) / 2f - 7f, "${a.name} (${num(a.dur)})", "#0d47a1", "middle", bold = true, size = 10))
+                // V326 — فعالیتی که از روی یک گره می‌پرد (مثل C: ۲→۴) با کمان زیر ردیف کشیده می‌شود
+                // تا خط و برچسبش روی گرهٔ میانی نیفتد؛ برچسب بقیهٔ یال‌ها هم با بردار عمود جدا می‌شود.
+                val jump = if (abs(eyy - syy) < 6f) nodes.firstOrNull { k ->
+                    val q = pos[k]!!
+                    abs(q.second - p1.second) <= 12f && q.first > min(p1.first, p2.first) + 14f && q.first < max(p1.first, p2.first) - 14f
+                } else null
+                if (jump != null) {
+                    val jmx = (sxx + exx) / 2f
+                    val jmy = max(syy, eyy) + 44f
+                    val apy = (syy + 2f * jmy + eyy) / 4f
+                    val tdx = exx - jmx; val tdy = eyy - jmy
+                    val tl = sqrt(tdx * tdx + tdy * tdy).coerceAtLeast(1f)
+                    val tux = tdx / tl; val tuy = tdy / tl
+                    val tbx = exx - tux * 8f; val tby = eyy - tuy * 8f
+                    sb.append(path("M ${num(sxx)} ${num(syy)} Q ${num(jmx)} ${num(jmy)} ${num(tbx)} ${num(tby)}", "none", ACC, 1.8f))
+                    sb.append(poly(
+                        "${num(exx)},${num(eyy)} ${num(tbx - tuy * 4f)},${num(tby + tux * 4f)} ${num(tbx + tuy * 4f)},${num(tby - tux * 4f)}",
+                        ACC, ACC, 1f
+                    ))
+                    sb.append(tx(jmx, apy + 14f, "${a.name} (${num(a.dur)})", "#0d47a1", "middle", bold = true, size = 10))
+                } else {
+                    val wdx = exx - sxx; val wdy = eyy - syy
+                    val wl = sqrt(wdx * wdx + wdy * wdy).coerceAtLeast(1f)
+                    var wnx = -wdy / wl; var wny = wdx / wl
+                    if (wny > 0f) { wnx = -wnx; wny = -wny }
+                    sb.append(arrow(sxx, syy, exx, eyy, ACC, 1.8f, 8f))
+                    sb.append(tx((sxx + exx) / 2f + wnx * 13f, (syy + eyy) / 2f + wny * 13f + 4f,
+                        "${a.name} (${num(a.dur)})", "#0d47a1", "middle", bold = true, size = 10))
+                }
             }
         }
         nodes.forEach { k -> val p = pos[k]!!; sb.append(cls(p.first, p.second, 14f, "#ffffff", ST, 2f)); sb.append(tx(p.first, p.second + 4f, k, ST, "middle", bold = true, size = 10)) }

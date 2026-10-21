@@ -285,35 +285,61 @@ object NextMathSvgRenderer {
         return sb.toString()
     }
 
+    /**
+     * V326 — بازنویسی «اجزای دایره».
+     * پیش از این وتر، مماس و کمان از مختصات دستیِ ثابت استفاده می‌کردند و سرشان روی محیط
+     * نمی‌نشست (وتر ۷ پیکسل بیرون/درون می‌افتاد) و برچسب‌ها روی محیط نوشته می‌شدند.
+     * اکنون همهٔ اجزا از روی همان شعاع محاسبه می‌شوند و برچسب‌ها بیرون دایره می‌نشینند.
+     */
     private fun circleParts(spec: FigureSpec): String {
         val show = spec.xStr("show", "all")
         fun on(k: String) = show == "all" || show == k
-        val cx = 180f; val cy = 138f; val r = 86f
+        val cx = 180f; val cy = 118f; val r = 74f
+        fun pt(deg: Double): Pair<Float, Float> {
+            val a = Math.toRadians(deg)
+            return (cx + r * kotlin.math.cos(a).toFloat()) to (cy + r * kotlin.math.sin(a).toFloat())
+        }
+        /** برچسب بیرون دایره: گزینه‌های چیدمان تا روی محیط/خط نیفتد */
+        fun outLabel(deg: Double, text: String, color: String, gap: Float = 15f): String {
+            val a = Math.toRadians(deg)
+            val ux = kotlin.math.cos(a).toFloat(); val uy = kotlin.math.sin(a).toFloat()
+            val lx = cx + ux * (r + gap)
+            val ly = cy + uy * (r + gap) + (if (uy > 0.4f) 11f else if (uy < -0.4f) -5f else 4f)
+            val anchor = if (ux > 0.3f) "start" else if (ux < -0.3f) "end" else "middle"
+            return tx(lx, ly, text, color, anchor, true, 11)
+        }
         val sb = StringBuilder()
-        sb.append(cls(cx, cy, r, "rgba(108,99,245,.06)", ACC, 2.2f)).append(cls(cx, cy, 4f, ST, "none", 0f))
-        sb.append(tx(cx, cy + 16f, "O", ST, "middle", true, 11))
+        sb.append(cls(cx, cy, r, "rgba(108,99,245,.05)", ST, 2.2f))
         if (on("radius")) {
-            sb.append(ln(cx, cy, cx + r * cos(-PI / 4).toFloat(), cy + r * sin(-PI / 4).toFloat(), PT, 2f))
-            sb.append(tx(cx + 36f, cy - 30f, "شعاع r", PT, "start", true, 11))
+            val p = pt(-42.0)
+            sb.append(ln(cx, cy, p.first, p.second, PT, 2.2f)).append(cls(p.first, p.second, 3.6f, PT, "none", 0f))
+            sb.append(outLabel(-42.0, "شعاع r", PT))
         }
         if (on("diameter")) {
-            sb.append(ln(cx - r, cy, cx + r, cy, "#1f8f7a", 2f))
-            sb.append(tx(cx - 62f, cy - 8f, "قطر 2r", "#1f8f7a", "middle", true, 11))
+            val a1 = pt(180.0); val a2 = pt(0.0)
+            sb.append(ln(a1.first, a1.second, a2.first, a2.second, "#1f8f7a", 2.2f))
+            sb.append(tx(cx - 34f, cy - 9f, "قطر 2r", "#1f8f7a", "middle", true, 11))
         }
         if (on("chord")) {
-            sb.append(ln(cx - 66f, cy + 46f, cx + 30f, cy + 74f, GLD, 2f))
-            sb.append(tx(cx - 34f, cy + 92f, "وتر", GLD, "middle", true, 11))
+            val c1 = pt(32.0); val c2b = pt(148.0)
+            sb.append(ln(c1.first, c1.second, c2b.first, c2b.second, GLD, 2.2f))
+            sb.append(cls(c1.first, c1.second, 3.4f, GLD, "none", 0f)).append(cls(c2b.first, c2b.second, 3.4f, GLD, "none", 0f))
+            sb.append(tx(cx + 6f, (c1.second + c2b.second) / 2f - 8f, "وتر", GLD, "start", true, 11))
         }
         if (on("tangent")) {
-            sb.append(ln(cx - 96f, cy + r, cx + 96f, cy + r, "#8e44ad", 2f, "5 4"))
-            sb.append(tx(cx + 92f, cy + r + 14f, "خط مماس", "#8e44ad", "end", true, 11))
+            sb.append(ln(cx - 96f, cy + r, cx + 96f, cy + r, "#8e44ad", 2.2f, "6 4"))
+            sb.append(cls(cx, cy + r, 3.4f, "#8e44ad", "none", 0f))
+            sb.append(tx(cx + 100f, cy + r + 5f, "مماس", "#8e44ad", "start", true, 11))
         }
         if (on("arc")) {
-            val a0 = PI * 1.15; val a1 = PI * 1.75
-            sb.append(path("M ${f(cx + r * cos(a0).toFloat())} ${f(cy + r * sin(a0).toFloat())} A ${f(r)} ${f(r)} 0 0 1 ${f(cx + r * cos(a1).toFloat())} ${f(cy + r * sin(a1).toFloat())}", "none", PT, 3.4f))
-            sb.append(tx(cx - 66f, cy - 40f, "کمان", PT, "end", true, 11))
+            val a0 = Math.toRadians(196.0); val a1 = Math.toRadians(250.0)
+            val p0x = cx + r * kotlin.math.cos(a0).toFloat(); val p0y = cy + r * kotlin.math.sin(a0).toFloat()
+            val p1x = cx + r * kotlin.math.cos(a1).toFloat(); val p1y = cy + r * kotlin.math.sin(a1).toFloat()
+            sb.append(path("M ${f(p0x)} ${f(p0y)} A ${f(r)} ${f(r)} 0 0 1 ${f(p1x)} ${f(p1y)}", "none", PT, 4f))
+            sb.append(outLabel(223.0, "کمان", PT))
         }
-        sb.append(tx(180f, 250f, "اجزای دایره — مرکز، شعاع، قطر، وتر، مماس و کمان", MU, "middle", true, 11))
+        sb.append(cls(cx, cy, 3.6f, ST, "none", 0f)).append(tx(cx - 9f, cy + 15f, "O", ST, "middle", true, 11))
+        sb.append(tx(180f, 258f, "اجزای دایره — مرکز، شعاع، قطر، وتر، مماس و کمان", MU, "middle", true, 11))
         return sb.toString()
     }
 
