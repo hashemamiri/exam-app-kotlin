@@ -24,7 +24,7 @@ class V306_DrawDictationTest {
     @Test
     fun `payload codec reads draw and dictation modes from public json only`() {
         val payload = src("data/repository/StudentExamPayloadCodec.kt")
-        assertTrue(payload.contains("obj.text(\"mode\") == \"draw\""))
+        assertTrue(payload.contains("obj.text(\"mode\")?.takeIf { it in setOf(\"draw\", \"voice\", \"steps\", \"proof\", \"construct\") }"))
         assertTrue(payload.contains("obj.text(\"mode\") == \"dictation\""))
         assertTrue(payload.contains("obj.text(\"speak\")"))
         // «speak» عمومی است؛ کلید پاسخ (accept) همچنان حذف می‌شود
@@ -42,15 +42,16 @@ class V306_DrawDictationTest {
     @Test
     fun `builder offers draw and dictation choices in primary mode`() {
         val builder = src("ui/builder/ExamBuilderScreen.kt")
-        assertTrue(builder.contains("\"draw\" to \"پاسخ با نقاشی (تخته بزرگ)\""))
+        assertTrue(builder.contains("\"draw\" to \"رسم/ساخت روی تخته\""))
         assertTrue(builder.contains("\"dictation\" to \"املا (گوش بده و بنویس)\""))
-        assertTrue(builder.contains("question.type == QuestionType.ESSAY))"))
+        assertTrue(builder.contains("private fun SecondaryQuestionControls"))
+        assertTrue(builder.contains("if (question.type == QuestionType.ESSAY)"))
     }
 
     @Test
     fun `student screen shows big whiteboard for draw and reads dictation text`() {
         val student = src("ui/student/StudentExamScreen.kt")
-        assertTrue(student.contains("val drawAnswer = (question as? EssayQuestion)?.answerMode == \"draw\""))
+        assertTrue(student.contains("val drawAnswer = (question as? EssayQuestion)?.answerMode in setOf(\"draw\", \"construct\", \"voice\")"))
         assertTrue(student.contains("big = true"))
         assertTrue(student.contains("if (!drawAnswer) if (presentation.allowAnswerGraph || questionHasGraph) {"))
         assertTrue(student.contains("(question as? FillBlankQuestion)?.dictationText ?:"))

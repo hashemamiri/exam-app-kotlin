@@ -20,7 +20,9 @@ class V310_1_PrintPrimaryParityTest {
     @Test
     fun `primary mode chooser is not hidden in print mode`() {
         val s = screen()
-        assertTrue(s.contains("if (primary && (question.type == QuestionType.FILL_BLANK || question.type == QuestionType.MULTIPLE_CHOICE || question.type == QuestionType.ESSAY)) {"))
+        assertTrue(s.contains("if (primary && (question.type == QuestionType.FILL_BLANK || question.type == QuestionType.MULTIPLE_CHOICE)) {"))
+        assertTrue("secondary response modes must remain visible in print mode", s.contains("SecondaryQuestionControls(question, viewModel)"))
+        assertTrue("essay response modes must be offered", s.contains("if (question.type == QuestionType.ESSAY)"))
         assertTrue(!s.contains("if (primary && !printMode && (question.type"))
     }
 
