@@ -1570,7 +1570,7 @@ object AdvancedMathSvgRenderer {
 
     private fun letterForms(spec: FigureSpec): String {
         val ch = spec.xStr("ch", "ب").trim().firstOrNull()?.toString() ?: "ب"
-        val forms = LETTER_FORMS[ch] ?: listOf(ch, "$chـ", "ـ$chـ", "ـ$ch")
+        val forms = LETTER_FORMS[ch] ?: listOf(ch, "${ch}ـ", "ـ${ch}ـ", "ـ$ch")
         val caps = listOf("تنها", "آغازین", "میانی", "پایانی")
         val sb = StringBuilder()
         sb.append(tx(180f, 34f, "نویسه‌های حرف «$ch»", ST, "middle", bold = true, size = 13))
