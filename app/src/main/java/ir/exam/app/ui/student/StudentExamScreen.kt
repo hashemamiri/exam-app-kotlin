@@ -1282,7 +1282,10 @@ private fun StepwiseEssayAnswer(question: EssayQuestion, saved: String, onChange
                         Text("گام ${part.label.ifBlank { (index + 1).toString() }}: ${part.prompt}", fontWeight = FontWeight.Bold)
                         OutlinedTextField(values.first, { next -> emit(proofAnswers + (part.id to (next to values.second))) }, label = { Text("نتیجه / گزارهٔ این گام") }, minLines = 2, modifier = Modifier.fillMaxWidth())
                         if (part.requiresReason) OutlinedTextField(values.second, { next -> emit(proofAnswers + (part.id to (values.first to next))) }, label = { Text(part.reasonPrompt.ifBlank { "دلیل این گام" }) }, minLines = 2, modifier = Modifier.fillMaxWidth())
-                        if (part.carriesForward && index > 0) Text("می‌توانید از نتیجهٔ گام قبلی استفاده کنید.", style = MaterialTheme.typography.bodySmall)
+                        if (part.carriesForward && index > 0) {
+                            val prior = parts.getOrNull(index - 1)?.let { proofAnswers[it.id]?.first }.orEmpty()
+                            Text("ارجاع به نتیجهٔ گام قبل: ${prior.ifBlank { "پاسخ گام قبل هنوز ثبت نشده است." }}", style = MaterialTheme.typography.bodySmall)
+                        }
                     }
                 }
             }
@@ -1297,6 +1300,8 @@ private fun StepwiseEssayAnswer(question: EssayQuestion, saved: String, onChange
     }
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         prompts.forEachIndexed { index, prompt ->
+            val carriesForward = parts.getOrNull(index)?.carriesForward == true && index > 0
+            val previousResult = values.getOrNull(index - 1).orEmpty()
             OutlinedTextField(
                 value = values[index],
                 onValueChange = { next ->
@@ -1305,7 +1310,7 @@ private fun StepwiseEssayAnswer(question: EssayQuestion, saved: String, onChange
                     onChange(updated.joinToString("\n"))
                 },
                 label = { Text(prompt.ifBlank { "گام ${index + 1}" }) },
-                supportingText = if (parts.getOrNull(index)?.carriesForward == true && index > 0) ({ Text("در صورت نیاز، نتیجهٔ بخش قبلی را اینجا به‌کار ببر.") }) else null,
+                supportingText = if (carriesForward) ({ Text("ارجاع به نتیجهٔ گام قبل: ${previousResult.ifBlank { "پاسخ گام قبل هنوز ثبت نشده است." }}") }) else null,
                 minLines = 2,
                 modifier = Modifier.fillMaxWidth()
             )

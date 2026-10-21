@@ -634,7 +634,7 @@
         card.appendChild(el('b',{text:'گام '+(part.label||fa(pi+1))+': '+(part.prompt||'')}));
         var answer=el('textarea',{class:'st-input',rows:2,placeholder:'نتیجه / گزارهٔ این گام'});answer.value=cur.answer||'';answer.addEventListener('input',function(){cur.answer=answer.value;data[part.id]=cur;save();});card.appendChild(answer);
         if(part.requiresReason){var reason=el('textarea',{class:'st-input',rows:2,placeholder:part.reasonPrompt||'دلیل این گام'});reason.value=cur.reason||'';reason.addEventListener('input',function(){cur.reason=reason.value;data[part.id]=cur;save();});card.appendChild(reason);}
-        if(part.carriesForward&&pi>0)card.appendChild(el('small',{class:'muted',text:'می‌توانید از نتیجهٔ گام قبلی استفاده کنید.'}));
+        if(part.carriesForward&&pi>0){var prevPart=q.assessmentParts[pi-1],prevAnswer=(data[prevPart.id]||{}).answer||'';card.appendChild(el('div',{class:'card',style:'padding:7px;background:var(--soft)'},[el('b',{text:'ارجاع به نتیجهٔ گام قبل'}),el('div',{class:'muted',text:prevAnswer||'پاسخ گام قبل هنوز ثبت نشده است.'})]));}
         wrap.appendChild(card);
       });
       return wrap;
@@ -742,7 +742,7 @@
           st.value = vals[si] || '';
           st.addEventListener('input', function () { vals[si] = st.value.replace(/\n/g,' '); set(vals.join('\n')); });
           box.appendChild(st);
-          if(q.assessmentParts&&q.assessmentParts[si]&&q.assessmentParts[si].carriesForward)box.appendChild(el('small',{class:'muted',text:'در صورت نیاز، نتیجهٔ بخش قبلی را اینجا به‌کار ببر.'}));
+          if(q.assessmentParts&&q.assessmentParts[si]&&q.assessmentParts[si].carriesForward&&si>0)box.appendChild(el('div',{class:'card',style:'padding:7px;background:var(--soft)'},[el('b',{text:'ارجاع به نتیجهٔ گام قبل'}),el('div',{class:'muted',text:vals[si-1]||'پاسخ گام قبل هنوز ثبت نشده است.'})]));
         });
       } else if (ex.primary && q.type === 'essay' && q.mode === 'voice') {
         /* V309 — پاسخ صوتی: ضبط با سقف مدت معلم */
