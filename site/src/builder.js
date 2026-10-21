@@ -152,7 +152,7 @@
   function newQuestion(type) {
     var q = {id: uuid(), type: type || 'multiple', text: '', grade: 0, subject: '', score: 1, options: ['', '', '', ''], optionImages: [null, null, null, null], correctIndex: null, expectedText: '', expectedNumber: '', tolerance: '0', caseSensitive: false,
       matchingLeft: ['', ''], matchingRight: ['', ''], matchingPairs: {}, images: [], answerImageMode: 'no', allowAnswerGraph: false, maxAnswerImages: 1,
-      textAlign: 'right', imagePosition: 'below', fontFamily: 'default', fontSizeSp: 16, bold: false, italic: false, answerLines: type === 'essay' ? 5 : 2, answerLineStyle: 'lined', optionsLayout: '', answerLineSpacingCm: 1.0, spans: [], alignSpans: [], raw: {}, rawKey: {}, mode: '', orderItems: [], hotspots: []};
+      textAlign: 'right', imagePosition: 'below', fontFamily: 'default', fontSizeSp: 16, bold: false, italic: false, answerLines: type === 'essay' ? 5 : 2, answerLineStyle: 'lined', optionsLayout: '', answerLineSpacingCm: 1.0, spans: [], alignSpans: [], raw: {}, rawKey: {}, mode: '', orderItems: [], hotspots: [], sectionTitle: '', topic: '', passage: '', rubric: '', solutionSteps: []};
     if (type === 'truefalse') { q.options = []; q.optionImages = []; q.expectedText = 'true'; }
     if (type === 'fill' || type === 'numeric' || type === 'essay') { q.options = []; q.optionImages = []; }
     return q;
@@ -162,13 +162,13 @@
     obj = obj || {}; key = key || {};
     var type = S.qType(obj.type); if (type === 'long') type = 'essay';
     var q = newQuestion(type);
-    q.id = obj.id || q.id; q.text = obj.text || ''; q.score = Number(obj.score) || 1;
+    q.id = obj.id || q.id; q.text = obj.text || ''; q.score = Number(obj.score) || 1; q.sectionTitle = obj.sectionTitle || ''; q.topic = obj.topic || ''; q.passage = obj.passage || ''; q.rubric = key.rubric || ''; q.solutionSteps = Array.isArray(obj.solutionSteps) ? obj.solutionSteps.map(String) : [];
     q.options = (obj.options || []).map(function (x) { return x == null ? '' : String(x); });
     q.optionImages = q.options.map(function (_, i) { var v = (obj.optionImages || [])[i]; return v ? String(v) : null; });
     q.optionStyles = obj.optionStyles || null; q.leftStyles = obj.leftStyles || null; q.rightStyles = obj.rightStyles || null;
     q.spans = obj.spans || []; q.alignSpans = obj.alignSpans || [];
     /* V305 / V314.0 — حالت ابتدایی سؤال: ترتیب درست فقط در کلید (accept[0]) است */
-    q.mode = (obj.mode === 'order' && type === 'fill') || (obj.mode === 'syllable' && type === 'fill') || (obj.mode === 'bucket' && type === 'fill') || (obj.mode === 'hotspot' && type === 'multiple') || (obj.mode === 'draw' && type === 'essay') || (obj.mode === 'voice' && type === 'essay') || (obj.mode === 'dictation' && type === 'fill') ? obj.mode : '';
+    q.mode = (obj.mode === 'order' && type === 'fill') || (obj.mode === 'syllable' && type === 'fill') || (obj.mode === 'bucket' && type === 'fill') || (obj.mode === 'hotspot' && type === 'multiple') || (obj.mode === 'draw' && type === 'essay') || (obj.mode === 'voice' && type === 'essay') || (['steps','proof','construct'].indexOf(obj.mode) >= 0 && type === 'essay') || (obj.mode === 'dictation' && type === 'fill') ? obj.mode : '';
     q.orderItems = q.mode === 'order' ? ((key.accept && key.accept[0]) ? String(key.accept[0]).split(',').map(function (x) { return x.trim(); }).filter(Boolean) : (obj.items || []).map(String)) : [];
     q.hotspots = q.mode === 'hotspot' ? (Array.isArray(obj.hotspots) ? obj.hotspots.map(function (h) { return {x: Number(h.x) || 0, y: Number(h.y) || 0, w: Number(h.w) || 0, h: Number(h.h) || 0}; }) : []) : [];
     q.correctIndex = key.correctOption != null ? Number(key.correctOption) : (obj.correctIndex != null ? Number(obj.correctIndex) : null);
@@ -196,14 +196,14 @@
     q.raw = obj; q.rawKey = key;
     return q;
   }
-  var ANSWER_FIELDS = ['correctOption', 'correctAnswer', 'accept', 'answer', 'tolerance', 'caseSensitive', 'matchAnswer', 'pairs'];
+  var ANSWER_FIELDS = ['correctOption', 'correctAnswer', 'accept', 'answer', 'tolerance', 'caseSensitive', 'matchAnswer', 'pairs', 'rubric'];
   /* encode: همان ExamQuestionCodec.encode */
   function encodeQuestions(list) {
     var pub = [], keys = [];
     list.forEach(function (q, index) {
       var v = {}; Object.keys(q.raw || {}).forEach(function (k) { v[k] = q.raw[k]; });
       ANSWER_FIELDS.forEach(function (k) { delete v[k]; });
-      v.id = q.id; v.type = q.type; v.text = q.text.trim(); v.score = Number(q.score) || 0;
+      v.id = q.id; v.type = q.type; v.text = q.text.trim(); v.score = Number(q.score) || 0; v.sectionTitle = q.sectionTitle || ''; v.topic = q.topic || ''; v.passage = q.passage || ''; if (q.solutionSteps && q.solutionSteps.length) v.solutionSteps = q.solutionSteps; else delete v.solutionSteps; delete v.rubric;
       v.images = q.images.map(function (m) { return m.uri; }); v.image = q.images.length ? q.images[0].uri : null;
       v.imgFreePositions = q.images.map(function (m) { return {x: m.xMm, y: m.yMm, w: m.widthMm}; });
       if (q.audio) { v.audio = q.audio; v.audioBytes = q.audioBytes || 0; v.audioMs = q.audioMs || 0; } else { delete v.audio; delete v.audioBytes; delete v.audioMs; }
@@ -220,6 +220,7 @@
       if (isHot) { v.mode = 'hotspot'; v.hotspots = q.options.map(function (_, i) { var z = (q.hotspots || [])[i] || {}; return {x: Number(z.x) || 0, y: Number(z.y) || 0, w: Number(z.w) || 0, h: Number(z.h) || 0}; }); } else { delete v.hotspots; }
       /* V306 — پاسخ با تخته و املا: متن املا (speak) فقط وقتی صدای معلم نیست */
       var isDraw = q.type === 'essay' && q.mode === 'draw', isDict = q.type === 'fill' && q.mode === 'dictation';
+      if (q.type === 'essay' && ['steps','proof','construct'].indexOf(q.mode) >= 0) v.mode = q.mode;
       var isSyl = q.type === 'fill' && q.mode === 'syllable', isBkt = q.type === 'fill' && q.mode === 'bucket';
       if (isDraw) v.mode = 'draw';
       /* V309 — پاسخ صوتی: حالت و سقف ضبط */
@@ -242,7 +243,7 @@
           v.items = shuffledPublicOrder(allBi);
         }
       } else delete v.buckets;
-      if (!isOrd && !isHot && !isDraw && !isDict && !isSyl && !isBkt && !(q.type === 'essay' && q.mode === 'voice')) delete v.mode;
+      if (!isOrd && !isHot && !isDraw && !isDict && !isSyl && !isBkt && !(q.type === 'essay' && ['voice','steps','proof','construct'].indexOf(q.mode) >= 0)) delete v.mode;
       if (q.type === 'multiple') { v.options = q.options.slice(); v.optionImages = q.options.map(function (_, i) { return q.optionImages[i] || ''; }); if (q.optionStyles) v.optionStyles = q.optionStyles; }
       if (q.type === 'matching') {
         v.leftItems = q.matchingLeft.slice(); v.rightItems = q.matchingRight.slice();
@@ -250,7 +251,7 @@
         v.leftImages = q.matchingLeft.map(function (_, i) { return (q.matchingLeftImages || [])[i] || ''; }); v.rightImages = q.matchingRight.map(function (_, i) { return (q.matchingRightImages || [])[i] || ''; });
       }
       pub.push(v);
-      var k = {}; Object.keys(q.rawKey || {}).forEach(function (x) { k[x] = q.rawKey[x]; }); k.i = index;
+      var k = {}; Object.keys(q.rawKey || {}).forEach(function (x) { k[x] = q.rawKey[x]; }); k.i = index; if (q.rubric) k.rubric = q.rubric; else delete k.rubric;
       if (q.type === 'multiple') k.correctOption = q.correctIndex != null ? q.correctIndex : 0;
       else if (q.type === 'truefalse') k.correctAnswer = q.expectedText === 'true';
       else if (q.type === 'fill' && q.mode === 'order') k.accept = [orderAnswerText(q.orderItems)];
@@ -851,6 +852,27 @@
       editor.appendChild(el('div', {class: 'field'}, [el('label', {text: 'متن سؤال'}), tt.wrap, tools, tt.live]));
       /* V166 — تغییر نوع سؤال با تراشه‌ها (مثل QuestionTypeChips اپ)؛ V211: در دسکتاپ نمایش داده نمی‌شود */
       editor.appendChild(el('div', {class: 'b-types'}, TYPES.map(function (t) { return el('button', {class: 'chip' + (q.type === t[0] ? ' on' : ''), text: t[1], onclick: function () { if (q.type === t[0]) return; changeType(q, t[0]); mark(); drawList(); drawEditor(); }}); })));
+      editor.appendChild(el('div', {class: 'grid2', style: 'margin:8px 0'}, [
+        inp('بخش آزمون / صورت مشترک', q.sectionTitle || '', function (v) { q.sectionTitle = v.slice(0,100); mark(); }),
+        inp('فصل یا مبحث (بانک سؤال)', q.topic || '', function (v) { q.topic = v.slice(0,100); mark(); })
+      ]));
+      var passage = el('textarea', {rows: 3, placeholder: 'متن یا صورت مشترک برای چند بخش/سؤال'}); passage.value = q.passage || '';
+      passage.addEventListener('input', function () { q.passage = passage.value.slice(0,4000); mark(); });
+      editor.appendChild(el('div', {class:'field'}, [el('label',{text:'متن/مسئلهٔ مشترک (اختیاری)'}), passage]));
+      if (q.type === 'essay') {
+        var sm = sel('حالت پاسخ', q.mode || '', [['','متنی'],['steps','حل مرحله‌ای'],['proof','اثبات با گام‌ها'],['construct','رسم/ساخت روی تخته'],['draw','نقاشی آزاد'],['voice','پاسخ صوتی']], function (v) { q.mode = v; mark(); drawEditor(); });
+        editor.appendChild(sm);
+        if (q.mode === 'steps' || q.mode === 'proof') {
+          var stepsBox = el('textarea', {rows: 3, placeholder: 'هر گام در یک سطر'}); stepsBox.value = (q.solutionSteps || []).join('\n');
+          stepsBox.addEventListener('input', function () { q.solutionSteps = stepsBox.value.split(/\r?\n/).map(function (x) { return x.trim(); }).filter(Boolean).slice(0,10); mark(); });
+          editor.appendChild(el('div', {class:'field'}, [el('label',{text:'گام‌های پاسخ'}),stepsBox]));
+        }
+        if (q.mode === 'steps' || q.mode === 'proof' || q.mode === 'construct') {
+          var rb = el('textarea', {rows: 3, placeholder: 'معیارهای نمره‌دهی دبیر (برای دانش‌آموز پنهان)'}); rb.value = q.rubric || '';
+          rb.addEventListener('input', function () { q.rubric = rb.value.slice(0,4000); mark(); });
+          editor.appendChild(el('div', {class:'field'}, [el('label',{text:'Rubric دبیر'}),rb]));
+        }
+      }
       if (q.images.length) {
         var ig = el('div', {class: 'b-imgs'});
         q.images.forEach(function (m, k) { ig.appendChild(el('div', {class: 'b-img'}, [el('img', {src: m.uri}), el('button', {class: 'x', text: '✕', onclick: function () { q.images.splice(k, 1); mark(); drawEditor(); }})])); });
@@ -1084,7 +1106,7 @@
     function typeSection(q) {      var box = el('div', {class: 'b-type'});
       function redraw() { var n = typeSection(q); box.replaceWith(n); }
       /* V305 — ابتدایی: نوع ویژهٔ سؤال (فقط وقتی حالت ابتدایی آزمون روشن است) */
-      if (state.primaryMode && (q.type === 'fill' || q.type === 'multiple' || q.type === 'essay')) box.appendChild(primaryModeChooser(q, redraw));
+      if (state.primaryMode && (q.type === 'fill' || q.type === 'multiple')) box.appendChild(primaryModeChooser(q, redraw));
       if (state.primaryMode && q.type === 'essay' && q.mode === 'voice') box.appendChild(voiceSecondsEditor(q, redraw)); /* V309 */
       if (state.primaryMode) box.appendChild(primaryTagEditor(q, redraw)); /* V308 / ۱۴ */
       if (state.primaryMode && q.type === 'fill' && q.mode === 'dictation') box.appendChild(el('p', {class: 'muted', style: 'font-size:13px', text: 'متن املا همان «پاسخ درست» است. اگر صدای معلم نباشد، دستگاه همین متن را می‌خواند و متن در داده‌های عمومی سؤال قرار می‌گیرد.'}));
@@ -1144,26 +1166,42 @@
     /* --- مشخصات آزمون (آنلاین) --- */
     /* V166 — فرم «مشخصات آزمون» مشترک: پنجرهٔ بازشو (گوشی/تبلت) و ستون راست سازندهٔ دسکتاپ */
     function pickHint(st) {
-      var t = st.questions.length, rules = pickRulesClean(st), keys = Object.keys(rules);
-      /* V272 — قاعده‌های بخش‌بندی‌شده بر پیک ساده مقدم‌اند */
+      var t = st.questions.length, rules = pickRulesClean(st), groups = {};
+      st.questions.forEach(function (q) {
+        var topicKey = q.topic ? 'topic:' + q.topic.trim() : '', sectionKey = q.sectionTitle ? 'section:' + q.sectionTitle.trim() : '';
+        var k = topicKey && rules[topicKey] ? topicKey : (sectionKey && rules[sectionKey] ? sectionKey : (q.type === 'long' ? 'essay' : q.type));
+        groups[k] = (groups[k] || 0) + 1;
+      });
+      var keys = Object.keys(rules);
       if (keys.length) {
-        var cnt = typeCounts(st), shown = 0, parts = [];
-        TYPES.forEach(function (tp) { var c = cnt[tp[0]] || 0; if (!c) return; var n = rules[tp[0]] != null ? Math.min(rules[tp[0]], c) : c; shown += n; parts.push(fa(n) + ' از ' + fa(c) + ' ' + tp[1]); });
+        var shown = 0, parts = [];
+        Object.keys(groups).forEach(function (k) { var c = groups[k], n = rules[k] != null ? Math.min(rules[k], c) : c; shown += n; parts.push(fa(n) + ' از ' + fa(c) + ' ' + (k.indexOf('topic:') === 0 ? 'مبحث ' + k.slice(6) : k.indexOf('section:') === 0 ? 'بخش ' + k.slice(8) : (TYPES.find(function (x) { return x[0] === k; }) || [k,k])[1])); });
         return 'هر دانش‌آموز ' + fa(shown) + ' سؤال از ' + fa(t) + ' می‌بیند (' + parts.join('، ') + ')؛ نمره از جمع بارم همان سؤال‌ها.';
       }
       var n = parseInt(st.pickCount, 10) || 0; return (n > 0 && n < t) ? 'هر دانش‌آموز ' + fa(n) + ' سؤال از ' + fa(t) + ' سؤال می‌بیند؛ نمره از جمع بارم همان ' + fa(n) + ' سؤال.' : 'همهٔ ' + fa(t) + ' سؤال نمایش داده می‌شود.';
     }
     function typeCounts(st) { var c = {}; st.questions.forEach(function (q) { var k = q.type === 'long' ? 'essay' : q.type; c[k] = (c[k] || 0) + 1; }); return c; }
     function pickRulesClean(st) { var out = {}, r = st.pickRules || {}; Object.keys(r).forEach(function (k) { var n = parseInt(r[k], 10); if (n > 0) out[k] = n; }); return out; }
-    /* V272 — «۵۰ سؤال بساز، ۲۰ تا تصادفی» با بخش‌بندی: برای هر نوع سؤالِ موجود یک فیلد «چند تا از N»؛ خالی = همهٔ آن نوع */
+    /* V328 — شمارش بر حسب مبحث/بخش؛ در سرور این قواعد بر نوع سؤال مقدم‌اند. */
     function pickRulesBox(st) {
-      var cnt = typeCounts(st), box = el('div', {class: 'field'}, [el('label', {text: 'انتخاب تصادفی بر اساس نوع سؤال (خالی = همهٔ آن نوع)'})]);
+      var cnt = typeCounts(st), box = el('div', {class: 'field'}, [el('label', {text: 'انتخاب تصادفی از هر نوع، مبحث یا بخش (خالی = همهٔ گروه)'})]);
       var grid = el('div', {class: 'b-pick-rules', style: 'display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px'});
-      var any = false;
-      TYPES.forEach(function (tp) { var c = cnt[tp[0]] || 0; if (!c) return; any = true; var v = (st.pickRules || {})[tp[0]]; var i = el('input', {type: 'number', min: '0', max: String(c), placeholder: 'همه', value: v != null && v !== '' ? String(v) : '', style: 'width:100%', 'aria-label': tp[1]}); i.addEventListener('input', function () { st.pickRules = st.pickRules || {}; var n = en(i.value).replace(/[^0-9]/g, ''); if (n === '') delete st.pickRules[tp[0]]; else st.pickRules[tp[0]] = Math.min(c, parseInt(n, 10)); mark(); hintEl.textContent = pickHint(st); }); grid.appendChild(el('div', {}, [el('div', {class: 'muted', style: 'font-size:12px;margin-bottom:4px', text: tp[1] + ' (' + fa(c) + ' سؤال)'}), i])); });
+      var any = false, hintEl;
+      function field(key, label, c) {
+        if (!c) return;
+        any = true;
+        var v = (st.pickRules || {})[key], i = el('input', {type: 'number', min: '1', max: String(c), placeholder: 'همه', value: v != null && v !== '' ? String(v) : '', style: 'width:100%', 'aria-label': label});
+        i.addEventListener('input', function () { st.pickRules = st.pickRules || {}; var n = en(i.value).replace(/[^0-9]/g, ''); if (n === '') delete st.pickRules[key]; else st.pickRules[key] = Math.max(1, Math.min(c, parseInt(n, 10))); mark(); hintEl.textContent = pickHint(st); });
+        grid.appendChild(el('div', {}, [el('div', {class: 'muted', style: 'font-size:12px;margin-bottom:4px', text: label + ' (' + fa(c) + ' سؤال)'}), i]));
+      }
+      TYPES.forEach(function (tp) { field(tp[0], tp[1], cnt[tp[0]] || 0); });
+      var topics = {}, sections = {};
+      st.questions.forEach(function (q) { if (q.topic) topics[q.topic.trim()] = (topics[q.topic.trim()] || 0) + 1; if (q.sectionTitle) sections[q.sectionTitle.trim()] = (sections[q.sectionTitle.trim()] || 0) + 1; });
+      Object.keys(topics).forEach(function (name) { field('topic:' + name, 'مبحث: ' + name, topics[name]); });
+      Object.keys(sections).forEach(function (name) { field('section:' + name, 'بخش: ' + name, sections[name]); });
       if (!any) return null;
       box.appendChild(grid);
-      var hintEl = el('div', {class: 'muted', style: 'font-size:12px;margin-top:6px', text: pickHint(st)});
+      hintEl = el('div', {class: 'muted', style: 'font-size:12px;margin-top:6px', text: pickHint(st)});
       box.appendChild(hintEl);
       return box;
     }
@@ -1275,7 +1313,7 @@ var fillSubj = function () { var cur = ss.value; ss.innerHTML = ''; ss.appendChi
         function draw() {
           var s = q.value.trim().toLowerCase(), cid = cs.value ? Number(cs.value) : null;
           lst.innerHTML = '';
-          var f = items.filter(function (it) { var qq = it.question || {}; return (!s || String(qq.text || '').toLowerCase().indexOf(s) >= 0 || String(it.subject || '').toLowerCase().indexOf(s) >= 0) && (!cid || (it.cat_ids || []).indexOf(cid) >= 0) && (!gs.value || Number(qq.grade) === Number(gs.value)) && (!ss.value || qq.subject === ss.value); });
+          var f = items.filter(function (it) { var qq = it.question || {}; return (!s || String(qq.text || '').toLowerCase().indexOf(s) >= 0 || String(qq.topic || '').toLowerCase().indexOf(s) >= 0 || String(it.subject || '').toLowerCase().indexOf(s) >= 0) && (!cid || (it.cat_ids || []).indexOf(cid) >= 0) && (!gs.value || Number(qq.grade) === Number(gs.value)) && (!ss.value || qq.subject === ss.value); });
           lastFiltered = f;
           if (!f.length) { lst.appendChild(S.emptyBox('🏦', 'سؤالی پیدا نشد.')); return; }
           /* V260 — کارت‌های فشرده مثل صفحهٔ بانک: تیک انتخاب چندتایی، نوع/بارم، چشم (محتوای کامل)، عنوان آزمون/درس، دسته‌ها، دکمهٔ افزودن تکی */

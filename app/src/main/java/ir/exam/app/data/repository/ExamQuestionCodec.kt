@@ -123,6 +123,10 @@ internal object ExamQuestionCodec {
                 text = obj["text"]?.asString().orEmpty(),
                 // V327 — passage مشترك برای سؤال‌های درک مطلب؛ برای دادهٔ قدیمی غایب است.
                 passage = obj["passage"]?.asString().orEmpty(),
+                sectionTitle = obj["sectionTitle"]?.asString().orEmpty(),
+                topic = obj["topic"]?.asString().orEmpty(),
+                rubric = key["rubric"]?.asString().orEmpty(),
+                solutionSteps = obj["solutionSteps"].asArrayOrEmpty().mapNotNull { it.asString() },
                 score = obj["score"]?.asDouble() ?: 1.0,
                 grade = obj["grade"]?.asInt()?.coerceIn(0, 6) ?: 0,
                 subject = obj["subject"]?.asString().orEmpty(),
@@ -184,7 +188,7 @@ internal object ExamQuestionCodec {
                 audioBytes = (obj["audioBytes"] as? JsonPrimitive)?.longOrNull ?: 0L,
                 audioMs = (obj["audioMs"] as? JsonPrimitive)?.longOrNull ?: 0L,
                 // V305 / V314.0 — حالت ویژهٔ ابتدایی (مرتب‌سازی / انتخاب روی تصویر / بخش‌کردن / سبد)
-                mode = obj["mode"]?.asString()?.takeIf { it in setOf("order", "hotspot", "draw", "dictation", "voice", "syllable", "bucket", "paint") }.orEmpty(),
+                mode = obj["mode"]?.asString()?.takeIf { it in setOf("order", "hotspot", "draw", "dictation", "voice", "syllable", "bucket", "paint", "steps", "proof", "construct") }.orEmpty(),
                 // V327 — تنظیم‌های رنگ‌آمیزی و املا
                 paintRows = (obj["paintRows"]?.asInt() ?: 4).coerceIn(1, 8),
                 paintCols = (obj["paintCols"]?.asInt() ?: 4).coerceIn(1, 8),
@@ -217,6 +221,10 @@ internal object ExamQuestionCodec {
             values["score"] = JsonPrimitive(question.score)
             // V327 — متن روخوانی مشترک (درک مطلب); مقدار خالی کلید را حذف می‌کند.
             if (question.passage.isNotBlank()) values["passage"] = JsonPrimitive(question.passage) else values.remove("passage")
+            if (question.sectionTitle.isNotBlank()) values["sectionTitle"] = JsonPrimitive(question.sectionTitle) else values.remove("sectionTitle")
+            if (question.topic.isNotBlank()) values["topic"] = JsonPrimitive(question.topic) else values.remove("topic")
+            values.remove("rubric")
+            if (question.solutionSteps.isNotEmpty()) values["solutionSteps"] = JsonArray(question.solutionSteps.map(::JsonPrimitive)) else values.remove("solutionSteps")
             // V308 / ۱۴ — برچسب پایه/درس فقط وقتی پر است نوشته می‌شود
             if (question.grade in 1..6) values["grade"] = JsonPrimitive(question.grade)
             if (question.subject.isNotBlank()) values["subject"] = JsonPrimitive(question.subject.trim())
@@ -276,6 +284,9 @@ internal object ExamQuestionCodec {
             if (question.type == QuestionType.ESSAY && question.mode == "voice") {
                 values["mode"] = JsonPrimitive("voice")
                 values["voice_max_seconds"] = JsonPrimitive(question.voiceMaxSeconds.takeIf { it > 0 }?.coerceIn(10, 300) ?: 60)
+            }
+            if (question.type == QuestionType.ESSAY && question.mode in setOf("steps", "proof", "construct")) {
+                values["mode"] = JsonPrimitive(question.mode)
             }
             // V306 — املا: صدای معلم اولویت دارد؛ اگر صدا نباشد، متن املا برای «بخوان» (TTS دستگاه) در سؤال عمومی می‌آید.
             if (question.type == QuestionType.FILL_BLANK && question.mode == "dictation") {
@@ -341,6 +352,7 @@ internal object ExamQuestionCodec {
         val answerRows = questions.mapIndexed { index, question ->
             val values = question.rawAnswer.toMutableMap()
             values["i"] = JsonPrimitive(index)
+            if (question.rubric.isNotBlank()) values["rubric"] = JsonPrimitive(question.rubric) else values.remove("rubric")
             when (question.type) {
                 QuestionType.MULTIPLE_CHOICE -> values["correctOption"] = JsonPrimitive(question.correctIndex ?: 0)
                 QuestionType.TRUE_FALSE -> values["correctAnswer"] = JsonPrimitive(question.expectedText.toBooleanStrictOrNull() ?: false)

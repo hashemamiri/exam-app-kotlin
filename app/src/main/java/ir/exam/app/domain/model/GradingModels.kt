@@ -27,7 +27,11 @@ data class GradingQuestion(
     val text: String,
     val score: Double,
     val options: List<String> = emptyList(),
-    val images: List<String> = emptyList()
+    val images: List<String> = emptyList(),
+    val rubric: String = "",
+    val sectionTitle: String = "",
+    val topic: String = "",
+    val solutionSteps: List<String> = emptyList()
 )
 
 data class GradingExam(

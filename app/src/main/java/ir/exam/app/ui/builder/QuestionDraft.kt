@@ -335,6 +335,11 @@ data class QuestionDraft(
      * "hotspot" (چندگزینه‌ای → انتخاب روی تصویر؛ هر گزینه یک ناحیه در hotspots). کلید سیمی: mode / items / hotspots.
      */
     val mode: String = "",
+    // V328 — بخش‌بندی آزمون، برچسب مبحث، معیار تصحیح و گام‌های پاسخ.
+    val sectionTitle: String = "",
+    val topic: String = "",
+    val rubric: String = "",
+    val solutionSteps: List<String> = emptyList(),
     // V327 — متن مشترک روخوانی/درک مطلب؛ چند سؤال می‌توانند passage یکسان داشته باشند.
     val passage: String = "",
     // V327 — سکوت و تعداد تکرار در قالب املا؛ برای داده‌های قدیمی پیش‌فرض امن.

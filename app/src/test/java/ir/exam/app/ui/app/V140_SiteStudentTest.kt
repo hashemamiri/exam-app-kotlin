@@ -19,7 +19,7 @@ class V140_SiteStudentTest {
         assertTrue("'native_submit_queued_answer_v1', {p_operation: uuid(), p_exam: ex.id, p_responses: responses, p_images: images, p_meta:" in js)
         assertTrue("'native_monitor_upsert_v1', {p_exam:" in js)
         // پاک‌سازی کلید پاسخ مثل StudentExamPayloadCodec.answerFields
-        assertTrue("['correctOption', 'correctIndex', 'correctAnswer', 'accept', 'answer', 'tolerance', 'matchAnswer', 'explanation', 'answer_key']" in js)
+        assertTrue("['correctOption', 'correctIndex', 'correctAnswer', 'accept', 'answer', 'tolerance', 'matchAnswer', 'explanation', 'answer_key', 'rubric']" in js)
         // StableExamShuffle: LCG 1664525/1013904223 و seed «student:exam:index:options»
         assertTrue("1664525n + 1013904223n" in js && "':options'" in js && "':questions'" in js && "':matching'" in js)
         // پاسخ‌ها به ترتیب اصلی سؤال (PendingSubmissionCodec) و تصاویر پاسخ در مسیر answers/<student>/<exam>/<question>

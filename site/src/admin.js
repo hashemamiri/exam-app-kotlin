@@ -141,7 +141,9 @@
         var box = el('div', {class: 'g-q'}, [
           el('div', {class: 'row'}, [el('b', {text: 'سؤال ' + fa(i + 1)}), el('span', {class: 'chip', text: TYPE_LABEL[q.__type]}), el('span', {class: 'grow'}), el('span', {class: 'muted', style: 'font-size:12px', text: 'از ' + fa(S.fmtScore(q.score))}), inp,
             auto != null ? el('button', {class: 'btn light sm', title: 'نمرهٔ پیشنهادی', text: '⚡ ' + fa(S.fmtScore(auto)), onclick: function () { inp.value = auto; }}) : null, el('button', {class: 'btn light sm', text: 'کامل', onclick: function () { inp.value = q.score; }}), el('button', {class: 'btn light sm', text: '۰', onclick: function () { inp.value = 0; }})]),
+          q.sectionTitle ? el('div', {class:'chip brand', text:q.sectionTitle}) : null,
           richEl('div', 'g-qtext', q.text),
+          q.rubric ? el('div', {class:'card', style:'padding:8px;margin:6px 0;background:var(--soft)'}, [el('b',{text:'راهنمای نمره‌دهی دبیر: '}),el('span',{text:q.rubric})]) : null,
           el('div', {class: 'g-resp'}, [el('span', {class: 'muted', text: 'پاسخ دانش‌آموز: '}), rt != null ? richEl('span', auto == null ? '' : (auto >= num(q.score) ? 'ok-t' : (auto > 0 ? 'warn-t' : 'err-t')), rt) : el('i', {class: 'muted', text: 'بدون پاسخ'})]),
           ct ? el('div', {class: 'g-resp muted', style: 'font-size:13px'}, [el('span', {text: 'پاسخ درست: '}), richEl('span', '', ct)]) : null,
           qi.length ? el('div', {class: 'st-imgs'}, qi.map(function (u) { return answerMedia(u); })) : null
@@ -186,7 +188,7 @@
     body.appendChild(holder);
     function draw() {
       holder.innerHTML = ''; var q = questions[qi]; var inputs = {};
-      holder.appendChild(el('div', {class: 'card', style: 'margin-bottom:10px'}, [richEl('div', 'g-qtext', q.text), correctText(q) ? el('div', {class: 'muted', style: 'font-size:13px'}, [el('span', {text: 'پاسخ درست: '}), richEl('span', '', correctText(q))]) : null]));
+      holder.appendChild(el('div', {class: 'card', style: 'margin-bottom:10px'}, [q.sectionTitle ? el('b',{text:q.sectionTitle}) : null, richEl('div', 'g-qtext', q.text), q.rubric ? el('div',{class:'muted',text:'راهنمای دبیر: '+q.rubric}) : null, correctText(q) ? el('div', {class: 'muted', style: 'font-size:13px'}, [el('span', {text: 'پاسخ درست: '}), richEl('span', '', correctText(q))]) : null]));
       var tbl = el('table', {class: 'tbl'}, [el('thead', {}, [el('tr', {}, ['دانش‌آموز', 'پاسخ', 'تصویر', 'نمره (از ' + fa(S.fmtScore(q.score)) + ')'].map(function (h) { return el('th', {text: h}); }))]),
         el('tbody', {}, answers.map(function (a) { var r = (a.responses || [])[qi], auto = autoScore(q, r), cur = (a.grades || [])[qi]; var inp = el('input', {type: 'number', step: '0.25', min: 0, max: q.score, value: cur != null ? cur : (auto != null ? auto : ''), style: 'width:80px;border:1px solid var(--line);border-radius:8px;padding:5px;direction:ltr'}); inputs[a.id] = inp; if (a.meta && typeof a.meta === 'object' && Array.isArray(a.meta.shown_q) && a.meta.shown_q.length && a.meta.shown_q.indexOf(qi) < 0) { inp.value = '0'; inp.disabled = true; inp.title = 'این سؤال برای این دانش‌آموز نمایش داده نشده است (پیک تصادفی)'; } /* V255 */ var im = (a.response_images || {})[q.id] || (a.response_images || {})[String(qi)] || [];
           return el('tr', {}, [el('td', {text: a.student_name || '—'}), el('td', {}, [richEl('span', '', responseText(q, r) || '—')]), el('td', {}, im.map(function (u) { return el('img', {src: u, style: 'width:48px;height:40px;object-fit:cover;border-radius:6px;cursor:zoom-in;margin-inline-end:4px', onclick: function () { lightbox(u); }}); })), el('td', {}, [inp])]); }))]);

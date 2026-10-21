@@ -11,7 +11,7 @@
   var LS_DRAFT = 'examsite.student.draft.v1.';    /* + examId → {answers, images} */
   var BUCKET = 'exam-images';
   var WHITEBOARD_MAX_PAGES = 6;
-  var ANSWER_FIELDS = ['correctOption', 'correctIndex', 'correctAnswer', 'accept', 'answer', 'tolerance', 'matchAnswer', 'explanation', 'answer_key'];
+  var ANSWER_FIELDS = ['correctOption', 'correctIndex', 'correctAnswer', 'accept', 'answer', 'tolerance', 'matchAnswer', 'explanation', 'answer_key', 'rubric'];
 
   /* ================================================================ StableExamShuffle (بیت‌به‌بیت مثل Kotlin) */
   function stableShuffle(values, seed) {
@@ -48,7 +48,7 @@
       var images = strs(obj.images); if (!images.length && obj.image) images = [String(obj.image)];
       var allow = obj.allowImages || obj.allow_images || null;
       var maxImg = (!allow || allow === 'no') ? 0 : Math.max(0, Math.min(10, Number(obj.maxImages != null ? obj.maxImages : (obj.max_images != null ? obj.max_images : 1))));
-      var q = {id: obj.id || ('q-' + oi), type: type, text: obj.text || '', score: Number(obj.score) || 0, images: images, maxAnswerImages: maxImg, answerImagesRequired: allow === 'required', originalIndex: oi,
+      var q = {id: obj.id || ('q-' + oi), type: type, text: obj.text || '', sectionTitle: obj.sectionTitle || '', topic: obj.topic || '', passage: obj.passage || '', solutionSteps: Array.isArray(obj.solutionSteps) ? obj.solutionSteps.map(String) : [], mode: obj.mode || '', score: Number(obj.score) || 0, images: images, maxAnswerImages: maxImg, answerImagesRequired: allow === 'required', originalIndex: oi,
         pres: {align: ['right', 'center', 'left', 'justify'].indexOf(obj.align) >= 0 ? obj.align : 'right', font: obj.font || 'default', fontSize: Math.max(8, Math.min(40, Number(obj.fontSize) || 16)), bold: obj.bold === true, italic: obj.italic === true, allowAnswerGraph: obj.allowAnswerGraph === true, audio: obj.audio || null, spans: obj.spans || [], alignSpans: obj.alignSpans || []}};
       if (type === 'multiple') {
         var opts = strs(obj.options), oimg = nstrs(obj.optionImages);
@@ -447,9 +447,14 @@
       if (!q) return;
       var p = q.pres;
       var txt = el('div', {class: 'st-qtext', style: 'text-align:' + p.align + ';font-size:' + p.fontSize + 'px;' + (p.bold ? 'font-weight:700;' : '') + (p.italic ? 'font-style:italic;' : '') + (p.font && p.font !== 'default' ? 'font-family:' + p.font + ',Vazirmatn;' : ''), html: esc(q.text).replace(/\n/g, '<br>')});
+      if (q.sectionTitle) { var sq = ex.questions.filter(function (x) { return x.sectionTitle === q.sectionTitle; }); var ss = sq.reduce(function (n, x) { return n + num(x.score); }, 0); body.appendChild(el('div', {class: 'card', style: 'padding:10px;margin-bottom:8px;color:var(--brand)'}, [el('b',{text:q.sectionTitle}),el('div',{class:'muted',style:'font-size:12px;margin-top:3px',text:fa(sq.length)+' سؤال · جمع بارم '+fa(S.fmtScore(ss))})])); }
       body.appendChild(el('div', {class: 'row', style: 'margin-bottom:10px'}, [el('span', {class: 'chip brand', text: 'سؤال ' + fa(run.index + 1)}), el('span', {class: 'chip', text: 'بارم ' + fa(S.fmtScore(q.score))}), el('span', {class: 'chip', text: {multiple: 'چندگزینه‌ای', truefalse: 'صحیح/غلط', fill: 'جای‌خالی', numeric: 'عددی', matching: 'جورکردنی', essay: 'تشریحی'}[q.type] || ''})]));
       body.appendChild(txt);
       richHtml(q.text).then(function (h) { if (ex.questions[run.index] === q) { txt.innerHTML = h; fitMath(txt); } });
+      if (q.passage) {
+        var passageBox = el('div', {class:'card', style:'padding:14px;margin:8px 0;background:var(--soft)'}, [el('b',{text:'متن/صورت مشترک'}), el('div',{style:'margin-top:8px;white-space:pre-wrap',text:q.passage})]);
+        body.insertBefore(passageBox, txt);
+      }
       if (p.audio) body.appendChild(el('audio', {controls: 'controls', src: p.audio, style: 'width:100%;margin:8px 0'}));
       else if (ex.primary || q.mode === 'dictation') body.appendChild(readAloudButton(q)); /* V302 — ابتدایی: «بخوان» با صدای مرورگر وقتی معلم صدا نگذاشته */
       if (q.images.length) body.appendChild(el('div', {class: 'st-imgs'}, q.images.map(function (u) { return el('img', {src: u, onclick: function () { lightbox(u); }}); })));
@@ -683,10 +688,19 @@
           richHtml(l).then(function (h) { var g = row.querySelector('.grow'); g.innerHTML = '<b>' + fa(li + 1) + '.</b> ' + h; fitMath(g); });
           box.appendChild(row);
         });
+      } else if (q.type === 'essay' && (q.mode === 'steps' || q.mode === 'proof')) {
+        var prompts = q.solutionSteps && q.solutionSteps.length ? q.solutionSteps : ['گام اول','گام دوم','پاسخ نهایی'];
+        var vals = String(a || '').split('\n');
+        prompts.forEach(function (pr, si) {
+          var st = el('textarea', {class:'st-input', rows:2, placeholder:pr || ('گام '+fa(si+1))});
+          st.value = vals[si] || '';
+          st.addEventListener('input', function () { vals[si] = st.value.replace(/\n/g,' '); set(vals.join('\n')); });
+          box.appendChild(st);
+        });
       } else if (ex.primary && q.type === 'essay' && q.mode === 'voice') {
         /* V309 — پاسخ صوتی: ضبط با سقف مدت معلم */
         box.appendChild(voiceAnswerBlock(q, box));
-      } else if (ex.primary && q.type === 'essay' && q.mode === 'draw') {
+      } else if (q.type === 'essay' && (q.mode === 'draw' || q.mode === 'construct')) {
         /* V306 — ابتدایی: پاسخ با تخته؛ کادر متنی نیست */
         box.appendChild(el('p', {class: 'st-hint', text: 'پاسخ را روی تخته بکشید و ذخیره کنید؛ با دکمهٔ تخته زیر باز کنید.'}));
       } else {
@@ -696,7 +710,7 @@
       }
       /* تصویر پاسخ / تخته */
       /* V306 — پاسخ با تخته: تخته همیشه (بزرگ) نشان داده می‌شود */
-      var drawMode = ex.primary && q.type === 'essay' && q.mode === 'draw';
+      var drawMode = q.type === 'essay' && (q.mode === 'draw' || q.mode === 'construct');
       var whiteboardOnly = (q.pres.allowAnswerGraph || drawMode) && q.maxAnswerImages <= 0;
       if (q.maxAnswerImages > 0 || q.pres.allowAnswerGraph || drawMode) {
         var imgs = run.images[q.id] || [];

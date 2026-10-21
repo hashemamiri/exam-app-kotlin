@@ -185,7 +185,7 @@ class ExamBuilderViewModel(
     fun setQuestionMode(id: String, mode: String) = update(id) { q ->
         when (mode) {
             "order" -> q.copy(mode = mode, orderItems = q.orderItems.ifEmpty { listOf("", "", "") })
-            "draw", "dictation", "voice", "paint" -> q.copy(mode = mode)
+            "draw", "dictation", "voice", "paint", "steps", "proof", "construct" -> q.copy(mode = mode)
             "hotspot" -> q.copy(mode = mode, hotspots = q.hotspots.takeIf { it.size == q.options.size } ?: List(q.options.size) { ir.exam.app.ui.builder.HotspotRect(0f, 0f, 0f, 0f) })
             else -> q.copy(mode = "")
         }
@@ -193,6 +193,11 @@ class ExamBuilderViewModel(
 
     /** V308 / ۱۴ — برچسب پایه/درس سؤال (حالت ابتدایی). */
     fun setQuestionTags(id: String, grade: Int, subject: String) = update(id) { q -> q.copy(grade = grade, subject = subject) }
+    /** V328 — بخش/مبحث، rubric دبیر و گام‌های پاسخ. */
+    fun setQuestionGrouping(id: String, section: String, topic: String) = update(id) { q -> q.copy(sectionTitle = section.take(100), topic = topic.take(100)) }
+    fun setRubric(id: String, value: String) = update(id) { it.copy(rubric = value.take(4000)) }
+    fun setSolutionSteps(id: String, value: List<String>) = update(id) { it.copy(solutionSteps = value.map(String::trim).filter(String::isNotBlank).take(10)) }
+
 
     /** V327 — متن روخوانی مشترک: شناسهٔ گروه متن بین پرسش‌های وابسته مشترک است. */
     fun setPassage(id: String, value: String) = update(id) { q -> q.copy(passage = value.take(4000)) }
@@ -236,6 +241,21 @@ class ExamBuilderViewModel(
             st.copy(pickRules = rules)
         }
     }
+    /** V328 — برداشت تصادفی N سؤال از هر مبحث/بخش؛ خالی = همهٔ همان گروه. */
+    fun setPickGroupRule(key: String, value: String) {
+        if (!key.startsWith("topic:") && !key.startsWith("section:")) return
+        val n = value.filter(Char::isDigit).take(4).toIntOrNull()
+        _state.update { st ->
+            val max = st.questions.count { q ->
+                if (key.startsWith("topic:")) q.topic.trim() == key.removePrefix("topic:")
+                else q.sectionTitle.trim() == key.removePrefix("section:")
+            }
+            val rules = st.pickRules.toMutableMap()
+            if (n == null || n <= 0) rules.remove(key) else rules[key] = n.coerceAtMost(max.coerceAtLeast(1))
+            st.copy(pickRules = rules)
+        }
+    }
+
     fun setAttemptCooldown(value: String) { _state.update { it.copy(attemptCooldown = value.filter(Char::isDigit).take(4)) } }
     fun reportError(error: Throwable) {
         _state.update { it.copy(error = safeBuilderError(error)) }

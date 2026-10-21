@@ -376,7 +376,11 @@ private fun QuestionDraft.toGradingQuestion() = GradingQuestion(
     text = text,
     score = score,
     options = options,
-    images = images.map { it.uri }
+    images = images.map { it.uri },
+    rubric = rubric,
+    sectionTitle = sectionTitle,
+    topic = topic,
+    solutionSteps = solutionSteps
 )
 
 private fun AnswerDto.toDomain(): GradingSubmission {

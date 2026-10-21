@@ -369,6 +369,16 @@ fun StudentExamContent(
                 var zoomImage by remember(question.id) { mutableStateOf<String?>(null) }
                 val answerText = (state.answers[question.id] as? TextAnswer)?.value.orEmpty()
                 Column(verticalArrangement=Arrangement.spacedBy(6.dp)) {
+                    if (question.sectionTitle.isNotBlank()) {
+                        val sectionQuestions = exam.questions.filter { it.sectionTitle == question.sectionTitle }
+                        val sectionScore = sectionQuestions.sumOf { it.score }
+                        Card(Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.tertiaryContainer)) {
+                            Column(Modifier.fillMaxWidth().padding(10.dp), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                                Text(question.sectionTitle, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                                Text("${sectionQuestions.size} سؤال · جمع بارم ${sectionScore}", style = MaterialTheme.typography.bodySmall)
+                            }
+                        }
+                    }
                     // V327 — متن مشترک درک مطلب فقط یک بار بالای اولین سؤالِ وابسته نشان داده می‌شود.
                     if (question.passage.isNotBlank()) {
                         Card(Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)) {
@@ -424,7 +434,11 @@ fun StudentExamContent(
             }
             item {
                 when (question) {
-                    is EssayQuestion -> if (question.answerMode == "voice") {
+                    is EssayQuestion -> if (question.answerMode == "steps" || question.answerMode == "proof") {
+                        StepwiseEssayAnswer(question, (state.answers[question.id] as? TextAnswer)?.value.orEmpty()) {
+                            onAnswer(TextAnswer(question.id, it))
+                        }
+                    } else if (question.answerMode == "voice") {
                         // V309 — پاسخ صوتی: ضبط با سقف مدت تعیین‌شدهٔ معلم؛ فایل مثل نقاشی ذخیره می‌شود
                         StudentVoiceAnswerEntry(
                             questionId = question.id,
@@ -433,7 +447,7 @@ fun StudentExamContent(
                             onAdd = onAddImages,
                             onRemove = onRemoveImage
                         )
-                    } else if (question.answerMode == "draw") {
+                    } else if (question.answerMode == "draw" || question.answerMode == "construct") {
                         // V306 — ابتدایی: پاسخ با تخته؛ کادر متنی نشان داده نمی‌شود
                         Text("پاسخ را روی تخته بکشید و ذخیره کنید؛ با دکمهٔ بزرگ زیر باز کنید.", style = MaterialTheme.typography.bodyLarge)
                         StudentWhiteboardEntry(
@@ -633,7 +647,7 @@ fun StudentExamContent(
             // رسم آزاد می‌کند و نتیجه به‌عنوان تصویر پاسخ ثبت می‌شود.
             // V137 — «نمودار پاسخ دانش‌آموز» به‌کلی حذف شد؛ سؤالی که خودش نمودار دارد
             // (questionHasGraph) هم فقط تختهٔ وایت‌برد می‌گیرد.
-            val drawAnswer = (question as? EssayQuestion)?.answerMode == "draw" || (question as? EssayQuestion)?.answerMode == "voice"
+            val drawAnswer = (question as? EssayQuestion)?.answerMode in setOf("draw", "construct", "voice")
             if (!drawAnswer) if (presentation.allowAnswerGraph || questionHasGraph) {
                 item {
                     StudentWhiteboardEntry(
@@ -1201,6 +1215,31 @@ private fun PrimaryBucketAnswer(
                     }
                 }
             }
+        }
+    }
+}
+
+/** V328 — یک پاسخ مستقل برای هر گام؛ متن پاسخ به‌صورت خط‌به‌خط ذخیره می‌شود. */
+@Composable
+private fun StepwiseEssayAnswer(question: EssayQuestion, saved: String, onChange: (String) -> Unit) {
+    val prompts = question.solutionSteps.ifEmpty { listOf("گام اول", "گام دوم", "پاسخ نهایی") }
+    val values = remember(question.id, saved, prompts.size) {
+        val parts = saved.split("\n")
+        List(prompts.size) { parts.getOrElse(it) { "" } }
+    }
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        prompts.forEachIndexed { index, prompt ->
+            OutlinedTextField(
+                value = values[index],
+                onValueChange = { next ->
+                    val updated = values.toMutableList()
+                    updated[index] = next.replace("\n", " ")
+                    onChange(updated.joinToString("\n"))
+                },
+                label = { Text(prompt.ifBlank { "گام ${index + 1}" }) },
+                minLines = 2,
+                modifier = Modifier.fillMaxWidth()
+            )
         }
     }
 }

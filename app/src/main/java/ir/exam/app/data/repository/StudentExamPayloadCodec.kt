@@ -127,6 +127,8 @@ internal object StudentExamPayloadCodec {
         val answerImagesRequired = allowImages == "required"
         // V327 — متن روخوانیِ مشترک (خالی = بدون متن)
         val passage = obj.text("passage").orEmpty()
+        val sectionTitle = obj.text("sectionTitle").orEmpty()
+        val topic = obj.text("topic").orEmpty()
 
         return when (obj.text("type")?.lowercase()) {
             "multiple", "multiple_choice", "multiplechoice" -> {
@@ -148,6 +150,8 @@ internal object StudentExamPayloadCodec {
                     optionOriginalIndices = order,
                     // V305 — انتخاب روی تصویر: ناحیه‌ها به اندیس اصلی (بدون بُرخوردن)
                     passage = passage,
+                    sectionTitle = sectionTitle,
+                    topic = topic,
                     hotspots = if (obj.text("mode") == "hotspot") obj["hotspots"].arrayOrEmpty().mapNotNull { h ->
                         (h as? JsonObject)?.let { o ->
                             HotspotZone(o.double("x")?.toFloat() ?: 0f, o.double("y")?.toFloat() ?: 0f, o.double("w")?.toFloat() ?: 0f, o.double("h")?.toFloat() ?: 0f)
@@ -156,7 +160,7 @@ internal object StudentExamPayloadCodec {
                 )
             }
             "truefalse", "true_false" -> TrueFalseQuestion(
-                id, text, score, images, maxAnswerImages, answerImagesRequired, originalIndex, passage
+                id, text, score, images, maxAnswerImages, answerImagesRequired, originalIndex, passage, sectionTitle, topic
             )
             "fill", "fill_blank" -> FillBlankQuestion(
                 id, text, score, images, maxAnswerImages, answerImagesRequired, originalIndex,
@@ -178,10 +182,12 @@ internal object StudentExamPayloadCodec {
                     val pc = (obj.int("paintCols") ?: 4).coerceIn(1, 8)
                     (obj.int("paintGoal") ?: 1).coerceIn(1, pr * pc)
                 } else 0,
-                passage = passage
+                passage = passage,
+                sectionTitle = sectionTitle,
+                topic = topic
             )
             "numeric", "number" -> NumericQuestion(
-                id, text, score, images, maxAnswerImages, answerImagesRequired, originalIndex, passage
+                id, text, score, images, maxAnswerImages, answerImagesRequired, originalIndex, passage, sectionTitle, topic
             )
             "matching", "match" -> {
                 val right = obj["rightItems"].arrayStrings()
@@ -202,16 +208,21 @@ internal object StudentExamPayloadCodec {
                     answerImagesRequired = answerImagesRequired,
                     originalIndex = originalIndex,
                     rightOriginalIndices = rightOrder,
-                    passage = passage
+                    passage = passage,
+                    sectionTitle = sectionTitle,
+                    topic = topic
                 )
             }
             else -> EssayQuestion(
                 id, text, score, images, maxAnswerImages, answerImagesRequired, originalIndex,
                 // V306 — پاسخ با تخته (حالت ابتدایی)
-                answerMode = if (obj.text("mode") == "draw") "draw" else if (obj.text("mode") == "voice") "voice" else "text",
+                answerMode = obj.text("mode")?.takeIf { it in setOf("draw", "voice", "steps", "proof", "construct") } ?: "text",
                 // V309 — سقف ضبط پاسخ صوتی
                 voiceMaxSeconds = obj.int("voice_max_seconds") ?: 0,
-                passage = passage
+                passage = passage,
+                sectionTitle = sectionTitle,
+                topic = topic,
+                solutionSteps = obj["solutionSteps"].arrayStrings().take(10)
             )
         }
     }

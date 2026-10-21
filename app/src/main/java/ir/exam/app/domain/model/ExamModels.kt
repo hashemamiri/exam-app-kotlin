@@ -57,6 +57,9 @@ sealed interface Question {
      * (درکِ متن/روخوانی دبستان). خالی = سؤال بدون متن.
      */
     val passage: String
+    /** V328 — نام بخش و مبحث آزمون. */
+    val sectionTitle: String
+    val topic: String
 }
 
 data class EssayQuestion(
@@ -71,7 +74,12 @@ data class EssayQuestion(
     val answerMode: String = "text",
     /** V309 — سقف مدت ضبط پاسخ صوتی (ثانیه)؛ فقط وقتی answerMode = "voice" است. */
     val voiceMaxSeconds: Int = 0,
-    override val passage: String = ""
+    override val passage: String = "",
+    override val sectionTitle: String = "",
+    override val topic: String = "",
+    /** V328 — solution mode: configured prompts for proof/stepwise answers. */
+    val solutionSteps: List<String> = emptyList(),
+    val rubric: String = ""
 ) : Question
 
 data class MultipleChoiceQuestion(
@@ -88,7 +96,9 @@ data class MultipleChoiceQuestion(
     val optionOriginalIndices: List<Int> = options.indices.toList(),
     /** V305 — انتخاب روی تصویر: ناحیهٔ هر گزینه به «اندیس اصلی» (درصد x,y,w,h)؛ خالی = حالت عادی. */
     val hotspots: List<HotspotZone> = emptyList(),
-    override val passage: String = ""
+    override val passage: String = "",
+    override val sectionTitle: String = "",
+    override val topic: String = ""
 ) : Question
 
 /** V305 — ناحیهٔ Hotspot (درصد نسبت به تصویر). */
@@ -102,7 +112,9 @@ data class TrueFalseQuestion(
     override val maxAnswerImages: Int = 0,
     override val answerImagesRequired: Boolean = false,
     override val originalIndex: Int = 0,
-    override val passage: String = ""
+    override val passage: String = "",
+    override val sectionTitle: String = "",
+    override val topic: String = ""
 ) : Question
 
 data class FillBlankQuestion(
@@ -129,7 +141,9 @@ data class FillBlankQuestion(
     val paintRows: Int = 0,
     val paintCols: Int = 0,
     val paintGoal: Int = 0,
-    override val passage: String = ""
+    override val passage: String = "",
+    override val sectionTitle: String = "",
+    override val topic: String = ""
 ) : Question
 
 data class NumericQuestion(
@@ -140,7 +154,9 @@ data class NumericQuestion(
     override val maxAnswerImages: Int = 0,
     override val answerImagesRequired: Boolean = false,
     override val originalIndex: Int = 0,
-    override val passage: String = ""
+    override val passage: String = "",
+    override val sectionTitle: String = "",
+    override val topic: String = ""
 ) : Question
 
 data class MatchingQuestion(
@@ -157,7 +173,9 @@ data class MatchingQuestion(
     override val originalIndex: Int = 0,
     /** هر عضو نمایشی ستون راست به کدام اندیس اصلی کلید پاسخ اشاره می‌کند. */
     val rightOriginalIndices: List<Int> = rightItems.indices.toList(),
-    override val passage: String = ""
+    override val passage: String = "",
+    override val sectionTitle: String = "",
+    override val topic: String = ""
 ) : Question
 
 sealed interface StudentAnswer { val questionId: String }

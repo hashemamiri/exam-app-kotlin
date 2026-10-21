@@ -27,6 +27,7 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
@@ -270,7 +271,14 @@ private fun SubmissionCard(
             questions.forEachIndexed { index, question ->
                 Card(Modifier.fillMaxWidth()) {
                     Column(Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                        if (question.sectionTitle.isNotBlank()) Text(question.sectionTitle, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
                         NativeMathText("سؤال ${index + 1}: ${question.text}")
+                        if (question.rubric.isNotBlank()) Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.tertiaryContainer)) {
+                            Column(Modifier.padding(8.dp)) {
+                                Text("راهنمای نمره‌دهی دبیر", fontWeight = FontWeight.Bold)
+                                NativeMathText(question.rubric)
+                            }
+                        }
                         Text("پاسخ: ${submission.responses.getOrNull(index).displayText()}")
                         AnswerImagesRow(submission.answerImagesFor(question.id, index))
                         val scoreKey = "${submission.id}:$index"
@@ -341,7 +349,9 @@ private fun QuestionCentricContent(state: GradingUiState, viewModel: GradingView
                     }
                 }
                 HorizontalDivider()
+                if (question.sectionTitle.isNotBlank()) Text(question.sectionTitle, style = MaterialTheme.typography.labelLarge)
                 NativeMathText(question.text)
+                if (question.rubric.isNotBlank()) Text("راهنمای دبیر: ${question.rubric}", color = MaterialTheme.colorScheme.primary)
                 HorizontalDivider()
                 Button(
                     enabled = state.submissions.isNotEmpty() && !state.actionLoading,

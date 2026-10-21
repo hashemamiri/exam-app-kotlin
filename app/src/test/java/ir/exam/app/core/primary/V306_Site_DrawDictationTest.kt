@@ -18,7 +18,7 @@ class V306_Site_DrawDictationTest {
         val builder = File(root(), "site/src/builder.js").readText()
         assertTrue(student.contains("if (obj.mode === 'draw' && type === 'essay') q.mode = 'draw';"))
         assertTrue(student.contains("q.dictationText = obj.speak ? String(obj.speak) : ''"))
-        assertTrue(student.contains("var drawMode = ex.primary && q.type === 'essay' && q.mode === 'draw';"))
+        assertTrue(student.contains("var drawMode = q.type === 'essay' && (q.mode === 'draw' || q.mode === 'construct');"))
         assertTrue(builder.contains("var isDraw = q.type === 'essay' && q.mode === 'draw', isDict = q.type === 'fill' && q.mode === 'dictation';"))
         assertTrue(builder.contains("['dictation', 'املا (گوش بده و بنویس)']"))
     }

@@ -1008,7 +1008,28 @@ private fun ExamSettingsCard(state: ExamBuilderState, viewModel: ExamBuilderView
                         modifier = Modifier.fillMaxWidth()
                     )
                 }
-                val shown = typeCounts.entries.sumOf { (t, c) -> state.pickRules[t.wireName()]?.coerceAtMost(c) ?: c }
+                // V328 — قواعد مبحث/بخش بر نوع سؤال اولویت دارند.
+                val groupCounts = state.questions.groupBy { q ->
+                    val topicKey = "topic:${q.topic.trim()}"
+                    val sectionKey = "section:${q.sectionTitle.trim()}"
+                    when {
+                        q.topic.isNotBlank() && topicKey in state.pickRules -> topicKey
+                        q.sectionTitle.isNotBlank() && sectionKey in state.pickRules -> sectionKey
+                        else -> q.type.wireName()
+                    }
+                }.mapValues { it.value.size }
+                val shown = groupCounts.entries.sumOf { (key, c) -> state.pickRules[key]?.coerceAtMost(c) ?: c }
+                val topicCounts = state.questions.filter { it.topic.isNotBlank() }.groupingBy { it.topic.trim() }.eachCount()
+                val sectionCounts = state.questions.filter { it.sectionTitle.isNotBlank() }.groupingBy { it.sectionTitle.trim() }.eachCount()
+                if (topicCounts.isNotEmpty() || sectionCounts.isNotEmpty()) {
+                    Text("انتخاب تصادفی بر اساس مبحث/بخش (مقدم بر نوع سؤال؛ خالی = همه)", style = MaterialTheme.typography.labelLarge)
+                    (topicCounts.map { (name, count) -> "topic:$name" to ("مبحث: $name" to count) } +
+                        sectionCounts.map { (name, count) -> "section:$name" to ("بخش: $name" to count) }).forEach { (key, pair) ->
+                        val (label, count) = pair
+                        OutlinedTextField(state.pickRules[key]?.toString().orEmpty(), { viewModel.setPickGroupRule(key, it) },
+                            label = { Text("$label ($count سؤال)") }, placeholder = { Text("همه") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                    }
+                }
                 if (state.pickRules.isNotEmpty()) {
                     Text(
                         "هر دانش‌آموز $shown سؤال از ${state.questions.size} می‌بیند؛ نمره از جمع بارم همان سؤال‌ها.",
@@ -1085,7 +1106,8 @@ private fun BuilderQuestionBankDialog(
         (!state.primaryMode || tagSubject.isEmpty() || item.question.subject == tagSubject) &&
         (state.selectedBankCategory == null || state.selectedBankCategory in item.categoryIds) &&
             (query.isBlank() || item.question.text.lowercase().contains(query) ||
-                item.subject.orEmpty().lowercase().contains(query) ||
+                item.question.topic.lowercase().contains(query) ||
+                item.question.subject.orEmpty().lowercase().contains(query) ||
                 item.examTitle.orEmpty().lowercase().contains(query))
     }
     val selected = remember { mutableStateListOf<Long>() }
@@ -1670,7 +1692,7 @@ private fun QuestionEditor(
             }
             // V305 — حالت ابتدایی: نوع ویژهٔ سؤال (فقط وقتی کلید «حالت ابتدایی» آزمون روشن است)
             // V310.1 — در آزمون چاپی هم مثل سایت نمایش داده می‌شود (قبلاً `!printMode` بود و املا در چاپ دیده نمی‌شد).
-            if (primary && (question.type == QuestionType.FILL_BLANK || question.type == QuestionType.MULTIPLE_CHOICE || question.type == QuestionType.ESSAY)) {
+            if (primary && (question.type == QuestionType.FILL_BLANK || question.type == QuestionType.MULTIPLE_CHOICE)) {
                 PrimaryModeChooser(question, viewModel)
                 if (question.type == QuestionType.FILL_BLANK && question.mode == "paint") {
                     PrimaryPaintSettings(question, viewModel)
@@ -1679,17 +1701,17 @@ private fun QuestionEditor(
                     PrimaryDictationSettings(question, viewModel)
                 }
             }
-            // V327 — متن مشترک روخوانی/درک مطلب در هر سؤال وابسته وارد شود.
-            if (primary) {
-                OutlinedTextField(
+            // V328 — گروه‌بندی و برچسب فصل/مبحث برای سؤال‌های متوسطه و فیلتر بانک.
+            SecondaryQuestionControls(question, viewModel)
+            // V327/V328 — متن مشترک روخوانی و صورت چندبخشی.
+            OutlinedTextField(
                     value = question.passage,
                     onValueChange = { viewModel.setPassage(question.id, it) },
-                    label = { Text("متن روخوانی مشترک (اختیاری)") },
-                    supportingText = { Text("برای سؤال‌های مربوط به یک متن، همان متن را در هر سؤال کپی کنید؛ فقط یک‌بار در صفحهٔ دانش‌آموز نمایش داده می‌شود.") },
+                    label = { Text("متن مشترک / صورت چندبخشی (اختیاری)") },
+                    supportingText = { Text("برای سؤال‌های یک بخش یا مسئله، همین عنوان و متن را روی سؤال‌های مرتبط بگذارید؛ متن برای دانش‌آموز کنار هر زیرسؤال می‌آید.") },
                     minLines = 2,
                     modifier = Modifier.fillMaxWidth()
                 )
-            }
             // V308 / ۱۴ — برچسب پایه و درس روی هر سؤال (فقط حالت ابتدایی)
             if (primary) PrimaryTagEditor(question, viewModel) // V310.1 — مثل سایت، در چاپ هم
             when (question.type) {
@@ -2361,6 +2383,42 @@ private fun QuestionType.faLabel(): String = when (this) {
  * ============================================================ */
 
 /** انتخاب نوع ویژهٔ سؤال: جای‌خالی → مرتب‌سازی؛ چندگزینه‌ای → انتخاب روی تصویر. */
+/** V328 — بخش، فصل، حالت پاسخ مرحله‌ای/اثبات/ساخت و راهنمای rubric. */
+@Composable
+private fun SecondaryQuestionControls(question: QuestionDraft, viewModel: ExamBuilderViewModel) {
+    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            OutlinedTextField(question.sectionTitle, { viewModel.setQuestionGrouping(question.id, it, question.topic) }, label = { Text("بخش آزمون / صورت مشترک") }, modifier = Modifier.weight(1f))
+            OutlinedTextField(question.topic, { viewModel.setQuestionGrouping(question.id, question.sectionTitle, it) }, label = { Text("فصل یا مبحث (بانک)") }, modifier = Modifier.weight(1f))
+        }
+        if (question.type == QuestionType.ESSAY) {
+            PrimaryDropdown(
+                selectedValue = question.mode,
+                options = listOf("" to "پاسخ متنی", "steps" to "حل مرحله‌ای", "proof" to "اثبات با گام‌ها", "construct" to "رسم/ساخت روی تخته", "draw" to "نقاشی آزاد", "voice" to "پاسخ صوتی"),
+                onSelect = { viewModel.setQuestionMode(question.id, it) },
+                modifier = Modifier.fillMaxWidth()
+            )
+            if (question.mode in setOf("steps", "proof")) {
+                OutlinedTextField(
+                    value = question.solutionSteps.joinToString("\n"),
+                    onValueChange = { viewModel.setSolutionSteps(question.id, it.lines()) },
+                    label = { Text("گام‌های پاسخ (هر گام یک خط)") },
+                    supportingText = { Text("دانش‌آموز برای هر گام کادر جدا می‌بیند؛ تصحیح پاسخ نوشتاری با دبیر است.") },
+                    minLines = 2, modifier = Modifier.fillMaxWidth()
+                )
+            }
+            if (question.mode in setOf("steps", "proof", "construct")) {
+                OutlinedTextField(
+                    value = question.rubric,
+                    onValueChange = { viewModel.setRubric(question.id, it) },
+                    label = { Text("معیار نمره‌دهی دبیر (برای دانش‌آموز پنهان)") },
+                    minLines = 2, modifier = Modifier.fillMaxWidth()
+                )
+            }
+        }
+    }
+}
+
 /** V308 / ۱۴ — برچسب پایه و درس سؤال؛ فیلتر بانک حالت ابتدایی از همین برچسب‌ها استفاده می‌کند. */
 @Composable
 private fun PrimaryTagEditor(question: QuestionDraft, viewModel: ExamBuilderViewModel) {
