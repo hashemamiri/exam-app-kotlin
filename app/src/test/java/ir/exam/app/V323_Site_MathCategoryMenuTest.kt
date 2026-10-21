@@ -66,13 +66,13 @@ class V323_Site_MathCategoryMenuTest {
         val g = js()
         val ids = Regex("""\{ id: '(\w+)', name: '[^']*', hint: '[^']*', ids: \[([^\]]*)\] \}""").findAll(g).toList()
         val byId = ids.associate { m -> m.groupValues[1] to m.groupValues[2].split(',').count { it.isNotBlank() } }
-        assertEquals("elementary tools", 37, byId["elementary"])
+        assertEquals("elementary tools", 44, byId["elementary"])
         assertEquals("middle tools", 15, byId["middle"])
         assertEquals("high tools", 22, byId["high"])
         assertEquals("university tools", 23, byId["university"])
         assertEquals("catalog categories", 4, MATH_CATEGORIES.size)
         assertEquals(MATH_CATEGORIES.map { it.id }, listOf("elementary", "middle", "high", "university"))
-        assertEquals("total tools", 97, byId.values.sum())
+        assertEquals("total tools", 104, byId.values.sum())
         for (c in MATH_CATEGORIES) assertEquals("app vs web count for ${c.id}", c.ids.size, byId[c.id])
     }
 
