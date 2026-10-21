@@ -43,8 +43,8 @@ class V306_DrawDictationTest {
     fun `builder offers draw and dictation choices in primary mode`() {
         val builder = src("ui/builder/ExamBuilderScreen.kt")
         assertTrue(builder.contains("\"construct\" to \"رسم/ساخت روی تخته\""))
-        assertTrue(builder.contains("\"draw\" to \"نقاشی آزاد\"))
-        assertTrue(builder.contains("\"dictation\" to \"املا (گوش بده و بنویس)\"))
+        assertTrue(builder.contains("\"draw\" to \"نقاشی آزاد\""))
+        assertTrue(builder.contains("\"dictation\" to \"املا (گوش بده و بنویس)\""))
         assertTrue(builder.contains("private fun SecondaryQuestionControls"))
         assertTrue(builder.contains("if (question.type == QuestionType.ESSAY)"))
     }
