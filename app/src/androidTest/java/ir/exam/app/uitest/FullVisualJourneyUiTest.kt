@@ -28,16 +28,16 @@ import org.junit.Test
 import org.junit.runner.RunWith
 
 /**
- * V333.2 — سناریوی بصری و تعاملی سرتاسری دوپرسونایی (معلم ↔ دانش‌آموز ↔ معلم ↔ کارنامهٔ دانش‌آموز)
+ * V333.3 — سناریوی بصری و تعاملی سرتاسری دوپرسونایی (معلم ↔ دانش‌آموز ↔ معلم ↔ کارنامهٔ دانش‌آموز)
  * روی شبیه‌ساز واقعی Pixel 6 (API 34) همراه ثبت گالری تصاویر PNG از تمام مراحل کلیدی:
  *
  * ۱) صفحهٔ خوش‌آمد و ورود راست‌به‌چپ
  * ۲) ورود معلم، ساخت آزمون در آزمون‌ساز بومی و دریافت کد ۶حرفی
  * ۳) باز کردن آزمون روی کارت داشبورد معلم («بازکردن» → «بستن» / وضعیت باز) و خروج امن
- * ۴) ورود دانش‌آموز با نام کاربری، ورود با کد آزمون، پاسخ به سؤال فعال (با ثبت تصویر بدون شکستن FLAG_SECURE)
+ * ۴) ورود دانش‌آموز (فرود در «تقویم» ← منو ← کارت «آزمون» ← پنجرهٔ «پیوستن به آزمون» ← «جست‌وجوی آزمون») و پاسخ به سؤال فعال
  * ۵) مرور و ارسال نهایی پاسخ دانش‌آموز و دریافت رسید ثبت
  * ۶) ورود مجدد معلم، گردش چرخ‌وفلک «کارت‌ها» تا کارت فعال «تصحیح»، ثبت بازخورد تشریحی و ذخیرهٔ نمره
- * ۷) ورود مجدد دانش‌آموز، باز کردن منو («منو» / «بازکردن منو» → «نتایج من»)، مشاهدهٔ کارنامهٔ توصیفی و بازخورد معلم
+ * ۷) ورود مجدد دانش‌آموز (فرود در «تقویم» ← منو ← «نتایج من»)، مشاهدهٔ کارنامهٔ توصیفی و بازخورد معلم
  */
 @RunWith(AndroidJUnit4::class)
 class FullVisualJourneyUiTest {
@@ -53,9 +53,9 @@ class FullVisualJourneyUiTest {
         }
     }
 
-    private fun openMainMenu() {
+    private fun openMainMenu(timeout: Long = netTimeout) {
         UiScreenshotHelper.hideKeyboard(rule)
-        rule.waitUntil(15_000) {
+        rule.waitUntil(timeout) {
             rule.onAllNodesWithContentDescription("منو").fetchSemanticsNodes().isNotEmpty() ||
                 rule.onAllNodesWithContentDescription("بازکردن منو").fetchSemanticsNodes().isNotEmpty() ||
                 rule.onAllNodesWithContentDescription("بستن منو").fetchSemanticsNodes().isNotEmpty()
@@ -203,7 +203,7 @@ class FullVisualJourneyUiTest {
             // خروج معلم و ورود دانش‌آموز
             signOutIfAuthenticated()
 
-            // ۴) ورود دانش‌آموز با نام کاربری و شروع آزمون فعال
+            // ۴) ورود دانش‌آموز با نام کاربری، باز کردن منو ← «آزمون» ← «پیوستن به آزمون» و شروع آزمون فعال
             rule.onNodeWithText("ورود به حساب").performClick()
             rule.onNodeWithText("دانش‌آموز").performClick()
             waitForText("نام کاربری دانش‌آموز", timeout = 10_000)
@@ -212,10 +212,18 @@ class FullVisualJourneyUiTest {
             UiScreenshotHelper.hideKeyboard(rule)
             UiScreenshotHelper.clickDialogOrLastText(rule, "ورود")
 
-            waitForText("کد آزمون را وارد کنید", timeout = netTimeout)
+            // پس از ورود، دانش‌آموز در ExamApp روی صفحهٔ پیش‌فرض «تقویم» قرار می‌گیرد؛
+            // ورود به آزمون از مسیر «منو ← کارت آزمون ← پنجرهٔ پیوستن به آزمون ← جست‌وجوی آزمون» انجام می‌شود.
+            openMainMenu(timeout = netTimeout)
+            UiScreenshotHelper.scrollUntilTextVisible(rule, "آزمون")
+            rule.onAllNodesWithText("آزمون").onFirst().performClick()
+            waitForText("پیوستن به آزمون", timeout = 15_000)
             rule.onNodeWithText("کد آزمون").performTextReplacement(examCode)
             UiScreenshotHelper.hideKeyboard(rule)
-            rule.onNodeWithText("ورود به آزمون").performClick()
+            rule.waitUntil(10_000) {
+                rule.onAllNodesWithContentDescription("جست‌وجوی آزمون").fetchSemanticsNodes().isNotEmpty()
+            }
+            rule.onNodeWithContentDescription("جست‌وجوی آزمون").performClick()
 
             waitForText("شروع پاسخ‌گویی", timeout = netTimeout)
             rule.onNodeWithText("شروع پاسخ‌گویی").performClick()
@@ -301,7 +309,7 @@ class FullVisualJourneyUiTest {
 
             signOutIfAuthenticated()
 
-            // ۷) ورود مجدد دانش‌آموز → منو («منو» / «بازکردن منو») → «نتایج من» → کارنامه و جزئیات
+            // ۷) ورود مجدد دانش‌آموز (فرود در «تقویم») → منو («منو» / «بازکردن منو») → «نتایج من» → کارنامه و جزئیات
             rule.onNodeWithText("ورود به حساب").performClick()
             rule.onNodeWithText("دانش‌آموز").performClick()
             waitForText("نام کاربری دانش‌آموز", timeout = 10_000)
@@ -310,14 +318,14 @@ class FullVisualJourneyUiTest {
             UiScreenshotHelper.hideKeyboard(rule)
             UiScreenshotHelper.clickDialogOrLastText(rule, "ورود")
 
-            waitForText("کد آزمون را وارد کنید", timeout = netTimeout)
-            openMainMenu()
+            openMainMenu(timeout = netTimeout)
             UiScreenshotHelper.scrollUntilTextVisible(rule, "نتایج من")
             rule.onAllNodesWithText("نتایج من").onFirst().performClick()
 
             waitForText("نتایج و پاسخ‌های من", timeout = netTimeout)
-            waitForText("تصحیح‌شده", timeout = netTimeout)
+            waitForText("میانگین کل", substring = true, timeout = netTimeout)
             UiScreenshotHelper.scrollUntilTextVisible(rule, "مشاهده سؤال‌ها و پاسخ‌ها")
+            waitForText("تصحیح‌شده", timeout = 15_000)
             rule.onAllNodesWithText("مشاهده سؤال‌ها و پاسخ‌ها").onFirst().performClick()
             waitForText(teacherFeedback, substring = true, timeout = 15_000)
 

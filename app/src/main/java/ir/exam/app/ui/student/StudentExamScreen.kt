@@ -624,7 +624,11 @@ fun StudentExamContent(
                                 }
                                 return@forEachIndexed
                             }
-                            Card(Modifier.fillMaxWidth()) {
+                            Card(
+                                Modifier
+                                    .fillMaxWidth()
+                                    .clickable { onAnswer(ChoiceAnswer(question.id, originalIndex)) }
+                            ) {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     RadioButton(
                                         selected = (state.answers[question.id] as? ChoiceAnswer)?.selectedIndex == originalIndex,

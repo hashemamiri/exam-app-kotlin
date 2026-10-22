@@ -32,7 +32,7 @@ import org.json.JSONObject
 import org.junit.AssumptionViolatedException
 
 /**
- * V333.2 — ابزار ثبت اسکرین‌شات واقعی صفحات Compose، انتخاب امن دکمه‌های پنجرهٔ محاوره‌ای (`AlertDialog`)،
+ * V333.3 — ابزار ثبت اسکرین‌شات واقعی صفحات Compose، انتخاب امن دکمه‌های پنجرهٔ محاوره‌ای (`AlertDialog`)،
  * مدیریت کیبورد نرم‌افزاری، اسکرول عمودی دقیق (`VerticalScrollAxisRange`) و عیب‌یابی تصویری خودکار
  * در لحظهٔ خطا (`99_failure_*.png`) روی شبیه‌ساز Pixel 6 (API 34).
  */
