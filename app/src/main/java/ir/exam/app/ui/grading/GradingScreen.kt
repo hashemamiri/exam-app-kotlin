@@ -280,10 +280,34 @@ private fun SubmissionCard(
                     Column(Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
                         if (question.sectionTitle.isNotBlank()) Text(question.sectionTitle, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
                         NativeMathText("سؤال ${index + 1}: ${question.text}")
-                        if (question.constructionTargets.isNotEmpty()) Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)) {
+                        val rawElement = submission.responses.getOrNull(index)
+                        val rawJsonString = (rawElement as? JsonPrimitive)?.contentOrNull ?: rawElement?.toString().orEmpty()
+                        val hasGeometrySpec = question.constructionTargets.isNotEmpty() || question.constructionConstraints.isNotEmpty()
+                        val geometryEval = if (hasGeometrySpec) {
+                            ir.exam.app.core.geometry.GeometryConstructionEvaluator.evaluate(
+                                questionScore = question.score,
+                                targets = question.constructionTargets.map { ir.exam.app.core.geometry.GeometryConstructionEvaluator.TargetSpec(it.label, it.x, it.y, it.tolerance, it.score) },
+                                constraints = question.constructionConstraints.map { ir.exam.app.core.geometry.GeometryConstructionEvaluator.ConstraintSpec(it.id, it.type, it.points, it.value, it.tolerance, it.score) },
+                                rawResponse = rawJsonString
+                            )
+                        } else null
+                        if (hasGeometrySpec) Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)) {
                             Column(Modifier.padding(8.dp), verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                                Text(question.constructionPrompt.ifBlank { "نقاط هدف" }, fontWeight = FontWeight.Bold)
+                                Text(question.constructionPrompt.ifBlank { "نقاط و شرط‌های هندسی" }, fontWeight = FontWeight.Bold)
                                 question.constructionTargets.forEach { target -> Text("${target.label}: (${target.x}, ${target.y}) ± ${target.tolerance} · بارم ${target.score}", style = MaterialTheme.typography.bodySmall) }
+                                question.constructionConstraints.forEach { c ->
+                                    Text(ir.exam.app.core.geometry.GeometryConstructionEvaluator.formatConstraintSummary(
+                                        ir.exam.app.core.geometry.GeometryConstructionEvaluator.ConstraintSpec(c.id, c.type, c.points, c.value, c.tolerance, c.score)
+                                    ), style = MaterialTheme.typography.bodySmall)
+                                }
+                                geometryEval?.checks?.forEach { chk ->
+                                    Text("${if (chk.passed) "✓" else "✗"} ${chk.label}: ${chk.detail}", style = MaterialTheme.typography.bodySmall, color = if (chk.passed) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error)
+                                }
+                                if (geometryEval != null && question.assessmentParts.isEmpty()) {
+                                    TextButton(onClick = { viewModel.setScore(submission.id, index, geometryEval.score.toString()) }) {
+                                        Text("⚡ اعمال نمرهٔ پیشنهادی هندسی (${geometryEval.score})")
+                                    }
+                                }
                             }
                         }
                         if (question.rubric.isNotBlank()) Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.tertiaryContainer)) {
@@ -301,6 +325,8 @@ private fun SubmissionCard(
                                 Text("نتیجه: ${proofPartAnswer(responseText, proofPart.id, "answer")}")
                                 if (proofPart.requiresReason) Text("دلیل: ${proofPartAnswer(responseText, proofPart.id, "reason")}")
                             }
+                        } else if (question.answerMode == "construct" || hasGeometrySpec) {
+                            Text("پاسخ هندسی: ${ir.exam.app.core.geometry.GeometryConstructionEvaluator.formatResponseSummary(rawJsonString, question.constructionLabels)}")
                         } else Text("پاسخ: ${submission.responses.getOrNull(index).displayText()}")
                         AnswerImagesRow(submission.answerImagesFor(question.id, index))
                         val scoreKey = "${submission.id}:$index"

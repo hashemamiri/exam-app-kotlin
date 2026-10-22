@@ -331,16 +331,18 @@ class SupabaseGradingRepository {
         val responses = raw["responses"] as? JsonArray ?: JsonArray(emptyList())
         val grades = raw["grades"] as? JsonArray ?: JsonArray(emptyList())
         val responseImages = raw["response_images"] as? JsonObject ?: JsonObject(emptyMap())
+        val partGrades = raw["part_grades"] as? JsonObject ?: JsonObject(emptyMap())
         val partFeedback = raw["part_feedback"] as? JsonObject ?: JsonObject(emptyMap())
         val questions = (raw["questions"] as? JsonArray).orEmpty().mapIndexedNotNull { index, item ->
             val question = item as? JsonObject ?: return@mapIndexedNotNull null
             val questionId = question.text("id") ?: "q-$index"
             val originalIndex = question["i"]?.jsonPrimitive?.intOrNull ?: index
             val answerValue = responses.getOrNull(index)
+            val answerRawText = (answerValue as? JsonPrimitive)?.contentOrNull.orEmpty()
             val proofValues = if (question.text("mode") == "proof") runCatching {
-                val rawText = (answerValue as? JsonPrimitive)?.contentOrNull.orEmpty()
-                Json.parseToJsonElement(rawText).jsonObject["parts"] as? JsonObject ?: JsonObject(emptyMap())
+                Json.parseToJsonElement(answerRawText).jsonObject["parts"] as? JsonObject ?: JsonObject(emptyMap())
             }.getOrDefault(JsonObject(emptyMap())) else JsonObject(emptyMap())
+            val stepLines = answerRawText.split("\n")
             val answerPartMetadata = (question["assessmentParts"] as? JsonArray).orEmpty()
             StudentAnswerReviewQuestion(
                 index = originalIndex,
@@ -360,8 +362,17 @@ class SupabaseGradingRepository {
                 explanation = if (graded) question.text("explanation")?.takeIf(String::isNotBlank) else null,
                 partFeedback = if (graded) answerPartMetadata.mapIndexedNotNull { partIndex, rawPart ->
                     val part = rawPart as? JsonObject ?: return@mapIndexedNotNull null
-                    val value = partFeedback["$originalIndex:$partIndex"]?.jsonPrimitive?.contentOrNull?.takeIf(String::isNotBlank) ?: return@mapIndexedNotNull null
-                    ir.exam.app.domain.model.PartFeedbackReview(part.text("label").orEmpty().ifBlank { "گام ${partIndex + 1}" }, value)
+                    val fbVal = partFeedback["$originalIndex:$partIndex"]?.jsonPrimitive?.contentOrNull.orEmpty()
+                    val earnedPart = partGrades["$originalIndex:$partIndex"]?.jsonPrimitive?.doubleOrNull
+                    val stepAns = stepLines.getOrElse(partIndex) { "" }.trim()
+                    if (fbVal.isBlank() && earnedPart == null && stepAns.isBlank()) return@mapIndexedNotNull null
+                    ir.exam.app.domain.model.PartFeedbackReview(
+                        label = part.text("label").orEmpty().ifBlank { "گام ${partIndex + 1}" },
+                        answer = stepAns,
+                        text = fbVal,
+                        earnedScore = earnedPart,
+                        maxScore = part.number("score") ?: 0.0
+                    )
                 } else emptyList(),
                 answerMode = question.text("mode").orEmpty(),
                 proofAssumptions = question.text("proofAssumptions").orEmpty(),
@@ -376,7 +387,9 @@ class SupabaseGradingRepository {
                         result = values?.text("answer").orEmpty(),
                         reasonPrompt = part.text("reasonPrompt").orEmpty(),
                         reason = values?.text("reason").orEmpty(),
-                        feedback = partFeedback["$originalIndex:$partIndex"]?.jsonPrimitive?.contentOrNull.orEmpty()
+                        feedback = partFeedback["$originalIndex:$partIndex"]?.jsonPrimitive?.contentOrNull.orEmpty(),
+                        earnedScore = partGrades["$originalIndex:$partIndex"]?.jsonPrimitive?.doubleOrNull,
+                        maxScore = part.number("score") ?: 0.0
                     )
                 } else emptyList()
             )
@@ -416,6 +429,11 @@ private fun QuestionDraft.toGradingQuestion() = GradingQuestion(
     assessmentParts = assessmentParts.map { ir.exam.app.domain.model.AssessmentPart(it.id, it.label, it.prompt, it.score, it.carriesForward, it.reasonPrompt, it.requiresReason, it.rubric) },
     constructionPrompt = constructionPrompt,
     constructionTargets = constructionTargets.map { ir.exam.app.domain.model.GradingConstructionTarget(it.label, it.x, it.y, it.tolerance, it.score) },
+    constructionConstraints = constructionConstraints.map { ir.exam.app.domain.model.GradingConstructionConstraint(it.id, it.type, it.points, it.value, it.tolerance, it.score) },
+    constructionLabels = ir.exam.app.core.geometry.GeometryConstructionEvaluator.derivePublicLabels(
+        constructionTargets.map { ir.exam.app.core.geometry.GeometryConstructionEvaluator.TargetSpec(it.label, it.x, it.y, it.tolerance, it.score) },
+        constructionConstraints.map { ir.exam.app.core.geometry.GeometryConstructionEvaluator.ConstraintSpec(it.id, it.type, it.points, it.value, it.tolerance, it.score) }
+    ),
     proofAssumptions = proofAssumptions,
     proofGoal = proofGoal,
     answerMode = mode

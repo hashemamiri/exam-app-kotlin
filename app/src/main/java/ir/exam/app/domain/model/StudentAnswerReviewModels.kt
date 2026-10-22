@@ -14,8 +14,23 @@ data class StudentAnswerSummary(
     val feedback: String
 )
 
-data class PartFeedbackReview(val label: String, val text: String)
-data class StudentProofStepReview(val label: String, val prompt: String, val result: String, val reasonPrompt: String, val reason: String, val feedback: String)
+data class PartFeedbackReview(
+    val label: String,
+    val answer: String = "",
+    val text: String = "",
+    val earnedScore: Double? = null,
+    val maxScore: Double = 0.0
+)
+data class StudentProofStepReview(
+    val label: String,
+    val prompt: String,
+    val result: String,
+    val reasonPrompt: String,
+    val reason: String,
+    val feedback: String,
+    val earnedScore: Double? = null,
+    val maxScore: Double = 0.0
+)
 
 data class StudentAnswerReviewQuestion(
     val index: Int,

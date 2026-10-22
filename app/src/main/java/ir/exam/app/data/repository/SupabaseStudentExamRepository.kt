@@ -7,6 +7,7 @@ import ir.exam.app.data.local.ActiveExamSessionEntity
 import ir.exam.app.data.local.NativeDatabaseProvider
 import ir.exam.app.data.remote.SupabaseProvider
 import ir.exam.app.domain.model.Exam
+import ir.exam.app.domain.model.ServerSectionSync
 import ir.exam.app.domain.model.SubmissionOutcome
 import ir.exam.app.domain.model.SubmittedExam
 import ir.exam.app.domain.repository.ExamRepository
@@ -136,6 +137,33 @@ class SupabaseStudentExamRepository(context: Context) : ExamRepository {
 
     override suspend fun submitAttempt(attempt: SubmittedExam): Result<SubmissionOutcome> = runCatching {
         sendPrepared(prepareSubmission(attempt))
+    }
+
+    override suspend fun syncSectionTiming(
+        examId: String,
+        sectionTitle: String,
+        sectionSnapshot: Map<Int, String>
+    ): Result<ServerSectionSync?> = runCatching {
+        val raw = SupabaseProvider.client.postgrest.rpc(
+            "native_sync_exam_section_v1",
+            buildJsonObject {
+                put("p_exam_id", examId)
+                put("p_section_title", sectionTitle.trim())
+                if (sectionSnapshot.isNotEmpty()) {
+                    put("p_snapshot", buildJsonObject {
+                        sectionSnapshot.forEach { (qIndex, value) -> put(qIndex.toString(), JsonPrimitive(value)) }
+                    })
+                }
+            }
+        ).decodeAs<JsonObject>()
+        raw["error"]?.jsonPrimitive?.contentOrNull?.takeIf(String::isNotBlank)?.let(::error)
+        val localNow = System.currentTimeMillis()
+        val deadlines = StudentExamPayloadCodec.serverSectionDeadlines(raw, localNow)
+        val expired = (raw["expired_sections"] as? JsonArray)
+            ?.mapNotNull { it.jsonPrimitive.contentOrNull?.trim() }
+            ?.filter(String::isNotBlank)
+            ?.toSet().orEmpty()
+        ServerSectionSync(deadlines, expired)
     }
 
     /** V58.0 — ثبت گزارش نظارتی؛ فقط معلمِ همان آزمون آن را می‌خواند. */

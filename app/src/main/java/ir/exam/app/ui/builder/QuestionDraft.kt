@@ -278,6 +278,16 @@ data class ConstructionTargetDraft(
 )
 
 @Serializable
+data class ConstructionConstraintDraft(
+    val id: String = UUID.randomUUID().toString(),
+    val type: String = "distance",
+    val points: List<String> = listOf("A", "B"),
+    val value: Double = 3.0,
+    val tolerance: Double = 0.5,
+    val score: Double = 1.0
+)
+
+@Serializable
 data class AssessmentPartDraft(
     val id: String = UUID.randomUUID().toString(),
     val label: String = "",
@@ -372,6 +382,8 @@ data class QuestionDraft(
     val proofGoal: String = "",
     val constructionPrompt: String = "",
     val constructionTargets: List<ConstructionTargetDraft> = emptyList(),
+    val constructionConstraints: List<ConstructionConstraintDraft> = emptyList(),
+    val constructionAngleLabels: List<String> = emptyList(),
     // V327 — متن مشترک روخوانی/درک مطلب؛ چند سؤال می‌توانند passage یکسان داشته باشند.
     val passage: String = "",
     // V327 — سکوت و تعداد تکرار در قالب املا؛ برای داده‌های قدیمی پیش‌فرض امن.

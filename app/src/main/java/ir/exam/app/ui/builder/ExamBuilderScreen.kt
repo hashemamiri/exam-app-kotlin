@@ -2495,9 +2495,70 @@ private fun SecondaryQuestionControls(question: QuestionDraft, allQuestions: Lis
                     }
                 }
                 TextButton(onClick = { viewModel.addConstructionTarget(question.id) }, enabled = question.constructionTargets.size < 8) { Text("افزودن نقطهٔ هدف") }
-                if (question.constructionTargets.isNotEmpty()) {
-                    val targetScore = question.constructionTargets.sumOf { it.score }
-                    Text("جمع بارم نقاط: ${compactScore(targetScore)} از بارم سؤال ${compactScore(question.score)}", style = MaterialTheme.typography.bodySmall)
+                OutlinedTextField(
+                    value = question.constructionAngleLabels.joinToString(", "),
+                    onValueChange = { viewModel.setConstructionAngleLabels(question.id, it) },
+                    label = { Text("برچسب زاویه‌ها برای نام‌گذاری روی نمودار (مثل ABC, OAB)") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+                question.constructionConstraints.forEachIndexed { cIndex, constraint ->
+                    Card(Modifier.fillMaxWidth()) {
+                        Column(Modifier.padding(8.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                            Text("شرط هندسی ${cIndex + 1}", style = MaterialTheme.typography.labelLarge)
+                            PrimaryDropdown(
+                                selectedValue = constraint.type,
+                                options = ir.exam.app.core.geometry.GeometryConstructionEvaluator.SUPPORTED_CONSTRAINTS,
+                                onSelect = { selected ->
+                                    viewModel.updateConstructionConstraint(question.id, cIndex) {
+                                        it.copy(
+                                            type = selected,
+                                            tolerance = ir.exam.app.core.geometry.GeometryConstructionEvaluator.defaultTolerance(selected)
+                                        )
+                                    }
+                                },
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                OutlinedTextField(
+                                    value = constraint.points.joinToString(","),
+                                    onValueChange = { value ->
+                                        val pts = value.split(',', '،', ' ').map(String::trim).filter(String::isNotBlank).take(4)
+                                        viewModel.updateConstructionConstraint(question.id, cIndex) { it.copy(points = pts) }
+                                    },
+                                    label = { Text("نقاط به ترتیب (مثل A,B,C)") },
+                                    modifier = Modifier.weight(1.4f)
+                                )
+                                if (constraint.type in setOf("distance", "angle")) {
+                                    OutlinedTextField(
+                                        value = constraint.value.toString(),
+                                        onValueChange = { v -> v.toDoubleOrNull()?.let { num -> viewModel.updateConstructionConstraint(question.id, cIndex) { it.copy(value = num) } } },
+                                        label = { Text(if (constraint.type == "angle") "زاویه (°)" else "طول هدف") },
+                                        modifier = Modifier.weight(1f)
+                                    )
+                                }
+                            }
+                            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                OutlinedTextField(
+                                    value = constraint.tolerance.toString(),
+                                    onValueChange = { v -> v.toDoubleOrNull()?.takeIf { it > 0.0 }?.let { tol -> viewModel.updateConstructionConstraint(question.id, cIndex) { it.copy(tolerance = tol) } } },
+                                    label = { Text("تلورانس") },
+                                    modifier = Modifier.weight(1f)
+                                )
+                                OutlinedTextField(
+                                    value = constraint.score.toString(),
+                                    onValueChange = { v -> v.toDoubleOrNull()?.takeIf { it >= 0.0 }?.let { sc -> viewModel.updateConstructionConstraint(question.id, cIndex) { it.copy(score = sc) } } },
+                                    label = { Text("بارم شرط") },
+                                    modifier = Modifier.weight(1f)
+                                )
+                                TextButton(onClick = { viewModel.removeConstructionConstraint(question.id, cIndex) }) { Text("حذف") }
+                            }
+                        }
+                    }
+                }
+                TextButton(onClick = { viewModel.addConstructionConstraint(question.id) }, enabled = question.constructionConstraints.size < 8) { Text("افزودن شرط هندسی") }
+                if (question.constructionTargets.isNotEmpty() || question.constructionConstraints.isNotEmpty()) {
+                    val targetScore = question.constructionTargets.sumOf { it.score } + question.constructionConstraints.sumOf { it.score }
+                    Text("جمع وزن نقاط و شرط‌ها: ${compactScore(targetScore)} از بارم سؤال ${compactScore(question.score)}", style = MaterialTheme.typography.bodySmall)
                 }
             }
             if (question.mode in setOf("steps", "proof")) {

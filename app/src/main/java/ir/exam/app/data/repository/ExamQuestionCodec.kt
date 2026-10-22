@@ -1,10 +1,12 @@
 package ir.exam.app.data.repository
 
+import ir.exam.app.core.geometry.GeometryConstructionEvaluator
 import ir.exam.app.ui.builder.AlignSpan
 import ir.exam.app.ui.builder.HotspotRect
 import ir.exam.app.ui.builder.MediaDraft
 import ir.exam.app.ui.builder.OptionStyle
 import ir.exam.app.ui.builder.AssessmentPartDraft
+import ir.exam.app.ui.builder.ConstructionConstraintDraft
 import ir.exam.app.ui.builder.ConstructionTargetDraft
 import ir.exam.app.ui.builder.QuestionDraft
 import ir.exam.app.ui.builder.StyleSpan
@@ -132,6 +134,7 @@ internal object ExamQuestionCodec {
                 proofAssumptions = obj["proofAssumptions"]?.asString().orEmpty(),
                 proofGoal = obj["proofGoal"]?.asString().orEmpty(),
                 constructionPrompt = obj["constructionPrompt"]?.asString().orEmpty(),
+                constructionAngleLabels = obj["constructionAngleLabels"].asArrayOrEmpty().mapNotNull { it.asString()?.trim() }.filter(String::isNotBlank),
                 constructionTargets = key["constructionTargets"].asArrayOrEmpty().mapIndexedNotNull { targetIndex, rawTarget ->
                     val target = rawTarget as? JsonObject ?: return@mapIndexedNotNull null
                     ConstructionTargetDraft(
@@ -141,6 +144,18 @@ internal object ExamQuestionCodec {
                         y = target["y"]?.asDouble() ?: 0.0,
                         tolerance = target["tolerance"]?.asDouble() ?: 0.5,
                         score = target["score"]?.asDouble() ?: 1.0
+                    )
+                },
+                constructionConstraints = key["constructionConstraints"].asArrayOrEmpty().mapIndexedNotNull { cIndex, rawConstraint ->
+                    val c = rawConstraint as? JsonObject ?: return@mapIndexedNotNull null
+                    val cType = c["type"]?.asString()?.lowercase() ?: "distance"
+                    ConstructionConstraintDraft(
+                        id = c["id"]?.asString() ?: "${obj["id"]?.asString().orEmpty()}-constraint-$cIndex",
+                        type = cType,
+                        points = c["points"].asArrayOrEmpty().mapNotNull { it.asString()?.trim() }.filter(String::isNotBlank),
+                        value = c["value"]?.asDouble() ?: c["targetValue"]?.asDouble() ?: 0.0,
+                        tolerance = c["tolerance"]?.asDouble() ?: GeometryConstructionEvaluator.defaultTolerance(cType),
+                        score = c["score"]?.asDouble() ?: 1.0
                     )
                 },
                 rubric = key["rubric"]?.asString().orEmpty(),
@@ -264,7 +279,18 @@ internal object ExamQuestionCodec {
             if (question.proofAssumptions.isNotBlank()) values["proofAssumptions"] = JsonPrimitive(question.proofAssumptions) else values.remove("proofAssumptions")
             if (question.proofGoal.isNotBlank()) values["proofGoal"] = JsonPrimitive(question.proofGoal) else values.remove("proofGoal")
             if (question.constructionPrompt.isNotBlank()) values["constructionPrompt"] = JsonPrimitive(question.constructionPrompt) else values.remove("constructionPrompt")
-            if (question.constructionTargets.isNotEmpty()) values["constructionLabels"] = JsonArray(question.constructionTargets.map { JsonPrimitive(it.label) }) else values.remove("constructionLabels")
+            val derivedLabels = GeometryConstructionEvaluator.derivePublicLabels(
+                question.constructionTargets.map { GeometryConstructionEvaluator.TargetSpec(it.label, it.x, it.y, it.tolerance, it.score) },
+                question.constructionConstraints.map { GeometryConstructionEvaluator.ConstraintSpec(it.id, it.type, it.points, it.value, it.tolerance, it.score) }
+            )
+            val derivedAngleLabels = GeometryConstructionEvaluator.derivePublicAngleLabels(
+                question.constructionAngleLabels,
+                question.constructionConstraints.map { GeometryConstructionEvaluator.ConstraintSpec(it.id, it.type, it.points, it.value, it.tolerance, it.score) }
+            )
+            if (derivedLabels.isNotEmpty()) values["constructionLabels"] = JsonArray(derivedLabels.map(::JsonPrimitive)) else values.remove("constructionLabels")
+            if (derivedAngleLabels.isNotEmpty()) values["constructionAngleLabels"] = JsonArray(derivedAngleLabels.map(::JsonPrimitive)) else values.remove("constructionAngleLabels")
+            values.remove("constructionTargets")
+            values.remove("constructionConstraints")
             // V308 / ۱۴ — برچسب پایه/درس فقط وقتی پر است نوشته می‌شود
             if (question.grade in 1..6) values["grade"] = JsonPrimitive(question.grade)
             if (question.subject.isNotBlank()) values["subject"] = JsonPrimitive(question.subject.trim())
@@ -395,6 +421,16 @@ internal object ExamQuestionCodec {
             if (question.rubric.isNotBlank()) values["rubric"] = JsonPrimitive(question.rubric) else values.remove("rubric")
             if (question.assessmentParts.isNotEmpty()) values["partRubrics"] = JsonArray(question.assessmentParts.map { JsonPrimitive(it.rubric) }) else values.remove("partRubrics")
             if (question.constructionTargets.isNotEmpty()) values["constructionTargets"] = JsonArray(question.constructionTargets.map { target -> JsonObject(mapOf("id" to JsonPrimitive(target.id), "label" to JsonPrimitive(target.label), "x" to JsonPrimitive(target.x), "y" to JsonPrimitive(target.y), "tolerance" to JsonPrimitive(target.tolerance), "score" to JsonPrimitive(target.score))) }) else values.remove("constructionTargets")
+            if (question.constructionConstraints.isNotEmpty()) values["constructionConstraints"] = JsonArray(question.constructionConstraints.map { c ->
+                JsonObject(mapOf(
+                    "id" to JsonPrimitive(c.id),
+                    "type" to JsonPrimitive(c.type.lowercase()),
+                    "points" to JsonArray(c.points.map { JsonPrimitive(it.trim()) }),
+                    "value" to JsonPrimitive(c.value),
+                    "tolerance" to JsonPrimitive(c.tolerance),
+                    "score" to JsonPrimitive(c.score)
+                ))
+            }) else values.remove("constructionConstraints")
             when (question.type) {
                 QuestionType.MULTIPLE_CHOICE -> values["correctOption"] = JsonPrimitive(question.correctIndex ?: 0)
                 QuestionType.TRUE_FALSE -> values["correctAnswer"] = JsonPrimitive(question.expectedText.toBooleanStrictOrNull() ?: false)
@@ -480,7 +516,10 @@ internal object ExamQuestionCodec {
         QuestionType.MATCHING -> "matching"
     }
 
-    private val ANSWER_FIELDS = setOf("correctOption", "correctAnswer", "accept", "answer", "tolerance", "caseSensitive", "matchAnswer", "pairs")
+    private val ANSWER_FIELDS = setOf(
+        "correctOption", "correctAnswer", "accept", "answer", "tolerance", "caseSensitive",
+        "matchAnswer", "pairs", "rubric", "partRubrics", "constructionTargets", "constructionConstraints"
+    )
 }
 
 private fun JsonElement?.asArrayOrEmpty(): JsonArray = this as? JsonArray ?: JsonArray(emptyList())

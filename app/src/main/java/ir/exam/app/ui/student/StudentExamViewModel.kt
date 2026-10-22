@@ -7,12 +7,16 @@ import ir.exam.app.core.network.UserFacingError
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import ir.exam.app.data.repository.PendingActionRepository
+import ir.exam.app.domain.model.BooleanAnswer
+import ir.exam.app.domain.model.ChoiceAnswer
 import ir.exam.app.domain.model.Exam
+import ir.exam.app.domain.model.MatchingAnswer
 import ir.exam.app.domain.model.PendingSubmissionStatus
 import ir.exam.app.domain.model.SubmissionOutcome
 import ir.exam.app.domain.model.StudentAnswer
 import ir.exam.app.domain.model.StudentDraft
 import ir.exam.app.domain.model.SubmittedExam
+import ir.exam.app.domain.model.TextAnswer
 import ir.exam.app.domain.repository.AnswerDraftRepository
 import ir.exam.app.domain.repository.ExamRepository
 import kotlinx.coroutines.Job
@@ -22,6 +26,8 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 
 data class StudentExamUiState(
     val code: String = "",
@@ -35,6 +41,7 @@ data class StudentExamUiState(
     val remainingSeconds: Long = UNLIMITED_TIME,
     val sectionRemainingSeconds: Long = UNLIMITED_TIME,
     val activeSectionTitle: String = "",
+    val expiredSections: Set<String> = emptySet(),
     val restoringExam: Boolean = true,
     val showPreview: Boolean = false,
     val resumedExam: Boolean = false,
@@ -311,8 +318,19 @@ class StudentExamViewModel(
         draftObserver?.cancel()
         val draft = runCatching { drafts.load(exam.id) }.getOrElse { StudentDraft() }
         sectionStartedAtEpochMs.clear(); sectionStartedAtEpochMs.putAll(draft.sectionStartedAtEpochMs)
-        expiredSections.clear(); expiredSections.addAll(draft.expiredSections)
-        val initialSection = exam.questions.getOrNull(draft.lastQuestionIndex)?.sectionTitle.orEmpty().trim()
+        expiredSections.clear(); expiredSections.addAll(draft.expiredSections); expiredSections.addAll(exam.serverExpiredSections)
+        exam.serverSectionDeadlinesEpochMs.forEach { (title, deadlineMs) ->
+            val mins = exam.sectionDurationsMinutes[title]?.coerceIn(1, 1440) ?: return@forEach
+            val serverStarted = deadlineMs - mins * 60_000L
+            val existing = sectionStartedAtEpochMs[title]
+            if (existing == null || serverStarted < existing) sectionStartedAtEpochMs[title] = serverStarted
+            if (deadlineMs <= System.currentTimeMillis()) expiredSections += title
+        }
+        val preferredIndex = draft.lastQuestionIndex.coerceIn(0, exam.questions.lastIndex.coerceAtLeast(0))
+        val safeInitialIndex = if (exam.questions.getOrNull(preferredIndex)?.sectionTitle.orEmpty().trim() in expiredSections) {
+            exam.questions.indices.firstOrNull { idx -> exam.questions[idx].sectionTitle.trim() !in expiredSections } ?: preferredIndex
+        } else preferredIndex
+        val initialSection = exam.questions.getOrNull(safeInitialIndex)?.sectionTitle.orEmpty().trim()
         val initialSectionRemaining = sectionRemainingFor(exam, initialSection)
         _state.update {
             it.copy(
@@ -320,12 +338,13 @@ class StudentExamViewModel(
                 exam = exam,
                 answers = draft.answers,
                 responseImages = draft.responseImages,
-                questionIndex = draft.lastQuestionIndex.coerceIn(0,exam.questions.lastIndex.coerceAtLeast(0)),
+                questionIndex = safeInitialIndex,
                 flaggedQuestionIds = draft.flaggedQuestionIds,
                 showSubmitReview = false,
                 remainingSeconds = remainingFor(exam),
                 activeSectionTitle = initialSection,
                 sectionRemainingSeconds = initialSectionRemaining,
+                expiredSections = expiredSections.toSet(),
                 restoringExam = false,
                 showPreview = true,
                 resumedExam = resumed,
@@ -377,9 +396,11 @@ class StudentExamViewModel(
                 val sectionTitle = currentQuestion?.sectionTitle.orEmpty().trim()
                 ensureSectionStarted(exam, sectionTitle)
                 val sectionRemaining = sectionRemainingFor(exam, sectionTitle)
-                _state.update { it.copy(activeSectionTitle = sectionTitle, sectionRemainingSeconds = sectionRemaining) }
+                _state.update { it.copy(activeSectionTitle = sectionTitle, sectionRemainingSeconds = sectionRemaining, expiredSections = expiredSections.toSet()) }
                 if (sectionRemaining != UNLIMITED_TIME && sectionRemaining <= 0L && sectionTitle.isNotBlank()) {
                     expiredSections += sectionTitle
+                    _state.update { it.copy(expiredSections = expiredSections.toSet()) }
+                    syncSectionToServer(exam, sectionTitle, state.value.answers)
                     saveDraft(exam.id, state.value.answers, state.value.responseImages)
                     val currentIndex = state.value.questionIndex
                     val next = exam.questions.indices.firstOrNull { index ->
@@ -419,6 +440,11 @@ class StudentExamViewModel(
 
     fun answer(answer: StudentAnswer) {
         val exam = state.value.exam ?: return
+        val qSection = exam.questions.firstOrNull { it.id == answer.questionId }?.sectionTitle.orEmpty().trim()
+        if (qSection.isNotBlank() && qSection in expiredSections) {
+            _state.update { it.copy(error = "زمان این بخش تمام شده و امکان ویرایش پاسخ نیست.") }
+            return
+        }
         val answers = state.value.answers + (answer.questionId to answer)
         _state.update { it.copy(answers = answers, error = null) }
         saveDraft(exam.id, answers, state.value.responseImages)
@@ -427,6 +453,11 @@ class StudentExamViewModel(
     fun addResponseImages(questionId: String, uris: List<String>) {
         val exam = state.value.exam ?: return
         val question = exam.questions.firstOrNull { it.id == questionId }
+        val qSection = question?.sectionTitle.orEmpty().trim()
+        if (qSection.isNotBlank() && qSection in expiredSections) {
+            _state.update { it.copy(error = "زمان این بخش تمام شده و امکان ویرایش پاسخ نیست.") }
+            return
+        }
         // V136 — تخته وایت‌برد (allowAnswerGraph) حتی بدون سهمیهٔ تصویر هم یک تصویر
         // (خروجی تخته) می‌پذیرد؛ تخته‌های بعدی تصویر قبلی را جایگزین می‌کنند.
         // V137.3 — ریشهٔ «تصویر تخته به معلم نمی‌رسید»: سؤالِ دارای نمودار (questionHasGraph) بدون
@@ -448,6 +479,11 @@ class StudentExamViewModel(
 
     fun removeResponseImage(questionId: String, uri: String) {
         val exam = state.value.exam ?: return
+        val qSection = exam.questions.firstOrNull { it.id == questionId }?.sectionTitle.orEmpty().trim()
+        if (qSection.isNotBlank() && qSection in expiredSections) {
+            _state.update { it.copy(error = "زمان این بخش تمام شده و امکان ویرایش پاسخ نیست.") }
+            return
+        }
         val images = state.value.responseImages + (
             questionId to state.value.responseImages[questionId].orEmpty().filterNot { it == uri }
         )
@@ -466,6 +502,12 @@ class StudentExamViewModel(
             lastSavedDraft = draft
             // V252 — خطای پایگاه‌دادهٔ محلی (حافظهٔ پر/خراب) نباید وسط آزمون برنامه را ببندد؛ وضعیت در حافظه می‌ماند
             runCatching { drafts.save(examId, draft) }.onSuccess { _state.update { it.copy(draftSavedAtMs = System.currentTimeMillis()) } } /* V281 */
+            current.exam?.let { ex ->
+                val sec = ex.questions.getOrNull(current.questionIndex)?.sectionTitle.orEmpty().trim()
+                if (sec.isNotBlank() && (ex.sectionDurationsMinutes[sec] ?: 0) > 0 && sec !in expiredSections) {
+                    syncSectionToServer(ex, sec, answers)
+                }
+            }
         }
     }
 
@@ -483,12 +525,50 @@ class StudentExamViewModel(
         saveDraft(exam.id,state.value.answers,state.value.responseImages)
     }
 
+    private fun sectionSnapshotStrings(exam: Exam, sectionTitle: String, answers: Map<String, StudentAnswer>): Map<Int, String> = buildMap {
+        exam.questions.forEachIndexed { qIdx, q ->
+            if (q.sectionTitle.trim() == sectionTitle) {
+                val canonicalIdx = q.originalIndex.takeIf { it >= 0 } ?: qIdx
+                val encoded = when (val answer = answers[q.id]) {
+                    is TextAnswer -> answer.value
+                    is ChoiceAnswer -> answer.selectedIndex.toString()
+                    is BooleanAnswer -> answer.value.toString()
+                    is MatchingAnswer -> JsonObject(
+                        answer.pairs.mapKeys { it.key.toString() }.mapValues { JsonPrimitive(it.value) }
+                    ).toString()
+                    null -> ""
+                }
+                put(canonicalIdx, encoded)
+            }
+        }
+    }
+
+    private fun syncSectionToServer(exam: Exam, sectionTitle: String, answers: Map<String, StudentAnswer>) {
+        if (sectionTitle.isBlank() || (exam.sectionDurationsMinutes[sectionTitle] ?: 0) <= 0) return
+        val snap = sectionSnapshotStrings(exam, sectionTitle, answers)
+        viewModelScope.launch {
+            exams.syncSectionTiming(exam.id, sectionTitle, snap).getOrNull()?.let { sync ->
+                sync.sectionDeadlinesEpochMs.forEach { (title, deadlineMs) ->
+                    val mins = exam.sectionDurationsMinutes[title]?.coerceIn(1, 1440) ?: return@forEach
+                    val serverStarted = deadlineMs - mins * 60_000L
+                    val existing = sectionStartedAtEpochMs[title]
+                    if (existing == null || serverStarted < existing) sectionStartedAtEpochMs[title] = serverStarted
+                }
+                if (sync.expiredSections.isNotEmpty()) {
+                    expiredSections.addAll(sync.expiredSections)
+                    _state.update { it.copy(expiredSections = expiredSections.toSet()) }
+                }
+            }
+        }
+    }
+
     private fun ensureSectionStarted(exam: Exam, title: String) {
         if (title.isBlank() || (exam.sectionDurationsMinutes[title] ?: 0) <= 0 || title in expiredSections) return
         if (title !in sectionStartedAtEpochMs) {
             sectionStartedAtEpochMs[title] = System.currentTimeMillis()
             _state.update { it.copy(sectionRemainingSeconds = sectionRemainingFor(exam, title)) }
             saveDraft(exam.id, state.value.answers, state.value.responseImages)
+            syncSectionToServer(exam, title, state.value.answers)
         }
     }
 

@@ -208,6 +208,10 @@ class ExamBuilderViewModel(
     fun removeAssessmentPart(id: String, index: Int) = update(id) { q -> q.copy(assessmentParts = q.assessmentParts.filterIndexed { i, _ -> i != index }) }
     fun setProofContext(id: String, assumptions: String, goal: String) = update(id) { it.copy(proofAssumptions = assumptions.take(1000), proofGoal = goal.take(1000)) }
     fun setConstructionPrompt(id: String, value: String) = update(id) { it.copy(constructionPrompt = value.take(500)) }
+    fun setConstructionAngleLabels(id: String, raw: String) = update(id) { q ->
+        val parsed = raw.split(',', '،', ';', '\n').map { it.trim().removePrefix("∠").trim() }.filter(String::isNotBlank).distinct().take(8)
+        q.copy(constructionAngleLabels = parsed)
+    }
     fun addConstructionTarget(id: String) = update(id) { q ->
         if (q.constructionTargets.size >= 8) q else q.copy(constructionTargets = q.constructionTargets + ConstructionTargetDraft(label = ('A'.code + q.constructionTargets.size).toChar().toString()))
     }
@@ -215,6 +219,15 @@ class ExamBuilderViewModel(
         q.copy(constructionTargets = q.constructionTargets.mapIndexed { i, target -> if (i == index) transform(target) else target })
     }
     fun removeConstructionTarget(id: String, index: Int) = update(id) { q -> q.copy(constructionTargets = q.constructionTargets.filterIndexed { i, _ -> i != index }) }
+    fun addConstructionConstraint(id: String) = update(id) { q ->
+        if (q.constructionConstraints.size >= 8) q else q.copy(constructionConstraints = q.constructionConstraints + ConstructionConstraintDraft())
+    }
+    fun updateConstructionConstraint(id: String, index: Int, transform: (ConstructionConstraintDraft) -> ConstructionConstraintDraft) = update(id) { q ->
+        q.copy(constructionConstraints = q.constructionConstraints.mapIndexed { i, item -> if (i == index) transform(item) else item })
+    }
+    fun removeConstructionConstraint(id: String, index: Int) = update(id) { q ->
+        q.copy(constructionConstraints = q.constructionConstraints.filterIndexed { i, _ -> i != index })
+    }
 
 
     /** V327 — متن روخوانی مشترک: شناسهٔ گروه متن بین پرسش‌های وابسته مشترک است. */

@@ -22,6 +22,14 @@ data class StudentReport(
 )
 
 data class GradingConstructionTarget(val label: String, val x: Double, val y: Double, val tolerance: Double, val score: Double)
+data class GradingConstructionConstraint(
+    val id: String = "",
+    val type: String,
+    val points: List<String>,
+    val value: Double = 0.0,
+    val tolerance: Double = 0.5,
+    val score: Double = 1.0
+)
 
 data class GradingQuestion(
     val id: String,
@@ -37,6 +45,8 @@ data class GradingQuestion(
     val assessmentParts: List<AssessmentPart> = emptyList(),
     val constructionPrompt: String = "",
     val constructionTargets: List<GradingConstructionTarget> = emptyList(),
+    val constructionConstraints: List<GradingConstructionConstraint> = emptyList(),
+    val constructionLabels: List<String> = emptyList(),
     val proofAssumptions: String = "",
     val proofGoal: String = "",
     val answerMode: String = ""

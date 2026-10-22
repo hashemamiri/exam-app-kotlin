@@ -241,7 +241,7 @@ class GradingViewModel(
         val part = q.assessmentParts.getOrNull(partIndex) ?: return
         val key = "$answerId:$questionIndex:$partIndex"
         val normalized = ir.exam.app.core.calendar.PersianDigits.latin(raw).trim()
-        val value = normalized.toDoubleOrNull()
+        val value = if (normalized.isEmpty()) 0.0 else normalized.toDoubleOrNull()
         _state.update { old ->
             val inputs = old.partScoreInputs + (key to raw)
             val errorKey = key

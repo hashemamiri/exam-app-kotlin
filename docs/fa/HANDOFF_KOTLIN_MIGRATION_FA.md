@@ -1,17 +1,32 @@
 # هندآف جامع مهاجرت سامانه آزمون از WebView به Native Kotlin
 
-**آخرین به‌روزرسانی:** ۲۰۲۶-۱۰-۲۱ — نمایش ارجاع به نتیجهٔ گام قبل در پاسخ مرحله‌ای در اپ و وب همگام شد.
+**آخرین به‌روزرسانی:** ۲۰۲۶-۱۰-۲۲ — بستهٔ V332.0 (`1.02.74`، مقصد: هر دو شاخهٔ `main` و `staging`) آماده شد؛ ۳۴۹ دسته تست JUnit (۱۱۸۱ تست) و preflight کامل پاس شدند.
+
+## وضعیت جاری و ادامهٔ کار
+
+- آخرین بسته: V332.0 / `apply_v332.py` (نسخهٔ `1.02.74`، مقصد: **هر دو شاخهٔ `main` و `staging`**) به‌همراه اسکریپت مهاجرت پایگاه‌داده در `/home/user/apply_v332_supabase.sql` (`supabase/migrations/20261022_secondary_geometry_and_section_timing_v332.sql`).
+- قابلیت‌های تکمیل‌شده در V332.0:
+  1. **زمان‌بندی بخش‌ها با اعتبارسنجی سرور**: ستون‌های `section_deadlines` و `section_locked_responses` روی `public.exam_attempts`، تابع `public.native_sync_exam_section_v1` برای ثبت غیرقابل‌تمدید مهلت بخش و قفل تصویر پاسخ‌های بخش در لحظهٔ انقضا، بازگشت `section_deadlines` و `expired_sections` در `get_exam_for_student`، تحمیل پاسخ‌های قفل‌شده در `submit_answer`، و اصلاح باگ اندیس‌گذاری متنی JSON در `submit_answer` (`v_full -> v_i` به‌جای `v_full ->> (v_i::text)`).
+  2. **برچسب‌گذاری نقاط و زاویه‌ها + اعتبارسنجی ۷ شرط هندسی**: موتور ارزیابی هم‌تراز در اپ (`GeometryConstructionEvaluator.kt`)، وب (`site/src/builder.js`، `site/src/student.js`، `site/src/admin.js`) و سرور (`native_auto_grade_question_v1`، `exam_autograde_info`، `approve_auto_grades`) با پشتیبانی از نقاط هدف، برچسب زاویه‌ها (`constructionAngleLabels` / `_angles`) و هر ۷ شرط هندسی (`distance`، `equal_length`، `angle`، `perpendicular`، `parallel`، `midpoint`، `collinear`) بدون نشت کلید در سؤال عمومی دانش‌آموز.
+  3. **ممیزی کدبه‌کد و رفع اختلاف‌های اپ اندروید و وب**: پاک‌سازی `rubric`، `partRubrics`، `constructionTargets` و `constructionConstraints` در اپ/وب/سرور، نمایش `part_grades` کنار `part_feedback` در کارنامهٔ اپ و وب و اصلاح کلید `shown_q` برای سؤال‌های اثباتی در وب، همگام‌سازی دکمه‌های نمره‌دهی و پاک‌کردن نمرهٔ گام در پنل تصحیح اپ و وب، تازه‌سازی زندهٔ `sectionDurationsBox` در سازندهٔ دسکتاپ وب، و به‌روزرسانی زندهٔ کادر `carriesForward` در هر دو حالت `proof` و `steps`.
+- شواهد راستی‌آزمایی‌شده در این نشست:
+  - کامپایل کامل همهٔ ۲۶۵ فایل Kotlin برنامه + ۷ فایل Java تولیدی KSP/Hilt/BuildConfig با `kotlinc 2.0.21` (پلاگین‌های Compose و Serialization) و اجرای زندهٔ همهٔ **۳۴۹ کلاس تست JUnit (۱۱۸۱ تست، ۰ خطا)** روی OpenJDK 17 (از جمله `V332_SecondaryParityAndValidationTest`).
+  - بررسی نحوی `node --check` روی همهٔ فایل‌های `site/src/*.js`، بازسازی باندل سایت (`python3 site/build_site.py`) و اجرای کامل `python3 scripts/preflight.py` با نتیجهٔ `PREFLIGHT: PASS`.
+- موارد نیازمند اقدام/آزمون عملی کاربر (فراتر از شواهد خودکار بالا ادعا نمی‌شود):
+  1. اجرای دستی فایل `/home/user/apply_v332_supabase.sql` در SQL Editor پروژهٔ اصلی Supabase (و پروژهٔ آزمایشی در صورت جدابودن).
+  2. اجرای `apply_v332.py` در WSL و بررسی سبزشدن GitHub Actions روی هر دو شاخهٔ `main` و `staging`.
+  3. آزمون عملی end-to-end روی گوشی واقعی اندروید و مرورگر وب (ساخت آزمون بخش‌بندی‌شده و سؤال ترسیمی زاویه‌دار توسط دبیر، شرکت دانش‌آموز و پایان مهلت بخش، تصحیح خودکار/دستی و مشاهدهٔ کارنامه).
 **زبان همکاری:** فارسی
 **کاربر:** غیر‌برنامه‌نویس؛ دستورها باید ساده، مرحله‌ای و قابل کپی در WSL باشند.
 
 ---
 
 
-## همگام‌سازی پاسخ مرحله‌ای اپ و وب — ۲۰۲۶-۱۰-۲۱
+## همگام‌سازی پاسخ مرحله‌ای اپ و وب — ۲۰۲۶-۱۰-۲۲
 
-- در هر دو نسخه، اگر زیربخش گزینهٔ carries-forward داشته باشد، نتیجهٔ ثبت‌شدهٔ گام قبلی کنار فیلد گام جاری نمایش داده می‌شود؛ اگر هنوز پاسخی نیست، پیام یکسان نشان داده می‌شود.
-- برای اثبات ساختاریافته و پاسخ خط‌به‌خط، رفتار جداگانهٔ هر دو قالب حفظ شده؛ آزمون‌های پین Android و وب این نمایش را بررسی می‌کنند.
-- Preflight پس از تغییر موفق بود؛ CI برای کد جدید هنوز اجرا نشده است.
+- در هر دو نسخه، اگر زیربخش گزینهٔ carries-forward داشته باشد، پاسخ ثبت‌شدهٔ گام قبلی کنار فیلد گام جاری نمایش داده می‌شود؛ در نبود پاسخ، پیام یکسان نمایش داده می‌شود.
+- برای اثبات ساختاریافته و پاسخ خط‌به‌خط، رفتار هر دو قالب حفظ شده و پین‌های Android/وب نمایش ارجاع را بررسی می‌کنند.
+- کاربر تأیید کرد CI پس از اعمال V331.0 سبز شده است. اجرای end-to-end دستی روی گوشی و مرورگر هنوز گزارش نشده است.
 
 ## پیگیری CI برای V330.3 — ۲۰۲۶-۱۰-۲۱
 
@@ -46,7 +61,7 @@
 - انتخاب تصادفی بر اساس مبحث/بخش در RPC موجود است؛ مجموع نمرهٔ سؤال‌های انتخاب‌شده حفظ می‌شود. جمع بارم بخش از نمره‌های سؤال‌ها محاسبه می‌شود.
 - `scripts/preflight.py`, `verify_native_final.py`, pins, براکت‌های Kotlin، بررسی نحوی Node و `git diff --check` موفق شدند؛ سایت بازسازی شد.
 - `bash gradlew :app:testDebugUnitTest --no-daemon` اجرا شد اما قبل از build به‌علت resolve نشدن افزونهٔ KSP در محیط متوقف شد؛ کامپایل/تست Android تأیید نشده‌اند.
-- migrationهای `20261021_native_section_pick_rules_v328.sql` و `20261021_native_part_grading.sql` هنوز روی پایگاه داده اعمال نشده‌اند؛ برای فعال‌شدن سروری نیاز به اجرای migration و آزمون end-to-end دارند.
+- کاربر تأیید کرد بستهٔ SQL تجمیعی را به‌صورت دستی اجرا کرده است؛ نتیجهٔ درخواست‌های واقعی RPC پس از اجرا هنوز با تست end-to-end جداگانه بررسی نشده است.
 - پیش از ساخت بسته، مقصد از کاربر پرسیده شد؛ انتخاب این نوبت «هر دو» است. این انتخاب برای بسته‌های بعدی قابل تعمیم نیست.
 
 ## بهبود آزمون دبستان — ۲۰۲۶-۱۰-۲۱
@@ -20617,3 +20632,23 @@ check_test_pins بهبودیافته (assertTrue/assertFalse/contains/!contains/
 ### ۵) نتیجه
 - قبل: ۶۰ ایراد در ۲۱ ابزار → بعد: **۰ ایراد در ۹۹ ابزار**.
 - `preflight` PASS (شامل نگهبان آکولاد Kotlin، پین‌ها و باندل سایت).
+
+---
+
+## گزارش نسخهٔ V332.0 (اپ `1.02.74` + سایت + سرور — شاخهٔ مقصد: هر دو `main` و `staging`)
+
+### ۱. تکمیل قابلیت‌های باقی‌ماندهٔ دورهٔ متوسطه
+1. **زمان‌بندی بخش‌ها با اعتبارسنجی سرور (`section_deadlines` + `section_locked_responses` + `native_sync_exam_section_v1`)**:
+   - در جدول `public.exam_attempts` دو ستون `section_deadlines` و `section_locked_responses` افزوده شد و تابع `public.native_sync_exam_section_v1` هنگام ورود به بخش زمان‌دار، مهلت سرور را یک‌بار و غیرقابل تمدید ثبت می‌کند و هنگام پایان مهلت بخش، تصویر پاسخ‌های همان بخش را قفل می‌کند.
+   - تابع `public.get_exam_for_student` اکنون `section_deadlines` و `expired_sections` را بر اساس ساعت سرور برمی‌گرداند و کلیدهای `rubric`، `partRubrics`، `constructionTargets` و `constructionConstraints` را نیز کامل حذف می‌کند.
+   - تابع `public.submit_answer` پاسخ‌های بخش‌های قفل‌شده یا منقضی را با تصویر ثبت‌شده در سرور جایگزین می‌کند و باگ اندیس‌گذاری متنی آرایهٔ JSON (`v_full ->> (v_i::text)`) را به اندیس عددی `v_full -> v_i` به همراه نمره‌دهی خودکار یکپارچه (`native_auto_grade_question_v1`) اصلاح می‌کند.
+2. **برچسب‌گذاری نقاط و زاویه‌ها + اعتبارسنجی شرط‌های هندسی (`GeometryConstructionEvaluator`)**:
+   - موتور مشترک `GeometryConstructionEvaluator.kt`، معادل دقیق وب در `site/src/admin.js` (`evaluateConstructionResponse`) و تابع سرور `public.native_auto_grade_question_v1` از نقاط هدف و هر ۷ شرط هندسی (`distance`، `equal_length`، `angle`، `perpendicular`، `parallel`، `midpoint`، `collinear`) و خواندن دوکلیدی `value` / `targetValue` پشتیبانی می‌کنند.
+   - در سازندهٔ اپ (`ExamBuilderScreen.kt`) و وب (`site/src/builder.js`) امکان تعریف برچسب زاویه‌ها (`constructionAngleLabels`) و هر ۷ شرط هندسی بدون نشت کلید در سؤال عمومی فراهم شد.
+   - در صفحهٔ آزمون اپ (`StudentExamScreen.kt`) و وب (`site/src/student.js`) محور شماره‌گذاری‌شدهٔ `−5..5`، چسبیدن اختیاری به شبکهٔ `0.5`، رسم پرتوها و اندازهٔ زاویه (`∠ABC`) و ثبت یکسان `_angles` به‌صورت شیء JSON (`{"ABC": 90.0}`) پیاده‌سازی شد.
+
+### ۲. موارد کشف و رفع‌شده در ممیزی هم‌ترازی اپ اندروید و وب‌سایت
+- **رفع نشت کلید از `rawPublic` هنگام بازذخیرهٔ بستهٔ آزمون**: فیلدهای `rubric`، `partRubrics`، `constructionTargets` و `constructionConstraints` به `ANSWER_FIELDS` در `ExamQuestionCodec.kt`، `StudentExamPayloadCodec.kt`، `site/src/builder.js` و `site/src/student.js` افزوده شدند.
+- **کارنامهٔ دانش‌آموز در اپ و وب (`StudentResultsScreen.kt`، `SupabaseGradingRepository.kt`، `site/src/admin.js`)**: بازگشت `part_grades` در `native_my_answer_detail_parts_v1`، نمایش نمرهٔ هر گام در کنار بازخورد دبیر برای سؤال‌های چندبخشی و اثباتی، و رفع باگ کلید بازخورد در حالت `shown_q` (`keyIndex + ':' + pi`).
+- **تصحیح دبیر در اپ و وب (`GradingScreen.kt`، `GradingViewModel.kt`، `site/src/admin.js`)**: پاک‌شدن واقعی نمرهٔ گام با خالی‌کردن فیلد، دکمهٔ اعمال نمرهٔ پیشنهادی هندسی در اپ، هماهنگی دکمه‌های `کامل` / `۰` با زیربخش‌ها در وب، و پشتیبانی `approve_auto_grades` و `exam_autograde_info` از ترسیم‌های خودکار.
+- **سازندهٔ دسکتاپ وب و تجربهٔ آزمون دانش‌آموز**: تازه‌سازی زندهٔ `sectionDurationsBox` و قواعد بخش/مبحث هنگام تایپ عنوان بخش یا مبحث، به‌روزرسانی زندهٔ کادر «ارجاع به نتیجهٔ گام قبل»، عنوان «متن / صورت مشترک» در متوسطه، و حذف تختهٔ آزاد اضافی زیر بوم مختصاتی وقتی `allowAnswerGraph` خاموش است.

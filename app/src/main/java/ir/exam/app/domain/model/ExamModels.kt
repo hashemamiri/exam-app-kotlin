@@ -19,7 +19,16 @@ data class Exam(
     /** V301 — «حالت ابتدایی»: نمای درشت و ساده برای پایهٔ اول تا ششم (exams.options.primary). */
     val primaryMode: Boolean = false,
     /** مهلت مستقل هر بخش، برحسب دقیقه؛ کلید همان sectionTitle است. */
-    val sectionDurationsMinutes: Map<String, Int> = emptyMap()
+    val sectionDurationsMinutes: Map<String, Int> = emptyMap(),
+    /** مهلت سروری بخش‌ها (epoch ms محلی هم‌تراز با server_now) برای جلوگیری از دستکاری ساعت یا پاک‌کردن پیش‌نویس. */
+    val serverSectionDeadlinesEpochMs: Map<String, Long> = emptyMap(),
+    /** بخش‌هایی که در سرور مهلتشان به پایان رسیده است. */
+    val serverExpiredSections: Set<String> = emptySet()
+)
+
+data class ServerSectionSync(
+    val sectionDeadlinesEpochMs: Map<String, Long> = emptyMap(),
+    val expiredSections: Set<String> = emptySet()
 )
 
 data class QuestionPresentation(
@@ -92,7 +101,8 @@ data class EssayQuestion(
     val proofAssumptions: String = "",
     val proofGoal: String = "",
     val constructionPrompt: String = "",
-    val constructionLabels: List<String> = emptyList()
+    val constructionLabels: List<String> = emptyList(),
+    val constructionAngleLabels: List<String> = emptyList()
 ) : Question
 
 data class MultipleChoiceQuestion(

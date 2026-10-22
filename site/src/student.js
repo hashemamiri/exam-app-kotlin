@@ -11,7 +11,7 @@
   var LS_DRAFT = 'examsite.student.draft.v1.';    /* + examId → {answers, images} */
   var BUCKET = 'exam-images';
   var WHITEBOARD_MAX_PAGES = 6;
-  var ANSWER_FIELDS = ['correctOption', 'correctIndex', 'correctAnswer', 'accept', 'answer', 'tolerance', 'matchAnswer', 'explanation', 'answer_key', 'rubric'];
+  var ANSWER_FIELDS = ['correctOption', 'correctIndex', 'correctAnswer', 'accept', 'answer', 'tolerance', 'matchAnswer', 'explanation', 'answer_key', 'rubric'].concat(['partRubrics', 'constructionTargets', 'constructionConstraints']);
 
   /* ================================================================ StableExamShuffle (بیت‌به‌بیت مثل Kotlin) */
   function stableShuffle(values, seed) {
@@ -48,7 +48,7 @@
       var images = strs(obj.images); if (!images.length && obj.image) images = [String(obj.image)];
       var allow = obj.allowImages || obj.allow_images || null;
       var maxImg = (!allow || allow === 'no') ? 0 : Math.max(0, Math.min(10, Number(obj.maxImages != null ? obj.maxImages : (obj.max_images != null ? obj.max_images : 1))));
-      var q = {id: obj.id || ('q-' + oi), type: type, text: obj.text || '', sectionTitle: obj.sectionTitle || '', topic: obj.topic || '', passage: obj.passage || '', solutionSteps: Array.isArray(obj.solutionSteps) ? obj.solutionSteps.map(String) : [], assessmentParts: Array.isArray(obj.assessmentParts) ? obj.assessmentParts : [], proofAssumptions: String(obj.proofAssumptions||''), proofGoal: String(obj.proofGoal||''), constructionPrompt: String(obj.constructionPrompt||''), constructionLabels: Array.isArray(obj.constructionLabels)?obj.constructionLabels.map(String).slice(0,8):[], mode: obj.mode || '', score: Number(obj.score) || 0, images: images, maxAnswerImages: maxImg, answerImagesRequired: allow === 'required', originalIndex: oi,
+      var q = {id: obj.id || ('q-' + oi), type: type, text: obj.text || '', sectionTitle: obj.sectionTitle || '', topic: obj.topic || '', passage: obj.passage || '', solutionSteps: Array.isArray(obj.solutionSteps) ? obj.solutionSteps.map(String) : [], assessmentParts: Array.isArray(obj.assessmentParts) ? obj.assessmentParts : [], proofAssumptions: String(obj.proofAssumptions||''), proofGoal: String(obj.proofGoal||''), constructionPrompt: String(obj.constructionPrompt||''), constructionLabels: Array.isArray(obj.constructionLabels)?obj.constructionLabels.map(String).slice(0,12):[], constructionAngleLabels: Array.isArray(obj.constructionAngleLabels)?obj.constructionAngleLabels.map(String).slice(0,8):[], mode: obj.mode || '', score: Number(obj.score) || 0, images: images, maxAnswerImages: maxImg, answerImagesRequired: allow === 'required', originalIndex: oi,
         pres: {align: ['right', 'center', 'left', 'justify'].indexOf(obj.align) >= 0 ? obj.align : 'right', font: obj.font || 'default', fontSize: Math.max(8, Math.min(40, Number(obj.fontSize) || 16)), bold: obj.bold === true, italic: obj.italic === true, allowAnswerGraph: obj.allowAnswerGraph === true, audio: obj.audio || null, spans: obj.spans || [], alignSpans: obj.alignSpans || []}};
       if (type === 'multiple') {
         var opts = strs(obj.options), oimg = nstrs(obj.optionImages);
@@ -84,7 +84,17 @@
       else deadline = duration > 0 ? now + duration * 60000 : null;
     }
     var sectionDurations = raw.options && raw.options.sectionDurations && typeof raw.options.sectionDurations === 'object' ? raw.options.sectionDurations : {};
-    return {id: examId, primary: !!(raw.options && raw.options.primary), sectionDurations: sectionDurations, /* V301 — حالت ابتدایی */ title: (raw.title || '').trim() || 'آزمون', code: raw.code || '', duration: duration, questions: ordered, subject: raw.subject || '', teacherMessage: (raw.teacher_message || '').trim() || null, deadline: deadline,
+    var serverNowMs = parseMs(raw.server_now);
+    var clockDelta = serverNowMs != null ? now - serverNowMs : 0;
+    var serverSectionDeadlines = {}, serverExpiredSections = {};
+    if (raw.section_deadlines && typeof raw.section_deadlines === 'object') {
+      Object.keys(raw.section_deadlines).forEach(function (k) {
+        var dl = parseMs(raw.section_deadlines[k]);
+        if (dl != null) serverSectionDeadlines[String(k).trim()] = dl + clockDelta;
+      });
+    }
+    if (Array.isArray(raw.expired_sections)) raw.expired_sections.forEach(function (k) { var t = String(k || '').trim(); if (t) serverExpiredSections[t] = true; });
+    return {id: examId, primary: !!(raw.options && raw.options.primary), sectionDurations: sectionDurations, serverSectionDeadlines: serverSectionDeadlines, serverExpiredSections: serverExpiredSections, /* V301 — حالت ابتدایی */ title: (raw.title || '').trim() || 'آزمون', code: raw.code || '', duration: duration, questions: ordered, subject: raw.subject || '', teacherMessage: (raw.teacher_message || '').trim() || null, deadline: deadline,
       attemptsAllowed: Math.max(1, Math.min(5, Number(raw.attempts_allowed) || 1)), attemptNumber: raw.attempt_no != null ? Number(raw.attempt_no) : (raw.attempt_number != null ? Number(raw.attempt_number) : null), attemptsRemaining: raw.attempts_remaining != null ? Number(raw.attempts_remaining) : null, raw: raw};
   }
 
@@ -357,8 +367,14 @@
   }
   function startExam(c, exam, resumed) {
     var d = exam.practice ? {answers: {}, images: {}} : draftGet(exam.id);
-    run = {exam: exam, practice: !!exam.practice, index: 0, answers: d.answers || {}, images: d.images || {}, started: true, finished: false, submitting: false, enteredAt: Date.now(), qEnter: {}, qTime: {}, qVisits: {}, events: {}, sectionDeadlines: d.sectionDeadlines || {}, expiredSections: d.expiredSections || {}, timer: null, monitorTimer: null};
-    run.qEnter[0] = Date.now(); run.qVisits[exam.questions[0] && exam.questions[0].id] = 1;
+    var mergedDeadlines = Object.assign({}, d.sectionDeadlines || {}, exam.serverSectionDeadlines || {});
+    var mergedExpired = Object.assign({}, d.expiredSections || {}, exam.serverExpiredSections || {});
+    Object.keys(mergedDeadlines).forEach(function (k) { if (mergedDeadlines[k] <= Date.now()) mergedExpired[k] = true; });
+    var startIdx = 0;
+    while (startIdx < exam.questions.length && exam.questions[startIdx].sectionTitle && mergedExpired[String(exam.questions[startIdx].sectionTitle).trim()]) startIdx++;
+    if (startIdx >= exam.questions.length) startIdx = 0;
+    run = {exam: exam, practice: !!exam.practice, index: startIdx, answers: d.answers || {}, images: d.images || {}, started: true, finished: false, submitting: false, enteredAt: Date.now(), qEnter: {}, qTime: {}, qVisits: {}, events: {}, sectionDeadlines: mergedDeadlines, expiredSections: mergedExpired, syncedSections: {}, timer: null, monitorTimer: null};
+    run.qEnter[startIdx] = Date.now(); run.qVisits[exam.questions[startIdx] && exam.questions[startIdx].id] = 1;
     document.addEventListener('visibilitychange', onVis);
     window.addEventListener('blur', onBlur);
     guardsOn();
@@ -628,35 +644,122 @@
       if(q.proofAssumptions)wrap.appendChild(el('div',{class:'card',style:'padding:9px;margin:6px 0'},[el('b',{text:'فرض‌ها / داده‌ها'}),el('div',{text:q.proofAssumptions})]));
       if(q.proofGoal)wrap.appendChild(el('div',{class:'card',style:'padding:9px;margin:6px 0'},[el('b',{text:'خواسته'}),el('div',{text:q.proofGoal})]));
       function save(){set(JSON.stringify({parts:data}));}
+      var carryRefs=[];
       (q.assessmentParts||[]).forEach(function(part,pi){
         var cur=data[part.id]||{answer:'',reason:''};
         var card=el('div',{class:'card',style:'padding:9px;margin:7px 0'});
         card.appendChild(el('b',{text:'گام '+(part.label||fa(pi+1))+': '+(part.prompt||'')}));
-        var answer=el('textarea',{class:'st-input',rows:2,placeholder:'نتیجه / گزارهٔ این گام'});answer.value=cur.answer||'';answer.addEventListener('input',function(){cur.answer=answer.value;data[part.id]=cur;save();});card.appendChild(answer);
+        var answer=el('textarea',{class:'st-input',rows:2,placeholder:'نتیجه / گزارهٔ این گام'});answer.value=cur.answer||'';answer.addEventListener('input',function(){cur.answer=answer.value;data[part.id]=cur;save();carryRefs.forEach(function(fn){fn();});});card.appendChild(answer);
         if(part.requiresReason){var reason=el('textarea',{class:'st-input',rows:2,placeholder:part.reasonPrompt||'دلیل این گام'});reason.value=cur.reason||'';reason.addEventListener('input',function(){cur.reason=reason.value;data[part.id]=cur;save();});card.appendChild(reason);}
-        if(part.carriesForward&&pi>0){var prevPart=q.assessmentParts[pi-1],prevAnswer=(data[prevPart.id]||{}).answer||'';card.appendChild(el('div',{class:'card',style:'padding:7px;background:var(--soft)'},[el('b',{text:'ارجاع به نتیجهٔ گام قبل'}),el('div',{class:'muted',text:prevAnswer||'پاسخ گام قبل هنوز ثبت نشده است.'})]));}
+        if(part.carriesForward&&pi>0){var prevPart=q.assessmentParts[pi-1],prevEl=el('div',{class:'muted',text:(data[prevPart.id]||{}).answer||'پاسخ گام قبل هنوز ثبت نشده است.'});carryRefs.push(function(){prevEl.textContent=(data[prevPart.id]||{}).answer||'پاسخ گام قبل هنوز ثبت نشده است.';});card.appendChild(el('div',{class:'card',style:'padding:7px;background:var(--soft)'},[el('b',{text:'ارجاع به نتیجهٔ گام قبل'}),prevEl]));}
         wrap.appendChild(card);
       });
       return wrap;
     }
 
+    function parseAngleVertsJs(raw, knownLabels) {
+      var clean = String(raw || '').replace(/^∠/, '').trim();
+      if (!clean) return null;
+      if (/[,،\-\s]/.test(clean)) { var ps = clean.split(/[,،\-\s]+/).map(function (x) { return x.trim(); }).filter(Boolean); return ps.length === 3 ? ps : null; }
+      if (clean.length === 3) return [clean[0], clean[1], clean[2]];
+      var sorted = (knownLabels || []).slice().sort(function (a, b) { return b.length - a.length; }), out = [], rest = clean;
+      while (rest.length && out.length < 3) {
+        var m2 = sorted.find(function (lb) { return rest.indexOf(lb) === 0; });
+        if (!m2) return null;
+        out.push(m2); rest = rest.slice(m2.length);
+      }
+      return out.length === 3 && !rest.length ? out : null;
+    }
+
     function constructionAnswer(q, saved, set) {
-      var labels=(q.constructionLabels||[]).slice(0,8), points={}, activeLabel=null;
-      try { points=JSON.parse(String(saved||'{}'))||{}; } catch (_) { points={}; }
+      var labels=(q.constructionLabels||[]).slice(0,12), points={}, savedAngles=[], activeLabel=null;
+      var snapHalf = q.__snapHalf !== false;
+      try {
+        var rawObj=JSON.parse(String(saved||'{}'))||{};
+        Object.keys(rawObj).forEach(function(k){
+          if(k==='_angles'){
+            if(Array.isArray(rawObj[k])) savedAngles=rawObj[k].map(String).filter(Boolean);
+            else if(rawObj[k]&&typeof rawObj[k]==='object') savedAngles=Object.keys(rawObj[k]).filter(Boolean);
+          } else if(rawObj[k]&&typeof rawObj[k]==='object'&&isFinite(Number(rawObj[k].x))&&isFinite(Number(rawObj[k].y))) points[k]={x:Number(rawObj[k].x),y:Number(rawObj[k].y)};
+        });
+      } catch (_) { points={}; }
+      var angles = Array.from(new Set((q.constructionAngleLabels||[]).concat(savedAngles).map(function(x){return String(x||'').replace(/^∠/,'').trim();}).filter(function(x){return x.length>=3;})));
+      function serializeState(nextPts, nextAngs) {
+        var payload = {};
+        Object.keys(nextPts).forEach(function(k){ payload[k] = {x: Math.round(Number(nextPts[k].x)*100)/100, y: Math.round(Number(nextPts[k].y)*100)/100}; });
+        if (nextAngs && nextAngs.length) {
+          var angMap = {};
+          nextAngs.forEach(function(tok){
+            var verts = parseAngleVertsJs(tok, labels);
+            var dg = verts && nextPts[verts[0]] && nextPts[verts[1]] && nextPts[verts[2]] ? angleDeg(nextPts[verts[0]], nextPts[verts[1]], nextPts[verts[2]]) : null;
+            angMap[tok] = dg != null ? Math.round(dg * 10) / 10 : -1;
+          });
+          payload._angles = angMap;
+        }
+        return JSON.stringify(payload);
+      }
+      function angleDeg(p0, pv, p2) {
+        var ux=p0.x-pv.x, uy=p0.y-pv.y, vx=p2.x-pv.x, vy=p2.y-pv.y;
+        var nu=Math.hypot(ux,uy), nv=Math.hypot(vx,vy);
+        if (nu<1e-6 || nv<1e-6) return null;
+        return Math.acos(Math.max(-1, Math.min(1, (ux*vx+uy*vy)/(nu*nv)))) * 180 / Math.PI;
+      }
       var wrap=el('div',{class:'st-construct'});
       wrap.appendChild(el('p',{class:'st-hint',text:q.constructionPrompt||'نقاط خواسته‌شده را روی صفحهٔ مختصات مشخص کنید.'}));
-      var canvas=el('canvas',{width:640,height:320,style:'width:100%;height:280px;border:1px solid #9aa5b1;border-radius:8px;touch-action:manipulation;background:#fff'});
-      var ctx=canvas.getContext('2d'), m=28, w=canvas.width-2*m, h=canvas.height-2*m;
+      var canvas=el('canvas',{width:640,height:340,style:'width:100%;height:290px;border:1px solid #9aa5b1;border-radius:8px;touch-action:manipulation;background:#fff'});
+      var ctx=canvas.getContext('2d'), m=30, w=canvas.width-2*m, h=canvas.height-2*m;
       function px(x){return m+(Number(x)+5)/10*w;} function py(y){return m+(5-Number(y))/10*h;}
-      ctx.clearRect(0,0,canvas.width,canvas.height);ctx.strokeStyle='#d9dee6';ctx.lineWidth=1;
-      for(var i=-5;i<=5;i++){ctx.beginPath();ctx.moveTo(px(i),m);ctx.lineTo(px(i),m+h);ctx.stroke();ctx.beginPath();ctx.moveTo(m,py(i));ctx.lineTo(m+w,py(i));ctx.stroke();}
+      ctx.clearRect(0,0,canvas.width,canvas.height);ctx.strokeStyle='#d9dee6';ctx.lineWidth=1;ctx.fillStyle='#6e7884';ctx.font='11px sans-serif';
+      for(var i=-5;i<=5;i++){
+        ctx.beginPath();ctx.moveTo(px(i),m);ctx.lineTo(px(i),m+h);ctx.stroke();
+        ctx.beginPath();ctx.moveTo(m,py(i));ctx.lineTo(m+w,py(i));ctx.stroke();
+        if(i!==0){ctx.fillText(String(i),px(i)-4,py(0)+13);ctx.fillText(String(i),px(0)+4,py(i)+4);}
+      }
       ctx.strokeStyle='#263445';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(px(0),m);ctx.lineTo(px(0),m+h);ctx.stroke();ctx.beginPath();ctx.moveTo(m,py(0));ctx.lineTo(m+w,py(0));ctx.stroke();
+      angles.forEach(function(tok){
+        var verts=parseAngleVertsJs(tok,labels);if(!verts)return;
+        var p0=points[verts[0]],pv=points[verts[1]],p2=points[verts[2]];
+        if(p0&&pv&&p2){
+          ctx.strokeStyle='#d97706';ctx.lineWidth=2;
+          ctx.beginPath();ctx.moveTo(px(pv.x),py(pv.y));ctx.lineTo(px(p0.x),py(p0.y));ctx.moveTo(px(pv.x),py(pv.y));ctx.lineTo(px(p2.x),py(p2.y));ctx.stroke();
+          var dg=angleDeg(p0,pv,p2);
+          if(dg!=null){ctx.fillStyle='#b45309';ctx.font='bold 13px sans-serif';ctx.fillText('∠'+tok+'='+dg.toFixed(1)+'°',px(pv.x)+8,py(pv.y)+16);}
+        }
+      });
       labels.forEach(function(label){var p=points[label];if(!p)return;ctx.fillStyle='#1e53aa';ctx.beginPath();ctx.arc(px(p.x),py(p.y),7,0,Math.PI*2);ctx.fill();ctx.font='bold 17px sans-serif';ctx.fillText(label,px(p.x)+9,py(p.y)-8);});
-      canvas.addEventListener('pointerdown',function(ev){var r=canvas.getBoundingClientRect();var sx=(ev.clientX-r.left)*(canvas.width/r.width),sy=(ev.clientY-r.top)*(canvas.height/r.height);var label=activeLabel||labels.find(function(x){return !Object.prototype.hasOwnProperty.call(points,x);})||labels[labels.length-1];if(!label)return;points=Object.assign({},points);points[label]={x:Math.max(-5,Math.min(5,((sx-m)/w)*10-5)),y:Math.max(-5,Math.min(5,5-((sy-m)/h)*10))};set(JSON.stringify(points));wrap.replaceWith(answerArea(q));});
-      wrap.appendChild(canvas);wrap.appendChild(el('div',{class:'st-hint',text:'ثبت‌شده: '+fa(Object.keys(points).filter(function(k){return labels.indexOf(k)>=0;}).length)+' از '+fa(labels.length)}));
+      canvas.addEventListener('pointerdown',function(ev){
+        var r=canvas.getBoundingClientRect();var sx=(ev.clientX-r.left)*(canvas.width/r.width),sy=(ev.clientY-r.top)*(canvas.height/r.height);
+        var label=activeLabel||labels.find(function(x){return !Object.prototype.hasOwnProperty.call(points,x);})||labels[labels.length-1];if(!label)return;
+        var rx=Math.max(-5,Math.min(5,((sx-m)/w)*10-5)), ry=Math.max(-5,Math.min(5,5-((sy-m)/h)*10));
+        if(snapHalf){rx=Math.round(rx*2)/2;ry=Math.round(ry*2)/2;}
+        points=Object.assign({},points);points[label]={x:rx,y:ry};
+        set(serializeState(points, angles));wrap.replaceWith(answerArea(q));
+      });
+      wrap.appendChild(canvas);
+      var metaRow=el('div',{class:'row',style:'gap:8px;align-items:center;margin-top:4px'},[
+        el('span',{class:'st-hint',text:'ثبت‌شده: '+fa(Object.keys(points).filter(function(k){return labels.indexOf(k)>=0;}).length)+' از '+fa(labels.length)}),
+        el('button',{type:'button',class:'chip'+(snapHalf?' brand':''),text:'چسبیدن به شبکه ۰٫۵',onclick:function(){q.__snapHalf=!snapHalf;wrap.replaceWith(answerArea(q));}})
+      ]);
+      wrap.appendChild(metaRow);
       wrap.appendChild(el('div',{class:'st-hint',text:'برای جابه‌جایی، برچسب نقطه را انتخاب و محل تازه را روی نمودار لمس کنید.'}));
-      var chips=el('div',{class:'row'});labels.forEach(function(label){var p=points[label], chip=el('button',{type:'button',class:'chip'+(p?' brand':''),text:label+(p?' ('+fa(Number(p.x).toFixed(1))+', '+fa(Number(p.y).toFixed(1))+')':' —'),onclick:function(){activeLabel=activeLabel===label?null:label;Array.prototype.forEach.call(chips.children,function(x){x.classList.toggle('on',x.dataset.pointLabel===activeLabel);});}});chip.dataset.pointLabel=label;chips.appendChild(chip);});
+      var chips=el('div',{class:'row',style:'flex-wrap:wrap;gap:6px'});labels.forEach(function(label){var p=points[label], chip=el('button',{type:'button',class:'chip'+(p?' brand':''),text:label+(p?' ('+fa(Number(p.x).toFixed(1))+', '+fa(Number(p.y).toFixed(1))+')':' —'),onclick:function(){activeLabel=activeLabel===label?null:label;Array.prototype.forEach.call(chips.children,function(x){x.classList.toggle('on',x.dataset.pointLabel===activeLabel);});}});chip.dataset.pointLabel=label;chips.appendChild(chip);});
       chips.appendChild(el('button',{class:'btn light sm',text:'پاک‌کردن',onclick:function(){set('{}');wrap.replaceWith(answerArea(q));}}));wrap.appendChild(chips);
+      if(angles.length||labels.length>=3){
+        var angRow=el('div',{class:'row',style:'flex-wrap:wrap;gap:6px;margin-top:6px'});
+        angles.forEach(function(tok){
+          var verts=parseAngleVertsJs(tok,labels), dg=verts&&points[verts[0]]&&points[verts[1]]&&points[verts[2]]?angleDeg(points[verts[0]],points[verts[1]],points[verts[2]]):null;
+          angRow.appendChild(el('button',{type:'button',class:'chip'+(dg!=null?' brand':''),text:'∠'+tok+(dg!=null?' = '+fa(dg.toFixed(1))+'°':''),onclick:function(){
+            if((q.constructionAngleLabels||[]).indexOf(tok)<0){var nextA=angles.filter(function(x){return x!==tok;});set(serializeState(points,nextA));wrap.replaceWith(answerArea(q));}
+          }}));
+        });
+        var angInp=el('input',{type:'text',placeholder:'برچسب زاویه (مثل ABC)',style:'width:150px;border:1px solid var(--line);border-radius:8px;padding:4px 8px'});
+        angRow.appendChild(angInp);
+        angRow.appendChild(el('button',{type:'button',class:'btn light sm',text:'ثبت زاویه',onclick:function(){
+          var v=parseAngleVertsJs(angInp.value,labels);
+          if(v){var tok=v.join('');if(angles.indexOf(tok)<0){angles.push(tok);set(serializeState(points,angles));wrap.replaceWith(answerArea(q));}}
+        }}));
+        wrap.appendChild(angRow);
+      }
       return wrap;
     }
 
@@ -736,13 +839,13 @@
         box.appendChild(proofAnswer(q,a,set));
       } else if (q.type === 'essay' && ((q.assessmentParts && q.assessmentParts.length) || q.mode === 'steps' || q.mode === 'proof')) {
         var prompts = q.assessmentParts && q.assessmentParts.length ? q.assessmentParts.map(function(p){return [p.label,p.prompt].filter(Boolean).join(' · ')||'زیربخش';}) : (q.solutionSteps && q.solutionSteps.length ? q.solutionSteps : ['گام اول','گام دوم','پاسخ نهایی']);
-        var vals = String(a || '').split('\n');
+        var vals = String(a || '').split('\n'), stepRefs = [];
         prompts.forEach(function (pr, si) {
           var st = el('textarea', {class:'st-input', rows:2, placeholder:pr || ('گام '+fa(si+1))});
           st.value = vals[si] || '';
-          st.addEventListener('input', function () { vals[si] = st.value.replace(/\n/g,' '); set(vals.join('\n')); });
+          st.addEventListener('input', function () { vals[si] = st.value.replace(/\n/g,' '); set(vals.join('\n')); stepRefs.forEach(function(fn){fn();}); });
           box.appendChild(st);
-          if(q.assessmentParts&&q.assessmentParts[si]&&q.assessmentParts[si].carriesForward&&si>0)box.appendChild(el('div',{class:'card',style:'padding:7px;background:var(--soft)'},[el('b',{text:'ارجاع به نتیجهٔ گام قبل'}),el('div',{class:'muted',text:vals[si-1]||'پاسخ گام قبل هنوز ثبت نشده است.'})]));
+          if(q.assessmentParts&&q.assessmentParts[si]&&q.assessmentParts[si].carriesForward&&si>0){var prevNode=el('div',{class:'muted',text:vals[si-1]||'پاسخ گام قبل هنوز ثبت نشده است.'});stepRefs.push(function(){prevNode.textContent=vals[si-1]||'پاسخ گام قبل هنوز ثبت نشده است.';});box.appendChild(el('div',{class:'card',style:'padding:7px;background:var(--soft)'},[el('b',{text:'ارجاع به نتیجهٔ گام قبل'}),prevNode]));}
         });
       } else if (ex.primary && q.type === 'essay' && q.mode === 'voice') {
         /* V309 — پاسخ صوتی: ضبط با سقف مدت معلم */
@@ -756,8 +859,9 @@
         box.appendChild(ta);
       }
       /* تصویر پاسخ / تخته */
-      /* V306 — پاسخ با تخته: تخته همیشه (بزرگ) نشان داده می‌شود */
+      /* V306 — پاسخ با تخته: تخته همیشه (بزرگ) نشان داده می‌شود؛ در حالت مختصاتی (constructionLabels) تختهٔ اضافی نشان داده نمی‌شود مگر allowAnswerGraph روشن باشد */
       var drawMode = q.type === 'essay' && (q.mode === 'draw' || q.mode === 'construct');
+      if (drawMode && q.mode === 'construct' && q.constructionLabels && q.constructionLabels.length) drawMode = false;
       var whiteboardOnly = (q.pres.allowAnswerGraph || drawMode) && q.maxAnswerImages <= 0;
       if (q.maxAnswerImages > 0 || q.pres.allowAnswerGraph || drawMode) {
         var imgs = run.images[q.id] || [];
@@ -825,15 +929,40 @@
       saveDraft(); drawNav();
     }
     function drawAll() { drawNav(); drawBody(); drawFoot(); }
+    function syncSectionToServer(sectionTitle, lockSection) {
+      if (!run || run.practice || !sectionTitle) return;
+      var snap = {};
+      if (lockSection) {
+        ex.questions.filter(function (x) { return String(x.sectionTitle || '').trim() === sectionTitle; }).forEach(function (x) {
+          var v = run.answers[x.id];
+          snap[String(x.originalIndex)] = v == null ? null : v;
+        });
+      }
+      S.rpcObj('native_sync_exam_section_v1', {p_exam: ex.id, p_section: sectionTitle, p_lock: !!lockSection, p_section_responses: snap}).then(function (res) {
+        if (!run || run.finished || !res) return;
+        var sn = parseMs(res.server_now), delta = sn != null ? Date.now() - sn : 0;
+        var dl = res.section_deadlines && parseMs(res.section_deadlines[sectionTitle]);
+        if (dl != null) { run.sectionDeadlines[sectionTitle] = dl + delta; saveDraft(); }
+        if (Array.isArray(res.expired_sections) && res.expired_sections.indexOf(sectionTitle) >= 0) { run.expiredSections[sectionTitle] = true; saveDraft(); }
+      }).catch(function () {});
+    }
     function tick() {
       if (!run || run.finished) return;
       var now = Date.now(), q = ex.questions[run.index], title = q && String(q.sectionTitle || '').trim(), sectionMinutes = title ? Number(ex.sectionDurations && ex.sectionDurations[title]) || 0 : 0;
       var sectionRem = null;
       if (title && sectionMinutes > 0 && !run.expiredSections[title]) {
-        if (!run.sectionDeadlines[title]) { run.sectionDeadlines[title] = now + Math.min(1440, sectionMinutes) * 60000; saveDraft(); }
+        if (!run.sectionDeadlines[title]) {
+          run.sectionDeadlines[title] = now + Math.min(1440, sectionMinutes) * 60000;
+          saveDraft();
+        }
+        if (!run.syncedSections[title]) {
+          run.syncedSections[title] = true;
+          syncSectionToServer(title, false);
+        }
         sectionRem = Math.max(0, run.sectionDeadlines[title] - now);
         if (sectionRem <= 0) {
           run.expiredSections[title] = true; saveDraft();
+          syncSectionToServer(title, true);
           toast('زمان بخش «' + title + '» تمام شد؛ پاسخ‌های ثبت‌شده حفظ شدند.', 'err');
           var next = ex.questions.findIndex(function(x,i){return i>run.index && String(x.sectionTitle||'').trim()!==title && !(x.sectionTitle && run.expiredSections[String(x.sectionTitle).trim()]);});
           if (next < 0) next = ex.questions.findIndex(function(x){return !(x.sectionTitle && run.expiredSections[String(x.sectionTitle).trim()]);});

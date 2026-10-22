@@ -33,7 +33,8 @@ internal object StudentExamPayloadCodec {
     private val json = Json { ignoreUnknownKeys = true }
     private val answerFields = setOf(
         "correctOption", "correctIndex", "correctAnswer", "accept", "answer",
-        "tolerance", "matchAnswer", "explanation", "answer_key"
+        "tolerance", "matchAnswer", "explanation", "answer_key",
+        "rubric", "partRubrics", "constructionTargets", "constructionConstraints"
     )
 
     fun sanitize(raw: JsonObject): JsonObject {
@@ -107,8 +108,10 @@ internal object StudentExamPayloadCodec {
             // V301 — options.primary (سرور بدون SQL V301 این کلید را نمی‌فرستد → false)
             primaryMode = (raw["options"] as? JsonObject)?.boolean("primary") == true,
             sectionDurationsMinutes = ((raw["options"] as? JsonObject)?.get("sectionDurations") as? JsonObject)
-                ?.mapNotNull { (title, value) -> (value as? JsonPrimitive)?.intOrNull?.takeIf { it in 1..1440 }?.let { title to it } }
-                ?.toMap().orEmpty()
+                ?.mapNotNull { (title, value) -> (value as? JsonPrimitive)?.intOrNull?.takeIf { it in 1..1440 }?.let { title.trim() to it } }
+                ?.toMap().orEmpty(),
+            serverSectionDeadlinesEpochMs = serverSectionDeadlines(raw, localNow),
+            serverExpiredSections = raw["expired_sections"].arrayStrings().map(String::trim).filter(String::isNotBlank).toSet()
         )
     }
 
@@ -234,7 +237,8 @@ internal object StudentExamPayloadCodec {
                 proofAssumptions = obj.text("proofAssumptions").orEmpty(),
                 proofGoal = obj.text("proofGoal").orEmpty(),
                 constructionPrompt = obj.text("constructionPrompt").orEmpty(),
-                constructionLabels = obj["constructionLabels"].arrayStrings().take(8)
+                constructionLabels = obj["constructionLabels"].arrayStrings().take(12),
+                constructionAngleLabels = obj["constructionAngleLabels"].arrayStrings().take(8)
             )
         }
     }
@@ -263,6 +267,22 @@ internal object StudentExamPayloadCodec {
                 )
             }
         )
+    }
+
+    internal fun serverExpiredSections(raw: JsonObject): Set<String> =
+        raw["expired_sections"].arrayStrings().map(String::trim).filter(String::isNotBlank).toSet()
+
+    internal fun serverSectionDeadlines(raw: JsonObject, localNow: Long): Map<String, Long> {
+        val rawMap = raw["section_deadlines"] as? JsonObject ?: return emptyMap()
+        val serverNow = raw.text("server_now")?.let(::parseInstantMillis)
+        return rawMap.mapNotNull { (title, el) ->
+            val key = title.trim().takeIf(String::isNotBlank) ?: return@mapNotNull null
+            val expMs = (el as? JsonPrimitive)?.contentOrNull?.let(::parseInstantMillis)
+                ?: (el as? JsonPrimitive)?.longOrNull
+                ?: return@mapNotNull null
+            val aligned = if (serverNow != null) localNow + (expMs - serverNow) else expMs
+            key to aligned
+        }.toMap()
     }
 
     private fun serverDeadline(raw: JsonObject, localNow: Long, durationMinutes: Int): Long? {

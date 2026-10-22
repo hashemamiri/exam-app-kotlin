@@ -153,7 +153,7 @@
   function newQuestion(type) {
     var q = {id: uuid(), type: type || 'multiple', text: '', grade: 0, subject: '', score: 1, options: ['', '', '', ''], optionImages: [null, null, null, null], correctIndex: null, expectedText: '', expectedNumber: '', tolerance: '0', caseSensitive: false,
       matchingLeft: ['', ''], matchingRight: ['', ''], matchingPairs: {}, images: [], answerImageMode: 'no', allowAnswerGraph: false, maxAnswerImages: 1,
-      textAlign: 'right', imagePosition: 'below', fontFamily: 'default', fontSizeSp: 16, bold: false, italic: false, answerLines: type === 'essay' ? 5 : 2, answerLineStyle: 'lined', optionsLayout: '', answerLineSpacingCm: 1.0, spans: [], alignSpans: [], raw: {}, rawKey: {}, mode: '', orderItems: [], hotspots: [], sectionTitle: '', topic: '', difficulty: 0, learningObjective: '', passage: '', rubric: '', solutionSteps: [], assessmentParts: [], constructionPrompt: '', constructionTargets: [], proofAssumptions: '', proofGoal: ''};
+      textAlign: 'right', imagePosition: 'below', fontFamily: 'default', fontSizeSp: 16, bold: false, italic: false, answerLines: type === 'essay' ? 5 : 2, answerLineStyle: 'lined', optionsLayout: '', answerLineSpacingCm: 1.0, spans: [], alignSpans: [], raw: {}, rawKey: {}, mode: '', orderItems: [], hotspots: [], sectionTitle: '', topic: '', difficulty: 0, learningObjective: '', passage: '', rubric: '', solutionSteps: [], assessmentParts: [], constructionPrompt: '', constructionTargets: [], constructionConstraints: [], constructionAngleLabels: [], proofAssumptions: '', proofGoal: ''};
     if (type === 'truefalse') { q.options = []; q.optionImages = []; q.expectedText = 'true'; }
     if (type === 'fill' || type === 'numeric' || type === 'essay') { q.options = []; q.optionImages = []; }
     return q;
@@ -163,7 +163,7 @@
     obj = obj || {}; key = key || {};
     var type = S.qType(obj.type); if (type === 'long') type = 'essay';
     var q = newQuestion(type);
-    q.id = obj.id || q.id; q.text = obj.text || ''; q.score = Number(obj.score) || 1; q.sectionTitle = obj.sectionTitle || ''; q.topic = obj.topic || ''; q.difficulty = Math.max(0,Math.min(3,Number(obj.difficulty)||0)); q.learningObjective = obj.learningObjective || ''; q.passage = obj.passage || ''; q.rubric = key.rubric || ''; q.solutionSteps = Array.isArray(obj.solutionSteps) ? obj.solutionSteps.map(String) : []; q.assessmentParts = Array.isArray(obj.assessmentParts) ? obj.assessmentParts.map(function(p,i){p=p||{};return {id:String(p.id||q.id+'-part-'+i),label:String(p.label||''),prompt:String(p.prompt||''),score:Number(p.score)||0,carriesForward:p.carriesForward===true,reasonPrompt:String(p.reasonPrompt||''),requiresReason:p.requiresReason===true,rubric:String((key.partRubrics||[])[i]||'')};}) : []; q.proofAssumptions=String(obj.proofAssumptions||'');q.proofGoal=String(obj.proofGoal||''); q.constructionPrompt=String(obj.constructionPrompt||''); q.constructionTargets=Array.isArray(key.constructionTargets)?key.constructionTargets.map(function(t,i){t=t||{};return {id:String(t.id||q.id+'-target-'+i),label:String(t.label||String.fromCharCode(65+i)),x:Number(t.x)||0,y:Number(t.y)||0,tolerance:Number(t.tolerance)||0.5,score:Number(t.score)||0};}):[];
+    q.id = obj.id || q.id; q.text = obj.text || ''; q.score = Number(obj.score) || 1; q.sectionTitle = obj.sectionTitle || ''; q.topic = obj.topic || ''; q.difficulty = Math.max(0,Math.min(3,Number(obj.difficulty)||0)); q.learningObjective = obj.learningObjective || ''; q.passage = obj.passage || ''; q.rubric = key.rubric || ''; q.solutionSteps = Array.isArray(obj.solutionSteps) ? obj.solutionSteps.map(String) : []; q.assessmentParts = Array.isArray(obj.assessmentParts) ? obj.assessmentParts.map(function(p,i){p=p||{};return {id:String(p.id||q.id+'-part-'+i),label:String(p.label||''),prompt:String(p.prompt||''),score:Number(p.score)||0,carriesForward:p.carriesForward===true,reasonPrompt:String(p.reasonPrompt||''),requiresReason:p.requiresReason===true,rubric:String((key.partRubrics||[])[i]||'')};}) : []; q.proofAssumptions=String(obj.proofAssumptions||'');q.proofGoal=String(obj.proofGoal||''); q.constructionPrompt=String(obj.constructionPrompt||''); q.constructionAngleLabels=Array.isArray(obj.constructionAngleLabels)?obj.constructionAngleLabels.map(String).filter(Boolean).slice(0,8):[]; q.constructionTargets=Array.isArray(key.constructionTargets)?key.constructionTargets.map(function(t,i){t=t||{};return {id:String(t.id||q.id+'-target-'+i),label:String(t.label||String.fromCharCode(65+i)),x:Number(t.x)||0,y:Number(t.y)||0,tolerance:Number(t.tolerance)||0.5,score:Number(t.score)||0};}):[]; q.constructionConstraints=Array.isArray(key.constructionConstraints)?key.constructionConstraints.map(function(c,i){c=c||{};var ct=String(c.type||'distance'),cv=Number(c.value!=null?c.value:c.targetValue)||0;return {id:String(c.id||q.id+'-constraint-'+i),type:ct,points:Array.isArray(c.points)?c.points.map(String).filter(Boolean):[],value:cv,targetValue:cv,tolerance:Math.max(0.05,Number(c.tolerance)||(ct==='distance'||ct==='equal_length'||ct==='midpoint'?0.5:5)),score:Math.max(0,Number(c.score)||0),label:String(c.label||'')};}):[];
     q.options = (obj.options || []).map(function (x) { return x == null ? '' : String(x); });
     q.optionImages = q.options.map(function (_, i) { var v = (obj.optionImages || [])[i]; return v ? String(v) : null; });
     q.optionStyles = obj.optionStyles || null; q.leftStyles = obj.leftStyles || null; q.rightStyles = obj.rightStyles || null;
@@ -197,14 +197,20 @@
     q.raw = obj; q.rawKey = key;
     return q;
   }
-  var ANSWER_FIELDS = ['correctOption', 'correctAnswer', 'accept', 'answer', 'tolerance', 'caseSensitive', 'matchAnswer', 'pairs', 'rubric', 'constructionTargets', 'partRubrics'];
+  var ANSWER_FIELDS = ['correctOption', 'correctAnswer', 'accept', 'answer', 'tolerance', 'caseSensitive', 'matchAnswer', 'pairs', 'rubric', 'constructionTargets', 'partRubrics'].concat(['constructionConstraints']);
   /* encode: همان ExamQuestionCodec.encode */
   function encodeQuestions(list) {
     var pub = [], keys = [];
     list.forEach(function (q, index) {
       var v = {}; Object.keys(q.raw || {}).forEach(function (k) { v[k] = q.raw[k]; });
       ANSWER_FIELDS.forEach(function (k) { delete v[k]; });
-      v.id = q.id; v.type = q.type; v.text = q.text.trim(); v.score = Number(q.score) || 0; v.sectionTitle = q.sectionTitle || ''; v.topic = q.topic || ''; if (q.difficulty) v.difficulty = q.difficulty; else delete v.difficulty; v.learningObjective = q.learningObjective || ''; v.passage = q.passage || ''; if (q.solutionSteps && q.solutionSteps.length) v.solutionSteps = q.solutionSteps; else delete v.solutionSteps; if (q.assessmentParts && q.assessmentParts.length) v.assessmentParts=q.assessmentParts.map(function(p){return {id:p.id,label:p.label,prompt:p.prompt,score:Number(p.score)||0,carriesForward:!!p.carriesForward,reasonPrompt:p.reasonPrompt||'',requiresReason:!!p.requiresReason};}); else delete v.assessmentParts; v.proofAssumptions=q.proofAssumptions||'';v.proofGoal=q.proofGoal||'';v.constructionPrompt=q.constructionPrompt||''; if(q.constructionTargets&&q.constructionTargets.length)v.constructionLabels=q.constructionTargets.map(function(t){return t.label;});else delete v.constructionLabels; delete v.rubric;
+      var derivedLabels = [];
+      (q.constructionTargets || []).forEach(function (t) { var lb = String(t.label || '').trim(); if (lb && derivedLabels.indexOf(lb) < 0) derivedLabels.push(lb); });
+      (q.constructionConstraints || []).forEach(function (c) { (c.points || []).forEach(function (p) { var lb = String(p || '').trim(); if (lb && derivedLabels.indexOf(lb) < 0) derivedLabels.push(lb); }); });
+      var derivedAngles = [];
+      (q.constructionAngleLabels || []).forEach(function (a) { var lb = String(a || '').replace(/^∠/, '').trim(); if (lb.length >= 3 && derivedAngles.indexOf(lb) < 0) derivedAngles.push(lb); });
+      (q.constructionConstraints || []).forEach(function (c) { if (c.type === 'angle' && Array.isArray(c.points) && c.points.length >= 3) { var lb = String(c.points[0] || '').trim() + String(c.points[1] || '').trim() + String(c.points[2] || '').trim(); if (lb.length >= 3 && derivedAngles.indexOf(lb) < 0) derivedAngles.push(lb); } });
+      v.id = q.id; v.type = q.type; v.text = q.text.trim(); v.score = Number(q.score) || 0; v.sectionTitle = q.sectionTitle || ''; v.topic = q.topic || ''; if (q.difficulty) v.difficulty = q.difficulty; else delete v.difficulty; v.learningObjective = q.learningObjective || ''; v.passage = q.passage || ''; if (q.solutionSteps && q.solutionSteps.length) v.solutionSteps = q.solutionSteps; else delete v.solutionSteps; if (q.assessmentParts && q.assessmentParts.length) v.assessmentParts=q.assessmentParts.map(function(p){return {id:p.id,label:p.label,prompt:p.prompt,score:Number(p.score)||0,carriesForward:!!p.carriesForward,reasonPrompt:p.reasonPrompt||'',requiresReason:!!p.requiresReason};}); else delete v.assessmentParts; v.proofAssumptions=q.proofAssumptions||'';v.proofGoal=q.proofGoal||'';v.constructionPrompt=q.constructionPrompt||''; if(derivedLabels.length)v.constructionLabels=derivedLabels.slice(0,12);else delete v.constructionLabels; if(derivedAngles.length)v.constructionAngleLabels=derivedAngles.slice(0,8);else delete v.constructionAngleLabels; delete v.rubric; delete v.constructionTargets; delete v.constructionConstraints;
       v.images = q.images.map(function (m) { return m.uri; }); v.image = q.images.length ? q.images[0].uri : null;
       v.imgFreePositions = q.images.map(function (m) { return {x: m.xMm, y: m.yMm, w: m.widthMm}; });
       if (q.audio) { v.audio = q.audio; v.audioBytes = q.audioBytes || 0; v.audioMs = q.audioMs || 0; } else { delete v.audio; delete v.audioBytes; delete v.audioMs; }
@@ -252,7 +258,7 @@
         v.leftImages = q.matchingLeft.map(function (_, i) { return (q.matchingLeftImages || [])[i] || ''; }); v.rightImages = q.matchingRight.map(function (_, i) { return (q.matchingRightImages || [])[i] || ''; });
       }
       pub.push(v);
-      var k = {}; Object.keys(q.rawKey || {}).forEach(function (x) { k[x] = q.rawKey[x]; }); k.i = index; if (q.rubric) k.rubric = q.rubric; else delete k.rubric; if (q.assessmentParts && q.assessmentParts.length) k.partRubrics=q.assessmentParts.map(function(p){return p.rubric||'';}); else delete k.partRubrics; if(q.constructionTargets&&q.constructionTargets.length)k.constructionTargets=q.constructionTargets.map(function(t){return {id:t.id,label:t.label,x:Number(t.x)||0,y:Number(t.y)||0,tolerance:Number(t.tolerance)||0.5,score:Number(t.score)||0};});else delete k.constructionTargets;
+      var k = {}; Object.keys(q.rawKey || {}).forEach(function (x) { k[x] = q.rawKey[x]; }); k.i = index; if (q.rubric) k.rubric = q.rubric; else delete k.rubric; if (q.assessmentParts && q.assessmentParts.length) k.partRubrics=q.assessmentParts.map(function(p){return p.rubric||'';}); else delete k.partRubrics; if(q.constructionTargets&&q.constructionTargets.length)k.constructionTargets=q.constructionTargets.map(function(t){return {id:t.id,label:t.label,x:Number(t.x)||0,y:Number(t.y)||0,tolerance:Number(t.tolerance)||0.5,score:Number(t.score)||0};});else delete k.constructionTargets; if(q.constructionConstraints&&q.constructionConstraints.length)k.constructionConstraints=q.constructionConstraints.map(function(c){var cv=Number(c.targetValue!=null?c.targetValue:c.value)||0;return {id:c.id||uuid(),type:String(c.type||'distance'),points:(c.points||[]).map(function(p){return String(p||'').trim();}).filter(Boolean),value:cv,targetValue:cv,tolerance:Math.max(0.05,Number(c.tolerance)||0.5),score:Math.max(0,Number(c.score)||0),label:String(c.label||'')};});else delete k.constructionConstraints;
       if (q.type === 'multiple') k.correctOption = q.correctIndex != null ? q.correctIndex : 0;
       else if (q.type === 'truefalse') k.correctAnswer = q.expectedText === 'true';
       else if (q.type === 'fill' && q.mode === 'order') k.accept = [orderAnswerText(q.orderItems)];
@@ -854,8 +860,8 @@
       /* V166 — تغییر نوع سؤال با تراشه‌ها (مثل QuestionTypeChips اپ)؛ V211: در دسکتاپ نمایش داده نمی‌شود */
       editor.appendChild(el('div', {class: 'b-types'}, TYPES.map(function (t) { return el('button', {class: 'chip' + (q.type === t[0] ? ' on' : ''), text: t[1], onclick: function () { if (q.type === t[0]) return; changeType(q, t[0]); mark(); drawList(); drawEditor(); }}); })));
       editor.appendChild(el('div', {class: 'grid2', style: 'margin:8px 0'}, [
-        inp('بخش آزمون / صورت مشترک', q.sectionTitle || '', function (v) { q.sectionTitle = v.slice(0,100); mark(); }),
-        inp('فصل یا مبحث (بانک سؤال)', q.topic || '', function (v) { q.topic = v.slice(0,100); mark(); })
+        inp('بخش آزمون / صورت مشترک', q.sectionTitle || '', function (v) { q.sectionTitle = v.slice(0,100); mark(); drawListSoft(); refreshPickRules(); }),
+        inp('فصل یا مبحث (بانک سؤال)', q.topic || '', function (v) { q.topic = v.slice(0,100); mark(); refreshPickRules(); })
       ]));
       if (q.sectionTitle) { var sectionQs = state.questions.filter(function (x) { return (x.sectionTitle||'').trim() === q.sectionTitle.trim(); }); var sectionMark = sectionQs.reduce(function (n,x) { return n + (Number(x.score)||0); },0); editor.appendChild(el('div',{class:'muted',style:'font-size:12px;margin-bottom:6px',text:'بخش «'+q.sectionTitle+'»: '+fa(sectionQs.length)+' سؤال · جمع بارم '+fa(S.fmtScore(sectionMark))})); }
       editor.appendChild(el('div', {class:'grid2',style:'margin:8px 0'}, [
@@ -890,14 +896,33 @@
           editor.appendChild(el('p',{class:'muted',text:'برای هر گام، دانش‌آموز گزاره و دلیل را جدا می‌نویسد؛ امتیاز و rubric هر گام مستقل است.'}));
         }
         if (q.mode === 'construct') {
-          var cp=el('textarea',{rows:2,placeholder:'دستور ساخت نقاط روی صفحهٔ مختصات'});cp.value=q.constructionPrompt||'';cp.addEventListener('input',function(){q.constructionPrompt=cp.value.slice(0,500);mark();});
+          var cp=el('textarea',{rows:2,placeholder:'دستور ساخت نقاط و شکل روی صفحهٔ مختصات'});cp.value=q.constructionPrompt||'';cp.addEventListener('input',function(){q.constructionPrompt=cp.value.slice(0,500);mark();});
           editor.appendChild(el('div',{class:'field'},[el('label',{text:'دستور ساخت'}),cp]));
+          editor.appendChild(inp('برچسب زاویه‌های خواسته‌شده (مثل ABC, BCD)', (q.constructionAngleLabels||[]).join(', '), function(v){
+            q.constructionAngleLabels = String(v||'').split(/[,،\s]+/).map(function(x){return x.replace(/^∠/,'').trim();}).filter(function(x){return x.length>=3;}).slice(0,8);
+            mark();
+          }));
           (q.constructionTargets||[]).forEach(function(t,ti){
             var targetCard=el('div',{class:'card',style:'padding:8px;margin:6px 0'});
             [['برچسب',t.label,'label'],['x هدف',String(t.x),'x'],['y هدف',String(t.y),'y'],['تلورانس',String(t.tolerance),'tolerance'],['بارم',String(t.score),'score']].forEach(function(spec){targetCard.appendChild(inp(spec[0],spec[1],function(v){if(spec[2]==='label')t.label=v.slice(0,8);else{var n=Number(v);if(Number.isFinite(n)){if(spec[2]==='x'||spec[2]==='y')n=Math.max(-5,Math.min(5,n));if(spec[2]==='tolerance')n=Math.max(.05,Math.min(5,n));if(spec[2]==='score')n=Math.max(0,n);t[spec[2]]=n;}}mark();}));});
             targetCard.appendChild(el('button',{class:'btn light sm',text:'حذف نقطه',onclick:function(){q.constructionTargets.splice(ti,1);mark();drawEditor();}}));editor.appendChild(targetCard);
           });
-          editor.appendChild(el('button',{class:'btn light sm',text:'افزودن نقطهٔ هدف',disabled:q.constructionTargets.length>=8,onclick:function(){q.constructionTargets.push({id:uuid(),label:String.fromCharCode(65+q.constructionTargets.length),x:0,y:0,tolerance:.5,score:1});mark();drawEditor();}}));
+          editor.appendChild(el('button',{class:'btn light sm',text:'افزودن نقطهٔ هدف',disabled:(q.constructionTargets||[]).length>=8,onclick:function(){q.constructionTargets.push({id:uuid(),label:String.fromCharCode(65+q.constructionTargets.length),x:0,y:0,tolerance:.5,score:1});mark();drawEditor();}}));
+          var C_TYPES=[['distance','فاصلهٔ دو نقطه |AB|'],['equal_length','برابری طول |AB|=|CD|'],['angle','اندازهٔ زاویه ∠ABC (درجه)'],['midpoint','نقطهٔ وسط پاره‌خط'],['collinear','هم‌خط بودن سه نقطه'],['perpendicular','عمود بودن AB ⊥ CD'],['parallel','موازی بودن AB ∥ CD']];
+          (q.constructionConstraints||[]).forEach(function(c,ci){
+            var cc=el('div',{class:'card',style:'padding:8px;margin:6px 0'});
+            cc.appendChild(sel('نوع شرط هندسی',c.type||'distance',C_TYPES,function(v){c.type=v;c.points=v==='distance'?['A','B']:(v==='angle'||v==='collinear'||v==='midpoint'?['A','B','C']:['A','B','C','D']);c.value=c.targetValue=v==='angle'?90:(v==='distance'?5:0);c.tolerance=(v==='distance'||v==='equal_length'||v==='midpoint')?0.5:5;mark();drawEditor();}));
+            cc.appendChild(inp('نقاط درگیر (با کاما مثل A,B,C)',(c.points||[]).join(','),function(v){c.points=String(v||'').split(/[,،\s]+/).map(function(x){return x.trim();}).filter(Boolean).slice(0,4);mark();}));
+            if(c.type==='distance'||c.type==='angle'){cc.appendChild(inp(c.type==='angle'?'زاویهٔ هدف (درجه)':'فاصلهٔ هدف',String(c.targetValue!=null?c.targetValue:(c.value||0)),function(v){var n=Number(en(v));if(Number.isFinite(n)){c.targetValue=n;c.value=n;}mark();},'number'));}
+            cc.appendChild(inp('تلورانس مجاز',String(c.tolerance||0.5),function(v){var n=Number(en(v));if(Number.isFinite(n))c.tolerance=Math.max(0.05,n);mark();},'number'));
+            cc.appendChild(inp('بارم این شرط',String(c.score||0),function(v){var n=Number(en(v));if(Number.isFinite(n))c.score=Math.max(0,n);mark();},'number'));
+            cc.appendChild(inp('توضیح شرط (اختیاری)',c.label||'',function(v){c.label=v.slice(0,120);mark();}));
+            cc.appendChild(el('button',{class:'btn light sm',text:'حذف شرط هندسی',onclick:function(){q.constructionConstraints.splice(ci,1);mark();drawEditor();}}));
+            editor.appendChild(cc);
+          });
+          editor.appendChild(el('button',{class:'btn light sm',style:'margin-inline-start:6px',text:'افزودن شرط هندسی (زاویه/فاصله/عمود/موازی/هم‌خط)',disabled:(q.constructionConstraints||[]).length>=12,onclick:function(){q.constructionConstraints=(q.constructionConstraints||[]).concat([{id:uuid(),type:'angle',points:['A','B','C'],targetValue:90,tolerance:4,score:1,label:''}]);mark();drawEditor();}}));
+          var constructSum=(q.constructionTargets||[]).reduce(function(a,x){return a+(Number(x.score)||0);},0)+(q.constructionConstraints||[]).reduce(function(a,x){return a+(Number(x.score)||0);},0);
+          if(constructSum>0)editor.appendChild(el('div',{class:'muted',style:'margin-top:6px;font-size:12px',text:'جمع بارم نقاط هدف و شرط‌های هندسی: '+fa(S.fmtScore(constructSum))}));
         }
         if (q.mode === 'steps' || q.mode === 'proof') {
           var stepsBox = el('textarea', {rows: 3, placeholder: 'هر گام در یک سطر'}); stepsBox.value = (q.solutionSteps || []).join('\n');
@@ -1242,9 +1267,18 @@
       box.appendChild(hintEl);
       return box;
     }
-    /* V275 — پنل «مشخصات آزمون» دسکتاپ یک بار ساخته می‌شود؛ فیلدهای «انتخاب تصادفی بر اساس نوع» باید با هر افزودن/حذف سؤال تازه شوند */
+    function sectionDurationsBox(st) {
+      var sectionDurations = {}; st.questions.forEach(function(q){var n=String(q.sectionTitle||'').trim();if(n)sectionDurations[n]=(sectionDurations[n]||0)+1;});
+      var sectionNames = Object.keys(sectionDurations);
+      if (!sectionNames.length) return null;
+      var outer = el('div', {class: 'b-section-durations'});
+      outer.appendChild(el('h4',{text:'زمان مجاز هر بخش (دقیقه؛ خالی = بدون زمان جداگانه)'}));
+      sectionNames.forEach(function(name){var wrap=el('div',{class:'field'}),input=el('input',{type:'number',min:'1',max:'1440',value:(st.sectionDurations||{})[name]||'',placeholder:'بدون محدودیت'});input.addEventListener('input',function(){st.sectionDurations=st.sectionDurations||{};if(Number(input.value)>0)st.sectionDurations[name]=Math.min(1440,Number(input.value));else delete st.sectionDurations[name];mark();});wrap.appendChild(el('label',{text:'بخش: '+name+' ('+fa(sectionDurations[name])+' سؤال)'}));wrap.appendChild(input);outer.appendChild(wrap);});
+      return outer;
+    }
+    /* V275 — پنل «مشخصات آزمون» دسکتاپ یک بار ساخته می‌شود؛ فیلدهای «انتخاب تصادفی بر اساس نوع/مبحث/بخش» و زمان بخش‌ها باید زنده تازه شوند */
     function refreshPickRules() {
-      document.querySelectorAll('.b-pr-wrap').forEach(function (w) { w.innerHTML = ''; var b = pickRulesBox(state); if (b) w.appendChild(b); });
+      document.querySelectorAll('.b-pr-wrap').forEach(function (w) { w.innerHTML = ''; var b = pickRulesBox(state); if (b) w.appendChild(b); var sd = sectionDurationsBox(state); if (sd) w.appendChild(sd); });
     }
     function settingsForm(m_) {
       function redrawSettings() { var y = m_.scrollTop; m_.innerHTML = ''; settingsForm(m_); m_.scrollTop = y; }
@@ -1289,8 +1323,7 @@
         inp('نمایش تصادفی چند سؤال از کل؟ (خالی = همه)', state.pickCount || '', function (v) { state.pickCount = en(v).replace(/[^0-9]/g, ''); mark(); }, 'number'),
         el('div', {class: 'muted', style: 'font-size:12px', text: pickHint(state)})
       ]));
-      var prw = el('div', {class: 'b-pr-wrap'}); var prb = pickRulesBox(state); if (prb) prw.appendChild(prb); m_.appendChild(prw); /* V272 — V275: ظرف ثابت تا با افزودن/حذف سؤال تازه شود */
-      var sectionDurations = {}; state.questions.forEach(function(q){var n=String(q.sectionTitle||'').trim();if(n)sectionDurations[n]=(sectionDurations[n]||0)+1;}); var sectionNames=Object.keys(sectionDurations); if(sectionNames.length){m_.appendChild(el('h4',{text:'زمان مجاز هر بخش (دقیقه؛ خالی = بدون زمان جداگانه)'}));sectionNames.forEach(function(name){var wrap=el('div',{class:'field'}),input=el('input',{type:'number',min:'1',max:'1440',value:(state.sectionDurations||{})[name]||'',placeholder:'بدون محدودیت'});input.addEventListener('input',function(){state.sectionDurations=state.sectionDurations||{};if(Number(input.value)>0)state.sectionDurations[name]=Math.min(1440,Number(input.value));else delete state.sectionDurations[name];mark();});wrap.appendChild(el('label',{text:'بخش: '+name+' ('+fa(sectionDurations[name])+' سؤال)'}));wrap.appendChild(input);m_.appendChild(wrap);});}
+      var prw = el('div', {class: 'b-pr-wrap'}); var prb = pickRulesBox(state); if (prb) prw.appendChild(prb); m_.appendChild(prw); var sdb = sectionDurationsBox(state); if (sdb) prw.appendChild(sdb); /* V272 — V275 — V332 */
       m_.appendChild(el('div', {class: 'row', style: 'margin-bottom:12px'}, [chk('به‌هم‌ریختن سؤال‌ها', state.shuffleQuestions, function (v) { state.shuffleQuestions = v; mark(); }), chk('به‌هم‌ریختن گزینه‌ها', state.shuffleOptions, function (v) { state.shuffleOptions = v; mark(); }), chk('ثبت خودکار با پایان زمان', state.attemptOnTimeout, function (v) { state.attemptOnTimeout = v; mark(); })]));
       /* V301 — حالت ابتدایی (اول تا ششم): با انتخاب کلاس ابتدایی خودکار روشن می‌شود؛ معلم می‌تواند تغییر دهد. */
       m_.appendChild(el('div', {class: 'row', style: 'margin-bottom:12px;flex-wrap:wrap;gap:8px'}, [chk('حالت ابتدایی (اول تا ششم)', state.primaryMode, function (v) { state.primaryMode = v; mark(); if (typeof drawList === 'function') drawList(); if (typeof drawEditor === 'function') drawEditor(); }), el('span', {class: 'muted', style: 'font-size:12px', text: 'متن درشت، گزینه‌های بزرگ و لمسی، یک سؤال در هر صفحه، زمان‌سنج کم‌رنگ و پایان دوستانه.'})]));

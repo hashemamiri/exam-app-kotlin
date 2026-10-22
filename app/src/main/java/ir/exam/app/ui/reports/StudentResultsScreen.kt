@@ -193,11 +193,15 @@ private fun AnswerQuestionCard(question: StudentAnswerReviewQuestion, graded: Bo
                 if (question.proofAssumptions.isNotBlank()) NativeMathText("فرض‌ها: ${question.proofAssumptions}")
                 if (question.proofGoal.isNotBlank()) NativeMathText("خواسته: ${question.proofGoal}")
                 question.proofSteps.forEach { step ->
-                    Text("${step.label}: ${step.prompt}", fontWeight = FontWeight.SemiBold)
+                    val scoreBadge = step.earnedScore?.let { " · نمره: $it از ${step.maxScore}" }.orEmpty()
+                    Text("${step.label}: ${step.prompt}$scoreBadge", fontWeight = FontWeight.SemiBold)
                     Text("نتیجه: ${step.result.ifBlank { "بدون پاسخ" }}")
                     if (step.reasonPrompt.isNotBlank()) Text("${step.reasonPrompt}: ${step.reason.ifBlank { "بدون پاسخ" }}")
                     if (step.feedback.isNotBlank()) Text("بازخورد معلم: ${step.feedback}", color = MaterialTheme.colorScheme.primary)
                 }
+            } else if (question.answerMode == "construct") {
+                val rawStr = (question.response as? kotlinx.serialization.json.JsonPrimitive)?.content ?: question.response?.toString().orEmpty()
+                Text("پاسخ شما: ${ir.exam.app.core.geometry.GeometryConstructionEvaluator.formatResponseSummary(rawStr)}")
             } else Text("پاسخ شما: ${question.displayResponse()}")
             question.responseImages.forEach { url ->
                 if (isAnswerAudioUrl(url)) AnswerAudioPlayer(url) else AsyncImage(
@@ -206,7 +210,12 @@ private fun AnswerQuestionCard(question: StudentAnswerReviewQuestion, graded: Bo
                     modifier = Modifier.size(180.dp)
                 )
             }
-            if (question.answerMode != "proof") question.partFeedback.forEach { Text("بازخورد ${it.label}: ${it.text}", color = MaterialTheme.colorScheme.primary) }
+            if (question.answerMode != "proof") question.partFeedback.forEach { part ->
+                val scorePart = part.earnedScore?.let { "نمرهٔ ${part.label}: $it از ${part.maxScore}" }.orEmpty()
+                val fbPart = part.text.takeIf(String::isNotBlank)?.let { "بازخورد ${part.label}: $it" }.orEmpty()
+                val joined = listOf(scorePart, fbPart).filter(String::isNotBlank).joinToString(" · ")
+                if (joined.isNotBlank()) Text(joined, color = MaterialTheme.colorScheme.primary)
+            }
             question.correctAnswer?.let { Text("پاسخ صحیح: $it", color = MaterialTheme.colorScheme.primary) }
             question.explanation?.let { NativeMathText("توضیح: $it") }
         }

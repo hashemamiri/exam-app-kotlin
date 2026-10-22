@@ -386,7 +386,7 @@ fun StudentExamContent(
                 val answerText = (state.answers[question.id] as? TextAnswer)?.value.orEmpty()
                 Column(verticalArrangement=Arrangement.spacedBy(6.dp)) {
                     if (question.sectionTitle.isNotBlank()) {
-                        val sectionQuestions = exam.questions.filter { it.sectionTitle == question.sectionTitle }
+                        val sectionQuestions = exam.questions.filter { it.sectionTitle.trim() == question.sectionTitle.trim() }
                         val sectionScore = sectionQuestions.sumOf { it.score }
                         Card(Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.tertiaryContainer)) {
                             Column(Modifier.fillMaxWidth().padding(10.dp), verticalArrangement = Arrangement.spacedBy(3.dp)) {
@@ -400,7 +400,7 @@ fun StudentExamContent(
                     if (question.passage.isNotBlank()) {
                         Card(Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)) {
                             Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                                Text("متن روخوانی", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                                Text(if (primary) "متن روخوانی" else "متن / صورت مشترک", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                                 NativeMathText(question.passage, fontSize = if (primary) 22.sp else 18.sp)
                                 if (primary) ir.exam.app.ui.audio.ReadAloudButton(text = question.passage, modifier = Modifier.fillMaxWidth(), key = "passage-${question.id}")
                             }
@@ -449,8 +449,17 @@ fun StudentExamContent(
                     }
                 }
             }
+            val currentSectionExpired = question.sectionTitle.trim().isNotBlank() && question.sectionTitle.trim() in state.expiredSections
             item {
-                when (question) {
+                if (currentSectionExpired) {
+                    Card(Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer)) {
+                        Text(
+                            "زمان این بخش تمام شد؛ پاسخ‌های ثبت‌شده حفظ شده‌اند و امکان ویرایش یا بازگشت نیست.",
+                            modifier = Modifier.padding(12.dp),
+                            color = MaterialTheme.colorScheme.onErrorContainer
+                        )
+                    }
+                } else when (question) {
                     is EssayQuestion -> if (question.answerMode == "construct" && question.constructionLabels.isNotEmpty()) {
                         StudentConstructionAnswer(question, (state.answers[question.id] as? TextAnswer)?.value.orEmpty()) {
                             onAnswer(TextAnswer(question.id, it))
@@ -653,7 +662,7 @@ fun StudentExamContent(
                     )
                 }
             }
-            if (question.maxAnswerImages > 0) {
+            if (!currentSectionExpired && question.maxAnswerImages > 0) {
                 item {
                     ResponseImages(
                         questionId = question.id,
@@ -670,7 +679,7 @@ fun StudentExamContent(
             // (questionHasGraph) هم فقط تختهٔ وایت‌برد می‌گیرد.
             val drawAnswer = (question as? EssayQuestion)?.answerMode in setOf("draw", "construct", "voice")
             if (!drawAnswer) if (presentation.allowAnswerGraph || questionHasGraph) {
-                item {
+                if (!currentSectionExpired) item {
                     StudentWhiteboardEntry(
                         questionId = question.id,
                         current = if (question.maxAnswerImages > 0) emptyList() else state.responseImages[question.id].orEmpty(),
@@ -1318,55 +1327,101 @@ private fun StepwiseEssayAnswer(question: EssayQuestion, saved: String, onChange
     }
 }
 
-/** نمودار مختصاتی تعاملی: لمس صفحه نقاط را ثبت می‌کند؛ مختصات هدف هرگز به دانش‌آموز ارسال نمی‌شود. */
+/** نمودار مختصاتی تعاملی با برچسب‌گذاری نقاط و زاویه‌ها؛ مختصات و شرط‌های هدف هرگز به دانش‌آموز ارسال نمی‌شوند. */
 @Composable
 private fun StudentConstructionAnswer(question: EssayQuestion, saved: String, onChange: (String) -> Unit) {
-    val labels = question.constructionLabels.take(8)
+    val labels = question.constructionLabels.take(12)
     var selectedLabel by remember(question.id) { mutableStateOf<String?>(null) }
-    val points = remember(question.id, saved) {
-        runCatching {
-            val root = Json.parseToJsonElement(saved).jsonObject
-            labels.mapNotNull { label ->
-                val entry = root[label]?.jsonObject ?: return@mapNotNull null
-                val x = entry["x"]?.jsonPrimitive?.doubleOrNull?.toFloat() ?: return@mapNotNull null
-                val y = entry["y"]?.jsonPrimitive?.doubleOrNull?.toFloat() ?: return@mapNotNull null
-                label to Offset(x.coerceIn(-5f, 5f), y.coerceIn(-5f, 5f))
-            }.toMap()
-        }.getOrDefault(emptyMap())
+    var snapHalf by remember(question.id) { mutableStateOf(true) }
+    var customAngleInput by remember(question.id) { mutableStateOf("") }
+    val parsed = remember(question.id, saved) {
+        ir.exam.app.core.geometry.GeometryConstructionEvaluator.parseResponse(saved)
+    }
+    val points = remember(parsed, labels) {
+        labels.mapNotNull { label ->
+            val p = parsed.points[label] ?: return@mapNotNull null
+            label to Offset(p.x.toFloat().coerceIn(-5f, 5f), p.y.toFloat().coerceIn(-5f, 5f))
+        }.toMap()
+    }
+    val activeAngles = remember(parsed, question.constructionAngleLabels) {
+        (question.constructionAngleLabels + parsed.angleLabels)
+            .let { ir.exam.app.core.geometry.GeometryConstructionEvaluator.normalizeAngleLabels(it) }
+    }
+    fun emitUpdated(nextPoints: Map<String, Offset>, nextAngles: List<String> = activeAngles) {
+        val domainPts = nextPoints.mapValues { (_, v) ->
+            ir.exam.app.core.geometry.GeometryConstructionEvaluator.Point2D(v.x.toDouble(), v.y.toDouble())
+        }
+        onChange(ir.exam.app.core.geometry.GeometryConstructionEvaluator.encodeResponse(domainPts, nextAngles))
     }
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(question.constructionPrompt.ifBlank { "نقاط خواسته‌شده را روی صفحهٔ مختصات مشخص کنید." }, style = MaterialTheme.typography.bodyLarge)
         Text("برای ثبت نقطه روی نمودار بزنید؛ برای جابه‌جایی، برچسب نقطه را انتخاب و محل تازه را لمس کنید. مختصات از −۵ تا ۵ است.", style = MaterialTheme.typography.bodySmall)
         Canvas(
-            Modifier.fillMaxWidth().height(280.dp).border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(8.dp))
-                .pointerInput(question.id, labels, points, selectedLabel) {
+            Modifier.fillMaxWidth().height(290.dp).border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(8.dp))
+                .pointerInput(question.id, labels, points, selectedLabel, snapHalf, activeAngles) {
                     detectTapGestures { tap ->
-                        val margin = 24f
+                        val margin = 28f
                         val width = (size.width - 2 * margin).coerceAtLeast(1f)
                         val height = (size.height - 2 * margin).coerceAtLeast(1f)
                         val label = selectedLabel ?: labels.firstOrNull { it !in points } ?: labels.lastOrNull() ?: return@detectTapGestures
-                        val x = (((tap.x - margin) / width) * 10f - 5f).coerceIn(-5f, 5f)
-                        val y = (5f - ((tap.y - margin) / height) * 10f).coerceIn(-5f, 5f)
-                        val next = points + (label to Offset(x, y))
-                        onChange(buildJsonObject {
-                            next.forEach { (key, value) -> put(key, buildJsonObject { put("x", JsonPrimitive(value.x)); put("y", JsonPrimitive(value.y)) }) }
-                        }.toString())
+                        val rawX = (((tap.x - margin) / width) * 10f - 5f).coerceIn(-5f, 5f)
+                        val rawY = (5f - ((tap.y - margin) / height) * 10f).coerceIn(-5f, 5f)
+                        val x = if (snapHalf) kotlin.math.round(rawX * 2f) / 2f else rawX
+                        val y = if (snapHalf) kotlin.math.round(rawY * 2f) / 2f else rawY
+                        emitUpdated(points + (label to Offset(x, y)))
                     }
                 }
         ) {
-            val margin = 24f
+            val margin = 28f
             val w = (size.width - 2 * margin).coerceAtLeast(1f)
             val h = (size.height - 2 * margin).coerceAtLeast(1f)
             fun px(x: Float) = margin + (x + 5f) / 10f * w
             fun py(y: Float) = margin + (5f - y) / 10f * h
             val grid = Color.Gray.copy(alpha = 0.25f)
+            val tickPaint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
+                color = android.graphics.Color.rgb(110, 120, 132)
+                textSize = 10.dp.toPx()
+            }
             for (tick in -5..5) {
                 val x = px(tick.toFloat()); val y = py(tick.toFloat())
                 drawLine(grid, Offset(x, margin), Offset(x, margin + h), 1.dp.toPx())
                 drawLine(grid, Offset(margin, y), Offset(margin + w, y), 1.dp.toPx())
+                if (tick != 0) {
+                    drawContext.canvas.nativeCanvas.drawText(tick.toString(), x - 4.dp.toPx(), py(0f) + 12.dp.toPx(), tickPaint)
+                    drawContext.canvas.nativeCanvas.drawText(tick.toString(), px(0f) + 4.dp.toPx(), y + 4.dp.toPx(), tickPaint)
+                }
             }
             drawLine(Color.DarkGray, Offset(px(0f), margin), Offset(px(0f), margin + h), 2.dp.toPx())
             drawLine(Color.DarkGray, Offset(margin, py(0f)), Offset(margin + w, py(0f)), 2.dp.toPx())
+            val anglePaint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
+                color = android.graphics.Color.rgb(176, 88, 12)
+                textSize = 12.dp.toPx()
+                typeface = android.graphics.Typeface.DEFAULT_BOLD
+            }
+            activeAngles.forEach { token ->
+                val verts = ir.exam.app.core.geometry.GeometryConstructionEvaluator.splitAngleVertices(token) ?: return@forEach
+                val p0 = points[verts[0]]; val pv = points[verts[1]]; val p2 = points[verts[2]]
+                if (p0 != null && pv != null && p2 != null) {
+                    val vScreen = Offset(px(pv.x), py(pv.y))
+                    val aScreen = Offset(px(p0.x), py(p0.y))
+                    val cScreen = Offset(px(p2.x), py(p2.y))
+                    drawLine(Color(0xFFD97706), vScreen, aScreen, 2.dp.toPx())
+                    drawLine(Color(0xFFD97706), vScreen, cScreen, 2.dp.toPx())
+                    val deg = ir.exam.app.core.geometry.GeometryConstructionEvaluator.angleDegrees(
+                        ir.exam.app.core.geometry.GeometryConstructionEvaluator.Point2D(p0.x.toDouble(), p0.y.toDouble()),
+                        ir.exam.app.core.geometry.GeometryConstructionEvaluator.Point2D(pv.x.toDouble(), pv.y.toDouble()),
+                        ir.exam.app.core.geometry.GeometryConstructionEvaluator.Point2D(p2.x.toDouble(), p2.y.toDouble())
+                    )
+                    if (deg != null) {
+                        drawContext.canvas.nativeCanvas.drawText(
+                            "∠$token=${"%.1f".format(java.util.Locale.US, deg)}°",
+                            vScreen.x + 8.dp.toPx(),
+                            vScreen.y + 16.dp.toPx(),
+                            anglePaint
+                        )
+                    }
+                }
+            }
             val paint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply { color = android.graphics.Color.rgb(30, 83, 170); textSize = 15.dp.toPx(); typeface = android.graphics.Typeface.DEFAULT_BOLD }
             points.forEach { (label, point) ->
                 val cx = px(point.x); val cy = py(point.y)
@@ -1374,10 +1429,56 @@ private fun StudentConstructionAnswer(question: EssayQuestion, saved: String, on
                 drawContext.canvas.nativeCanvas.drawText(label, cx + 8.dp.toPx(), cy - 8.dp.toPx(), paint)
             }
         }
-        Text("ثبت‌شده: ${points.size} از ${labels.size}", style = MaterialTheme.typography.labelMedium)
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text("ثبت‌شده: ${points.size} از ${labels.size}", style = MaterialTheme.typography.labelMedium)
+            FilterChip(selected = snapHalf, onClick = { snapHalf = !snapHalf }, label = { Text("چسبیدن به شبکه ۰٫۵") })
+        }
+        Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
             labels.forEach { label -> FilterChip(selected = selectedLabel == label, onClick = { selectedLabel = if (selectedLabel == label) null else label }, label = { Text("$label${points[label]?.let { " (${"%.1f".format(it.x)}, ${"%.1f".format(it.y)})" } ?: " —"}") }) }
-            TextButton(onClick = { selectedLabel = null; onChange("{}") }, enabled = points.isNotEmpty()) { Text("پاک‌کردن") }
+            TextButton(onClick = { selectedLabel = null; onChange("{}") }, enabled = points.isNotEmpty() || activeAngles.isNotEmpty()) { Text("پاک‌کردن") }
+        }
+        if (activeAngles.isNotEmpty() || labels.size >= 3) {
+            Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+                activeAngles.forEach { token ->
+                    val verts = ir.exam.app.core.geometry.GeometryConstructionEvaluator.splitAngleVertices(token)
+                    val deg = verts?.let { v ->
+                        val p0 = points[v[0]]; val p1 = points[v[1]]; val p2 = points[v[2]]
+                        if (p0 != null && p1 != null && p2 != null) ir.exam.app.core.geometry.GeometryConstructionEvaluator.angleDegrees(
+                            ir.exam.app.core.geometry.GeometryConstructionEvaluator.Point2D(p0.x.toDouble(), p0.y.toDouble()),
+                            ir.exam.app.core.geometry.GeometryConstructionEvaluator.Point2D(p1.x.toDouble(), p1.y.toDouble()),
+                            ir.exam.app.core.geometry.GeometryConstructionEvaluator.Point2D(p2.x.toDouble(), p2.y.toDouble())
+                        ) else null
+                    }
+                    FilterChip(
+                        selected = deg != null,
+                        onClick = {
+                            if (token !in question.constructionAngleLabels) {
+                                emitUpdated(points, activeAngles.filterNot { it == token })
+                            }
+                        },
+                        label = { Text("∠$token" + (deg?.let { " = ${"%.1f".format(java.util.Locale.US, it)}°" } ?: "")) }
+                    )
+                }
+            }
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+                OutlinedTextField(
+                    value = customAngleInput,
+                    onValueChange = { customAngleInput = it.take(12) },
+                    label = { Text("برچسب زاویه (مثل ABC)") },
+                    singleLine = true,
+                    modifier = Modifier.weight(1f)
+                )
+                OutlinedButton(
+                    onClick = {
+                        val canonical = ir.exam.app.core.geometry.GeometryConstructionEvaluator.splitAngleVertices(customAngleInput)
+                            ?.let(ir.exam.app.core.geometry.GeometryConstructionEvaluator::canonicalAngleToken)
+                        if (canonical != null) {
+                            customAngleInput = ""
+                            emitUpdated(points, activeAngles + canonical)
+                        }
+                    }
+                ) { Text("ثبت زاویه") }
+            }
         }
     }
 }
