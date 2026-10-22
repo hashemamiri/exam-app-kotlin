@@ -110,12 +110,17 @@ class V333_1_EmulatorCiFixesAndLiveJourneyTest {
         val helper = File(root, "app/src/androidTest/java/ir/exam/app/uitest/UiScreenshotHelper.kt").readText()
 
         assertTrue(journeyTest.contains("\"بازگشت به آزمون‌ها\""))
+        assertTrue(journeyTest.contains("clickDialogOrLastText"))
         assertTrue(journeyTest.contains("\"بازکردن منو\"") && journeyTest.contains("\"منو\""))
         assertTrue(journeyTest.contains("scrollUntilTextVisible"))
+        assertTrue(journeyTest.contains("SemanticsActions.OnClick"))
+        assertTrue(journeyTest.contains("hasSetTextAction()"))
         assertTrue(journeyTest.contains("runWithFailureCapture"))
+        assertTrue(!journeyTest.contains("_teacher_") && !teacherTest.contains("_teacher_"))
         assertTrue(teacherTest.contains("clickSaveAndConfirm"))
         assertTrue(teacherTest.contains("runWithFailureCapture"))
         assertTrue(helper.contains("hideKeyboard") && helper.contains("99_failure_"))
+        assertTrue(helper.contains("isDialog()") && helper.contains("VerticalScrollAxisRange"))
     }
 
     @OptIn(ExperimentalCoroutinesApi::class)

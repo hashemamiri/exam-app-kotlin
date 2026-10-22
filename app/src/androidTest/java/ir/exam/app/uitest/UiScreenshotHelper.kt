@@ -7,12 +7,20 @@ import android.util.Base64
 import android.view.WindowManager
 import android.view.inputmethod.InputMethodManager
 import androidx.activity.ComponentActivity
+import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.hasAnyAncestor
+import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.isDialog
 import androidx.compose.ui.test.isRoot
 import androidx.compose.ui.test.junit4.AndroidComposeTestRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onFirst
+import androidx.compose.ui.test.onLast
+import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.swipeUp
 import androidx.test.platform.app.InstrumentationRegistry
@@ -24,8 +32,9 @@ import org.json.JSONObject
 import org.junit.AssumptionViolatedException
 
 /**
- * V333.1 — ابزار ثبت اسکرین‌شات واقعی صفحات Compose، مدیریت کیبورد نرم‌افزاری، اسکرول LazyColumn
- * و عیب‌یابی تصویری خودکار در لحظهٔ خطا (`99_failure_*.png`) روی شبیه‌ساز Pixel 6 (API 34).
+ * V333.2 — ابزار ثبت اسکرین‌شات واقعی صفحات Compose، انتخاب امن دکمه‌های پنجرهٔ محاوره‌ای (`AlertDialog`)،
+ * مدیریت کیبورد نرم‌افزاری، اسکرول عمودی دقیق (`VerticalScrollAxisRange`) و عیب‌یابی تصویری خودکار
+ * در لحظهٔ خطا (`99_failure_*.png`) روی شبیه‌ساز Pixel 6 (API 34).
  */
 object UiScreenshotHelper {
     private const val DEFAULT_ARTIFACT_ENDPOINT = "http://10.0.2.2:18991/__test__/screenshot"
@@ -51,22 +60,68 @@ object UiScreenshotHelper {
     }
 
     /**
-     * اسکرول امن برای هر دو نوع فهرست (`Column.verticalScroll` و `LazyColumn` که آیتم‌های پایین صفحه را
-     * تا پیش از اسکرول اصلاً Compose نمی‌کند).
+     * کلیک امن روی دکمه‌هایی که هم در پنجرهٔ `AlertDialog` رویی و هم در بنر/صفحهٔ زیری ممکن است هم‌نام باشند
+     * (مانند «بازگشت به آزمون‌ها» پس از ذخیرهٔ آزمون یا «خروج» در پنجرهٔ تأیید خروج).
+     */
+    fun <A : ComponentActivity> clickDialogOrLastText(
+        rule: AndroidComposeTestRule<*, A>,
+        text: String,
+        substring: Boolean = false
+    ) {
+        hideKeyboard(rule)
+        val inDialogMatcher = hasText(text, substring = substring) and hasAnyAncestor(isDialog())
+        val dialogNodes = rule.onAllNodes(inDialogMatcher).fetchSemanticsNodes()
+        if (dialogNodes.isNotEmpty()) {
+            val target = rule.onAllNodes(inDialogMatcher).onLast()
+            runCatching { target.performClick() }.recoverCatching {
+                target.performSemanticsAction(SemanticsActions.OnClick)
+            }.getOrThrow()
+            rule.waitForIdle()
+            return
+        }
+
+        val clickableMatcher = hasText(text, substring = substring) and hasClickAction()
+        if (rule.onAllNodes(clickableMatcher).fetchSemanticsNodes().isNotEmpty()) {
+            val target = rule.onAllNodes(clickableMatcher).onLast()
+            runCatching { target.performClick() }.recoverCatching {
+                target.performSemanticsAction(SemanticsActions.OnClick)
+            }.getOrThrow()
+            rule.waitForIdle()
+            return
+        }
+
+        val fallback = rule.onAllNodesWithText(text, substring = substring).onLast()
+        runCatching { fallback.performClick() }.recoverCatching {
+            fallback.performSemanticsAction(SemanticsActions.OnClick)
+        }.getOrThrow()
+        rule.waitForIdle()
+    }
+
+    /**
+     * اسکرول عمودی امن منحصراً روی ظرف دارای محور عمودی (`VerticalScrollAxisRange` — مانند `LazyColumn`
+     * یا `Column.verticalScroll`) تا ردیف‌های افقی چیپ‌های فیلتر (`horizontalScroll`) هرگز ژست `swipeUp`
+     * را نربایند و گره‌های برش‌خوردهٔ خارج دید هم وارد قاب شوند.
      */
     fun <A : ComponentActivity> scrollUntilTextVisible(
         rule: AndroidComposeTestRule<*, A>,
         text: String,
         substring: Boolean = false,
-        maxSwipes: Int = 8
+        maxSwipes: Int = 10
     ) {
         hideKeyboard(rule)
+        val verticalContainer = SemanticsMatcher.keyIsDefined(SemanticsProperties.VerticalScrollAxisRange)
         repeat(maxSwipes) {
-            if (rule.onAllNodesWithText(text, substring = substring).fetchSemanticsNodes().isNotEmpty()) {
+            val matching = rule.onAllNodesWithText(text, substring = substring).fetchSemanticsNodes()
+            if (matching.any { it.boundsInRoot.width > 4f && it.boundsInRoot.height > 4f }) {
                 return
             }
             runCatching {
-                rule.onAllNodes(isRoot()).onFirst().performTouchInput { swipeUp() }
+                val verticals = rule.onAllNodes(verticalContainer).fetchSemanticsNodes()
+                if (verticals.isNotEmpty()) {
+                    rule.onAllNodes(verticalContainer).onFirst().performTouchInput { swipeUp() }
+                } else {
+                    rule.onAllNodes(isRoot()).onFirst().performTouchInput { swipeUp() }
+                }
                 rule.waitForIdle()
             }
         }
@@ -92,7 +147,7 @@ object UiScreenshotHelper {
             node.children.forEach(::walk)
         }
         rule.onAllNodes(isRoot(), useUnmergedTree = true).fetchSemanticsNodes().forEach(::walk)
-        out.take(40).joinToString(" | ")
+        out.take(45).joinToString(" | ")
     }.getOrDefault("")
 
     /**
@@ -124,6 +179,7 @@ object UiScreenshotHelper {
         }
     }
 
+    @Suppress("DEPRECATION")
     fun <A : ComponentActivity> captureStep(
         rule: AndroidComposeTestRule<*, A>,
         filename: String,
@@ -232,12 +288,9 @@ object UiScreenshotHelper {
                 doOutput = true
                 setRequestProperty("Content-Type", "application/json; charset=utf-8")
             }
-            try {
-                conn.outputStream.use { it.write(payload) }
-                conn.responseCode
-            } finally {
-                conn.disconnect()
-            }
+            conn.outputStream.use { it.write(payload) }
+            conn.responseCode
+            conn.disconnect()
         }
     }
 }

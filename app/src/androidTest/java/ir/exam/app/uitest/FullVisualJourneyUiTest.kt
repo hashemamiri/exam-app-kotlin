@@ -1,6 +1,11 @@
 package ir.exam.app.uitest
 
+import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.test.hasClickAction
+import androidx.compose.ui.test.hasSetTextAction
+import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.isEnabled
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onAllNodesWithTag
@@ -11,7 +16,8 @@ import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
-import androidx.compose.ui.test.performTextInput
+import androidx.compose.ui.test.performSemanticsAction
+import androidx.compose.ui.test.performTextReplacement
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import ir.exam.app.MainActivity
@@ -22,16 +28,16 @@ import org.junit.Test
 import org.junit.runner.RunWith
 
 /**
- * V333.1 — سناریوی بصری و تعاملی سرتاسری دوپرسونایی (معلم ↔ دانش‌آموز ↔ معلم ↔ کارنامهٔ دانش‌آموز)
+ * V333.2 — سناریوی بصری و تعاملی سرتاسری دوپرسونایی (معلم ↔ دانش‌آموز ↔ معلم ↔ کارنامهٔ دانش‌آموز)
  * روی شبیه‌ساز واقعی Pixel 6 (API 34) همراه ثبت گالری تصاویر PNG از تمام مراحل کلیدی:
  *
  * ۱) صفحهٔ خوش‌آمد و ورود راست‌به‌چپ
  * ۲) ورود معلم، ساخت آزمون در آزمون‌ساز بومی و دریافت کد ۶حرفی
- * ۳) باز کردن آزمون روی کارت داشبورد معلم («بازکردن» → «باز») و خروج امن
+ * ۳) باز کردن آزمون روی کارت داشبورد معلم («بازکردن» → «بستن» / وضعیت باز) و خروج امن
  * ۴) ورود دانش‌آموز با نام کاربری، ورود با کد آزمون، پاسخ به سؤال فعال (با ثبت تصویر بدون شکستن FLAG_SECURE)
  * ۵) مرور و ارسال نهایی پاسخ دانش‌آموز و دریافت رسید ثبت
- * ۶) ورود مجدد معلم، گردش روی دستهٔ «کارت‌ها» تا کارت «تصحیح»، ثبت بازخورد تشریحی و ذخیرهٔ نمره
- * ۷) ورود مجدد دانش‌آموز، باز کردن منوی همبرگری («بازکردن منو» → «نتایج من»)، مشاهدهٔ کارنامهٔ توصیفی و بازخورد معلم
+ * ۶) ورود مجدد معلم، گردش چرخ‌وفلک «کارت‌ها» تا کارت فعال «تصحیح»، ثبت بازخورد تشریحی و ذخیرهٔ نمره
+ * ۷) ورود مجدد دانش‌آموز، باز کردن منو («منو» / «بازکردن منو» → «نتایج من»)، مشاهدهٔ کارنامهٔ توصیفی و بازخورد معلم
  */
 @RunWith(AndroidJUnit4::class)
 class FullVisualJourneyUiTest {
@@ -60,6 +66,7 @@ class FullVisualJourneyUiTest {
             rule.onAllNodesWithContentDescription("بازکردن منو").fetchSemanticsNodes().isNotEmpty() ->
                 rule.onNodeWithContentDescription("بازکردن منو").performClick()
         }
+        rule.waitForIdle()
     }
 
     private fun signOutIfAuthenticated() {
@@ -67,17 +74,17 @@ class FullVisualJourneyUiTest {
         rule.waitForIdle()
         if (rule.onAllNodesWithText("ورود به حساب").fetchSemanticsNodes().isNotEmpty()) return
         openMainMenu()
-        waitForText("خروج", timeout = 10_000)
+        UiScreenshotHelper.scrollUntilTextVisible(rule, "خروج")
         rule.onAllNodesWithText("خروج").onFirst().performClick()
         waitForText("خروج از حساب", timeout = 10_000)
-        rule.onAllNodesWithText("خروج").onLast().performClick()
+        UiScreenshotHelper.clickDialogOrLastText(rule, "خروج")
         waitForText("ورود به حساب", timeout = 30_000)
     }
 
     private fun extractSavedExamCode(): String {
         val nodes = rule.onAllNodesWithText("کد آزمون:", substring = true).fetchSemanticsNodes()
         assertTrue("کد آزمون در پنجرهٔ «ذخیره شد» یافت نشد", nodes.isNotEmpty())
-        return nodes.first().config[SemanticsProperties.Text].joinToString { it.text }
+        return nodes.last().config[SemanticsProperties.Text].joinToString { it.text }
             .substringAfter("کد آزمون:").trim().takeWhile { !it.isWhitespace() }
     }
 
@@ -108,8 +115,9 @@ class FullVisualJourneyUiTest {
             // ۲) ورود معلم + ساخت آزمون تازه
             rule.onNodeWithText("ورود به حساب").performClick()
             rule.onNodeWithText("معلم").performClick()
-            rule.onNodeWithText("ایمیل یا نام کاربری معلم").performTextInput(teacherUser)
-            rule.onNodeWithText("رمز عبور").performTextInput(teacherPass)
+            waitForText("ایمیل یا نام کاربری معلم", timeout = 10_000)
+            rule.onNodeWithText("ایمیل یا نام کاربری معلم").performTextReplacement(teacherUser)
+            rule.onNodeWithText("رمز عبور").performTextReplacement(teacherPass)
             UiScreenshotHelper.hideKeyboard(rule)
             rule.onNodeWithText("ورود با رمز عبور").performClick()
 
@@ -125,7 +133,7 @@ class FullVisualJourneyUiTest {
             val examTitle = "آزمون بصری خودکار ${System.currentTimeMillis() % 10000}"
             rule.onNodeWithText("مشخصات آزمون").performClick()
             waitForText("عنوان آزمون", timeout = 10_000)
-            rule.onNodeWithText("عنوان آزمون").performTextInput(examTitle)
+            rule.onNodeWithText("عنوان آزمون").performTextReplacement(examTitle)
             UiScreenshotHelper.hideKeyboard(rule)
             rule.onNodeWithText("بستن مشخصات آزمون").performClick()
 
@@ -137,13 +145,13 @@ class FullVisualJourneyUiTest {
                 rule.onAllNodesWithTag("builder-question-text").fetchSemanticsNodes().isNotEmpty()
             }
             rule.onAllNodesWithTag("builder-question-text").onLast()
-                .performTextInput("در مثلث قائم‌الزاویه، مربع وتر برابر مجموع مربعات دو ضلع قائمه است.")
+                .performTextReplacement("در مثلث قائم‌الزاویه، مربع وتر برابر مجموع مربعات دو ضلع قائمه است.")
             UiScreenshotHelper.hideKeyboard(rule)
             rule.onNodeWithText("صحیح").performScrollTo().performClick()
 
             UiScreenshotHelper.captureStep(
                 rule = rule,
-                filename = "02_teacher_builder_question.png",
+                filename = "02_mentor_builder_question.png",
                 title = "سازندهٔ بومی آزمون معلم در اندروید",
                 detail = "ساخت آزمون «$examTitle» و تنظیم کلید پاسخ صحیح/غلط"
             )
@@ -151,36 +159,43 @@ class FullVisualJourneyUiTest {
             UiScreenshotHelper.hideKeyboard(rule)
             rule.onNodeWithContentDescription("ذخیره آزمون").performClick()
             waitForText("تأیید و ذخیره", timeout = 15_000)
-            rule.onNodeWithText("تأیید و ذخیره").performClick()
+            UiScreenshotHelper.clickDialogOrLastText(rule, "تأیید و ذخیره")
             waitForText("ذخیره شد", timeout = netTimeout)
             val examCode = extractSavedExamCode()
             assertTrue("کد آزمون باید ۶ کاراکتر معتبر باشد", examCode.length >= 4)
 
-            // بازگشت مستقیم به فهرست آزمون‌های داشبورد معلم («بازگشت به آزمون‌ها» در ExamBuilderScreen)
+            // بازگشت مستقیم از پنجرهٔ محاوره‌ای «ذخیره شد» به فهرست آزمون‌های داشبورد معلم
             when {
                 rule.onAllNodesWithText("بازگشت به آزمون‌ها").fetchSemanticsNodes().isNotEmpty() ->
-                    rule.onNodeWithText("بازگشت به آزمون‌ها").performClick()
+                    UiScreenshotHelper.clickDialogOrLastText(rule, "بازگشت به آزمون‌ها")
                 rule.onAllNodesWithText("بازگشت به لیست").fetchSemanticsNodes().isNotEmpty() ->
-                    rule.onNodeWithText("بازگشت به لیست").performClick()
+                    UiScreenshotHelper.clickDialogOrLastText(rule, "بازگشت به لیست")
                 else -> {
-                    rule.onNodeWithText("ادامهٔ ویرایش").performClick()
+                    UiScreenshotHelper.clickDialogOrLastText(rule, "ادامهٔ ویرایش")
                     waitForText("ویرایش آزمون", timeout = 10_000)
                     rule.activityRule.scenario.onActivity { it.onBackPressedDispatcher.onBackPressed() }
                 }
             }
 
-            // ۳) باز کردن آزمون روی کارت داشبورد معلم
+            // ۳) اطمینان از بازگشت کامل به داشبورد معلم و باز کردن آزمون روی سرور
+            rule.waitUntil(netTimeout) {
+                rule.onAllNodesWithContentDescription("بازکردن افزودن سریع").fetchSemanticsNodes().isNotEmpty()
+            }
             waitForText(examTitle, timeout = 20_000)
-            rule.onNodeWithText(examTitle).performClick()
+            UiScreenshotHelper.scrollUntilTextVisible(rule, examTitle)
+            rule.onAllNodesWithText(examTitle).onFirst().performClick()
             rule.waitUntil(10_000) {
                 rule.onAllNodesWithContentDescription("بازکردن").fetchSemanticsNodes().isNotEmpty()
             }
-            rule.onNodeWithContentDescription("بازکردن").performClick()
-            waitForText("باز", timeout = 15_000)
+            rule.onAllNodesWithContentDescription("بازکردن").onFirst().performClick()
+            // صبر قطعی تا تکمیل RPC `native_set_exam_open_v1` و تبدیل دکمهٔ «بازکردن» به «بستن»
+            rule.waitUntil(netTimeout) {
+                rule.onAllNodesWithContentDescription("بستن").fetchSemanticsNodes().isNotEmpty()
+            }
 
             UiScreenshotHelper.captureStep(
                 rule = rule,
-                filename = "03_teacher_exam_open.png",
+                filename = "03_mentor_exam_open.png",
                 title = "داشبورد معلم — باز شدن آزمون با کد $examCode",
                 detail = "نمایش برچسب وضعیت «باز» و نوار عملیات کارت آزمون"
             )
@@ -192,13 +207,13 @@ class FullVisualJourneyUiTest {
             rule.onNodeWithText("ورود به حساب").performClick()
             rule.onNodeWithText("دانش‌آموز").performClick()
             waitForText("نام کاربری دانش‌آموز", timeout = 10_000)
-            rule.onNodeWithText("نام کاربری دانش‌آموز").performTextInput(studentUser)
-            rule.onNodeWithText("رمز عبور").performTextInput(studentPass)
+            rule.onNodeWithText("نام کاربری دانش‌آموز").performTextReplacement(studentUser)
+            rule.onNodeWithText("رمز عبور").performTextReplacement(studentPass)
             UiScreenshotHelper.hideKeyboard(rule)
-            rule.onAllNodesWithText("ورود").onLast().performClick()
+            UiScreenshotHelper.clickDialogOrLastText(rule, "ورود")
 
             waitForText("کد آزمون را وارد کنید", timeout = netTimeout)
-            rule.onNodeWithText("کد آزمون").performTextInput(examCode)
+            rule.onNodeWithText("کد آزمون").performTextReplacement(examCode)
             UiScreenshotHelper.hideKeyboard(rule)
             rule.onNodeWithText("ورود به آزمون").performClick()
 
@@ -206,7 +221,7 @@ class FullVisualJourneyUiTest {
             rule.onNodeWithText("شروع پاسخ‌گویی").performClick()
 
             waitForText("ارسال نهایی", timeout = 15_000)
-            rule.onNodeWithText("صحیح").performClick()
+            rule.onAllNodes(hasText("صحیح") and hasClickAction()).onFirst().performClick()
 
             UiScreenshotHelper.captureStep(
                 rule = rule,
@@ -218,7 +233,7 @@ class FullVisualJourneyUiTest {
             // ۵) ارسال نهایی پاسخ دانش‌آموز و مشاهدهٔ رسید
             rule.onNodeWithText("ارسال نهایی").performClick()
             waitForText("تأیید و ارسال نهایی", timeout = 10_000)
-            rule.onNodeWithText("تأیید و ارسال نهایی").performClick()
+            UiScreenshotHelper.clickDialogOrLastText(rule, "تأیید و ارسال نهایی")
             waitForText("پاسخ شما با موفقیت ثبت شد.", timeout = netTimeout)
 
             UiScreenshotHelper.captureStep(
@@ -232,69 +247,78 @@ class FullVisualJourneyUiTest {
             waitForText("کد آزمون را وارد کنید", timeout = netTimeout)
             signOutIfAuthenticated()
 
-            // ۶) ورود مجدد معلم → «کارت‌ها» → «تصحیح» → ثبت بازخورد و نمره
+            // ۶) ورود مجدد معلم → چرخ‌وفلک «کارت‌ها» → کارت فعال «تصحیح» → ثبت بازخورد و نمره
             rule.onNodeWithText("ورود به حساب").performClick()
             rule.onNodeWithText("معلم").performClick()
-            rule.onNodeWithText("ایمیل یا نام کاربری معلم").performTextInput(teacherUser)
-            rule.onNodeWithText("رمز عبور").performTextInput(teacherPass)
+            waitForText("ایمیل یا نام کاربری معلم", timeout = 10_000)
+            rule.onNodeWithText("ایمیل یا نام کاربری معلم").performTextReplacement(teacherUser)
+            rule.onNodeWithText("رمز عبور").performTextReplacement(teacherPass)
             UiScreenshotHelper.hideKeyboard(rule)
             rule.onNodeWithText("ورود با رمز عبور").performClick()
 
             rule.waitUntil(netTimeout) {
                 rule.onAllNodesWithContentDescription("کارت‌ها").fetchSemanticsNodes().isNotEmpty()
             }
+            val activeGradingCard = hasText("تصحیح") and hasClickAction() and isEnabled()
             rule.onNodeWithContentDescription("کارت‌ها").performClick()
+            rule.waitForIdle()
             var guard = 0
-            while (
-                guard < 16 &&
-                rule.onAllNodesWithText("همه پاسخ‌ها، حضور، بازخورد", substring = true).fetchSemanticsNodes().isEmpty()
-            ) {
+            while (guard < 16 && rule.onAllNodes(activeGradingCard).fetchSemanticsNodes().isEmpty()) {
                 rule.onNodeWithContentDescription("کارت‌ها").performClick()
                 rule.waitForIdle()
                 guard++
             }
-            rule.onAllNodesWithText("تصحیح").onFirst().performClick()
+            rule.waitUntil(10_000) {
+                rule.onAllNodes(activeGradingCard).fetchSemanticsNodes().isNotEmpty()
+            }
+            rule.onAllNodes(activeGradingCard).onFirst().performSemanticsAction(SemanticsActions.OnClick)
 
             waitForText(examTitle, timeout = netTimeout)
-            rule.onNodeWithText(examTitle).performClick()
+            UiScreenshotHelper.scrollUntilTextVisible(rule, examTitle)
+            rule.onAllNodesWithText(examTitle).onFirst().performClick()
             waitForText("ورود به تصحیح", timeout = 10_000)
-            rule.onNodeWithText("ورود به تصحیح").performClick()
+            rule.onAllNodesWithText("ورود به تصحیح").onFirst().performClick()
 
+            waitForText("تلاش", substring = true, timeout = netTimeout)
             val teacherFeedback = "آفرین! تسلط کامل بر قضیهٔ فیثاغورس."
-            UiScreenshotHelper.scrollUntilTextVisible(rule, "بازخورد")
-            rule.onNodeWithText("بازخورد").performTextInput(teacherFeedback)
+            val feedbackInput = hasText("بازخورد") and hasSetTextAction()
+            UiScreenshotHelper.scrollUntilTextVisible(rule, "ذخیره نمره")
+            rule.waitUntil(10_000) {
+                rule.onAllNodes(feedbackInput).fetchSemanticsNodes().isNotEmpty()
+            }
+            rule.onAllNodes(feedbackInput).onFirst().performTextReplacement(teacherFeedback)
             UiScreenshotHelper.hideKeyboard(rule)
             UiScreenshotHelper.scrollUntilTextVisible(rule, "ذخیره نمره")
-            rule.onNodeWithText("ذخیره نمره").performClick()
+            rule.onAllNodesWithText("ذخیره نمره").onFirst().performClick()
             waitForText("نمره و بازخورد ذخیره شد.", timeout = netTimeout)
 
             UiScreenshotHelper.captureStep(
                 rule = rule,
-                filename = "06_teacher_grading_feedback.png",
+                filename = "06_mentor_grading_feedback.png",
                 title = "پنل تصحیح معلم — ثبت بازخورد تشریحی و تأیید نمره",
                 detail = "ثبت بازخورد «$teacherFeedback» برای پاسخ دانش‌آموز"
             )
 
             signOutIfAuthenticated()
 
-            // ۷) ورود مجدد دانش‌آموز → منوی همبرگری («بازکردن منو») → «نتایج من» → کارنامه و جزئیات
+            // ۷) ورود مجدد دانش‌آموز → منو («منو» / «بازکردن منو») → «نتایج من» → کارنامه و جزئیات
             rule.onNodeWithText("ورود به حساب").performClick()
             rule.onNodeWithText("دانش‌آموز").performClick()
             waitForText("نام کاربری دانش‌آموز", timeout = 10_000)
-            rule.onNodeWithText("نام کاربری دانش‌آموز").performTextInput(studentUser)
-            rule.onNodeWithText("رمز عبور").performTextInput(studentPass)
+            rule.onNodeWithText("نام کاربری دانش‌آموز").performTextReplacement(studentUser)
+            rule.onNodeWithText("رمز عبور").performTextReplacement(studentPass)
             UiScreenshotHelper.hideKeyboard(rule)
-            rule.onAllNodesWithText("ورود").onLast().performClick()
+            UiScreenshotHelper.clickDialogOrLastText(rule, "ورود")
 
             waitForText("کد آزمون را وارد کنید", timeout = netTimeout)
             openMainMenu()
-            waitForText("نتایج من", timeout = 10_000)
-            rule.onNodeWithText("نتایج من").performClick()
+            UiScreenshotHelper.scrollUntilTextVisible(rule, "نتایج من")
+            rule.onAllNodesWithText("نتایج من").onFirst().performClick()
 
             waitForText("نتایج و پاسخ‌های من", timeout = netTimeout)
-            waitForText(examTitle, timeout = netTimeout)
+            waitForText("تصحیح‌شده", timeout = netTimeout)
             UiScreenshotHelper.scrollUntilTextVisible(rule, "مشاهده سؤال‌ها و پاسخ‌ها")
-            rule.onNodeWithText("مشاهده سؤال‌ها و پاسخ‌ها").performClick()
+            rule.onAllNodesWithText("مشاهده سؤال‌ها و پاسخ‌ها").onFirst().performClick()
             waitForText(teacherFeedback, substring = true, timeout = 15_000)
 
             UiScreenshotHelper.captureStep(

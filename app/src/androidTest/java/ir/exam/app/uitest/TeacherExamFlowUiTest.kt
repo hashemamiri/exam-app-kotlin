@@ -70,7 +70,7 @@ class TeacherExamFlowUiTest {
                 rule.onAllNodesWithText("ذخیره شد").fetchSemanticsNodes().isNotEmpty()
         }
         if (rule.onAllNodesWithText("تأیید و ذخیره").fetchSemanticsNodes().isNotEmpty()) {
-            rule.onNodeWithText("تأیید و ذخیره").performClick()
+            UiScreenshotHelper.clickDialogOrLastText(rule, "تأیید و ذخیره")
         }
         waitForText("ذخیره شد", timeout = netTimeout)
     }
@@ -124,7 +124,7 @@ class TeacherExamFlowUiTest {
         assertTrue("کد آزمون خالی است", code1.isNotBlank())
 
         // ادامهٔ ویرایش → ذخیرهٔ دوباره باید همان آزمون را با همان کد به‌روز کند
-        rule.onNodeWithText("ادامهٔ ویرایش").performClick()
+        UiScreenshotHelper.clickDialogOrLastText(rule, "ادامهٔ ویرایش")
         waitForText("ویرایش آزمون", timeout = 10_000)
         clickSaveAndConfirm()
         val code2 = savedCodeText()
@@ -134,7 +134,7 @@ class TeacherExamFlowUiTest {
         }
         UiScreenshotHelper.captureStep(
             rule = rule,
-            filename = "00_teacher_resave_same_code.png",
+            filename = "00_mentor_resave_same_code.png",
             title = "ذخیرهٔ مجدد آزمون با حفظ کد یکتا ($code2)",
             detail = "تأیید یکسان‌ماندن کد آزمون در ذخیرهٔ اول و دوم بدون ساخت آزمون تکراری"
         )
