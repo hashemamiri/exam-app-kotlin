@@ -863,10 +863,16 @@ def make_handler(state: MockSupabaseState):
                 self._send_json(200, {"ok": True, "email": target["email"]})
                 return
 
-            if fn == "native_staff_login_email_v1":
+            if fn == "resolve_login_email":
                 ident = str(params.get("p_username") or params.get("p_identifier") or "uitest_teacher")
                 target = state.find_user_by_identifier(ident)
                 self._send_json(200, target["email"])
+                return
+
+            if fn == "native_staff_login_email_v1":
+                ident = str(params.get("p_username") or params.get("p_identifier") or "uitest_teacher")
+                target = state.find_user_by_identifier(ident)
+                self._send_json(200, {"ok": True, "email": target["email"]})
                 return
 
             if fn in ("native_ensure_profile_v1", "native_my_profile"):
@@ -1471,8 +1477,7 @@ def make_handler(state: MockSupabaseState):
                 return
 
             if fn in ("my_classes", "native_my_classes_v28"):
-                cls_items = list(state.classes.values())
-                self._send_json(200, {"ok": True, "classes": cls_items} if fn == "native_my_classes_v28" else cls_items)
+                self._send_json(200, list(state.classes.values()))
                 return
 
             if fn in ("my_students", "my_students_for_pick"):
@@ -1537,11 +1542,33 @@ def make_handler(state: MockSupabaseState):
                 return
 
             if fn == "cal_unseen_v59":
-                self._send_json(200, 0)
+                self._send_json(200, {"ok": True, "notes": [], "count": 0})
+                return
+
+            if fn == "native_monitor_upsert_v1":
+                self._send_json(200, {"ok": True, "server_now": state.now_iso()})
+                return
+
+            if fn == "native_question_analysis_v1":
+                self._send_json(200, {"ok": True, "answer_count": len(state.answers), "cronbach_alpha": None, "questions": []})
+                return
+
+            if fn in (
+                "native_push_register_v1",
+                "native_push_unregister_v1",
+                "native_notifications_read_v284",
+                "fb_add",
+                "native_feedback_update_v1",
+                "native_feedback_delete_v1",
+                "cal_save_note",
+                "cal_mark_seen_v59",
+                "cal_delete_note",
+            ):
+                self._send_json(200, {"ok": True, "id": uuid.uuid4().hex[:12]})
                 return
 
             if fn in ("native_bank_snapshot_v1", "native_school_bank_v1"):
-                self._send_json(200, {"ok": True, "items": [], "questions": []})
+                self._send_json(200, {"ok": True, "items": [], "questions": [], "categories": []})
                 return
 
             self._send_json(200, {"ok": True})

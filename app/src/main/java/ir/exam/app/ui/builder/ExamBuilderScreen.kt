@@ -39,6 +39,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
@@ -332,7 +333,7 @@ fun ExamBuilderScreen(
             if (!state.loading) {
                 if (printMode) {
                     Row(
-                        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                        modifier = Modifier.fillMaxWidth().imePadding().padding(horizontal = 16.dp),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
@@ -432,7 +433,7 @@ fun ExamBuilderScreen(
                         }
                     }
                 } else {
-                    Box(Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+                    Box(Modifier.fillMaxWidth().imePadding().padding(horizontal = 16.dp)) {
                         FloatingActionButton(
                             onClick = requestSave,
                             modifier = Modifier.align(Alignment.CenterStart).size(56.dp),

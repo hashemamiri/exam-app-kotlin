@@ -728,7 +728,9 @@ class ExamBuilderViewModel(
     fun setAnswerLineSpacingCm(id: String, value: Float) { update(id) { it.copy(answerLineSpacingCm = (Math.round(value.coerceIn(0.5f, 2.0f) * 10f) / 10f)) } }
     /** V208 — چیدمان گزینه‌های چندگزینه‌ای در چاپ ("" = پیش‌فرض آزمون). */
     fun setOptionsLayout(id: String, value: String) { if (value in setOf("", "1row", "2rows", "4rows")) update(id) { it.copy(optionsLayout = value) } }
-    fun setTrueFalse(id: String, value: Boolean) { update(id) { it.copy(expectedText = value.toString()) } }
+    fun setTrueFalse(id: String, value: Boolean) {
+        update(id) { it.copy(expectedText = value.toString(), correctIndex = if (value) 0 else 1) }
+    }
     fun updateExpectedText(id: String, value: String) { update(id) { it.copy(expectedText = value) } }
     fun updateExpectedNumber(id: String, value: String) { update(id) { it.copy(expectedNumber = value.filter { c -> c.isDigit() || c == '.' || c == '-' }) } }
     fun updateTolerance(id: String, value: String) { update(id) { it.copy(tolerance = value.filter { c -> c.isDigit() || c == '.' }) } }

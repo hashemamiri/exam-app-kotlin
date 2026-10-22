@@ -73,8 +73,9 @@ object BuilderPreflight {
 
         questions.forEachIndexed { i, q ->
             val n = i + 1
+            val hasMedia = q.images.isNotEmpty() || q.hasInlineFigure() || !q.audioUri.isNullOrBlank()
             val hasFigureOnly = q.text.isBlank() && (q.images.isNotEmpty() || q.hasInlineFigure())
-            if (q.text.isBlank() && q.images.isEmpty() && !q.hasInlineFigure()) {
+            if (q.text.isBlank() && !hasMedia) {
                 add(n, "text.blank", BuilderIssueLevel.BLOCKER, "متن سؤال خالی است.")
             } else if (hasFigureOnly) {
                 add(n, "text.figureOnly", BuilderIssueLevel.HINT, "سؤال فقط تصویر/شکل دارد؛ متن کوتاه راهنما اضافه کنید.")
@@ -91,22 +92,42 @@ object BuilderPreflight {
             }
 
             when (q.type) {
-                QuestionType.MULTIPLE_CHOICE -> {
-                    val filled = q.options.map { it.trim() }.filter { it.isNotEmpty() }
-                    if (filled.size < 2) add(n, "mc.options", BuilderIssueLevel.BLOCKER, "سؤال چندگزینه‌ای باید دست‌کم دو گزینه داشته باشد.")
-                    if (q.options.any { it.isBlank() }) add(n, "mc.blankOption", BuilderIssueLevel.WARNING, "یکی از گزینه‌ها خالی است.")
-                    val distinct = filled.distinct()
-                    if (distinct.size != filled.size) add(n, "mc.duplicate", BuilderIssueLevel.WARNING, "گزینه‌های تکراری وجود دارد.")
+                QuestionType.MULTIPLE_CHOICE -> if (q.mode == "hotspot") {
+                    val activeZones = q.hotspots.mapIndexedNotNull { idx, z -> idx.takeIf { z.w > 0f && z.h > 0f } }
+                    if (activeZones.size < 2) add(n, "mc.options", BuilderIssueLevel.BLOCKER, "در انتخاب روی تصویر باید دست‌کم دو ناحیه مشخص شود.")
                     val correct = q.correctIndex
-                    if (correct == null || correct < 0 || correct >= q.options.size || q.options.getOrNull(correct)?.isBlank() != false) {
+                    if (correct == null || correct !in activeZones) {
+                        add(n, "mc.correct", BuilderIssueLevel.BLOCKER, "گزینهٔ صحیح روی تصویر انتخاب نشده است.")
+                    }
+                } else {
+                    val hasOptionContent = q.options.indices.map { idx ->
+                        q.options[idx].trim().isNotEmpty() || !q.optionImages.getOrNull(idx).isNullOrBlank()
+                    }
+                    val filledCount = hasOptionContent.count { it }
+                    if (filledCount < 2) add(n, "mc.options", BuilderIssueLevel.BLOCKER, "سؤال چندگزینه‌ای باید دست‌کم دو گزینه داشته باشد.")
+                    if (hasOptionContent.any { !it }) add(n, "mc.blankOption", BuilderIssueLevel.WARNING, "یکی از گزینه‌ها خالی است.")
+                    val textFilled = q.options.map { it.trim() }.filter { it.isNotEmpty() }
+                    if (textFilled.distinct().size != textFilled.size) add(n, "mc.duplicate", BuilderIssueLevel.WARNING, "گزینه‌های تکراری وجود دارد.")
+                    val correct = q.correctIndex
+                    if (correct == null || correct !in q.options.indices || !hasOptionContent[correct]) {
                         add(n, "mc.correct", BuilderIssueLevel.BLOCKER, "گزینهٔ صحیح انتخاب نشده است (یا خالی است).")
                     }
                 }
                 QuestionType.TRUE_FALSE -> {
-                    val correct = q.correctIndex
-                    if (correct == null || correct !in 0..1) add(n, "tf.correct", BuilderIssueLevel.BLOCKER, "پاسخ صحیح (درست/نادرست) انتخاب نشده است.")
+                    // V333.1 — در آزمون‌ساز بومی setTrueFalse مقدار «true/false» را در expectedText می‌گذارد؛
+                    // هر دو مسیر (expectedText و correctIndex) معتبرند و فقط وقتی هیچ‌کدام تعیین نشده خطای بازدارنده است.
+                    val hasExpected = q.expectedText.equals("true", ignoreCase = true) ||
+                        q.expectedText.equals("false", ignoreCase = true)
+                    val hasIndex = q.correctIndex != null && q.correctIndex in 0..1
+                    if (!hasExpected && !hasIndex) {
+                        add(n, "tf.correct", BuilderIssueLevel.BLOCKER, "پاسخ صحیح (درست/نادرست) انتخاب نشده است.")
+                    }
                 }
-                QuestionType.FILL_BLANK -> {
+                QuestionType.FILL_BLANK -> if (q.mode == "order") {
+                    if (q.orderItems.count { it.isNotBlank() } < 2) {
+                        add(n, "fill.order", BuilderIssueLevel.BLOCKER, "در سؤال مرتب‌سازی دست‌کم دو مورد بنویسید.")
+                    }
+                } else {
                     if (q.expectedText.isBlank()) add(n, "fill.expected", BuilderIssueLevel.BLOCKER, "پاسخ درست جای خالی نوشته نشده است.")
                     if (q.expectedText.contains("  ")) add(n, "fill.spaces", BuilderIssueLevel.HINT, "در پاسخ جای خالی فاصلهٔ اضافه هست.")
                 }
@@ -119,8 +140,8 @@ object BuilderPreflight {
                     else if (tol < 0) add(n, "numeric.toleranceNegative", BuilderIssueLevel.WARNING, "خطای مجاز منفی است.")
                 }
                 QuestionType.MATCHING -> {
-                    val left = q.matchingLeft.count { it.isNotBlank() }
-                    val right = q.matchingRight.count { it.isNotBlank() }
+                    val left = q.matchingLeft.indices.count { q.matchingLeft[it].isNotBlank() || !q.matchingLeftImages.getOrNull(it).isNullOrBlank() }
+                    val right = q.matchingRight.indices.count { q.matchingRight[it].isNotBlank() || !q.matchingRightImages.getOrNull(it).isNullOrBlank() }
                     if (left < 2 || right < 2) add(n, "match.items", BuilderIssueLevel.BLOCKER, "سؤال جورکردنی باید دست‌کم دو مورد در هر ستون داشته باشد.")
                     if (left != right) add(n, "match.balance", BuilderIssueLevel.WARNING, "تعداد موارد دو ستون برابر نیست ($left و $right).")
                     val missing = (0 until left).filter { q.matchingPairs[it] == null }

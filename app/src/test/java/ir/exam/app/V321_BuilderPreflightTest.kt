@@ -3,6 +3,7 @@ package ir.exam.app
 import ir.exam.app.ui.builder.BuilderIssueLevel
 import ir.exam.app.ui.builder.BuilderPreflight
 import ir.exam.app.ui.builder.BuilderPreflightReport
+import ir.exam.app.ui.builder.HotspotRect
 import ir.exam.app.ui.builder.QuestionDraft
 import ir.exam.app.ui.builder.QuestionType
 import org.junit.Assert.assertEquals
@@ -98,5 +99,44 @@ class V321_BuilderPreflightTest {
         assertTrue(text.contains("بررسی نهایی"))
         assertTrue(text.contains("سؤال 1"))
         assertEquals(BuilderIssueLevel.BLOCKER, report.issues.first { it.questionIndex == 1 }.level)
+    }
+
+    @Test
+    fun trueFalseAcceptsExpectedTextFromNativeEditorAndBlocksUnselected() {
+        // V333.1 — رگرسیون کشف‌شده توسط تست واقعی شبیه‌ساز Pixel 6:
+        // دکمهٔ «صحیح/غلط» در آزمون‌ساز بومی expectedText="true"/"false" را پر می‌کند.
+        val unselected = QuestionDraft(type = QuestionType.TRUE_FALSE, text = "آیا زمین گرد است؟")
+        val blocked = BuilderPreflight.check("آزمون", listOf(unselected))
+        assertFalse(blocked.canSave)
+        assertTrue(blocked.blockers.any { it.code == "tf.correct" })
+
+        val trueSelected = unselected.copy(expectedText = "true")
+        val falseSelected = unselected.copy(expectedText = "false")
+        assertTrue(BuilderPreflight.check("آزمون", listOf(trueSelected)).canSave)
+        assertTrue(BuilderPreflight.check("آزمون", listOf(falseSelected)).canSave)
+    }
+
+    @Test
+    fun primaryOrderAndHotspotModesValidateActualEditorFields() {
+        val orderValid = QuestionDraft(
+            type = QuestionType.FILL_BLANK,
+            text = "به ترتیب بنویسید",
+            mode = "order",
+            orderItems = listOf("بهار", "تابستان", "پاییز")
+        )
+        assertTrue(BuilderPreflight.check("آزمون ابتدایی", listOf(orderValid)).canSave)
+
+        val orderInvalid = orderValid.copy(orderItems = listOf("فقط یکی"))
+        assertTrue(BuilderPreflight.check("آزمون ابتدایی", listOf(orderInvalid)).blockers.any { it.code == "fill.order" })
+
+        val hotspotValid = QuestionDraft(
+            type = QuestionType.MULTIPLE_CHOICE,
+            text = "روی برگ کلیک کنید",
+            mode = "hotspot",
+            options = listOf("", "", "", ""),
+            hotspots = listOf(HotspotRect(10f, 10f, 18f, 18f), HotspotRect(50f, 50f, 18f, 18f), HotspotRect(0f, 0f, 0f, 0f), HotspotRect(0f, 0f, 0f, 0f)),
+            correctIndex = 1
+        )
+        assertTrue(BuilderPreflight.check("آزمون ابتدایی", listOf(hotspotValid)).canSave)
     }
 }

@@ -14,6 +14,13 @@ object SupabaseProvider {
     @Volatile
     private var appContext: android.content.Context? = null
 
+    @Volatile
+    private var testOverride: SupabaseClient? = null
+
+    internal fun overrideForTesting(client: SupabaseClient?) {
+        testOverride = client
+    }
+
     /**
      * V75.7 — باید از کلاس Application صدا زده شود (ExamApplication.onCreate)،
      * پیش از هر دسترسی به client؛ در غیر این صورت نشست نمی‌تواند رمزنگاری شود.
@@ -23,7 +30,7 @@ object SupabaseProvider {
         appContext = context.applicationContext
     }
 
-    val client: SupabaseClient by lazy {
+    private val defaultClient: SupabaseClient by lazy {
         require(BuildConfig.SUPABASE_URL.isNotBlank()) { "SUPABASE_URL در تنظیمات build وارد نشده است" }
         require(BuildConfig.SUPABASE_ANON_KEY.isNotBlank()) { "SUPABASE_ANON_KEY در تنظیمات build وارد نشده است" }
 
@@ -48,4 +55,7 @@ object SupabaseProvider {
             install(Functions)
         }
     }
+
+    val client: SupabaseClient
+        get() = testOverride ?: defaultClient
 }

@@ -1,9 +1,10 @@
 name: تست UI اپ روی شبیه‌ساز
-# V333.0 — اجرای خودکار و موازی تست بصری و تعاملی Compose روی شبیه‌ساز واقعی Pixel 6 (API 34):
-# - هم به‌صورت خودکار و موازی با هر push روی main و staging اجرا می‌شود (بدون مسدود کردن ساخت APK و بدون نیاز به Secret رمز عبور)
-# - هم به‌صورت دستی با یک کلیک (Run workflow) قابل اجراست:
-#   * اگر فیلدهای ورودی خالی باشند → به‌صورت خودکار به سرور آزمایشی محلی (10.0.2.2:18991) متصل می‌شود تا هیچ دادهٔ واقعی مدرسه تغییر نکند.
-#   * اگر نام کاربری/رمز آزمایشی وارد شود → مستقیماً روی Supabase واقعی تست می‌شود.
+# V333.1 — اجرای خودکار و ایزولهٔ تست بصری و تعاملی Compose روی شبیه‌ساز واقعی Pixel 6 (API 34):
+# - در تمام pushها روی main و staging همیشه به‌صورت ۱۰۰٪ ایزوله روی سرور آزمایشی محلی (10.0.2.2:18991)
+#   با هر دو نقش معلم و دانش‌آموز (۰ تست ردشده، بدون دست‌زدن به داده‌های واقعی مدرسه) اجرا می‌شود.
+# - در اجرای دستی (Run workflow):
+#   * به‌طور پیش‌فرض (use_live_supabase = false) روی سرور آزمایشی محلی ایزوله اجرا می‌شود.
+#   * در صورت فعال‌کردن دستی use_live_supabase = true، از ورودی‌های دستی یاUI_TEST_TEACHER_USER / UI_TEST_TEACHER_PASS استفاده می‌کند.
 on:
   push:
     branches: [main, staging]
@@ -15,12 +16,17 @@ on:
       - '!app/src/test/**'
   workflow_dispatch:
     inputs:
+      use_live_supabase:
+        description: 'اجرای دستی روی Supabase واقعی (پیش‌فرض false = سرور آزمایشی محلی ایزوله)'
+        required: false
+        default: false
+        type: boolean
       teacher_user:
-        description: 'نام کاربری معلم آزمایشی (خالی = اجرای ایزوله روی سرور آزمایشی محلی بدون نیاز به رمز)'
+        description: 'نام کاربری معلم آزمایشی (اختیاری)'
         required: false
         default: ''
       teacher_pass:
-        description: 'رمز معلم آزمایشی (خالی = اجرای ایزوله روی سرور آزمایشی محلی بدون نیاز به رمز)'
+        description: 'رمز معلم آزمایشی (اختیاری)'
         required: false
         default: ''
       student_user:
@@ -60,17 +66,19 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
       - name: پذیرش مجوزهای SDK
         run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null || true
-      - name: راه‌اندازی سرور آزمایشی محلی و تنظیم اتصال (خودکار بدون نیاز به Secret)
+      - name: راه‌اندازی سرور آزمایشی محلی و تنظیم اتصال ایزوله (خودکار بدون نیاز به Secret)
         id: target_cfg
         env:
+          EVENT_NAME: ${{ github.event_name }}
+          USE_LIVE: ${{ inputs.use_live_supabase }}
           LIVE_URL: ${{ secrets.SUPABASE_URL }}
           LIVE_ANON: ${{ secrets.SUPABASE_ANON_KEY }}
           IN_USER: ${{ inputs.teacher_user }}
           IN_PASS: ${{ inputs.teacher_pass }}
           IN_STU_USER: ${{ inputs.student_user }}
           IN_STU_PASS: ${{ inputs.student_pass }}
-          SEC_USER: ${{ secrets.UI_TEST_TEACHER_USER }}
-          SEC_PASS: ${{ secrets.UI_TEST_TEACHER_PASS }}
+          SEC_USER: ${{ github.event_name == 'workflow_dispatch' && inputs.use_live_supabase && secrets.UI_TEST_TEACHER_USER || '' }}
+          SEC_PASS: ${{ github.event_name == 'workflow_dispatch' && inputs.use_live_supabase && secrets.UI_TEST_TEACHER_PASS || '' }}
         run: |
           set -Eeuo pipefail
           mkdir -p android-ui-report
@@ -87,12 +95,14 @@ jobs:
           done
           MOCK_ANON="$(python3 -c 'import json; print(json.load(open("/tmp/mock_health.json"))["anon_key"])')"
 
-          T_USER="${IN_USER:-$SEC_USER}"
-          T_PASS="${IN_PASS:-$SEC_PASS}"
-          if [ -n "$T_USER" ] && [ -n "$T_PASS" ] && [ -n "$LIVE_URL" ] && [ -n "$LIVE_ANON" ]; then
+          T_CAND="${IN_USER:-$SEC_USER}"
+          P_CAND="${IN_PASS:-$SEC_PASS}"
+          if [ "$EVENT_NAME" = "workflow_dispatch" ] && [ "$USE_LIVE" = "true" ] && [ -n "$T_CAND" ] && [ -n "$P_CAND" ] && [ -n "$LIVE_URL" ] && [ -n "$LIVE_ANON" ]; then
             echo "mode=live-supabase" >> "$GITHUB_OUTPUT"
             printf 'SUPABASE_URL=%s\nSUPABASE_ANON_KEY=%s\nAPP_VERSION_CODE=2099999900\nAPP_VERSION_NAME=ui-test\n' \
               "$LIVE_URL" "$LIVE_ANON" > local.properties
+            T_USER="$T_CAND"
+            T_PASS="$P_CAND"
             echo "::add-mask::$T_PASS"
             S_USER="${IN_STU_USER:-}"
             S_PASS="${IN_STU_PASS:-}"
@@ -101,7 +111,7 @@ jobs:
             echo "mode=local-mock-supabase" >> "$GITHUB_OUTPUT"
             printf 'SUPABASE_URL=http://10.0.2.2:18991\nSUPABASE_ANON_KEY=%s\nAPP_VERSION_CODE=2099999900\nAPP_VERSION_NAME=ui-test\n' \
               "$MOCK_ANON" > local.properties
-            EPHEMERAL_CRED="$(python3 -c 'import secrets; print(secrets.token_urlsafe(12))')"
+            EPHEMERAL_CRED="$(python3 -c 'import secrets; print("pw_" + secrets.token_hex(8))')"
             T_USER="uitest_teacher"
             T_PASS="$EPHEMERAL_CRED"
             S_USER="uitest_student"
@@ -132,7 +142,7 @@ jobs:
           RC=$?
           set -e
           python3 - <<'PY' | tee -a "$GITHUB_STEP_SUMMARY"
-          import glob, html, os, pathlib, re
+          import glob, os, pathlib, xml.etree.ElementTree as ET
           files = sorted(set(
               glob.glob('app/build/**/androidTest-results/**/*.xml', recursive=True) +
               glob.glob('app/build/outputs/androidTest-results/**/*.xml', recursive=True)
@@ -142,30 +152,46 @@ jobs:
           if not files:
               print('- ❌ هیچ فایل نتیجهٔ تست (`XML`) پیدا نشد — لاگ اجرای شبیه‌ساز در بالا را ببینید.')
           for f in files:
-              t = open(f, encoding='utf-8', errors='ignore').read()
-              m = re.search(r'tests="(\d+)"[^>]*?failures="(\d+)"[^>]*?errors="(\d+)"', t)
-              print(f'- `{f}`: ' + (f'tests={m.group(1)} failures={m.group(2)} errors={m.group(3)}' if m else '(بدون خلاصه)'))
-              for name in re.findall(r'<testcase name="([^"]+)"', t):
-                  print(f'  - ✅ تست: `{name}`')
-              for msg in re.findall(r'<failure message="([^"]*)"', t):
-                  print('  - ❌ **علت شکست:** ' + html.unescape(msg)[:600])
-              for body in re.findall(r'<failure[^>]*>([\s\S]*?)</failure>', t):
-                  lines = [l for l in html.unescape(body).splitlines() if l.strip()][:12]
-                  print('    ```'); print('\n'.join(lines)); print('    ```')
+              root = ET.parse(f).getroot()
+              tests = root.attrib.get('tests', '?')
+              skipped = root.attrib.get('skipped', '0')
+              failures = root.attrib.get('failures', '0')
+              errors = root.attrib.get('errors', '0')
+              print(f'- `{f}`: `tests={tests}, skipped={skipped}, failures={failures}, errors={errors}`')
+              for tc in root.findall('.//testcase'):
+                  name = tc.attrib.get('name', '?')
+                  fail = tc.find('failure')
+                  err = tc.find('error')
+                  skip = tc.find('skipped')
+                  if fail is not None or err is not None:
+                      node = fail if fail is not None else err
+                      msg = (node.attrib.get('message') or '').strip()
+                      body = '\n'.join(l for l in (node.text or '').splitlines() if l.strip())[:1400]
+                      print(f'  - ❌ **ناموفق:** `{name}` — {msg[:500]}')
+                      if body:
+                          print('    ```')
+                          print(body)
+                          print('    ```')
+                  elif skip is not None:
+                      print(f'  - ⏭️ **ردشده:** `{name}`')
+                  else:
+                      print(f'  - ✅ **موفق:** `{name}`')
           summary_md = pathlib.Path('android-ui-report/summary.md')
           if summary_md.is_file():
               print()
               print(summary_md.read_text(encoding='utf-8'))
           PY
           exit $RC
-      - name: بایگانی تصاویر PNG، گالری بصری HTML و گزارش‌های تست اندروید
+      - name: بارگذاری گالری بصری و تصاویر شبیه‌ساز اندروید
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: android-ui-visual-report-${{ github.ref_name }}-${{ github.run_number }}
+          name: android-visual-ui-report-${{ github.ref_name }}
           path: |
             android-ui-report/
-            app/build/reports/androidTests/
             app/build/outputs/androidTest-results/
-          if-no-files-found: warn
+          if-no-files-found: ignore
           retention-days: 14
+      - name: توقف سرور آزمایشی محلی
+        if: always()
+        run: kill "${{ steps.target_cfg.outputs.mock_pid }}" 2>/dev/null || true
