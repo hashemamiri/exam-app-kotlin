@@ -6,8 +6,8 @@ import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onAllNodesWithText
-import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onLast
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
@@ -22,11 +22,9 @@ import org.junit.Test
 import org.junit.runner.RunWith
 
 /**
- * V276 — تست پرسونای معلم روی شبیه‌ساز واقعی (گردش کار دستی «تست UI اپ روی شبیه‌ساز»).
- * سناریو: ورود معلم با نام کاربری → «+» → «آزمون جدید» → عنوان → سؤال صحیح/غلط → ذخیره →
- * پنجرهٔ «ذخیره شد» با یادآوری «آزمون فعلاً بسته است» → «ادامهٔ ویرایش» → ذخیرهٔ دوباره →
- * همان کد (نه آزمون تکراری؛ باگ V275.1) و عنوان صفحه «ویرایش آزمون».
- * نام کاربری/رمز از آرگومان‌های instrumentation (teacherUser / teacherPass) می‌آیند؛ هرگز در کد نیستند.
+ * V276 / V333.0 — تست پرسونای معلم روی شبیه‌ساز واقعی همراه ثبت تصاویر واقعی Compose.
+ * نام کاربری/رمز از آرگومان‌های instrumentation (`teacherUser` / `teacherPass`) می‌آیند؛
+ * در حالت بدون Secret، گردش کار به‌صورت خودکار سرور آزمایشی محلی (`10.0.2.2:18991`) را متصل می‌کند.
  */
 @RunWith(AndroidJUnit4::class)
 class TeacherExamFlowUiTest {
@@ -53,6 +51,17 @@ class TeacherExamFlowUiTest {
         val pass = args.getString("teacherPass").orEmpty()
         assertTrue("teacherUser/teacherPass خالی است (Secret یا ورودی گردش کار را پر کنید)", user.isNotBlank() && pass.isNotBlank())
 
+        // اگر از اجرای قبلی نشستی باز مانده باشد، ابتدا خارج می‌شویم
+        if (rule.onAllNodesWithText("ورود به حساب").fetchSemanticsNodes().isEmpty()) {
+            if (rule.onAllNodesWithContentDescription("منو").fetchSemanticsNodes().isNotEmpty()) {
+                rule.onNodeWithContentDescription("منو").performClick()
+                waitForText("خروج", timeout = 10_000)
+                rule.onAllNodesWithText("خروج").onLast().performClick()
+                waitForText("خروج از حساب", timeout = 10_000)
+                rule.onAllNodesWithText("خروج").onLast().performClick()
+            }
+        }
+
         // ورود
         waitForText("ورود به حساب", timeout = 30_000)
         rule.onNodeWithText("ورود به حساب").performClick()
@@ -69,10 +78,9 @@ class TeacherExamFlowUiTest {
 
         // سازندهٔ آزمون
         waitForText("ساخت آزمون", timeout = 15_000)
-        // V276.2 — تا state.loading تمام نشود فهرست (و دکمهٔ «مشخصات آزمون») رندر نمی‌شود؛ باید منتظر ماند
         waitForText("مشخصات آزمون")
         val title = "UI-TEST ${System.currentTimeMillis() / 1000}"
-        rule.onNodeWithText("مشخصات آزمون").performClick() // کارت مشخصات پیش‌فرض بسته است
+        rule.onNodeWithText("مشخصات آزمون").performClick()
         waitForText("عنوان آزمون", timeout = 10_000)
         rule.onNodeWithText("عنوان آزمون").performTextInput(title)
         rule.onNodeWithText("بستن مشخصات آزمون").performClick()
@@ -105,5 +113,11 @@ class TeacherExamFlowUiTest {
         rule.onAllNodesWithText("آزمون فعلاً بسته است", substring = true).fetchSemanticsNodes().let {
             assertTrue("یادآوری «بسته است» فقط برای آزمون تازه باید بیاید", it.isEmpty())
         }
+        UiScreenshotHelper.captureStep(
+            rule = rule,
+            filename = "00_teacher_resave_same_code.png",
+            title = "پایداری کد ۶حرفی آزمون در ذخیرهٔ مجدد معلم",
+            detail = "کد $code2 بدون ساخت رکورد تکراری ثابت ماند"
+        )
     }
 }

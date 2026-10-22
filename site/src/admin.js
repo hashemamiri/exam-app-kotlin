@@ -52,7 +52,7 @@
       var r = await Promise.all([S.api.examDetail(examId), S.select('answers', 'select=*&exam_id=eq.' + encodeURIComponent(examId) + '&order=submitted_at.desc')]);
       var exam = r[0], answers = r[1] || [];
       var keys = {}; (Array.isArray(exam.__answers) ? exam.__answers : []).forEach(function (k, i) { if (k && typeof k === 'object') keys[k.i != null ? k.i : i] = k; });
-      var questions = (Array.isArray(exam.questions) ? exam.questions : []).map(function (q, i) { var k=keys[i]||{};var ps=Array.isArray(q.assessmentParts)?q.assessmentParts.map(function(p,pi){return Object.assign({},p,{rubric:(k.partRubrics||[])[pi]||''});}):[];return Object.assign({}, q, {assessmentParts:ps,__key:k, __type: qt(q.type)}); });
+      var questions = (Array.isArray(exam.questions) ? exam.questions : []).map(function (q, i) { var k=keys[i]||{};var ps=Array.isArray(q.assessmentParts)?q.assessmentParts.map(function(p,pi){return Object.assign({},p,{rubric:(k.partRubrics||[])[pi]||''});}):[];return Object.assign({}, q, {rubric:q.rubric||k.rubric||'', assessmentParts:ps,__key:k, __type: qt(q.type)}); });
       c.innerHTML = '';
       var head = el('div', {class: 'row', style: 'margin-bottom:12px'}, [el('button', {class: 'btn light sm', text: '→ همهٔ آزمون‌ها', onclick: function () { S.go('grading'); }}), el('h2', {class: 'grow', style: 'margin:0;font-size:18px', text: exam.title}), el('span', {class: 'chip', text: 'بارم ' + fa(S.fmtScore(exam.total_score))}), el('span', {class: 'chip', text: fa(answers.length) + ' پاسخ'})]);
       c.appendChild(head);

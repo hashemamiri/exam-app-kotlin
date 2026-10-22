@@ -1,18 +1,34 @@
 name: تست UI اپ روی شبیه‌ساز
-# V276 — «تست پرسونا» برای اپ اندروید: چون در محیط توسعه شبیه‌ساز نداریم، تست UI واقعی روی شبیه‌ساز
-# مدیریت‌شدهٔ Gradle (Pixel 6 / API 34) در GitHub Actions اجرا می‌شود. فقط دستی:
-# GitHub → Actions → «تست UI اپ روی شبیه‌ساز» → Run workflow (نام کاربری/رمز معلم آزمایشی را وارد کنید
-# یا Secretهای UI_TEST_TEACHER_USER / UI_TEST_TEACHER_PASS را یک بار بسازید).
-# خروجی: گزارش HTML تست + logcat به‌عنوان Artifact (۱۴ روز). هیچ APK منتشر نمی‌شود.
+# V333.0 — اجرای خودکار و موازی تست بصری و تعاملی Compose روی شبیه‌ساز واقعی Pixel 6 (API 34):
+# - هم به‌صورت خودکار و موازی با هر push روی main و staging اجرا می‌شود (بدون مسدود کردن ساخت APK و بدون نیاز به Secret رمز عبور)
+# - هم به‌صورت دستی با یک کلیک (Run workflow) قابل اجراست:
+#   * اگر فیلدهای ورودی خالی باشند → به‌صورت خودکار به سرور آزمایشی محلی (10.0.2.2:18991) متصل می‌شود تا هیچ دادهٔ واقعی مدرسه تغییر نکند.
+#   * اگر نام کاربری/رمز آزمایشی وارد شود → مستقیماً روی Supabase واقعی تست می‌شود.
 on:
+  push:
+    branches: [main, staging]
+    paths:
+      - 'app/**'
+      - 'text/APP_VERSION.txt'
+      - 'scripts/mock_supabase_server.py'
+      - '.github/workflows/app-ui-test.yml'
+      - '!app/src/test/**'
   workflow_dispatch:
     inputs:
       teacher_user:
-        description: 'نام کاربری معلم آزمایشی (خالی = Secret UI_TEST_TEACHER_USER)'
+        description: 'نام کاربری معلم آزمایشی (خالی = اجرای ایزوله روی سرور آزمایشی محلی بدون نیاز به رمز)'
         required: false
         default: ''
       teacher_pass:
-        description: 'رمز معلم آزمایشی (خالی = Secret UI_TEST_TEACHER_PASS)'
+        description: 'رمز معلم آزمایشی (خالی = اجرای ایزوله روی سرور آزمایشی محلی بدون نیاز به رمز)'
+        required: false
+        default: ''
+      student_user:
+        description: 'نام کاربری دانش‌آموز آزمایشی (اختیاری)'
+        required: false
+        default: ''
+      student_pass:
+        description: 'رمز دانش‌آموز آزمایشی (اختیاری)'
         required: false
         default: ''
 
@@ -20,8 +36,8 @@ permissions:
   contents: read
 
 concurrency:
-  group: app-ui-test
-  cancel-in-progress: false
+  group: app-ui-test-${{ github.ref_name }}
+  cancel-in-progress: true
 
 jobs:
   ui-test:
@@ -44,61 +60,111 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
       - name: پذیرش مجوزهای SDK
         run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null || true
-      - name: آماده‌سازی اتصال Supabase (کلید عمومی از Secret)
+      - name: راه‌اندازی سرور آزمایشی محلی و تنظیم اتصال (خودکار بدون نیاز به Secret)
+        id: target_cfg
         env:
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
-        run: |
-          test -n "$SUPABASE_URL"
-          test -n "$SUPABASE_ANON_KEY"
-          # شمارهٔ نسخهٔ بسیار بالا تا پنجرهٔ «بروزرسانی جدید» وسط تست باز نشود
-          printf 'SUPABASE_URL=%s\nSUPABASE_ANON_KEY=%s\nAPP_VERSION_CODE=2099999900\nAPP_VERSION_NAME=ui-test\n' "$SUPABASE_URL" "$SUPABASE_ANON_KEY" > local.properties
-      - name: اجرای تست UI روی شبیه‌ساز مدیریت‌شده
-        env:
+          LIVE_URL: ${{ secrets.SUPABASE_URL }}
+          LIVE_ANON: ${{ secrets.SUPABASE_ANON_KEY }}
           IN_USER: ${{ inputs.teacher_user }}
           IN_PASS: ${{ inputs.teacher_pass }}
+          IN_STU_USER: ${{ inputs.student_user }}
+          IN_STU_PASS: ${{ inputs.student_pass }}
           SEC_USER: ${{ secrets.UI_TEST_TEACHER_USER }}
           SEC_PASS: ${{ secrets.UI_TEST_TEACHER_PASS }}
         run: |
           set -Eeuo pipefail
-          T_USER="${IN_USER:-$SEC_USER}"; T_PASS="${IN_PASS:-$SEC_PASS}"
-          if [ -z "$T_USER" ] || [ -z "$T_PASS" ]; then echo "نام کاربری/رمز معلم آزمایشی داده نشده (ورودی گردش کار یا Secret)."; exit 1; fi
-          echo "::add-mask::$T_PASS"
+          mkdir -p android-ui-report
+          nohup python3 scripts/mock_supabase_server.py \
+            --host 0.0.0.0 \
+            --port 18991 \
+            --artifact-dir android-ui-report > android-ui-report/mock-server.log 2>&1 &
+          echo "mock_pid=$!" >> "$GITHUB_OUTPUT"
+          for _ in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:18991/__test__/health > /tmp/mock_health.json 2>/dev/null; then
+              break
+            fi
+            sleep 0.3
+          done
+          MOCK_ANON="$(python3 -c 'import json; print(json.load(open("/tmp/mock_health.json"))["anon_key"])')"
+
+          T_USER="${IN_USER:-$SEC_USER}"
+          T_PASS="${IN_PASS:-$SEC_PASS}"
+          if [ -n "$T_USER" ] && [ -n "$T_PASS" ] && [ -n "$LIVE_URL" ] && [ -n "$LIVE_ANON" ]; then
+            echo "mode=live-supabase" >> "$GITHUB_OUTPUT"
+            printf 'SUPABASE_URL=%s\nSUPABASE_ANON_KEY=%s\nAPP_VERSION_CODE=2099999900\nAPP_VERSION_NAME=ui-test\n' \
+              "$LIVE_URL" "$LIVE_ANON" > local.properties
+            echo "::add-mask::$T_PASS"
+            S_USER="${IN_STU_USER:-}"
+            S_PASS="${IN_STU_PASS:-}"
+            [ -n "$S_PASS" ] && echo "::add-mask::$S_PASS"
+          else
+            echo "mode=local-mock-supabase" >> "$GITHUB_OUTPUT"
+            printf 'SUPABASE_URL=http://10.0.2.2:18991\nSUPABASE_ANON_KEY=%s\nAPP_VERSION_CODE=2099999900\nAPP_VERSION_NAME=ui-test\n' \
+              "$MOCK_ANON" > local.properties
+            EPHEMERAL_CRED="$(python3 -c 'import secrets; print(secrets.token_urlsafe(12))')"
+            T_USER="uitest_teacher"
+            T_PASS="$EPHEMERAL_CRED"
+            S_USER="uitest_student"
+            S_PASS="$EPHEMERAL_CRED"
+          fi
+          {
+            echo "t_user=$T_USER"
+            echo "t_pass=$T_PASS"
+            echo "s_user=$S_USER"
+            echo "s_pass=$S_PASS"
+          } >> "$GITHUB_OUTPUT"
+      - name: اجرای تست UI و ثبت گالری بصری روی شبیه‌ساز مدیریت‌شده Pixel 6
+        env:
+          T_USER: ${{ steps.target_cfg.outputs.t_user }}
+          T_PASS: ${{ steps.target_cfg.outputs.t_pass }}
+          S_USER: ${{ steps.target_cfg.outputs.s_user }}
+          S_PASS: ${{ steps.target_cfg.outputs.s_pass }}
+          RUN_MODE: ${{ steps.target_cfg.outputs.mode }}
+        run: |
           set +e
           ./gradlew :app:uiPixel6Api34DebugAndroidTest \
             -PbaselineAbi=x86_64 \
             -Pandroid.testInstrumentationRunnerArguments.teacherUser="$T_USER" \
             -Pandroid.testInstrumentationRunnerArguments.teacherPass="$T_PASS" \
+            -Pandroid.testInstrumentationRunnerArguments.studentUser="$S_USER" \
+            -Pandroid.testInstrumentationRunnerArguments.studentPass="$S_PASS" \
             -Pandroid.testoptions.manageddevices.emulator.gpu=swiftshader_indirect
           RC=$?
           set -e
-          # V276.1 — علت شکست تست همین‌جا (و در صفحهٔ Summary اجرا) چاپ می‌شود؛ نیازی به باز کردن Artifact نیست
           python3 - <<'PY' | tee -a "$GITHUB_STEP_SUMMARY"
-          import glob, html, re
-          files = glob.glob('app/build/**/androidTest-results/**/*.xml', recursive=True) + glob.glob('app/build/outputs/androidTest-results/**/*.xml', recursive=True)
-          files = sorted(set(files))
-          print('## نتیجهٔ تست UI اپ')
+          import glob, html, os, pathlib, re
+          files = sorted(set(
+              glob.glob('app/build/**/androidTest-results/**/*.xml', recursive=True) +
+              glob.glob('app/build/outputs/androidTest-results/**/*.xml', recursive=True)
+          ))
+          print('## 📱 نتیجهٔ تست خودکار UI اپ اندروید (`Pixel 6 · API 34`)')
+          print(f'- **حالت اتصال سرور:** `{os.environ.get("RUN_MODE", "local-mock-supabase")}`')
           if not files:
-              print('هیچ فایل نتیجهٔ تست (XML) پیدا نشد — تست اصلاً اجرا نشده؛ لاگ بالا را ببینید.')
+              print('- ❌ هیچ فایل نتیجهٔ تست (`XML`) پیدا نشد — لاگ اجرای شبیه‌ساز در بالا را ببینید.')
           for f in files:
               t = open(f, encoding='utf-8', errors='ignore').read()
               m = re.search(r'tests="(\d+)"[^>]*?failures="(\d+)"[^>]*?errors="(\d+)"', t)
               print(f'- `{f}`: ' + (f'tests={m.group(1)} failures={m.group(2)} errors={m.group(3)}' if m else '(بدون خلاصه)'))
               for name in re.findall(r'<testcase name="([^"]+)"', t):
-                  print(f'  - تست: {name}')
+                  print(f'  - ✅ تست: `{name}`')
               for msg in re.findall(r'<failure message="([^"]*)"', t):
-                  print('  - **علت شکست:** ' + html.unescape(msg)[:600])
+                  print('  - ❌ **علت شکست:** ' + html.unescape(msg)[:600])
               for body in re.findall(r'<failure[^>]*>([\s\S]*?)</failure>', t):
                   lines = [l for l in html.unescape(body).splitlines() if l.strip()][:12]
                   print('    ```'); print('\n'.join(lines)); print('    ```')
+          summary_md = pathlib.Path('android-ui-report/summary.md')
+          if summary_md.is_file():
+              print()
+              print(summary_md.read_text(encoding='utf-8'))
           PY
           exit $RC
-      - name: بایگانی گزارش تست و logcat
+      - name: بایگانی تصاویر PNG، گالری بصری HTML و گزارش‌های تست اندروید
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: ui-test-report-${{ github.run_number }}
+          name: android-ui-visual-report-${{ github.ref_name }}-${{ github.run_number }}
           path: |
+            android-ui-report/
             app/build/reports/androidTests/
             app/build/outputs/androidTest-results/
           if-no-files-found: warn

@@ -63,6 +63,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
@@ -1254,7 +1256,10 @@ private fun AuthenticatedShell(
                                 },
                                 navigationIcon = {
                                     if (user.role == UserRole.STUDENT) {
-                                        IconButton(onClick = onToggleMenu) {
+                                        IconButton(
+                                            onClick = onToggleMenu,
+                                            modifier = Modifier.semantics { contentDescription = "منو" }
+                                        ) {
                                             Design69MorphingMenuIcon(
                                                 open = false,
                                                 tint = colors.muted,

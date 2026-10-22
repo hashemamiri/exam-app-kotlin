@@ -7,7 +7,7 @@ name: site
 on:
   push:
     branches: [main, staging]
-    paths: ['site/**', '.github/workflows/site.yml']
+    paths: ['site/**', 'scripts/web_ui_e2e.py', 'scripts/mock_supabase_server.py', '.github/workflows/site.yml']
   workflow_dispatch:
 concurrency:
   group: site-deploy-${{ github.ref_name }}
@@ -107,6 +107,29 @@ jobs:
           PY
           # هدرها: بدون کش برای index و SW تا به‌روزرسانی فوری دیده شود؛ Alt-Svc: clear برای جلوگیری از گیر کردن QUIC/HTTP3 در اپراتورهای ایران؛ آیکون‌ها کش طولانی
           printf '/*\n  Cache-Control: no-cache\n  Alt-Svc: clear\n  X-Content-Type-Options: nosniff\n  X-Frame-Options: SAMEORIGIN\n  Referrer-Policy: strict-origin-when-cross-origin\n  Strict-Transport-Security: max-age=31536000; includeSubDomains\n/pwa/sw.js\n  Cache-Control: no-cache\n  Service-Worker-Allowed: /\n/pwa/manifest.webmanifest\n  Content-Type: application/manifest+json; charset=utf-8\n/pwa/*.png\n  Cache-Control: public, max-age=604800\n/pwa/v3/*\n  Cache-Control: public, max-age=604800\n/engines.*.js\n  Cache-Control: public, max-age=31536000, immutable\n/panels.*.js\n  Cache-Control: public, max-age=31536000, immutable\n/s*.css\n  Cache-Control: public, max-age=31536000, immutable\n/c*.js\n  Cache-Control: public, max-age=31536000, immutable\n/p*.js\n  Cache-Control: public, max-age=31536000, immutable\n/fonts/*\n  Cache-Control: public, max-age=31536000, immutable\n' > site_out/_headers
+      # V333.0 — دروازهٔ خودکار آزمون بصری و تعاملی سرتاسری وب روی مرورگر واقعی Chromium (پیش از انتشار)
+      - name: Install Playwright & Chromium for visual UI gate
+        run: |
+          python3 -m pip install --upgrade pip playwright
+          python3 -m playwright install --with-deps chromium
+      - name: Run automated browser visual & E2E gate on site_out
+        run: |
+          python3 scripts/web_ui_e2e.py --site-dir site_out --out-dir web-ui-report
+      - name: Publish Persian visual report to GitHub Step Summary
+        if: always()
+        run: |
+          if [ -f web-ui-report/summary.md ]; then
+            cat web-ui-report/summary.md >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "## ❌ گزارش آزمون بصری وب تولید نشد (خطا پیش از اتمام سناریوها)" >> "$GITHUB_STEP_SUMMARY"
+          fi
+      - name: Upload browser visual screenshots & HTML gallery
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-ui-visual-report-${{ github.ref_name }}
+          path: web-ui-report/
+          retention-days: 14
       # V313.5 — انتشار هم‌زمان روی شاخهٔ gh-pages (GitHub Pages) برای عبور از مسدودی آی‌پی رایگان کلودفلر در همراه اول
       - name: Deploy to GitHub Pages (gh-pages)
         if: github.ref_name == 'main'

@@ -174,11 +174,13 @@
       else if (k === 'html') e.innerHTML = attrs[k];
       else if (k === 'text') e.textContent = attrs[k];
       else if (k.indexOf('on') === 0) e.addEventListener(k.slice(2), attrs[k]);
-      else if (attrs[k] !== null && attrs[k] !== undefined) e.setAttribute(k, attrs[k]);
+      else if (k === 'disabled' || k === 'checked' || k === 'readOnly' || k === 'readonly' || k === 'required' || k === 'multiple' || k === 'selected') { var _bp = k === 'readonly' ? 'readOnly' : k; e[_bp] = !!attrs[k]; if (attrs[k]) e.setAttribute(k.toLowerCase(), k.toLowerCase()); }
+      else if (attrs[k] !== null && attrs[k] !== undefined && attrs[k] !== false) e.setAttribute(k, attrs[k]);
     });
     /* V228 — دسترس‌پذیری: دکمه‌های آیکنی با title به‌طور خودکار aria-label می‌گیرند؛ دکمهٔ بستن (✕) برچسب «بستن» */
     if (tag === 'button' && attrs) { if (attrs.title && !attrs['aria-label']) e.setAttribute('aria-label', attrs.title); else if (attrs['class'] === 'x' && !attrs['aria-label']) e.setAttribute('aria-label', 'بستن'); }
-    (children || []).forEach(function (c) { if (c == null) return; e.appendChild(typeof c === 'string' ? document.createTextNode(c) : c); });
+    function addChild(c) { if (c == null || c === false) return; if (Array.isArray(c)) { c.forEach(addChild); return; } e.appendChild(typeof c === 'string' ? document.createTextNode(c) : c); }
+    addChild(children);
     return e;
   }
   function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }

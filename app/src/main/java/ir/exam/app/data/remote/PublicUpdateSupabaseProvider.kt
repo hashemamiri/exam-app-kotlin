@@ -23,6 +23,7 @@ object PublicUpdateSupabaseProvider {
             supabaseUrl = BuildConfig.SUPABASE_URL,
             supabaseKey = BuildConfig.SUPABASE_ANON_KEY
         ) {
+            useHTTPS = !BuildConfig.SUPABASE_URL.startsWith("http://", ignoreCase = true)
             httpEngine = OkHttp.create()
             install(Postgrest)
         }

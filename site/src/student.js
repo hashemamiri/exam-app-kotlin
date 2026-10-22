@@ -7,6 +7,7 @@
   'use strict';
   var S = window.ExamSite;
   var el = S.el, esc = S.esc, fa = S.fa, en = S.en, toast = S.toast, errMsg = S.errMsg, uuid = S.uuid;
+  function num(v) { v = Number(en(v)); return isFinite(v) ? v : 0; }
   var LS_ACTIVE = 'examsite.student.active.v1';   /* ActiveExamSessionEntity */
   var LS_DRAFT = 'examsite.student.draft.v1.';    /* + examId → {answers, images} */
   var BUCKET = 'exam-images';

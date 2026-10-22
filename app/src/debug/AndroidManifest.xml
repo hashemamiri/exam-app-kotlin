@@ -1,0 +1,7 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+    <!-- V333.0 — فقط در بیلد debug برای اتصال شبیه‌ساز به سرور آزمایشی محلی (10.0.2.2)؛ بیلد release همچنان فقط HTTPS است -->
+    <application
+        android:usesCleartextTraffic="true"
+        tools:replace="android:usesCleartextTraffic" />
+</manifest>
