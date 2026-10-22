@@ -150,7 +150,7 @@ class V333_AutomatedVisualUiTestingTest {
         assertTrue(siteYml.contains("[main, staging]"))
 
         val appUiYml = File(root, ".github/workflows/app-ui-test.yml").readText()
-        assertTrue(appUiYml.contains("branches: [main, staging]"))
+        assertTrue(!appUiYml.contains("\n  push:"))
         assertTrue(appUiYml.contains("workflow_dispatch:"))
         assertTrue(appUiYml.contains("scripts/mock_supabase_server.py"))
         assertTrue(appUiYml.contains("http://10.0.2.2:18991"))

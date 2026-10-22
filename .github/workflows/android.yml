@@ -18,6 +18,7 @@ on:
       - '!relay/**'
       - '!supabase/**'
       - '!.github/workflows/site.yml'
+      - '!.github/workflows/app-ui-test.yml'
       - '!app/src/test/**/V1*_Site*Test.kt'
       - '!app/src/test/**/V1*_Pay*Test.kt'
       - '!app/src/test/**/V1*_Print*Test.kt'

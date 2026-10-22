@@ -1,19 +1,11 @@
 name: تست UI اپ روی شبیه‌ساز
-# V333.1 — اجرای خودکار و ایزولهٔ تست بصری و تعاملی Compose روی شبیه‌ساز واقعی Pixel 6 (API 34):
-# - در تمام pushها روی main و staging همیشه به‌صورت ۱۰۰٪ ایزوله روی سرور آزمایشی محلی (10.0.2.2:18991)
-#   با هر دو نقش معلم و دانش‌آموز (۰ تست ردشده، بدون دست‌زدن به داده‌های واقعی مدرسه) اجرا می‌شود.
-# - در اجرای دستی (Run workflow):
-#   * به‌طور پیش‌فرض (use_live_supabase = false) روی سرور آزمایشی محلی ایزوله اجرا می‌شود.
-#   * در صورت فعال‌کردن دستی use_live_supabase = true، از ورودی‌های دستی یاUI_TEST_TEACHER_USER / UI_TEST_TEACHER_PASS استفاده می‌کند.
+# V333.4 — اجرای صرفاً دستی (workflow_dispatch فقط؛ بدون اجرای خودکار روی push/pull_request):
+# - با هیچ push روی main یا staging به‌صورت خودکار اجرا نمی‌شود.
+# - در اجرای دستی از تب Actions (Run workflow):
+#   * به‌طور پیش‌فرض (use_live_supabase = false) به‌صورت ۱۰۰٪ ایزوله روی سرور آزمایشی محلی (10.0.2.2:18991)
+#     با هر دو نقش معلم و دانش‌آموز (۰ تست ردشده، بدون دست‌زدن به داده‌های واقعی مدرسه) اجرا می‌شود.
+#   * در صورت فعال‌کردن دستی use_live_supabase = true، از ورودی‌های دستی یا UI_TEST_TEACHER_USER / UI_TEST_TEACHER_PASS استفاده می‌کند.
 on:
-  push:
-    branches: [main, staging]
-    paths:
-      - 'app/**'
-      - 'text/APP_VERSION.txt'
-      - 'scripts/mock_supabase_server.py'
-      - '.github/workflows/app-ui-test.yml'
-      - '!app/src/test/**'
   workflow_dispatch:
     inputs:
       use_live_supabase:
