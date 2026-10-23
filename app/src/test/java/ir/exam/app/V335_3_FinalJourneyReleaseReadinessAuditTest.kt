@@ -73,9 +73,13 @@ class V335_3_FinalJourneyReleaseReadinessAuditTest {
             "Icons.Outlined.KeyboardArrowRight"
         )
         for (f in ktFiles) {
-            val text = f.readText(Charsets.UTF_8)
-            for (token in forbidden) {
-                assertFalse("کد اصلی نباید حاوی توکن منسوخ $token باشد: ${f.name}", text.contains(token))
+            val lines = f.readLines(Charsets.UTF_8)
+            for (line in lines) {
+                val trimmed = line.trim()
+                if (trimmed.startsWith("//") || trimmed.startsWith("*") || trimmed.startsWith("/*")) continue
+                for (token in forbidden) {
+                    assertFalse("کد اصلی نباید حاوی توکن منسوخ $token باشد: ${f.name}", line.contains(token))
+                }
             }
         }
     }

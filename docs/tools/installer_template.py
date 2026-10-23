@@ -28,7 +28,9 @@ def main():
         print("   cd /mnt/c/Users/Hashem/Downloads/exam-app-kotlin")
         sys.exit(1)
     print("نصب " + VERSION + " ...")
-    # همگام‌سازی تضمینی با آخرین کامیت ریموت پیش از استخراج و کامیت (جلوگیری از خطای fast-forward)
+    # پاک‌سازی هرگونه وضعیت نیمه‌کاره قبلی (rebase/merge) و همگام‌سازی کامل با ریموت
+    run(["git", "rebase", "--abort"], check=False)
+    run(["git", "merge", "--abort"], check=False)
     run(["git", "fetch", "origin"])
     run(["git", "checkout", "-B", "main", "origin/main"])
     run(["git", "reset", "--hard", "origin/main"])
