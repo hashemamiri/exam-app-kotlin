@@ -2066,3 +2066,9 @@ body.site-locked .app{filter:blur(3px);pointer-events:none;user-select:none}
 .kbd-help kbd{display:inline-block;min-width:26px;text-align:center;font-family:Consolas,monospace;font-size:12px;background:#eef3f8;border:1px solid #cbd8e5;border-bottom-width:2px;border-radius:6px;padding:1px 6px;direction:ltr}
 .kbd-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:6px 0;border-bottom:1px dashed var(--line);font-size:13px}
 .kbd-row:last-child{border-bottom:0}
+
+/* ================= V335.7 — باکس فیلد پاسخ‌های قابل‌قبول در دسکتاپ هم‌شکل باکس درس ================= */
+.b-fill-answers{display:flex;flex-direction:column;gap:8px;margin-bottom:10px}
+.b-fill-answers .b-fill-row{display:flex;align-items:center;gap:8px;flex-wrap:nowrap}
+.b-fill-answers .field{flex:1 1 auto;min-width:0;margin:0}
+.b-fill-answers .icon-btn{flex:0 0 auto}

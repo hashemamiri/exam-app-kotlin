@@ -1105,11 +1105,11 @@
       var box = el('div', {class: 'b-order'});
       box.appendChild(el('div', {class: 'muted', style: 'font-size:12px;margin-bottom:6px', text: 'موارد را به ترتیب درست بنویسید (ویرگول مجاز نیست). در آزمون، ترتیب به‌هم‌ریخته نمایش داده می‌شود.'}));
       q.orderItems.forEach(function (item, i) {
-        var inpt = el('input', {type: 'text', value: item, placeholder: 'مورد ' + fa(i + 1), style: 'flex:1;min-width:0'});
+        var inpt = el('input', {type: 'text', value: item, placeholder: 'مورد ' + fa(i + 1)});
         inpt.addEventListener('input', function () { q.orderItems[i] = inpt.value.replace(/[,،]/g, ' '); inpt.value = q.orderItems[i]; mark(); });
         var rm = el('button', {type: 'button', class: 'btn light sm', text: '✕', onclick: function () { q.orderItems.splice(i, 1); mark(); redraw(); }});
         if (q.orderItems.length <= 2) rm.disabled = true;
-        box.appendChild(el('div', {class: 'row', style: 'gap:6px;align-items:center;margin-bottom:6px'}, [el('span', {text: fa(i + 1) + '.'}), inpt, rm]));
+        box.appendChild(el('div', {class: 'row', style: 'gap:8px;align-items:center;flex-wrap:nowrap;margin-bottom:8px'}, [el('span', {text: fa(i + 1) + '.'}), el('div', {class: 'field', style: 'flex:1;min-width:0;margin:0'}, [inpt]), rm]));
       });
       var add = el('button', {type: 'button', class: 'btn light sm', text: '➕ مورد', onclick: function () { q.orderItems.push(''); mark(); redraw(); }});
       if (q.orderItems.length >= 10) add.disabled = true;
@@ -1149,7 +1149,7 @@
     }
 
     function typeSection(q) {      var box = el('div', {class: 'b-type'});
-      function redraw() { var n = typeSection(q); box.replaceWith(n); }
+      function redraw() { var n = typeSection(q); box.replaceWith(n); return n; }
       /* V305 — ابتدایی: نوع ویژهٔ سؤال (فقط وقتی حالت ابتدایی آزمون روشن است) */
       if (state.primaryMode && (q.type === 'essay' || q.type === 'fill' || q.type === 'multiple')) box.appendChild(primaryModeChooser(q, redraw));
       if (state.primaryMode && q.type === 'essay' && q.mode === 'voice') box.appendChild(voiceSecondsEditor(q, redraw)); /* V309 */
@@ -1183,30 +1183,34 @@
         box.appendChild(el('h4', {text: 'پاسخ‌های قابل‌قبول'}));
         var answers = String(q.expectedText || '').split('|');
         if (!answers.length) answers = [''];
-        var wrap = el('div', {class: 'b-fill-answers', style: 'display:flex;flex-direction:column;gap:6px;margin-bottom:8px'});
+        var wrap = el('div', {class: 'b-fill-answers'});
         answers.forEach(function (ans, idx) {
-          var ai = el('input', {type: 'text', placeholder: 'پاسخ ' + fa(idx + 1), value: ans, style: 'flex:1'});
+          var ai = el('input', {type: 'text', placeholder: 'پاسخ ' + fa(idx + 1), value: ans});
           ai.addEventListener('input', function () {
             answers[idx] = ai.value;
             q.expectedText = answers.join('|');
             mark();
           });
-          var delBtn = (answers.length > 1) ? el('button', {class: 'icon-btn danger', html: '✕', title: 'حذف پاسخ', onclick: function () {
+          var delBtn = (answers.length > 1) ? el('button', {type: 'button', class: 'icon-btn danger', html: '✕', title: 'حذف پاسخ', onclick: function () {
             answers.splice(idx, 1);
             q.expectedText = answers.join('|');
             mark();
             redraw();
           }}) : null;
-          wrap.appendChild(el('div', {class: 'row', style: 'gap:6px'}, [ai, delBtn].filter(Boolean)));
+          wrap.appendChild(el('div', {class: 'b-fill-row'}, [el('div', {class: 'field'}, [ai]), delBtn].filter(Boolean)));
         });
         box.appendChild(wrap);
-        box.appendChild(el('button', {class: 'btn light sm', style: 'margin-bottom:8px', text: '➕ افزودن پاسخ دیگر', onclick: function () {
-          answers.push('');
-          q.expectedText = answers.join('|');
-          mark();
-          redraw();
-        }}));
-        box.appendChild(chk('حساس به بزرگی/کوچکی حروف', q.caseSensitive, function (v) { q.caseSensitive = v; mark(); }));
+        box.appendChild(el('div', {class: 'row', style: 'gap:8px'}, [
+          el('button', {type: 'button', class: 'btn light sm', text: '➕ افزودن پاسخ دیگر', onclick: function () {
+            answers.push('');
+            q.expectedText = answers.join('|');
+            mark();
+            var n = redraw();
+            var inps = n.querySelectorAll('.b-fill-answers input[type=text]');
+            if (inps.length) inps[inps.length - 1].focus();
+          }}),
+          chk('حساس به بزرگی/کوچکی حروف', q.caseSensitive, function (v) { q.caseSensitive = v; mark(); })
+        ]));
       } else if (q.type === 'numeric') {
         box.appendChild(el('div', {class: 'grid2'}, [inp('پاسخ عددی', q.expectedNumber, function (v) { q.expectedNumber = en(v); mark(); }), inp('خطای مجاز (±)', q.tolerance, function (v) { q.tolerance = en(v); mark(); })]));
       } else if (q.type === 'matching') {

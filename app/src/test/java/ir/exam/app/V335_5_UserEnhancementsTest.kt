@@ -35,7 +35,10 @@ class V335_5_UserEnhancementsTest {
         assertTrue("دکمهٔ افزودن فیلد پاسخ دیگر", "افزودن پاسخ دیگر (+)" in builderScreen)
 
         val builderJs = read("site/src/builder.js")
+        val siteCss = read("site/src/site.css")
         assertTrue("کلاس b-fill-answers در وب پیاده‌سازی شده است", "b-fill-answers" in builderJs)
+        assertTrue("ردیف پاسخ‌ها با استایل استاندارد field مثل فیلد درس پیچیده شده است", "b-fill-row" in builderJs && "el('div', {class: 'field'}, [ai])" in builderJs)
+        assertTrue("استایل b-fill-answers .field در CSS سایت تعریف شده است", ".b-fill-answers .field" in siteCss)
         assertTrue("ترکیب پاسخ‌ها با | در وب", "answers.join('|')" in builderJs)
         assertTrue("دکمهٔ افزودن پاسخ دیگر در وب", "➕ افزودن پاسخ دیگر" in builderJs)
     }
