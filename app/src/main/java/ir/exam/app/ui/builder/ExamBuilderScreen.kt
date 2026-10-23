@@ -141,7 +141,11 @@ import ir.exam.app.ui.math.QuestionEditorFieldController
 import ir.exam.app.ui.math.InlineMathTextEditor
 import ir.exam.app.core.math.FormulaTextCodec
 import ir.exam.app.core.text.RichTextSplitter
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
@@ -1387,12 +1391,14 @@ private fun QuestionEditor(
         if (uri != null) {
             ocrLoading = true
             scope.launch {
-                val bmp = withContext(Dispatchers.IO) {
-                    runCatching {
+                val bmp: Bitmap? = withContext(Dispatchers.IO) {
+                    try {
                         context.contentResolver.openInputStream(uri)?.use { stream ->
-                            android.graphics.BitmapFactory.decodeStream(stream)
+                            BitmapFactory.decodeStream(stream)
                         }
-                    }.getOrNull()
+                    } catch (_: Throwable) {
+                        null
+                    }
                 }
                 if (bmp != null) {
                     val bound = ExamImageOcr.boundForOcr(bmp)
