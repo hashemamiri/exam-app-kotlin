@@ -35,9 +35,37 @@ else: print('✅ site/index.html به‌روز است')
 step('git diff --check', ['git', 'diff', '--check'])
 step('git diff --cached --check', ['git', 'diff', '--cached', '--check'])
 ver = open('text/APP_VERSION.txt', encoding='utf-8').read().strip()
-first = open('text/CHANGELOG_FA.txt', encoding='utf-8').read().splitlines()[0]
+_cl_lines = open('text/CHANGELOG_FA.txt', encoding='utf-8').read().splitlines()
+first = _cl_lines[0] if _cl_lines else ''
 if ver in first: print('✅ نسخه', ver, 'در خط اول CHANGELOG')
 else: print('⚠ خط اول CHANGELOG نسخهٔ', ver, 'را ندارد (اگر تغییر فقط سایت است طبیعی است):', first[:80])
+# V334.2 — آینهٔ دقیق تست‌های V208_ReleaseNotesTest و V322_MathToolsRobustnessTest روی CHANGELOG_FA.txt
+_hdr_re = re.compile(r'^(V\d+(?:\.\d+)*)\s*(?:\(([^)]*)\))?\s*(?:[—\-–:]\s*(.*))?$')
+_blocks = []
+for _raw in _cl_lines[:60]:
+    _ln = _raw.strip().replace('`', '')
+    if not _ln: continue
+    _hm = _hdr_re.match(_ln)
+    if _hm:
+        _blocks.append({'ver': _hm.group(1), 'scope': (_hm.group(2) or '').strip(), 'summary': (_hm.group(3) or '').strip(), 'bullets': []})
+    elif _ln.startswith('-') or _ln.startswith('•'):
+        if _blocks: _blocks[-1]['bullets'].append(_ln.lstrip('-•').strip())
+if not _cl_lines or not _cl_lines[0].strip().startswith('V') or not _blocks:
+    ok = False; print('❌ V208/V322: خط اول CHANGELOG باید با سرآیند نسخه (Vxxx) شروع شود')
+else:
+    _top = _blocks[0]
+    _app_aff = (not _top['scope']) or (not (_top['scope'].startswith('فقط') and 'اپ' not in _top['scope']) and 'اپ' in _top['scope'])
+    if not _app_aff:
+        ok = False; print('❌ V322: بالاترین بلوک CHANGELOG باید شامل اپ باشد (appAffecting=true):', _top['scope'])
+    if not (1 <= len(_top['bullets']) <= 6):
+        ok = False; print('❌ V208/V322: تعداد بولت‌های بالاترین بلوک CHANGELOG باید بین ۱ تا ۶ باشد:', len(_top['bullets']))
+    for _blk in _blocks[:3]:
+        for _b in _blk['bullets']:
+            if len(_b) > 200:
+                ok = False; print(f'❌ V208/V322: طول بولت در {_blk["ver"]} بیش از ۲۰۰ نویسه است ({len(_b)}): {_b[:60]}…')
+            if re.search(r'\bV\d', _b):
+                ok = False; print(f'❌ V322: بولت در {_blk["ver"]} نباید شمارهٔ داخلی Vxxx داشته باشد: {_b}')
+    if ok: print(f'✅ قالب CHANGELOG سالم است ({_top["ver"]}: {len(_top["bullets"])} تیتر، حداکثر {max(len(x) for x in _top["bullets"])} نویسه)')
 # فایل‌های حذف‌شده که تستی به آن‌ها اشاره می‌کند
 tests = subprocess.run(['bash', '-lc', 'grep -rhoE "(source|src)\\(\\"[^\\"]+\\"\\)" app/src/test | sort -u'], capture_output=True, text=True).stdout
 for m in re.finditer(r'\("([^"]+)"\)', tests):
