@@ -78,7 +78,7 @@ window.SITE_CONFIG = { SUPABASE_URL: "https://eazwuyrymsvdkwckdpco.supabase.co",
 </div>
 <div class="toast-wrap" id="toasts"></div>
 <script>window.__ENGINES_URL = "/engines.764b9f3c4785.js";
-window.__PANELS_URL = "/panels.cb3157a149d0.js";</script>
+window.__PANELS_URL = "/panels.15e309a4b007.js";</script>
 <script>(function(){'use strict';var CFG=window.SITE_CONFIG||{};var SUPABASE_URL=String(CFG.SUPABASE_URL||'').replace(/\/+$/,'');var ANON=String(CFG.SUPABASE_ANON_KEY||'').trim();var KEY_READY=ANON&&ANON!=='…'&&ANON.indexOf('اینجا')<0&&ANON.length>20;var STUDENT_DOMAIN='student.exam.local';var USERNAME_RE=/^[a-z0-9_]{4,20}$/;var EMAIL_RE=/^[^\s@]+@[^\s@]+\.[^\s@]+$/;var LS_SESSION='examsite.session.v1';var LS_PAGESETUP='examsite.pagesetup.v1';var LS_LOCALSTATE='examsite.local.v1';var PRINT_COST_PER_Q=1000;function $(id){return document.getElementById(id);}
 var mediaCache={},lastMediaError='';function isOwnStorageUrl(u){return typeof u==='string'&&SUPABASE_URL&&u.indexOf(SUPABASE_URL+'/storage/v1/object/')===0;}
 function mediaBlobUrl(u){if(!isOwnStorageUrl(u))return Promise.resolve(u);if(mediaCache[u])return mediaCache[u];var authed=u.replace('/storage/v1/object/public/','/storage/v1/object/authenticated/');mediaCache[u]=fetch(authed,{headers:{'apikey':ANON,'Authorization':'Bearer '+(session?session.access_token:ANON)}}).then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);return r.blob();}).then(function(b){return URL.createObjectURL(b);}).catch(function(e){delete mediaCache[u];console.error('media',u,e);lastMediaError='Storage '+(e&&e.message||'');return u;});return mediaCache[u];}

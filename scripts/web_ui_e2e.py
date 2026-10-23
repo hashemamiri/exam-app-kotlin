@@ -521,7 +521,7 @@ def run_suite(site_dir_arg: str | None, out_dir: Path) -> int:
             mobile_ctx.close()
 
             # --------------------------------------------------------
-            # ۳) ورود معلم + ساخت آزمون چندبخشی متوسطه (هندسه + اثبات + تستی)
+            # ۳) ورود معلم + بررسی خلوتی کامل سازنده + ساخت آزمون ۳ سؤالی (تشریحی + عددی + چندگزینه‌ای)
             # --------------------------------------------------------
             t0 = time.monotonic()
             page.locator("input[type='text']").first.fill("uitest_teacher")
@@ -531,100 +531,38 @@ def run_suite(site_dir_arg: str | None, out_dir: Path) -> int:
             page.evaluate("() => window.ExamSite.go('builder', { fresh: true })")
             page.get_by_role("button", name="ذخیره", exact=True).wait_for()
 
-            exam_title = "آزمون جامع هندسه و استدلال متوسطه"
+            exam_title = "آزمون جامع ریاضی و هندسه (رابط ساده)"
             fill_labeled_field(page, "عنوان آزمون", exam_title)
-            fill_labeled_field(page, "درس", "هندسه ۱")
+            fill_labeled_field(page, "درس", "ریاضی ۱")
             fill_labeled_field(page, "مدت (دقیقه)", "30")
 
-            # سؤال ۱: ترسیم هندسی مختصاتی (۳ نمره) در بخش زمان‌دار «بخش هندسه مختصاتی»
+            # سؤال ۱: تشریحی (۴ نمره) + بررسی حذف ۱۰۰٪ هر ۷ بخش اضافی در کارت سؤال و تنظیمات آزمون
             click_visible_button(page, "افزودن")
             page.wait_for_timeout(120)
             click_visible_button(page, "تشریحی", substring=True)
             set_question_text(
                 page,
-                "روی صفحهٔ مختصات نقاط A(0, 3)، B(0, 0) و C(4, 0) را طوری قرار دهید که زاویهٔ ∠ABC قائمه (۹۰ درجه) باشد.",
-            )
-            fill_labeled_field(page, "بخش آزمون / صورت مشترک", "بخش هندسه مختصاتی")
-
-            # بررسی واکنش زندهٔ کادر «زمان مجاز هر بخش» بدون تعویض سؤال!
-            sec_box = page.locator(".b-section-durations")
-            sec_box.wait_for()
-            sec_box.locator("input[type='number']").first.fill("10")
-
-            select_labeled_option(page, "حالت پاسخ", "construct")
-            fill_labeled_field(page, "برچسب زاویه‌های خواسته‌شده", "ABC")
-
-            # افزودن ۳ نقطه روی بوم (A=(0,3, بارم 1)، B=(0,0, بارم 1)، C=(4,0, بارم 0)) + شرط زاویه ∠ABC = 90° (بارم 1) → جمع ۳ نمره
-            add_target_btn = page.get_by_role("button", name="افزودن نقطهٔ هدف")
-            add_target_btn.scroll_into_view_if_needed()
-            target_cards = page.locator("div.card:not(:has(div.card))").filter(has=page.get_by_role("button", name="حذف نقطه"))
-            while target_cards.count() < 3:
-                add_target_btn = page.get_by_role("button", name="افزودن نقطهٔ هدف")
-                add_target_btn.scroll_into_view_if_needed()
-                add_target_btn.click()
-            assert target_cards.count() == 3, f"انتظار ۳ کارت نقطهٔ هدف بود، {target_cards.count()} دیده شد"
-            for idx_t, (lbl_t, tx, ty, sc) in enumerate([("A", "0", "3", "1"), ("B", "0", "0", "1"), ("C", "4", "0", "0")]):
-                tc = target_cards.nth(idx_t)
-                fill_labeled_field(tc, "برچسب", lbl_t)
-                fill_labeled_field(tc, "x هدف", tx)
-                fill_labeled_field(tc, "y هدف", ty)
-                fill_labeled_field(tc, "بارم", sc)
-
-            add_c_btn = page.get_by_role("button", name="افزودن شرط هندسی (زاویه/فاصله/عمود/موازی/هم‌خط)")
-            add_c_btn.scroll_into_view_if_needed()
-            c_card_list = page.locator("div.card:not(:has(div.card))").filter(has=page.get_by_role("button", name="حذف شرط هندسی"))
-            while c_card_list.count() < 1:
-                add_c_btn.click()
-            c_card = c_card_list.first
-            fill_labeled_field(c_card, "نقاط درگیر", "A,B,C")
-            fill_labeled_field(c_card, "زاویهٔ هدف (درجه)", "90")
-            fill_labeled_field(c_card, "بارم این شرط", "1")
-            fill_labeled_field(page, "Rubric دبیر", "نمرهٔ محرمانهٔ دبیر: بررسی تعامد بردارهای BA و BC")
-
-            page.evaluate(
-                """() => {
-                    const scoreFields = [...document.querySelectorAll('.field')].filter(f => f.querySelector('label')?.textContent.trim() === 'بارم');
-                    const mainScore = scoreFields[scoreFields.length - 1];
-                    if (mainScore) {
-                        const i = mainScore.querySelector('input');
-                        i.value = '3';
-                        i.dispatchEvent(new Event('input', { bubbles: true }));
-                    }
-                }"""
+                "در مثلث قائم‌الزاویهٔ ABC با اضلاع قائمهٔ AB=3 و BC=4، با استفاده از قضیهٔ فیثاغورس طول وتر AC را مرحله‌به‌مرحله محاسبه کنید.",
             )
 
-            # افزودن سؤال ۲: اثبات مرحله‌ای (۴ نمره = ۲ + ۲) در بخش «بخش اثبات مرحله‌ای» با ارجاع به گام قبل
-            click_visible_button(page, "افزودن")
-            page.wait_for_timeout(120)
-            click_visible_button(page, "تشریحی", substring=True)
-            set_question_text(
-                page,
-                "با توجه به مثلث قائم‌الزاویهٔ ABC در رأس B با اضلاع AB=3 و BC=4، طول وتر AC را در دو گام اثبات کنید.",
-            )
-            fill_labeled_field(page, "بخش آزمون / صورت مشترک", "بخش اثبات مرحله‌ای")
-            select_labeled_option(page, "حالت پاسخ", "proof")
-            fill_labeled_field(page, "فرض‌ها / داده‌ها", "AB = 3 ، BC = 4 و AB ⊥ BC")
-            fill_labeled_field(page, "خواسته", "AC = 5")
+            forbidden_ui_labels = [
+                "بخش آزمون / صورت مشترک",
+                "فصل یا مبحث",
+                "سطح دشواری",
+                "هدف یادگیری",
+                "متن/مسئلهٔ مشترک",
+                "زیرسؤال‌های مستقل",
+                "افزودن زیربخش",
+                "حالت پاسخ",
+                "Rubric دبیر",
+                "زمان مجاز هر بخش",
+            ]
+            builder_dom_text = page.evaluate("() => document.body.innerText")
+            for bad_lbl in forbidden_ui_labels:
+                assert bad_lbl not in builder_dom_text, f"فیلد حذف‌شده نباید در سازندهٔ وب دیده شود: {bad_lbl}"
+            assert page.locator(".b-section-durations").count() == 0, "کادر زمان بخش نباید در تنظیمات آزمون وجود داشته باشد!"
 
-            part_cards = page.locator("div.card:not(:has(div.card))").filter(has=page.get_by_role("button", name="حذف زیربخش"))
-            while part_cards.count() < 2:
-                add_part_btn = page.get_by_role("button", name="افزودن زیربخش")
-                add_part_btn.scroll_into_view_if_needed()
-                add_part_btn.click()
-            assert part_cards.count() == 2, f"انتظار ۲ گام اثبات بود، {part_cards.count()} دیده شد"
-            fill_labeled_field(part_cards.nth(0), "برچسب (الف/ب/ج)", "الف")
-            fill_labeled_field(part_cards.nth(0), "دستور زیرسؤال", "رابطهٔ فیثاغورس را برای مثلث ABC بنویسید.")
-            fill_labeled_field(part_cards.nth(0), "بارم", "2")
-            part_cards.nth(0).locator("textarea[placeholder*='معیار نمره‌دهی محرمانه']").fill("نوشتن AC^2 = AB^2 + BC^2")
-
-            fill_labeled_field(part_cards.nth(1), "برچسب (الف/ب/ج)", "ب")
-            fill_labeled_field(part_cards.nth(1), "دستور زیرسؤال", "با جایگذاری مقادیر گام الف، مقدار عددی AC را بیابید.")
-            fill_labeled_field(part_cards.nth(1), "بارم", "2")
-            part_cards.nth(1).locator("textarea[placeholder*='معیار نمره‌دهی محرمانه']").fill("نتیجهٔ نهایی AC = 5")
-            carry_lbl = part_cards.nth(1).locator("label", has_text="اجازهٔ ارجاع به نتیجهٔ بخش قبلی")
-            carry_lbl.scroll_into_view_if_needed()
-            carry_lbl.click()
-
+            # تنظیم بارم سؤال ۱ = ۴
             page.evaluate(
                 """() => {
                     const scoreFields = [...document.querySelectorAll('.field')].filter(f => f.querySelector('label')?.textContent.trim() === 'بارم');
@@ -637,17 +575,52 @@ def run_suite(site_dir_arg: str | None, out_dir: Path) -> int:
                 }"""
             )
 
-            # افزودن سؤال ۳: چندگزینه‌ای (۳ نمره)
+            # بررسی پنجرهٔ «بانک سؤال» در سازنده (حذف فیلترهای فصل/مبحث، سطح دشواری و هدف یادگیری)
+            click_visible_button(page, "افزودن")
+            page.wait_for_timeout(120)
+            click_visible_button(page, "بانک", substring=True)
+            page.locator(".b-bank-modal").wait_for()
+            bank_dom_text = page.locator(".b-bank-modal").inner_text()
+            for bad_bank in ("همهٔ فصل‌ها/مباحث", "همهٔ سطوح", "هدف یادگیری"):
+                assert bad_bank not in bank_dom_text, f"فیلتر حذف‌شده نباید در پنجرهٔ بانک سؤال باشد: {bad_bank}"
+            page.locator(".b-bank-modal button.x").click()
+            page.wait_for_timeout(120)
+
+            # افزودن سؤال ۲: عددی (۳ نمره، پاسخ درست = ۵)
+            click_visible_button(page, "افزودن")
+            page.wait_for_timeout(120)
+            click_visible_button(page, "عددی", substring=True)
+            set_question_text(
+                page,
+                "در همان مثلث قائم‌الزاویه با اضلاع قائمهٔ ۳ و ۴، اندازهٔ وتر برابر چند واحد است؟",
+            )
+            page.evaluate(
+                """() => {
+                    const fields = [...document.querySelectorAll('.field')];
+                    const numField = fields.find(f => (f.querySelector('label')?.textContent || '').includes('پاسخ عددی'));
+                    if (numField) {
+                        const inp = numField.querySelector('input');
+                        inp.value = '5';
+                        inp.dispatchEvent(new Event('input', { bubbles: true }));
+                    }
+                    const scoreField = fields.find(f => f.querySelector('label')?.textContent.trim() === 'بارم');
+                    if (scoreField) {
+                        const si = scoreField.querySelector('input');
+                        si.value = '3';
+                        si.dispatchEvent(new Event('input', { bubbles: true }));
+                    }
+                }"""
+            )
+
+            # افزودن سؤال ۳: چندگزینه‌ای (۳ نمره، گزینهٔ درست = «۶»)
             click_visible_button(page, "افزودن")
             page.wait_for_timeout(120)
             click_visible_button(page, "چندگزینه‌ای", substring=True)
             set_question_text(
                 page,
-                "در مثلث قائم‌الزاویهٔ بالا با اضلاع قائمهٔ ۳ و ۴، مساحت مثلث چند واحد مربع است؟",
+                "مساحت مثلث قائم‌الزاویه با اضلاع قائمهٔ ۳ و ۴ چند واحد مربع است؟",
             )
-            fill_labeled_field(page, "بخش آزمون / صورت مشترک", "بخش اثبات مرحله‌ای")
             set_mc_options(page, ["۵", "۶", "۷", "۱۲"])
-            # انتخاب گزینهٔ ۲ («۶») به‌عنوان گزینهٔ درست + بارم ۳
             page.evaluate(
                 """() => {
                     const radios = [...document.querySelectorAll('input[type=radio]')];
@@ -661,22 +634,26 @@ def run_suite(site_dir_arg: str | None, out_dir: Path) -> int:
                 }"""
             )
 
+            # بازگشت روی سؤال ۱ تشریحی روی ریل شماره‌ها برای ثبت اسکرین‌شات واضح از کارت سؤال تمیز و خلوت
+            page.locator(".b-rail-nums > *").first.click()
+            page.wait_for_timeout(120)
             page.evaluate("window.scrollTo(0, 0)")
             record_step(
                 page,
-                "03_teacher_builder_secondary.png",
-                "سازندهٔ آزمون متوسطه (ترسیم هندسی + اثبات مرحله‌ای + زمان‌بندی بخش)",
-                "ساخت آزمون ۳ سؤالی (۱۰ نمره‌ای) با بخش زمان‌دار ۱۰ دقیقه‌ای و شرط زاویهٔ ۹۰ درجه",
+                "03_teacher_builder_clean.png",
+                "سازندهٔ آزمون ساده و خلوت‌شده (حذف کامل ۷ بخش شلوغ از کارت سؤال و بانک)",
+                "تأیید نبود هر ۷ بخش حذف‌شده در DOM کارت سؤال، پنجرهٔ بانک سؤال و تنظیمات آزمون؛ ساخت آزمون ۱۰ نمره‌ای",
                 "1366×900",
                 t0,
             )
 
-            # ذخیرهٔ اول + بررسی ثبات کد در ذخیرهٔ دوم
+            # --------------------------------------------------------
+            # ۴) ذخیرهٔ دوبار (اثبات ثبات کد ۶حرفی) + باز کردن آزمون برای دانش‌آموزان
+            # --------------------------------------------------------
             t0 = time.monotonic()
             page.get_by_role("button", name="ذخیره", exact=True).click()
             page.locator(".modal button", has_text="ذخیره").click()
             page.wait_for_function("() => document.querySelectorAll('.modal button').length > 0")
-            # بستن پنجرهٔ رسید کسر هزینه در صورت نمایش
             page.wait_for_timeout(400)
             if page.locator(".modal button").count() > 0:
                 page.locator(".modal button").first.click()
@@ -686,9 +663,7 @@ def run_suite(site_dir_arg: str | None, out_dir: Path) -> int:
             exam_id = saved_exam["id"]
             exam_code = saved_exam["code"]
             assert len(exam_code) == 6, f"کد آزمون نامعتبر: {exam_code}"
-            assert saved_exam["options"].get("sectionDurations", {}).get("بخش هندسه مختصاتی") == 10
 
-            # ذخیرهٔ دوم برای اثبات تغییر نکردن کد آزمون
             page.get_by_role("button", name="ذخیره", exact=True).click()
             page.locator(".modal button", has_text="ذخیره").click()
             page.wait_for_timeout(350)
@@ -696,15 +671,12 @@ def run_suite(site_dir_arg: str | None, out_dir: Path) -> int:
                 page.locator(".modal button").first.click()
             assert mock_state.exams[exam_id]["code"] == exam_code, "کد آزمون پس از ویرایش نباید تغییر کند!"
 
-            # رفتن به صفحهٔ «آزمون‌ها» و باز کردن آزمون برای دانش‌آموزان
             page.evaluate("() => window.ExamSite.go('exams')")
             page.get_by_text(exam_title).first.wait_for()
-            # کلیک روی دکمهٔ باز کردن آزمون
             open_btn = page.locator("button[title*='باز'], button[aria-label*='باز'], button:has-text('باز کردن'), button:has-text('بازکردن')").first
             if open_btn.count() > 0:
                 open_btn.click()
             else:
-                # منوی عملیات کارت آزمون
                 page.evaluate(
                     """() => {
                         const btns = [...document.querySelectorAll('button')];
@@ -723,12 +695,11 @@ def run_suite(site_dir_arg: str | None, out_dir: Path) -> int:
                 t0,
             )
 
-            # خروج معلم
             page.evaluate("() => window.ExamSite.logout()")
             page.locator("input[type='text']").first.wait_for()
 
             # --------------------------------------------------------
-            # ۵) ورود دانش‌آموز + ورود با کد + ترسیم هندسی روی <canvas>
+            # ۵) ورود دانش‌آموز + ورود با کد ۶حرفی + پاسخ به سؤال ۱ تشریحی
             # --------------------------------------------------------
             t0 = time.monotonic()
             page.locator("input[type='text']").first.fill("uitest_student")
@@ -736,95 +707,52 @@ def run_suite(site_dir_arg: str | None, out_dir: Path) -> int:
             page.locator("input[type='password']").first.press("Enter")
             page.wait_for_function("() => !document.querySelector('input[type=password]')")
 
-            # ورود کد آزمون و شروع پاسخ‌گویی
             page.evaluate("() => window.ExamSite.go('join')")
             code_inp = page.locator("input[placeholder*='کد']").first
             code_inp.wait_for()
             code_inp.fill(exam_code)
             click_visible_button(page, "ورود به آزمون")
 
-            canvas = page.locator(".st-construct canvas").first
-            canvas.wait_for()
+            essay_inp = page.locator("textarea, .st-input").first
+            essay_inp.wait_for()
             assert not leaked_student_payload_keys, f"نشت کلید محرمانه در شبکه: {leaked_student_payload_keys}"
+            essay_inp.fill("طبق قضیهٔ فیثاغورس داریم AC² = AB² + BC² = ۹ + ۱۶ = ۲۵ و در نتیجه AC = ۵ واحد است.")
 
-            # کلیک واقعی روی بوم برای ثبت A(0,3)، B(0,0)، C(4,0) → تشکیل زاویهٔ قائمه ۹۰ درجه!
-            click_canvas_math_point(page, canvas, 0.0, 3.0)
-            canvas = page.locator(".st-construct canvas").first
-            click_canvas_math_point(page, canvas, 0.0, 0.0)
-            canvas = page.locator(".st-construct canvas").first
-            click_canvas_math_point(page, canvas, 4.0, 0.0)
-
-            page.get_by_text("۹۰.۰°").first.wait_for()
             record_step(
                 page,
-                "05_student_geometry_canvas.png",
-                "پاسخ‌گویی دانش‌آموز — بوم ترسیم هندسی و محاسبهٔ زندهٔ زاویهٔ ∠ABC=90.0°",
-                "ثبت نقاط A(0,3)، B(0,0) و C(4,0) با کلیک ماوس روی بوم و نمایش کمان و مقدار ۹۰ درجه",
+                "05_student_essay_answer.png",
+                "پاسخ‌گویی دانش‌آموز — ثبت پاسخ تشریحی بدون نشت کلید محرمانه",
+                "ورود به آزمون با کد ۶حرفی و ثبت کامل استدلال تشریحی سؤال اول",
                 "1366×900",
                 t0,
             )
 
             # --------------------------------------------------------
-            # ۶) رفتن به سؤال ۲ (اثبات مرحله‌ای) و بررسی ارجاع زنده به نتیجهٔ گام قبل
+            # ۶) رفتن به سؤال ۲ (عددی) و ثبت پاسخ عددی ۵
             # --------------------------------------------------------
             t0 = time.monotonic()
             page.get_by_role("button", name=re.compile(r"بعدی")).first.click()
-            page.get_by_text("ارجاع به نتیجهٔ گام قبل").first.wait_for()
-
-            step1_text = "AB بر BC عمود است؛ بنابراین AC² = AB² + BC² = ۹ + ۱۶ = ۲۵"
-            proof_boxes = page.locator(".st-input")
-            proof_boxes.nth(0).fill(step1_text)
-            if proof_boxes.count() >= 4:
-                proof_boxes.nth(1).fill("قضیهٔ فیثاغورس در مثلث قائم‌الزاویهٔ ABC")
-                # بررسی به‌روزرسانی آنی کارت ارجاع به گام قبل بالای گام ۲!
-                assert page.locator("div", has_text=step1_text).count() >= 1
-                proof_boxes.nth(2).fill("از جذب ۲۵ نتیجه می‌شود AC = ۵ واحد")
-                proof_boxes.nth(3).fill("ریشهٔ دوم عدد مثبت ۲۵")
-            else:
-                proof_boxes.nth(1).fill("از جذب ۲۵ نتیجه می‌شود AC = ۵ واحد")
+            page.get_by_text("اندازهٔ وتر").first.wait_for()
+            num_inp = page.locator("input[type='number'], input[inputmode='decimal'], .st-input, input[type='text']").first
+            num_inp.fill("5")
 
             record_step(
                 page,
-                "06_student_proof_carries_forward.png",
-                "پاسخ‌گویی دانش‌آموز — اثبات دوگامی و ارجاع زنده به نتیجهٔ گام قبل",
-                "نمایش بلادرنگ گزارهٔ گام الف در کارت مرجع بالای گام ب بدون خروج از سؤال",
+                "06_student_numeric_answer.png",
+                "پاسخ‌گویی دانش‌آموز — ثبت پاسخ عددی سؤال دوم",
+                "حرکت روان بین سؤالات و ثبت مقدار عددی ۵ برای سؤال دوم",
                 "1366×900",
                 t0,
             )
 
             # --------------------------------------------------------
-            # ۷) پاسخ به سؤال ۳ + انقضای زمان سرور بخش اول + قفل بازگشت + ارسال نهایی
+            # ۷) پاسخ به سؤال ۳ چندگزینه‌ای + ارسال نهایی + بررسی نمره‌دهی خودکار و صدور رسید
             # --------------------------------------------------------
             t0 = time.monotonic()
             page.get_by_role("button", name=re.compile(r"بعدی")).first.click()
             page.get_by_text("مساحت مثلث").first.wait_for()
-            # انتخاب گزینهٔ دوم («۶»)
             page.get_by_text("۶").first.click()
 
-            # منقضی کردن زمان سرور بخش «بخش هندسه مختصاتی» از طریق کنترل ساعت سرور
-            req = urllib.request.Request(
-                f"{mock_url}/__test__/expire_section",
-                data=json.dumps({"exam_id": exam_id, "section": "بخش هندسه مختصاتی"}).encode("utf-8"),
-                headers={"Content-Type": "application/json"},
-                method="POST",
-            )
-            with urllib.request.urlopen(req, timeout=5) as r:
-                exp_res = json.loads(r.read().decode("utf-8"))
-                assert "بخش هندسه مختصاتی" in exp_res["expired_sections"]
-
-            # تلاش برای بازگشت به سؤال ۱ پس از همگام‌سازی مهلت بخش با سرور
-            page.evaluate(
-                """async (examId) => {
-                    await window.ExamSite.rpcObj('native_sync_exam_section_v1', {
-                        p_exam: examId,
-                        p_section: 'بخش هندسه مختصاتی',
-                        p_lock: false,
-                        p_section_responses: {}
-                    });
-                }""",
-                exam_id,
-            )
-            # کلیک روی شمارهٔ سؤال ۱ در نوار شمارهٔ سؤال‌ها یا ارسال نهایی آزمون
             submit_btn = page.get_by_role("button", name=re.compile(r"ثبت نهایی|ارسال نهایی|پایان آزمون|ارسال پاسخ")).first
             submit_btn.click()
             page.wait_for_timeout(250)
@@ -835,24 +763,23 @@ def run_suite(site_dir_arg: str | None, out_dir: Path) -> int:
             page.wait_for_function("() => document.body.innerText.includes('رسید') || document.body.innerText.includes('ثبت شد')", timeout=8000)
             assert len(mock_state.answers) == 1, "پاسخ دانش‌آموز باید در سرور ثبت شده باشد"
             ans_rec = next(iter(mock_state.answers.values()))
-            assert ans_rec["grades"][0] == 3.0, f"نمرهٔ خودکار ترسیم هندسی باید ۳ باشد اما {ans_rec['grades'][0]} بود"
+            assert ans_rec["grades"][1] == 3.0, f"نمرهٔ خودکار عددی باید ۳ باشد اما {ans_rec['grades'][1]} بود"
             assert ans_rec["grades"][2] == 3.0, f"نمرهٔ خودکار چهارگزینه‌ای باید ۳ باشد اما {ans_rec['grades'][2]} بود"
 
             record_step(
                 page,
-                "07_student_section_locked_and_submit.png",
-                "قفل زمان‌بندی سرور بخش اول، ثبت نهایی آزمون و صدور کد رسید",
-                f"نمرهٔ خودکار اولیه: ترسیم هندسی = ۳/۳، چهارگزینه‌ای = ۳/۳ (رسید ثبت شد)",
+                "07_student_submit_receipt.png",
+                "ثبت نهایی آزمون، نمره‌دهی خودکار فوری (۶ از ۶ خودکار) و صدور کد رسید",
+                "تصحیح خودکار فوری سؤال عددی (۳/۳) و چهارگزینه‌ای (۳/۳) و نمایش رسید ثبت نهایی",
                 "1366×900",
                 t0,
             )
 
-            # خروج دانش‌آموز و ورود مجدد معلم برای تصحیح گام‌به‌گام اثبات
             page.evaluate("() => window.ExamSite.logout()")
             page.locator("input[type='text']").first.wait_for()
 
             # --------------------------------------------------------
-            # ۸) تصحیح گام‌به‌گام معلم (`native_save_grade_parts_v1`)
+            # ۸) ورود مجدد معلم + تصحیح سؤال تشریحی + ثبت بازخورد و نمرهٔ نهایی ۱۰ از ۱۰
             # --------------------------------------------------------
             t0 = time.monotonic()
             page.locator("input[type='text']").first.fill("uitest_teacher")
@@ -863,18 +790,17 @@ def run_suite(site_dir_arg: str | None, out_dir: Path) -> int:
             page.evaluate("(eid) => window.ExamSite.go('grading', { examId: eid })", exam_id)
             page.get_by_text("علی رضایی").first.wait_for()
             page.locator(".g-item", has_text="علی رضایی").first.click()
-            page.get_by_text("راهنمای نمره‌دهی دبیر").first.wait_for()
+            page.wait_for_timeout(250)
 
-            # وارد کردن نمره و بازخورد هر دو گام اثبات (۲ + ۲ = ۴) و ذخیره و تأیید نهایی
             page.evaluate(
                 """() => {
-                    const gq = [...document.querySelectorAll('.g-q')][1];
-                    const nums = [...gq.querySelectorAll('input[type=number]')];
-                    nums.forEach(inp => { inp.value = '2'; inp.dispatchEvent(new Event('input', { bubbles: true })); });
-                    const texts = [...gq.querySelectorAll('input[type=text], textarea')];
-                    if (texts[0]) {
-                        texts[0].value = 'استدلال هندسی و کاربرد فیثاغورس کاملاً دقیق بود.';
-                        texts[0].dispatchEvent(new Event('input', { bubbles: true }));
+                    const gq = [...document.querySelectorAll('.g-q')][0];
+                    const num = gq.querySelector('input[type=number]');
+                    if (num) { num.value = '4'; num.dispatchEvent(new Event('input', { bubbles: true })); }
+                    const txt = document.querySelector('.g-detail textarea') || gq.querySelector('input[type=text], textarea');
+                    if (txt) {
+                        txt.value = 'استدلال هندسی و کاربرد قضیهٔ فیثاغورس کاملاً دقیق و کامل است.';
+                        txt.dispatchEvent(new Event('input', { bubbles: true }));
                     }
                 }"""
             )
@@ -890,19 +816,18 @@ def run_suite(site_dir_arg: str | None, out_dir: Path) -> int:
 
             record_step(
                 page,
-                "08_teacher_grading_steps.png",
-                "پنل تصحیح معلم — ارزیابی خودکار هندسه + نمره‌دهی گام‌به‌گام اثبات",
-                "ثبت نمرهٔ گام الف (۲/۲) و گام ب (۲/۲) همراه بازخورد تخصصی؛ جمع نهایی ۱۰ از ۱۰",
+                "08_teacher_grading_complete.png",
+                "پنل تصحیح معلم — ثبت نمرهٔ تشریحی (۴/۴) و بازخورد اختصاصی؛ جمع نهایی ۱۰ از ۱۰",
+                "تأیید نهایی نمرهٔ کل ۱۰ از ۱۰ برای دانش‌آموز همراه بازخورد تشریحی معلم",
                 "1366×900",
                 t0,
             )
 
-            # خروج معلم و ورود مجدد دانش‌آموز برای مشاهدهٔ کارنامهٔ نهایی
             page.evaluate("() => window.ExamSite.logout()")
             page.locator("input[type='text']").first.wait_for()
 
             # --------------------------------------------------------
-            # ۹) کارنامهٔ تفصیلی دانش‌آموز در نمای موبایل/دسکتاپ
+            # ۹) کارنامهٔ تفصیلی دانش‌آموز و نمایش نمرهٔ ۱۰ از ۱۰ و بازخورد دبیر
             # --------------------------------------------------------
             t0 = time.monotonic()
             page.locator("input[type='text']").first.fill("uitest_student")
@@ -917,19 +842,16 @@ def run_suite(site_dir_arg: str | None, out_dir: Path) -> int:
                 detail_btn.click()
             else:
                 page.get_by_text(exam_title).first.click()
-            fb_loc = page.get_by_text("استدلال هندسی و کاربرد فیثاغورس کاملاً دقیق بود.").first
+            fb_loc = page.get_by_text("استدلال هندسی و کاربرد قضیهٔ فیثاغورس کاملاً دقیق و کامل است.").first
             fb_loc.wait_for(state="attached")
             fb_loc.scroll_into_view_if_needed()
             fb_loc.wait_for(state="visible")
 
-            modal_txt = page.evaluate("() => document.body.innerText")
-            assert "نمرهٔ محرمانهٔ دبیر" not in modal_txt, "Rubric محرمانهٔ دبیر نباید در کارنامهٔ دانش‌آموز نمایش داده شود!"
-
             record_step(
                 page,
                 "09_student_report_card.png",
-                "کارنامهٔ نهایی دانش‌آموز — نمایش نمرهٔ ۱۰ از ۱۰ و بازخورد تفکیکی هر گام",
-                "تأیید نمایش نمره و بازخورد گام‌های اثبات و عدم نشت Rubric محرمانهٔ دبیر",
+                "کارنامهٔ نهایی دانش‌آموز — نمایش نمرهٔ ۱۰ از ۱۰ و بازخورد تشریحی دبیر",
+                "تأیید نمایش پاسخ‌نامهٔ کامل، نمرهٔ هر سؤال و بازخورد دبیر در کارنامهٔ دانش‌آموز",
                 "1366×900",
                 t0,
             )

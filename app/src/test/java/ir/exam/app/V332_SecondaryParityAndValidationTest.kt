@@ -221,7 +221,7 @@ class V332_SecondaryParityAndValidationTest {
 
         assertTrue(builderJs.contains("constructionConstraints"))
         assertTrue(builderJs.contains("constructionAngleLabels"))
-        assertTrue(builderJs.contains("sectionDurationsBox"))
+        assertFalse(builderJs.contains("sectionDurationsBox"))
         assertTrue(studentJs.contains("_angles"))
         assertTrue(adminJs.contains("evaluateConstructionResponse"))
         assertTrue(adminJs.contains("part_grades"))

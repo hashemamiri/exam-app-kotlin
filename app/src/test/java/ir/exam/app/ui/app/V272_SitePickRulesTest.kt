@@ -13,7 +13,7 @@ class V272_SitePickRulesTest {
     fun `site builder has pick rules box`() {
         val js = src("site/src/builder.js")
         assertTrue("function pickRulesBox(st) {" in js)
-        assertTrue("text: 'انتخاب تصادفی از هر نوع، مبحث یا بخش (خالی = همهٔ گروه)'" in js)
+        assertTrue("text: 'انتخاب تصادفی بر اساس نوع سؤال (خالی = همهٔ آن نوع)'" in js)
         assertTrue("var prw = el('div', {class: 'b-pr-wrap'}); var prb = pickRulesBox(state); if (prb) prw.appendChild(prb); m_.appendChild(prw);" in js) // V275: ظرف ثابت
     }
 }
