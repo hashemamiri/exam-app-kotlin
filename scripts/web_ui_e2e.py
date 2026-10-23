@@ -634,72 +634,15 @@ def run_suite(site_dir_arg: str | None, out_dir: Path) -> int:
                 }"""
             )
 
-            # بررسی چیدمان V334.1 روی سؤال چندگزینه‌ای (گزینه‌ها بلافاصله زیر ابزارها و بالاتر از قالب متن سؤال)
-            mc_geom = page.evaluate(
-                """() => {
-                    const tools = document.querySelector('.b-editor .b-tools').getBoundingClientRect();
-                    const typeBox = document.querySelector('.b-editor .b-type').getBoundingClientRect();
-                    const fmtBox = document.querySelector('.b-editor .b-sec-fmt').getBoundingClientRect();
-                    return { toolsBottom: tools.bottom, typeTop: typeBox.top, typeBottom: typeBox.bottom, fmtTop: fmtBox.top };
-                }"""
-            )
-            assert mc_geom["toolsBottom"] <= mc_geom["typeTop"] + 2, f"گزینه‌ها باید زیر نوار ابزار باشد: {mc_geom}"
-            assert mc_geom["typeBottom"] <= mc_geom["fmtTop"] + 2, f"گزینه‌ها باید بالای قالب متن سؤال باشد: {mc_geom}"
-
-            # بررسی موقت نوع «جورکردنی» و تأیید قرارگیری ستون‌های جورکردنی بلافاصله زیر ابزارها، سپس بازگرداندن به چندگزینه‌ای
-            page.evaluate(
-                """() => {
-                    const matchChip = [...document.querySelectorAll('.b-types .chip')].find(c => c.textContent.includes('جور'));
-                    if (matchChip) matchChip.click();
-                }"""
-            )
-            page.wait_for_timeout(100)
-            match_geom = page.evaluate(
-                """() => {
-                    const tools = document.querySelector('.b-editor .b-tools').getBoundingClientRect();
-                    const typeBox = document.querySelector('.b-editor .b-type').getBoundingClientRect();
-                    const fmtBox = document.querySelector('.b-editor .b-sec-fmt').getBoundingClientRect();
-                    return {
-                        text: document.querySelector('.b-editor .b-type').innerText,
-                        toolsBottom: tools.bottom,
-                        typeTop: typeBox.top,
-                        typeBottom: typeBox.bottom,
-                        fmtTop: fmtBox.top
-                    };
-                }"""
-            )
-            assert "ستون راست" in match_geom["text"], f"ستون جورکردنی نمایش داده نشد: {match_geom}"
-            assert match_geom["toolsBottom"] <= match_geom["typeTop"] + 2, f"ستون جورکردنی باید زیر ابزارها باشد: {match_geom}"
-            assert match_geom["typeBottom"] <= match_geom["fmtTop"] + 2, f"ستون جورکردنی باید بالای قالب متن باشد: {match_geom}"
-
-            # بازگرداندن سؤال ۳ به چندگزینه‌ای با همان گزینه‌ها و پاسخ درست
-            page.evaluate(
-                """() => {
-                    const mcChip = [...document.querySelectorAll('.b-types .chip')].find(c => c.textContent.includes('چند'));
-                    if (mcChip) mcChip.click();
-                }"""
-            )
-            set_mc_options(page, ["۵", "۶", "۷", "۱۲"])
-            page.evaluate(
-                """() => {
-                    const radios = [...document.querySelectorAll('input[type=radio]')];
-                    if (radios[1]) { radios[1].checked = true; radios[1].dispatchEvent(new Event('change', { bubbles: true })); radios[1].click(); }
-                    const scoreField = [...document.querySelectorAll('.field')].find(f => f.querySelector('label')?.textContent.trim() === 'بارم');
-                    if (scoreField) {
-                        const i = scoreField.querySelector('input');
-                        i.value = '3';
-                        i.dispatchEvent(new Event('input', { bubbles: true }));
-                    }
-                }"""
-            )
-
-            # ماندن روی سؤال ۳ چندگزینه‌ای برای ثبت اسکرین‌شات واضح که «گزینه‌ها» بلافاصله زیر ابزارها دیده می‌شود
+            # بازگشت روی سؤال ۱ تشریحی روی ریل شماره‌ها برای ثبت اسکرین‌شات واضح از کارت سؤال تمیز و خلوت
+            page.locator(".b-rail-nums > *").first.click()
+            page.wait_for_timeout(120)
             page.evaluate("window.scrollTo(0, 0)")
             record_step(
                 page,
                 "03_teacher_builder_clean.png",
-                "سازندهٔ آزمون V334.1 — قرارگیری بلافاصلهٔ گزینه‌ها/ستون جورکردنی زیر نوار ابزارها",
-                "تأیید مختصات پیکسل واقعی: نوار ابزارها ← گزینه‌ها/ستون جورکردنی ← قالب متن سؤال",
+                "سازندهٔ آزمون ساده و خلوت‌شده (حذف کامل ۷ بخش شلوغ از کارت سؤال و بانک)",
+                "تأیید نبود هر ۷ بخش حذف‌شده در DOM کارت سؤال، پنجرهٔ بانک سؤال و تنظیمات آزمون؛ ساخت آزمون ۱۰ نمره‌ای",
                 "1366×900",
                 t0,
             )
