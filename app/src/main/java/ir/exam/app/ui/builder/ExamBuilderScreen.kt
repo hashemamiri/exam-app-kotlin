@@ -1638,53 +1638,8 @@ private fun QuestionEditor(
                     modifier = Modifier.fillMaxWidth()
                 )
             }
-            // V107 — «تصویر پاسخ دانش‌آموز» و «نمودار پاسخ دانش‌آموز» فقط در
-            // آزمونِ آنلاین معنا دارند؛ در آزمونِ چاپی به‌جای آن‌ها «فضای پاسخ»
-            // (تعداد سطر / نوع سطر / فاصلهٔ سطر به سانتی‌متر) نشان داده می‌شود.
-            if (printMode) {
-                // V110 — فضای پاسخ برای تشریحی، جای‌خالی و عددی (درخواست کاربر).
-                if (question.type == QuestionType.ESSAY || question.type == QuestionType.FILL_BLANK || question.type == QuestionType.NUMERIC) {
-                    PrintAnswerSpaceControls(question = question, viewModel = viewModel)
-                }
-                // V208 — چیدمان گزینه‌های چندگزینه‌ای در برگهٔ چاپی (پیش‌فرض آزمون در «تنظیمات صفحه» پیش‌نمایش)
-                if (question.type == QuestionType.MULTIPLE_CHOICE) {
-                    PrintOptionsLayoutControls(question = question, viewModel = viewModel)
-                }
-            } else {
-            Text("تصویر پاسخ دانش‌آموز")
-            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                listOf("no" to "غیرفعال", "optional" to "اختیاری", "required" to "اجباری").forEach { (mode, label) ->
-                    FilterChip(
-                        selected = question.answerImageMode == mode,
-                        onClick = { viewModel.setAnswerImageMode(question.id, mode) },
-                        label = { Text(label) }
-                    )
-                }
-            }
-            if (question.answerImageMode != "no") {
-                (1..10).chunked(5).forEach { counts ->
-                    Row(horizontalArrangement = Arrangement.spacedBy(5.dp)) {
-                        counts.forEach { count ->
-                            FilterChip(
-                                selected = question.maxAnswerImages == count,
-                                onClick = { viewModel.setMaxAnswerImages(question.id, count) },
-                                label = { Text(count.toString()) }
-                            )
-                        }
-                    }
-                }
-            }
-            // V136 — «تخته وایت‌برد» جایگزین «نمودار پاسخ دانش‌آموز» (V58.0) شد؛ همان
-            // پرچم allowAnswerGraph در JSON سؤال ذخیره می‌شود تا آزمون‌های قدیمی سازگار بمانند.
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("تخته وایت‌برد دانش‌آموز")
-                FilterChip(
-                    selected = question.allowAnswerGraph,
-                    onClick = { viewModel.setAllowAnswerGraph(question.id, !question.allowAnswerGraph) },
-                    label = { Text(if (question.allowAnswerGraph) "فعال" else "غیرفعال") }
-                )
-            }
-            }
+            // V334.1 — بخش اختصاصی هر نوع سؤال (گزینه‌ها، ستون جورکردنی، درست/نادرست، جای‌خالی، عددی و نوع ابتدایی)
+            // بلافاصله زیر نوار ابزارها قرار می‌گیرد تا معلم بدون اسکرول مستقیم وارد طراحی پاسخ سؤال شود.
             // V305 — حالت ابتدایی: نوع ویژهٔ سؤال (فقط وقتی کلید «حالت ابتدایی» آزمون روشن است)
             // V310.1 — در آزمون چاپی هم مثل سایت نمایش داده می‌شود (قبلاً `!printMode` بود و املا در چاپ دیده نمی‌شد).
             if (primary && (question.type == QuestionType.ESSAY || question.type == QuestionType.FILL_BLANK || question.type == QuestionType.MULTIPLE_CHOICE)) {
@@ -1841,6 +1796,51 @@ private fun QuestionEditor(
                     onItemDragScroll = onDragScroll
                 )
                 QuestionType.ESSAY -> Unit
+            }
+            // V334.1 — تنظیمات تکمیلی سؤال (فضای پاسخ/چیدمان چاپی یا تصویر پاسخ/تختهٔ دانش‌آموز) در پایین بخش اختصاصی نوع سؤال
+            if (printMode) {
+                // V110 — فضای پاسخ برای تشریحی، جای‌خالی و عددی (درخواست کاربر).
+                if (question.type == QuestionType.ESSAY || question.type == QuestionType.FILL_BLANK || question.type == QuestionType.NUMERIC) {
+                    PrintAnswerSpaceControls(question = question, viewModel = viewModel)
+                }
+                // V208 — چیدمان گزینه‌های چندگزینه‌ای در برگهٔ چاپی (پیش‌فرض آزمون در «تنظیمات صفحه» پیش‌نمایش)
+                if (question.type == QuestionType.MULTIPLE_CHOICE) {
+                    PrintOptionsLayoutControls(question = question, viewModel = viewModel)
+                }
+            } else {
+                Text("تصویر پاسخ دانش‌آموز")
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    listOf("no" to "غیرفعال", "optional" to "اختیاری", "required" to "اجباری").forEach { (mode, label) ->
+                        FilterChip(
+                            selected = question.answerImageMode == mode,
+                            onClick = { viewModel.setAnswerImageMode(question.id, mode) },
+                            label = { Text(label) }
+                        )
+                    }
+                }
+                if (question.answerImageMode != "no") {
+                    (1..10).chunked(5).forEach { counts ->
+                        Row(horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+                            counts.forEach { count ->
+                                FilterChip(
+                                    selected = question.maxAnswerImages == count,
+                                    onClick = { viewModel.setMaxAnswerImages(question.id, count) },
+                                    label = { Text(count.toString()) }
+                                )
+                            }
+                        }
+                    }
+                }
+                // V136 — «تخته وایت‌برد» جایگزین «نمودار پاسخ دانش‌آموز» (V58.0) شد؛ همان
+                // پرچم allowAnswerGraph در JSON سؤال ذخیره می‌شود تا آزمون‌های قدیمی سازگار بمانند.
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("تخته وایت‌برد دانش‌آموز")
+                    FilterChip(
+                        selected = question.allowAnswerGraph,
+                        onClick = { viewModel.setAllowAnswerGraph(question.id, !question.allowAnswerGraph) },
+                        label = { Text(if (question.allowAnswerGraph) "فعال" else "غیرفعال") }
+                    )
+                }
             }
             /* V88.4 — «چیدمان و ظاهر چاپ» از کارتِ آزمونِ آنلاین برداشته شد:
                آنجا آزمون روی صفحهٔ دانش‌آموز اجرا می‌شود و تنظیماتِ کاغذ

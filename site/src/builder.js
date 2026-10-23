@@ -864,6 +864,8 @@
         q.images.forEach(function (m, k) { ig.appendChild(el('div', {class: 'b-img'}, [el('img', {src: m.uri}), el('button', {class: 'x', text: '✕', onclick: function () { q.images.splice(k, 1); mark(); drawEditor(); }})])); });
         editor.appendChild(ig);
       }
+      /* V334.1 — بخش اختصاصی هر نوع سؤال بلافاصله زیر نوار ابزارها (گزینه‌ها، ستون جورکردنی، درست/نادرست، پاسخ کوتاه/عددی و ...) */
+      editor.appendChild(typeSection(q));
       /* بارم + قالب */
       var fmt = el('div', {class: 'grid4'}, [
         inp('بارم', String(q.score), function (v) { q.score = parseFloat(en(v)) || 0; mark(); drawListSoft(); var rs = rail.querySelector('.b-rail-score-v'); if (rs) rs.textContent = fa(S.fmtScore(totalScore())); }, 'number'),
@@ -874,8 +876,6 @@
       /* V259.1 — دسکتاپ: هر گروه تنظیمات در یک «بخش» مرتب (عنوان + شبکهٔ هم‌ارتفاع)؛ گوشی بدون تغییر ظاهری */
       function sec(title, children, cls) { return el('div', {class: 'b-sec' + (cls ? ' ' + cls : '')}, [title ? el('h4', {class: 'b-sec-t', text: title, style: 'margin-top:14px'}) : null].concat(children)); }
       editor.appendChild(sec(document.body.classList.contains('dk') ? 'قالب متن سؤال' : '', [fmt, el('div', {class: 'row b-sec-chips', style: 'margin:-6px 0 12px'}, [chk('ضخیم', q.bold, function (v) { q.bold = v; mark(); }), chk('مورب', q.italic, function (v) { q.italic = v; mark(); })])], 'b-sec-fmt'));
-      /* بخش مخصوص نوع */
-      editor.appendChild(typeSection(q));
       /* فضای پاسخ (چاپ) */
       if (q.type === 'essay' || q.type === 'fill' || q.type === 'numeric') {
         editor.appendChild(sec('فضای پاسخ در برگهٔ چاپی', [el('div', {class: 'grid3'}, [
