@@ -1391,11 +1391,10 @@ private fun QuestionEditor(
         if (uri != null) {
             ocrLoading = true
             scope.launch {
-                val bmp: Bitmap? = withContext(Dispatchers.IO) {
+                val bytesRes = DocumentIo.readBytes(context, uri, 20 * 1024 * 1024, "حجم تصویر بسیار زیاد است.")
+                val bmp: Bitmap? = bytesRes.getOrNull()?.let { bytes ->
                     try {
-                        context.contentResolver.openInputStream(uri)?.use { stream ->
-                            BitmapFactory.decodeStream(stream)
-                        }
+                        BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
                     } catch (_: Throwable) {
                         null
                     }
