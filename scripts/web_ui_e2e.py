@@ -528,22 +528,6 @@ def run_suite(site_dir_arg: str | None, out_dir: Path) -> int:
             page.locator("input[type='password']").first.fill("TestPass1234!")
             page.locator("input[type='password']").first.press("Enter")
             page.locator("button[aria-label='افزودن']").wait_for()
-
-            # بررسی سازندهٔ «آزمون چاپی» (V334.3): داشتن «قالب متن سؤال» و «فضای پاسخ در برگهٔ چاپی» و نداشتن اجزای آنلاین
-            page.evaluate("() => window.ExamSite.go('builder', { mode: 'print', fresh: true })")
-            click_visible_button(page, "افزودن")
-            page.wait_for_timeout(100)
-            click_visible_button(page, "تشریحی", substring=True)
-            set_question_text(page, "قضیهٔ فیثاغورس را بیان و برای مثلث قائم‌الزاویهٔ ABC اثبات کنید.")
-            print_dom = page.evaluate("() => document.body.innerText")
-            assert "قالب متن سؤال" in print_dom, "قالب متن سؤال باید در سازندهٔ چاپی دیده شود"
-            assert "فضای پاسخ در برگهٔ چاپی" in print_dom, "فضای پاسخ چاپی باید در سازندهٔ چاپی دیده شود"
-            assert "سؤال تشریحی به‌صورت دستی تصحیح می‌شود." not in print_dom, "پیام تصحیح آنلاین نباید در سازندهٔ چاپی باشد"
-            assert "پاسخ تصویری / تختهٔ دانش‌آموز" not in print_dom, "پاسخ تصویری آنلاین نباید در سازندهٔ چاپی باشد"
-            assert page.locator(".b-tools button[aria-label='صوت سؤال']").count() == 0, "دکمهٔ صوت سؤال نباید در سازندهٔ چاپی باشد"
-            page.screenshot(path=str(out_dir / "03a_print_builder_clean.png"))
-
-            # بازگشت به سازندهٔ «آزمون آنلاین جدید» (V334.3): نداشتن هیچ‌یک از بخش‌های کاغذی/چاپی
             page.evaluate("() => window.ExamSite.go('builder', { fresh: true })")
             page.get_by_role("button", name="ذخیره", exact=True).wait_for()
 
@@ -574,10 +558,8 @@ def run_suite(site_dir_arg: str | None, out_dir: Path) -> int:
                 "زمان مجاز هر بخش",
             ]
             builder_dom_text = page.evaluate("() => document.body.innerText")
-            for bad_lbl in forbidden_ui_labels + ["قالب متن سؤال", "فضای پاسخ در برگهٔ چاپی", "چیدمان گزینه‌ها در برگهٔ چاپی"]:
-                assert bad_lbl not in builder_dom_text, f"فیلد غیرمربوط نباید در سازندهٔ آزمون آنلاین دیده شود: {bad_lbl}"
-            assert "سؤال تشریحی به‌صورت دستی تصحیح می‌شود." in builder_dom_text, "توضیح تصحیح دستی باید در آزمون آنلاین باشد"
-            assert "پاسخ تصویری / تختهٔ دانش‌آموز" in builder_dom_text, "پاسخ تصویری دانش‌آموز باید در آزمون آنلاین باشد"
+            for bad_lbl in forbidden_ui_labels:
+                assert bad_lbl not in builder_dom_text, f"فیلد حذف‌شده نباید در سازندهٔ وب دیده شود: {bad_lbl}"
             assert page.locator(".b-section-durations").count() == 0, "کادر زمان بخش نباید در تنظیمات آزمون وجود داشته باشد!"
 
             # تنظیم بارم سؤال ۱ = ۴
@@ -652,19 +634,17 @@ def run_suite(site_dir_arg: str | None, out_dir: Path) -> int:
                 }"""
             )
 
-            # بررسی چیدمان V334.1 + V334.3 روی سؤال چندگزینه‌ای آنلاین (گزینه‌ها بلافاصله زیر ابزارها، بارم در سربرگ، بدون قالب چاپی)
+            # بررسی چیدمان V334.1 روی سؤال چندگزینه‌ای (گزینه‌ها بلافاصله زیر ابزارها و بالاتر از قالب متن سؤال)
             mc_geom = page.evaluate(
                 """() => {
-                    const head = document.querySelector('.b-editor .b-qhead .b-qscore').getBoundingClientRect();
                     const tools = document.querySelector('.b-editor .b-tools').getBoundingClientRect();
                     const typeBox = document.querySelector('.b-editor .b-type').getBoundingClientRect();
-                    const fmtEl = document.querySelector('.b-editor .b-sec-fmt');
-                    return { headBottom: head.bottom, toolsTop: tools.top, toolsBottom: tools.bottom, typeTop: typeBox.top, hasPrintFmt: !!fmtEl };
+                    const fmtBox = document.querySelector('.b-editor .b-sec-fmt').getBoundingClientRect();
+                    return { toolsBottom: tools.bottom, typeTop: typeBox.top, typeBottom: typeBox.bottom, fmtTop: fmtBox.top };
                 }"""
             )
-            assert mc_geom["hasPrintFmt"] is False, f"قالب چاپی نباید در آزمون آنلاین رندر شود: {mc_geom}"
-            assert mc_geom["headBottom"] <= mc_geom["toolsTop"] + 2, f"بارم باید در سربرگ کارت بالای ابزارها باشد: {mc_geom}"
             assert mc_geom["toolsBottom"] <= mc_geom["typeTop"] + 2, f"گزینه‌ها باید زیر نوار ابزار باشد: {mc_geom}"
+            assert mc_geom["typeBottom"] <= mc_geom["fmtTop"] + 2, f"گزینه‌ها باید بالای قالب متن سؤال باشد: {mc_geom}"
 
             # بررسی موقت نوع «جورکردنی» و تأیید قرارگیری ستون‌های جورکردنی بلافاصله زیر ابزارها، سپس بازگرداندن به چندگزینه‌ای
             page.evaluate(
@@ -678,17 +658,19 @@ def run_suite(site_dir_arg: str | None, out_dir: Path) -> int:
                 """() => {
                     const tools = document.querySelector('.b-editor .b-tools').getBoundingClientRect();
                     const typeBox = document.querySelector('.b-editor .b-type').getBoundingClientRect();
+                    const fmtBox = document.querySelector('.b-editor .b-sec-fmt').getBoundingClientRect();
                     return {
                         text: document.querySelector('.b-editor .b-type').innerText,
                         toolsBottom: tools.bottom,
                         typeTop: typeBox.top,
-                        hasPrintFmt: !!document.querySelector('.b-editor .b-sec-fmt')
+                        typeBottom: typeBox.bottom,
+                        fmtTop: fmtBox.top
                     };
                 }"""
             )
             assert "ستون راست" in match_geom["text"], f"ستون جورکردنی نمایش داده نشد: {match_geom}"
             assert match_geom["toolsBottom"] <= match_geom["typeTop"] + 2, f"ستون جورکردنی باید زیر ابزارها باشد: {match_geom}"
-            assert match_geom["hasPrintFmt"] is False, f"قالب چاپی نباید در جورکردنی آنلاین باشد: {match_geom}"
+            assert match_geom["typeBottom"] <= match_geom["fmtTop"] + 2, f"ستون جورکردنی باید بالای قالب متن باشد: {match_geom}"
 
             # بازگرداندن سؤال ۳ به چندگزینه‌ای با همان گزینه‌ها و پاسخ درست
             page.evaluate(

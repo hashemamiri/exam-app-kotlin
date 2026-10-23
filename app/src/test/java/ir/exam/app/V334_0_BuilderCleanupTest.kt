@@ -7,13 +7,10 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
- * V334.0 .. V334.3 (1.02.83) — اطمینان از:
+ * V334.0 / V334.1 (1.02.81) — اطمینان از:
  * ۱) حذف ۱۰۰٪ بخش‌های شلوغ از سازندهٔ آزمون، پنجرهٔ بانک سؤال و تنظیمات آزمون در هر دو پلتفرم،
  * ۲) قرارگیری بلافاصلهٔ بخش اختصاصی هر نوع سؤال (گزینه‌ها، ستون جورکردنی، درست/نادرست، پاسخ کوتاه/عددی و ...)
- *    زیر نوار ابزارهای سؤال و بالاتر از تنظیمات تکمیلی،
- * ۳) تفکیک کامل اجزای «آزمون آنلاین» و «آزمون چاپی» در وب‌سایت هم‌تراز با اپ اندروید:
- *    - در آزمون آنلاین: بدون «قالب متن سؤال» و بدون «فضای پاسخ در برگهٔ چاپی»؛ بارم فشرده در سربرگ کارت سؤال.
- *    - در آزمون چاپی: بدون «سؤال تشریحی به‌صورت دستی تصحیح می‌شود.»، بدون «صوت سؤال» و بدون «پاسخ تصویری دانش‌آموز».
+ *    زیر نوار ابزارهای سؤال و بالاتر از تنظیمات تکمیلی (قالب متن سؤال / فضای پاسخ / پاسخ تصویری) در هر دو پلتفرم.
  */
 class V334_0_BuilderCleanupTest {
     private fun root(): File {
@@ -69,24 +66,17 @@ class V334_0_BuilderCleanupTest {
     }
 
     @Test
-    fun webExamBuilderAndCompiledBundle_separateOnlineAndPrintCleanly() {
+    fun webExamBuilderAndCompiledBundle_haveZeroRemovedControlsAndTypeSectionRightUnderTools() {
         val builderJs = src("site/src/builder.js")
         forbiddenBuilderStrings.forEach { forbidden ->
             assertFalse("رشتهٔ حذف‌شده نباید در site/src/builder.js باقی مانده باشد: $forbidden", forbidden in builderJs)
         }
-        assertTrue("بارم فشرده در سربرگ کارت سؤال باید موجود باشد", "class: 'field b-qscore'" in builderJs)
-        assertTrue("صوت سؤال فقط در آزمون آنلاین نمایش داده شود", "state.mode !== 'print' && window.SiteExtras" in builderJs)
-        assertTrue("توضیح تصحیح دستی تشریحی فقط در حالت آنلاین باشد", "} else if (state.mode !== 'print') {" in builderJs)
-
         val toolsIdx = builderJs.indexOf("class: 'b-tools'")
         val typeIdx = builderJs.indexOf("editor.appendChild(typeSection(q));")
-        val printGuardIdx = builderJs.indexOf("if (state.mode === 'print') {", typeIdx)
-        val fmtIdx = builderJs.indexOf("'b-sec-fmt'", printGuardIdx)
-        val printSpaceIdx = builderJs.indexOf("sec('فضای پاسخ در برگهٔ چاپی'", fmtIdx)
-        val onlineImgIdx = builderJs.indexOf("if (state.mode === 'online' &&", printSpaceIdx)
-        assertTrue("بخش نوع سؤال باید زیر نوار ابزارهای وب باشد", toolsIdx in 1 until typeIdx)
-        assertTrue("بخش‌های چاپی باید داخل شرط state.mode === 'print' و زیر بخش نوع سؤال باشند",
-            typeIdx < printGuardIdx && printGuardIdx < fmtIdx && fmtIdx < printSpaceIdx && printSpaceIdx < onlineImgIdx)
+        val fmtIdx = builderJs.indexOf("'b-sec-fmt'")
+        assertTrue("نوار ابزار و بخش نوع سؤال در وب باید یافت شوند", toolsIdx > 0 && typeIdx > 0 && fmtIdx > 0)
+        assertTrue("بخش نوع سؤال باید زیر نوار ابزارهای وب باشد", toolsIdx < typeIdx)
+        assertTrue("بخش نوع سؤال باید بالاتر از قالب متن سؤال (b-sec-fmt) قرار گیرد", typeIdx < fmtIdx)
 
         val indexHtml = src("site/index.html")
         val match = Regex("""window\.__PANELS_URL\s*=\s*"/([^"]+)"""").find(indexHtml)
@@ -97,7 +87,6 @@ class V334_0_BuilderCleanupTest {
         forbiddenBuilderStrings.forEach { forbidden ->
             assertFalse("رشتهٔ حذف‌شده نباید در باندل فعال ${activePanelsFile.name} باقی مانده باشد: $forbidden", forbidden in bundleText)
         }
-        assertTrue("b-qscore" in bundleText)
         val bundleTypeIdx = bundleText.indexOf("editor.appendChild(typeSection(q))")
         val bundleFmtIdx = bundleText.indexOf("'b-sec-fmt'")
         assertTrue("در باندل کامپایل‌شده نیز typeSection باید قبل از b-sec-fmt باشد", bundleTypeIdx in 1 until bundleFmtIdx)

@@ -1,32 +1,6 @@
 # هندآف جامع مهاجرت سامانه آزمون از WebView به Native Kotlin
 
-**آخرین به‌روزرسانی:** ۲۰۲۶-۱۰-۲۳ — بستهٔ V335.0 (`1.02.85`، گام ۱ از ۴ برنامه نهایی: **ممیزی کامل امنیت و Data API سوپابیس پیش از ۳۰ اکتبر**، فایل SQL مستقل: `/home/user/20261023_post_oct30_complete_audit_v335_0.sql` + فایل نصاب خودکار: `/home/user/apply_v335_0.py`): با اسکن کالبدشکافانه کل ۹۲ فایل مهاجرت SQL، تمام مخازن Kotlin اپ، تمام فایل‌های JS وب‌سایت و هر ۶ تابع لبه Deno، **۴ گپ واقعی پیش از تغییر ۳۰ اکتبر Supabase کشف و برطرف شد**:
-  1. **پوشش صریح هر ۱۶ جدول هسته‌ای اولیه (`profiles`, `exams`, `exam_keys`, `answers`, `answer_drafts`, `answers_trash`, `classes`, `class_members`, `exam_attempts`, `exam_audience_classes`, `exam_audience_students`, `exam_classes`, `exam_overrides`, `exam_sessions`, `exam_students`, `question_bank`):** این ۱۶ جدول پیش از پوشه `supabase/migrations` ساخته شده بودند و در `V324` گرنت صریح `service_role` / `authenticated` نداشتند (در مجموع پوشش صریح به **۵۷ جدول** رسید و دسترسی مستقیم `anon` به `exam_keys` صریحاً مسدود شد).
-  2. **تکمیل گرنت اجرای `service_role` روی `public.native_due_account_deletions_v282()`** که در `V282` پس از `revoke all` جا افتاده بود.
-  3. **قفل امنیتی `SET search_path = public, pg_temp` روی ۴ تابع عمومی فاقد `search_path` (`native_auto_grade_question_v1`, `native_normalize_text_v1`, `native_answer_max_score_v255`, `native_exams_created_at_v137`) + حلقه خودکار روی کلیه توابع `public` و `private` و قفل کامل schema خصوصی `private`.**
-  4. **ارتقای دائمی نگهبان `scripts/check_supabase_data_api_grants.py` + تست واحد `V335_0_SupabaseOct30AuditTest.kt` + جدول گزارش فارسی خودکار در انتهای اسکریپت SQL** تا هنگام اجرا در Supabase SQL Editor با نمایش `۰ خطا` سلامت دیتابیس واقعی فوراً روی صفحه تایید شود.
-
----
-
-## سابقهٔ بستهٔ V334.4 (`1.02.84`) — ۲۰۲۶-۱۰-۲۳
-
-- **بستهٔ پیشین:** بستهٔ خودکار تک‌فرمانی V334.4 (`1.02.84`، فایل نصاب مستقل همه‌کاره: `/home/user/apply_v334_4.py`، مقصد تأییدشده توسط کاربر: **هر دو شاخهٔ `main` و `staging`**، بدون نیاز به هیچ اسکریپت SQL): علاوه بر اصلاح تک‌خطی تست `V334_0_BuilderCleanupTest:88` و تأیید مستقیم ۴۲ تست JUnit با `K2JVMCompiler + JUnitCore`، بنا به دستور صریح کاربر («در قالب بسته بده» تا دستورات ترمینال طولانی نباشد) **تمامی مراحل Git (`git fetch origin`، پاک‌سازی وضعیت نیمه‌کاره، `checkout/reset` روی `origin/main`، استخراج با تأیید SHA-256، `git commit` و `git push` هم‌زمان به `main` و `staging`) مستقیماً درون خودِ فایل `apply_v334_4.py` گنجانده شد** تا کاربر از هر پوشه‌ای در WSL تنها با **یک خط کوتاه** (`python3 /mnt/c/Users/Hashem/Downloads/apply_v334_4.py`) بسته را اعمال و CI گیت‌هاب را روشن کند.
-
----
-
-## سابقهٔ بستهٔ V334.3 (`1.02.83`) — ۲۰۲۶-۱۰-۲۳
-
-- **بستهٔ پیشین:** بستهٔ V334.3 (`1.02.83`، فایل نصاب مستقل: `/home/user/apply_v334_3.py`، مقصد تأییدشده توسط کاربر از طریق پرسش صریح: **هر دو شاخهٔ `main` و `staging`**، بدون نیاز به هیچ اسکریپت SQL جدیدی): پس از سبز شدن V334.2 (`86e72fead8`)، طبق دستور صریح مالک محصول **بخش‌های «آزمون جدید آنلاین» و «آزمون جدید چاپی» در وب‌سایت کاملاً از هم تفکیک و با اپلیکیشن اندروید (`ExamBuilderScreen.kt`) صددرصد هم‌تراز شدند**:
-  1. **فیلد جمع‌وجور «بارم» در سربرگ کارت سؤال (`.b-qhead .b-qscore`):** بارم سؤال دقیقاً مثل اپ اندروید (`MinimalScoreField`) به ردیف سربرگ بالای کارت سؤال منتقل شد تا در آزمون آنلاین نیازی به جعبهٔ سنگین پایین کارت نباشد.
-  2. **پاک‌سازی کامل سازندهٔ «آزمون آنلاین» (`state.mode !== 'print'`):** کادرهای کاغذی **«قالب متن سؤال»** (`تراز متن / فونت / اندازهٔ فونت / ضخیم / مورب`) و **«فضای پاسخ در برگهٔ چاپی»** (`تعداد خط / نوع خط / فاصلهٔ خط`) از بخش آزمون آنلاین حذف شدند و فقط در بخش **آزمون چاپی (`state.mode === 'print'`)** نمایش داده می‌شوند.
-  3. **پاک‌سازی کامل سازندهٔ «آزمون چاپی» (`state.mode === 'print'`):** جملهٔ **«سؤال تشریحی به‌صورت دستی تصحیح می‌شود.»**، دکمهٔ **«صوت سؤال»** در نوار ابزارها و بخش **«پاسخ تصویری / تختهٔ دانش‌آموز»** از بخش چاپی حذف شدند (درحالی‌که کلید پاسخ‌ها برای «چاپ با کلید (پاسخ‌نامه)» حفظ شد).
-  4. **راستی‌آزمایی زندهٔ مرورگر کرومیوم (`scripts/web_ui_e2e.py`) و بازبینی چشمی هر دو نما:** هر دو نمای «سازندهٔ چاپی» (`03a_print_builder_clean.png`) و «سازندهٔ آنلاین» (`03_teacher_builder_clean.png`) در کرومیوم واقعی رندر، از نظر DOM و مختصات پیکسلی بررسی (`WEB_UI_E2E_ALL_GREEN steps=9`) و با چشم بازبینی شدند؛ `scripts/preflight.py` (`PASS`) و `check_supabase_data_api_grants.py` (`41/41`) نیز سبز شدند.
-
----
-
-## سابقهٔ بستهٔ V334.2 (`1.02.82`) — ۲۰۲۶-۱۰-۲۳
-
-- **بستهٔ پیشین:** بستهٔ V334.2 (`1.02.82`، فایل نصاب مستقل: `/home/user/apply_v334_2.py`، مقصد تأییدشده توسط کاربر از طریق پرسش صریح: **هر دو شاخهٔ `main` و `staging`**، بدون نیاز به هیچ اسکریپت SQL جدیدی): پس از سبز شدن کامل استقرار وب V334.1 روی هر سه شاخهٔ `main` (`#39917095452`)، `staging` (`#39917098508`) و `gh-pages` (`#39917160990`) و موفقیت کامل کامپایل `compileDebugKotlin`، `compileDebugUnitTestKotlin` و ۱٬۱۹۵ تست از ۱٬۱۹۷ تست واحد در GitHub Actions، تنها علت خطای دو تست `V208_ReleaseNotesTest.changelogTopBlockHasHeadlineBullets` و `V322_MathToolsRobustnessTest.changelogTopBlockHasNoInternalVersionNumbers` (طول `287` نویسه‌ای تک‌بولت بالای `text/CHANGELOG_FA.txt` که بیش از سقف `it.length <= 200` بود) برطرف شد:
+**آخرین به‌روزرسانی:** ۲۰۲۶-۱۰-۲۳ — بستهٔ V334.2 (`1.02.82`، فایل نصاب مستقل: `/home/user/apply_v334_2.py`، مقصد تأییدشده توسط کاربر از طریق پرسش صریح: **هر دو شاخهٔ `main` و `staging`**، بدون نیاز به هیچ اسکریپت SQL جدیدی): پس از سبز شدن کامل استقرار وب V334.1 روی هر سه شاخهٔ `main` (`#39917095452`)، `staging` (`#39917098508`) و `gh-pages` (`#39917160990`) و موفقیت کامل کامپایل `compileDebugKotlin`، `compileDebugUnitTestKotlin` و ۱٬۱۹۵ تست از ۱٬۱۹۷ تست واحد در GitHub Actions، تنها علت خطای دو تست `V208_ReleaseNotesTest.changelogTopBlockHasHeadlineBullets` و `V322_MathToolsRobustnessTest.changelogTopBlockHasNoInternalVersionNumbers` (طول `287` نویسه‌ای تک‌بولت بالای `text/CHANGELOG_FA.txt` که بیش از سقف `it.length <= 200` بود) برطرف شد:
   1. در `text/CHANGELOG_FA.txt` بولت‌های `V334.2` (`1.02.82`) و `V334.1` (`1.02.81`) با الگوی استاندارد `- ` و حداکثر طول ۱۱۵ نویسه (کاملاً زیر سقف ۲۰۰ نویسه و بدون هیچ کد نسخهٔ داخلی `Vxxx`) بازنویسی شدند.
   2. آینهٔ دقیق قواعد `V208_ReleaseNotesTest` و `V322_MathToolsRobustnessTest` مستقیماً به `scripts/preflight.py` اضافه شد تا از این پس هرگونه تخطی از سقف ۲۰۰ نویسه، نبود بولت، یا وجود کد `Vxxx` پیش از بسته‌بندی به‌طور خودکار متوقف شود.
 
