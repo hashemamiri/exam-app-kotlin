@@ -810,6 +810,21 @@ class ExamBuilderViewModel(
         _state.update { it.copy(questions = it.questions + drafts.map { d -> d.copy(id = UUID.randomUUID().toString()).ensureEditorIds() }) }
     }
 
+    /** V335.4 — سؤالات استخراج‌شده از OCR به آزمون اضافه می‌شوند. اگر سؤال جاری کاملاً خالی باشد، با اولین سؤال جایگزین می‌شود. */
+    fun addOcrQuestions(drafts: List<QuestionDraft>, currentQuestionId: String? = null) {
+        if (drafts.isEmpty()) return
+        _state.update { st ->
+            val cur = st.questions.firstOrNull { it.id == currentQuestionId }
+            if (cur != null && cur.text.isBlank() && cur.images.isEmpty() && cur.options.all(String::isBlank)) {
+                val first = drafts.first().copy(id = cur.id).ensureEditorIds()
+                val rest = drafts.drop(1).map { it.copy(id = UUID.randomUUID().toString()).ensureEditorIds() }
+                st.copy(questions = st.questions.map { if (it.id == cur.id) first else it } + rest)
+            } else {
+                st.copy(questions = st.questions + drafts.map { it.copy(id = UUID.randomUUID().toString()).ensureEditorIds() })
+            }
+        }
+    }
+
     fun addFromBank(id: Long) {
         val item = state.value.bankQuestions.firstOrNull { it.id == id } ?: return
         _state.update {

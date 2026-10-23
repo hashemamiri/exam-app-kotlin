@@ -23,6 +23,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Close
+import androidx.compose.material.icons.outlined.DocumentScanner
 import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.Draw
 import androidx.compose.material.icons.outlined.MusicNote
@@ -80,7 +81,9 @@ fun QuestionMediaEditor(
     hasAudio: Boolean = false,
     // V137.3 — آیکن تختهٔ سفید کنار آیکن موسیقی: معلم هم با همان تختهٔ دانش‌آموز شکل می‌کشد و
     // خروجی به‌عنوان تصویر سؤال اضافه می‌شود. null = نمایش داده نشود.
-    onOpenWhiteboard: (() -> Unit)? = null
+    onOpenWhiteboard: (() -> Unit)? = null,
+    // V335.4 — ابزار استخراج سؤالات و تست‌ها از تصویر با OCR آفلاین (کنار تختهٔ سفید)
+    onOpenOcr: (() -> Unit)? = null
 ) {
     val context = LocalContext.current
     val repository = remember(context) { LocalImageRepository(context) }
@@ -158,6 +161,11 @@ fun QuestionMediaEditor(
         if (onOpenWhiteboard != null) {
             IconButton(onClick = onOpenWhiteboard) {
                 Icon(Icons.Outlined.Draw, contentDescription = "تختهٔ سفید: کشیدن شکل برای سؤال")
+            }
+        }
+        if (onOpenOcr != null) {
+            IconButton(onClick = onOpenOcr) {
+                Icon(Icons.Outlined.DocumentScanner, contentDescription = "استخراج تست‌ها و سؤالات با OCR")
             }
         }
         if (processing) CircularProgressIndicator(Modifier.size(22.dp), strokeWidth = 2.dp)

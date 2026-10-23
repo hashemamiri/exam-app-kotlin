@@ -2222,7 +2222,7 @@
         f.forEach(function (x) {
           grid.appendChild(el('div', {class: 'exam'}, [
             el('div', {class: 'row'}, [el('div', {class: 't grow', text: x.title || 'بدون عنوان'}), el('span', {class: 'chip ' + (x.is_open ? 'ok' : 'off'), text: x.is_open ? 'باز' : 'بسته'})]),
-            el('div', {class: 'meta'}, [el('span', {text: '📚 ' + (x.subject || '—')}), el('span', {text: '⏱ ' + fa(x.duration || 0) + ' دقیقه'}), el('span', {text: '∑ ' + fa(fmtScore(x.total_score))})]),
+            el('div', {class: 'meta'}, [el('span', {text: '📚 ' + (x.subject || '—')}), el('span', {text: '⏱ ' + fa(x.duration || 0) + ' دقیقه'}), el('span', {text: 'بارم ' + fa(fmtScore(x.total_score))})]),
             el('div', {class: 'row'}, [el('span', {class: 'muted', style: 'font-size:12px', text: 'کد:'}), el('span', {class: 'code', text: x.code || '—'}), el('span', {class: 'grow'}), el('span', {class: 'muted', style: 'font-size:12px', text: fmtDate(x.created_at)})]),
             examActions(x, function () { pageExams(c); })
           ]));

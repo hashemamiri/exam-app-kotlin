@@ -57,9 +57,9 @@ class V321_App_SpeedDarkTest {
     fun darkToggleIsWiredFromTheMainMenu() {
         val menu = read("app/src/main/java/ir/exam/app/ui/app/Design69MainMenuScreen.kt")
         assertTrue("onToggleTheme: (() -> Unit)? = null" in menu)
-        assertTrue("if (darkTheme) \"☀️\" else \"🌙\"" in menu)
         val app = read("app/src/main/java/ir/exam/app/ui/app/ExamApp.kt")
-        assertTrue("onToggleTheme = toggleTheme" in app)
+        // V335.4 — کلید سریع تغییر تم از کارت پروفایل منو به هدر تقویم کنار اعلان‌ها منتقل شد
+        assertTrue("if (darkActive) \"☀️\" else \"🌙\"" in app)
         assertTrue("appearancePrefs.setTheme(next)" in app)
         // V321.1 — اعلان‌ها باید در همان composable‌ای باشند که منو را می‌سازد (AuthenticatedShell)
         assertTrue("val themeScope = rememberCoroutineScope()" in app)

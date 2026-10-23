@@ -1248,6 +1248,16 @@ private fun AuthenticatedShell(
                                     }
                                 },
                                 actions = {
+                                    // V335.4 — کلید سریع تغییر تم تیره/روشن کنار زنگولهٔ اعلان‌ها
+                                    IconButton(
+                                        onClick = toggleTheme,
+                                        modifier = Modifier.semantics { contentDescription = "تغییر تم تیره/روشن" }
+                                    ) {
+                                        Text(
+                                            if (darkActive) "☀️" else "🌙",
+                                            style = MaterialTheme.typography.titleMedium
+                                        )
+                                    }
                                     // V284 — زنگولهٔ مرکز اعلان (همهٔ نقش‌ها)
                                     ir.exam.app.ui.notifications.NotificationBell(
                                         userId = user.id,

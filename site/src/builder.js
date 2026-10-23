@@ -1180,27 +1180,91 @@
         box.appendChild(el('h4', {text: 'پاسخ درست'}));
         box.appendChild(el('div', {class: 'row'}, [['true', 'صحیح'], ['false', 'غلط']].map(function (o) { var r = el('input', {type: 'radio', name: 'tf_' + q.id}); r.checked = q.expectedText === o[0]; r.addEventListener('change', function () { q.expectedText = o[0]; mark(); }); return el('label', {class: 'row', style: 'gap:6px'}, [r, o[1]]); })));
       } else if (q.type === 'fill') {
-        box.appendChild(inp('پاسخ‌های قابل‌قبول (با | جدا کنید)', q.expectedText, function (v) { q.expectedText = v; mark(); }));
+        box.appendChild(el('h4', {text: 'پاسخ‌های قابل‌قبول'}));
+        var answers = String(q.expectedText || '').split('|');
+        if (!answers.length) answers = [''];
+        var wrap = el('div', {class: 'b-fill-answers', style: 'display:flex;flex-direction:column;gap:6px;margin-bottom:8px'});
+        answers.forEach(function (ans, idx) {
+          var ai = el('input', {type: 'text', placeholder: 'پاسخ ' + fa(idx + 1), value: ans, style: 'flex:1'});
+          ai.addEventListener('input', function () {
+            answers[idx] = ai.value;
+            q.expectedText = answers.join('|');
+            mark();
+          });
+          var delBtn = (answers.length > 1) ? el('button', {class: 'icon-btn danger', html: '✕', title: 'حذف پاسخ', onclick: function () {
+            answers.splice(idx, 1);
+            q.expectedText = answers.join('|');
+            mark();
+            redraw();
+          }}) : null;
+          wrap.appendChild(el('div', {class: 'row', style: 'gap:6px'}, [ai, delBtn].filter(Boolean)));
+        });
+        box.appendChild(wrap);
+        box.appendChild(el('button', {class: 'btn light sm', style: 'margin-bottom:8px', text: '➕ افزودن پاسخ دیگر', onclick: function () {
+          answers.push('');
+          q.expectedText = answers.join('|');
+          mark();
+          redraw();
+        }}));
         box.appendChild(chk('حساس به بزرگی/کوچکی حروف', q.caseSensitive, function (v) { q.caseSensitive = v; mark(); }));
       } else if (q.type === 'numeric') {
         box.appendChild(el('div', {class: 'grid2'}, [inp('پاسخ عددی', q.expectedNumber, function (v) { q.expectedNumber = en(v); mark(); }), inp('خطای مجاز (±)', q.tolerance, function (v) { q.tolerance = en(v); mark(); })]));
       } else if (q.type === 'matching') {
         box.appendChild(el('h4', {text: 'ستون راست ← ستون چپ (پاسخ درست را از فهرست انتخاب کنید)'}));
+        if (!q.matchingLeftImages) q.matchingLeftImages = [];
+        if (!q.matchingRightImages) q.matchingRightImages = [];
         var n = Math.max(q.matchingLeft.length, q.matchingRight.length);
         for (var k = 0; k < n; k++) (function (k) {
           /* V258 — جورکردنی هم مثل اپ: کادر تراشه‌ای (فرمول = نماد) + دکمهٔ + در دسکتاپ */
           var l = el('textarea', {rows: 1, placeholder: 'راست ' + fa(k + 1)}); l.value = q.matchingLeft[k] || ''; l.addEventListener('input', function () { q.matchingLeft[k] = l.value; mark(); });
           var r = el('textarea', {rows: 1, placeholder: 'چپ ' + fa(k + 1)}); r.value = q.matchingRight[k] || ''; r.addEventListener('input', function () { q.matchingRight[k] = r.value; mark(); });
           var lt = tokenTextarea(l, {small: true}), rt = tokenTextarea(r, {small: true}); lt.wrap.style.flex = '1'; rt.wrap.style.flex = '1';
+          var lImg = q.matchingLeftImages[k] || null;
+          var pickLImg = function () {
+            if (lImg) { q.matchingLeftImages[k] = null; mark(); redraw(); return; }
+            window.SiteStudio.open({onInsert: function (u) { if (!q.matchingLeftImages) q.matchingLeftImages = []; q.matchingLeftImages[k] = u; mark(); redraw(); }});
+          };
+          var rImg = q.matchingRightImages[k] || null;
+          var pickRImg = function () {
+            if (rImg) { q.matchingRightImages[k] = null; mark(); redraw(); return; }
+            window.SiteStudio.open({onInsert: function (u) { if (!q.matchingRightImages) q.matchingRightImages = []; q.matchingRightImages[k] = u; mark(); redraw(); }});
+          };
           /* V274 — دکمهٔ + درج برای موردهای جورکردنی روی گوشی هم (مثل اپ) */
-          var lp = el('button', {class: 'icon-btn b-opt-plus', title: 'درج در مورد راست ' + fa(k + 1), html: QI.plus, onclick: function (e) { insertMenu(e.currentTarget, l, q, {label: 'مورد راست ' + fa(k + 1)}); }});
-          var rp = el('button', {class: 'icon-btn b-opt-plus', title: 'درج در مورد چپ ' + fa(k + 1), html: QI.plus, onclick: function (e) { insertMenu(e.currentTarget, r, q, {label: 'مورد چپ ' + fa(k + 1)}); }});
+          var lp = el('button', {class: 'icon-btn b-opt-plus', title: 'درج در مورد راست ' + fa(k + 1), 'aria-label': 'درج در مورد راست ' + fa(k + 1), html: QI.plus, onclick: function (e) { insertMenu(e.currentTarget, l, q, {label: 'مورد راست ' + fa(k + 1), image: pickLImg, hasImage: !!lImg}); }});
+          var rp = el('button', {class: 'icon-btn b-opt-plus', title: 'درج در مورد چپ ' + fa(k + 1), 'aria-label': 'درج در مورد چپ ' + fa(k + 1), html: QI.plus, onclick: function (e) { insertMenu(e.currentTarget, r, q, {label: 'مورد چپ ' + fa(k + 1), image: pickRImg, hasImage: !!rImg}); }});
           var s = el('select'); s.appendChild(el('option', {value: '', text: '— جفت —'}));
           q.matchingRight.forEach(function (_, j) { var o = el('option', {value: String(j), text: 'چپ ' + fa(j + 1)}); if (q.matchingPairs[k] === j) o.selected = true; s.appendChild(o); });
           s.addEventListener('change', function () { if (s.value === '') delete q.matchingPairs[k]; else q.matchingPairs[k] = Number(s.value); mark(); });
-          box.appendChild(el('div', {class: 'b-opt'}, [lt.wrap, lp, s, rt.wrap, rp, el('button', {class: 'icon-btn danger', html: '✕', title: 'حذف ردیف', onclick: function () { if (n <= 2) return; q.matchingLeft.splice(k, 1); q.matchingRight.splice(k, 1); q.matchingPairs = {}; mark(); redraw(); }})]));
+          box.appendChild(el('div', {class: 'b-opt'}, [
+            lt.wrap,
+            lImg ? el('img', {src: lImg, class: 'thumb', title: 'تصویر مورد راست — برای حذف کلیک کنید', onclick: pickLImg}) : null,
+            lp,
+            s,
+            rt.wrap,
+            rImg ? el('img', {src: rImg, class: 'thumb', title: 'تصویر مورد چپ — برای حذف کلیک کنید', onclick: pickRImg}) : null,
+            rp,
+            el('button', {class: 'icon-btn danger', html: '✕', title: 'حذف ردیف', onclick: function () {
+              if (n <= 2) return;
+              q.matchingLeft.splice(k, 1);
+              q.matchingRight.splice(k, 1);
+              if (q.matchingLeftImages) q.matchingLeftImages.splice(k, 1);
+              if (q.matchingRightImages) q.matchingRightImages.splice(k, 1);
+              q.matchingPairs = {};
+              mark();
+              redraw();
+            }})
+          ]));
         })(k);
-        box.appendChild(el('button', {class: 'btn light sm', text: '➕ ردیف', onclick: function () { q.matchingLeft.push(''); q.matchingRight.push(''); mark(); redraw(); }}));
+        box.appendChild(el('button', {class: 'btn light sm', text: '➕ ردیف', onclick: function () {
+          q.matchingLeft.push('');
+          q.matchingRight.push('');
+          if (!q.matchingLeftImages) q.matchingLeftImages = [];
+          if (!q.matchingRightImages) q.matchingRightImages = [];
+          q.matchingLeftImages.push(null);
+          q.matchingRightImages.push(null);
+          mark();
+          redraw();
+        }}));
       } else if (state.mode !== 'print') {
         /* V334.3 — توضیح تصحیح دستی مخصوص آزمون آنلاین است؛ در آزمون چاپی نمایش داده نمی‌شود */
         box.appendChild(el('p', {class: 'muted', style: 'font-size:13px', text: 'سؤال تشریحی به‌صورت دستی تصحیح می‌شود.'}));

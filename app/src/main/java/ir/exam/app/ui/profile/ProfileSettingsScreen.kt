@@ -488,7 +488,6 @@ private fun AppearanceSection(settings: AppearanceSettings, viewModel: ProfileSe
                         }
                     }
                 }
-                Text("سه قلم فارسی همراه برنامه و با مجوز OFL ذخیره شده‌اند.", style = MaterialTheme.typography.bodySmall)
             }
         }
         item {

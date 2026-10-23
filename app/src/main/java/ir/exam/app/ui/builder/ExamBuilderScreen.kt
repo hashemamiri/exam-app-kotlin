@@ -14,6 +14,7 @@ import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -52,12 +53,15 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.Check
+import androidx.compose.material.icons.outlined.Add
+import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.BookmarkAdd
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.DragIndicator
 import androidx.compose.material.icons.outlined.Visibility
 import androidx.compose.material.icons.outlined.Print
 import androidx.compose.material.icons.outlined.CheckCircle
+import ir.exam.app.ui.printing.ExamImageOcr
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.foundation.text.BasicTextField
@@ -1373,6 +1377,39 @@ private fun QuestionEditor(
     var formulaTarget by remember(question.id) { mutableStateOf<FormulaTarget?>(null) }
     var studioOpen by remember(question.id) { mutableStateOf(false) }
     var figureTarget by remember(question.id) { mutableStateOf<FigureTarget?>(null) }
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val scope = rememberCoroutineScope()
+    var ocrLoading by remember(question.id) { mutableStateOf(false) }
+    var ocrRawText by remember(question.id) { mutableStateOf<String?>(null) }
+    val ocrPickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.PickVisualMedia()
+    ) { uri ->
+        if (uri != null) {
+            ocrLoading = true
+            scope.launch {
+                val bmp = withContext(Dispatchers.IO) {
+                    runCatching {
+                        context.contentResolver.openInputStream(uri)?.use { stream ->
+                            android.graphics.BitmapFactory.decodeStream(stream)
+                        }
+                    }.getOrNull()
+                }
+                if (bmp != null) {
+                    val bound = ExamImageOcr.boundForOcr(bmp)
+                    val res = ExamImageOcr.recognize(context, bound)
+                    ocrLoading = false
+                    if (res != null && res.text.isNotBlank()) {
+                        ocrRawText = res.text
+                    } else {
+                        android.widget.Toast.makeText(context, "متنی در تصویر خوانده نشد.", android.widget.Toast.LENGTH_SHORT).show()
+                    }
+                } else {
+                    ocrLoading = false
+                    android.widget.Toast.makeText(context, "خطا در بارگذاری تصویر.", android.widget.Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+    }
     // V53.1 — کنترلر کادر متن سؤال WebView و هدف ویرایشگر Native جدول.
     val questionFieldController = remember(question.id) { QuestionEditorFieldController() }
     var tableTarget by remember(question.id) { mutableStateOf<TableTarget?>(null) }
@@ -1629,7 +1666,15 @@ private fun QuestionEditor(
                 onOpenAudio = if (printMode) null else ({ audioEditorOpen = true }),
                 hasAudio = !question.audioUri.isNullOrBlank(),
                 // V137.3 — تختهٔ سفید معلم (چاپی و آنلاین): خروجی PNG هر صفحه یک تصویر سؤال می‌شود.
-                onOpenWhiteboard = { whiteboardOpen = true }
+                onOpenWhiteboard = { whiteboardOpen = true },
+                // V335.4 — ابزار استخراج سؤالات و تست‌ها از تصویر با OCR
+                onOpenOcr = {
+                    ocrPickerLauncher.launch(
+                        androidx.activity.result.PickVisualMediaRequest(
+                            ActivityResultContracts.PickVisualMedia.ImageOnly
+                        )
+                    )
+                }
             )
             if (!printMode && !question.audioUri.isNullOrBlank()) {
                 ir.exam.app.ui.audio.QuestionAudioPlayer(
@@ -1801,7 +1846,7 @@ private fun QuestionEditor(
                 // «پاسخ عددی / تلورانس» معنایی ندارند (تصحیح خودکار آنلاین است).
                 // V310.1 — املا (گوش بده و بنویس) در چاپ هم متن املا را می‌خواهد؛ ترتیب هم مثل سایت در چاپ دیده می‌شود.
                 QuestionType.FILL_BLANK -> if (primary && question.mode == "order") PrimaryOrderEditor(question, viewModel) else if (!printMode || (primary && question.mode == "dictation")) Column(verticalArrangement=Arrangement.spacedBy(6.dp)) {
-                    OutlinedTextField(question.expectedText, { viewModel.updateExpectedText(question.id, it) }, label = { Text("پاسخ‌های قابل‌قبول (با | جدا کنید)") })
+                    FillBlankAcceptableAnswersEditor(question, viewModel)
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
                         BoldToggleChip(
                             label = "حساس به بزرگی/کوچکی حروف",
@@ -2213,6 +2258,180 @@ private fun QuestionEditor(
             onDismiss = { studioOpen = false }
         )
     }
+
+    if (ocrLoading) {
+        Dialog(onDismissRequest = { ocrLoading = false }) {
+            Surface(
+                shape = RoundedCornerShape(16.dp),
+                color = MaterialTheme.colorScheme.surface,
+                tonalElevation = 6.dp
+            ) {
+                Row(
+                    modifier = Modifier.padding(20.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    CircularProgressIndicator(modifier = Modifier.size(32.dp), strokeWidth = 3.dp)
+                    Text("در حال استخراج متن از تصویر با OCR…", style = MaterialTheme.typography.bodyMedium)
+                }
+            }
+        }
+    }
+
+    if (ocrRawText != null) {
+        OcrQuestionReviewDialog(
+            rawText = ocrRawText!!,
+            onDismiss = { ocrRawText = null },
+            onConfirm = { editedText ->
+                val parsed = OcrQuestionParser.parse(editedText)
+                if (parsed.isNotEmpty()) {
+                    viewModel.addOcrQuestions(parsed, question.id)
+                    android.widget.Toast.makeText(
+                        context,
+                        "${PersianDigits.convert(parsed.size.toString())} سؤال به آزمون افزوده شد.",
+                        android.widget.Toast.LENGTH_SHORT
+                    ).show()
+                }
+                ocrRawText = null
+            }
+        )
+    }
+}
+
+/**
+ * V335.4 — فیلدهای پویای پاسخ‌های قابل‌قبول برای سؤالات جای‌خالی/پاسخ کوتاه با دکمهٔ +
+ * دیگر نیازی به نوشتن دستی «|» نیست؛ فیلدها با «|» ترکیب می‌شوند.
+ */
+@Composable
+private fun FillBlankAcceptableAnswersEditor(
+    question: QuestionDraft,
+    viewModel: ExamBuilderViewModel
+) {
+    val items = remember(question.expectedText) {
+        if (question.expectedText.isEmpty()) listOf("")
+        else question.expectedText.split("|")
+    }
+
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(6.dp)
+    ) {
+        Text("پاسخ‌های قابل‌قبول", style = MaterialTheme.typography.titleSmall)
+        items.forEachIndexed { index, answer ->
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                OutlinedTextField(
+                    value = answer,
+                    onValueChange = { newVal ->
+                        val updated = items.toMutableList()
+                        if (index < updated.size) {
+                            updated[index] = newVal
+                        }
+                        viewModel.updateExpectedText(question.id, updated.joinToString("|"))
+                    },
+                    label = { Text("پاسخ ${PersianDigits.convert((index + 1).toString())}") },
+                    modifier = Modifier.weight(1f)
+                )
+                if (items.size > 1) {
+                    IconButton(
+                        onClick = {
+                            val updated = items.toMutableList().apply { removeAt(index) }
+                            viewModel.updateExpectedText(question.id, updated.joinToString("|"))
+                        }
+                    ) {
+                        Icon(
+                            Icons.Outlined.Close,
+                            contentDescription = "حذف پاسخ",
+                            tint = MaterialTheme.colorScheme.error
+                        )
+                    }
+                }
+            }
+        }
+        OutlinedButton(
+            onClick = {
+                val updated = items + ""
+                viewModel.updateExpectedText(question.id, updated.joinToString("|"))
+            },
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Icon(Icons.Outlined.Add, contentDescription = null)
+            Spacer(Modifier.width(6.dp))
+            Text("افزودن پاسخ دیگر (+)")
+        }
+    }
+}
+
+/**
+ * V335.4 — پنجرهٔ بررسی و ویرایش متن خروجی OCR پیش از افزودن به سؤالات آزمون
+ */
+@Composable
+private fun OcrQuestionReviewDialog(
+    rawText: String,
+    onDismiss: () -> Unit,
+    onConfirm: (String) -> Unit
+) {
+    var textDraft by remember(rawText) { mutableStateOf(rawText) }
+    val parsedQuestions = remember(textDraft) { OcrQuestionParser.parse(textDraft) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text("استخراج تست‌ها و سؤالات با OCR")
+        },
+        text = {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(max = 420.dp)
+                    .verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Text(
+                    "متن استخراج‌شده را بررسی و ویرایش کنید؛ تست‌ها و گزینه‌های داخل آن تفکیک شده و با تأیید به آزمون اضافه می‌شوند:",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                OutlinedTextField(
+                    value = textDraft,
+                    onValueChange = { textDraft = it },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(min = 160.dp, max = 280.dp),
+                    label = { Text("متن سؤالات و گزینه‌ها") }
+                )
+                Surface(
+                    color = MaterialTheme.colorScheme.primaryContainer,
+                    shape = RoundedCornerShape(8.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(
+                        text = "📋 ${PersianDigits.convert(parsedQuestions.size.toString())} سؤال شناسایی شد" +
+                                if (parsedQuestions.any { it.type == QuestionType.MULTIPLE_CHOICE }) " (تستی)" else "",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer,
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = { onConfirm(textDraft) },
+                enabled = textDraft.isNotBlank() && parsedQuestions.isNotEmpty()
+            ) {
+                Text("تأیید و افزودن سؤالات")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("انصراف")
+            }
+        }
+    )
 }
 
 

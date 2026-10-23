@@ -53,13 +53,15 @@ class NativePersianOcrTest {
     }
 
     @Test
-    fun `studio exposes an ocr button wired to the same prepared image`() {
-        assertTrue("🔎 استخراج متن (OCR فارسی)" in studio)
-        assertTrue("private fun prepareForOcr(" in studio)
-        assertTrue("ExamImageOcr.recognize(context, prepared)" in studio)
-        assertTrue("onOcrText: (String) -> Unit = {}," in studio)
-        // نتیجه پیش از درج قابل ویرایش است
-        assertTrue("درج در متن سؤال" in studio)
+    fun `ocr is extracted from studio and wired standalone next to whiteboard`() {
+        val editor = source("app/src/main/java/ir/exam/app/ui/image/QuestionMediaEditor.kt")
+        val builder = source("app/src/main/java/ir/exam/app/ui/builder/ExamBuilderScreen.kt")
+        assertTrue("onOpenOcr: (() -> Unit)? = null" in editor)
+        assertTrue("Icons.Outlined.DocumentScanner" in editor)
+        assertTrue("ExamImageOcr.recognize(context, bound)" in builder)
+        assertTrue("OcrQuestionParser.parse" in builder)
+        // OCR از استودیو برداشته شده است
+        assertTrue("🔎 استخراج متن (OCR فارسی)" !in studio)
     }
 
     // ---------- ریاضیِ واقعی: نرمال‌سازی متن ----------

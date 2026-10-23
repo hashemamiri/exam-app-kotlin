@@ -246,7 +246,6 @@
       if (st.tab === 'enhance') {
         tools.appendChild(row([chipBtn('👁 قبل/بعد', st.before, function () { st.before = !st.before; drawTools(); paintStage(); }), chipBtn('📖 حذف سایه و زردی', st.deshadow, function () { st.deshadow = !st.deshadow; drawTools(); paintStage(); }), chipBtn('🧽 حذف نویز و لکه', st.denoise, function () { st.denoise = !st.denoise; if (st.denoise && !st.scan) st.scan = true; drawTools(); paintStage(); }),
           chipBtn('✂️ برش خودکار حاشیه', false, function () { var b = autoCropBounds(bounded(base(), 800)); if (b) { st.crop = b; st.aspect = 'free'; paintStage(); toast('حاشیه برش خورد.', 'ok'); } else toast('محتوایی برای برش پیدا نشد.', 'info'); })]));
-        tools.appendChild(el('p', {class: 'studio-hint', text: 'OCR آفلاین اپ در مرورگر در دسترس نیست؛ متن را با 🎤 گفتار به متن یا تایپ وارد کنید.'}));
         return;
       }
       if (st.tab === 'deskew') {

@@ -168,11 +168,6 @@ fun ExamImageStudioDialog(
     var showTextPrompt by remember { mutableStateOf(false) }
     var previewOriginal by remember { mutableStateOf(false) }
     var openedWith by remember { mutableStateOf<Bitmap?>(null) }
-    // V76.9 — OCR فارسیِ آفلاین
-    var ocrRunning by remember { mutableStateOf(false) }
-    var ocrText by remember { mutableStateOf("") }
-    var ocrConfidence by remember { mutableStateOf(0) }
-    var showOcrResult by remember { mutableStateOf(false) }
     // V77.0 — فیلترهای اسکن کتاب، قطره‌چکان، لایهٔ اشیاء، فلش منحنی، حالت تاریک
     var deshadowOn by remember { mutableStateOf(false) }
     var denoiseOn by remember { mutableStateOf(false) }
@@ -280,7 +275,7 @@ fun ExamImageStudioDialog(
                             listOf(
                                 "image" to "🖼️ تصویر و برش",
                                 "draw" to "✏️ طراحی و علامت",
-                                "enhance" to "✨ بهبود و OCR",
+                                "enhance" to "✨ بهبود",
                                 "deskew" to "📐 صاف‌سازی"
                             ).forEach { (key, label) ->
                                 FilterChip(
@@ -1070,48 +1065,6 @@ fun ExamImageStudioDialog(
                             }
                         }
                         }
-                        if (studioTab == "enhance") {
-                        // V76.9 — OCR فارسیِ آفلاین روی همان تصویرِ آماده‌شده
-                        // (چرخش/صاف‌سازی/برش/اسکن/شکل‌ها اعمال می‌شوند تا متن
-                        // دقیقاً از همان چیزی خوانده شود که کاربر می‌بیند).
-                        Row(
-                            Modifier
-                                .fillMaxWidth()
-                                .horizontalScroll(rememberScrollState())
-                                .padding(horizontal = 8.dp),
-                            horizontalArrangement = Arrangement.spacedBy(6.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            ToolChip(if (ocrRunning) "⏳ در حال خواندن متن…" else "🔎 استخراج متن (OCR فارسی)") {
-                                val src = original
-                                if (src != null && !ocrRunning) {
-                                    ocrRunning = true
-                                    note = null
-                                    scope.launch {
-                                        val prepared = withContext(Dispatchers.Default) {
-                                            prepareForOcr(
-                                                src, rotation, deskewAngle, flip, crop, scanOn, threshold, shapes,
-                                                deshadowOn, denoiseOn
-                                            )
-                                        }
-                                        val res = if (prepared == null) null
-                                        else ExamImageOcr.recognize(context, prepared)
-                                        ocrRunning = false
-                                        if (res == null) {
-                                            note = "متنی خوانده نشد. تصویر واضح‌تر یا برش دقیق‌تری امتحان کنید."
-                                        } else {
-                                            ocrText = res.text
-                                            ocrConfidence = res.confidence
-                                            showOcrResult = true
-                                        }
-                                    }
-                                }
-                            }
-                            if (ocrRunning) {
-                                CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
-                            }
-                        }
-                        }
                         if (studioTab == "deskew") {
                         // V76.5 — صاف‌سازی: صفحه‌ای ۴گوشه + خودکار + دقیق ±۱۵°
                         Row(
@@ -1381,37 +1334,6 @@ fun ExamImageStudioDialog(
                         },
                         dismissButton = {
                             TextButton(onClick = { showTextPrompt = false }) { Text("انصراف") }
-                        }
-                    )
-                }
-
-                if (showOcrResult) {
-                    // V76.9 — نتیجهٔ OCR: قابل ویرایش پیش از درج در متنِ سؤال.
-                    AlertDialog(
-                        onDismissRequest = { showOcrResult = false },
-                        title = { Text("متنِ استخراج‌شده — دقت حدود ٪$ocrConfidence") },
-                        text = {
-                            Column(Modifier.heightIn(max = 340.dp).verticalScroll(rememberScrollState())) {
-                                Text(
-                                    "متن را بررسی و در صورت نیاز اصلاح کنید، بعد در سؤال درج شود.",
-                                    style = MaterialTheme.typography.bodySmall
-                                )
-                                OutlinedTextField(
-                                    value = ocrText,
-                                    onValueChange = { ocrText = it },
-                                    modifier = Modifier.fillMaxWidth().heightIn(min = 160.dp)
-                                )
-                            }
-                        },
-                        confirmButton = {
-                            Button(onClick = {
-                                val t = ocrText.trim()
-                                showOcrResult = false
-                                if (t.isNotEmpty()) onOcrText(t)
-                            }) { Text("درج در متن سؤال") }
-                        },
-                        dismissButton = {
-                            TextButton(onClick = { showOcrResult = false }) { Text("انصراف") }
                         }
                     )
                 }

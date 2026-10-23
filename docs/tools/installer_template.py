@@ -68,7 +68,12 @@ def main():
     run(["git", "config", "http.lowSpeedTime", "999999"], check=False)
     if TARGET == "main":
         run(["git", "push", "origin", "HEAD:refs/heads/main"])
-        run(["git", "push", "origin", "HEAD:refs/heads/staging"], check=False)  # آزمایشی هم همگام می‌شود
+        import time
+        time.sleep(2)
+        r_st = run(["git", "push", "origin", "HEAD:refs/heads/staging"], check=False)  # آزمایشی هم همگام می‌شود
+        if r_st != 0:
+            time.sleep(3)
+            run(["git", "push", "origin", "HEAD:refs/heads/staging"], check=False)
         print("\n✅ " + VERSION + " نصب و روی نسخهٔ اصلی (و آزمایشی) اعمال شد. GitHub Actions اپ اصلی/سایت onlineexam.ir را به‌روز می‌کند.")
     else:
         run(["git", "push", "origin", "HEAD:refs/heads/staging"])

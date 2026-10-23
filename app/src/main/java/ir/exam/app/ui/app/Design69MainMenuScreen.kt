@@ -157,15 +157,6 @@ fun Design69MainMenuScreen(
                             modifier = Modifier.padding(top = 6.dp)
                         )
                     }
-                    // V321 — کلید سریع «تیره/روشن»؛ تنظیم در همان تنظیمات ذخیره می‌شود
-                    if (onToggleTheme != null) {
-                        IconButton(onClick = onToggleTheme, modifier = Modifier.size(38.dp)) {
-                            Text(
-                                if (darkTheme) "☀️" else "🌙",
-                                style = MaterialTheme.typography.titleMedium
-                            )
-                        }
-                    }
                     Icon(
                         Design69Icons.ChevronLeft,
                         contentDescription = "بازکردن پروفایل",
