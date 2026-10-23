@@ -241,6 +241,9 @@ code.k{background:#f1f3f8;border-radius:6px;padding:1px 6px;font-size:13px;direc
 .b-bank-item>input[type=checkbox]{width:18px;height:18px;flex:0 0 auto;accent-color:var(--brand);cursor:pointer}
 .b-bank-item>.grow{cursor:pointer}
 .b-qhead .icon-btn svg{width:19px;height:19px}
+.b-qhead .b-qscore{display:inline-flex!important;flex-direction:row!important;align-items:center!important;gap:6px;margin:0!important;padding:0 10px;height:36px;border:1px solid var(--line);border-radius:10px;background:var(--card)}
+.b-qhead .b-qscore>label{display:inline-block!important;margin:0!important;line-height:1!important;font-size:12px;font-weight:700;color:var(--muted);white-space:nowrap}
+.b-qhead .b-qscore>input{width:54px!important;min-height:0!important;height:28px!important;line-height:28px!important;border:0!important;padding:0 4px!important;text-align:center;font-weight:700;font-size:14px;background:transparent!important;box-shadow:none!important}
 .modal.wide{max-width:860px;width:min(860px,94vw)}
 .grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:12px}
 @media (max-width:900px) and (pointer:coarse){.b-body{grid-template-columns:1fr}.b-list{position:static;max-height:none}.grid4{grid-template-columns:1fr 1fr}}
@@ -1085,6 +1088,7 @@ body.dk{--bg:#eef2f5;--card:#fff;--ink:#1d2935;--muted:#6c7985;--line:#d9e1e6;--
   .dk .tool-btn:nth-child(7){background:#e6f9ec;color:#2b8a3e}.dk .tool-btn:nth-child(8){background:#eef2f5;color:#39758a}.dk .tool-btn:nth-child(9){background:#f1eefc;color:#7048e8}
   .dk .tool-btn:hover{transform:translateY(-2px)}
   .dk .b-qhead .icon-btn{width:40px;height:40px;border-radius:12px}
+  .dk .b-qhead .b-qscore{height:40px;border-radius:12px;padding:0 12px}
   /* ریل چپ */
   .dk .b-rail{display:flex;flex-direction:column;align-items:center;gap:8px;position:fixed;left:14px;top:22px;bottom:22px;width:84px;padding:10px 6px;border-radius:20px;z-index:45;overflow:auto;
     background:linear-gradient(180deg,rgba(239,249,252,.97),rgba(211,236,245,.97));border:1px solid rgba(144,190,207,.65);box-shadow:0 18px 45px rgba(38,92,111,.15),inset 0 1px 0 rgba(255,255,255,.8);backdrop-filter:blur(14px)}

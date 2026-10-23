@@ -811,8 +811,16 @@
       var q = state.questions[state.selected];
       if (!q) { editor.appendChild(el('div', {class: 'empty'}, [el('div', {class: 'big', text: '✎'}), el('div', {text: 'سؤالی انتخاب نشده است. با دکمهٔ + سؤال اضافه کنید.'})])); return; }
       var i = state.selected;
+      var scoreInp = el('input', {type: 'number', step: '0.25', min: '0', value: String(q.score), 'aria-label': 'بارم'});
+      scoreInp.addEventListener('input', function () {
+        q.score = parseFloat(en(scoreInp.value)) || 0;
+        mark(); drawListSoft();
+        var rs = rail.querySelector('.b-rail-score-v');
+        if (rs) rs.textContent = fa(S.fmtScore(totalScore()));
+      });
       editor.appendChild(el('div', {class: 'row b-qhead', style: 'margin-bottom:10px'}, [
         el('h3', {class: 'grow', text: 'سؤال ' + fa(i + 1) + ' — ' + TYPE_LABEL[q.type]}),
+        el('div', {class: 'field b-qscore', title: 'بارم این سؤال'}, [el('label', {text: 'بارم'}), scoreInp]),
         el('button', {class: 'icon-btn', title: 'بالا', html: QI.up, onclick: function () { if (i > 0) { swap(i, i - 1); } }}),
         el('button', {class: 'icon-btn', title: 'پایین', html: QI.down, onclick: function () { if (i < state.questions.length - 1) swap(i, i + 1); }}),
         el('button', {class: 'icon-btn', title: 'کپی', html: QI.copy, onclick: function () { var cp = JSON.parse(JSON.stringify(q)); cp.id = uuid(); state.questions.splice(i + 1, 0, cp); state.selected = i + 1; mark(); drawList(); drawEditor(); }}),
@@ -853,7 +861,8 @@
           }, {title: 'تختهٔ سفید — سؤال ' + fa(i + 1), doneLabel: 'افزودن تصویر تخته به سؤال', prev: []});
         }}),
         el('button', {class: 'tool-btn is-mic', title: 'گفتار به متن', 'aria-label': 'گفتار به متن', html: toolSvg('mic'), onclick: function () { dictate(ta, q); }}),
-        window.SiteExtras ? el('button', {class: 'tool-btn' + (q.audio ? ' on' : ''), title: q.audio ? 'صوت سؤال (دارد)' : 'صوت سؤال', 'aria-label': 'صوت سؤال', html: toolSvg('audio'), onclick: function () { window.SiteExtras.audioDlg(q, state.examId || (state.examId = uuid()), state.mode === 'print', function () { mark(); drawEditor(); }); }}) : null
+        /* V334.3 — مثل اپ اندروید (V135): صوت سؤال فقط در آزمون آنلاین نمایش داده می‌شود (کاغذ صدا ندارد) */
+        state.mode !== 'print' && window.SiteExtras ? el('button', {class: 'tool-btn' + (q.audio ? ' on' : ''), title: q.audio ? 'صوت سؤال (دارد)' : 'صوت سؤال', 'aria-label': 'صوت سؤال', html: toolSvg('audio'), onclick: function () { window.SiteExtras.audioDlg(q, state.examId || (state.examId = uuid()), false, function () { mark(); drawEditor(); }); }}) : null
       ]);
       var tt = tokenTextarea(ta);
       editor.appendChild(el('div', {class: 'field'}, [el('label', {text: 'متن سؤال'}), tt.wrap, tools, tt.live]));
@@ -866,29 +875,29 @@
       }
       /* V334.1 — بخش اختصاصی هر نوع سؤال بلافاصله زیر نوار ابزارها (گزینه‌ها، ستون جورکردنی، درست/نادرست، پاسخ کوتاه/عددی و ...) */
       editor.appendChild(typeSection(q));
-      /* بارم + قالب */
-      var fmt = el('div', {class: 'grid4'}, [
-        inp('بارم', String(q.score), function (v) { q.score = parseFloat(en(v)) || 0; mark(); drawListSoft(); var rs = rail.querySelector('.b-rail-score-v'); if (rs) rs.textContent = fa(S.fmtScore(totalScore())); }, 'number'),
-        sel('تراز متن', q.textAlign, [['right', 'راست'], ['center', 'وسط'], ['left', 'چپ'], ['justify', 'دوطرفه']], function (v) { q.textAlign = v; mark(); }),
-        sel('فونت', q.fontFamily, [['default', 'پیش‌فرض'], ['Vazirmatn', 'وزیرمتن'], ['Shabnam', 'شبنم'], ['Sahel', 'ساحل'], ['BNazanin', 'ب نازنین'], ['Tahoma', 'تاهوما']], function (v) { q.fontFamily = v; mark(); }),
-        inp('اندازهٔ فونت', String(q.fontSizeSp), function (v) { q.fontSizeSp = Math.max(8, Math.min(40, parseFloat(en(v)) || 16)); mark(); }, 'number')
-      ]);
       /* V259.1 — دسکتاپ: هر گروه تنظیمات در یک «بخش» مرتب (عنوان + شبکهٔ هم‌ارتفاع)؛ گوشی بدون تغییر ظاهری */
       function sec(title, children, cls) { return el('div', {class: 'b-sec' + (cls ? ' ' + cls : '')}, [title ? el('h4', {class: 'b-sec-t', text: title, style: 'margin-top:14px'}) : null].concat(children)); }
-      editor.appendChild(sec(document.body.classList.contains('dk') ? 'قالب متن سؤال' : '', [fmt, el('div', {class: 'row b-sec-chips', style: 'margin:-6px 0 12px'}, [chk('ضخیم', q.bold, function (v) { q.bold = v; mark(); }), chk('مورب', q.italic, function (v) { q.italic = v; mark(); })])], 'b-sec-fmt'));
-      /* فضای پاسخ (چاپ) */
-      if (q.type === 'essay' || q.type === 'fill' || q.type === 'numeric') {
-        editor.appendChild(sec('فضای پاسخ در برگهٔ چاپی', [el('div', {class: 'grid3'}, [
-          inp('تعداد خط', String(q.answerLines), function (v) { q.answerLines = Math.max(0, Math.min(12, parseInt(en(v), 10) || 0)); mark(); }, 'number'),
-          sel('نوع خط', q.answerLineStyle, [['lined', 'خط‌دار'], ['blank', 'ساده'], ['grid', 'شطرنجی']], function (v) { q.answerLineStyle = v; mark(); }),
-          inp('فاصلهٔ خط (cm)', String(q.answerLineSpacingCm), function (v) { q.answerLineSpacingCm = Math.max(0.5, Math.min(2, parseFloat(en(v)) || 1)); mark(); }, 'number')
-        ])]));
-      }
-      /* V208 — چیدمان گزینه‌های چندگزینه‌ای در برگهٔ چاپی (پیش‌فرض آزمون در «تنظیمات صفحه»ی پیش‌نمایش) */
-      if (state.mode === 'print' && q.type === 'multiple') {
-        editor.appendChild(sec('چیدمان گزینه‌ها در برگهٔ چاپی', [el('div', {class: 'grid3'}, [
-          sel('چیدمان', q.optionsLayout || '', [['', 'پیش‌فرض آزمون'], ['1row', 'همه در یک ردیف'], ['2rows', 'دو ردیف'], ['4rows', 'هر گزینه یک ردیف']], function (v) { q.optionsLayout = v; mark(); })
-        ])]));
+      /* V334.3 — تفکیک کامل آزمون چاپی و آنلاین: «قالب متن سؤال» و «فضای پاسخ در برگهٔ چاپی» منحصراً مخصوص بخش چاپی هستند */
+      if (state.mode === 'print') {
+        var fmt = el('div', {class: 'grid3'}, [
+          sel('تراز متن', q.textAlign, [['right', 'راست'], ['center', 'وسط'], ['left', 'چپ'], ['justify', 'دوطرفه']], function (v) { q.textAlign = v; mark(); }),
+          sel('فونت', q.fontFamily, [['default', 'پیش‌فرض'], ['Vazirmatn', 'وزیرمتن'], ['Shabnam', 'شبنم'], ['Sahel', 'ساحل'], ['BNazanin', 'ب نازنین'], ['Tahoma', 'تاهوما']], function (v) { q.fontFamily = v; mark(); }),
+          inp('اندازهٔ فونت', String(q.fontSizeSp), function (v) { q.fontSizeSp = Math.max(8, Math.min(40, parseFloat(en(v)) || 16)); mark(); }, 'number')
+        ]);
+        editor.appendChild(sec(document.body.classList.contains('dk') ? 'قالب متن سؤال' : '', [fmt, el('div', {class: 'row b-sec-chips', style: 'margin:-6px 0 12px'}, [chk('ضخیم', q.bold, function (v) { q.bold = v; mark(); }), chk('مورب', q.italic, function (v) { q.italic = v; mark(); })])], 'b-sec-fmt'));
+        if (q.type === 'essay' || q.type === 'fill' || q.type === 'numeric') {
+          editor.appendChild(sec('فضای پاسخ در برگهٔ چاپی', [el('div', {class: 'grid3'}, [
+            inp('تعداد خط', String(q.answerLines), function (v) { q.answerLines = Math.max(0, Math.min(12, parseInt(en(v), 10) || 0)); mark(); }, 'number'),
+            sel('نوع خط', q.answerLineStyle, [['lined', 'خط‌دار'], ['blank', 'ساده'], ['grid', 'شطرنجی']], function (v) { q.answerLineStyle = v; mark(); }),
+            inp('فاصلهٔ خط (cm)', String(q.answerLineSpacingCm), function (v) { q.answerLineSpacingCm = Math.max(0.5, Math.min(2, parseFloat(en(v)) || 1)); mark(); }, 'number')
+          ])]));
+        }
+        /* V208 — چیدمان گزینه‌های چندگزینه‌ای در برگهٔ چاپی (پیش‌فرض آزمون در «تنظیمات صفحه»ی پیش‌نمایش) */
+        if (q.type === 'multiple') {
+          editor.appendChild(sec('چیدمان گزینه‌ها در برگهٔ چاپی', [el('div', {class: 'grid3'}, [
+            sel('چیدمان', q.optionsLayout || '', [['', 'پیش‌فرض آزمون'], ['1row', 'همه در یک ردیف'], ['2rows', 'دو ردیف'], ['4rows', 'هر گزینه یک ردیف']], function (v) { q.optionsLayout = v; mark(); })
+          ])]));
+        }
       }
       /* پاسخ تصویری (آنلاین) */
       if (state.mode === 'online' && (q.type === 'essay' || q.type === 'numeric' || q.type === 'fill')) {
@@ -1142,11 +1151,13 @@
           box.appendChild(el('div', {class: 'b-opt'}, [lt.wrap, lp, s, rt.wrap, rp, el('button', {class: 'icon-btn danger', html: '✕', title: 'حذف ردیف', onclick: function () { if (n <= 2) return; q.matchingLeft.splice(k, 1); q.matchingRight.splice(k, 1); q.matchingPairs = {}; mark(); redraw(); }})]));
         })(k);
         box.appendChild(el('button', {class: 'btn light sm', text: '➕ ردیف', onclick: function () { q.matchingLeft.push(''); q.matchingRight.push(''); mark(); redraw(); }}));
-      } else {
+      } else if (state.mode !== 'print') {
+        /* V334.3 — توضیح تصحیح دستی مخصوص آزمون آنلاین است؛ در آزمون چاپی نمایش داده نمی‌شود */
         box.appendChild(el('p', {class: 'muted', style: 'font-size:13px', text: 'سؤال تشریحی به‌صورت دستی تصحیح می‌شود.'}));
       }
       /* V305 — ابتدایی: ویرایش ناحیه‌های انتخاب روی تصویر (بعد از گزینه‌ها) */
       if (state.primaryMode && q.type === 'multiple' && q.mode === 'hotspot') box.appendChild(hotspotEditor(q, redraw));
+      if (!box.childNodes.length) box.style.display = 'none';
       return box;
     }
     /* --- مشخصات آزمون (آنلاین) --- */
