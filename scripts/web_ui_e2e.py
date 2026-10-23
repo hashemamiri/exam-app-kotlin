@@ -528,6 +528,22 @@ def run_suite(site_dir_arg: str | None, out_dir: Path) -> int:
             page.locator("input[type='password']").first.fill("TestPass1234!")
             page.locator("input[type='password']").first.press("Enter")
             page.locator("button[aria-label='افزودن']").wait_for()
+
+            # بررسی سازندهٔ «آزمون چاپی» (V334.3): داشتن «قالب متن سؤال» و «فضای پاسخ در برگهٔ چاپی» و نداشتن اجزای آنلاین
+            page.evaluate("() => window.ExamSite.go('builder', { mode: 'print', fresh: true })")
+            click_visible_button(page, "افزودن")
+            page.wait_for_timeout(100)
+            click_visible_button(page, "تشریحی", substring=True)
+            set_question_text(page, "قضیهٔ فیثاغورس را بیان و برای مثلث قائم‌الزاویهٔ ABC اثبات کنید.")
+            print_dom = page.evaluate("() => document.body.innerText")
+            assert "قالب متن سؤال" in print_dom, "قالب متن سؤال باید در سازندهٔ چاپی دیده شود"
+            assert "فضای پاسخ در برگهٔ چاپی" in print_dom, "فضای پاسخ چاپی باید در سازندهٔ چاپی دیده شود"
+            assert "سؤال تشریحی به‌صورت دستی تصحیح می‌شود." not in print_dom, "پیام تصحیح آنلاین نباید در سازندهٔ چاپی باشد"
+            assert "پاسخ تصویری / تختهٔ دانش‌آموز" not in print_dom, "پاسخ تصویری آنلاین نباید در سازندهٔ چاپی باشد"
+            assert page.locator(".b-tools button[aria-label='صوت سؤال']").count() == 0, "دکمهٔ صوت سؤال نباید در سازندهٔ چاپی باشد"
+            page.screenshot(path=str(out_dir / "03a_print_builder_clean.png"))
+
+            # بازگشت به سازندهٔ «آزمون آنلاین جدید» (V334.3): نداشتن هیچ‌یک از بخش‌های کاغذی/چاپی
             page.evaluate("() => window.ExamSite.go('builder', { fresh: true })")
             page.get_by_role("button", name="ذخیره", exact=True).wait_for()
 
@@ -558,8 +574,10 @@ def run_suite(site_dir_arg: str | None, out_dir: Path) -> int:
                 "زمان مجاز هر بخش",
             ]
             builder_dom_text = page.evaluate("() => document.body.innerText")
-            for bad_lbl in forbidden_ui_labels:
-                assert bad_lbl not in builder_dom_text, f"فیلد حذف‌شده نباید در سازندهٔ وب دیده شود: {bad_lbl}"
+            for bad_lbl in forbidden_ui_labels + ["قالب متن سؤال", "فضای پاسخ در برگهٔ چاپی", "چیدمان گزینه‌ها در برگهٔ چاپی"]:
+                assert bad_lbl not in builder_dom_text, f"فیلد غیرمربوط نباید در سازندهٔ آزمون آنلاین دیده شود: {bad_lbl}"
+            assert "سؤال تشریحی به‌صورت دستی تصحیح می‌شود." in builder_dom_text, "توضیح تصحیح دستی باید در آزمون آنلاین باشد"
+            assert "پاسخ تصویری / تختهٔ دانش‌آموز" in builder_dom_text, "پاسخ تصویری دانش‌آموز باید در آزمون آنلاین باشد"
             assert page.locator(".b-section-durations").count() == 0, "کادر زمان بخش نباید در تنظیمات آزمون وجود داشته باشد!"
 
             # تنظیم بارم سؤال ۱ = ۴
@@ -634,15 +652,72 @@ def run_suite(site_dir_arg: str | None, out_dir: Path) -> int:
                 }"""
             )
 
-            # بازگشت روی سؤال ۱ تشریحی روی ریل شماره‌ها برای ثبت اسکرین‌شات واضح از کارت سؤال تمیز و خلوت
-            page.locator(".b-rail-nums > *").first.click()
-            page.wait_for_timeout(120)
+            # بررسی چیدمان V334.1 + V334.3 روی سؤال چندگزینه‌ای آنلاین (گزینه‌ها بلافاصله زیر ابزارها، بارم در سربرگ، بدون قالب چاپی)
+            mc_geom = page.evaluate(
+                """() => {
+                    const head = document.querySelector('.b-editor .b-qhead .b-qscore').getBoundingClientRect();
+                    const tools = document.querySelector('.b-editor .b-tools').getBoundingClientRect();
+                    const typeBox = document.querySelector('.b-editor .b-type').getBoundingClientRect();
+                    const fmtEl = document.querySelector('.b-editor .b-sec-fmt');
+                    return { headBottom: head.bottom, toolsTop: tools.top, toolsBottom: tools.bottom, typeTop: typeBox.top, hasPrintFmt: !!fmtEl };
+                }"""
+            )
+            assert mc_geom["hasPrintFmt"] is False, f"قالب چاپی نباید در آزمون آنلاین رندر شود: {mc_geom}"
+            assert mc_geom["headBottom"] <= mc_geom["toolsTop"] + 2, f"بارم باید در سربرگ کارت بالای ابزارها باشد: {mc_geom}"
+            assert mc_geom["toolsBottom"] <= mc_geom["typeTop"] + 2, f"گزینه‌ها باید زیر نوار ابزار باشد: {mc_geom}"
+
+            # بررسی موقت نوع «جورکردنی» و تأیید قرارگیری ستون‌های جورکردنی بلافاصله زیر ابزارها، سپس بازگرداندن به چندگزینه‌ای
+            page.evaluate(
+                """() => {
+                    const matchChip = [...document.querySelectorAll('.b-types .chip')].find(c => c.textContent.includes('جور'));
+                    if (matchChip) matchChip.click();
+                }"""
+            )
+            page.wait_for_timeout(100)
+            match_geom = page.evaluate(
+                """() => {
+                    const tools = document.querySelector('.b-editor .b-tools').getBoundingClientRect();
+                    const typeBox = document.querySelector('.b-editor .b-type').getBoundingClientRect();
+                    return {
+                        text: document.querySelector('.b-editor .b-type').innerText,
+                        toolsBottom: tools.bottom,
+                        typeTop: typeBox.top,
+                        hasPrintFmt: !!document.querySelector('.b-editor .b-sec-fmt')
+                    };
+                }"""
+            )
+            assert "ستون راست" in match_geom["text"], f"ستون جورکردنی نمایش داده نشد: {match_geom}"
+            assert match_geom["toolsBottom"] <= match_geom["typeTop"] + 2, f"ستون جورکردنی باید زیر ابزارها باشد: {match_geom}"
+            assert match_geom["hasPrintFmt"] is False, f"قالب چاپی نباید در جورکردنی آنلاین باشد: {match_geom}"
+
+            # بازگرداندن سؤال ۳ به چندگزینه‌ای با همان گزینه‌ها و پاسخ درست
+            page.evaluate(
+                """() => {
+                    const mcChip = [...document.querySelectorAll('.b-types .chip')].find(c => c.textContent.includes('چند'));
+                    if (mcChip) mcChip.click();
+                }"""
+            )
+            set_mc_options(page, ["۵", "۶", "۷", "۱۲"])
+            page.evaluate(
+                """() => {
+                    const radios = [...document.querySelectorAll('input[type=radio]')];
+                    if (radios[1]) { radios[1].checked = true; radios[1].dispatchEvent(new Event('change', { bubbles: true })); radios[1].click(); }
+                    const scoreField = [...document.querySelectorAll('.field')].find(f => f.querySelector('label')?.textContent.trim() === 'بارم');
+                    if (scoreField) {
+                        const i = scoreField.querySelector('input');
+                        i.value = '3';
+                        i.dispatchEvent(new Event('input', { bubbles: true }));
+                    }
+                }"""
+            )
+
+            # ماندن روی سؤال ۳ چندگزینه‌ای برای ثبت اسکرین‌شات واضح که «گزینه‌ها» بلافاصله زیر ابزارها دیده می‌شود
             page.evaluate("window.scrollTo(0, 0)")
             record_step(
                 page,
                 "03_teacher_builder_clean.png",
-                "سازندهٔ آزمون ساده و خلوت‌شده (حذف کامل ۷ بخش شلوغ از کارت سؤال و بانک)",
-                "تأیید نبود هر ۷ بخش حذف‌شده در DOM کارت سؤال، پنجرهٔ بانک سؤال و تنظیمات آزمون؛ ساخت آزمون ۱۰ نمره‌ای",
+                "سازندهٔ آزمون V334.1 — قرارگیری بلافاصلهٔ گزینه‌ها/ستون جورکردنی زیر نوار ابزارها",
+                "تأیید مختصات پیکسل واقعی: نوار ابزارها ← گزینه‌ها/ستون جورکردنی ← قالب متن سؤال",
                 "1366×900",
                 t0,
             )
@@ -814,11 +889,93 @@ def run_suite(site_dir_arg: str | None, out_dir: Path) -> int:
             assert updated_ans["total_grade"] == 10.0, f"نمرهٔ کل باید ۱۰ باشد اما {updated_ans['total_grade']} بود"
             page.evaluate("window.scrollTo(0, 0)")
 
+            # V335.1 — تأیید نمایش کامل و بدون بریدگی وسط کلمهٔ تراشه‌های بازخورد تشویقی دبیر
+            stamp_texts = page.locator(".g-detail .chip").all_inner_texts()
+            for expected_stamp in (
+                "آفرین قهرمان! خیلی خوب درخشیدی",
+                "ستارهٔ طلایی برای دقت و تلاش عالی",
+                "پیشرفت عالی نسبت به آزمون‌های قبل!",
+            ):
+                assert any(expected_stamp in t for t in stamp_texts), (
+                    f"تراشهٔ بازخورد تشویقی نباید وسط کلمه بریده شود: {expected_stamp!r} در {stamp_texts!r}"
+                )
+
             record_step(
                 page,
                 "08_teacher_grading_complete.png",
                 "پنل تصحیح معلم — ثبت نمرهٔ تشریحی (۴/۴) و بازخورد اختصاصی؛ جمع نهایی ۱۰ از ۱۰",
-                "تأیید نهایی نمرهٔ کل ۱۰ از ۱۰ برای دانش‌آموز همراه بازخورد تشریحی معلم",
+                "تأیید نهایی نمرهٔ کل ۱۰ از ۱۰ و نمایش کامل تراشه‌های تشویقی بدون بریدگی وسط کلمه",
+                "1366×900",
+                t0,
+            )
+
+            # --------------------------------------------------------
+            # ۸ب و ۸ج) V335.1 — بستن خودکار مودال‌ها با Esc/تغییر مسیر + ویرایشگر تک‌سؤال بانک سؤال هم‌تراز با اندروید
+            # --------------------------------------------------------
+            t0 = time.monotonic()
+            page.evaluate(
+                "() => { window.__escRes = 'pending'; window.ExamSite.confirmDlg('آزمایش کلید Esc', 'با کلید Esc بسته می‌شود', 'تأیید').then(v => { window.__escRes = v; }); }"
+            )
+            page.locator(".modal-bg").first.wait_for(state="visible")
+            page.keyboard.press("Escape")
+            page.wait_for_function("() => document.querySelectorAll('.modal-bg').length === 0 && window.__escRes === false")
+
+            page.evaluate(
+                "() => { window.__navRes = 'pending'; window.ExamSite.confirmDlg('آزمایش تغییر مسیر', 'با جابه‌جایی صفحه بسته می‌شود', 'تأیید').then(v => { window.__navRes = v; }); }"
+            )
+            page.locator(".modal-bg").first.wait_for(state="visible")
+            page.evaluate("() => window.ExamSite.go('bank')")
+            page.wait_for_function(
+                "() => document.querySelectorAll('.modal-bg').length === 0 && window.__navRes === false && document.body.innerText.includes('سؤال جدید در بانک')"
+            )
+            bank_empty_txt = page.locator("body").inner_text()
+            assert "ذخیرهٔ سؤال جاری در بانک" not in bank_empty_txt, "متن کهنهٔ حالت خالی بانک نباید نمایش داده شود!"
+
+            # افزودن دستهٔ «فصل اول» برای تست انتساب دسته در ویرایشگر تک‌سؤال بانک
+            page.evaluate("() => window.ExamSite.rpcObj('native_bank_category_add_v1', { p_name: 'فصل اول' })")
+            page.get_by_role("button", name=re.compile(r"سؤال جدید در بانک")).click()
+            page.wait_for_selector(".b-settings", timeout=5000)
+            page.get_by_text("فصل اول").first.wait_for(state="visible", timeout=5000)
+
+            # در حالت تک‌سؤال بانک نباید دکمهٔ «+ افزودن سؤال»، «جمع بارم آزمون» یا دکمه‌های چندسؤالی نمایش داده شوند
+            assert page.locator(".b-rail-btn.add").count() == 0, "در ویرایشگر تک‌سؤال بانک نباید دکمهٔ افزودن سؤال دوم نمایش داده شود!"
+            assert page.locator(".b-rail-score").count() == 0, "در ویرایشگر تک‌سؤال بانک نباید جمع بارم آزمون نمایش داده شود!"
+            assert page.locator(".b-qhead button[title='افزودن به بانک سؤال']").count() == 0, "در خود بانک نباید دکمهٔ افزودن به بانک نمایش داده شود!"
+
+            fill_labeled_field(page.locator(".b-settings"), "درس", "فیزیک دهم")
+            page.locator(".b-settings label.g-item").first.click()
+            set_question_text(page, "قانون اول نیوتن (لَختی) را با یک مثال روزمره توضیح دهید.")
+            page.evaluate(
+                """() => {
+                    const sel = document.querySelector("select[aria-label='نوع سؤال']");
+                    sel.value = 'essay';
+                    sel.dispatchEvent(new Event('change', { bubbles: true }));
+                }"""
+            )
+            page.get_by_text("سؤال جدید بانک — تشریحی").first.wait_for(state="visible")
+            assert "قانون اول نیوتن" in page.locator(".b-editor").inner_text(), "تغییر نوع سؤال در بانک نباید متن نوشته‌شده را پاک کند!"
+
+            record_step(
+                page,
+                "08b_teacher_bank_builder.png",
+                "ویرایشگر تک‌سؤال بانک سؤال V335.1 — پنل راست درس/دسته‌ها، انتخاب نوع سؤال و ریل اختصاصی",
+                "نمایش ستون راست مشخصات سؤال بانک (درس و دسته‌ها)، انتخاب مستقیم نوع سؤال (تشریحی) و حذف دکمه‌های گمراه‌کنندهٔ چندسؤالی",
+                "1366×900",
+                t0,
+            )
+
+            t0 = time.monotonic()
+            page.locator(".b-rail-btn.ok").click()
+            card_loc = page.locator(".bank-card").first
+            card_loc.wait_for(state="visible", timeout=5000)
+            card_loc.get_by_text("فیزیک دهم").wait_for(state="visible", timeout=5000)
+            card_loc.get_by_text("فصل اول").wait_for(state="visible", timeout=5000)
+
+            record_step(
+                page,
+                "08c_teacher_bank_saved.png",
+                "بانک سؤال پس از ذخیرهٔ تک‌سؤال تشریحی — نمایش کارت سؤال با درس و برچسب دسته",
+                "ثبت موفق سؤال تشریحی در بانک سؤال همراه درس «فیزیک دهم» و دستهٔ «فصل اول» و بازگشت خودکار به فهرست بانک",
                 "1366×900",
                 t0,
             )

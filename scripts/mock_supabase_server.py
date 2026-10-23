@@ -1567,8 +1567,93 @@ def make_handler(state: MockSupabaseState):
                 self._send_json(200, {"ok": True, "id": uuid.uuid4().hex[:12]})
                 return
 
+            if not hasattr(state, "bank_categories"):
+                state.bank_categories = []
+                state.bank_items = []
+
+            if fn == "native_bank_category_add_v1":
+                cid = len(state.bank_categories) + 1
+                nm = str(params.get("p_name") or "").strip()
+                state.bank_categories.append({"id": cid, "name": nm})
+                self._send_json(200, {"ok": True, "id": cid})
+                return
+
+            if fn == "native_bank_category_delete_v1":
+                cid = int(params.get("p_id") or 0)
+                del_q = bool(params.get("p_delete_questions"))
+                state.bank_categories = [c for c in state.bank_categories if c["id"] != cid]
+                if del_q:
+                    state.bank_items = [it for it in state.bank_items if cid not in (it.get("cat_ids") or [])]
+                else:
+                    for it in state.bank_items:
+                        it["cat_ids"] = [x for x in (it.get("cat_ids") or []) if x != cid]
+                self._send_json(200, {"ok": True})
+                return
+
+            if fn == "native_bank_add_v2":
+                qid = len(state.bank_items) + 1
+                cids = [int(x) for x in (params.get("p_cats") or [])]
+                state.bank_items.insert(0, {
+                    "id": qid,
+                    "question": copy.deepcopy(params.get("p_question") or {}),
+                    "subject": str(params.get("p_subject") or "").strip(),
+                    "cat_ids": cids,
+                    "shared": False,
+                    "created_at": "2026-10-23T12:00:00Z",
+                })
+                self._send_json(200, {"ok": True, "id": qid})
+                return
+
+            if fn == "native_bank_update_question_v1":
+                qid = int(params.get("p_id") or 0)
+                cids = [int(x) for x in (params.get("p_cats") or [])]
+                for it in state.bank_items:
+                    if it["id"] == qid:
+                        it["question"] = copy.deepcopy(params.get("p_question") or {})
+                        it["subject"] = str(params.get("p_subject") or "").strip()
+                        it["cat_ids"] = cids
+                self._send_json(200, {"ok": True, "id": qid})
+                return
+
+            if fn == "native_bank_delete_question_v1":
+                qid = int(params.get("p_id") or 0)
+                state.bank_items = [it for it in state.bank_items if it["id"] != qid]
+                self._send_json(200, {"ok": True})
+                return
+
+            if fn == "native_bank_set_categories_v1":
+                qid = int(params.get("p_id") or 0)
+                cids = [int(x) for x in (params.get("p_cats") or [])]
+                for it in state.bank_items:
+                    if it["id"] == qid:
+                        it["cat_ids"] = cids
+                self._send_json(200, {"ok": True})
+                return
+
+            if fn == "native_bank_set_shared_v1":
+                qid = int(params.get("p_id") or 0)
+                sh = bool(params.get("p_shared"))
+                for it in state.bank_items:
+                    if it["id"] == qid:
+                        it["shared"] = sh
+                self._send_json(200, {"ok": True})
+                return
+
             if fn in ("native_bank_snapshot_v1", "native_school_bank_v1"):
-                self._send_json(200, {"ok": True, "items": [], "questions": [], "categories": []})
+                cmap = {c["id"]: c["name"] for c in state.bank_categories}
+                cats_out = [
+                    {
+                        "id": c["id"],
+                        "name": c["name"],
+                        "count": sum(1 for it in state.bank_items if c["id"] in (it.get("cat_ids") or [])),
+                    }
+                    for c in state.bank_categories
+                ]
+                items_out = [
+                    {**copy.deepcopy(it), "cat_names": [cmap[cid] for cid in (it.get("cat_ids") or []) if cid in cmap]}
+                    for it in state.bank_items
+                ]
+                self._send_json(200, {"ok": True, "items": items_out, "questions": items_out, "categories": cats_out})
                 return
 
             self._send_json(200, {"ok": True})

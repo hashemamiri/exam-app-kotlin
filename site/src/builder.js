@@ -630,8 +630,9 @@
     function mark() { state.dirty = true; state.printDirty = true; saveDraft(); }
     /* --- نوار بالا --- */
     var top = el('div', {class: 'card b-top'});
+    var dkSubjInp = null;
     var title = inp('عنوان آزمون', state.title, function (v) { state.title = v; mark(); });
-    var subject = inp('درس', state.subject, function (v) { state.subject = v; mark(); });
+    var subject = inp('درس', state.subject, function (v) { state.subject = v; if (dkSubjInp && dkSubjInp.value !== v) dkSubjInp.value = v; mark(); });
     var duration = inp('مدت (دقیقه)', state.duration, function (v) { state.duration = en(v); mark(); }, 'number');
     top.appendChild(el('div', {class: 'row', style: 'margin-bottom:8px'}, [
       el('span', {class: 'chip brand', text: state.bankEdit ? (state.bankEdit.id ? '🏦 ویرایش سؤال بانک' : '🏦 سؤال جدید بانک') : state.mode === 'print' ? '🖨 آزمون چاپی (محلی)' : (state.examId ? '✎ ویرایش آزمون آنلاین' : '➕ آزمون آنلاین جدید')}),
@@ -651,12 +652,43 @@
     wrap.appendChild(top);
 
     /* --- بدنه: فهرست سؤال‌ها + ویرایشگر --- */
-    var body = el('div', {class: 'b-body' + (!state.bankEdit && (state.mode === 'online' || (state.mode === 'print' && S.headerSettingsForm)) ? ' has-settings' : '')});
+    var body = el('div', {class: 'b-body' + (state.bankEdit || state.mode === 'online' || (state.mode === 'print' && S.headerSettingsForm) ? ' has-settings' : '')});
     var list = el('div', {class: 'b-list card'});
     var editor = el('div', {class: 'b-editor card'});
     /* V166 — دسکتاپ (body.dk): ستون راست «مشخصات آزمون» همیشه باز + ریل چپ (افزودن/بعدی/ذخیره/چاپ/پیش‌نمایش + شمارهٔ سؤال‌ها)؛ فهرست b-list فقط در گوشی/تبلت */
     var settings = null;
-    if (state.mode === 'online' && !state.bankEdit) { settings = el('aside', {class: 'b-settings card'}, [el('h3', {text: 'مشخصات آزمون'})]); settingsForm(settings); settings.addEventListener('input', syncMeta); }
+    if (state.bankEdit) {
+      /* V335.1 — در حالت ساخت/ویرایش تک‌سؤال بانک، ستون راست دسکتاپ «مشخصات سؤال بانک» (درس، دسته‌ها و بازگشت) را نمایش می‌دهد */
+      var dkSubj = inp('درس', state.subject, function (v) { state.subject = v; var si = subject.querySelector('input'); if (si && si.value !== v) si.value = v; mark(); });
+      dkSubjInp = dkSubj.querySelector('input');
+      var catHolder = el('div', {class: 'muted', style: 'font-size:13px;margin-top:4px', text: 'در حال بارگذاری دسته‌ها…'});
+      settings = el('aside', {class: 'b-settings card'}, [
+        el('h3', {text: state.bankEdit.id ? 'مشخصات سؤال بانک' : 'سؤال جدید در بانک'}),
+        dkSubj,
+        el('div', {class: 'field', style: 'margin-top:10px'}, [el('label', {text: 'دسته‌های بانک سؤال'}), catHolder]),
+        el('button', {class: 'btn light sm', style: 'width:100%;margin-top:12px', text: '↩ بازگشت به بانک سؤال', onclick: function () { S.go('bank'); }})
+      ]);
+      S.rpcObj('native_bank_snapshot_v1', {}).then(function (raw) {
+        var cats = (raw && raw.categories) || [];
+        catHolder.innerHTML = '';
+        catHolder.className = '';
+        if (!cats.length) { catHolder.appendChild(el('span', {class: 'muted', style: 'font-size:12px', text: 'هنوز دسته‌ای در بانک نساخته‌اید.'})); return; }
+        var box = el('div', {class: 'g-list', style: 'max-height:220px'});
+        cats.forEach(function (k) {
+          var cb = el('input', {type: 'checkbox', style: 'width:auto;flex:0 0 auto'});
+          cb.checked = (state.bankEdit.cats || []).indexOf(k.id) >= 0;
+          cb.addEventListener('change', function () {
+            var cur = (state.bankEdit.cats || []).filter(function (x) { return x !== k.id; });
+            if (cb.checked) cur.push(k.id);
+            state.bankEdit.cats = cur;
+            mark();
+          });
+          box.appendChild(el('label', {class: 'g-item', style: 'cursor:pointer'}, [cb, el('span', {text: k.name})]));
+        });
+        catHolder.appendChild(box);
+      }).catch(function () { catHolder.textContent = 'دسته‌ای یافت نشد.'; });
+    }
+    else if (state.mode === 'online' && !state.bankEdit) { settings = el('aside', {class: 'b-settings card'}, [el('h3', {text: 'مشخصات آزمون'})]); settingsForm(settings); settings.addEventListener('input', syncMeta); }
     /* V173 — سازندهٔ چاپی دسکتاپ مثل آنلاین: ستون راست = «تنظیمات سربرگ» (ExamBuilderScreen printMode) با ذخیرهٔ خودکار */
     else if (state.mode === 'print' && !state.bankEdit && S.headerSettingsForm) { settings = el('aside', {class: 'b-settings b-hdr card'}, [el('h3', {text: 'تنظیمات سربرگ'})]); S.headerSettingsForm(settings, {autosave: true}); }
     var rail = el('nav', {class: 'b-rail', 'aria-label': 'ابزار سازنده'});
@@ -744,9 +776,16 @@
       if (typeof refreshPickRules === 'function') refreshPickRules(); /* V275 */
       /* V259.2 — زیر هر دکمهٔ ریل نامش نوشته می‌شود (برچسب کوتاه)؛ زیر چشم، کارت «بارم» = جمع بارم آزمون */
       function rb(icon, label, on, cls, short) { var b = el('button', {class: 'b-rail-btn ' + (cls || ''), title: label, 'aria-label': label, html: icon, onclick: on}); b.appendChild(el('span', {class: 'b-rail-lbl', text: short || label})); return b; }
+      var EYE = '<svg viewBox="0 0 24 24"><path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>';
+      /* V335.1 — در حالت تک‌سؤال بانک، دکمهٔ «افزودن سؤال جدید به آزمون» و شماره‌های چندسؤالی نمایش داده نمی‌شوند تا سؤال دوم به صورت خاموش حذف نشود */
+      if (state.bankEdit) {
+        rail.appendChild(rb('<svg viewBox="0 0 24 24"><path d="M5 12l5 5L20 7"/></svg>', 'ذخیره در بانک', save, 'ok', 'ذخیره'));
+        rail.appendChild(rb(EYE, 'پیش‌نمایش دانش‌آموز', function () { studentPreview(); }, '', 'پیش‌نمایش'));
+        rail.appendChild(rb('<svg viewBox="0 0 24 24"><path d="M9 14l-4-4 4-4"/><path d="M5 10h11a4 4 0 0 1 0 8h-1"/></svg>', 'بازگشت به بانک سؤال', function () { S.go('bank'); }, '', 'بازگشت'));
+        return;
+      }
       rail.appendChild(rb('<svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>', 'افزودن سؤال', function (e) { addMenu(e.currentTarget); }, 'add', 'افزودن'));
       /* V173 — مثل FABهای ExamBuilderScreen: آنلاین = ذخیره + چشم (پیش‌نمایش دانش‌آموزی سؤال، V62.7)؛ چاپی = ذخیره + چشم (پیش‌نمایش برگه) + چاپ (منوی چاپ آزمون/چاپ با کلید) */
-      var EYE = '<svg viewBox="0 0 24 24"><path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>';
       rail.appendChild(rb('<svg viewBox="0 0 24 24"><path d="M5 12l5 5L20 7"/></svg>', state.bankEdit ? 'ذخیره در بانک' : 'ذخیره', save, 'ok', 'ذخیره'));
       if (state.mode === 'print') {
         rail.appendChild(rb(EYE, 'پیش‌نمایش آزمون', function () { preview(); }, '', 'پیش‌نمایش'));
@@ -786,8 +825,8 @@
       list.appendChild(el('div', {class: 'row', style: 'margin-bottom:10px'}, [el('b', {class: 'grow', text: 'سؤال‌ها (' + fa(state.questions.length) + ')'}), el('span', {class: 'muted', style: 'font-size:12px', text: 'جمع بارم: ' + fa(S.fmtScore(state.questions.reduce(function (s, q) { return s + (Number(q.score) || 0); }, 0)))})]));
       var addRow = el('div', {class: 'b-add'});
       TYPES.forEach(function (t) { addRow.appendChild(el('button', {class: 'btn light sm', title: t[1], text: t[2] + ' ' + t[1], onclick: function () { state.questions.push(newQuestion(t[0])); state.selected = state.questions.length - 1; mark(); drawList(); drawEditor(); }})); });
-      /* V325 — ثبت میان‌برهای همین صفحه: Ctrl+Enter سؤال تازه، Ctrl+S ذخیره */
-      SC.addq = function () { state.questions.push(newQuestion('multiple')); state.selected = state.questions.length - 1; mark(); drawList(); drawEditor(); };
+      /* V325 — ثبت میان‌برهای همین صفحه: Ctrl+Enter سؤال تازه (فقط در آزمون چندسؤالی)، Ctrl+S ذخیره */
+      SC.addq = state.bankEdit ? null : function () { state.questions.push(newQuestion('multiple')); state.selected = state.questions.length - 1; mark(); drawList(); drawEditor(); };
       try { SC.save = save; } catch (e) {}
       list.appendChild(addRow);
       if (bankAllowed()) list.appendChild(el('button', {class: 'btn soft sm', style: 'width:100%;margin-top:8px', text: '🏦 از بانک سؤال', onclick: openBank}));
@@ -811,13 +850,32 @@
       var q = state.questions[state.selected];
       if (!q) { editor.appendChild(el('div', {class: 'empty'}, [el('div', {class: 'big', text: '✎'}), el('div', {text: 'سؤالی انتخاب نشده است. با دکمهٔ + سؤال اضافه کنید.'})])); return; }
       var i = state.selected;
-      editor.appendChild(el('div', {class: 'row b-qhead', style: 'margin-bottom:10px'}, [
-        el('h3', {class: 'grow', text: 'سؤال ' + fa(i + 1) + ' — ' + TYPE_LABEL[q.type]}),
-        el('button', {class: 'icon-btn', title: 'بالا', html: QI.up, onclick: function () { if (i > 0) { swap(i, i - 1); } }}),
-        el('button', {class: 'icon-btn', title: 'پایین', html: QI.down, onclick: function () { if (i < state.questions.length - 1) swap(i, i + 1); }}),
-        el('button', {class: 'icon-btn', title: 'کپی', html: QI.copy, onclick: function () { var cp = JSON.parse(JSON.stringify(q)); cp.id = uuid(); state.questions.splice(i + 1, 0, cp); state.selected = i + 1; mark(); drawList(); drawEditor(); }}),
-        el('button', {class: 'icon-btn', title: 'افزودن به بانک سؤال', html: QI.bank, onclick: function () { addToBank(q); }}),
-        el('button', {class: 'icon-btn danger', title: 'حذف', html: QI.trash, onclick: async function () { if (!(await S.confirmDlg('حذف سؤال', 'سؤال ' + fa(i + 1) + ' حذف شود؟', 'حذف', true))) return; state.questions.splice(i, 1); state.selected = Math.max(0, Math.min(i, state.questions.length - 1)); mark(); drawList(); drawEditor(); }})
+      var scoreInp = el('input', {type: 'number', step: '0.25', min: '0', value: String(q.score), 'aria-label': 'بارم'});
+      scoreInp.addEventListener('input', function () {
+        q.score = parseFloat(en(scoreInp.value)) || 0;
+        mark(); drawListSoft();
+        var rs = rail.querySelector('.b-rail-score-v');
+        if (rs) rs.textContent = fa(S.fmtScore(totalScore()));
+      });
+      var bankTypeSel = null;
+      if (state.bankEdit) {
+        bankTypeSel = el('select', {'aria-label': 'نوع سؤال', style: 'border:1px solid var(--line);border-radius:10px;padding:6px 10px;font-size:13px'});
+        TYPES.forEach(function (t) { var op = el('option', {value: t[0], text: t[2] + ' ' + t[1]}); if (t[0] === q.type) op.selected = true; bankTypeSel.appendChild(op); });
+        bankTypeSel.addEventListener('change', function () {
+          var fresh = newQuestion(bankTypeSel.value);
+          fresh.text = q.text; fresh.score = q.score; fresh.images = q.images || []; fresh.audio = q.audio || ''; fresh.audioBytes = q.audioBytes || 0;
+          state.questions[i] = fresh; mark(); drawListSoft(); drawEditor();
+        });
+      }
+      editor.appendChild(el('div', {class: 'row b-qhead', style: 'margin-bottom:10px;flex-wrap:wrap'}, [
+        el('h3', {class: 'grow', text: state.bankEdit ? ((state.bankEdit.id ? 'ویرایش سؤال بانک — ' : 'سؤال جدید بانک — ') + TYPE_LABEL[q.type]) : ('سؤال ' + fa(i + 1) + ' — ' + TYPE_LABEL[q.type])}),
+        bankTypeSel,
+        el('div', {class: 'field b-qscore', title: 'بارم این سؤال'}, [el('label', {text: 'بارم'}), scoreInp]),
+        state.bankEdit ? null : el('button', {class: 'icon-btn', title: 'بالا', html: QI.up, onclick: function () { if (i > 0) { swap(i, i - 1); } }}),
+        state.bankEdit ? null : el('button', {class: 'icon-btn', title: 'پایین', html: QI.down, onclick: function () { if (i < state.questions.length - 1) swap(i, i + 1); }}),
+        state.bankEdit ? null : el('button', {class: 'icon-btn', title: 'کپی', html: QI.copy, onclick: function () { var cp = JSON.parse(JSON.stringify(q)); cp.id = uuid(); state.questions.splice(i + 1, 0, cp); state.selected = i + 1; mark(); drawList(); drawEditor(); }}),
+        state.bankEdit ? null : el('button', {class: 'icon-btn', title: 'افزودن به بانک سؤال', html: QI.bank, onclick: function () { addToBank(q); }}),
+        state.bankEdit ? null : el('button', {class: 'icon-btn danger', title: 'حذف', html: QI.trash, onclick: async function () { if (!(await S.confirmDlg('حذف سؤال', 'سؤال ' + fa(i + 1) + ' حذف شود؟', 'حذف', true))) return; state.questions.splice(i, 1); state.selected = Math.max(0, Math.min(i, state.questions.length - 1)); mark(); drawList(); drawEditor(); }})
       ]));
       /* متن سؤال + ابزار درج */
       var ta = el('textarea', {rows: 4, style: 'width:100%;border:1px solid var(--line);border-radius:10px;padding:10px;font-size:15px', placeholder: 'متن سؤال را بنویسید؛'});
@@ -853,7 +911,8 @@
           }, {title: 'تختهٔ سفید — سؤال ' + fa(i + 1), doneLabel: 'افزودن تصویر تخته به سؤال', prev: []});
         }}),
         el('button', {class: 'tool-btn is-mic', title: 'گفتار به متن', 'aria-label': 'گفتار به متن', html: toolSvg('mic'), onclick: function () { dictate(ta, q); }}),
-        window.SiteExtras ? el('button', {class: 'tool-btn' + (q.audio ? ' on' : ''), title: q.audio ? 'صوت سؤال (دارد)' : 'صوت سؤال', 'aria-label': 'صوت سؤال', html: toolSvg('audio'), onclick: function () { window.SiteExtras.audioDlg(q, state.examId || (state.examId = uuid()), state.mode === 'print', function () { mark(); drawEditor(); }); }}) : null
+        /* V334.3 — مثل اپ اندروید (V135): صوت سؤال فقط در آزمون آنلاین نمایش داده می‌شود (کاغذ صدا ندارد) */
+        state.mode !== 'print' && window.SiteExtras ? el('button', {class: 'tool-btn' + (q.audio ? ' on' : ''), title: q.audio ? 'صوت سؤال (دارد)' : 'صوت سؤال', 'aria-label': 'صوت سؤال', html: toolSvg('audio'), onclick: function () { window.SiteExtras.audioDlg(q, state.examId || (state.examId = uuid()), false, function () { mark(); drawEditor(); }); }}) : null
       ]);
       var tt = tokenTextarea(ta);
       editor.appendChild(el('div', {class: 'field'}, [el('label', {text: 'متن سؤال'}), tt.wrap, tools, tt.live]));
@@ -864,31 +923,31 @@
         q.images.forEach(function (m, k) { ig.appendChild(el('div', {class: 'b-img'}, [el('img', {src: m.uri}), el('button', {class: 'x', text: '✕', onclick: function () { q.images.splice(k, 1); mark(); drawEditor(); }})])); });
         editor.appendChild(ig);
       }
-      /* بارم + قالب */
-      var fmt = el('div', {class: 'grid4'}, [
-        inp('بارم', String(q.score), function (v) { q.score = parseFloat(en(v)) || 0; mark(); drawListSoft(); var rs = rail.querySelector('.b-rail-score-v'); if (rs) rs.textContent = fa(S.fmtScore(totalScore())); }, 'number'),
-        sel('تراز متن', q.textAlign, [['right', 'راست'], ['center', 'وسط'], ['left', 'چپ'], ['justify', 'دوطرفه']], function (v) { q.textAlign = v; mark(); }),
-        sel('فونت', q.fontFamily, [['default', 'پیش‌فرض'], ['Vazirmatn', 'وزیرمتن'], ['Shabnam', 'شبنم'], ['Sahel', 'ساحل'], ['BNazanin', 'ب نازنین'], ['Tahoma', 'تاهوما']], function (v) { q.fontFamily = v; mark(); }),
-        inp('اندازهٔ فونت', String(q.fontSizeSp), function (v) { q.fontSizeSp = Math.max(8, Math.min(40, parseFloat(en(v)) || 16)); mark(); }, 'number')
-      ]);
+      /* V334.1 — بخش اختصاصی هر نوع سؤال بلافاصله زیر نوار ابزارها (گزینه‌ها، ستون جورکردنی، درست/نادرست، پاسخ کوتاه/عددی و ...) */
+      editor.appendChild(typeSection(q));
       /* V259.1 — دسکتاپ: هر گروه تنظیمات در یک «بخش» مرتب (عنوان + شبکهٔ هم‌ارتفاع)؛ گوشی بدون تغییر ظاهری */
       function sec(title, children, cls) { return el('div', {class: 'b-sec' + (cls ? ' ' + cls : '')}, [title ? el('h4', {class: 'b-sec-t', text: title, style: 'margin-top:14px'}) : null].concat(children)); }
-      editor.appendChild(sec(document.body.classList.contains('dk') ? 'قالب متن سؤال' : '', [fmt, el('div', {class: 'row b-sec-chips', style: 'margin:-6px 0 12px'}, [chk('ضخیم', q.bold, function (v) { q.bold = v; mark(); }), chk('مورب', q.italic, function (v) { q.italic = v; mark(); })])], 'b-sec-fmt'));
-      /* بخش مخصوص نوع */
-      editor.appendChild(typeSection(q));
-      /* فضای پاسخ (چاپ) */
-      if (q.type === 'essay' || q.type === 'fill' || q.type === 'numeric') {
-        editor.appendChild(sec('فضای پاسخ در برگهٔ چاپی', [el('div', {class: 'grid3'}, [
-          inp('تعداد خط', String(q.answerLines), function (v) { q.answerLines = Math.max(0, Math.min(12, parseInt(en(v), 10) || 0)); mark(); }, 'number'),
-          sel('نوع خط', q.answerLineStyle, [['lined', 'خط‌دار'], ['blank', 'ساده'], ['grid', 'شطرنجی']], function (v) { q.answerLineStyle = v; mark(); }),
-          inp('فاصلهٔ خط (cm)', String(q.answerLineSpacingCm), function (v) { q.answerLineSpacingCm = Math.max(0.5, Math.min(2, parseFloat(en(v)) || 1)); mark(); }, 'number')
-        ])]));
-      }
-      /* V208 — چیدمان گزینه‌های چندگزینه‌ای در برگهٔ چاپی (پیش‌فرض آزمون در «تنظیمات صفحه»ی پیش‌نمایش) */
-      if (state.mode === 'print' && q.type === 'multiple') {
-        editor.appendChild(sec('چیدمان گزینه‌ها در برگهٔ چاپی', [el('div', {class: 'grid3'}, [
-          sel('چیدمان', q.optionsLayout || '', [['', 'پیش‌فرض آزمون'], ['1row', 'همه در یک ردیف'], ['2rows', 'دو ردیف'], ['4rows', 'هر گزینه یک ردیف']], function (v) { q.optionsLayout = v; mark(); })
-        ])]));
+      /* V334.3 — تفکیک کامل آزمون چاپی و آنلاین: «قالب متن سؤال» و «فضای پاسخ در برگهٔ چاپی» منحصراً مخصوص بخش چاپی هستند */
+      if (state.mode === 'print') {
+        var fmt = el('div', {class: 'grid3'}, [
+          sel('تراز متن', q.textAlign, [['right', 'راست'], ['center', 'وسط'], ['left', 'چپ'], ['justify', 'دوطرفه']], function (v) { q.textAlign = v; mark(); }),
+          sel('فونت', q.fontFamily, [['default', 'پیش‌فرض'], ['Vazirmatn', 'وزیرمتن'], ['Shabnam', 'شبنم'], ['Sahel', 'ساحل'], ['BNazanin', 'ب نازنین'], ['Tahoma', 'تاهوما']], function (v) { q.fontFamily = v; mark(); }),
+          inp('اندازهٔ فونت', String(q.fontSizeSp), function (v) { q.fontSizeSp = Math.max(8, Math.min(40, parseFloat(en(v)) || 16)); mark(); }, 'number')
+        ]);
+        editor.appendChild(sec(document.body.classList.contains('dk') ? 'قالب متن سؤال' : '', [fmt, el('div', {class: 'row b-sec-chips', style: 'margin:-6px 0 12px'}, [chk('ضخیم', q.bold, function (v) { q.bold = v; mark(); }), chk('مورب', q.italic, function (v) { q.italic = v; mark(); })])], 'b-sec-fmt'));
+        if (q.type === 'essay' || q.type === 'fill' || q.type === 'numeric') {
+          editor.appendChild(sec('فضای پاسخ در برگهٔ چاپی', [el('div', {class: 'grid3'}, [
+            inp('تعداد خط', String(q.answerLines), function (v) { q.answerLines = Math.max(0, Math.min(12, parseInt(en(v), 10) || 0)); mark(); }, 'number'),
+            sel('نوع خط', q.answerLineStyle, [['lined', 'خط‌دار'], ['blank', 'ساده'], ['grid', 'شطرنجی']], function (v) { q.answerLineStyle = v; mark(); }),
+            inp('فاصلهٔ خط (cm)', String(q.answerLineSpacingCm), function (v) { q.answerLineSpacingCm = Math.max(0.5, Math.min(2, parseFloat(en(v)) || 1)); mark(); }, 'number')
+          ])]));
+        }
+        /* V208 — چیدمان گزینه‌های چندگزینه‌ای در برگهٔ چاپی (پیش‌فرض آزمون در «تنظیمات صفحه»ی پیش‌نمایش) */
+        if (q.type === 'multiple') {
+          editor.appendChild(sec('چیدمان گزینه‌ها در برگهٔ چاپی', [el('div', {class: 'grid3'}, [
+            sel('چیدمان', q.optionsLayout || '', [['', 'پیش‌فرض آزمون'], ['1row', 'همه در یک ردیف'], ['2rows', 'دو ردیف'], ['4rows', 'هر گزینه یک ردیف']], function (v) { q.optionsLayout = v; mark(); })
+          ])]));
+        }
       }
       /* پاسخ تصویری (آنلاین) */
       if (state.mode === 'online' && (q.type === 'essay' || q.type === 'numeric' || q.type === 'fill')) {
@@ -1142,11 +1201,13 @@
           box.appendChild(el('div', {class: 'b-opt'}, [lt.wrap, lp, s, rt.wrap, rp, el('button', {class: 'icon-btn danger', html: '✕', title: 'حذف ردیف', onclick: function () { if (n <= 2) return; q.matchingLeft.splice(k, 1); q.matchingRight.splice(k, 1); q.matchingPairs = {}; mark(); redraw(); }})]));
         })(k);
         box.appendChild(el('button', {class: 'btn light sm', text: '➕ ردیف', onclick: function () { q.matchingLeft.push(''); q.matchingRight.push(''); mark(); redraw(); }}));
-      } else {
+      } else if (state.mode !== 'print') {
+        /* V334.3 — توضیح تصحیح دستی مخصوص آزمون آنلاین است؛ در آزمون چاپی نمایش داده نمی‌شود */
         box.appendChild(el('p', {class: 'muted', style: 'font-size:13px', text: 'سؤال تشریحی به‌صورت دستی تصحیح می‌شود.'}));
       }
       /* V305 — ابتدایی: ویرایش ناحیه‌های انتخاب روی تصویر (بعد از گزینه‌ها) */
       if (state.primaryMode && q.type === 'multiple' && q.mode === 'hotspot') box.appendChild(hotspotEditor(q, redraw));
+      if (!box.childNodes.length) box.style.display = 'none';
       return box;
     }
     /* --- مشخصات آزمون (آنلاین) --- */
@@ -1297,7 +1358,7 @@
           f.forEach(function (it) { var qq = it.question || {}; var cb = el('input', {type: 'checkbox', 'aria-label': 'انتخاب'}); cb.checked = picked.indexOf(it) >= 0; cb.addEventListener('change', function () { var k = picked.indexOf(it); if (cb.checked && k < 0) picked.push(it); if (!cb.checked && k >= 0) picked.splice(k, 1); card.classList.toggle('on', cb.checked); syncAddBtn(); });
             var card = el('div', {class: 'bank-card compact b-bank-pick' + (cb.checked ? ' on' : ''), onclick: function (e) { if (e.target.closest('button,input,label')) return; cb.checked = !cb.checked; cb.dispatchEvent(new Event('change')); }}, [
               el('div', {class: 'bk-head'}, [el('label', {class: 'bk-check', title: 'انتخاب'}, [cb]), el('span', {class: 'chip type', text: TYPE_LABEL[S.qType(qq.type) === 'long' ? 'essay' : S.qType(qq.type)] || 'سؤال'}), el('span', {class: 'chip', text: 'بارم ' + fa(S.fmtScore(Number(qq.score) || 1))}), el('button', {type: 'button', class: 'icon-btn bk-eye', title: 'نمایش محتوای سؤال', 'aria-label': 'نمایش محتوای سؤال', html: '👁', onclick: function () { if (window.SiteSchool && window.SiteSchool.bankQuestionModal) window.SiteSchool.bankQuestionModal(it); }})]),
-              el('div', {class: 'bk-meta'}, [el('div', [el('small', {text: 'عنوان آزمون'}), el('div', {class: 'v', text: qq.examTitle || '—'})]), el('div', [el('small', {text: 'درس'}), el('div', {class: 'v', text: it.subject || 'بدون درس'})])]),
+              el('div', {class: 'bk-meta'}, [el('div', {}, [el('small', {text: 'عنوان آزمون'}), el('div', {class: 'v', text: qq.examTitle || '—'})]), el('div', {}, [el('small', {text: 'درس'}), el('div', {class: 'v', text: it.subject || 'بدون درس'})])]),
               (it.cat_names || []).length ? el('div', {class: 'bk-cats'}, (it.cat_names || []).slice(0, 4).map(function (n) { return el('span', {class: 'chip', text: n}); })) : null,
               el('div', {class: 'bk-foot'}, [el('button', {type: 'button', class: 'btn soft sm', text: 'افزودن', onclick: function () { addItems([it]); }})])
             ]);

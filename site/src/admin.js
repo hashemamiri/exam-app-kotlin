@@ -217,8 +217,8 @@
         detail.appendChild(box);
       });
       var fb = el('textarea', {rows: 2, style: 'width:100%;border:1px solid var(--line);border-radius:10px;padding:8px', placeholder: 'بازخورد به دانش‌آموز (اختیاری)'}); fb.value = a.feedback || '';
-      /* V314.0 — مهرها و برچسب‌های تشویقی تصویری ویژهٔ دورهٔ ابتدایی */
-      var stampRow = el('div', {class: 'row', style: 'flex-wrap:wrap;gap:4px;margin:6px 0'});
+      /* V314.0 — مهرها و برچسب‌های تشویقی تصویری ویژهٔ دورهٔ ابتدایی؛ V335.1 — نمایش کامل بدون برش وسط کلمه */
+      var stampRow = el('div', {class: 'row', style: 'flex-wrap:wrap;gap:6px;margin:6px 0'});
       [
         '🌟 آفرین قهرمان! خیلی خوب درخشیدی',
         '🏆 ستارهٔ طلایی برای دقت و تلاش عالی',
@@ -227,10 +227,10 @@
         '📚 پیشرفت عالی نسبت به آزمون‌های قبل!',
         '💪 با کمی تمرین بیشتر عالی می‌شوی'
       ].forEach(function (st) {
-        stampRow.appendChild(el('button', {class: 'chip', style: 'cursor:pointer', text: st.slice(0, 24), title: st, onclick: function () { fb.value = (fb.value ? fb.value.trim() + ' — ' : '') + st; }}));
+        stampRow.appendChild(el('button', {class: 'chip', style: 'cursor:pointer;white-space:normal;text-align:right;height:auto;line-height:1.5', text: st, title: st, onclick: function () { fb.value = (fb.value ? fb.value.trim() + ' — ' : '') + st; }}));
       });
-      var fbBank = el('div', {class: 'row', style: 'flex-wrap:wrap;gap:4px;margin:6px 0'});
-      fbList().then(function (list) { (list || []).slice(0, 12).forEach(function (p) { fbBank.appendChild(el('button', {class: 'chip', style: 'cursor:pointer', text: p.text, onclick: function () { fb.value = (fb.value ? fb.value + ' ' : '') + p.text; }})); }); }).catch(function () {});
+      var fbBank = el('div', {class: 'row', style: 'flex-wrap:wrap;gap:6px;margin:6px 0'});
+      fbList().then(function (list) { (list || []).slice(0, 12).forEach(function (p) { fbBank.appendChild(el('button', {class: 'chip', style: 'cursor:pointer;white-space:normal;text-align:right;height:auto;line-height:1.5', text: p.text, title: p.text, onclick: function () { fb.value = (fb.value ? fb.value + ' ' : '') + p.text; }})); }); }).catch(function () {});
       var total = el('b');
       function sum() { var s = 0; inputs.forEach(function (x) { s += num(x.value); }); total.textContent = 'جمع: ' + fa(S.fmtScore(s)) + ' از ' + fa(S.fmtScore(maxScore)); }
       inputs.forEach(function (x) { x.addEventListener('input', sum); }); sum();

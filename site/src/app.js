@@ -165,6 +165,7 @@
     return m[1] + svg + (isHtml ? rest : esc(rest));
   }
   function el(tag, attrs, children) {
+    if (Array.isArray(attrs)) { children = attrs; attrs = null; }
     var e = document.createElement(tag);
     if (attrs && (typeof attrs.text === 'string' || typeof attrs.html === 'string')) { var _ik = typeof attrs.html === 'string' ? dkIconify(attrs.html, true) : dkIconify(attrs.text, false); if (_ik != null) { attrs = Object.assign({}, attrs); if (typeof attrs.html === 'string') attrs.html = _ik; else { delete attrs.text; attrs.html = _ik; } } }
     if (attrs) Object.keys(attrs).forEach(function (k) {
@@ -261,26 +262,32 @@
   /* V159 — پنجرهٔ ورودی متن (AlertDialog با OutlinedTextField در اپ) */
   function promptDlg(title, body, label, value, okLabel) {
     return new Promise(function (resolve) {
+      var done = false;
+      function finish(v) { if (done) return; done = true; bg.remove(); resolve(v); }
       var bg = el('div', {class: 'modal-bg'});
+      bg._onCancel = function () { finish(null); };
       var i = el('input', {type: 'text', value: value || ''});
-      var ok = el('button', {class: 'btn', text: okLabel || 'تأیید', onclick: function () { bg.remove(); resolve(i.value); }});
+      var ok = el('button', {class: 'btn', text: okLabel || 'تأیید', onclick: function () { finish(i.value); }});
       i.addEventListener('input', function () { ok.disabled = !i.value.trim(); });
       i.addEventListener('keydown', function (e) { if (e.key === 'Enter' && i.value.trim()) ok.click(); });
       var m = el('div', {class: 'modal'}, [el('h2', {text: title}), body ? el('p', {class: 'muted', text: body}) : null, el('div', {class: 'field'}, [el('label', {text: label || ''}), i]),
-        el('div', {class: 'row', style: 'justify-content:flex-start;margin-top:14px'}, [ok, el('button', {class: 'btn light', text: 'انصراف', onclick: function () { bg.remove(); resolve(null); }})])]);
+        el('div', {class: 'row', style: 'justify-content:flex-start;margin-top:14px'}, [ok, el('button', {class: 'btn light', text: 'انصراف', onclick: function () { finish(null); }})])]);
       bg.appendChild(m); document.body.appendChild(bg); setTimeout(function () { i.focus(); i.select(); }, 30);
     });
   }
   function confirmDlg(title, body, okLabel, danger) {
     return new Promise(function (resolve) {
+      var done = false;
+      function finish(v) { if (done) return; done = true; bg.remove(); resolve(v); }
       /* V180 — روی موتور چاپ/فرمول (z-index 60) هم دیده شود؛ پیش از این پنجرهٔ هزینهٔ چاپ پشتِ پیش‌نمایش پنهان می‌ماند */
       var bg = el('div', {class: 'modal-bg' + (document.querySelector('.engine-bg') ? ' over-engine' : '')});
+      bg._onCancel = function () { finish(false); };
       var m = el('div', {class: 'modal'}, [
         el('h2', {text: title}),
         el('p', {class: 'muted', html: body}),
         el('div', {class: 'row', style: 'justify-content:flex-start;margin-top:14px'}, [
-          el('button', {class: 'btn ' + (danger ? 'danger' : ''), text: okLabel || 'تأیید', onclick: function () { bg.remove(); resolve(true); }}),
-          el('button', {class: 'btn light', text: 'انصراف', onclick: function () { bg.remove(); resolve(false); }})
+          el('button', {class: 'btn ' + (danger ? 'danger' : ''), text: okLabel || 'تأیید', onclick: function () { finish(true); }}),
+          el('button', {class: 'btn light', text: 'انصراف', onclick: function () { finish(false); }})
         ])
       ]);
       bg.appendChild(m); document.body.appendChild(bg);
@@ -310,12 +317,15 @@
   /* V202 — پیام یکسانِ «کسر هزینه» برای همهٔ مسیرهای کسر از کیف پول: وسط صفحه، فقط با دکمهٔ «تأیید» محو می‌شود (نه toast) */
   function infoDlg(title, body, okLabel) {
     return new Promise(function (resolve) {
+      var done = false;
+      function finish(v) { if (done) return; done = true; bg.remove(); resolve(v); }
       var bg = el('div', {class: 'modal-bg' + (document.querySelector('.engine-bg') ? ' over-engine' : '')});
+      bg._onCancel = function () { finish(true); };
       var m = el('div', {class: 'modal'}, [
         el('h2', {text: title}),
         el('p', {class: 'muted', html: body}),
         el('div', {class: 'row', style: 'justify-content:flex-start;margin-top:14px'}, [
-          el('button', {class: 'btn', text: okLabel || 'تأیید', onclick: function () { bg.remove(); resolve(true); }})
+          el('button', {class: 'btn', text: okLabel || 'تأیید', onclick: function () { finish(true); }})
         ])
       ]);
       bg.appendChild(m); document.body.appendChild(bg);
@@ -1406,8 +1416,18 @@
     if (!prev) return false;
     navPopping = true; view.panel = prev.panel; view.arg = prev.arg; render(); return true;
   }
+  /* V335.1 — بستن پنجره‌ها و منوهای شناور باز هنگام جابه‌جایی صفحه تا لایهٔ تیره روی صفحه‌های بعدی جا نماند (#authBg ثابت صفحهٔ اول است) */
+  function closeModalsOnNav() {
+    if (typeof ddClose === 'function') ddClose();
+    if (kbdHelpEl) { kbdHelpEl.remove(); kbdHelpEl = null; }
+    document.querySelectorAll('.modal-bg:not(#authBg), #b-addmenu, .dk-radial, .m-radial-bg').forEach(function (n) {
+      if (typeof n._onCancel === 'function') { try { n._onCancel(); } catch (e) { n.remove(); } }
+      else n.remove();
+    });
+  }
   function render() {
     root = $('root');
+    closeModalsOnNav();
     navTrack();
     document.body.classList.remove('dk');
     /* V148 — پوستهٔ موبایل (mobile.js) در حالت گوشی/معلم جای پنل دسکتاپ را می‌گیرد */
@@ -2690,6 +2710,16 @@
       if (k === 'enter') { e.preventDefault(); kbdDispatch('addq'); return; }
       if (k === 'k') { e.preventDefault(); var sb = document.querySelector('.dk-rail'); if (sb) sb.scrollIntoView({block: 'nearest'}); kbdDispatch('search'); return; }
       return;
+    }
+    if (e.key === 'Escape') {
+      if (kbdHelpEl) { e.preventDefault(); kbdHelpEl.remove(); kbdHelpEl = null; return; }
+      var modals = document.querySelectorAll('.modal-bg:not(#authBg)');
+      if (modals.length) {
+        var topM = modals[modals.length - 1];
+        e.preventDefault();
+        if (typeof topM._onCancel === 'function') topM._onCancel(); else topM.remove();
+        return;
+      }
     }
     if (typing) return;
     if (e.key === '?') { e.preventDefault(); kbdDispatch('help'); }

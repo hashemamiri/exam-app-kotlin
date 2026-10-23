@@ -582,14 +582,14 @@
         var f = items.filter(function (it) { var qq = it.question || {}; return (!s || String(qq.text || '').toLowerCase().indexOf(s) >= 0 || String(it.subject || '').toLowerCase().indexOf(s) >= 0) && (!cid || (it.cat_ids || []).indexOf(cid) >= 0); });
         cnt.textContent = fa(f.length) + ' از ' + fa(items.length) + ' سؤال';
         lst.innerHTML = '';
-        if (!f.length) { lst.appendChild(S.emptyBox('🏦', 'سؤالی در بانک نیست. از سازندهٔ آزمون با «ذخیرهٔ سؤال جاری در بانک» اضافه کنید.')); return; }
+        if (!f.length) { lst.appendChild(S.emptyBox('🏦', 'سؤالی در بانک نیست. با دکمهٔ «➕ سؤال جدید در بانک» یا آیکون «افزودن به بانک سؤال» در سازندهٔ آزمون اضافه کنید.')); return; }
         f.forEach(function (it) {
           var qq = it.question || {};
           /* V259 — کارت فشرده: نوع/بارم + آیکن چشم؛ عنوان آزمون و درس؛ دسته‌ها؛ اقدام‌ها. محتوای سؤال با چشم در پنجره نمایش داده می‌شود (مثل اپ) */
           function showQuestion() { bankQuestionModal(it); }
           lst.appendChild(el('div', {class: 'bank-card compact'}, [
             el('div', {class: 'bk-head'}, [el('span', {class: 'chip type', text: TYPE[S.qType(qq.type)] || 'سؤال'}), el('span', {class: 'chip', text: 'بارم ' + fa(S.fmtScore(Number(qq.score) || 1))}), el('button', {class: 'icon-btn bk-eye', title: 'نمایش محتوای سؤال', 'aria-label': 'نمایش محتوای سؤال', html: '👁', onclick: showQuestion})]),
-            el('div', {class: 'bk-meta'}, [el('div', [el('small', {text: 'عنوان آزمون'}), el('div', {class: 'v', text: qq.examTitle || '—'})]), el('div', [el('small', {text: 'درس'}), el('div', {class: 'v', text: it.subject || 'بدون درس'})])]),
+            el('div', {class: 'bk-meta'}, [el('div', {}, [el('small', {text: 'عنوان آزمون'}), el('div', {class: 'v', text: qq.examTitle || '—'})]), el('div', {}, [el('small', {text: 'درس'}), el('div', {class: 'v', text: it.subject || 'بدون درس'})])]),
             (it.cat_names || []).length ? el('div', {class: 'bk-cats'}, (it.cat_names || []).slice(0, 4).map(function (n) { return el('span', {class: 'chip', text: n}); })) : null,
             el('div', {class: 'bk-foot'}, [el('div', {class: 'acts'}, [
               /* V230 — اشتراک با همکاران مدرسه (فقط خواندن/کپی) */
