@@ -80,10 +80,10 @@ class V334_0_BuilderCleanupTest {
 
         val toolsIdx = builderJs.indexOf("class: 'b-tools'")
         val typeIdx = builderJs.indexOf("editor.appendChild(typeSection(q));")
-        val printGuardIdx = builderJs.indexOf("if (state.mode === 'print') {")
-        val fmtIdx = builderJs.indexOf("'b-sec-fmt'")
-        val printSpaceIdx = builderJs.indexOf("sec('فضای پاسخ در برگهٔ چاپی'")
-        val onlineImgIdx = builderJs.indexOf("if (state.mode === 'online' &&")
+        val printGuardIdx = builderJs.indexOf("if (state.mode === 'print') {", typeIdx)
+        val fmtIdx = builderJs.indexOf("'b-sec-fmt'", printGuardIdx)
+        val printSpaceIdx = builderJs.indexOf("sec('فضای پاسخ در برگهٔ چاپی'", fmtIdx)
+        val onlineImgIdx = builderJs.indexOf("if (state.mode === 'online' &&", printSpaceIdx)
         assertTrue("بخش نوع سؤال باید زیر نوار ابزارهای وب باشد", toolsIdx in 1 until typeIdx)
         assertTrue("بخش‌های چاپی باید داخل شرط state.mode === 'print' و زیر بخش نوع سؤال باشند",
             typeIdx < printGuardIdx && printGuardIdx < fmtIdx && fmtIdx < printSpaceIdx && printSpaceIdx < onlineImgIdx)
