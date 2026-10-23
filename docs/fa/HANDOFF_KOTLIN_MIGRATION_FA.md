@@ -1,6 +1,16 @@
 # هندآف جامع مهاجرت سامانه آزمون از WebView به Native Kotlin
 
-**آخرین به‌روزرسانی:** ۲۰۲۶-۱۰-۲۳ — بستهٔ خودکار تک‌فرمانی V334.4 (`1.02.84`، فایل نصاب مستقل همه‌کاره: `/home/user/apply_v334_4.py`، مقصد تأییدشده توسط کاربر: **هر دو شاخهٔ `main` و `staging`**، بدون نیاز به هیچ اسکریپت SQL): علاوه بر اصلاح تک‌خطی تست `V334_0_BuilderCleanupTest:88` و تأیید مستقیم ۴۲ تست JUnit با `K2JVMCompiler + JUnitCore`، بنا به دستور صریح کاربر («در قالب بسته بده» تا دستورات ترمینال طولانی نباشد) **تمامی مراحل Git (`git fetch origin`، پاک‌سازی وضعیت نیمه‌کاره، `checkout/reset` روی `origin/main`، استخراج با تأیید SHA-256، `git commit` و `git push` هم‌زمان به `main` و `staging`) مستقیماً درون خودِ فایل `apply_v334_4.py` گنجانده شد** تا کاربر از هر پوشه‌ای در WSL تنها با **یک خط کوتاه** (`python3 /mnt/c/Users/Hashem/Downloads/apply_v334_4.py`) بسته را اعمال و CI گیت‌هاب را روشن کند.
+**آخرین به‌روزرسانی:** ۲۰۲۶-۱۰-۲۳ — بستهٔ V335.0 (`1.02.85`، گام ۱ از ۴ برنامه نهایی: **ممیزی کامل امنیت و Data API سوپابیس پیش از ۳۰ اکتبر**، فایل SQL مستقل: `/home/user/20261023_post_oct30_complete_audit_v335_0.sql` + فایل نصاب خودکار: `/home/user/apply_v335_0.py`): با اسکن کالبدشکافانه کل ۹۲ فایل مهاجرت SQL، تمام مخازن Kotlin اپ، تمام فایل‌های JS وب‌سایت و هر ۶ تابع لبه Deno، **۴ گپ واقعی پیش از تغییر ۳۰ اکتبر Supabase کشف و برطرف شد**:
+  1. **پوشش صریح هر ۱۶ جدول هسته‌ای اولیه (`profiles`, `exams`, `exam_keys`, `answers`, `answer_drafts`, `answers_trash`, `classes`, `class_members`, `exam_attempts`, `exam_audience_classes`, `exam_audience_students`, `exam_classes`, `exam_overrides`, `exam_sessions`, `exam_students`, `question_bank`):** این ۱۶ جدول پیش از پوشه `supabase/migrations` ساخته شده بودند و در `V324` گرنت صریح `service_role` / `authenticated` نداشتند (در مجموع پوشش صریح به **۵۷ جدول** رسید و دسترسی مستقیم `anon` به `exam_keys` صریحاً مسدود شد).
+  2. **تکمیل گرنت اجرای `service_role` روی `public.native_due_account_deletions_v282()`** که در `V282` پس از `revoke all` جا افتاده بود.
+  3. **قفل امنیتی `SET search_path = public, pg_temp` روی ۴ تابع عمومی فاقد `search_path` (`native_auto_grade_question_v1`, `native_normalize_text_v1`, `native_answer_max_score_v255`, `native_exams_created_at_v137`) + حلقه خودکار روی کلیه توابع `public` و `private` و قفل کامل schema خصوصی `private`.**
+  4. **ارتقای دائمی نگهبان `scripts/check_supabase_data_api_grants.py` + تست واحد `V335_0_SupabaseOct30AuditTest.kt` + جدول گزارش فارسی خودکار در انتهای اسکریپت SQL** تا هنگام اجرا در Supabase SQL Editor با نمایش `۰ خطا` سلامت دیتابیس واقعی فوراً روی صفحه تایید شود.
+
+---
+
+## سابقهٔ بستهٔ V334.4 (`1.02.84`) — ۲۰۲۶-۱۰-۲۳
+
+- **بستهٔ پیشین:** بستهٔ خودکار تک‌فرمانی V334.4 (`1.02.84`، فایل نصاب مستقل همه‌کاره: `/home/user/apply_v334_4.py`، مقصد تأییدشده توسط کاربر: **هر دو شاخهٔ `main` و `staging`**، بدون نیاز به هیچ اسکریپت SQL): علاوه بر اصلاح تک‌خطی تست `V334_0_BuilderCleanupTest:88` و تأیید مستقیم ۴۲ تست JUnit با `K2JVMCompiler + JUnitCore`، بنا به دستور صریح کاربر («در قالب بسته بده» تا دستورات ترمینال طولانی نباشد) **تمامی مراحل Git (`git fetch origin`، پاک‌سازی وضعیت نیمه‌کاره، `checkout/reset` روی `origin/main`، استخراج با تأیید SHA-256، `git commit` و `git push` هم‌زمان به `main` و `staging`) مستقیماً درون خودِ فایل `apply_v334_4.py` گنجانده شد** تا کاربر از هر پوشه‌ای در WSL تنها با **یک خط کوتاه** (`python3 /mnt/c/Users/Hashem/Downloads/apply_v334_4.py`) بسته را اعمال و CI گیت‌هاب را روشن کند.
 
 ---
 
