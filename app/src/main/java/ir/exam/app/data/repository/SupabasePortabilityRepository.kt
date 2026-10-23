@@ -35,6 +35,7 @@ import kotlinx.serialization.json.longOrNull
 import kotlinx.serialization.json.put
 
 class SupabasePortabilityRepository {
+    @OptIn(kotlinx.serialization.ExperimentalSerializationApi::class)
     private val prettyJson = Json { prettyPrint = true; explicitNulls = false }
 
     suspend fun exportExam(examId: String, includeAnswerKey: Boolean = true): Result<PortableFile> = runCatching {

@@ -134,7 +134,6 @@ fun QuestionAudioEditorDialog(
 
     val selMs = (endMs - startMs).coerceAtLeast(0L)
     val planned = AudioTranscoder.plannedBitrate(selMs)
-    val estBytes = planned?.let { AudioTranscoder.estimateBytes(selMs, it) }
     val tooLong = info != null && planned == null
 
     AlertDialog(
@@ -218,7 +217,8 @@ fun QuestionAudioEditorDialog(
                         Column(Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(3.dp)) {
                             if (tooLong) {
                                 Text("این بازه حتی با کمترین کیفیت از ۳ مگابایت بیشتر می‌شود؛ بازه را کوتاه‌تر کنید.", color = MaterialTheme.colorScheme.onErrorContainer, fontWeight = FontWeight.Bold)
-                            } else if (estBytes != null && planned != null) {
+                            } else if (planned != null) {
+                                val estBytes = AudioTranscoder.estimateBytes(selMs, planned)
                                 Text("حجم تقریبی خروجی: ${AudioTranscoder.formatMb(estBytes)} مگابایت (AAC ${PersianDigits.convert(planned / 1000)} kbps${if (planned < 48_000) "، مونو" else ""})", fontWeight = FontWeight.Bold)
                                 Text("هزینهٔ صوت این سؤال: ${PersianDigits.convert(audioChargeForBytes(estBytes))} تومان · سقف ۳ مگابایت", style = MaterialTheme.typography.bodySmall)
                             }

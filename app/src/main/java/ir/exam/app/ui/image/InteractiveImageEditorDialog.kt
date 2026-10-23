@@ -28,11 +28,11 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.RotateLeft
+import androidx.compose.material.icons.automirrored.outlined.RotateRight
 import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.Crop
-import androidx.compose.material.icons.outlined.RotateLeft
-import androidx.compose.material.icons.outlined.RotateRight
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -180,7 +180,7 @@ fun InteractiveImageEditorDialog(
                     ) {
                         ImageToolButton(
                             "چرخش به چپ",
-                            Icons.Outlined.RotateLeft,
+                            Icons.AutoMirrored.Outlined.RotateLeft,
                             enabled = safeSource != null && !preparing
                         ) {
                             rotation = (rotation + 270) % 360
@@ -200,7 +200,7 @@ fun InteractiveImageEditorDialog(
                         }
                         ImageToolButton(
                             "چرخش به راست",
-                            Icons.Outlined.RotateRight,
+                            Icons.AutoMirrored.Outlined.RotateRight,
                             enabled = safeSource != null && !preparing
                         ) {
                             rotation = (rotation + 90) % 360
@@ -377,12 +377,14 @@ private fun ImageToolButton(
         )
     ) {
         IconButton(onClick = onClick, enabled = enabled) {
-            Icon(
-                icon,
-                contentDescription = description,
-                tint = if (enabled) MaterialTheme.colorScheme.primary
-                else MaterialTheme.colorScheme.onSurface.copy(alpha = .32f)
-            )
+            CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
+                Icon(
+                    icon,
+                    contentDescription = description,
+                    tint = if (enabled) MaterialTheme.colorScheme.primary
+                    else MaterialTheme.colorScheme.onSurface.copy(alpha = .32f)
+                )
+            }
         }
     }
 }

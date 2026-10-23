@@ -41,6 +41,7 @@ data class ExamBuilderDraftPayload(
 )
 
 class ExamBuilderDraftStore(private val dao: ExamBuilderDraftDao) {
+    @OptIn(kotlinx.serialization.ExperimentalSerializationApi::class)
     private val json = Json { ignoreUnknownKeys = true; encodeDefaults = true; explicitNulls = false }
 
     suspend fun load(userId: String): ExamBuilderDraftPayload? = dao.get(userId)?.let { entity ->

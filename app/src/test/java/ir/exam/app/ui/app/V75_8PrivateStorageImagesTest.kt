@@ -50,8 +50,10 @@ class V75_8PrivateStorageImagesTest {
     }
     @Test
     fun `the custom loader is installed at the app root`() {
+        val examApplication = source("app/src/main/java/ir/exam/app/ExamApplication.kt")
         assertTrue("ImageLoader.Builder(context)" in loader)
         assertTrue("add(SupabaseAuthImageInterceptor())" in loader)
-        assertTrue("LocalImageLoader provides imageLoader" in app)
+        assertTrue("Coil.setImageLoader(PrivateImageLoader.create(" in app)
+        assertTrue("override fun newImageLoader(): ImageLoader = PrivateImageLoader.create(this)" in examApplication)
     }
 }

@@ -29,6 +29,7 @@ data class PendingSubmissionPayload(
 )
 
 object PendingSubmissionCodec {
+    @OptIn(kotlinx.serialization.ExperimentalSerializationApi::class)
     private val json = Json {
         ignoreUnknownKeys = true
         explicitNulls = false

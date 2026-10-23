@@ -59,9 +59,9 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowLeft
+import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowRight
 import androidx.compose.material.icons.outlined.Calculate
-import androidx.compose.material.icons.outlined.KeyboardArrowLeft
-import androidx.compose.material.icons.outlined.KeyboardArrowRight
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -329,22 +329,22 @@ fun StudentExamContent(
                 // V301 — ابتدایی: به‌جای نوار شماره‌ها، دو دکمهٔ بزرگ و «سؤال ۳ از ۱۰» در وسط
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Button(onClick = onPrevious, enabled = state.questionIndex > 0, modifier = Modifier.weight(1f).heightIn(min = 52.dp)) {
-                        Icon(Icons.Outlined.KeyboardArrowRight, contentDescription = null); Text("قبلی")
+                        Icon(Icons.AutoMirrored.Outlined.KeyboardArrowLeft, contentDescription = null); Text("قبلی")
                     }
                     Text(
                         "سؤال ${PersianDigits.convert(state.questionIndex + 1)} از ${PersianDigits.convert(exam.questions.size)}",
                         style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center, modifier = Modifier.weight(1.2f)
                     )
                     Button(onClick = onNext, enabled = state.questionIndex < exam.questions.lastIndex, modifier = Modifier.weight(1f).heightIn(min = 52.dp)) {
-                        Text("بعدی"); Icon(Icons.Outlined.KeyboardArrowLeft, contentDescription = null)
+                        Text("بعدی"); Icon(Icons.AutoMirrored.Outlined.KeyboardArrowRight, contentDescription = null)
                     }
                 }
             } else item {
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                    // V58.0.2 — آیکن‌های AutoMirrored در RTL برعکس رندر می‌شدند؛
-                    // نسخهٔ غیرآینه‌ای: قبلی = فلش رو به راست، بعدی = رو به چپ.
+                    // V58.0.2 / V335.2 — در RTL آیکن‌های AutoMirrored آینه‌ای می‌شوند:
+                    // KeyboardArrowLeft -> فلش رو به راست (قبلی) و KeyboardArrowRight -> فلش رو به چپ (بعدی).
                     IconButton(onClick = onPrevious, enabled = state.questionIndex > 0) {
-                        Icon(Icons.Outlined.KeyboardArrowRight, contentDescription = "سؤال قبلی")
+                        Icon(Icons.AutoMirrored.Outlined.KeyboardArrowLeft, contentDescription = "سؤال قبلی")
                     }
                     // V59.0 — شمارهٔ سؤال جاری همیشه خودکار به دید اسکرول می‌شود.
                     val stripState = rememberLazyListState()
@@ -372,7 +372,7 @@ fun StudentExamContent(
                         }
                     }
                     IconButton(onClick = onNext, enabled = state.questionIndex < exam.questions.lastIndex) {
-                        Icon(Icons.Outlined.KeyboardArrowLeft, contentDescription = "سؤال بعدی")
+                        Icon(Icons.AutoMirrored.Outlined.KeyboardArrowRight, contentDescription = "سؤال بعدی")
                     }
                 }
             }

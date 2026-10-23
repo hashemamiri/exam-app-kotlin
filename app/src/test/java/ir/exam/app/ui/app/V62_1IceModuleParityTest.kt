@@ -41,8 +41,8 @@ class V62_1IceModuleParityTest {
             "internal fun IceOutlinedButton(",
             "internal fun StaggeredItem("
         )) assertTrue(needle, needle in components)
-        // موج سه‌لایه و برف هاله‌دار ماژول
-        assertTrue("quadraticBezierTo" in components)
+        // موج سه‌لایه و برف هاله‌دار ماژول (V335.2: مهاجرت به quadraticTo بدون هشدار منسوخ)
+        assertTrue("path.quadraticTo(" in components)
         assertTrue("radius = r * 2.2f" in components)
         // stagger ماژول: تأخیر ۵۵ میلی‌ثانیه به‌ازای هر آیتم
         assertTrue("delay(index * 55L)" in components)

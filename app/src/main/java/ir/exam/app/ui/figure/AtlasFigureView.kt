@@ -149,13 +149,12 @@ fun AtlasFigureView(
         }
         if (blanks) {
             marks.sortedBy { it.n }.forEach { mark ->
-                val editable = onBlankAnswer != null &&
-                    !(markNames && mark.label.isNotBlank())
+                val editable = !(markNames && mark.label.isNotBlank())
                 if (editable) {
                     // V57.0 — کادر تایپ پاسخ نامگذاری برای دانش‌آموز.
                     OutlinedTextField(
                         value = blankAnswers?.get(mark.n).orEmpty(),
-                        onValueChange = { onBlankAnswer?.invoke(mark.n, it) },
+                        onValueChange = { onBlankAnswer(mark.n, it) },
                         label = { Text("نام بخش ${AtlasMarkPainter.faNum(mark.n)}") },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth().padding(top = 4.dp)

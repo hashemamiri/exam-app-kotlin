@@ -13,10 +13,10 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.ArrowBack
+import androidx.compose.material.icons.automirrored.outlined.Login
 import androidx.compose.material.icons.outlined.AccountBalanceWallet
-import androidx.compose.material.icons.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.Delete
-import androidx.compose.material.icons.outlined.Login
 import androidx.compose.material.icons.outlined.ToggleOff
 import androidx.compose.material.icons.outlined.ToggleOn
 import androidx.compose.material3.Card
@@ -132,7 +132,7 @@ fun ManagerTeachersScreen(
                     // V62.6 — بازگشت از کد دعوت: داشبورد باز شود.
                     onInviteBack?.invoke() ?: reloadTeachers()
                 }) {
-                    androidx.compose.material3.Icon(Icons.Outlined.ArrowBack, "بازگشت")
+                    androidx.compose.material3.Icon(Icons.AutoMirrored.Outlined.ArrowBack, "بازگشت")
                 }
             }
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
@@ -227,7 +227,7 @@ fun ManagerTeachersScreen(
                                     )
                                 }
                                 androidx.compose.material3.IconButton(onClick = { onManageTeacher(teacher.id) }) {
-                                    androidx.compose.material3.Icon(Icons.Outlined.Login, "ورود به مدیریت معلم", modifier = Modifier.size(32.dp))
+                                    androidx.compose.material3.Icon(Icons.AutoMirrored.Outlined.Login, "ورود به مدیریت معلم", modifier = Modifier.size(32.dp))
                                 }
                                 androidx.compose.material3.IconButton(onClick = { transferTarget = teacher; transferAmount = "" }) {
                                     androidx.compose.material3.Icon(Icons.Outlined.AccountBalanceWallet, "شارژ کیف پول", modifier = Modifier.size(32.dp))

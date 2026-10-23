@@ -29,7 +29,7 @@ class V41InviteTeacherCardPolishTest {
         assertTrue("Color(0xFFE5484D)" in ui)
         assertTrue("Modifier.size(34.dp)" in ui)
         assertTrue(ui.split("Modifier.size(32.dp)").size - 1 >= 3)
-        assertTrue("Icons.Outlined.Login" in ui)
+        assertTrue("Icons.AutoMirrored.Outlined.Login" in ui)
         assertTrue("Icons.Outlined.AccountBalanceWallet" in ui)
         assertTrue("Icons.Outlined.Delete" in ui)
     }

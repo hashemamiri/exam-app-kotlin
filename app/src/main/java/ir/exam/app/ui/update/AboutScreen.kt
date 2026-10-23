@@ -179,7 +179,10 @@ const val SUPPORT_EMAIL = "info@onlineexam.ir"
 @Composable
 private fun ContactCard(onError: (Throwable) -> Unit) {
     val context = LocalContext.current
-    val clipboard = androidx.compose.ui.platform.LocalClipboardManager.current
+    fun copySupportEmail() {
+        context.getSystemService(android.content.ClipboardManager::class.java)
+            ?.setPrimaryClip(android.content.ClipData.newPlainText("support_email", SUPPORT_EMAIL))
+    }
     Card(Modifier.fillMaxWidth()) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text("تماس با ما و نظرات", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
@@ -198,14 +201,14 @@ private fun ContactCard(onError: (Throwable) -> Unit) {
                                     .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                             )
                         }.onFailure {
-                            clipboard.setText(androidx.compose.ui.text.AnnotatedString(SUPPORT_EMAIL))
+                            copySupportEmail()
                             onError(IllegalStateException("برنامهٔ ایمیل پیدا نشد؛ نشانی کپی شد."))
                         }
                     },
                     modifier = Modifier.weight(1f)
                 ) { Text("ارسال ایمیل") }
                 OutlinedButton(
-                    onClick = { clipboard.setText(androidx.compose.ui.text.AnnotatedString(SUPPORT_EMAIL)) },
+                    onClick = { copySupportEmail() },
                     modifier = Modifier.weight(1f)
                 ) { Text("کپی نشانی") }
             }

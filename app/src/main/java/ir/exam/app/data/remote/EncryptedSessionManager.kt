@@ -16,6 +16,7 @@ import kotlinx.serialization.json.Json
  */
 class EncryptedSessionManager(context: Context) : SessionManager {
     private val storage = SecureSessionStorage(context.applicationContext)
+    @OptIn(kotlinx.serialization.ExperimentalSerializationApi::class)
     private val json = Json { ignoreUnknownKeys = true; explicitNulls = false }
 
     override suspend fun saveSession(session: UserSession) {

@@ -44,7 +44,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
-import coil.compose.LocalImageLoader
+import coil.Coil
 import ir.exam.app.ui.image.PrivateImageLoader
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -121,13 +121,14 @@ private enum class MainPage {
 
 @Composable
 fun ExamApp(appearance: AppearanceSettings = AppearanceSettings()) {
-    // V75.8 — بارگذار تصویرِ اختصاصی (تصاویر خصوصیِ Supabase با توکنِ نشست)
-    // یک‌بار در ریشه نصب می‌شود تا همهٔ صفحه‌ها از آن استفاده کنند.
+    // V75.8 / V335.2 — بارگذار تصویرِ اختصاصی (تصاویر خصوصیِ Supabase با توکنِ نشست)
+    // از طریق ImageLoaderFactory و Coil.setImageLoader ثبت یکتا می‌شود تا بدون API منسوخ در همهٔ صفحه‌ها فعال باشد.
     val context = LocalContext.current
-    val imageLoader = remember(context) { PrivateImageLoader.create(context) }
-    CompositionLocalProvider(LocalImageLoader provides imageLoader) {
-        ExamAppContent(appearance)
+    remember(context) {
+        Coil.setImageLoader(PrivateImageLoader.create(context.applicationContext))
+        true
     }
+    ExamAppContent(appearance)
 }
 
 @Composable

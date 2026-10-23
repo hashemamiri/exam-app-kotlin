@@ -50,10 +50,10 @@ class V58_0StudentExamUxTimerTest {
         // V59.0: سطر شماره‌ها LazyRow با اسکرول خودکار شد.
         assertTrue("LazyRow(" in student)
         assertTrue("animateScrollToItem(state.questionIndex" in student)
-        // V58.0.2 — نسخهٔ AutoMirrored در RTL برعکس رندر می‌شد؛ غیرآینه‌ای شد.
-        assertTrue("Icons.Outlined.KeyboardArrowRight" in student)
-        assertTrue("Icons.Outlined.KeyboardArrowLeft" in student)
-        assertFalse("Icons.AutoMirrored.Outlined.KeyboardArrowRight" in student)
+        // V58.0.2 / V335.2 — در RTL آیکن‌های AutoMirrored آینه‌ای می‌شوند: Left برای «قبلی» (→) و Right برای «بعدی» (←).
+        assertTrue("Icon(Icons.AutoMirrored.Outlined.KeyboardArrowLeft, contentDescription = \"سؤال قبلی\")" in student)
+        assertTrue("Icon(Icons.AutoMirrored.Outlined.KeyboardArrowRight, contentDescription = \"سؤال بعدی\")" in student)
+        assertFalse("Icons.Outlined.KeyboardArrowRight" in student)
         // دکمه‌های متنی قبلی/بعدی پایین حذف شدند
         assertFalse("{ Text(\"قبلی\") }" in student)
         assertFalse("{ Text(\"بعدی\") }" in student)

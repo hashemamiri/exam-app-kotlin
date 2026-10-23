@@ -18,7 +18,7 @@ class V40BManagerTeacherCardsInvitesTest {
 
     @Test fun `teacher card has details and four hidden icon actions`() {
         val ui=source("app/src/main/java/ir/exam/app/ui/manager/ManagerFoundationScreens.kt")
-        listOf("کد پرسنلی:","شماره تلفن:","expandedTeacher == teacher.id","Icons.Outlined.ToggleOn","Icons.Outlined.Login","Icons.Outlined.AccountBalanceWallet","Icons.Outlined.Delete").forEach{assertTrue(it in ui)}
+        listOf("کد پرسنلی:","شماره تلفن:","expandedTeacher == teacher.id","Icons.Outlined.ToggleOn","Icons.AutoMirrored.Outlined.Login","Icons.Outlined.AccountBalanceWallet","Icons.Outlined.Delete").forEach{assertTrue(it in ui)}
         assertTrue("Modifier.fillMaxWidth().clickable" in ui)
     }
 

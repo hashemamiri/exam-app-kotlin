@@ -6,8 +6,8 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.os.PersistableBundle
-import android.view.WindowManager
 import android.widget.Toast
+import androidx.core.view.WindowCompat
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
@@ -1814,16 +1814,13 @@ private fun StudentEditDialog(
     // قرمز، چشم مشترک رمزها و تیک سبز است و فیلدها با اطلاعات دانش‌آموز پیش‌پرند.
     Dialog(
         onDismissRequest = onDismiss,
-        properties = DialogProperties(usePlatformDefaultWidth = false)
+        properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)
     ) {
         val dialogView = LocalView.current
         DisposableEffect(dialogView) {
             val window = (dialogView.parent as? DialogWindowProvider)?.window
-            val previousMode = window?.attributes?.softInputMode
-            window?.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)
-            onDispose {
-                if (previousMode != null) window?.setSoftInputMode(previousMode)
-            }
+            if (window != null) WindowCompat.setDecorFitsSystemWindows(window, false)
+            onDispose { }
         }
         BoxWithConstraints(
             modifier = Modifier.fillMaxSize().imePadding().padding(horizontal = 14.dp, vertical = 10.dp),
@@ -2125,16 +2122,13 @@ private fun BulkStudentDialog(
     // پنجره گروهی دقیقاً مانند پنجره تکی: هم‌عرض ۶۲۰dp، از بالا، بدون کشیدن به کل ارتفاع.
     Dialog(
         onDismissRequest = onDismiss,
-        properties = DialogProperties(usePlatformDefaultWidth = false)
+        properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)
     ) {
         val dialogView = LocalView.current
         DisposableEffect(dialogView) {
             val window = (dialogView.parent as? DialogWindowProvider)?.window
-            val previousMode = window?.attributes?.softInputMode
-            window?.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)
-            onDispose {
-                if (previousMode != null) window?.setSoftInputMode(previousMode)
-            }
+            if (window != null) WindowCompat.setDecorFitsSystemWindows(window, false)
+            onDispose { }
         }
         BoxWithConstraints(
             modifier = Modifier.fillMaxSize().imePadding().padding(horizontal = 14.dp, vertical = 10.dp),

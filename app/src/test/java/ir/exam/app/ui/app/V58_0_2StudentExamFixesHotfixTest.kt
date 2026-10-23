@@ -60,11 +60,11 @@ class V58_0_2StudentExamFixesHotfixTest {
     }
 
     @Test
-    fun `previous next icons are not auto mirrored anymore`() {
-        assertTrue("Icons.Outlined.KeyboardArrowRight" in student)
-        assertTrue("Icons.Outlined.KeyboardArrowLeft" in student)
-        assertFalse("Icons.AutoMirrored.Outlined.KeyboardArrowRight" in student)
-        assertFalse("Icons.AutoMirrored.Outlined.KeyboardArrowLeft" in student)
+    fun `previous next icons render right arrow for previous and left arrow for next in rtl`() {
+        assertTrue("Icon(Icons.AutoMirrored.Outlined.KeyboardArrowLeft, contentDescription = \"سؤال قبلی\")" in student)
+        assertTrue("Icon(Icons.AutoMirrored.Outlined.KeyboardArrowRight, contentDescription = \"سؤال بعدی\")" in student)
+        assertFalse("Icon(Icons.AutoMirrored.Outlined.KeyboardArrowRight, contentDescription = \"سؤال قبلی\")" in student)
+        assertFalse("Icon(Icons.AutoMirrored.Outlined.KeyboardArrowLeft, contentDescription = \"سؤال بعدی\")" in student)
     }
 
     @Test

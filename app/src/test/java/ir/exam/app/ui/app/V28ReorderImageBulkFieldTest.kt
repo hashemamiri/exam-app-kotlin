@@ -161,7 +161,8 @@ class V28ReorderImageBulkFieldTest {
     @Test
     fun `bulk dialog keeps ime resize behaviour`() {
         val bulk = bulkSection()
-        assertTrue("SOFT_INPUT_ADJUST_RESIZE" in bulk)
+        assertTrue("decorFitsSystemWindows = false" in bulk)
+        assertTrue("WindowCompat.setDecorFitsSystemWindows(window, false)" in bulk)
         assertTrue("imePadding()" in bulk)
     }
 

@@ -24,6 +24,7 @@ object ExamPackageCodec {
     const val EXTENSION = ".azmoon"
     private const val MAX_PACKAGE_BYTES = 8 * 1024 * 1024
     private const val MAX_QUESTIONS = 500
+    @OptIn(kotlinx.serialization.ExperimentalSerializationApi::class)
     private val json = Json { ignoreUnknownKeys = true; explicitNulls = false }
 
     data class ExportedExam(

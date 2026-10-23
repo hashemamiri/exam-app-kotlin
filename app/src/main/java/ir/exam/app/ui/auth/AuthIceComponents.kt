@@ -255,7 +255,7 @@ internal fun IceBackdrop(modifier: Modifier = Modifier, waves: Boolean = true) {
             path.moveTo(x, top + h * 0.62f)
             var up = true
             while (x < w + lambda * 2f) {
-                path.quadraticBezierTo(
+                path.quadraticTo(
                     x + lambda / 2f,
                     top + h * (if (up) 0.18f else 1.05f),
                     x + lambda,

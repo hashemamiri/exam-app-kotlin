@@ -93,7 +93,7 @@ import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
-import coil.compose.LocalImageLoader
+import coil.Coil
 import coil.request.ImageRequest
 import coil.request.SuccessResult
 import androidx.core.graphics.drawable.toBitmap
@@ -264,7 +264,7 @@ fun StudentWhiteboardDialog(
 ) {
     val context = LocalContext.current
     val density = androidx.compose.ui.platform.LocalDensity.current.density
-    val imageLoader = LocalImageLoader.current
+    val imageLoader = coil.Coil.imageLoader(context)
     val scope = rememberCoroutineScope()
     val strokes = remember(questionId) { mutableStateListOf<BoardStroke>() }
     val redo = remember(questionId) { mutableStateListOf<BoardStroke>() }

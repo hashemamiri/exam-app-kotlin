@@ -12,8 +12,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.Add
-import androidx.compose.material.icons.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material3.AlertDialog
@@ -93,7 +93,7 @@ fun ManagerTeacherClassScreen(
  }
  androidx.compose.foundation.layout.Box(Modifier.fillMaxSize()){
  Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),verticalArrangement=Arrangement.spacedBy(10.dp)){
-  Row(verticalAlignment=Alignment.CenterVertically){IconButton(onClick={if(selected!=null){selected=null;roster=null;onTitleChanged("کلاس‌های ${teacherName.ifBlank{"معلم"}}")}else{onTitleChanged(null);onBack()}}){Icon(Icons.Outlined.ArrowBack,"بازگشت")}}
+  Row(verticalAlignment=Alignment.CenterVertically){IconButton(onClick={if(selected!=null){selected=null;roster=null;onTitleChanged("کلاس‌های ${teacherName.ifBlank{"معلم"}}")}else{onTitleChanged(null);onBack()}}){Icon(Icons.AutoMirrored.Outlined.ArrowBack,"بازگشت")}}
   error?.let{Text(it,color=MaterialTheme.colorScheme.error)};info?.let{Text(it,color=MaterialTheme.colorScheme.primary)};if(loading)CircularProgressIndicator()
   if(selected==null){
    Button(onClick={editClassId=null;name="";grade="";field="";createOpen=!createOpen},modifier=Modifier.fillMaxWidth()){Icon(Icons.Outlined.Add,null);Text("کلاس جدید برای معلم")}

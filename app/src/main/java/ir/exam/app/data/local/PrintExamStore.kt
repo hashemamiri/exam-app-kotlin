@@ -35,6 +35,7 @@ class PrintExamStore(context: Context) {
         Context.MODE_PRIVATE
     )
 
+    @OptIn(kotlinx.serialization.ExperimentalSerializationApi::class)
     private val json = Json {
         ignoreUnknownKeys = true
         encodeDefaults = true
