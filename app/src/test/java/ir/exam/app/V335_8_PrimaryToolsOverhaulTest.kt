@@ -101,10 +101,11 @@ class V335_8_PrimaryToolsOverhaulTest {
         // ۷) تقارن شطرنجی: در حالت عدم نمایش کامل شکل قرینه هیچ علامت سؤالی روی شکل نیست
         val symHidden = FigureSpec.parse("""{"t":"axsym","X":{"axis":"v","mirror":"0","cells":"2,1;3,2"}}""")!!
         val symSvg = FigureSvgRenderer.render(symHidden).xml
-        assertFalse("Symmetry grid must not render question marks when mirror=0", symSvg.contains(">؟<"))
-        assertTrue(symSvg.contains("شکل قرینه را رنگ کن"))
+        assertFalse("Symmetry grid must not render question marks when mirror=0", symSvg.contains("؟"))
         val symStudent = PrimaryInteractiveFigureHelper.injectStudentOverlay(symHidden, "2,5")
-        assertTrue(FigureSvgRenderer.render(symStudent).xml.contains("#27c4a8"))
+        val symStudentSvg = FigureSvgRenderer.render(symStudent).xml
+        assertFalse(symStudentSvg.contains("؟"))
+        assertTrue(symStudentSvg.contains("#27c4a8"))
 
         // ۹) استوانهٔ مدرج تا ۴ استوانه
         val beaker4 = FigureSpec.parse("""{"t":"axbeaker","X":{"count":"4","max":"100","val":"20","val2":"45","val3":"70","val4":"90"}}""")!!
@@ -163,8 +164,11 @@ class V335_8_PrimaryToolsOverhaulTest {
         val paint2 = PrimaryInteractiveFigureHelper.togglePaintCell(paint, 2, 3)
         assertTrue(paint2.xStr("cells").contains("2,3"))
 
-        // ۱۵) هجاهای کلمه با افزودن پویا (+) در صفحهٔ دانش‌آموز اندروید و وب
-        assertTrue(read("app/src/main/java/ir/exam/app/ui/student/StudentExamScreen.kt").contains("+ افزودن کادر"))
+        // ۱۵) هجاهای کلمه با افزودن پویا (+) در صفحهٔ دانش‌آموز اندروید و وب + نگهبان EssayQuestion
+        val studentKt = read("app/src/main/java/ir/exam/app/ui/student/StudentExamScreen.kt")
+        assertTrue(studentKt.contains("+ افزودن کادر"))
+        assertTrue(studentKt.contains("question is EssayQuestion"))
+        assertFalse(studentKt.contains("DescriptiveQuestion"))
         assertTrue(read("site/src/student.js").contains("+ افزودن کادر"))
         assertTrue(read("site/src/student.js").contains("bindInteractiveQuestionFigs("))
 

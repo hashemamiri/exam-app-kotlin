@@ -439,7 +439,7 @@ fun StudentExamContent(
                             onAnswer(TextAnswer(question.id, AtlasBlankAnswerCodec.merge(blanks, AtlasBlankAnswerCodec.freeText(answerText))))
                         },
                         studentFigureAnswer = answerText,
-                        onStudentFigureAnswer = if (question is FillBlankQuestion || question is NumericQuestion || question is ir.exam.app.domain.model.DescriptiveQuestion) {
+                        onStudentFigureAnswer = if (question is FillBlankQuestion || question is NumericQuestion || question is EssayQuestion) {
                             { nextVal -> onAnswer(TextAnswer(question.id, nextVal)) }
                         } else null
                     )
