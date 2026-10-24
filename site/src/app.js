@@ -264,7 +264,7 @@
     return new Promise(function (resolve) {
       var done = false;
       function finish(v) { if (done) return; done = true; bg.remove(); resolve(v); }
-      var bg = el('div', {class: 'modal-bg'});
+      var bg = el('div', {class: 'modal-bg' + (document.querySelector('.engine-bg') ? ' over-engine' : '')});
       bg._onCancel = function () { finish(null); };
       var i = el('input', {type: 'text', value: value || ''});
       var ok = el('button', {class: 'btn', text: okLabel || 'تأیید', onclick: function () { finish(i.value); }});

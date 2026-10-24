@@ -398,7 +398,7 @@
     var k = (e.key || '').toLowerCase();
     if (k === 'printscreen') { secEvent('screenshot_attempt'); toast('اسکرین‌شات از آزمون گزارش می‌شود.', 'err'); try { navigator.clipboard && navigator.clipboard.writeText(''); } catch (x) {} return; }
     if ((e.ctrlKey || e.metaKey) && (k === 'p' || k === 's' || (e.shiftKey && k === 's'))) { e.preventDefault(); secEvent('print_attempt'); toast('چاپ/ذخیرهٔ صفحهٔ آزمون مجاز نیست.', 'err'); return; }
-    if ((e.ctrlKey || e.metaKey) && (k === 'c' || k === 'x' || k === 'a') && !inField(e.target)) { e.preventDefault(); secEvent('copy_attempt'); }
+    if ((e.ctrlKey || e.metaKey) && (k === 'c' || k === 'x' || (k === 'a' && !document.querySelector('.engine-bg.wb'))) && !inField(e.target)) { e.preventDefault(); secEvent('copy_attempt'); }
   }
   function guardsOn() { document.addEventListener('copy', onCopyGuard); document.addEventListener('cut', onCopyGuard); document.addEventListener('contextmenu', onCtxGuard); document.addEventListener('dragstart', onCtxGuard); document.addEventListener('keydown', onKeyGuard); document.body.classList.add('st-nocopy'); }
   function guardsOff() { document.removeEventListener('copy', onCopyGuard); document.removeEventListener('cut', onCopyGuard); document.removeEventListener('contextmenu', onCtxGuard); document.removeEventListener('dragstart', onCtxGuard); document.removeEventListener('keydown', onKeyGuard); document.body.classList.remove('st-nocopy'); }
@@ -1426,25 +1426,57 @@
     var bg = el('div', {class: 'engine-bg wb'});
     var pages = [], cur = 0, tool = 'pen', color = '#1a237e', size = 3, grid = 'blank';
     var lineStyle = 'solid', fillShape = false, zoomPct = 100;
+    var items = [], selectedIds = [], nextItemId = 1;
     var undoStack = [], redoStack = [], drawing = false, last = null, startPt = null, endPt = null;
     var autoShape = false, penPts = [], rulerSnapEdge = null;
+    var selDrag = null;
 
     var canvas = el('canvas', {width: W, height: H, class: 'wb-canvas'});
     var ctx = canvas.getContext('2d');
     var inkCanvas = document.createElement('canvas');
     inkCanvas.width = W; inkCanvas.height = H;
     var inkCtx = inkCanvas.getContext('2d');
+    var imgCache = {};
 
     var status = el('span', {class: 'muted', style: 'font-size:12px'});
     var hud = el('div', {class: 'wb-hud', style: 'display:none'});
+    var selBadge = el('div', {class: 'wb-sel-badge', text: 'موردی انتخاب نشده است'});
 
     /* خط‌کش دیجیتال تعاملی (فقط روی نمایشگر؛ وارد خروجی ثبت پاسخ نمی‌شود) */
     var rulerOn = false, rulerState = {x: W / 2, y: H / 2 + 120, deg: 0, len: 680, halfH: 45};
     var rulerDegLbl = el('span', {class: 'wb-ruler-deg', text: '۰°'});
     var rulerEl = el('div', {class: 'wb-ruler', style: 'display:none'});
 
-    function newPage() { return {ink: null, data: null, grid: 'blank'}; }
+    var SHAPE_NAMES = {
+      line: 'خط', arrow: 'پیکان', dblarrow: 'پیکان دوسر', rect: 'مستطیل',
+      circle: 'دایره', ellipse: 'بیضی', triangle: 'مثلث',
+      rtriangle: 'مثلث قائم‌الزاویه', diamond: 'لوزی', axes: 'محور مختصات'
+    };
+
+    function uid() { return 'i' + (nextItemId++); }
+    function newPage() { return {items: [], ink: null, data: null, grid: 'blank'}; }
     function clearInk() { inkCtx.clearRect(0, 0, W, H); }
+
+    function cloneItem(it) {
+      var c = {};
+      Object.keys(it).forEach(function (k) {
+        if (k === 'pts') c.pts = it.pts.map(function (pt) { return {x: pt.x, y: pt.y}; });
+        else if (k === 'a' || k === 'b') c[k] = it[k] ? {x: it[k].x, y: it[k].y} : null;
+        else c[k] = it[k];
+      });
+      return c;
+    }
+    function cloneItems(list) { return (list || []).map(cloneItem); }
+
+    function ensureImg(srcUrl) {
+      if (!srcUrl) return null;
+      if (imgCache[srcUrl]) return imgCache[srcUrl];
+      var im = new Image();
+      imgCache[srcUrl] = im;
+      im.onload = function () { renderComposite(true); };
+      im.src = srcUrl;
+      return im;
+    }
 
     function drawGrid() {
       ctx.save();
@@ -1533,49 +1565,9 @@
       ctx.restore();
     }
 
-    function renderComposite(previewFn) {
-      ctx.fillStyle = '#FFFFFF';
-      ctx.fillRect(0, 0, W, H);
-      drawGrid();
-      ctx.drawImage(inkCanvas, 0, 0);
-      if (previewFn) previewFn(ctx);
-    }
-
-    function blank() { clearInk(); renderComposite(); }
-
-    function updateHistoryBtns() {
-      if (undoBtn) undoBtn.disabled = !undoStack.length;
-      if (redoBtn) redoBtn.disabled = !redoStack.length;
-    }
-    function pushUndo() {
-      undoStack.push(inkCanvas.toDataURL('image/png'));
-      if (undoStack.length > 30) undoStack.shift();
-      redoStack = [];
-      updateHistoryBtns();
-    }
-    function restoreInkFrom(url) {
-      var im = new Image();
-      im.onload = function () { clearInk(); inkCtx.drawImage(im, 0, 0); renderComposite(); };
-      im.src = url;
-    }
-    function doUndo() {
-      if (!undoStack.length) return;
-      redoStack.push(inkCanvas.toDataURL('image/png'));
-      var prevUrl = undoStack.pop();
-      updateHistoryBtns();
-      restoreInkFrom(prevUrl);
-    }
-    function doRedo() {
-      if (!redoStack.length) return;
-      undoStack.push(inkCanvas.toDataURL('image/png'));
-      var nextUrl = redoStack.pop();
-      updateHistoryBtns();
-      restoreInkFrom(nextUrl);
-    }
-
-    function applyDash(c, w) {
-      if (lineStyle === 'dashed') c.setLineDash([w * 3.5 + 7, w * 2.2 + 5]);
-      else if (lineStyle === 'dotted') c.setLineDash([Math.max(1.5, w * 0.9), w * 2.4 + 4]);
+    function applyDashFor(c, w, st) {
+      if (st === 'dashed') c.setLineDash([w * 3.5 + 7, w * 2.2 + 5]);
+      else if (st === 'dotted') c.setLineDash([Math.max(1.5, w * 0.9), w * 2.4 + 4]);
       else c.setLineDash([]);
     }
     function hexRgba(hex, alpha) {
@@ -1583,6 +1575,587 @@
       if (h.length === 3) h = h[0] + h[0] + h[1] + h[1] + h[2] + h[2];
       var rv = parseInt(h.slice(0, 2), 16) || 0, gv = parseInt(h.slice(2, 4), 16) || 0, bv = parseInt(h.slice(4, 6), 16) || 0;
       return 'rgba(' + rv + ',' + gv + ',' + bv + ',' + alpha + ')';
+    }
+
+    function drawArrowHead(c, x1, y1, x2, y2, headLen) {
+      var an = Math.atan2(y2 - y1, x2 - x1);
+      c.save(); c.setLineDash([]);
+      c.beginPath();
+      c.moveTo(x2, y2); c.lineTo(x2 - headLen * Math.cos(an - 0.45), y2 - headLen * Math.sin(an - 0.45));
+      c.moveTo(x2, y2); c.lineTo(x2 - headLen * Math.cos(an + 0.45), y2 - headLen * Math.sin(an + 0.45));
+      c.stroke(); c.restore();
+    }
+
+    function measureTextDims(txt, fontPx) {
+      var lines = String(txt || '').split('\n');
+      ctx.save();
+      ctx.font = fontPx + 'px Vazirmatn, sans-serif';
+      var maxW = 24;
+      for (var i = 0; i < lines.length; i++) {
+        var mw = ctx.measureText(lines[i]).width;
+        if (mw > maxW) maxW = mw;
+      }
+      ctx.restore();
+      var lh = Math.round(fontPx * 1.32);
+      return {w: Math.ceil(maxW) + 8, h: Math.max(lh, lines.length * lh), lh: lh, lines: lines};
+    }
+
+    function drawItemLabel(c, label, cx, cy, col, sz) {
+      if (!label) return;
+      var fpx = Math.max(15, (sz || 3) * 3 + 12);
+      c.save();
+      c.setLineDash([]);
+      c.font = 'bold ' + fpx + 'px Vazirmatn, sans-serif';
+      c.direction = 'rtl';
+      c.textAlign = 'center';
+      c.textBaseline = 'middle';
+      var tw = c.measureText(label).width + 14, th = fpx + 8;
+      c.fillStyle = 'rgba(255,255,255,0.86)';
+      c.fillRect(cx - tw / 2, cy - th / 2, tw, th);
+      c.fillStyle = col || '#1a237e';
+      c.fillText(label, cx, cy);
+      c.restore();
+    }
+
+    function drawShapeItem(c, shKind, a, b, col, sz, lStyle, filled, label) {
+      c.save();
+      c.strokeStyle = col;
+      c.lineWidth = sz;
+      c.lineCap = 'round';
+      c.lineJoin = 'round';
+      applyDashFor(c, sz, lStyle);
+      var headLen = Math.max(13, sz * 3 + 6);
+      var closed = (shKind === 'rect' || shKind === 'circle' || shKind === 'ellipse' || shKind === 'triangle' || shKind === 'rtriangle' || shKind === 'diamond');
+      c.beginPath();
+      if (shKind === 'line' || shKind === 'arrow' || shKind === 'dblarrow') {
+        c.moveTo(a.x, a.y); c.lineTo(b.x, b.y);
+      } else if (shKind === 'rect') {
+        c.rect(a.x, a.y, b.x - a.x, b.y - a.y);
+      } else if (shKind === 'circle' || shKind === 'ellipse') {
+        var ecx = (a.x + b.x) / 2, ecy = (a.y + b.y) / 2;
+        c.ellipse(ecx, ecy, Math.max(1, Math.abs(b.x - a.x) / 2), Math.max(1, Math.abs(b.y - a.y) / 2), 0, 0, Math.PI * 2);
+      } else if (shKind === 'triangle') {
+        c.moveTo((a.x + b.x) / 2, a.y); c.lineTo(b.x, b.y); c.lineTo(a.x, b.y); c.closePath();
+      } else if (shKind === 'rtriangle') {
+        c.moveTo(a.x, a.y); c.lineTo(a.x, b.y); c.lineTo(b.x, b.y); c.closePath();
+      } else if (shKind === 'diamond') {
+        var dcx = (a.x + b.x) / 2, dcy = (a.y + b.y) / 2;
+        c.moveTo(dcx, a.y); c.lineTo(b.x, dcy); c.lineTo(dcx, b.y); c.lineTo(a.x, dcy); c.closePath();
+      } else if (shKind === 'axes') {
+        var xMin = Math.min(a.x, b.x), xMax = Math.max(a.x, b.x), yMin = Math.min(a.y, b.y), yMax = Math.max(a.y, b.y);
+        var axCx = (xMin + xMax) / 2, axCy = (yMin + yMax) / 2;
+        c.moveTo(xMin, axCy); c.lineTo(xMax, axCy);
+        c.moveTo(axCx, yMax); c.lineTo(axCx, yMin);
+      }
+      if (closed && filled) {
+        c.fillStyle = hexRgba(col, 0.16);
+        c.fill();
+      }
+      c.stroke();
+      if (shKind === 'arrow') drawArrowHead(c, a.x, a.y, b.x, b.y, headLen);
+      else if (shKind === 'dblarrow') {
+        drawArrowHead(c, a.x, a.y, b.x, b.y, headLen);
+        drawArrowHead(c, b.x, b.y, a.x, a.y, headLen);
+      } else if (shKind === 'rtriangle' && Math.abs(b.x - a.x) > 22 && Math.abs(b.y - a.y) > 22) {
+        var sq = Math.min(18, Math.abs(b.x - a.x) * 0.25, Math.abs(b.y - a.y) * 0.25);
+        var sx = b.x >= a.x ? 1 : -1, sy = a.y <= b.y ? -1 : 1;
+        c.save(); c.setLineDash([]); c.lineWidth = Math.max(1.5, sz * 0.75);
+        c.beginPath();
+        c.moveTo(a.x + sx * sq, b.y);
+        c.lineTo(a.x + sx * sq, b.y + sy * sq);
+        c.lineTo(a.x, b.y + sy * sq);
+        c.stroke(); c.restore();
+      } else if (shKind === 'axes' && Math.abs(b.x - a.x) > 30 && Math.abs(b.y - a.y) > 30) {
+        var x0 = Math.min(a.x, b.x), x1 = Math.max(a.x, b.x), y0 = Math.min(a.y, b.y), y1 = Math.max(a.y, b.y);
+        var mCx = (x0 + x1) / 2, mCy = (y0 + y1) / 2;
+        drawArrowHead(c, x0, mCy, x1, mCy, 11);
+        drawArrowHead(c, mCx, y1, mCx, y0, 11);
+        c.save(); c.setLineDash([]); c.fillStyle = col; c.font = 'bold 16px Vazirmatn, sans-serif';
+        c.fillText('x', x1 - 12, mCy - 8);
+        c.fillText('y', mCx + 8, y0 + 16);
+        c.restore();
+      }
+      if (label) drawItemLabel(c, label, (a.x + b.x) / 2, (a.y + b.y) / 2, col, sz);
+      c.restore();
+    }
+
+    function drawStrokePts(c, pts, col, sz, lStyle, isHi, label) {
+      if (!pts || !pts.length) return;
+      c.save();
+      if (isHi) {
+        c.globalAlpha = 0.30;
+        c.lineWidth = Math.max(16, sz * 6);
+        c.setLineDash([]);
+      } else {
+        c.lineWidth = sz;
+        applyDashFor(c, sz, lStyle);
+      }
+      c.strokeStyle = col;
+      c.lineCap = 'round';
+      c.lineJoin = 'round';
+      c.beginPath();
+      c.moveTo(pts[0].x, pts[0].y);
+      for (var k = 1; k < pts.length; k++) c.lineTo(pts[k].x, pts[k].y);
+      if (pts.length === 1) c.lineTo(pts[0].x + 0.5, pts[0].y);
+      c.stroke();
+      c.restore();
+      if (label) {
+        var bx = getStrokeBox(pts);
+        drawItemLabel(c, label, bx.x + bx.w / 2, bx.y + bx.h / 2, col, sz);
+      }
+    }
+
+    function drawSingleItem(c, it) {
+      if (it.kind === 'stroke') {
+        drawStrokePts(c, it.pts, it.color, it.size, it.lineStyle || 'solid', it.sub === 'highlighter', it.label);
+      } else if (it.kind === 'shape') {
+        drawShapeItem(c, it.shape, it.a, it.b, it.color, it.size, it.lineStyle || 'solid', !!it.fill, it.label);
+      } else if (it.kind === 'text') {
+        var fpx = it.fontPx || ((it.size || 3) * 6 + 14);
+        var md = measureTextDims(it.text, fpx);
+        it.w = md.w; it.h = md.h;
+        c.save();
+        c.fillStyle = it.color || '#1a237e';
+        c.font = fpx + 'px Vazirmatn, sans-serif';
+        c.direction = 'rtl';
+        c.textAlign = 'right';
+        c.textBaseline = 'top';
+        for (var li = 0; li < md.lines.length; li++) {
+          c.fillText(md.lines[li], it.x + md.w - 4, it.y + li * md.lh);
+        }
+        c.restore();
+      } else if (it.kind === 'image') {
+        var im = ensureImg(it.src);
+        if (im && im.complete && im.naturalWidth > 0) {
+          c.save();
+          if (it.flipX) {
+            c.translate(it.x + it.w, it.y);
+            c.scale(-1, 1);
+            c.drawImage(im, 0, 0, it.w, it.h);
+          } else {
+            c.drawImage(im, it.x, it.y, it.w, it.h);
+          }
+          c.restore();
+        }
+        if (it.label) drawItemLabel(c, it.label, it.x + it.w / 2, it.y + it.h / 2, it.color || '#1a237e', it.size || 3);
+      }
+    }
+
+    function eraseAtRaster(x0, y0, x1, y1, rad) {
+      inkCtx.save();
+      inkCtx.globalCompositeOperation = 'destination-out';
+      inkCtx.lineCap = 'round'; inkCtx.lineJoin = 'round';
+      inkCtx.lineWidth = rad * 2;
+      inkCtx.beginPath(); inkCtx.moveTo(x0, y0); inkCtx.lineTo(x1, y1); inkCtx.stroke();
+      inkCtx.restore();
+    }
+
+    function getStrokeBox(pts) {
+      if (!pts || !pts.length) return {x: 0, y: 0, w: 0, h: 0};
+      var minX = pts[0].x, maxX = pts[0].x, minY = pts[0].y, maxY = pts[0].y;
+      for (var i = 1; i < pts.length; i++) {
+        if (pts[i].x < minX) minX = pts[i].x;
+        if (pts[i].x > maxX) maxX = pts[i].x;
+        if (pts[i].y < minY) minY = pts[i].y;
+        if (pts[i].y > maxY) maxY = pts[i].y;
+      }
+      return {x: minX, y: minY, w: maxX - minX, h: maxY - minY};
+    }
+
+    function getItemBox(it) {
+      if (it.kind === 'stroke') return getStrokeBox(it.pts);
+      if (it.kind === 'shape') {
+        return {
+          x: Math.min(it.a.x, it.b.x),
+          y: Math.min(it.a.y, it.b.y),
+          w: Math.abs(it.b.x - it.a.x),
+          h: Math.abs(it.b.y - it.a.y)
+        };
+      }
+      if (it.kind === 'text') {
+        var fpx = it.fontPx || ((it.size || 3) * 6 + 14);
+        var md = measureTextDims(it.text, fpx);
+        it.w = md.w; it.h = md.h;
+        return {x: it.x, y: it.y, w: md.w, h: md.h};
+      }
+      if (it.kind === 'image') return {x: it.x, y: it.y, w: it.w, h: it.h};
+      return {x: 0, y: 0, w: 0, h: 0};
+    }
+
+    function unionBox(list) {
+      if (!list || !list.length) return null;
+      var b0 = getItemBox(list[0]);
+      var minX = b0.x, minY = b0.y, maxX = b0.x + b0.w, maxY = b0.y + b0.h;
+      for (var i = 1; i < list.length; i++) {
+        var bi = getItemBox(list[i]);
+        if (bi.x < minX) minX = bi.x;
+        if (bi.y < minY) minY = bi.y;
+        if (bi.x + bi.w > maxX) maxX = bi.x + bi.w;
+        if (bi.y + bi.h > maxY) maxY = bi.y + bi.h;
+      }
+      return {x: minX, y: minY, w: maxX - minX, h: maxY - minY};
+    }
+
+    function distToSeg(px, py, x1, y1, x2, y2) {
+      var dx = x2 - x1, dy = y2 - y1;
+      var l2 = dx * dx + dy * dy;
+      if (l2 < 1e-4) return Math.hypot(px - x1, py - y1);
+      var t = Math.max(0, Math.min(1, ((px - x1) * dx + (py - y1) * dy) / l2));
+      return Math.hypot(px - (x1 + t * dx), py - (y1 + t * dy));
+    }
+
+    function hitItem(it, px, py) {
+      var pad = Math.max(12, (it.size || 3) * 2 + 8);
+      if (it.kind === 'stroke') {
+        var extra = it.sub === 'highlighter' ? Math.max(12, (it.size || 3) * 3) : pad;
+        var sb = getStrokeBox(it.pts);
+        if (px < sb.x - extra || px > sb.x + sb.w + extra || py < sb.y - extra || py > sb.y + sb.h + extra) return false;
+        if (it.pts.length === 1) return Math.hypot(px - it.pts[0].x, py - it.pts[0].y) <= extra;
+        for (var i = 1; i < it.pts.length; i++) {
+          if (distToSeg(px, py, it.pts[i - 1].x, it.pts[i - 1].y, it.pts[i].x, it.pts[i].y) <= extra) return true;
+        }
+        return false;
+      }
+      if (it.kind === 'shape') {
+        if (it.shape === 'line' || it.shape === 'arrow' || it.shape === 'dblarrow') {
+          if (distToSeg(px, py, it.a.x, it.a.y, it.b.x, it.b.y) <= pad) return true;
+          if (it.label && Math.hypot(px - (it.a.x + it.b.x) / 2, py - (it.a.y + it.b.y) / 2) <= 32) return true;
+          return false;
+        }
+        var bx = getItemBox(it);
+        return px >= bx.x - pad && px <= bx.x + bx.w + pad && py >= bx.y - pad && py <= bx.y + bx.h + pad;
+      }
+      var b = getItemBox(it);
+      return px >= b.x - 8 && px <= b.x + b.w + 8 && py >= b.y - 8 && py <= b.y + b.h + 8;
+    }
+
+    function selectedItems() {
+      if (!selectedIds.length) return [];
+      var set = {};
+      selectedIds.forEach(function (id) { set[id] = true; });
+      return items.filter(function (it) { return !!set[it.id]; });
+    }
+
+    function isSingleLineLike(sel) {
+      return sel.length === 1 && sel[0].kind === 'shape' &&
+        (sel[0].shape === 'line' || sel[0].shape === 'arrow' || sel[0].shape === 'dblarrow');
+    }
+
+    function getHandlesForBox(ub) {
+      var pad = 6;
+      var x = ub.x - pad, y = ub.y - pad, w = Math.max(12, ub.w + pad * 2), h = Math.max(12, ub.h + pad * 2);
+      return [
+        {id: 'nw', x: x, y: y, cur: 'nwse-resize'},
+        {id: 'n', x: x + w / 2, y: y, cur: 'ns-resize'},
+        {id: 'ne', x: x + w, y: y, cur: 'nesw-resize'},
+        {id: 'e', x: x + w, y: y + h / 2, cur: 'ew-resize'},
+        {id: 'se', x: x + w, y: y + h, cur: 'nwse-resize'},
+        {id: 's', x: x + w / 2, y: y + h, cur: 'ns-resize'},
+        {id: 'sw', x: x, y: y + h, cur: 'nesw-resize'},
+        {id: 'w', x: x, y: y + h / 2, cur: 'ew-resize'}
+      ];
+    }
+
+    function drawSelectionOverlay(c) {
+      var sel = selectedItems();
+      if (sel.length) {
+        c.save();
+        if (isSingleLineLike(sel)) {
+          var ln = sel[0];
+          c.setLineDash([6, 5]);
+          c.strokeStyle = '#1e5eff';
+          c.lineWidth = 1.6;
+          c.beginPath(); c.moveTo(ln.a.x, ln.a.y); c.lineTo(ln.b.x, ln.b.y); c.stroke();
+          c.setLineDash([]);
+          [ln.a, ln.b].forEach(function (ep) {
+            c.fillStyle = '#FFFFFF';
+            c.strokeStyle = '#1e5eff';
+            c.lineWidth = 2.5;
+            c.beginPath(); c.arc(ep.x, ep.y, 8, 0, Math.PI * 2); c.fill(); c.stroke();
+          });
+        } else {
+          var ub = unionBox(sel);
+          if (ub) {
+            var pad = 6;
+            var rx = ub.x - pad, ry = ub.y - pad, rw = Math.max(12, ub.w + pad * 2), rh = Math.max(12, ub.h + pad * 2);
+            c.strokeStyle = '#1e5eff';
+            c.lineWidth = 2;
+            c.setLineDash([7, 5]);
+            c.strokeRect(rx, ry, rw, rh);
+            c.setLineDash([]);
+            getHandlesForBox(ub).forEach(function (hd) {
+              c.fillStyle = '#FFFFFF';
+              c.strokeStyle = '#1e5eff';
+              c.lineWidth = 2.2;
+              c.beginPath();
+              c.rect(hd.x - 6.5, hd.y - 6.5, 13, 13);
+              c.fill();
+              c.stroke();
+            });
+          }
+        }
+        c.restore();
+      }
+      if (selDrag && selDrag.mode === 'marquee' && selDrag.cur) {
+        var mx = Math.min(selDrag.start.x, selDrag.cur.x), my = Math.min(selDrag.start.y, selDrag.cur.y);
+        var mw = Math.abs(selDrag.cur.x - selDrag.start.x), mh = Math.abs(selDrag.cur.y - selDrag.start.y);
+        c.save();
+        c.fillStyle = 'rgba(30,94,255,0.09)';
+        c.strokeStyle = '#1e5eff';
+        c.lineWidth = 1.8;
+        c.setLineDash([6, 4]);
+        c.fillRect(mx, my, mw, mh);
+        c.strokeRect(mx, my, mw, mh);
+        c.restore();
+      }
+    }
+
+    function renderComposite(showUi, previewFn) {
+      if (showUi === undefined) showUi = true;
+      clearInk();
+      for (var i = 0; i < items.length; i++) drawSingleItem(inkCtx, items[i]);
+      ctx.fillStyle = '#FFFFFF';
+      ctx.fillRect(0, 0, W, H);
+      drawGrid();
+      ctx.drawImage(inkCanvas, 0, 0);
+      if (previewFn) previewFn(ctx);
+      if (showUi && tool === 'select') drawSelectionOverlay(ctx);
+    }
+
+    function blank() { items = []; selectedIds = []; syncSelectionUi(); renderComposite(true); }
+
+    function updateHistoryBtns() {
+      if (undoBtn) undoBtn.disabled = !undoStack.length;
+      if (redoBtn) redoBtn.disabled = !redoStack.length;
+    }
+    function pushUndo() {
+      undoStack.push(cloneItems(items));
+      if (undoStack.length > 40) undoStack.shift();
+      redoStack = [];
+      updateHistoryBtns();
+    }
+    function doUndo() {
+      if (!undoStack.length) return;
+      redoStack.push(cloneItems(items));
+      items = undoStack.pop();
+      selectedIds = selectedIds.filter(function (id) { return items.some(function (it) { return it.id === id; }); });
+      updateHistoryBtns();
+      syncSelectionUi();
+      renderComposite(true);
+    }
+    function doRedo() {
+      if (!redoStack.length) return;
+      undoStack.push(cloneItems(items));
+      items = redoStack.pop();
+      selectedIds = selectedIds.filter(function (id) { return items.some(function (it) { return it.id === id; }); });
+      updateHistoryBtns();
+      syncSelectionUi();
+      renderComposite(true);
+    }
+
+    function translateItem(it, dx, dy) {
+      if (it.kind === 'stroke') {
+        for (var i = 0; i < it.pts.length; i++) { it.pts[i].x += dx; it.pts[i].y += dy; }
+      } else if (it.kind === 'shape') {
+        it.a.x += dx; it.a.y += dy; it.b.x += dx; it.b.y += dy;
+      } else if (it.kind === 'text' || it.kind === 'image') {
+        it.x += dx; it.y += dy;
+      }
+    }
+
+    function applyScaledFromOrig(it, orig, ob, nb) {
+      function mx(vx) { return ob.w > 1 ? nb.x + (vx - ob.x) / ob.w * nb.w : nb.x + nb.w / 2; }
+      function my(vy) { return ob.h > 1 ? nb.y + (vy - ob.y) / ob.h * nb.h : nb.y + nb.h / 2; }
+      if (orig.kind === 'stroke') {
+        it.pts = orig.pts.map(function (pt) { return {x: mx(pt.x), y: my(pt.y)}; });
+      } else if (orig.kind === 'shape') {
+        it.a = {x: mx(orig.a.x), y: my(orig.a.y)};
+        it.b = {x: mx(orig.b.x), y: my(orig.b.y)};
+      } else if (orig.kind === 'image') {
+        var x1 = mx(orig.x), y1 = my(orig.y), x2 = mx(orig.x + orig.w), y2 = my(orig.y + orig.h);
+        it.x = Math.min(x1, x2); it.y = Math.min(y1, y2);
+        it.w = Math.max(20, Math.abs(x2 - x1)); it.h = Math.max(20, Math.abs(y2 - y1));
+      } else if (orig.kind === 'text') {
+        var origFpx = orig.fontPx || ((orig.size || 3) * 6 + 14);
+        var obItem = getItemBox(cloneItem(orig));
+        var sx = ob.w > 1 ? nb.w / ob.w : 1;
+        var sy = ob.h > 1 ? nb.h / ob.h : 1;
+        var sc = Math.max(0.25, (sx + sy) / 2);
+        it.fontPx = Math.max(12, Math.min(160, Math.round(origFpx * sc)));
+        it.x = mx(obItem.x);
+        it.y = my(obItem.y);
+      }
+    }
+
+    function scaleSelectedBy(factor) {
+      var sel = selectedItems();
+      if (!sel.length) return;
+      var ub = unionBox(sel);
+      if (!ub) return;
+      pushUndo();
+      var cx = ub.x + ub.w / 2, cy = ub.y + ub.h / 2;
+      var nw = Math.max(16, ub.w * factor), nh = Math.max(16, ub.h * factor);
+      var nb = {x: cx - nw / 2, y: cy - nh / 2, w: nw, h: nh};
+      sel.forEach(function (it) {
+        if (sel.length === 1 && it.kind === 'text') {
+          var f0 = it.fontPx || ((it.size || 3) * 6 + 14);
+          var nf = Math.max(12, Math.min(160, Math.round(f0 * factor)));
+          var oldD = measureTextDims(it.text, f0), newD = measureTextDims(it.text, nf);
+          it.fontPx = nf;
+          it.x = it.x + (oldD.w - newD.w) / 2;
+          it.y = it.y + (oldD.h - newD.h) / 2;
+        } else {
+          applyScaledFromOrig(it, cloneItem(it), ub, nb);
+        }
+      });
+      renderComposite(true);
+    }
+
+    function flipSelectedHoriz() {
+      var sel = selectedItems();
+      if (!sel.length) return;
+      var ub = unionBox(sel);
+      if (!ub) return;
+      pushUndo();
+      var cx = ub.x + ub.w / 2;
+      sel.forEach(function (it) {
+        if (it.kind === 'stroke') {
+          it.pts.forEach(function (pt) { pt.x = 2 * cx - pt.x; });
+        } else if (it.kind === 'shape') {
+          it.a.x = 2 * cx - it.a.x;
+          it.b.x = 2 * cx - it.b.x;
+        } else if (it.kind === 'image') {
+          it.x = 2 * cx - (it.x + it.w);
+          it.flipX = !it.flipX;
+        } else if (it.kind === 'text') {
+          var bx = getItemBox(it);
+          it.x = 2 * cx - (bx.x + bx.w);
+        }
+      });
+      renderComposite(true);
+    }
+
+    function deleteSelected() {
+      if (!selectedIds.length) return;
+      pushUndo();
+      var set = {};
+      selectedIds.forEach(function (id) { set[id] = true; });
+      items = items.filter(function (it) { return !set[it.id]; });
+      selectedIds = [];
+      syncSelectionUi();
+      renderComposite(true);
+    }
+
+    function duplicateSelected() {
+      var sel = selectedItems();
+      if (!sel.length) return;
+      pushUndo();
+      var newIds = [];
+      sel.forEach(function (it) {
+        var cp = cloneItem(it);
+        cp.id = uid();
+        translateItem(cp, 26, 26);
+        items.push(cp);
+        newIds.push(cp.id);
+      });
+      selectedIds = newIds;
+      setActiveTool('select', true);
+      syncSelectionUi();
+      renderComposite(true);
+    }
+
+    function wbPromptText(title, body, label, initialVal, allowEmpty) {
+      return new Promise(function (resolve) {
+        var done = false;
+        var mbg = el('div', {class: 'modal-bg over-engine'});
+        function finish(val) { if (done) return; done = true; mbg.remove(); resolve(val); }
+        mbg._onCancel = function () { finish(null); };
+        var inp = el('input', {type: 'text', value: initialVal || '', placeholder: allowEmpty ? 'خالی بگذارید تا برچسب حذف شود' : ''});
+        var okBtn = el('button', {class: 'btn', text: 'ثبت', onclick: function () {
+          if (!allowEmpty && !inp.value.trim()) return;
+          finish(inp.value);
+        }});
+        if (!allowEmpty) okBtn.disabled = !(initialVal || '').trim();
+        inp.addEventListener('input', function () {
+          if (!allowEmpty) okBtn.disabled = !inp.value.trim();
+        });
+        inp.addEventListener('keydown', function (ev) {
+          if (ev.key === 'Enter') { ev.preventDefault(); if (allowEmpty || inp.value.trim()) okBtn.click(); }
+          if (ev.key === 'Escape') { ev.preventDefault(); ev.stopPropagation(); finish(null); }
+        });
+        var modal = el('div', {class: 'modal'}, [
+          el('h2', {text: title}),
+          body ? el('p', {class: 'muted', text: body}) : null,
+          el('div', {class: 'field'}, [el('label', {text: label || ''}), inp]),
+          el('div', {class: 'row', style: 'justify-content:flex-start;margin-top:14px'}, [
+            okBtn,
+            el('button', {class: 'btn light', text: 'انصراف', onclick: function () { finish(null); }})
+          ])
+        ]);
+        mbg.addEventListener('click', function (ev) { if (ev.target === mbg) finish(null); });
+        mbg.appendChild(modal);
+        document.body.appendChild(mbg);
+        setTimeout(function () { inp.focus(); inp.select(); }, 25);
+      });
+    }
+
+    async function editSelectedItem() {
+      var sel = selectedItems();
+      if (!sel.length) return;
+      var target = sel[0];
+      if (target.kind === 'text') {
+        var nv = await wbPromptText('ویرایش متن درج‌شده', 'متن جدید را وارد کنید:', 'متن', target.text || '', false);
+        if (nv !== null && nv !== undefined && nv.trim()) {
+          pushUndo();
+          target.text = nv.trim();
+          var md = measureTextDims(target.text, target.fontPx || (target.size * 6 + 14));
+          target.w = md.w; target.h = md.h;
+          syncSelectionUi();
+          renderComposite(true);
+        }
+      } else {
+        var curLbl = target.label || '';
+        var lv = await wbPromptText('ویرایش برچسب / متن روی مورد', 'متن دلخواه روی این شکل یا مورد را بنویسید:', 'برچسب', curLbl, true);
+        if (lv !== null && lv !== undefined) {
+          pushUndo();
+          target.label = lv.trim();
+          syncSelectionUi();
+          renderComposite(true);
+        }
+      }
+    }
+
+    function itemTitleFa(it) {
+      if (it.kind === 'text') return 'متن «' + (it.text.length > 14 ? it.text.slice(0, 14) + '…' : it.text) + '»';
+      if (it.kind === 'image') return 'تصویر';
+      if (it.kind === 'stroke') return it.sub === 'highlighter' ? 'ماژیک هایلایت' : 'دست‌خط قلم';
+      if (it.kind === 'shape') return SHAPE_NAMES[it.shape] || 'شکل';
+      return 'مورد';
+    }
+
+    var selActionBtns = [];
+    function syncSelectionUi() {
+      var sel = selectedItems();
+      var has = sel.length > 0;
+      selActionBtns.forEach(function (b) { b.disabled = !has; });
+      if (!has) {
+        selBadge.textContent = tool === 'select' ? 'روی یک مورد کلیک کنید یا کادر بکشید' : 'موردی انتخاب نشده است';
+        selBadge.classList.remove('on');
+      } else {
+        selBadge.textContent = sel.length === 1 ? ('✓ انتخاب‌شده: ' + itemTitleFa(sel[0])) : ('✓ ' + fa(sel.length) + ' مورد انتخاب شده');
+        selBadge.classList.add('on');
+        var f = sel[0];
+        if (f.color) syncColorUiOnly(f.color);
+        if (f.size) { size = f.size; sizeIn.value = size; sizeVal.textContent = fa(size); }
+        if (f.lineStyle && styleBtns[f.lineStyle]) {
+          lineStyle = f.lineStyle;
+          Object.keys(styleBtns).forEach(function (k) { styleBtns[k].classList.toggle('on', k === lineStyle); });
+        }
+        if (f.kind === 'shape') {
+          fillShape = !!f.fill;
+          if (fillBtn) fillBtn.classList.toggle('on', fillShape);
+        }
+      }
     }
 
     function snapPointToRuler(p, checkOnly) {
@@ -1609,7 +2182,7 @@
     function constrainPoint(a, b, shiftKey) {
       if (!shiftKey) return b;
       var dx = b.x - a.x, dy = b.y - a.y;
-      if (tool === 'line' || tool === 'arrow' || tool === 'dblarrow') {
+      if (tool === 'line' || tool === 'arrow' || tool === 'dblarrow' || tool === 'select') {
         var dist = Math.hypot(dx, dy);
         var ang = Math.round(Math.atan2(dy, dx) / (Math.PI / 12)) * (Math.PI / 12);
         return {x: a.x + dist * Math.cos(ang), y: a.y + dist * Math.sin(ang)};
@@ -1621,98 +2194,6 @@
       return b;
     }
 
-    function drawHighlighterPath(c, pts) {
-      if (!pts.length) return;
-      c.save();
-      c.globalAlpha = 0.30;
-      c.strokeStyle = color;
-      c.lineWidth = Math.max(16, size * 6);
-      c.lineCap = 'round';
-      c.lineJoin = 'round';
-      c.beginPath();
-      c.moveTo(pts[0].x, pts[0].y);
-      for (var k = 1; k < pts.length; k++) c.lineTo(pts[k].x, pts[k].y);
-      if (pts.length === 1) c.lineTo(pts[0].x + 0.5, pts[0].y);
-      c.stroke();
-      c.restore();
-    }
-
-    function drawArrowHead(c, x1, y1, x2, y2, headLen) {
-      var an = Math.atan2(y2 - y1, x2 - x1);
-      c.save(); c.setLineDash([]);
-      c.beginPath();
-      c.moveTo(x2, y2); c.lineTo(x2 - headLen * Math.cos(an - 0.45), y2 - headLen * Math.sin(an - 0.45));
-      c.moveTo(x2, y2); c.lineTo(x2 - headLen * Math.cos(an + 0.45), y2 - headLen * Math.sin(an + 0.45));
-      c.stroke(); c.restore();
-    }
-
-    function drawShapeOn(c, a, b) {
-      c.save();
-      c.strokeStyle = color;
-      c.lineWidth = size;
-      c.lineCap = 'round';
-      c.lineJoin = 'round';
-      applyDash(c, size);
-      var headLen = Math.max(13, size * 3 + 6);
-      var closed = (tool === 'rect' || tool === 'circle' || tool === 'ellipse' || tool === 'triangle' || tool === 'rtriangle' || tool === 'diamond');
-      c.beginPath();
-      if (tool === 'line') { c.moveTo(a.x, a.y); c.lineTo(b.x, b.y); }
-      else if (tool === 'arrow' || tool === 'dblarrow') { c.moveTo(a.x, a.y); c.lineTo(b.x, b.y); }
-      else if (tool === 'rect') { c.rect(a.x, a.y, b.x - a.x, b.y - a.y); }
-      else if (tool === 'circle') { var r = Math.hypot(b.x - a.x, b.y - a.y); c.arc(a.x, a.y, r, 0, Math.PI * 2); }
-      else if (tool === 'ellipse') {
-        var ecx = (a.x + b.x) / 2, ecy = (a.y + b.y) / 2;
-        c.ellipse(ecx, ecy, Math.max(1, Math.abs(b.x - a.x) / 2), Math.max(1, Math.abs(b.y - a.y) / 2), 0, 0, Math.PI * 2);
-      }
-      else if (tool === 'triangle') {
-        c.moveTo((a.x + b.x) / 2, a.y); c.lineTo(b.x, b.y); c.lineTo(a.x, b.y); c.closePath();
-      }
-      else if (tool === 'rtriangle') {
-        c.moveTo(a.x, a.y); c.lineTo(a.x, b.y); c.lineTo(b.x, b.y); c.closePath();
-      }
-      else if (tool === 'diamond') {
-        var dcx = (a.x + b.x) / 2, dcy = (a.y + b.y) / 2;
-        c.moveTo(dcx, a.y); c.lineTo(b.x, dcy); c.lineTo(dcx, b.y); c.lineTo(a.x, dcy); c.closePath();
-      }
-      else if (tool === 'axes') {
-        var xMin = Math.min(a.x, b.x), xMax = Math.max(a.x, b.x), yMin = Math.min(a.y, b.y), yMax = Math.max(a.y, b.y);
-        var axCx = (xMin + xMax) / 2, axCy = (yMin + yMax) / 2;
-        c.moveTo(xMin, axCy); c.lineTo(xMax, axCy);
-        c.moveTo(axCx, yMax); c.lineTo(axCx, yMin);
-      }
-      if (closed && fillShape) {
-        c.fillStyle = hexRgba(color, 0.16);
-        c.fill();
-      }
-      c.stroke();
-      if (tool === 'arrow') drawArrowHead(c, a.x, a.y, b.x, b.y, headLen);
-      else if (tool === 'dblarrow') {
-        drawArrowHead(c, a.x, a.y, b.x, b.y, headLen);
-        drawArrowHead(c, b.x, b.y, a.x, a.y, headLen);
-      }
-      else if (tool === 'rtriangle' && Math.abs(b.x - a.x) > 22 && Math.abs(b.y - a.y) > 22) {
-        var sq = Math.min(18, Math.abs(b.x - a.x) * 0.25, Math.abs(b.y - a.y) * 0.25);
-        var sx = b.x >= a.x ? 1 : -1, sy = a.y <= b.y ? -1 : 1;
-        c.save(); c.setLineDash([]); c.lineWidth = Math.max(1.5, size * 0.75);
-        c.beginPath();
-        c.moveTo(a.x + sx * sq, b.y);
-        c.lineTo(a.x + sx * sq, b.y + sy * sq);
-        c.lineTo(a.x, b.y + sy * sq);
-        c.stroke(); c.restore();
-      }
-      else if (tool === 'axes' && Math.abs(b.x - a.x) > 30 && Math.abs(b.y - a.y) > 30) {
-        var x0 = Math.min(a.x, b.x), x1 = Math.max(a.x, b.x), y0 = Math.min(a.y, b.y), y1 = Math.max(a.y, b.y);
-        var mCx = (x0 + x1) / 2, mCy = (y0 + y1) / 2;
-        drawArrowHead(c, x0, mCy, x1, mCy, 11);
-        drawArrowHead(c, mCx, y1, mCx, y0, 11);
-        c.save(); c.setLineDash([]); c.fillStyle = color; c.font = 'bold 16px Vazirmatn, sans-serif';
-        c.fillText('x', x1 - 12, mCy - 8);
-        c.fillText('y', mCx + 8, y0 + 16);
-        c.restore();
-      }
-      c.restore();
-    }
-
     function updateHud(a, b) {
       var dx = b.x - a.x, dy = b.y - a.y;
       var txt = '';
@@ -1722,7 +2203,7 @@
         txt = 'طول: ' + fa(lenU) + ' واحد  •  زاویه: ' + fa(deg) + '°';
       } else if (tool === 'circle') {
         txt = 'شعاع: ' + fa((Math.hypot(dx, dy) / 40).toFixed(1)) + ' واحد';
-      } else if (tool !== 'pen' && tool !== 'highlighter' && tool !== 'eraser' && tool !== 'text') {
+      } else if (tool !== 'pen' && tool !== 'highlighter' && tool !== 'eraser' && tool !== 'text' && tool !== 'select') {
         txt = 'ابعاد: ' + fa((Math.abs(dx) / 40).toFixed(1)) + ' × ' + fa((Math.abs(dy) / 40).toFixed(1)) + ' واحد';
       }
       if (txt) { hud.textContent = txt; hud.style.display = ''; }
@@ -1735,107 +2216,325 @@
       return {x: (t.clientX - r.left) * W / r.width, y: (t.clientY - r.top) * H / r.height};
     }
 
+    function hitHandle(p) {
+      var sel = selectedItems();
+      if (!sel.length) return null;
+      var rHit = 16;
+      if (isSingleLineLike(sel)) {
+        if (Math.hypot(p.x - sel[0].a.x, p.y - sel[0].a.y) <= rHit) return {mode: 'end-a', cur: 'pointer'};
+        if (Math.hypot(p.x - sel[0].b.x, p.y - sel[0].b.y) <= rHit) return {mode: 'end-b', cur: 'pointer'};
+        return null;
+      }
+      var ub = unionBox(sel);
+      if (!ub) return null;
+      var hs = getHandlesForBox(ub);
+      for (var i = 0; i < hs.length; i++) {
+        if (Math.hypot(p.x - hs[i].x, p.y - hs[i].y) <= rHit) return {mode: 'resize', handle: hs[i].id, cur: hs[i].cur};
+      }
+      return null;
+    }
+
+    function topHitItem(p) {
+      for (var i = items.length - 1; i >= 0; i--) {
+        if (hitItem(items[i], p.x, p.y)) return items[i];
+      }
+      return null;
+    }
+
+    function eraseStrokesSegment(p0, p1, rad) {
+      eraseAtRaster(p0.x, p0.y, p1.x, p1.y, rad);
+      var out = [];
+      for (var i = 0; i < items.length; i++) {
+        var it = items[i];
+        if (it.kind !== 'stroke') { out.push(it); continue; }
+        var curSeg = [];
+        for (var k = 0; k < it.pts.length; k++) {
+          var pt = it.pts[k];
+          if (distToSeg(pt.x, pt.y, p0.x, p0.y, p1.x, p1.y) <= rad) {
+            if (curSeg.length >= 2) {
+              var s1 = cloneItem(it); s1.id = uid(); s1.pts = curSeg; out.push(s1);
+            }
+            curSeg = [];
+          } else {
+            curSeg.push(pt);
+          }
+        }
+        if (curSeg.length === it.pts.length) out.push(it);
+        else if (curSeg.length >= 2) {
+          var s2 = cloneItem(it); s2.id = uid(); s2.pts = curSeg; out.push(s2);
+        }
+      }
+      items = out;
+    }
+
+    function computeResizedBox(ob, handle, dx, dy, keepRatio) {
+      var x1 = ob.x, y1 = ob.y, x2 = ob.x + ob.w, y2 = ob.y + ob.h;
+      if (handle.indexOf('w') >= 0) x1 += dx;
+      if (handle.indexOf('e') >= 0) x2 += dx;
+      if (handle.indexOf('n') >= 0) y1 += dy;
+      if (handle.indexOf('s') >= 0) y2 += dy;
+      var nx = Math.min(x1, x2), ny = Math.min(y1, y2);
+      var nw = Math.max(16, Math.abs(x2 - x1)), nh = Math.max(16, Math.abs(y2 - y1));
+      if (keepRatio && ob.w > 4 && ob.h > 4 && handle.length === 2) {
+        var ratio = ob.w / ob.h;
+        if (nw / nh > ratio) nh = Math.max(16, nw / ratio);
+        else nw = Math.max(16, nh * ratio);
+        if (handle.indexOf('w') >= 0) nx = x2 - nw;
+        if (handle.indexOf('n') >= 0) ny = y2 - nh;
+      }
+      return {x: nx, y: ny, w: nw, h: nh};
+    }
+
+    var eraserUndoPushed = false;
+
     function down(e) {
       e.preventDefault();
       var p0 = pos(e);
+
+      if (tool === 'select') {
+        var hd = hitHandle(p0);
+        if (hd) {
+          var sel0 = selectedItems();
+          var map0 = {};
+          sel0.forEach(function (it) { map0[it.id] = cloneItem(it); });
+          selDrag = {
+            mode: hd.mode, handle: hd.handle, start: p0, cur: p0,
+            origBox: unionBox(sel0), origMap: map0, moved: false
+          };
+          drawing = true;
+          return;
+        }
+        var hit = topHitItem(p0);
+        if (hit) {
+          if (e.shiftKey) {
+            var idx = selectedIds.indexOf(hit.id);
+            if (idx >= 0) selectedIds.splice(idx, 1);
+            else selectedIds.push(hit.id);
+          } else if (selectedIds.indexOf(hit.id) < 0) {
+            selectedIds = [hit.id];
+          }
+          syncSelectionUi();
+          renderComposite(true);
+          var selM = selectedItems();
+          var mapM = {};
+          selM.forEach(function (it) { mapM[it.id] = cloneItem(it); });
+          selDrag = {mode: 'move', start: p0, cur: p0, origMap: mapM, moved: false};
+          drawing = true;
+          return;
+        }
+        var ubCur = unionBox(selectedItems());
+        if (ubCur && p0.x >= ubCur.x && p0.x <= ubCur.x + ubCur.w && p0.y >= ubCur.y && p0.y <= ubCur.y + ubCur.h) {
+          var selB = selectedItems();
+          var mapB = {};
+          selB.forEach(function (it) { mapB[it.id] = cloneItem(it); });
+          selDrag = {mode: 'move', start: p0, cur: p0, origMap: mapB, moved: false};
+          drawing = true;
+          return;
+        }
+        if (!e.shiftKey) selectedIds = [];
+        syncSelectionUi();
+        selDrag = {mode: 'marquee', start: p0, cur: p0, baseIds: selectedIds.slice()};
+        drawing = true;
+        renderComposite(true);
+        return;
+      }
+
       if (tool === 'text') {
         drawing = false;
-        S.promptDlg('متن روی تخته', '', 'متن', '').then(function (t) {
+        wbPromptText('درج متن روی تخته', 'متن مورد نظر را وارد کنید:', 'متن', '', false).then(function (t) {
           if (t && t.trim()) {
             pushUndo();
-            inkCtx.save();
-            inkCtx.fillStyle = color;
-            inkCtx.font = (size * 6 + 12) + 'px Vazirmatn, sans-serif';
-            inkCtx.direction = 'rtl';
-            inkCtx.fillText(t.trim(), p0.x, p0.y);
-            inkCtx.restore();
-            renderComposite();
+            var fpx = size * 6 + 14;
+            var md = measureTextDims(t.trim(), fpx);
+            var tx = Math.max(10, Math.min(W - md.w - 10, p0.x - md.w));
+            var ty = Math.max(10, Math.min(H - md.h - 10, p0.y - Math.round(fpx * 0.75)));
+            var newTxt = {id: uid(), kind: 'text', x: tx, y: ty, w: md.w, h: md.h, fontPx: fpx, text: t.trim(), color: color, size: size};
+            items.push(newTxt);
+            renderComposite(true);
           }
         });
         return;
       }
+
       drawing = true;
-      pushUndo();
+      if (tool === 'eraser') {
+        eraserUndoPushed = false;
+        last = p0;
+        return;
+      }
       rulerSnapEdge = (tool === 'pen') ? snapPointToRuler(p0, true) : null;
       if (rulerSnapEdge !== null) p0 = snapPointToRuler(p0, false) || p0;
       last = startPt = endPt = p0;
       penPts = [p0];
-      if (tool === 'highlighter') renderComposite(function (c) { drawHighlighterPath(c, penPts); });
-    }
-
-    function move(e) {
-      if (!drawing) return;
-      e.preventDefault();
-      var p = pos(e);
-      if (tool === 'pen') {
-        if (rulerSnapEdge !== null) p = snapPointToRuler(p, false) || p;
-        penPts.push(p);
-        inkCtx.save();
-        inkCtx.lineCap = 'round'; inkCtx.lineJoin = 'round';
-        inkCtx.strokeStyle = color; inkCtx.lineWidth = size;
-        applyDash(inkCtx, size);
-        inkCtx.beginPath(); inkCtx.moveTo(last.x, last.y); inkCtx.lineTo(p.x, p.y); inkCtx.stroke();
-        inkCtx.restore();
-        last = p;
-        renderComposite();
-      } else if (tool === 'eraser') {
-        inkCtx.save();
-        inkCtx.globalCompositeOperation = 'destination-out';
-        inkCtx.lineCap = 'round'; inkCtx.lineJoin = 'round';
-        inkCtx.lineWidth = Math.max(16, size * 8);
-        inkCtx.beginPath(); inkCtx.moveTo(last.x, last.y); inkCtx.lineTo(p.x, p.y); inkCtx.stroke();
-        inkCtx.restore();
-        last = p;
-        renderComposite();
-      } else if (tool === 'highlighter') {
-        penPts.push(p);
-        last = p;
-        renderComposite(function (c) { drawHighlighterPath(c, penPts); });
-      } else {
-        endPt = constrainPoint(startPt, p, !!e.shiftKey);
-        updateHud(startPt, endPt);
-        renderComposite(function (c) { drawShapeOn(c, startPt, endPt); });
+      if (tool === 'pen' || tool === 'highlighter') {
+        renderComposite(false, function (c) {
+          drawStrokePts(c, penPts, color, size, lineStyle, tool === 'highlighter', '');
+        });
       }
     }
 
-    function drawRecognized(sh) {
-      inkCtx.save();
-      inkCtx.strokeStyle = color; inkCtx.lineWidth = size;
-      inkCtx.lineCap = 'round'; inkCtx.lineJoin = 'round';
-      applyDash(inkCtx, size);
-      inkCtx.beginPath();
-      if (sh.kind === 'line') { inkCtx.moveTo(sh.a.x, sh.a.y); inkCtx.lineTo(sh.b.x, sh.b.y); }
-      else if (sh.kind === 'rect') inkCtx.rect(sh.a.x, sh.a.y, sh.b.x - sh.a.x, sh.b.y - sh.a.y);
-      else if (sh.kind === 'circle') inkCtx.ellipse((sh.a.x + sh.b.x) / 2, (sh.a.y + sh.b.y) / 2, Math.max(1, (sh.b.x - sh.a.x) / 2), Math.max(1, (sh.b.y - sh.a.y) / 2), 0, 0, Math.PI * 2);
-      else if (sh.kind === 'triangle') { inkCtx.moveTo((sh.a.x + sh.b.x) / 2, sh.a.y); inkCtx.lineTo(sh.b.x, sh.b.y); inkCtx.lineTo(sh.a.x, sh.b.y); inkCtx.closePath(); }
-      if (fillShape && sh.kind !== 'line') { inkCtx.fillStyle = hexRgba(color, 0.16); inkCtx.fill(); }
-      inkCtx.stroke();
-      inkCtx.restore();
+    function move(e) {
+      var p = pos(e);
+      if (!drawing) {
+        if (tool === 'select') {
+          var hh = hitHandle(p);
+          if (hh) canvas.style.cursor = hh.cur;
+          else if (topHitItem(p)) canvas.style.cursor = 'move';
+          else canvas.style.cursor = 'default';
+        } else {
+          canvas.style.cursor = 'crosshair';
+        }
+        return;
+      }
+      e.preventDefault();
+
+      if (tool === 'select' && selDrag) {
+        selDrag.cur = p;
+        var dx = p.x - selDrag.start.x, dy = p.y - selDrag.start.y;
+        if (!selDrag.moved && selDrag.mode !== 'marquee' && Math.hypot(dx, dy) > 2) {
+          pushUndo();
+          selDrag.moved = true;
+        }
+        if (selDrag.mode === 'move' && selDrag.moved) {
+          selectedItems().forEach(function (it) {
+            var o = selDrag.origMap[it.id];
+            if (!o) return;
+            var cp = cloneItem(o);
+            translateItem(cp, dx, dy);
+            Object.keys(cp).forEach(function (k) { it[k] = cp[k]; });
+          });
+          hud.textContent = 'جابه‌جایی: Δx=' + fa(Math.round(dx)) + ' ، Δy=' + fa(Math.round(dy));
+          hud.style.display = '';
+        } else if ((selDrag.mode === 'end-a' || selDrag.mode === 'end-b') && selDrag.moved) {
+          var ln = selectedItems()[0];
+          if (ln) {
+            var oLn = selDrag.origMap[ln.id];
+            if (selDrag.mode === 'end-a') {
+              ln.b = {x: oLn.b.x, y: oLn.b.y};
+              ln.a = constrainPoint(ln.b, p, !!e.shiftKey);
+            } else {
+              ln.a = {x: oLn.a.x, y: oLn.a.y};
+              ln.b = constrainPoint(ln.a, p, !!e.shiftKey);
+            }
+          }
+        } else if (selDrag.mode === 'resize' && selDrag.moved && selDrag.origBox) {
+          var nb = computeResizedBox(selDrag.origBox, selDrag.handle, dx, dy, !!e.shiftKey);
+          selectedItems().forEach(function (it) {
+            var orig = selDrag.origMap[it.id];
+            if (orig) applyScaledFromOrig(it, orig, selDrag.origBox, nb);
+          });
+          hud.textContent = 'اندازه: ' + fa((nb.w / 40).toFixed(1)) + ' × ' + fa((nb.h / 40).toFixed(1)) + ' واحد';
+          hud.style.display = '';
+        } else if (selDrag.mode === 'marquee') {
+          var mx = Math.min(selDrag.start.x, p.x), my = Math.min(selDrag.start.y, p.y);
+          var mw = Math.abs(p.x - selDrag.start.x), mh = Math.abs(p.y - selDrag.start.y);
+          var picked = selDrag.baseIds.slice();
+          if (mw > 4 || mh > 4) {
+            items.forEach(function (it) {
+              var b = getItemBox(it);
+              var inter = !(b.x + b.w < mx || b.x > mx + mw || b.y + b.h < my || b.y > my + mh);
+              if (inter && picked.indexOf(it.id) < 0) picked.push(it.id);
+            });
+          }
+          selectedIds = picked;
+          syncSelectionUi();
+        }
+        renderComposite(true);
+        return;
+      }
+
+      if (tool === 'pen' || tool === 'highlighter') {
+        if (tool === 'pen' && rulerSnapEdge !== null) p = snapPointToRuler(p, false) || p;
+        penPts.push(p);
+        last = p;
+        renderComposite(false, function (c) {
+          drawStrokePts(c, penPts, color, size, lineStyle, tool === 'highlighter', '');
+        });
+      } else if (tool === 'eraser') {
+        if (!eraserUndoPushed) { pushUndo(); eraserUndoPushed = true; }
+        eraseStrokesSegment(last, p, Math.max(12, size * 5));
+        last = p;
+        renderComposite(false);
+      } else {
+        endPt = constrainPoint(startPt, p, !!e.shiftKey);
+        updateHud(startPt, endPt);
+        renderComposite(false, function (c) {
+          var pa = startPt, pb = endPt;
+          if (tool === 'circle') {
+            var cr = Math.hypot(pb.x - pa.x, pb.y - pa.y);
+            pa = {x: startPt.x - cr, y: startPt.y - cr};
+            pb = {x: startPt.x + cr, y: startPt.y + cr};
+          }
+          drawShapeItem(c, tool, pa, pb, color, size, lineStyle, fillShape, '');
+        });
+      }
     }
 
     function up() {
       if (!drawing) return;
       drawing = false;
       hud.style.display = 'none';
-      if (tool === 'highlighter') {
-        drawHighlighterPath(inkCtx, penPts);
-        renderComposite();
-      } else if (tool !== 'pen' && tool !== 'eraser' && tool !== 'text' && startPt && endPt) {
-        drawShapeOn(inkCtx, startPt, endPt);
-        renderComposite();
-      } else if (autoShape && tool === 'pen' && rulerSnapEdge === null && penPts.length >= 8) {
-        var sh = recognizeShape(penPts);
-        if (sh) {
-          var base = undoStack[undoStack.length - 1];
-          if (base) {
-            var im = new Image();
-            im.onload = function () { clearInk(); inkCtx.drawImage(im, 0, 0); drawRecognized(sh); renderComposite(); };
-            im.src = base;
-          }
-        }
+
+      if (tool === 'select') {
+        selDrag = null;
+        renderComposite(true);
+        return;
       }
-      penPts = []; rulerSnapEdge = null;
+
+      if (tool === 'pen' || tool === 'highlighter') {
+        if (penPts.length) {
+          pushUndo();
+          if (autoShape && tool === 'pen' && rulerSnapEdge === null && penPts.length >= 8) {
+            var sh = recognizeShape(penPts);
+            if (sh) {
+              items.push({
+                id: uid(), kind: 'shape', shape: sh.kind,
+                a: {x: sh.a.x, y: sh.a.y}, b: {x: sh.b.x, y: sh.b.y},
+                color: color, size: size, lineStyle: lineStyle, fill: fillShape, label: ''
+              });
+              penPts = []; rulerSnapEdge = null;
+              renderComposite(true);
+              return;
+            }
+          }
+          items.push({
+            id: uid(), kind: 'stroke', sub: tool,
+            pts: penPts.slice(), color: color, size: size, lineStyle: lineStyle, label: ''
+          });
+        }
+        penPts = []; rulerSnapEdge = null;
+        renderComposite(true);
+      } else if (tool !== 'eraser' && tool !== 'text' && startPt && endPt) {
+        if (Math.hypot(endPt.x - startPt.x, endPt.y - startPt.y) >= 3) {
+          pushUndo();
+          var sa = {x: startPt.x, y: startPt.y}, sb = {x: endPt.x, y: endPt.y};
+          if (tool === 'circle') {
+            var cr = Math.hypot(sb.x - sa.x, sb.y - sa.y);
+            sa = {x: startPt.x - cr, y: startPt.y - cr};
+            sb = {x: startPt.x + cr, y: startPt.y + cr};
+          }
+          items.push({
+            id: uid(), kind: 'shape', shape: tool,
+            a: sa, b: sb, color: color, size: size, lineStyle: lineStyle, fill: fillShape, label: ''
+          });
+        }
+        startPt = endPt = null;
+        renderComposite(true);
+      }
     }
+
+    canvas.addEventListener('dblclick', function (ev) {
+      var p = pos(ev);
+      var hit = topHitItem(p);
+      if (hit) {
+        ev.preventDefault();
+        selectedIds = [hit.id];
+        setActiveTool('select', true);
+        syncSelectionUi();
+        renderComposite(true);
+        editSelectedItem();
+      }
+    });
 
     /* خط‌کش دیجیتال قابل جابه‌جایی و چرخش */
     function syncRulerDom() {
@@ -1894,13 +2593,22 @@
 
     function insertImageUrl(url) {
       var im = new Image();
+      imgCache[url] = im;
       im.onload = function () {
         pushUndo();
-        var maxW = 760, maxH = 560;
+        var maxW = 720, maxH = 520;
         var sc = Math.min(1, maxW / Math.max(1, im.naturalWidth), maxH / Math.max(1, im.naturalHeight));
-        var dw = Math.round(im.naturalWidth * sc), dh = Math.round(im.naturalHeight * sc);
-        inkCtx.drawImage(im, Math.round((W - dw) / 2), Math.round((H - dh) / 2), dw, dh);
-        renderComposite();
+        var dw = Math.max(40, Math.round(im.naturalWidth * sc)), dh = Math.max(40, Math.round(im.naturalHeight * sc));
+        var imgIt = {
+          id: uid(), kind: 'image',
+          x: Math.round((W - dw) / 2), y: Math.round((H - dh) / 2),
+          w: dw, h: dh, src: url, flipX: false, label: ''
+        };
+        items.push(imgIt);
+        selectedIds = [imgIt.id];
+        setActiveTool('select', true);
+        syncSelectionUi();
+        renderComposite(true);
       };
       im.src = url;
     }
@@ -1910,41 +2618,57 @@
     window.addEventListener('pointerup', up);
 
     function savePage() {
-      renderComposite();
+      renderComposite(false);
+      pages[cur].items = cloneItems(items);
       pages[cur].ink = inkCanvas.toDataURL('image/png');
       pages[cur].data = canvas.toDataURL('image/webp', 0.85);
       pages[cur].grid = grid;
+      renderComposite(true);
     }
     function loadPage(i) {
       cur = i;
       grid = pages[i].grid || 'blank';
       gridSel.value = grid;
       undoStack = []; redoStack = [];
+      selectedIds = [];
       updateHistoryBtns();
       status.textContent = 'صفحهٔ ' + fa(i + 1) + ' از ' + fa(pages.length);
-      clearInk();
-      var src = pages[i].ink || pages[i].data;
-      if (src) {
-        var im = new Image();
-        im.onload = function () { clearInk(); inkCtx.drawImage(im, 0, 0); renderComposite(); };
-        im.src = src;
-        renderComposite();
+      if (pages[i].items && pages[i].items.length) {
+        items = cloneItems(pages[i].items);
+        syncSelectionUi();
+        renderComposite(true);
+      } else if (pages[i].data) {
+        var bgImg = ensureImg(pages[i].data);
+        items = [{id: uid(), kind: 'image', x: 0, y: 0, w: W, h: H, src: pages[i].data, flipX: false, label: ''}];
+        if (bgImg && bgImg.complete) renderComposite(true);
+        syncSelectionUi();
       } else {
-        renderComposite();
+        items = [];
+        syncSelectionUi();
+        renderComposite(true);
       }
     }
 
     var toolBtns = {};
+    function setActiveTool(id, keepSelection) {
+      tool = id;
+      Object.keys(toolBtns).forEach(function (k) { toolBtns[k].classList.toggle('on', k === id); });
+      if (selModeQuickBtn) selModeQuickBtn.classList.toggle('on', id === 'select');
+      if (!keepSelection && id !== 'select' && selectedIds.length) {
+        selectedIds = [];
+      }
+      canvas.style.cursor = id === 'select' ? 'default' : 'crosshair';
+      syncSelectionUi();
+      renderComposite(true);
+    }
+
     function tb(id, icon, title, dkOnly) {
       var b = el('button', {
         type: 'button',
         class: 'wb-tool' + (tool === id ? ' on' : '') + (dkOnly ? ' wb-dk-only' : ''),
         title: title,
         'aria-label': title,
-        onclick: function () {
-          tool = id;
-          Object.keys(toolBtns).forEach(function (k) { toolBtns[k].classList.toggle('on', k === id); });
-        }
+        onclick: function () { setActiveTool(id, false); }
       }, [
         el('span', {class: 'wb-tool-ic', text: icon}),
         el('span', {class: 'wb-tool-txt', text: title})
@@ -1970,33 +2694,61 @@
     });
     gridSel.addEventListener('change', function () {
       grid = gridSel.value;
-      renderComposite();
+      renderComposite(true);
     });
 
     var swatchBtns = [];
     var colorIn = el('input', {type: 'color', value: color, class: 'wb-color', title: 'رنگ دلخواه'});
-    function syncColor(c) {
+    function syncColorUiOnly(c) {
       color = c;
-      colorIn.value = c;
-      swatchBtns.forEach(function (sb) { sb.classList.toggle('on', sb.getAttribute('data-col') === c.toLowerCase()); });
+      if (/^#[0-9a-fA-F]{6}$/.test(c)) colorIn.value = c;
+      swatchBtns.forEach(function (sb) { sb.classList.toggle('on', sb.getAttribute('data-col') === String(c).toLowerCase()); });
     }
-    colorIn.addEventListener('input', function () { syncColor(colorIn.value); });
+    function applyColor(c) {
+      syncColorUiOnly(c);
+      var sel = selectedItems();
+      if (sel.length) {
+        pushUndo();
+        sel.forEach(function (it) { it.color = c; });
+        renderComposite(true);
+      }
+    }
+    colorIn.addEventListener('change', function () { applyColor(colorIn.value); });
+    colorIn.addEventListener('input', function () {
+      syncColorUiOnly(colorIn.value);
+      var sel = selectedItems();
+      if (sel.length) { sel.forEach(function (it) { it.color = colorIn.value; }); renderComposite(true); }
+    });
     var swatches = ['#1a237e', '#111827', '#dc2626', '#059669', '#0284c7', '#7c3aed', '#d97706'].map(function (hex) {
       var sw = el('button', {
         type: 'button',
         class: 'wb-swatch' + (hex === color ? ' on' : ''),
         'data-col': hex,
-        title: 'رنگ قلم',
+        title: 'رنگ قلم / مورد انتخاب‌شده',
         style: 'background:' + hex,
-        onclick: function () { syncColor(hex); }
+        onclick: function () { applyColor(hex); }
       });
       swatchBtns.push(sw);
       return sw;
     });
 
     var sizeVal = el('span', {class: 'wb-size-val', text: fa(size)});
-    var sizeIn = el('input', {type: 'range', min: 1, max: 16, value: size, class: 'wb-size', title: 'ضخامت قلم'});
-    sizeIn.addEventListener('input', function () { size = Number(sizeIn.value); sizeVal.textContent = fa(size); });
+    var sizeIn = el('input', {type: 'range', min: 1, max: 16, value: size, class: 'wb-size', title: 'ضخامت قلم / اندازهٔ مورد انتخاب‌شده'});
+    var sizeUndoArmed = true;
+    sizeIn.addEventListener('pointerdown', function () { sizeUndoArmed = true; });
+    sizeIn.addEventListener('input', function () {
+      size = Number(sizeIn.value);
+      sizeVal.textContent = fa(size);
+      var sel = selectedItems();
+      if (sel.length) {
+        if (sizeUndoArmed) { pushUndo(); sizeUndoArmed = false; }
+        sel.forEach(function (it) {
+          it.size = size;
+          if (it.kind === 'text') it.fontPx = size * 6 + 14;
+        });
+        renderComposite(true);
+      }
+    });
 
     var autoShapeBtn = (function () {
       var b = el('button', {
@@ -2007,7 +2759,7 @@
         onclick: function () {
           autoShape = !autoShape;
           b.classList.toggle('on', autoShape);
-          if (autoShape && toolBtns.pen) toolBtns.pen.click();
+          if (autoShape && toolBtns.pen) setActiveTool('pen', false);
         }
       }, [
         el('span', {class: 'wb-tool-ic', text: '✨'}),
@@ -2020,11 +2772,17 @@
       var b = el('button', {
         type: 'button',
         class: 'wb-tool wb-dk-only',
-        title: 'پر کردن ملایم داخل اشکال بسته (مستطیل، دایره، بیضی، مثلث و لوزی)',
+        title: 'پر کردن ملایم داخل اشکال بسته (برای رسم جدید یا شکل انتخاب‌شده)',
         'aria-label': 'توپر ملایم',
         onclick: function () {
           fillShape = !fillShape;
           b.classList.toggle('on', fillShape);
+          var sel = selectedItems().filter(function (it) { return it.kind === 'shape'; });
+          if (sel.length) {
+            pushUndo();
+            sel.forEach(function (it) { it.fill = fillShape; });
+            renderComposite(true);
+          }
         }
       }, [
         el('span', {class: 'wb-tool-ic', text: '▣'}),
@@ -2046,11 +2804,30 @@
         onclick: function () {
           lineStyle = st[0];
           Object.keys(styleBtns).forEach(function (k) { styleBtns[k].classList.toggle('on', k === st[0]); });
+          var sel = selectedItems().filter(function (it) { return it.kind === 'shape' || it.kind === 'stroke'; });
+          if (sel.length) {
+            pushUndo();
+            sel.forEach(function (it) { it.lineStyle = lineStyle; });
+            renderComposite(true);
+          }
         }
       });
       styleBtns[st[0]] = sb;
       return sb;
     }));
+
+    var imgBtn = el('button', {
+      type: 'button',
+      class: 'wb-tool wb-act wb-dk-only',
+      title: 'درج تصویر روی تخته (یا چسباندن با Ctrl+V)',
+      'aria-label': 'درج تصویر',
+      onclick: async function () {
+        var f = await pickFile();
+        if (!f) return;
+        var url = await fileToDataUrl(f);
+        insertImageUrl(url);
+      }
+    }, [el('span', {class: 'wb-tool-ic', text: '🖼'}), el('span', {class: 'wb-tool-txt', text: 'درج تصویر'})]);
 
     var qIdx = (run && run.exam && Array.isArray(run.exam.questions)) ? run.exam.questions.indexOf(q) : -1;
     var boardTitle = opts && opts.title ? '🖍 ' + opts.title : ('🖍 تختهٔ سفید' + (qIdx >= 0 ? ' — سؤال ' + fa(qIdx + 1) : ''));
@@ -2058,6 +2835,8 @@
     function onKeyDown(ev) {
       if (!document.body.contains(bg)) return;
       if (document.querySelector('.modal-bg')) return;
+      var tag = ev.target && ev.target.tagName;
+      if (tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA') return;
       var mod = ev.ctrlKey || ev.metaKey;
       if (mod && (ev.key === 'z' || ev.key === 'Z')) {
         ev.preventDefault();
@@ -2065,15 +2844,41 @@
       } else if (mod && (ev.key === 'y' || ev.key === 'Y')) {
         ev.preventDefault();
         doRedo();
+      } else if (mod && (ev.key === 'a' || ev.key === 'A')) {
+        if (items.length) {
+          ev.preventDefault();
+          selectedIds = items.map(function (it) { return it.id; });
+          setActiveTool('select', true);
+          syncSelectionUi();
+          renderComposite(true);
+        }
+      } else if (mod && (ev.key === 'd' || ev.key === 'D')) {
+        if (selectedIds.length) { ev.preventDefault(); duplicateSelected(); }
+      } else if ((ev.key === 'Delete' || ev.key === 'Backspace') && selectedIds.length) {
+        ev.preventDefault();
+        deleteSelected();
+      } else if (ev.key === 'Escape' && selectedIds.length) {
+        ev.preventDefault();
+        selectedIds = [];
+        syncSelectionUi();
+        renderComposite(true);
+      } else if (selectedIds.length && (ev.key === 'ArrowUp' || ev.key === 'ArrowDown' || ev.key === 'ArrowLeft' || ev.key === 'ArrowRight')) {
+        ev.preventDefault();
+        var step = ev.shiftKey ? 12 : 3;
+        var ndx = ev.key === 'ArrowLeft' ? -step : (ev.key === 'ArrowRight' ? step : 0);
+        var ndy = ev.key === 'ArrowUp' ? -step : (ev.key === 'ArrowDown' ? step : 0);
+        pushUndo();
+        selectedItems().forEach(function (it) { translateItem(it, ndx, ndy); });
+        renderComposite(true);
       }
     }
     function onPaste(ev) {
       if (!document.body.contains(bg) || document.querySelector('.modal-bg')) return;
-      var items = ev.clipboardData && ev.clipboardData.items;
-      if (!items) return;
-      for (var idx = 0; idx < items.length; idx++) {
-        if (items[idx].type && items[idx].type.indexOf('image/') === 0) {
-          var fl = items[idx].getAsFile();
+      var cItems = ev.clipboardData && ev.clipboardData.items;
+      if (!cItems) return;
+      for (var idx = 0; idx < cItems.length; idx++) {
+        if (cItems[idx].type && cItems[idx].type.indexOf('image/') === 0) {
+          var fl = cItems[idx].getAsFile();
           if (fl) { ev.preventDefault(); fileToDataUrl(fl).then(insertImageUrl); break; }
         }
       }
@@ -2093,16 +2898,18 @@
     }
     bg.__onBack = requestClose;
 
-    /* V335.15/16 — چیدمان دسکتاپ: ستون راست = قلم‌ها، اشکال هندسی، سبک خط و رنگ؛ وسط = بوم تمام‌قد؛ ستون چپ = زمینه، ویرایش، خط‌کش، بزرگ‌نمایی، صفحات و ثبت */
+    /* ستون راست: انتخاب، قلم‌ها، اشکال هندسی، سبک خط و رنگ */
     var rightSide = el('aside', {class: 'wb-side wb-right', 'aria-label': 'ابزارهای ترسیم تخته'}, [
       el('div', {class: 'wb-title'}, [el('span', {text: boardTitle})]),
       el('div', {class: 'wb-sec'}, [
-        el('div', {class: 'wb-sec-lbl', text: 'قلم و نوشتن'}),
+        el('div', {class: 'wb-sec-lbl', text: 'انتخاب، قلم و درج'}),
         el('div', {class: 'wb-tools-grid'}, [
+          tb('select', '↖', 'انتخاب'),
           tb('pen', '✏️', 'قلم'),
           tb('highlighter', '🖍', 'ماژیک هایلایت'),
           tb('eraser', '🧽', 'پاک‌کن'),
-          tb('text', 'T', 'متن')
+          tb('text', 'T', 'متن'),
+          imgBtn
         ])
       ]),
       el('div', {class: 'wb-sec'}, [
@@ -2126,7 +2933,7 @@
         strokeStyleRow
       ]),
       el('div', {class: 'wb-sec wb-stroke-sec'}, [
-        el('div', {class: 'wb-sec-lbl', text: 'رنگ و ضخامت قلم'}),
+        el('div', {class: 'wb-sec-lbl', text: 'رنگ و ضخامت (رسم / مورد انتخابی)'}),
         el('div', {class: 'wb-swatches'}, swatches.concat([colorIn])),
         el('div', {class: 'wb-size-row'}, [
           el('span', {class: 'wb-size-lbl', text: 'ضخامت'}),
@@ -2135,6 +2942,49 @@
         ])
       ])
     ]);
+
+    /* بخش اختصاصی انتخاب و ویرایش موارد درج‌شده (در ستون چپ دسکتاپ) */
+    var selModeQuickBtn = el('button', {
+      type: 'button',
+      class: 'wb-tool wb-act',
+      title: 'فعال کردن ابزار انتخاب، جابه‌جایی و تغییر اندازه روی بوم',
+      'aria-label': 'ابزار انتخاب',
+      onclick: function () { setActiveTool('select', true); }
+    }, [el('span', {class: 'wb-tool-ic', text: '↖'}), el('span', {class: 'wb-tool-txt', text: 'ابزار انتخاب'})]);
+
+    var selAllBtn = el('button', {
+      type: 'button',
+      class: 'wb-tool wb-act',
+      title: 'انتخاب همهٔ موارد صفحه (Ctrl+A)',
+      'aria-label': 'انتخاب همه',
+      onclick: function () {
+        if (!items.length) { toast('هنوز موردی روی تخته درج نشده است.', 'err'); return; }
+        selectedIds = items.map(function (it) { return it.id; });
+        setActiveTool('select', true);
+        syncSelectionUi();
+        renderComposite(true);
+      }
+    }, [el('span', {class: 'wb-tool-ic', text: '⊞'}), el('span', {class: 'wb-tool-txt', text: 'انتخاب همه'})]);
+
+    function selActBtn(icon, label, titleTxt, fn, extraCls) {
+      var b = el('button', {
+        type: 'button',
+        class: 'wb-tool wb-act' + (extraCls ? ' ' + extraCls : ''),
+        title: titleTxt,
+        'aria-label': label,
+        disabled: true,
+        onclick: fn
+      }, [el('span', {class: 'wb-tool-ic', text: icon}), el('span', {class: 'wb-tool-txt', text: label})]);
+      selActionBtns.push(b);
+      return b;
+    }
+
+    var editItemBtn = selActBtn('✏️', 'ویرایش', 'ویرایش متن یا افزودن/ویرایش برچسب روی شکل انتخاب‌شده (یا دوبار کلیک روی بوم)', editSelectedItem);
+    var dupItemBtn = selActBtn('⧉', 'تکثیر مورد', 'کپی کردن مورد انتخاب‌شده (Ctrl+D)', duplicateSelected);
+    var growItemBtn = selActBtn('➕', 'بزرگ‌تر', 'بزرگ‌تر کردن مورد انتخاب‌شده (+۱۵٪)', function () { scaleSelectedBy(1.15); });
+    var shrinkItemBtn = selActBtn('➖', 'کوچک‌تر', 'کوچک‌تر کردن مورد انتخاب‌شده (−۱۵٪)', function () { scaleSelectedBy(0.86); });
+    var flipItemBtn = selActBtn('⇄', 'قرینه', 'قرینهٔ افقی مورد انتخاب‌شده', flipSelectedHoriz);
+    var delItemBtn = selActBtn('🗑', 'حذف مورد', 'حذف مورد انتخاب‌شده (Delete)', deleteSelected, 'is-danger');
 
     var undoBtn = el('button', {
       type: 'button',
@@ -2164,27 +3014,14 @@
       }
     }, [el('span', {class: 'wb-tool-ic', text: '📏'}), el('span', {class: 'wb-tool-txt', text: 'خط‌کش کمکی'})]);
 
-    var imgBtn = el('button', {
-      type: 'button',
-      class: 'wb-tool wb-act wb-dk-only',
-      title: 'درج تصویر روی تخته (یا چسباندن با Ctrl+V)',
-      'aria-label': 'درج تصویر',
-      onclick: async function () {
-        var f = await pickFile();
-        if (!f) return;
-        var url = await fileToDataUrl(f);
-        insertImageUrl(url);
-      }
-    }, [el('span', {class: 'wb-tool-ic', text: '🖼'}), el('span', {class: 'wb-tool-txt', text: 'درج تصویر'})]);
-
     var clearBtn = el('button', {
       type: 'button',
       class: 'wb-tool wb-act is-danger',
-      title: 'پاک کردن رسم‌های صفحه (زمینه حفظ می‌شود)',
+      title: 'پاک کردن همهٔ رسم‌های این صفحه (زمینه حفظ می‌شود)',
       onclick: async function () {
         if (await S.confirmDlg('پاک کردن صفحه', 'کل رسم‌های این صفحه پاک شود؟', 'پاک شود', true)) { pushUndo(); blank(); }
       }
-    }, [el('span', {class: 'wb-tool-ic', text: '🗑'}), el('span', {class: 'wb-tool-txt', text: 'پاک کردن صفحه'})]);
+    }, [el('span', {class: 'wb-tool-ic', text: '🗑'}), el('span', {class: 'wb-tool-txt', text: 'پاک کل صفحه'})]);
 
     var stage = el('div', {class: 'wb-stage'}, [canvas, rulerEl, hud]);
     var zoomLbl = el('button', {
@@ -2240,7 +3077,7 @@
       onclick: function () {
         if (pages.length >= WHITEBOARD_MAX_PAGES) { toast('حداکثر ' + fa(WHITEBOARD_MAX_PAGES) + ' صفحه.', 'err'); return; }
         savePage();
-        var copy = {ink: pages[cur].ink, data: pages[cur].data, grid: pages[cur].grid};
+        var copy = {items: cloneItems(pages[cur].items), ink: pages[cur].ink, data: pages[cur].data, grid: pages[cur].grid};
         pages.splice(cur + 1, 0, copy);
         loadPage(cur + 1);
         toast('صفحه کپی شد.', 'ok');
@@ -2252,11 +3089,12 @@
       text: '⬇ ذخیرهٔ عکس',
       title: 'دانلود تصویر صفحهٔ فعلی تخته (PNG)',
       onclick: function () {
-        renderComposite();
+        renderComposite(false);
         var a = document.createElement('a');
         a.href = canvas.toDataURL('image/png');
         a.download = 'whiteboard-page-' + (cur + 1) + '.png';
         a.click();
+        renderComposite(true);
       }
     });
     var doneBtn = el('button', {
@@ -2280,14 +3118,23 @@
 
     var leftSide = el('aside', {class: 'wb-side wb-left', 'aria-label': 'مدیریت صفحه و ثبت تخته'}, [
       el('div', {class: 'wb-top-close'}, [closeBtn]),
+      el('div', {class: 'wb-sec wb-inspector wb-dk-only'}, [
+        el('div', {class: 'wb-sec-lbl', text: 'انتخاب و ویرایش موارد درج‌شده'}),
+        selBadge,
+        el('div', {class: 'wb-tools-grid'}, [
+          selModeQuickBtn, selAllBtn,
+          editItemBtn, dupItemBtn,
+          growItemBtn, shrinkItemBtn,
+          flipItemBtn, delItemBtn
+        ])
+      ]),
       el('div', {class: 'wb-sec'}, [
         el('div', {class: 'wb-sec-lbl', text: 'زمینهٔ صفحه (بدون پاک شدن رسم)'}),
         gridSel
       ]),
       el('div', {class: 'wb-sec'}, [
-        el('div', {class: 'wb-sec-lbl', text: 'ویرایش و ابزار کمکی'}),
-        el('div', {class: 'wb-tools-grid wb-edit-grid'}, [undoBtn, redoBtn, rulerBtn, imgBtn]),
-        clearBtn
+        el('div', {class: 'wb-sec-lbl', text: 'تاریخچه و ابزار کمکی'}),
+        el('div', {class: 'wb-tools-grid wb-edit-grid'}, [undoBtn, redoBtn, rulerBtn, clearBtn])
       ]),
       el('div', {class: 'wb-sec wb-dk-only'}, [
         el('div', {class: 'wb-sec-lbl', text: 'بزرگ‌نمایی بوم'}),
@@ -2300,7 +3147,6 @@
         el('div', {class: 'wb-nav-row wb-dk-only'}, [dupBtn, dlBtn])
       ]),
       el('div', {class: 'wb-spacer'}),
-      el('div', {class: 'wb-kbd-hint wb-dk-only', text: 'میانبرها: Ctrl+Z / Ctrl+Y • Shift: زاویه/مربع دقیق • Ctrl+V: تصویر'}),
       doneBtn
     ]);
 

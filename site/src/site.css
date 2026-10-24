@@ -299,11 +299,17 @@ code.k{background:#f1f3f8;border-radius:6px;padding:1px 6px;font-size:13px;direc
 .chip.warn{background:var(--warn-soft);color:#7c4a03}
 /* تخته — V335.15/16: در دسکتاپ ستون راست (قلم‌ها، اشکال، سبک خط و رنگ) + بوم تمام‌قد وسط + ستون چپ (زمینه، ویرایش، خط‌کش، بزرگ‌نمایی، صفحات و ثبت) */
 .engine-bg.wb{display:flex;flex-direction:row;align-items:stretch;background:#e8eef5}
-.wb-side{width:262px;flex-shrink:0;background:var(--card);color:var(--ink);padding:10px 10px;display:flex;flex-direction:column;gap:10px;overflow-y:auto;overflow-x:hidden;z-index:2;box-shadow:0 0 24px rgba(15,23,42,.06)}
+.wb-side{width:268px;flex-shrink:0;background:var(--card);color:var(--ink);padding:10px 10px;display:flex;flex-direction:column;gap:9px;overflow-y:auto;overflow-x:hidden;z-index:2;box-shadow:0 0 24px rgba(15,23,42,.06)}
 .wb-right{border-inline-end:1px solid var(--line)}
 .wb-left{border-inline-start:1px solid var(--line)}
 .wb-title{font-weight:800;font-size:12.5px;color:var(--ink);padding:7px 9px;border-radius:10px;background:var(--brand-soft);line-height:1.45;text-align:center}
 .wb-sec{display:flex;flex-direction:column;gap:5px}
+.wb-inspector{padding:8px;border-radius:11px;border:1px solid var(--line);background:var(--bg)}
+.wb-inspector .wb-tool{background:var(--card)}
+.wb-inspector .wb-tool.on{background:var(--brand)}
+.wb-sel-badge{font-size:11px;font-weight:700;padding:5px 8px;border-radius:8px;background:var(--card);border:1px dashed var(--line);color:var(--muted);text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.wb-sel-badge.on{background:var(--brand-soft);border:1px solid var(--brand);color:var(--brand);font-weight:800}
+.m-dark .wb-sel-badge.on{color:#93c5fd;border-color:#3b82f6;background:rgba(59,130,246,.18)}
 .wb-sec-lbl{font-size:11px;font-weight:700;color:var(--muted)}
 .wb-tools-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:5px}
 .wb-tool{display:flex;align-items:center;justify-content:flex-start;gap:5px;padding:5px 7px;min-height:34px;min-width:0;width:100%;border:1px solid var(--line);background:var(--bg);color:var(--ink);border-radius:9px;cursor:pointer;font-size:11.5px;font-weight:600;transition:border-color .15s,background .15s,color .15s,opacity .15s}
