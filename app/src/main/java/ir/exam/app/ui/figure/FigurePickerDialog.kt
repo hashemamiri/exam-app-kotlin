@@ -453,7 +453,8 @@ private fun GraphEditorPane(initialSpec: FigureSpec, onInsert: (FigureSpec) -> U
     val visibleParamKeys = paramKeys(graphType).filter { it !in hiddenRawKeys }
     val previewHeight = if (graphType in setOf(
             "axabacus", "axbase10", "axplace", "axsaw", "axpattern", "axsym",
-            "axcalendar", "axmultgrid", "axmulwheel", "axtower", "axpaintgrid", "axcubes", "axbeaker"
+            "axcalendar", "axmultgrid", "axmulwheel", "axtower", "axpaintgrid", "axcubes", "axbeaker",
+            "axdicefold", "axunitconv", "axprobtree", "axorbital", "axpunnett", "axkenken"
         )
     ) 264.dp else 208.dp
 
@@ -462,8 +463,9 @@ private fun GraphEditorPane(initialSpec: FigureSpec, onInsert: (FigureSpec) -> U
         "axpattern" -> "💡 از منوی کشویی یکی از الگوهای آماده را برگزینید یا روی هر خانهٔ پیش‌نمایش بزنید تا تغییرش دهید."
         "axsym" -> "💡 روی هر خانهٔ شطرنجی در پیش‌نمایش بزنید تا آن خانه رنگی یا پاک شود."
         "axpaintgrid" -> "💡 روی هر خانهٔ شبکهٔ رنگ‌آمیزی در پیش‌نمایش بزنید تا رنگ یا پاک شود."
-        "axcalendar", "axmultgrid", "axmulwheel", "axtower" ->
-            "💡 روی هر خانهٔ شکل در پیش‌نمایش بزنید تا عدد دلخواه بنویسید یا آن را بدون علامت سؤال خالی بگذارید."
+        "axcalendar", "axmultgrid", "axmulwheel", "axtower",
+        "axdicefold", "axunitconv", "axprobtree", "axorbital", "axpunnett", "axkenken" ->
+            "💡 روی هر بخش یا خانهٔ شکل در پیش‌نمایش بزنید تا مقدارش را تغییر دهید یا آن را بدون علامت سؤال برای دانش‌آموز خالی بگذارید."
         else -> null
     }
 
@@ -775,23 +777,23 @@ private fun paramFields(type: String): List<Pair<String, String>> = when (type) 
     "axsyllablechart" -> listOf("word" to "کلمهٔ مورد نظر (مثلاً مدرسه)", "mode" to "حالت نمایش")
     "axmagnet" -> listOf("mode" to "حالت قطب‌ها")
     "axsenses" -> listOf("mode" to "حالت نمایش برچسب‌ها")
-    "axtiles" -> listOf("x2" to "تعداد کاشی x²", "x" to "تعداد کاشی x", "k" to "تعداد کاشی ۱", "neg" to "منفی (۱/۰)")
-    "axkenken" -> listOf("size" to "ابعاد جدول (۳ تا ۶)", "cages" to "قفس‌ها (خانه‌ها|هدف|عمل با ;)")
-    "axdicefold" -> listOf("mode" to "نمایش وجه‌ها", "top" to "شمارهٔ وجه بالا", "ask" to "پرسش وجه مقابل (۱/۰)")
+    "axtiles" -> listOf("x2" to "تعداد کاشی x² (۰ تا ۹)", "x" to "تعداد کاشی x (۰ تا ۱۶)", "k" to "تعداد کاشی ۱ (۰ تا ۲۴)", "neg" to "علامت کاشی‌ها", "show" to "نمایش عبارت جبری زیر کاشی‌ها")
+    "axkenken" -> listOf("kind" to "نوع پازل", "size" to "ابعاد جدول (۳ تا ۶)", "cages" to "قفس‌ها / سرنخ‌ها (با ;)")
+    "axdicefold" -> listOf("net" to "الگوی گستردهٔ مکعب", "mode" to "نمایش وجه‌ها", "top" to "شمارهٔ وجه بالا", "ask" to "حالت اولیهٔ وجه‌ها")
     "axtransform" -> listOf("shape" to "شکل", "op" to "نوع تبدیل", "dx" to "انتقال افقی", "dy" to "انتقال عمودی", "ang" to "زاویهٔ دوران", "axis" to "محور بازتاب", "grid" to "اندازهٔ شبکه")
-    "axcaliper" -> listOf("kind" to "نوع ابزار", "val" to "مقدار اندازه‌گیری (mm)", "max" to "بیشینهٔ مقیاس")
+    "axcaliper" -> listOf("kind" to "نوع ابزار", "val" to "مقدار اندازه‌گیری (mm)", "max" to "بیشینهٔ مقیاس", "label" to "نمایش عدد خوانده‌شده")
     "axsigntable" -> listOf("roots" to "ریشه‌ها (با ویرگول)", "mult" to "تکرار ریشه‌ها (۱ فرد / ۲ زوج)", "lead" to "ضریب پیشرو (۱ یا -۱)")
-    "axtrigcircle" -> listOf("deg" to "زاویه (درجه)", "show" to "نمایش تصویر sin و cos (۱/۰)")
-    "axmapping" -> listOf("from" to "اعضای دامنه", "to" to "اعضای برد", "arrows" to "پیکان‌ها (مبدأ-مقصد با ;)")
-    "axprobtree" -> listOf("first" to "گزینه‌های مرحلهٔ ۱", "second" to "گزینه‌های مرحلهٔ ۲", "mode" to "نمایش")
+    "axtrigcircle" -> listOf("deg" to "زاویه (درجه — منفی و بیش از ۱۸۰ مجاز)", "show" to "نمایش نسبت‌های مثلثاتی")
+    "axmapping" -> listOf("from" to "اعضای دامنه (A)", "to" to "اعضای هم‌دامنه (B)", "arrows" to "پیکان‌ها (مبدأ-مقصد با ;)", "show" to "بررسی نوع تابع زیر شکل")
+    "axprobtree" -> listOf("stages" to "تعداد مراحل (۱ تا ۴)", "first" to "گزینه‌های مرحلهٔ ۱ (یا نام:وزن)", "second" to "گزینه‌های مرحلهٔ ۲", "third" to "گزینه‌های مرحلهٔ ۳ (اختیاری)", "fourth" to "گزینه‌های مرحلهٔ ۴ (اختیاری)", "mode" to "نمایش خروجی شاخه‌ها")
     "axconic" -> listOf("kind" to "نوع مقطع", "a" to "نیم‌محور a", "b" to "نیم‌محور b")
-    "axorbital" -> listOf("z" to "عدد اتمی", "mode" to "حالت (جعبهٔ اوربیتال / ساختار لوئیس)", "sym" to "نماد اتم (لوئیس)", "val" to "الکترون ظرفیت (لوئیس)")
-    "axpunnett" -> listOf("kind" to "نوع", "p1" to "والد ۱", "p2" to "والد ۲", "mode" to "نمایش")
+    "axorbital" -> listOf("z" to "عدد اتمی Z (۱ تا ۵۴ — تا زنون)", "mode" to "حالت نمایش", "sym" to "نماد اتم (لوئیس)", "val" to "الکترون ظرفیت (لوئیس)")
+    "axpunnett" -> listOf("kind" to "نوع نمودار ژنتیک", "p1" to "والد ۱ (تک‌رگه Aa یا دورگه AaBb)", "p2" to "والد ۲", "gens" to "تعداد نسل‌های شجره‌نامه (۲ تا ۴)", "mode" to "نمایش")
     "axecg" -> listOf("kind" to "نوع نوار", "n" to "تعداد ضربان", "label" to "برچسب موج‌ها (۱/۰)", "A" to "دامنه (نوسان)", "T" to "دوره (نوسان)")
-    "axprosody" -> listOf("line" to "مصراع (ارکان با فاصله)", "mode" to "حالت نمایش")
+    "axprosody" -> listOf("line" to "ارکان وزن (با فاصله)", "verse" to "متن مصراع شعر (اختیاری)", "mode" to "حالت نمایش")
     "axtruthtable" -> listOf("kind" to "نوع", "expr" to "عبارت (عنوان ستون)")
     "axledger" -> listOf("title" to "عنوان حساب", "debit" to "اقلام بدهکار (با ویرگول)", "credit" to "اقلام بستانکار (با ویرگول)")
-    "axstaff" -> listOf("kind" to "نوع", "clef" to "کلید", "notes" to "نت‌ها (شمارهٔ MIDI)")
+    "axstaff" -> listOf("kind" to "نوع ابزار هنری", "clef" to "کلید موسیقی", "time" to "کسر میزان", "notes" to "نت‌ها (MIDI با # و b مجاز)", "dur" to "کشش نت‌ها (w,h,q,e با ویرگول)", "label" to "نمایش نام نت‌ها", "harmony" to "هم‌نشینی رنگ‌ها (چرخهٔ ایتن)")
     "axkmap" -> listOf("vars" to "تعداد متغیر", "ones" to "خانه‌های ۱ (شماره)", "groups" to "گروه‌ها (خانه‌ها با ;)")
     "axgate" -> listOf("kind" to "نوع گیت", "a" to "ورودی A (۱/۰)", "b" to "ورودی B (۱/۰)")
     "axdfa" -> listOf("states" to "حالت‌ها", "start" to "حالت شروع", "accept" to "حالت پایانی", "edges" to "یال‌ها (مبدأ-مقصد:برچسب با ;)")
@@ -805,25 +807,25 @@ private fun paramFields(type: String): List<Pair<String, String>> = when (type) 
     "axnormal" -> listOf("lo" to "کران پایین", "hi" to "کران بالا", "mu" to "میانگین μ", "sd" to "انحراف معیار σ")
     "axsupply" -> listOf("kind" to "نوع نمودار", "shift" to "مقدار جابه‌جایی", "ceiling" to "سقف قیمت (۰ = ندارد)")
     "axgame" -> listOf("kind" to "نوع", "mat" to "ماتریس سود (سطرها با ;)")
-    "axunitconv" -> listOf("kind" to "نوع واحد", "val" to "مقدار")
-    "axperimeter" -> listOf("shape" to "شکل", "w" to "عرض / شعاع", "h" to "ارتفاع", "n" to "تعداد ضلع چندضلعی")
+    "axunitconv" -> listOf("kind" to "کمیت و زنجیرهٔ واحدها", "val" to "مقدار پلهٔ اول", "blank" to "حالت اولیهٔ خانه‌ها")
+    "axperimeter" -> listOf("shape" to "شکل هندسی", "w" to "طول / قاعده / شعاع / قطر اول", "h" to "عرض / ارتفاع / قطر دوم", "a" to "قاعدهٔ کوچک ذوزنقه", "n" to "تعداد ضلع چندضلعی منتظم", "show" to "نمایش محیط و مساحت زیر شکل")
     "axpictograph" -> listOf("mode" to "نوع نمودار", "data" to "داده‌ها (با ویرگول)", "labs" to "نام دسته‌ها")
-    "axrounding" -> listOf("n" to "عدد", "mode" to "گرد به")
+    "axrounding" -> listOf("n" to "عدد مورد نظر", "mode" to "مرتبهٔ گرد کردن", "label" to "نمایش پاسخ زیر محور")
     "axdivision" -> listOf("a" to "عدد کل", "b" to "تعداد هر گروه")
     "axshapeid" -> listOf("kind" to "شکل", "n" to "تعداد ضلع (چندضلعی)")
     "axcircleparts" -> listOf("show" to "بخش نمایش‌داده‌شده")
     "axcylinder" -> listOf("kind" to "نوع جسم", "r" to "شعاع قاعده", "h" to "ارتفاع")
     "axproportion" -> listOf("a" to "مخرج معلوم", "b" to "صورت معلوم", "c" to "مقدار متناظر")
-    "axlinear" -> listOf("m1" to "شیب خط اول", "b1" to "عرض از مبدأ اول", "m2" to "شیب خط دوم", "b2" to "عرض از مبدأ دوم")
-    "axbarchart" -> listOf("data" to "داده‌ها", "labs" to "برچسب‌ها", "show" to "نمایش شاخص")
+    "axlinear" -> listOf("m1" to "شیب خط اول (m₁)", "b1" to "عرض از مبدأ اول (b₁)", "m2" to "شیب خط دوم (m₂)", "b2" to "عرض از مبدأ دوم (b₂)", "show" to "نمایش معادله‌ها و جواب")
+    "axbarchart" -> listOf("data" to "داده‌ها (با ویرگول)", "labs" to "برچسب ستون‌ها", "show" to "نمایش شاخص آماری")
     "axparabola" -> listOf("a" to "ضریب a", "b" to "ضریب b", "c" to "جملهٔ ثابت c")
     "axinthales" -> listOf("ang" to "زاویهٔ مرکزی (درجه)")
-    "axpendulum" -> listOf("len" to "طول نخ (متر)", "amp" to "دامنه (درجه)")
-    "axincline" -> listOf("ang" to "زاویهٔ شیب (درجه)", "mass" to "جرم (kg)")
-    "axcircuit" -> listOf("mode" to "نوع مدار", "r1" to "مقاومت ۱ (Ω)", "r2" to "مقاومت ۲ (Ω)", "v" to "ولتاژ باتری")
-    "axoptics" -> listOf("kind" to "نوع عدسی", "f" to "فاصلهٔ کانونی (cm)", "d" to "فاصلهٔ جسم (cm)")
-    "axheatcurve" -> listOf()
-    "axdna" -> listOf("mode" to "نمایش", "seq" to "توالی بازها (A/T/G/C)")
+    "axpendulum" -> listOf("len" to "طول نخ L (متر)", "amp" to "زاویهٔ انحراف θ (درجه)", "g" to "شتاب گرانش g (m/s²)", "mode" to "حالت تحلیل و نمایش")
+    "axincline" -> listOf("ang" to "زاویهٔ شیب θ (درجه)", "mass" to "جرم جسم m (kg)", "mu" to "ضریب اصطکاک μ", "g" to "شتاب گرانش g (m/s²)", "show" to "نمایش بردارها و مقادیر")
+    "axcircuit" -> listOf("mode" to "آرایش مدار", "r1" to "مقاومت R₁ (Ω)", "r2" to "مقاومت R₂ (Ω)", "r3" to "مقاومت R₃ (Ω — ۰ = ندارد)", "v" to "ولتاژ باتری (V)", "show" to "نمایش مقادیر محاسباتی")
+    "axoptics" -> listOf("kind" to "نوع عدسی", "f" to "فاصلهٔ کانونی f (cm)", "d" to "فاصلهٔ جسم p (cm)", "show" to "نمایش پرتوها و تصویر")
+    "axheatcurve" -> listOf("t0" to "دمای اولیهٔ یخ (°C)", "t1" to "دمای نهایی بخار (°C)", "m" to "جرم آب/یخ (گرم)", "mode" to "حالت نمایش")
+    "axdna" -> listOf("mode" to "حالت نمایش ملکول", "seq" to "توالی بازها (A, T, G, C)", "label" to "نمایش پیوند هیدروژنی و درصد GC")
     "axcell" -> listOf("kind" to "نوع سلول")
     "axtimeline" -> listOf("events" to "رویدادها (سال:عنوان)")
     "axmapgeo" -> listOf("kind" to "نوع نمایش")
@@ -874,9 +876,9 @@ private val TEXT_PARAM_KEYS = setOf(
     "shape", "unit", "notes", "coins", "op2", "op3", "n2", "n3", "mode", "seq", // V304 — V310.8/V310.9/V314.0: کلیدهای متنی ابزارهای ابتدایی
     "cells", "axis", "parts", "dice", "left", "right", "mid", // V315.0: کلیدهای متنی ۸ ابزار جدید ابتدایی
     "rule", "blanks", "in", "op1", "dens", "fills", "label", // V317.0: کلیدهای متنی ابزارهای پیشرفتهٔ ابتدایی
-    "month", "mark", "syll", "word", "from", "to", "arrows", "first", "second", "sym",
-    "p1", "p2", "states", "accept", "edges", "line", "expr", "title", "debit", "credit",
-    "ones", "groups", "cages", "nums", "base", "map", "mat", // V318.0: کلیدهای متنی ۴۰ ابزار جامع
+    "month", "mark", "syll", "word", "from", "to", "arrows", "first", "second", "third", "fourth", "stages", "sym",
+    "p1", "p2", "gens", "states", "accept", "edges", "line", "verse", "expr", "title", "debit", "credit",
+    "ones", "groups", "cages", "nums", "base", "map", "mat", "net", "time", "dur", "harmony", // V318.0 / V335.11: کلیدهای متنی
     "val", "val2", "val3", "val4", "count", "ov", "empty", "data", "n", "a", "b", "c", "show", "kind", "mode", "seq", "subj", "verb", "obj",
     "ax1", "ay1", "bx", "by", "f", "lo", "hi", "steps", "items", "op", "pts", "events", "labs", "w", "h",
     "shape", "r", "m1", "b1", "m2", "b2", // V319.1: کلیدهای متنی ۳۰ ابزار جدید
@@ -1073,28 +1075,38 @@ private fun dropdownOptionsFor(type: String, key: String, currentValue: String =
     )
     "axwordtrain" to "mode" -> listOf("join" to "نمایش کلمه", "blank" to "کلمه با جای خالی (؟)")
     "axtiles" to "neg" -> listOf("0" to "مثبت (آبی)", "1" to "منفی (قرمز)")
+    "axtiles" to "show" -> listOf("1" to "نمایش عبارت جبری زیر کاشی‌ها", "2" to "عبارت جبری با جای خالی (؟)", "0" to "بدون عبارت جبری")
+    "axkenken" to "kind" -> listOf("kenken" to "کن‌کن (قفس‌های عملیات ریاضی)", "kakuro" to "کاکورو (جمع سطری و ستونی)")
     "axkenken" to "size" -> listOf("3" to "۳×۳", "4" to "۴×۴", "5" to "۵×۵", "6" to "۶×۶")
-    "axdicefold" to "mode" -> listOf("dots" to "نقطه‌ها", "num" to "عددها")
-    "axdicefold" to "top" -> listOf("1" to "1", "2" to "2", "3" to "3", "4" to "4", "5" to "5", "6" to "6")
-    "axdicefold" to "ask" -> listOf("0" to "نمایش همهٔ وجه‌ها", "1" to "چند وجه جای خالی (؟)")
+    "axdicefold" to "net" -> listOf("cross" to "الگوی صلیبی کلاسیک", "t" to "الگوی T شکل", "stairs" to "الگوی پله‌ای", "z" to "الگوی زیگزاگ (Z)")
+    "axdicefold" to "mode" -> listOf("dots" to "نقطه‌های تاس", "num" to "عددهای ۱ تا ۶")
+    "axdicefold" to "top" -> listOf("1" to "۱", "2" to "۲", "3" to "۳", "4" to "۴", "5" to "۵", "6" to "۶")
+    "axdicefold" to "ask" -> listOf("0" to "نمایش همهٔ وجه‌ها (انتخاب دستی وجه خالی با لمس)", "1" to "خالی‌کردن خودکار ۲ وجه (بدون ؟)")
     "axtransform" to "shape" -> listOf("tri" to "مثلث", "sq" to "مربع", "rect" to "مستطیل")
     "axtransform" to "op" -> listOf("translate" to "انتقال (بردار)", "rotate" to "دوران", "reflect" to "بازتاب")
     "axtransform" to "axis" -> listOf("x" to "نسبت به محور x", "y" to "نسبت به محور y")
-    "axcaliper" to "kind" -> listOf("vernier" to "کولیس ورنیه (دقت ۰٫۱)", "micrometer" to "ریزسنج (دقت ۰٫۰۱)")
+    "axcaliper" to "kind" -> listOf("vernier" to "کولیس ورنیه (دقت ۰٫۱ میلی‌متر)", "micrometer" to "ریزسنج / میکرومتر (دقت ۰٫۰۱ میلی‌متر)")
+    "axcaliper" to "label" -> listOf("1" to "نمایش عدد خوانده‌شده و فرمول", "2" to "جای خالی عدد خوانده‌شده (؟) برای آزمون", "0" to "بدون کادر پایین")
     "axsigntable" to "lead" -> listOf("1" to "مثبت (۱)", "-1" to "منفی (-۱)")
-    "axtrigcircle" to "show" -> listOf("1" to "با تصویر sin و cos", "0" to "فقط ضلع زاویه")
-    "axprobtree" to "mode" -> listOf("prob" to "نمایش درصد احتمال", "count" to "نمایش نتیجهٔ هر شاخه")
+    "axtrigcircle" to "show" -> listOf("1" to "نمایش sin و cos و مختصات", "tan" to "همراه با خط مماس tan θ", "0" to "فقط زاویه و ضلع انتهایی")
+    "axmapping" to "show" -> listOf("1" to "نمایش تشخیص تابع / یک‌به‌یک / پوشا", "2" to "جای خالی نوع رابطه برای آزمون (؟)", "0" to "فقط نمودار پیکانی")
+    "axprobtree" to "stages" -> listOf("2" to "۲ مرحله‌ای", "3" to "۳ مرحله‌ای", "4" to "۴ مرحله‌ای", "1" to "۱ مرحله‌ای")
+    "axprobtree" to "mode" -> listOf("prob" to "کسر احتمال دقیق هر پیشامد", "pct" to "درصد احتمال هر شاخه", "count" to "برچسب پیشامد نهایی", "blank" to "خالی‌کردن خودکار نتایج نهایی (بدون ؟)")
     "axconic" to "kind" -> listOf("ellipse" to "بیضی", "hyperbola" to "هذلولی", "parabola" to "سهمی")
-    "axorbital" to "mode" -> listOf("box" to "جعبه‌های اوربیتال", "lewis" to "ساختار لوئیس")
-    "axpunnett" to "kind" -> listOf("punnett" to "مربع پانت", "pedigree" to "شجره‌نامه")
-    "axpunnett" to "mode" -> listOf("genotype" to "ژنوتیپ", "ratio" to "نسبت فنوتیپی")
+    "axorbital" to "mode" -> listOf("box" to "جعبه‌های اوربیتال (تا ۵۴ الکترون — 1s تا 5p)", "gas" to "جعبه‌های اوربیتال + آرایش فشردهٔ گاز نجیب", "lewis" to "ساختار نقطه‌ای لوئیس")
+    "axpunnett" to "kind" -> listOf("punnett" to "مربع پانت (تک‌رگه ۲×۲ و دورگه ۴×۴)", "pedigree" to "شجره‌نامهٔ وراثت (۲ تا ۴ نسل)")
+    "axpunnett" to "gens" -> listOf("3" to "۳ نسل (I تا III)", "2" to "۲ نسل (I و II)", "4" to "۴ نسل (I تا IV)")
+    "axpunnett" to "mode" -> listOf("genotype" to "نمایش ژنوتیپ کامل", "ratio" to "همراه با نسبت ژنوتیپی و فنوتیپی", "blank" to "خالی‌کردن خودکار خانه‌ها (بدون ؟)")
     "axecg" to "kind" -> listOf("ecg" to "نوار قلب (ECG)", "shm" to "نوسان هماهنگ ساده")
     "axecg" to "label" -> listOf("1" to "با برچسب P و QRS و T", "0" to "بدون برچسب")
     "axecg" to "n" -> listOf("1" to "۱ ضربان", "2" to "۲ ضربان", "3" to "۳ ضربان")
-    "axprosody" to "mode" -> listOf("arkan" to "نام ارکان + هجاها", "taqti" to "فقط تقطیع (∪ و −)")
+    "axprosody" to "mode" -> listOf("arkan" to "نام ارکان + تقطیع + تشخیص بحر عروضی", "taqti" to "فقط نشانه‌های هجایی (U و −)", "blank" to "جای خالی نام ارکان و وزن برای آزمون")
     "axtruthtable" to "kind" -> listOf("truth" to "جدول ارزش گزاره‌ها", "square" to "مربع تقابل ارسطویی")
-    "axstaff" to "kind" -> listOf("staff" to "خطوط حامل", "color" to "چرخهٔ ۱۲ رنگ ایتن")
-    "axstaff" to "clef" -> listOf("treble" to "کلید سل", "bass" to "کلید فا")
+    "axstaff" to "kind" -> listOf("staff" to "پنج‌خط حامل موسیقی", "color" to "چرخهٔ ۱۲ رنگ ایتن")
+    "axstaff" to "clef" -> listOf("treble" to "کلید سل (Treble)", "bass" to "کلید فا (Bass)")
+    "axstaff" to "time" -> listOf("4/4" to "۴/۴", "3/4" to "۳/۴", "2/4" to "۲/۴", "6/8" to "۶/۸", "none" to "بدون کسر میزان")
+    "axstaff" to "label" -> listOf("1" to "نمایش نام فارسی نت‌ها (دو، ر، می، ...)", "0" to "بدون نام نت زیر حامل")
+    "axstaff" to "harmony" -> listOf("triad" to "سه‌گانهٔ رنگ‌های اصلی", "comp" to "رنگ‌های مکمل (روبه‌رو)", "analog" to "رنگ‌های هم‌جوار", "warmcool" to "تفکیک رنگ‌های گرم و سرد", "none" to "بدون خطوط راهنما")
     "axkmap" to "vars" -> listOf("2" to "۲ متغیره", "3" to "۳ متغیره", "4" to "۴ متغیره")
     "axgate" to "kind" -> listOf("and" to "AND (و)", "or" to "OR (یا)", "not" to "NOT (نقیض)", "nand" to "NAND", "nor" to "NOR", "xor" to "XOR")
     "axgate" to "a" -> listOf("0" to "۰", "1" to "۱")
@@ -1117,17 +1129,60 @@ private fun dropdownOptionsFor(type: String, key: String, currentValue: String =
     // شکل‌های هندسی
     "ngon" to "X:n" -> listOf("3" to "۳ضلعی", "4" to "۴ضلعی", "5" to "۵ضلعی", "6" to "۶ضلعی", "7" to "۷ضلعی", "8" to "۸ضلعی", "9" to "۹ضلعی", "10" to "۱۰ضلعی", "12" to "۱۲ضلعی")
     "parll" to "X:n" -> listOf("1" to "۱ خط مورب", "2" to "۲ خط مورب", "3" to "۳ خط مورب", "4" to "۴ خط مورب")
-    "axunitconv" to "kind" -> listOf("len" to "طول: کیلومتر → متر → میلی‌متر", "mass" to "جرم: تن → کیلوگرم → گرم", "area" to "مساحت: m² → dm² → cm²")
-    "axperimeter" to "shape" -> listOf("rect" to "مستطیل", "tri" to "مثلث قائم‌الزاویه", "circle" to "دایره", "poly" to "چندضلعی منتظم")
+    "axunitconv" to "kind" -> listOf(
+        "len" to "طول: km → m → cm → mm",
+        "mass" to "جرم: t → kg → g → mg",
+        "area" to "مساحت: m² → dm² → cm² → mm²",
+        "vol" to "حجم: m³ → L (dm³) → mL (cm³)",
+        "time" to "زمان: ساعت → دقیقه → ثانیه"
+    )
+    "axunitconv" to "blank" -> listOf("0" to "نمایش همهٔ پله‌ها (انتخاب دستی خانهٔ خالی با لمس)", "1" to "خالی‌کردن خودکار پله‌های تبدیل (بدون ؟)")
+    "axperimeter" to "shape" -> listOf(
+        "rect" to "مستطیل",
+        "square" to "مربع",
+        "tri" to "مثلث قائم‌الزاویه",
+        "para" to "متوازی‌الاضلاع",
+        "trap" to "ذوزنقه",
+        "rhomb" to "لوزی",
+        "circle" to "دایره",
+        "poly" to "چندضلعی منتظم"
+    )
+    "axperimeter" to "show" -> listOf(
+        "both" to "نوشتن محیط و مساحت با هم",
+        "perim" to "فقط محیط (P)",
+        "area" to "فقط مساحت (S)",
+        "none" to "هیچ‌کدام نوشته نشود"
+    )
     "axpictograph" to "mode" -> listOf("picto" to "تصویری (شکل‌ها)", "bar" to "میله‌ای")
-    "axrounding" to "mode" -> listOf("ten" to "دهگان", "hundred" to "صدگان")
+    "axrounding" to "mode" -> listOf(
+        "ten" to "دهگان",
+        "hundred" to "صدگان",
+        "thousand" to "هزارگان",
+        "one" to "یکان (عدد صحیح)",
+        "tenth" to "دهم (۰٫۱)",
+        "hundredth" to "صدم (۰٫۰۱)"
+    )
+    "axrounding" to "label" -> listOf("1" to "نمایش مقدار گردشده و کمان راهنما", "2" to "نمایش با جای خالی (≈ ؟) برای آزمون", "0" to "فقط نمایش عدد روی محور")
     "axshapeid" to "kind" -> listOf("tri" to "مثلث", "square" to "مربع", "rect" to "مستطیل", "circle" to "دایره", "poly" to "چندضلعی منتظم")
     "axcircleparts" to "show" -> listOf("all" to "همهٔ اجزا", "radius" to "شعاع", "diameter" to "قطر", "chord" to "وتر", "tangent" to "مماس", "arc" to "کمان")
     "axcylinder" to "kind" -> listOf("cylinder" to "استوانه", "cone" to "مخروط")
-    "axbarchart" to "show" -> listOf("mean" to "میانگین", "median" to "میانه", "none" to "بدون شاخص")
-    "axcircuit" to "mode" -> listOf("series" to "سری", "parallel" to "موازی")
-    "axoptics" to "kind" -> listOf("convex" to "محدب (همگرا)", "concave" to "مقعر (واگرا)")
-    "axdna" to "mode" -> listOf("helix" to "مارپیچ دوگانه", "flat" to "نردبان صاف")
+    "axlinear" to "show" -> listOf("all" to "نمایش معادله‌ها (بالا) و نقطهٔ برخورد (پایین)", "eq" to "فقط نمایش معادله‌ها در بالای نمودار", "none" to "فقط خطوط روی دستگاه مختصات")
+    "axbarchart" to "show" -> listOf(
+        "mean" to "خط و مقدار میانگین (x̄)",
+        "median" to "خط و مقدار میانه",
+        "mode" to "مد (نما) و دامنهٔ تغییرات",
+        "all" to "همهٔ شاخص‌ها (میانگین، میانه، مد، انحراف معیار σ)",
+        "none" to "بدون شاخص آماری (برای طرح سؤال)"
+    )
+    "axpendulum" to "mode" -> listOf("period" to "محاسبهٔ دورهٔ نوسان T", "forces" to "تحلیل نیروها (mg ، T ، mg·sinθ)", "energy" to "ارتفاع اوج و پایستگی انرژی", "quiz" to "حالت آزمون (بدون فرمول پایین)")
+    "axincline" to "show" -> listOf("all" to "بردارهای نیرو + محاسبهٔ شتاب و اصطکاک", "vec" to "فقط بردارهای نیرو (بدون مقادیر عددی پایین)", "plain" to "فقط شکل جسم روی سطح شیب‌دار")
+    "axcircuit" to "mode" -> listOf("series" to "متوالی (سری)", "parallel" to "موازی", "mixed" to "ترکیبی (R₁ سری با R₂‖R₃)")
+    "axcircuit" to "show" -> listOf("all" to "نمایش مقاومت معادل، جریان و توان", "given" to "فقط مدار و مقادیر داده‌شده (برای آزمون)")
+    "axoptics" to "kind" -> listOf("convex" to "عدسی محدب (همگرا)", "concave" to "عدسی مقعر (واگرا)")
+    "axoptics" to "show" -> listOf("all" to "پرتوها + تصویر + مشخصات تصویر", "rays" to "فقط پرتوهای تابش و شکست", "blank" to "فقط جسم و عدسی (برای رسم پرتو توسط دانش‌آموز)")
+    "axheatcurve" to "mode" -> listOf("full" to "کامل با برچسب مراحل و گرمای کل Q (kJ)", "stages" to "فقط نام مراحل تغییر حالت", "quiz" to "شماره‌گذاری مراحل (۱) تا (۵) برای آزمون")
+    "axdna" to "mode" -> listOf("helix" to "مارپیچ دوگانهٔ DNA", "flat" to "نردبان جفت‌بازها (با ۲ و ۳ پیوند هیدروژنی)", "mrna" to "رونویسی DNA به mRNA (باز U)", "quiz" to "جای خالی رشتهٔ مکمل برای آزمون")
+    "axdna" to "label" -> listOf("1" to "نمایش مجموع پیوند هیدروژنی و درصد GC", "0" to "بدون نوار اطلاعات پایین")
     "axcell" to "kind" -> listOf("animal" to "سلول جانوری", "plant" to "سلول گیاهی")
     "axmapgeo" to "kind" -> listOf("compass" to "گل‌آویز جهت‌ها", "map" to "نقشه و مقیاس")
     "axsentence" to "mode" -> listOf("verbal" to "جملهٔ فعلیه", "nominal" to "جملهٔ اسمیه")

@@ -484,7 +484,7 @@
       rebuildAns();
       body.appendChild(ansHost);
     }
-    /* V335.8 — تعامل مستقیم دانش‌آموز روی شکل‌های تقارن شطرنجی، شبکهٔ رنگ‌آمیزی، تقویم، جدول ضرب، چرخ ضرب و هرم اعداد */
+    /* V335.8 / V335.11 — تعامل مستقیم دانش‌آموز روی خانه‌های خالی شکل‌های تعاملی در همهٔ پایه‌ها */
     function bindInteractiveQuestionFigs(container, q, onSyncAns) {
       if (!container || !(q.type === 'fill' || q.type === 'numeric' || q.type === 'essay')) return;
       ensureMathFrame().then(function (w) {
@@ -496,9 +496,19 @@
           var t = baseSpec.t, X = baseSpec.X || {};
           var isSym = t === 'axsym' && Math.floor(Number(en(String(X.mirror == null ? '1' : X.mirror)))) === 0;
           var isPaint = t === 'axpaintgrid';
-          var isKeyed = (t === 'axcalendar' || t === 'axmultgrid' || t === 'axmulwheel' || t === 'axtower');
+          var isDomKeyed = (t === 'axdicefold' || t === 'axunitconv' || t === 'axprobtree' || t === 'axorbital' || t === 'axpunnett' || t === 'axkenken');
+          var isKeyed = (t === 'axcalendar' || t === 'axmultgrid' || t === 'axmulwheel' || t === 'axtower') || isDomKeyed;
           if (!isSym && !isPaint && !isKeyed) return;
+          if (isDomKeyed && !figEl.querySelector('svg')) figEl.innerHTML = w.GraphFig.svg(baseSpec);
           var listEmptyKeys = function () {
+            if (isDomKeyed) {
+              var domKeys = [];
+              Array.prototype.forEach.call(figEl.querySelectorAll('[data-cell-empty="1"]'), function (nd) {
+                var k0 = nd.getAttribute('data-cell-key');
+                if (k0 && domKeys.indexOf(k0) < 0) domKeys.push(k0);
+              });
+              return domKeys;
+            }
             var empRaw = String(X.empty || '').split(/[,،;؛\s]+/).map(function (z) { return en(z.trim()); }).filter(Boolean);
             if (empRaw.length) return empRaw;
             var out = [];
@@ -547,7 +557,28 @@
           var encodeStuMap = function (m) {
             if (emptyKeys.length === 1) return (m[emptyKeys[0]] || '').trim();
             var arr = emptyKeys.map(function (k0) { return (m[k0] || '').trim(); });
-            return arr.every(function (x) { return !x; }) ? '' : arr.join('، ');
+            if (arr.every(function (x) { return !x; })) return '';
+            if (arr.some(function (x) { return x.indexOf(',') >= 0 || x.indexOf('،') >= 0; })) {
+              return emptyKeys.filter(function (k0) { return !!(m[k0] || '').trim(); }).map(function (k0) { return k0 + ':' + m[k0].trim(); }).join(';');
+            }
+            return arr.join('، ');
+          };
+          var stuQuickChips = function (cellKey) {
+            if (t === 'axorbital' && cellKey !== 'cfg') return [['↑↓', '↑↓ (جفت)'], ['↑', '↑ (تک بالا)'], ['↓', '↓ (تک پایین)']];
+            if (t === 'axdicefold') return [['1', '۱'], ['2', '۲'], ['3', '۳'], ['4', '۴'], ['5', '۵'], ['6', '۶']];
+            if (t === 'axpunnett') {
+              if (String(X.kind || '').toLowerCase() === 'pedigree') {
+                return [['M', '□ مرد سالم'], ['M*', '■ مرد مبتلا'], ['Mc', '◧ مرد ناقل'], ['F', '○ زن سالم'], ['F*', '● زن مبتلا'], ['Fc', '◐ زن ناقل']];
+              }
+              if (cellKey.indexOf('c_') === 0) return [['AA', 'AA'], ['Aa', 'Aa'], ['aa', 'aa'], ['AABB', 'AABB'], ['AaBb', 'AaBb'], ['aabb', 'aabb']];
+              if (cellKey.indexOf('h') === 0) return [['A', 'A'], ['a', 'a'], ['AB', 'AB'], ['Ab', 'Ab'], ['aB', 'aB'], ['ab', 'ab']];
+            }
+            if (t === 'axkenken') {
+              var ksz = Math.max(3, Math.min(6, Math.floor(Number(en(String(X.size || '4'))) || 4))), kr = [];
+              for (var kd = 1; kd <= ksz; kd++) kr.push([String(kd), fa(kd)]);
+              return kr;
+            }
+            return null;
           };
           var saveAns = function (v) {
             if (!v) delete run.answers[q.id]; else run.answers[q.id] = v;
@@ -577,27 +608,41 @@
           var openStuCellModal = function (cellKey, titleLbl) {
             var mp = parseStuMap(run.answers[q.id]);
             var bg = el('div', {class: 'modal-bg'});
-            var inp = el('input', {type: 'text', class: 'st-input', inputmode: 'decimal', placeholder: 'مقدار این خانه', value: mp[cellKey] || '', style: 'text-align:center;font-size:20px;font-weight:700'});
+            var textMode = (t === 'axorbital' || t === 'axpunnett' || t === 'axprobtree');
+            var inp = el('input', {type: 'text', class: 'st-input', inputmode: textMode ? 'text' : 'decimal', placeholder: 'مقدار این خانه', value: mp[cellKey] || '', style: 'text-align:center;font-size:20px;font-weight:700'});
             var commit = function (val) {
-              if (val === '') delete mp[cellKey]; else mp[cellKey] = val;
+              var clean = String(val == null ? '' : val).replace(/[;؛]/g, ',').trim();
+              if (clean === '') delete mp[cellKey]; else mp[cellKey] = clean;
               bg.remove();
               saveAns(encodeStuMap(mp));
             };
-            inp.addEventListener('keydown', function (ev) { if (ev.key === 'Enter') { ev.preventDefault(); commit(inp.value.trim()); } });
-            var modal = el('div', {class: 'modal', style: 'max-width:360px'}, [
+            inp.addEventListener('keydown', function (ev) { if (ev.key === 'Enter') { ev.preventDefault(); commit(inp.value); } });
+            var chips = stuQuickChips(cellKey);
+            var chipsRow = chips ? el('div', {class: 'row', style: 'flex-wrap:wrap;gap:6px;margin-bottom:10px;justify-content:center'}, chips.map(function (ch) {
+              return el('button', {type: 'button', class: 'btn light sm', text: ch[1], onclick: function () { commit(ch[0]); }});
+            })) : null;
+            var modal = el('div', {class: 'modal', style: 'max-width:380px'}, [
               el('h3', {text: titleLbl, style: 'margin-top:0'}),
+              chipsRow,
               inp,
               el('div', {class: 'row', style: 'margin-top:12px;gap:8px'}, [
-                el('button', {type: 'button', class: 'btn', text: 'ثبت', onclick: function () { commit(inp.value.trim()); }}),
+                el('button', {type: 'button', class: 'btn', text: 'ثبت', onclick: function () { commit(inp.value); }}),
                 el('button', {type: 'button', class: 'btn light', text: 'پاک‌کردن خانه', onclick: function () { commit(''); }}),
                 el('button', {type: 'button', class: 'btn light', text: 'انصراف', onclick: function () { bg.remove(); }})
               ])
-            ]);
+            ].filter(Boolean));
             bg.addEventListener('click', function (ev) { if (ev.target === bg) bg.remove(); });
             bg.appendChild(modal); document.body.appendChild(bg);
             setTimeout(function () { try { inp.focus(); inp.select(); } catch (_e) {} }, 20);
           };
           figEl.onclick = function (ev) {
+            if (isDomKeyed) {
+              var domEl = ev.target && ev.target.closest ? ev.target.closest('[data-cell-empty="1"]') : null;
+              if (!domEl || !figEl.contains(domEl)) return;
+              var ck = domEl.getAttribute('data-cell-key') || '', cl = domEl.getAttribute('data-cell-label') || 'این خانه';
+              if (ck && emptyKeys.indexOf(ck) >= 0) openStuCellModal(ck, 'مقدار «' + cl + '» را وارد کن');
+              return;
+            }
             var p = svgPoint(ev); if (!p) return;
             if (isSym) {
               if (p.x < 76 || p.x > 284 || p.y < 32 || p.y > 240) return;

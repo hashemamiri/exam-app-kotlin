@@ -25,6 +25,7 @@ const GEO_IDS = ['tri', 'rtri', 'iso', 'eq', 'scal', 'sq', 'rect', 'para', 'rhom
   'tet', 'hpris', 'netc', 'thales', 'chord', 'tang', 'acut', 'obt', 'star', 'torus', 'elps', 'octa', 'dodec', 'icosa'];
 
 const GRAPH_IDS = [
+  'axtiles', 'axkenken', 'axdicefold',
   'axcaliper', 'axsigntable', 'axtrigcircle', 'axmapping', 'axprobtree', 'axconic', 'axorbital', 'axpunnett',
   'axecg', 'axprosody', 'axtruthtable', 'axledger', 'axstaff', 'axkmap', 'axgate', 'axdfa', 'axbst', 'axbode',
   'axbeam', 'axmohr', 'axpv', 'axpert', 'axbenzene', 'axnormal', 'axsupply', 'axgame', 'axunitconv',

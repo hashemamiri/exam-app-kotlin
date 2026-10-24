@@ -32,6 +32,7 @@ import ir.exam.app.core.figure.FigureSpec
 import ir.exam.app.core.text.RichSegment
 import ir.exam.app.core.text.RichTextSplitter
 import ir.exam.app.ui.figure.AtlasFigureView
+import ir.exam.app.core.figure.PrimaryInteractiveFigureHelper
 import ir.exam.app.core.figure.PrimaryMathSvgRenderer
 import ir.exam.app.ui.figure.AdjustableFigure
 import ir.exam.app.ui.figure.InlineFigureView
@@ -125,12 +126,14 @@ fun NativeMathText(
                     )
                 } else {
                     val isInteractiveStudentFig = onStudentFigureAnswer != null && (
-                        figure.spec.type in setOf("axpaintgrid", "axcalendar", "axmultgrid", "axmulwheel", "axtower") ||
+                        figure.spec.type == "axpaintgrid" ||
+                            figure.spec.type in PrimaryInteractiveFigureHelper.KEYED_CELL_TYPES ||
                             (figure.spec.type == "axsym" && figure.spec.xNum("mirror", 1f).toInt() == 0)
                         )
                     val tallPrimaryFig = figure.spec.type in setOf(
                         "axsym", "axpaintgrid", "axcalendar", "axmultgrid", "axmulwheel",
-                        "axtower", "axsaw", "axcubes", "axbeaker", "axsenses", "axlever", "axwordtrain"
+                        "axtower", "axsaw", "axcubes", "axbeaker", "axsenses", "axlever", "axwordtrain",
+                        "axdicefold", "axunitconv", "axorbital", "axpunnett", "axkenken"
                     )
                     Box(
                         modifier = Modifier
@@ -141,7 +144,7 @@ fun NativeMathText(
                             )
                             .then(
                                 when {
-                                    figure.spec.type == "axbase10" || figure.spec.type == "axplace" || figure.spec.type == "axabacus" ->
+                                    figure.spec.type in setOf("axbase10", "axplace", "axabacus", "axprobtree") ->
                                         Modifier.aspectRatio(
                                             PrimaryMathSvgRenderer.canvasWidth(figure.spec) /
                                                 PrimaryMathSvgRenderer.canvasHeight(figure.spec)

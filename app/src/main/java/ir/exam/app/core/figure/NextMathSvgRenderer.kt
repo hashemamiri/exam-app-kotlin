@@ -4,6 +4,7 @@ import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.atan2
 import kotlin.math.cos
+import kotlin.math.hypot
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.roundToInt
@@ -39,6 +40,12 @@ object NextMathSvgRenderer {
     private const val GLD = "#f0a202"
     private const val PT = "#d6336c"
     private const val GR = "#d5dce6"
+
+    fun interactiveRegions(spec: FigureSpec): List<AdvancedMathSvgRenderer.InteractiveRegion> {
+        val out = mutableListOf<AdvancedMathSvgRenderer.InteractiveRegion>()
+        if (spec.type == "axunitconv") unitLadderRender(spec, out)
+        return out
+    }
 
     fun body(spec: FigureSpec): String {
         val title = spec.xStr("title")
@@ -80,86 +87,237 @@ object NextMathSvgRenderer {
     }
 
     // ---------------------------------------------------------------- دبستان
-    private fun unitLadder(spec: FigureSpec): String {
+    private fun fmtClean(v: Double): String {
+        val av = abs(v)
+        if (av >= 1e-6 && abs(v - kotlin.math.round(v)) < 1e-6) return kotlin.math.round(v).toLong().toString()
+        if (av == 0.0) return "0"
+        return String.format(java.util.Locale.US, "%.4f", v).trimEnd('0').trimEnd('.')
+    }
+
+    private fun unitLadder(spec: FigureSpec): String = unitLadderRender(spec, null)
+
+    private fun unitLadderRender(spec: FigureSpec, regions: MutableList<AdvancedMathSvgRenderer.InteractiveRegion>?): String {
         val kind = spec.xStr("kind", "len").lowercase()
-        val v = spec.xNum("val", 1f)
-        val names = when (kind) {
-            "mass" -> listOf("تن", "کیلوگرم", "گرم")
-            "area" -> listOf("متر مربع", "دسی‌متر مربع", "سانتی‌متر مربع")
-            else -> listOf("کیلومتر", "متر", "میلی‌متر")
+        val v = spec.xNum("val", 1f).toDouble()
+        val blank = spec.xStr("blank", "0") == "1"
+        val emptySet = AdvancedMathSvgRenderer.parseEmptySet(spec)
+        val ovMap = AdvancedMathSvgRenderer.parseCellMap(spec, "ov")
+        val ansMap = AdvancedMathSvgRenderer.parseCellMap(spec, "ans")
+
+        data class UnitChain(val title: String, val units: List<String>, val factors: List<Int>)
+        val chain = when (kind) {
+            "mass" -> UnitChain("جرم", listOf("t", "kg", "g", "mg"), listOf(1000, 1000, 1000))
+            "area" -> UnitChain("مساحت", listOf("m²", "dm²", "cm²", "mm²"), listOf(100, 100, 100))
+            "vol" -> UnitChain("حجم", listOf("m³", "L (dm³)", "mL (cm³)"), listOf(1000, 1000))
+            "time" -> UnitChain("زمان", listOf("ساعت", "دقیقه", "ثانیه"), listOf(60, 60))
+            else -> UnitChain("طول", listOf("km", "m", "cm", "mm"), listOf(1000, 100, 10))
         }
-        val fac = if (kind == "area") 100 else 1000
+
+        val n = chain.units.size
+        val vals = ArrayList<Double>(n)
+        var cur = v
+        vals.add(cur)
+        for (fac in chain.factors) {
+            cur *= fac
+            vals.add(cur)
+        }
+
         val sb = StringBuilder()
-        for (i in 0..2) {
-            val y = 44f + i * 66f
-            sb.append(rc(56f, y, 176f, 46f, if (i == 1) "rgba(108,99,245,.18)" else "#ffffff", ST, 1.6f, 10f))
-            sb.append(tx(144f, y + 20f, names[i], ST, "middle", true, 13))
-            val valText = num((v * Math.pow(fac.toDouble(), i.toDouble()) * 1000).roundToInt() / 1000f)
-            sb.append(tx(144f, y + 39f, valText, ACC, "middle", true, 13))
-            sb.append(tx(240f, y + 27f, "×$fac", MU, "start", false, 10))
-            if (i < 2) {
-                sb.append(ln(144f, y + 46f, 144f, y + 62f, PT, 1.6f))
-                sb.append(poly("139.5,${f(y + 54f)} 148.5,${f(y + 54f)} 144,${f(y + 64f)}", PT, "none", 0f))
-                sb.append(tx(154f, y + 60f, "× $fac", PT, "start", true, 11))
+        sb.append(tx(180f, 22f, "نردبان تبدیل واحد ${chain.title}", "#1e293b", "middle", true, 12))
+
+        val cardW = if (n == 4) 74f else 94f
+        val cardH = 62f
+        val gap = if (n == 4) 11f else 20f
+        val totalW = n * cardW + (n - 1) * gap
+        val x0 = (360f - totalW) / 2f
+        val yCard = 104f
+        val cardTints = listOf("#eef2ff", "#ecfdf5", "#fffbeb", "#fdf2f8")
+        val cardBrds = listOf(ACC, "#0d9488", "#d97706", PT)
+
+        // کمان‌های ضرب (بالا) و تقسیم (پایین) بین پله‌های مجاور
+        for (i in 0 until n - 1) {
+            val xA = x0 + i * (cardW + gap) + cardW * 0.72f
+            val xB = x0 + (i + 1) * (cardW + gap) + cardW * 0.28f
+            val xm = (xA + xB) / 2f
+            val fac = chain.factors[i]
+            // پیکان بالایی: ضرب (از واحد بزرگ به کوچک)
+            sb.append(path("M ${f(xA)} ${f(yCard - 4f)} Q ${f(xm)} ${f(yCard - 38f)} ${f(xB)} ${f(yCard - 4f)}", "none", ACC, 1.7f))
+            sb.append(poly("${f(xB)},${f(yCard - 4f)} ${f(xB - 6f)},${f(yCard - 10f)} ${f(xB - 1.5f)},${f(yCard - 12f)}", ACC, "none", 0f))
+            sb.append(rc(xm - 21f, yCard - 42f, 42f, 16f, "#ffffff", ACC, 1f, 5f))
+            sb.append(tx(xm, yCard - 31f, "×$fac", ACC, "middle", true, 9))
+
+            // پیکان پایینی: تقسیم (از واحد کوچک به بزرگ)
+            val yBot = yCard + cardH
+            sb.append(path("M ${f(xB)} ${f(yBot + 4f)} Q ${f(xm)} ${f(yBot + 38f)} ${f(xA)} ${f(yBot + 4f)}", "none", "#0f766e", 1.6f, "4 2.5"))
+            sb.append(poly("${f(xA)},${f(yBot + 4f)} ${f(xA + 6f)},${f(yBot + 10f)} ${f(xA + 1.5f)},${f(yBot + 12f)}", "#0f766e", "none", 0f))
+            sb.append(rc(xm - 21f, yBot + 26f, 42f, 16f, "#ffffff", "#0f766e", 1f, 5f))
+            sb.append(tx(xm, yBot + 37f, "÷$fac", "#0f766e", "middle", true, 9))
+        }
+
+        // کارت‌های مقدار و واحد (هر خانه قابل کلیک برای ویرایش یا خالی‌کردن بدون علامت سؤال!)
+        for (i in 0 until n) {
+            val cx = x0 + i * (cardW + gap)
+            val key = "u$i"
+            val autoEmpty = blank && i > 0
+            val isEmpty = key in emptySet || autoEmpty
+            val defVal = fmtClean(vals[i])
+            regions?.add(AdvancedMathSvgRenderer.InteractiveRegion(key, "مقدار بر حسب ${chain.units[i]}", defVal, cx, yCard, cardW, cardH, defaultEmpty = autoEmpty))
+
+            sb.append(rc(cx, yCard, cardW, cardH, if (isEmpty) "#ffffff" else cardTints[i % cardTints.size], if (isEmpty) "#4f46e5" else cardBrds[i % cardBrds.size], if (isEmpty) 1.9f else 1.7f, 8f))
+            // نوار واحد در پایین کارت
+            sb.append(rc(cx + 3f, yCard + cardH - 20f, cardW - 6f, 17f, "rgba(15,23,42,.06)", "none", 0f, 5f))
+            sb.append(tx(cx + cardW / 2f, yCard + cardH - 8f, chain.units[i], MU, "middle", true, 10))
+
+            if (isEmpty) {
+                sb.append(rcDash(cx + 5f, yCard + 5f, cardW - 10f, 32f, "#f8fafc", "#4f46e5", 1.4f, 5f, "4 2.5"))
+                val stu = ansMap[key]?.trim().orEmpty()
+                if (stu.isNotEmpty()) {
+                    sb.append(tx(cx + cardW / 2f, yCard + 26f, stu, "#1d4ed8", "middle", true, if (stu.length > 6) 10 else 12))
+                }
+            } else {
+                val disp = ovMap[key]?.trim() ?: defVal
+                sb.append(tx(cx + cardW / 2f, yCard + 26f, disp, ST, "middle", true, if (disp.length > 6) 10 else 12))
             }
         }
-        sb.append(tx(180f, 262f, "هر پله ×$fac — برگشت ÷$fac", MU, "middle", true, 12))
+
+        sb.append(tx(180f, 256f, "از راست/چپ: ضرب در حرکت به واحد کوچک‌تر، تقسیم به واحد بزرگ‌تر", MU, "middle", false, 10))
         return sb.toString()
     }
 
     private fun perimeterArea(spec: FigureSpec): String {
         val shape = spec.xStr("shape", "rect").lowercase()
+        val show = spec.xStr("show", "both").lowercase() // both | perim | area | none
         val w = max(1f, spec.xNum("w", 6f))
         val h = max(1f, spec.xNum("h", 4f))
+        val aTop = max(1f, spec.xNum("a", max(1f, w - 2f)))
         val sb = StringBuilder()
-        var perimeter = 0f
-        var area = 0f
-        val formula: String
+
+        var perStr = ""
+        var areaStr = ""
+
         when (shape) {
+            "square" -> {
+                val sPx = 124f
+                val rx = 180f - sPx / 2f
+                val ry = 42f
+                sb.append(rc(rx, ry, sPx, sPx, "rgba(108,99,245,.13)", ACC, 2.2f, 3f))
+                sb.append(rc(rx, ry + sPx - 11f, 11f, 11f, "none", ACC, 1.3f))
+                // تیک تساوی ۴ ضلع
+                sb.append(ln(180f, ry - 4f, 180f, ry + 4f, PT, 1.8f))
+                sb.append(ln(180f, ry + sPx - 4f, 180f, ry + sPx + 4f, PT, 1.8f))
+                sb.append(ln(rx - 4f, ry + sPx / 2f, rx + 4f, ry + sPx / 2f, PT, 1.8f))
+                sb.append(ln(rx + sPx - 4f, ry + sPx / 2f, rx + sPx + 4f, ry + sPx / 2f, PT, 1.8f))
+                sb.append(tx(180f, ry - 10f, "a = ${num(w)}", ST, "middle", true, 12))
+                perStr = "P = 4a = ${num(4f * w)}"
+                areaStr = "S = a² = ${num(w * w)}"
+            }
             "circle" -> {
-                val rad = min(84f, 15f * w)
-                sb.append(cls(180f, 130f, rad, "rgba(108,99,245,.16)", ACC, 2.2f))
-                sb.append(ln(180f, 130f, 180f + rad, 130f, PT, 1.6f)).append(cls(180f, 130f, 3.2f, PT, "none", 0f))
-                sb.append(tx(180f + rad / 2f, 122f, "r = " + num(w), PT, "middle", true, 11))
-                perimeter = (2 * PI * w).toFloat(); area = (PI * w * w).toFloat()
-                formula = "محیط = ۲πr  ·  مساحت = πr²"
+                val rPx = min(72f, max(36f, w * 11f))
+                val cx = 180f; val cy = 112f
+                sb.append(cls(cx, cy, rPx, "rgba(39,196,168,.15)", GRN, 2.2f))
+                sb.append(cls(cx, cy, 3.2f, ST, "none", 0f))
+                sb.append(ln(cx, cy, cx + rPx, cy, PT, 2f))
+                sb.append(tx(cx + rPx / 2f, cy - 8f, "r = ${num(w)}", PT, "middle", true, 11))
+                perStr = "P = 2πr ≈ ${num((2 * PI * w).toFloat())}"
+                areaStr = "S = πr² ≈ ${num((PI * w * w).toFloat())}"
             }
             "tri" -> {
-                val x0 = 100f; val y0 = 206f; val tw = min(180f, 20f * w); val th = min(120f, 20f * h)
-                sb.append(poly("$x0,$y0 ${f(x0 + tw)},$y0 $x0,${f(y0 - th)}", "rgba(39,196,168,.16)", ACC, 2.2f))
-                sb.append(rc(x0, y0 - 12f, 12f, 12f, "none", ST, 1.2f))
-                sb.append(tx(x0 + tw / 2f, y0 + 16f, num(w), MU, "middle", true, 11))
-                sb.append(tx(x0 - 8f, y0 - th / 2f, num(h), MU, "end", true, 11))
-                perimeter = w + h + sqrt(w * w + h * h); area = w * h / 2f
-                formula = "مساحت مثلث = ½ × قاعده × ارتفاع"
+                val scale = min(180f / w, 120f / h)
+                val bw = max(60f, w * scale)
+                val bh = max(50f, h * scale)
+                val x0 = 180f - bw / 2f
+                val y0 = 176f
+                sb.append(poly("${f(x0)},${f(y0)} ${f(x0 + bw)},${f(y0)} ${f(x0)},${f(y0 - bh)}", "rgba(240,162,2,.15)", GLD, 2.2f))
+                sb.append(rc(x0, y0 - 11f, 11f, 11f, "none", ST, 1.3f))
+                val hyp = sqrt(w * w + h * h)
+                sb.append(tx(x0 + bw / 2f, y0 + 18f, "a = ${num(w)}", ST, "middle", true, 11))
+                sb.append(tx(x0 - 10f, y0 - bh / 2f, "b = ${num(h)}", ST, "end", true, 11))
+                sb.append(tx(x0 + bw / 2f + 14f, y0 - bh / 2f - 4f, "c ≈ ${num(hyp)}", PT, "start", true, 11))
+                perStr = "P = ${num(w + h + hyp)}"
+                areaStr = "S = ½ab = ${num(w * h / 2f)}"
+            }
+            "para" -> {
+                val bw = 156f; val bh = 96f; val skew = 34f
+                val x0 = 96f; val y0 = 172f
+                sb.append(poly("${f(x0)},${f(y0)} ${f(x0 + bw)},${f(y0)} ${f(x0 + bw + skew)},${f(y0 - bh)} ${f(x0 + skew)},${f(y0 - bh)}", "rgba(108,99,245,.13)", ACC, 2.2f))
+                sb.append(ln(x0 + skew, y0 - bh, x0 + skew, y0, PT, 1.6f, "4 3"))
+                sb.append(rc(x0 + skew, y0 - 10f, 10f, 10f, "none", PT, 1.2f))
+                val side = hypot(h, max(1f, w * 0.35f)).let { kotlin.math.round(it * 10f) / 10f }
+                sb.append(tx(x0 + bw / 2f, y0 + 18f, "قاعده b = ${num(w)}", ST, "middle", true, 11))
+                sb.append(tx(x0 + skew + 6f, y0 - bh / 2f, "h = ${num(h)}", PT, "start", true, 11))
+                perStr = "P ≈ ${num(2f * (w + side))}"
+                areaStr = "S = b×h = ${num(w * h)}"
+            }
+            "trap" -> {
+                val bBig = max(w, aTop + 1f)
+                val bSmall = min(w, aTop)
+                val wPx = 176f
+                val topPx = (bSmall / bBig * wPx).coerceIn(64f, 148f)
+                val hPx = 98f
+                val x0 = 180f - wPx / 2f
+                val xTop = 180f - topPx / 2f
+                val y0 = 172f
+                sb.append(poly("${f(x0)},${f(y0)} ${f(x0 + wPx)},${f(y0)} ${f(xTop + topPx)},${f(y0 - hPx)} ${f(xTop)},${f(y0 - hPx)}", "rgba(39,196,168,.15)", "#0d9488", 2.2f))
+                sb.append(ln(xTop, y0 - hPx, xTop, y0, PT, 1.6f, "4 3"))
+                sb.append(rc(xTop, y0 - 10f, 10f, 10f, "none", PT, 1.2f))
+                val leg = sqrt(((bBig - bSmall) / 2f) * ((bBig - bSmall) / 2f) + h * h)
+                sb.append(tx(180f, y0 - hPx - 8f, "a = ${num(bSmall)}", ST, "middle", true, 11))
+                sb.append(tx(180f, y0 + 18f, "b = ${num(bBig)}", ST, "middle", true, 11))
+                sb.append(tx(xTop + 6f, y0 - hPx / 2f, "h = ${num(h)}", PT, "start", true, 11))
+                perStr = "P ≈ ${num(bBig + bSmall + 2f * leg)}"
+                areaStr = "S = ½(a+b)h = ${num((bBig + bSmall) * h / 2f)}"
+            }
+            "rhomb" -> {
+                val d1Px = 164f; val d2Px = 106f
+                val cx = 180f; val cy = 112f
+                sb.append(poly("${f(cx)},${f(cy - d2Px / 2f)} ${f(cx + d1Px / 2f)},${f(cy)} ${f(cx)},${f(cy + d2Px / 2f)} ${f(cx - d1Px / 2f)},${f(cy)}", "rgba(214,51,108,.12)", PT, 2.2f))
+                sb.append(ln(cx - d1Px / 2f, cy, cx + d1Px / 2f, cy, ACC, 1.5f, "4 3"))
+                sb.append(ln(cx, cy - d2Px / 2f, cx, cy + d2Px / 2f, "#0d9488", 1.5f, "4 3"))
+                val side = sqrt((w / 2f) * (w / 2f) + (h / 2f) * (h / 2f))
+                sb.append(tx(cx + d1Px / 4f, cy - 6f, "d₁=${num(w)}", ACC, "middle", true, 10))
+                sb.append(tx(cx + 6f, cy + d2Px / 4f + 4f, "d₂=${num(h)}", "#0d9488", "start", true, 10))
+                perStr = "P = 4a ≈ ${num(4f * side)}"
+                areaStr = "S = ½d₁d₂ = ${num(w * h / 2f)}"
             }
             "poly" -> {
-                val n = spec.xNum("n", 5f).toInt().coerceIn(3, 8)
-                val pts = StringBuilder()
-                for (i in 0 until n) {
-                    val a = -PI / 2 + i * 2 * PI / n
-                    pts.append(f(180f + 76f * cos(a).toFloat())).append(',').append(f(126f + 76f * sin(a).toFloat())).append(' ')
+                val n = spec.xNum("n", 5f).toInt().coerceIn(3, 10)
+                val rPx = 68f; val cx = 180f; val cy = 110f
+                val pts = (0 until n).joinToString(" ") { i ->
+                    val a = -PI / 2 + 2 * PI * i / n
+                    "${f(cx + (rPx * cos(a)).toFloat())},${f(cy + (rPx * sin(a)).toFloat())}"
                 }
-                sb.append(poly(pts.toString().trim(), "rgba(240,162,2,.16)", GLD, 2.2f))
-                val side = (2 * 76f * sin(PI / n) / 14.0).toFloat()
-                sb.append(tx(180f, 222f, "$n ضلع", ST, "middle", true, 12))
-                perimeter = n * side
-                area = (0.5f * n * side * side / (4 * kotlin.math.tan(PI / n))).toFloat()
-                formula = "چندضلعی منتظم — محیط = n × ضلع"
+                sb.append(poly(pts, "rgba(108,99,245,.13)", ACC, 2.2f))
+                val apothem = (w / (2.0 * kotlin.math.tan(PI / n))).toFloat()
+                sb.append(tx(cx, cy + rPx + 18f, "$n ضلعی منتظم — ضلع a = ${num(w)}", ST, "middle", true, 11))
+                perStr = "P = ${n}a = ${num(n * w)}"
+                areaStr = "S ≈ ${num(n * w * apothem / 2f)}"
             }
             else -> {
-                val rw = min(220f, 30f * w); val rh = min(120f, 30f * h)
-                val rx0 = 180f - rw / 2f; val ry0 = 126f - rh / 2f
-                sb.append(rc(rx0, ry0, rw, rh, "rgba(108,99,245,.16)", ACC, 2.2f))
-                sb.append(tx(180f, ry0 + rh + 18f, "عرض = " + num(w), MU, "middle", true, 11))
-                sb.append(tx(rx0 - 8f, ry0 + rh / 2f + 4f, "ارتفاع = " + num(h), MU, "end", true, 11))
-                perimeter = 2 * (w + h); area = w * h
-                formula = "محیط = ۲(طول + عرض)  ·  مساحت = طول × عرض"
+                val scale = min(204f / w, 122f / h)
+                val rw = max(72f, w * scale)
+                val rh = max(48f, h * scale)
+                val rx = 180f - rw / 2f
+                val ry = 108f - rh / 2f
+                sb.append(rc(rx, ry, rw, rh, "rgba(108,99,245,.13)", ACC, 2.2f, 3f))
+                sb.append(rc(rx, ry + rh - 11f, 11f, 11f, "none", ACC, 1.3f))
+                sb.append(tx(180f, ry - 9f, "طول = ${num(w)}", ST, "middle", true, 12))
+                sb.append(tx(rx + rw + 10f, ry + rh / 2f + 4f, "عرض = ${num(h)}", ST, "start", true, 12))
+                perStr = "محیط P = ${num(2f * (w + h))}"
+                areaStr = "مساحت S = ${num(w * h)}"
             }
         }
-        sb.append(tx(180f, 30f, formula, MU, "middle", false, 10))
-        sb.append(tx(180f, 244f, "محیط ≈ " + num((perimeter * 100).roundToInt() / 100f), ST, "middle", true, 13))
-        sb.append(tx(180f, 262f, "مساحت ≈ " + num((area * 100).roundToInt() / 100f), ACC, "middle", true, 13))
+
+        // نمایش انتخابی زیر شکل: هر دو (both)، فقط محیط (perim)، فقط مساحت (area)، یا هیچ‌کدام (none)
+        val footer = when (show) {
+            "none", "0" -> ""
+            "perim", "p" -> perStr
+            "area", "s" -> areaStr
+            else -> "$perStr   |   $areaStr"
+        }
+        if (footer.isNotEmpty()) {
+            sb.append(rc(22f, 232f, 316f, 32f, "#eef2ff", ACC, 1.5f, 8f))
+            sb.append(tx(180f, 253f, footer, "#1e1b4b", "middle", true, 12))
+        }
         return sb.toString()
     }
 
@@ -195,29 +353,76 @@ object NextMathSvgRenderer {
     }
 
     private fun rounding(spec: FigureSpec): String {
-        val n = spec.xNum("n", 147f)
-        val ten = spec.xStr("mode", "ten") != "hundred"
-        val step = if (ten) 10f else 100f
-        val lo = kotlin.math.floor(n / step) * step
-        val hi = lo + step
-        val l2 = lo - step
-        val h2 = hi + step
-        fun px(x: Float) = 60f + (x - l2) / (h2 - l2) * 240f
-        val y = 150f
-        val sb = StringBuilder()
-        sb.append(ln(52f, y, 320f, y, ST, 2f))
-        for (v in listOf(l2, lo, hi, h2)) {
-            sb.append(ln(px(v), y - 7f, px(v), y + 7f, ST, 1.5f))
-            sb.append(tx(px(v), y + 22f, num(v), MU, "middle", false, 10))
+        val nVal = spec.xNum("n", 147f).toDouble()
+        val mode = spec.xStr("mode", "ten").lowercase()
+        val labelMode = spec.xStr("label", "1")
+        val step = when (mode) {
+            "thousand" -> 1000.0
+            "hundred" -> 100.0
+            "one" -> 1.0
+            "tenth" -> 0.1
+            "hundredth" -> 0.01
+            else -> 10.0
         }
-        sb.append(cls(px(lo), y, 4.5f, "#ffffff", PT, 1.8f)).append(cls(px(hi), y, 4.5f, "#ffffff", PT, 1.8f))
-        sb.append(cls(px(n), y - 26f, 5f, PT, "#ffffff", 1.2f))
-        sb.append(tx(px(n), y - 36f, num(n), PT, "middle", true, 12))
-        val near = if (abs(n - lo) <= abs(hi - n)) lo else hi
-        sb.append(path("M ${f(px(n))} ${f(y - 20f)} Q ${f((px(n) + px(near)) / 2f)} ${f(y - 52f)} ${f(px(near))} ${f(y - 8f)}", "none", ACC, 1.8f, "5 4"))
-        sb.append(tx(180f, 218f, num(n) + " ≈ " + num(near) + "   (گرد به " + (if (ten) "دهگان" else "صدگان") + ")", ST, "middle", true, 13))
-        sb.append(tx(180f, 240f, "اختلاف تا " + num(lo) + " = " + num(abs(n - lo)) + "  ·  تا " + num(hi) + " = " + num(abs(hi - n)), MU, "middle", false, 10))
-        sb.append(tx(180f, 262f, "رقم گردکردن: " + num(step), MU, "middle", false, 10))
+        val modeFa = when (mode) {
+            "thousand" -> "هزارگان"
+            "hundred" -> "صدگان"
+            "one" -> "یکان"
+            "tenth" -> "دهم"
+            "hundredth" -> "صدم"
+            else -> "دهگان"
+        }
+
+        val lo = kotlin.math.floor(nVal / step + 1e-9) * step
+        val hi = lo + step
+        val mid = lo + step / 2.0
+        val roundsUp = nVal >= mid - 1e-9
+        val ans = if (roundsUp) hi else lo
+
+        val xL = 44f
+        val xR = 316f
+        val yLine = 136f
+        fun px(v: Double): Float = (xL + ((v - lo) / (hi - lo)).coerceIn(0.0, 1.0) * (xR - xL)).toFloat()
+
+        val sb = StringBuilder()
+        sb.append(tx(180f, 26f, "گرد کردن عدد ${fmtClean(nVal)} به تقریب $modeFa", "#1e293b", "middle", true, 12))
+
+        // دو ناحیهٔ رنگی (کمتر از وسط = گرد به پایین، از وسط به بعد = گرد به بالا)
+        val xMid = (xL + xR) / 2f
+        sb.append(rc(xL, yLine - 16f, xMid - xL, 16f, "rgba(148,163,184,.16)", "none", 0f, 3f))
+        sb.append(rc(xMid, yLine - 16f, xR - xMid, 16f, "rgba(39,196,168,.18)", "none", 0f, 3f))
+
+        // محور مدرج ۱۰ قسمتی + نقطهٔ وسط (mid)
+        sb.append(ln(xL - 12f, yLine, xR + 12f, yLine, ST, 2.2f))
+        for (i in 0..10) {
+            val tx0 = xL + i * (xR - xL) / 10f
+            val isEnd = i == 0 || i == 10
+            val isMid = i == 5
+            val hTick = when { isEnd -> 12f; isMid -> 9f; else -> 5f }
+            sb.append(ln(tx0, yLine - hTick, tx0, yLine + hTick, if (isMid) "#d97706" else ST, if (isEnd || isMid) 2f else 1.1f))
+        }
+        sb.append(tx(xL, yLine + 28f, fmtClean(lo), ST, "middle", true, 12))
+        sb.append(tx(xMid, yLine + 26f, "وسط (${fmtClean(mid)})", "#b45309", "middle", true, 10))
+        sb.append(tx(xR, yLine + 28f, fmtClean(hi), ST, "middle", true, 12))
+
+        // نقطهٔ عدد مورد نظر روی محور + کمان جهت گرد شدن
+        val nx = px(nVal)
+        val txAns = if (roundsUp) xR else xL
+        if (labelMode == "1" && abs(nx - txAns) > 6f) {
+            val qx = (nx + txAns) / 2f
+            sb.append(path("M ${f(nx)} ${f(yLine - 12f)} Q ${f(qx)} ${f(yLine - 58f)} ${f(txAns)} ${f(yLine - 14f)}", "none", "#0d9488", 2f, "5 3"))
+            sb.append(cls(txAns, yLine, 6.5f, "#10b981", "#ffffff", 1.6f))
+        }
+        sb.append(cls(nx, yLine, 6.5f, PT, "#ffffff", 1.8f))
+        sb.append(rc(nx - 24f, yLine - 44f, 48f, 20f, "#fff1f2", PT, 1.3f, 5f))
+        sb.append(tx(nx, yLine - 30f, fmtClean(nVal), PT, "middle", true, 11))
+
+        if (labelMode != "0") {
+            val ask = labelMode == "2"
+            sb.append(rc(28f, 224f, 304f, 34f, if (ask) "#fffbeb" else "#ecfdf5", if (ask) GLD else "#10b981", 1.6f, 8f))
+            val btm = if (ask) "${fmtClean(nVal)}  ≈  ؟   (گرد به $modeFa)" else "${fmtClean(nVal)}  ≈  ${fmtClean(ans)}   (گرد به $modeFa)"
+            sb.append(tx(180f, 246f, btm, if (ask) "#92400e" else "#065f46", "middle", true, 13))
+        }
         return sb.toString()
     }
 
@@ -398,78 +603,179 @@ object NextMathSvgRenderer {
         return sb.toString()
     }
 
+    private fun formatLinearEq(m: Float, b: Float): String {
+        val mZero = abs(m) < 1e-4f
+        val bZero = abs(b) < 1e-4f
+        if (mZero) return "y = ${num(b)}"
+        val mTerm = when {
+            abs(m - 1f) < 1e-4f -> "x"
+            abs(m + 1f) < 1e-4f -> "−x"
+            m < 0f -> "−${num(abs(m))}x"
+            else -> "${num(m)}x"
+        }
+        if (bZero) return "y = $mTerm"
+        val bPart = if (b > 0f) " + ${num(b)}" else " − ${num(abs(b))}"
+        return "y = $mTerm$bPart"
+    }
+
     private fun linearSystem(spec: FigureSpec): String {
         val m1 = spec.xNum("m1", 1f); val b1 = spec.xNum("b1", 2f)
         val m2 = spec.xNum("m2", -1f); val b2 = spec.xNum("b2", 4f)
-        val ox = 180f; val oy = 148f; val sc = 20f
+        val show = spec.xStr("show", "all").lowercase() // all | eq | none
         val sb = StringBuilder()
-        for (g in -6..6) {
-            sb.append(ln(ox + g * sc, 44f, ox + g * sc, 250f, GR, 0.7f))
-            if (g != 0) sb.append(tx(ox + g * sc, oy + 14f, g.toString(), MU, "middle", false, 9))
+
+        // ۱) نوار معادله‌ها کاملاً بیرون از صفحهٔ مختصات (بالای شبکه: y = 6..36)
+        if (show != "none") {
+            sb.append(rc(18f, 6f, 324f, 30f, "#f8fafc", "#cbd5e1", 1.2f, 7f))
+            sb.append(ln(28f, 21f, 44f, 21f, ACC, 2.5f))
+            sb.append(tx(50f, 25f, formatLinearEq(m1, b1), ACC, "start", true, 11))
+            sb.append(ln(188f, 21f, 204f, 21f, "#0d9488", 2.5f))
+            sb.append(tx(210f, 25f, formatLinearEq(m2, b2), "#0d9488", "start", true, 11))
         }
-        for (g in -5..5) {
-            sb.append(ln(52f, oy - g * sc, 320f, oy - g * sc, GR, 0.7f))
-            if (g != 0) sb.append(tx(ox - 12f, oy - g * sc + 3f, g.toString(), MU, "end", false, 9))
+
+        // ۲) صفحهٔ مختصات تمیز و بدون هیچ متن اضافی روی شبکه (y = 44..244)
+        val ox = 186f; val oy = 144f; val sc = 16.5f
+        for (i in -7..7) {
+            val gx = ox + i * sc
+            if (gx in 52f..320f) sb.append(ln(gx, 44f, gx, 244f, "#eef1f6", 1f))
         }
-        sb.append(ln(46f, oy, 322f, oy, ST, 1.8f)).append(arrowHeadRight(322f, oy))
-        sb.append(ln(ox, 254f, ox, 42f, ST, 1.8f)).append(arrowHeadUp(ox, 42f))
-        sb.append(tx(326f, oy + 14f, "x", ST, "middle", true, 12))
-        sb.append(tx(ox - 12f, 40f, "y", ST, "middle", true, 12))
+        for (j in -6..6) {
+            val gy = oy - j * sc
+            if (gy in 44f..244f) sb.append(ln(52f, gy, 320f, gy, "#eef1f6", 1f))
+        }
+        sb.append(rc(52f, 44f, 268f, 200f, "none", "#cbd5e1", 1.1f))
+        sb.append(ln(52f, oy, 320f, oy, ST, 1.5f))
+        sb.append(ln(ox, 44f, ox, 244f, ST, 1.5f))
+        sb.append(arrowHeadRight(320f, oy)); sb.append(arrowHeadUp(ox, 44f))
+
         fun px(v: Float) = ox + v * sc
         fun py(v: Float) = oy - v * sc
-        // V322 — با شیب/عرض از مبدأ بزرگ، سرِ خطوط بیرون از بوم می‌افتاد؛ حالا در کادر برش می‌خورند.
+        // V322 — شیب/عرض از مبدأ بزرگ خط را با y ده‌ها هزار بیرون از بوم می‌برد؛ به کادر محور مهار می‌شود.
         fun pyc(v: Float) = py(v).coerceIn(44f, 254f)
         fun pxc(v: Float) = px(v).coerceIn(46f, 326f)
-        sb.append(ln(pxc(-6f), pyc(m1 * -6f + b1), pxc(6f), pyc(m1 * 6f + b1), ACC, 2.2f))
-        sb.append(ln(pxc(-6f), pyc(m2 * -6f + b2), pxc(6f), pyc(m2 * 6f + b2), PT, 2.2f))
-        val den = m1 - m2
-        if (abs(den) > 1e-6f) {
-            val ix = (b2 - b1) / den
-            val iy = m1 * ix + b1
-            sb.append(cls(px(ix).coerceIn(50f, 322f), py(iy).coerceIn(48f, 250f), 5.5f, "#1f8f7a", "#ffffff", 1.2f))
-            sb.append(tx(min(max(px(ix) + 8f, 60f), 300f), min(max(py(iy) - 10f, 56f), 240f),
-                "(" + num((ix * 100).roundToInt() / 100f) + ", " + num((iy * 100).roundToInt() / 100f) + ")", "#1f8f7a", "start", true, 11))
-            sb.append(tx(180f, 268f, "نقطهٔ تقاطع — جواب دستگاه", "#1f8f7a", "middle", true, 11))
-        } else {
-            sb.append(tx(180f, 268f, "دو خط موازی‌اند — دستگاه جواب ندارد", PT, "middle", true, 11))
+
+        fun drawClippedLine(m: Float, b: Float, col: String, dash: String = "") {
+            val pts = mutableListOf<Pair<Float, Float>>()
+            val xMin = -8.12f; val xMax = 8.12f
+            val yMin = -6.06f; val yMax = 6.06f
+            val yAtMin = m * xMin + b
+            if (yAtMin in yMin..yMax) pts += xMin to yAtMin
+            val yAtMax = m * xMax + b
+            if (yAtMax in yMin..yMax) pts += xMax to yAtMax
+            if (abs(m) > 1e-4f) {
+                val xAtBot = (yMin - b) / m
+                if (xAtBot in xMin..xMax) pts += xAtBot to yMin
+                val xAtTop = (yMax - b) / m
+                if (xAtTop in xMin..xMax) pts += xAtTop to yMax
+            }
+            val uniq = pts.distinctBy { (kotlin.math.round(it.first * 20f) to kotlin.math.round(it.second * 20f)) }
+            if (uniq.size >= 2) {
+                val a = uniq.first(); val z = uniq.last()
+                sb.append(ln(pxc(a.first), pyc(a.second), pxc(z.first), pyc(z.second), col, 2.3f, dash))
+            } else {
+                sb.append(ln(pxc(-7f), pyc(m * -7f + b), pxc(7f), pyc(m * 7f + b), col, 2.3f, dash))
+            }
         }
-        sb.append(tx(70f, 56f, "y = " + num(m1) + "x + " + num(b1), ACC, "start", true, 11))
-        sb.append(tx(70f, 74f, "y = " + num(m2) + "x + " + num(b2), PT, "start", true, 11))
+
+        val sameSlope = abs(m1 - m2) < 1e-3f
+        val sameIntercept = abs(b1 - b2) < 1e-3f
+        drawClippedLine(m1, b1, ACC)
+        drawClippedLine(m2, b2, "#0d9488", if (sameSlope && sameIntercept) "6 4" else "")
+
+        var statusTxt = ""
+        var statusCol = "#1e293b"
+        if (!sameSlope) {
+            val ix = (b2 - b1) / (m1 - m2)
+            val iy = m1 * ix + b1
+            if (px(ix) in 52f..320f && py(iy) in 44f..244f) {
+                sb.append(cls(px(ix), py(iy), 5f, PT, "#ffffff", 1.6f))
+            }
+            statusTxt = "جواب دستگاه (نقطهٔ برخورد):  (${num(ix)}, ${num(iy)})"
+            statusCol = PT
+        } else if (sameIntercept) {
+            statusTxt = "دو خط منطبق‌اند — دستگاه بی‌شمار جواب دارد"
+            statusCol = "#0f766e"
+        } else {
+            statusTxt = "دو خط موازی‌اند — دستگاه جواب ندارد"
+            statusCol = "#b45309"
+        }
+
+        // ۳) نوار جواب در پایین شبکه (بیرون از صفحهٔ مختصات: y = 250..274)
+        if (show == "all") {
+            sb.append(rc(24f, 250f, 312f, 24f, "#f8fafc", "#cbd5e1", 1.1f, 6f))
+            sb.append(tx(180f, 266f, statusTxt, statusCol, "middle", true, 11))
+        }
         return sb.toString()
     }
 
     // ---------------------------------------------------------------- متوسطه و علوم
     private fun barStats(spec: FigureSpec): String {
-        var data = ints(spec, "data", "4,7,3,6,5")
+        var data = ints(spec, "data", "4,7,3,6,5").take(10)
         if (data.isEmpty()) data = listOf(4, 7, 3, 6, 5)
-        // V322 — دادهٔ منفی ارتفاع منفی (rect نامعتبر) و میلهٔ بیرون از بوم می‌ساخت؛ حالا به بازهٔ مجاز محدود می‌شود.
+        // V322 — دادهٔ منفی ارتفاع منفی (<rect height="-...">) می‌ساخت؛ مقادیر به [0, 999] مهار می‌شوند.
         data = data.map { it.coerceIn(0, 999) }
-        val labs = splitList(spec.xStr("labs", "الف,ب,ج,د,ه"))
-        val show = spec.xStr("show", "mean")
-        val n = data.size
-        val maxV = max(1, data.maxOrNull() ?: 1)
-        val x0 = 66f; val y0 = 216f; val w = 260f; val h = 150f
-        val bw = min(34f, w / (n * 1.6f))
+        val labs = spec.xList("labs", "الف,ب,ج,د,ه")
+        val show = spec.xStr("show", "mean").lowercase() // mean | median | mode | all | none
+
+        val rawMax = (data.maxOrNull() ?: 1).coerceAtLeast(1)
+        val niceMax = when {
+            rawMax <= 5 -> 5f
+            rawMax <= 10 -> 10f
+            else -> (kotlin.math.ceil(rawMax / 5.0) * 5.0).toFloat()
+        }
+        val x0 = 50f; val y0 = 216f; val w = 282f; val h = 166f
+        val bw = w / data.size * 0.62f
         val sb = StringBuilder()
-        sb.append(ln(x0 - 8f, y0, x0 + w, y0, ST, 1.8f)).append(ln(x0 - 8f, y0, x0 - 8f, y0 - h - 8f, ST, 1.8f))
-        for (i in 0 until n) {
-            val bx = x0 + 16f + i * (w - 20f) / n
-            val bh = data[i] / maxV.toFloat() * h
-            sb.append(rc(bx, y0 - bh, bw, bh, if (i % 2 == 1) "rgba(39,196,168,.75)" else "rgba(108,99,245,.75)", "#ffffff", 1.2f, 4f))
-            sb.append(tx(bx + bw / 2f, y0 - bh - 6f, data[i].toString(), ST, "middle", true, 10))
-            sb.append(tx(bx + bw / 2f, y0 + 16f, labs.getOrElse(i) { "مورد ${i + 1}" }, MU, "middle", false, 10))
+
+        // خطوط افقی شبکه و اعداد محور عمودی
+        for (t in 0..4) {
+            val tv = niceMax * t / 4f
+            val ty = y0 - (tv / niceMax) * h
+            sb.append(ln(x0, ty, x0 + w, ty, if (t == 0) ST else "#e2e8f0", if (t == 0) 1.7f else 1f))
+            sb.append(tx(x0 - 6f, ty + 4f, num(tv), MU, "end", false, 9))
         }
-        val sum = data.sum()
-        val mean = sum / n.toFloat()
+        sb.append(ln(x0, y0 - h - 8f, x0, y0, ST, 1.7f))
+
+        val cols = listOf(ACC, GRN, GLD, PT, "#4c9be8", "#9b5de5", "#0d9488", "#ea580c", "#2563eb", "#be185d")
+        for (i in data.indices) {
+            val bh = data[i] / niceMax * h
+            val bx = x0 + (i + 0.5f) * (w / data.size) - bw / 2f
+            sb.append(rc(bx, y0 - bh, bw, bh, cols[i % cols.size], ST, 1.2f, 3f))
+            sb.append(tx(bx + bw / 2f, y0 - bh - 5f, data[i].toString(), ST, "middle", true, 10))
+            sb.append(tx(bx + bw / 2f, y0 + 16f, labs.getOrElse(i) { (i + 1).toString() }, MU, "middle", true, 10))
+        }
+
+        val mean = data.average().toFloat()
         val sorted = data.sorted()
-        val median = if (n % 2 == 1) sorted[(n - 1) / 2].toFloat() else (sorted[n / 2 - 1] + sorted[n / 2]) / 2f
-        if (show == "mean") {
-            val y = y0 - mean / maxV * h
-            sb.append(ln(x0 - 4f, y, x0 + w, y, PT, 1.8f, "6 4"))
-            sb.append(tx(x0 + w, y - 6f, "میانگین " + num((mean * 100).roundToInt() / 100f), PT, "end", true, 10))
+        val median = if (sorted.size % 2 == 1) sorted[sorted.size / 2].toFloat()
+        else (sorted[sorted.size / 2 - 1] + sorted[sorted.size / 2]) / 2f
+        val rangeVal = (sorted.last() - sorted.first())
+        val freqMap = data.groupingBy { it }.eachCount()
+        val maxFreq = freqMap.values.maxOrNull() ?: 1
+        val modes = freqMap.filterValues { it == maxFreq }.keys.sorted()
+        val modeStr = if (maxFreq <= 1 && data.size > 1) "ندارد" else modes.joinToString("، ")
+        val variance = data.map { (it - mean) * (it - mean) }.average().toFloat()
+        val sd = sqrt(variance)
+
+        if (show == "mean" || show == "all") {
+            val my = y0 - mean / niceMax * h
+            sb.append(ln(x0, my, x0 + w, my, PT, 1.9f, "6 4"))
         }
-        sb.append(tx(180f, 248f, "میانگین = " + num((mean * 100).roundToInt() / 100f) + "  ·  میانه = " + num(median) + "  ·  بیشترین = $maxV", ST, "middle", true, 11))
-        sb.append(tx(180f, 268f, "نمودار میله‌ای داده‌های آماری", MU, "middle", false, 10))
+        if (show == "median" || show == "all") {
+            val mdy = y0 - median / niceMax * h
+            sb.append(ln(x0, mdy, x0 + w, mdy, "#0d9488", 1.8f, "3 3"))
+        }
+
+        if (show != "none") {
+            val summary = when (show) {
+                "median" -> "میانه = ${num(median)}"
+                "mode" -> "مد (نما) = $modeStr   |   دامنهٔ تغییرات R = $rangeVal"
+                "all" -> "میانگین=${num(mean)} ، میانه=${num(median)} ، مد=$modeStr ، σ=${num(sd)}"
+                else -> "میانگین (x̄) = ${num(mean)}"
+            }
+            sb.append(rc(18f, 240f, 324f, 28f, "#f8fafc", "#cbd5e1", 1.2f, 7f))
+            sb.append(tx(180f, 258f, summary, "#1e293b", "middle", true, 11))
+        }
         return sb.toString()
     }
 
@@ -548,197 +854,568 @@ object NextMathSvgRenderer {
         return sb.toString()
     }
 
+    private fun vecArrow(x1: Float, y1: Float, x2: Float, y2: Float, color: String, w: Float = 2.2f, head: Float = 7.5f, dash: String = ""): String {
+        val an = atan2(y2 - y1, x2 - x1)
+        val pts = "${f(x2)},${f(y2)} ${f(x2 - head * cos(an - 0.44f))},${f(y2 - head * sin(an - 0.44f))} ${f(x2 - head * cos(an + 0.44f))},${f(y2 - head * sin(an + 0.44f))}"
+        return ln(x1, y1, x2, y2, color, w, dash) + poly(pts, color, "none", 0f)
+    }
+
     private fun pendulum(spec: FigureSpec): String {
-        val len = max(0.1f, spec.xNum("len", 1f))
-        val amp = spec.xNum("amp", 20f).coerceIn(5f, 60f)
-        val period = (2 * PI * sqrt(len / 9.8)).toFloat()
-        val px = 180f; val py = 46f; val plen = 150f
-        val th = amp * PI / 180
-        val bx = px + plen * sin(th).toFloat(); val by = py + plen * cos(th).toFloat()
+        val lenM = max(0.1f, spec.xNum("len", 1f))
+        val amp = spec.xNum("amp", 24f).coerceIn(5f, 65f)
+        val gVal = max(1f, spec.xNum("g", 9.8f))
+        val mode = spec.xStr("mode", "period").lowercase() // period | forces | energy | quiz
+
+        val px = 180f
+        val py = 36f
+        val plen = 148f
+        val rad = amp * PI / 180.0
+        val bx = px + (plen * sin(rad)).toFloat()
+        val by = py + (plen * cos(rad)).toFloat()
+        val lx = px - (plen * sin(rad)).toFloat()
+        val ly = by
+        val eqY = py + plen
+
         val sb = StringBuilder()
-        sb.append(rc(150f, 34f, 60f, 12f, ST, ST, 1f, 5f)).append(tx(180f, 30f, "تکیه‌گاه", MU, "middle", false, 10))
-        sb.append(path("M $px $py A ${f(plen)} ${f(plen)} 0 0 1 ${f(px + plen)} $py", "none", GR, 1.4f, "5 4"))
-        sb.append(ln(px, py, bx, by, ST, 2f))
-        sb.append(cls(bx, by, 12f, "rgba(214,51,108,.85)", PT, 1.4f)).append(cls(px, py, 3.4f, ST, "none", 0f))
-        sb.append(path("M ${f(bx)} ${f(by)} L ${f(bx)} ${f(py + plen)}", "none", MU, 1.2f, "4 4"))
-        sb.append(path("M ${f(bx)} ${f(py + plen)} A ${f(plen)} ${f(plen)} 0 0 1 ${f(px + plen)} ${f(py + plen - 0.1f)}", "none", MU, 1f, "3 4"))
-        sb.append(tx(px + 8f, py + plen / 2f, "L = " + num(len) + " m", PT, "start", true, 11))
-        sb.append(tx(250f, py + 40f, "θ = " + num(amp) + "°", GLD, "start", true, 11))
-        sb.append(tx(180f, 236f, "دورهٔ آونگ T = ۲π√(L / g) ≈ " + num((period * 100).roundToInt() / 100f) + " s", ST, "middle", true, 13))
-        sb.append(tx(180f, 258f, "g ≈ ۹٫۸ m/s²   ·   مستقل از جرم گلوله", MU, "middle", false, 10))
+        // سقف هاشورخوردهٔ مکانیکی و لولای آونگ
+        sb.append(ln(116f, py, 244f, py, ST, 3f))
+        for (hx in 122..238 step 14) {
+            sb.append(ln(hx.toFloat(), py, hx - 7f, py - 9f, "#64748b", 1.3f))
+        }
+        sb.append(cls(px, py, 4.5f, ST, "#ffffff", 1.3f))
+
+        // خط قائم تعادل + مسیر کمان واقعی حرکت گلوله حول نقطهٔ تعادل (px, py+plen)
+        sb.append(ln(px, py, px, eqY + 14f, "#94a3b8", 1.4f, "5 4"))
+        sb.append(path("M ${f(lx)} ${f(ly)} A ${f(plen)} ${f(plen)} 0 0 0 ${f(bx)} ${f(by)}", "none", ACC, 1.7f, "5 3"))
+        sb.append(cls(lx, ly, 10f, "rgba(148,163,184,.18)", "#94a3b8", 1.2f))
+        sb.append(cls(px, eqY, 10f, "rgba(39,196,168,.15)", GRN, 1.2f))
+
+        // کمان زاویهٔ انحراف θ در بالای نخ (شعاع ۴۲ از نقطهٔ آویز)
+        val rAng = 42f
+        val ax = px + (rAng * sin(rad)).toFloat()
+        val ay = py + (rAng * cos(rad)).toFloat()
+        sb.append(path("M ${f(px)} ${f(py + rAng)} A ${f(rAng)} ${f(rAng)} 0 0 0 ${f(ax)} ${f(ay)}", "none", "#d97706", 2f))
+        sb.append(tx(px + (rAng * sin(rad / 2.0)).toFloat() + 8f, py + (rAng * cos(rad / 2.0)).toFloat() + 12f, "θ=${num(amp)}°", "#b45309", "start", true, 10))
+
+        // نخ و گلولهٔ آونگ
+        sb.append(ln(px, py, bx, by, ST, 2.2f))
+        sb.append(tx((px + bx) / 2f + 10f, (py + by) / 2f - 4f, "L = ${num(lenM)} m", ST, "start", true, 10))
+
+        if (mode == "forces") {
+            // نمایش نیروهای وارد بر گلوله: وزن mg، کشش نخ T، مؤلفهٔ بازگرداننده mg·sinθ
+            sb.append(vecArrow(bx, by, bx, by + 42f, ACC, 2.1f, 7f))
+            sb.append(tx(bx + 6f, by + 44f, "mg", ACC, "start", true, 10))
+            val ux = (px - bx) / plen; val uy = (py - by) / plen
+            sb.append(vecArrow(bx, by, bx + ux * 40f, by + uy * 40f, "#0d9488", 2.1f, 7f))
+            sb.append(tx(bx + ux * 40f - 8f, by + uy * 40f, "T", "#0d9488", "end", true, 10))
+            val txTan = -cos(rad).toFloat(); val tyTan = sin(rad).toFloat()
+            sb.append(vecArrow(bx, by, bx + txTan * 34f, by + tyTan * 34f, PT, 2f, 6.5f))
+            sb.append(tx(bx + txTan * 36f - 4f, by + tyTan * 36f + 10f, "mg·sinθ", PT, "end", true, 9))
+        } else if (mode == "energy") {
+            sb.append(ln(px - 10f, by, bx, by, "#0d9488", 1.3f, "3 3"))
+            sb.append(tx(px - 14f, (by + eqY) / 2f + 4f, "h", "#0d9488", "end", true, 11))
+        }
+
+        sb.append(cls(bx, by, 13f, PT, ST, 1.9f))
+
+        val period = (2 * PI * sqrt(lenM / gVal)).toFloat()
+        val hRise = (lenM * (1.0 - cos(rad))).toFloat()
+        if (mode != "quiz") {
+            val btm = when (mode) {
+                "forces" -> "نیروی بازگرداننده: F = mg·sinθ   |   دوره: T ≈ ${num(period)} s"
+                "energy" -> "اوج ارتفاع: h = L(1−cosθ) ≈ ${num(hRise)} m   |   T ≈ ${num(period)} s"
+                else -> "دورهٔ نوسان:  T = 2π√(L/g) ≈ ${num(period)} s"
+            }
+            sb.append(rc(20f, 240f, 320f, 28f, "#f8fafc", "#cbd5e1", 1.2f, 7f))
+            sb.append(tx(180f, 258f, btm, "#1e293b", "middle", true, 11))
+        }
         return sb.toString()
     }
 
     private fun incline(spec: FigureSpec): String {
-        val ang = spec.xNum("ang", 30f).coerceIn(10f, 60f)
-        val m = max(1f, spec.xNum("mass", 5f))
-        val ax = 74f; val ay = 210f; val len = 220f
-        val rad = ang * PI / 180
-        val bx = ax + len
-        val cxp = ax + len * cos(rad).toFloat(); val cyp = ay - len * sin(rad).toFloat()
+        val ang = spec.xNum("ang", 30f).coerceIn(10f, 70f)
+        val mass = max(0.5f, spec.xNum("mass", 5f))
+        val mu = spec.xNum("mu", 0f).coerceIn(0f, 1.2f)
+        val gVal = max(1f, spec.xNum("g", 9.8f))
+        val show = spec.xStr("show", "all").lowercase() // all | vec | plain
+
+        val rad = ang * PI / 180.0
+        val cosA = cos(rad).toFloat()
+        val sinA = sin(rad).toFloat()
+
+        // مثلث قائم‌الزاویهٔ دقیق سطح شیب‌دار: A=(ax, yBase) زاویهٔ θ، B=(bx, yBase) قائمه، C=(bx, cyPeak) قله
+        val ax = 48f
+        val yBase = 216f
+        val hypLen = min(228f / cosA, 146f / sinA).coerceAtMost(236f)
+        val bx = ax + hypLen * cosA
+        val cyPeak = yBase - hypLen * sinA
+
         val sb = StringBuilder()
-        sb.append(poly("$ax,$ay ${f(bx)},$ay ${f(cxp)},${f(cyp)}", "rgba(108,99,245,.10)", ACC, 2f))
-        val t = 0.55f
-        val px = ax + len * t * cos(rad).toFloat(); val py = ay - len * t * sin(rad).toFloat()
-        sb.append(poly("${f(px - 9f)},${f(py - 20f)} ${f(px + 11f)},${f(py - 6f)} ${f(px + 2f)},${f(py + 3f)} ${f(px - 18f)},${f(py - 11f)}", "rgba(240,162,2,.9)", "#8a5b00", 1.2f))
-        val wgt = m * 9.8f
-        val sv = sin(rad).toFloat(); val cv = cos(rad).toFloat()
-        sb.append(ln(px, py, px, py + 34f, PT, 1.8f))
-        sb.append(poly("${f(px - 4.5f)},${f(py + 26f)} ${f(px + 4.5f)},${f(py + 26f)} ${f(px)},${f(py + 34f)}", PT, "none", 0f))
-        sb.append(tx(px, py + 48f, "mg = " + num((wgt * 10).roundToInt() / 10f) + " N", PT, "middle", true, 10))
-        sb.append(ln(px, py, px - sv * 44f, py + cv * 44f, GLD, 1.8f))
-        sb.append(poly("${f(px - sv * 44f - 4f)},${f(py + cv * 44f - 3f)} ${f(px - sv * 44f + 4f)},${f(py + cv * 44f + 3f)} ${f(px - sv * 44f + 1f)},${f(py + cv * 44f + 9f)}", GLD, "none", 0f))
-        sb.append(tx(px - sv * 62f - 14f, py + cv * 62f + 24f, "mg·sinθ = " + num((wgt * sv * 10).roundToInt() / 10f) + " N", GLD, "middle", true, 10))
-        sb.append(ln(px, py, px - sv * 40f, py - cv * 40f, "#1f8f7a", 1.8f))
-        sb.append(tx(px - sv * 54f - 6f, py - cv * 54f - 8f, "N = " + num((wgt * cv * 10).roundToInt() / 10f) + " N", "#1f8f7a", "middle", true, 10))
-        sb.append(path("M ${f(ax + 34f)} $ay A 34 34 0 0 0 ${f(ax + 34f * cos(rad).toFloat())} ${f(ay - 34f * sin(rad).toFloat())}", "none", ST, 1.4f))
-        sb.append(tx(ax + 46f, ay - 8f, "θ = " + num(ang) + "°", ST, "start", true, 11))
-        sb.append(tx(180f, 236f, "نیروی موازی با سطح: F = mg·sinθ", ST, "middle", true, 12))
-        sb.append(tx(180f, 258f, "نیروی عمود بر سطح: N = mg·cosθ   ·   m = " + num(m) + " kg", MU, "middle", false, 10))
+        sb.append(ln(30f, yBase, 332f, yBase, "#94a3b8", 1.5f))
+        sb.append(poly("${f(ax)},${f(yBase)} ${f(bx)},${f(yBase)} ${f(bx)},${f(cyPeak)}", "#f1f5f9", ST, 2.2f))
+        // علامت زاویهٔ قائمه در B و کمان دقیق زاویهٔ شیب θ در رأس A
+        sb.append(rc(bx - 11f, yBase - 11f, 11f, 11f, "none", ST, 1.3f))
+        val rArc = 34f
+        sb.append(path("M ${f(ax + rArc)} ${f(yBase)} A ${f(rArc)} ${f(rArc)} 0 0 0 ${f(ax + rArc * cosA)} ${f(yBase - rArc * sinA)}", "none", "#d97706", 2f))
+        sb.append(tx(ax + (rArc + 14f) * cos(rad / 2.0).toFloat(), yBase - (rArc + 12f) * sin(rad / 2.0).toFloat() + 3f, "${num(ang)}°", "#b45309", "middle", true, 10))
+
+        // بردارهای یکه در راستای شیب به بالا uUp=(cosθ,-sinθ) و عمود بر سطح به بیرون uNorm=(-sinθ,-cosθ)
+        val uUpX = cosA; val uUpY = -sinA
+        val uNormX = -sinA; val uNormY = -cosA
+
+        // جرم m چرخیده با زاویهٔ دقیق θ مماس بر وتر سطح شیب‌دار
+        val tPos = 0.54f
+        val px = ax + tPos * (bx - ax)
+        val py = yBase + tPos * (cyPeak - yBase)
+        val bw = 42f; val bh = 26f
+        val p1x = px - (bw / 2f) * uUpX; val p1y = py - (bw / 2f) * uUpY
+        val p2x = px + (bw / 2f) * uUpX; val p2y = py + (bw / 2f) * uUpY
+        val p3x = p2x + bh * uNormX; val p3y = p2y + bh * uNormY
+        val p4x = p1x + bh * uNormX; val p4y = p1y + bh * uNormY
+        sb.append(poly("${f(p1x)},${f(p1y)} ${f(p2x)},${f(p2y)} ${f(p3x)},${f(p3y)} ${f(p4x)},${f(p4y)}", "rgba(108,99,245,.20)", ACC, 2f))
+
+        val cmX = px + (bh / 2f) * uNormX
+        val cmY = py + (bh / 2f) * uNormY
+        sb.append(cls(cmX, cmY, 3f, ST, "none", 0f))
+
+        if (show != "plain") {
+            val vMg = 52f
+            val vN = vMg * cosA
+            val vPar = max(22f, vMg * sinA)
+            // ۱) وزن mg قائم به پایین
+            sb.append(vecArrow(cmX, cmY, cmX, cmY + vMg, ACC, 2.2f, 7f))
+            sb.append(tx(cmX + 6f, cmY + vMg + 4f, "mg", ACC, "start", true, 10))
+            // ۲) نیروی عمودی تکیه‌گاه N عمود بر سطح به بیرون
+            sb.append(vecArrow(cmX, cmY, cmX + vN * uNormX, cmY + vN * uNormY, "#0d9488", 2.2f, 7f))
+            sb.append(tx(cmX + (vN + 11f) * uNormX, cmY + (vN + 11f) * uNormY + 3f, "N", "#0d9488", "middle", true, 11))
+            // ۳) مؤلفهٔ عمود بر سطح mg·cosθ (در خلاف جهت N)
+            sb.append(vecArrow(cmX, cmY, cmX - vN * uNormX, cmY - vN * uNormY, "#64748b", 1.5f, 6f, "4 3"))
+            // ۴) مؤلفهٔ موازی سطح به طرف پایین شیب: mg·sinθ (در جهت -uUp)
+            sb.append(vecArrow(cmX, cmY, cmX - vPar * uUpX, cmY - vPar * uUpY, PT, 2.3f, 7f))
+            sb.append(tx(cmX - (vPar + 8f) * uUpX - 4f, cmY - (vPar + 8f) * uUpY + 4f, "mg·sinθ", PT, "end", true, 10))
+            // ۵) نیروی اصطکاک f موازی سطح به طرف بالای شیب (وقتی μ > 0)
+            if (mu > 0.001f) {
+                val vF = min(vPar, max(20f, mu * vN))
+                sb.append(vecArrow(cmX, cmY, cmX + vF * uUpX, cmY + vF * uUpY, "#dc2626", 2.1f, 6.5f))
+                sb.append(tx(cmX + (vF + 8f) * uUpX + 4f, cmY + (vF + 8f) * uUpY, "f", "#dc2626", "start", true, 11))
+            }
+        } else {
+            sb.append(tx(cmX, cmY + 4f, "m", ST, "middle", true, 11))
+        }
+
+        if (show == "all") {
+            val fPar = mass * gVal * sinA
+            val nForce = mass * gVal * cosA
+            val fFric = mu * nForce
+            val acc = max(0f, (fPar - fFric) / mass)
+            val summary = if (mu > 0.001f) {
+                "m=${num(mass)}kg ، μ=${num(mu)}  |  N≈${num(nForce)}N ، a≈${num(acc)} m/s²"
+            } else {
+                "m=${num(mass)}kg  |  mg·sinθ≈${num(fPar)}N ، N≈${num(nForce)}N ، a≈${num(acc)} m/s²"
+            }
+            sb.append(rc(16f, 240f, 328f, 28f, "#f8fafc", "#cbd5e1", 1.2f, 7f))
+            sb.append(tx(180f, 258f, summary, "#1e293b", "middle", true, 10))
+        }
         return sb.toString()
     }
 
     private fun circuit(spec: FigureSpec): String {
-        val parallel = spec.xStr("mode", "series") == "parallel"
+        val mode = spec.xStr("mode", "series").lowercase() // series | parallel | mixed
         val r1 = max(0.5f, spec.xNum("r1", 4f))
         val r2 = max(0.5f, spec.xNum("r2", 6f))
-        val v = max(0.1f, spec.xNum("v", 12f))
-        val req = if (parallel) (r1 * r2) / (r1 + r2) else r1 + r2
-        val i = v / req
+        val r3 = max(0f, spec.xNum("r3", 0f))
+        val v = max(0.5f, spec.xNum("v", 12f))
+        val show = spec.xStr("show", "all").lowercase() // all | given
         val sb = StringBuilder()
-        sb.append(rc(46f, 96f, 16f, 84f, "#ffffff", ST, 1.8f, 3f))
-        sb.append(ln(46f, 110f, 62f, 110f, ST, 1.6f)).append(ln(46f, 166f, 62f, 166f, ST, 1.6f))
-        sb.append(ln(54f, 120f, 54f, 156f, ST, 1.4f)).append(ln(48f, 124f, 60f, 124f, ST, 1.4f)).append(ln(54f, 134f, 54f, 142f, ST, 1.4f))
-        sb.append(tx(38f, 142f, "V=" + num(v) + "V", MU, "middle", true, 10))
-        if (parallel) {
-            sb.append(ln(62f, 110f, 320f, 110f, ST, 1.8f)).append(ln(62f, 166f, 320f, 166f, ST, 1.8f)).append(ln(320f, 110f, 320f, 166f, ST, 1.8f))
-            sb.append(rc(128f, 96f, 64f, 28f, "rgba(108,99,245,.16)", ACC, 1.8f, 4f)).append(tx(160f, 114f, "R₁=" + num(r1) + "Ω", ST, "middle", true, 11))
-            sb.append(rc(128f, 152f, 64f, 28f, "rgba(39,196,168,.18)", "#1f8f7a", 1.8f, 4f)).append(tx(160f, 170f, "R₂=" + num(r2) + "Ω", ST, "middle", true, 11))
-            sb.append(tx(240f, 102f, "I₁=" + num((v / r1 * 100).roundToInt() / 100f) + "A", ACC, "start", true, 10))
-            sb.append(tx(240f, 186f, "I₂=" + num((v / r2 * 100).roundToInt() / 100f) + "A", "#1f8f7a", "start", true, 10))
-        } else {
-            sb.append(ln(62f, 110f, 120f, 110f, ST, 1.8f)).append(ln(120f, 96f, 188f, 96f, ST, 1.8f)).append(ln(188f, 110f, 320f, 110f, ST, 1.8f))
-            sb.append(ln(62f, 166f, 320f, 166f, ST, 1.8f)).append(ln(320f, 110f, 320f, 166f, ST, 1.8f))
-            sb.append(rc(120f, 82f, 68f, 28f, "rgba(108,99,245,.16)", ACC, 1.8f, 4f)).append(tx(154f, 100f, "R₁=" + num(r1) + "Ω", ST, "middle", true, 11))
-            sb.append(rc(212f, 82f, 68f, 28f, "rgba(39,196,168,.18)", "#1f8f7a", 1.8f, 4f)).append(tx(246f, 100f, "R₂=" + num(r2) + "Ω", ST, "middle", true, 11))
-            sb.append(ln(188f, 96f, 212f, 96f, ST, 1.8f))
-            sb.append(tx(262f, 138f, "I = " + num((i * 100).roundToInt() / 100f) + " A", ST, "middle", true, 11))
+
+        fun drawBattery(bx: Float, cy: Float) {
+            sb.append(ln(bx, cy - 16f, bx, cy + 16f, PT, 3.2f))
+            sb.append(ln(bx - 7f, cy - 9f, bx - 7f, cy + 9f, ST, 2.2f))
+            sb.append(tx(bx + 6f, cy - 18f, "+", PT, "start", true, 11))
+            sb.append(tx(bx - 16f, cy + 24f, "${num(v)}V", PT, "middle", true, 11))
         }
-        sb.append(tx(180f, 212f, (if (parallel) "مدار موازی" else "مدار سری") + "  ·  R کل = " + num((req * 100).roundToInt() / 100f) + " Ω", ST, "middle", true, 13))
-        sb.append(tx(180f, 234f, "جریان کل I = V ÷ R ≈ " + num((i * 100).roundToInt() / 100f) + " A", ACC, "middle", true, 12))
-        sb.append(tx(180f, 256f, if (parallel) "در موازی: ۱/R = ۱/R₁ + ۱/R₂ و ولتاژها برابر" else "در سری: R = R₁ + R₂ و جریان‌ها برابر", MU, "middle", false, 10))
+
+        fun drawAmmeter(ax: Float, ay: Float) {
+            sb.append(cls(ax, ay, 12f, "#ffffff", "#0d9488", 1.8f))
+            sb.append(tx(ax, ay + 4f, "A", "#0d9488", "middle", true, 11))
+        }
+
+        val req: Float
+        when (mode) {
+            "parallel" -> {
+                val hasR3 = r3 >= 0.5f
+                req = if (hasR3) 1f / (1f / r1 + 1f / r2 + 1f / r3) else (r1 * r2) / (r1 + r2)
+                // حلقهٔ اصلی چپ (باتری) + شاخه‌های موازی
+                sb.append(ln(54f, 44f, 298f, 44f, ST, 2f))
+                sb.append(ln(54f, 206f, 298f, 206f, ST, 2f))
+                sb.append(ln(54f, 44f, 54f, 112f, ST, 2f))
+                sb.append(ln(54f, 138f, 54f, 206f, ST, 2f))
+                drawBattery(54f, 125f)
+                drawAmmeter(96f, 44f)
+
+                val branchYs = if (hasR3) listOf(76f, 126f, 176f) else listOf(92f, 160f)
+                val branchRs = if (hasR3) listOf(r1, r2, r3) else listOf(r1, r2)
+                sb.append(ln(136f, branchYs.first(), 136f, branchYs.last(), ST, 2f))
+                sb.append(ln(298f, 44f, 298f, 206f, ST, 2f))
+                sb.append(ln(136f, 44f, 136f, branchYs.first(), ST, 2f))
+                sb.append(ln(136f, branchYs.last(), 136f, 206f, ST, 2f))
+
+                branchYs.forEachIndexed { idx, by ->
+                    sb.append(ln(136f, by, 182f, by, ST, 2f))
+                    sb.append(ln(252f, by, 298f, by, ST, 2f))
+                    sb.append(rc(182f, by - 12f, 70f, 24f, "rgba(108,99,245,.15)", ACC, 1.9f, 4f))
+                    sb.append(tx(217f, by + 4f, "R${idx + 1}=${num(branchRs[idx])}Ω", ST, "middle", true, 10))
+                }
+            }
+            "mixed" -> {
+                val r3Eff = if (r3 >= 0.5f) r3 else 6f
+                val rPar = (r2 * r3Eff) / (r2 + r3Eff)
+                req = r1 + rPar
+                sb.append(ln(52f, 54f, 104f, 54f, ST, 2f))
+                sb.append(rc(104f, 42f, 64f, 24f, "rgba(108,99,245,.15)", ACC, 1.9f, 4f))
+                sb.append(tx(136f, 58f, "R1=${num(r1)}Ω", ST, "middle", true, 10))
+                sb.append(ln(168f, 54f, 196f, 54f, ST, 2f))
+                // دو شاخهٔ موازی R2 و R3
+                sb.append(ln(196f, 34f, 196f, 78f, ST, 2f))
+                sb.append(ln(298f, 34f, 298f, 202f, ST, 2f))
+                listOf(34f to ("R2" to r2), 78f to ("R3" to r3Eff)).forEach { (by, pair) ->
+                    sb.append(ln(196f, by, 214f, by, ST, 2f))
+                    sb.append(rc(214f, by - 11f, 66f, 22f, "rgba(39,196,168,.16)", "#0d9488", 1.8f, 4f))
+                    sb.append(tx(247f, by + 4f, "${pair.first}=${num(pair.second)}Ω", ST, "middle", true, 9))
+                    sb.append(ln(280f, by, 298f, by, ST, 2f))
+                }
+                sb.append(ln(52f, 202f, 298f, 202f, ST, 2f))
+                sb.append(ln(52f, 54f, 52f, 202f, ST, 2f))
+                drawBattery(156f, 202f)
+                drawAmmeter(246f, 202f)
+            }
+            else -> {
+                val hasR3 = r3 >= 0.5f
+                req = if (hasR3) r1 + r2 + r3 else r1 + r2
+                // V326 — قطع سیم‌ها زیر مستطیل مقاومت‌ها تا خط زیر جعبه پوشیده نشود
+                if (hasR3) {
+                    sb.append(ln(50f, 64f, 78f, 64f, ST, 2f))
+                    sb.append(rc(78f, 51f, 60f, 26f, "rgba(108,99,245,.15)", ACC, 1.9f, 4f))
+                    sb.append(tx(108f, 68f, "R1=${num(r1)}Ω", ST, "middle", true, 9))
+                    sb.append(ln(138f, 64f, 156f, 64f, ST, 2f))
+                    sb.append(rc(156f, 51f, 60f, 26f, "rgba(108,99,245,.15)", ACC, 1.9f, 4f))
+                    sb.append(tx(186f, 68f, "R2=${num(r2)}Ω", ST, "middle", true, 9))
+                    sb.append(ln(216f, 64f, 234f, 64f, ST, 2f))
+                    sb.append(rc(234f, 51f, 60f, 26f, "rgba(108,99,245,.15)", ACC, 1.9f, 4f))
+                    sb.append(tx(264f, 68f, "R3=${num(r3)}Ω", ST, "middle", true, 9))
+                    sb.append(ln(294f, 64f, 312f, 64f, ST, 2f))
+                } else {
+                    sb.append(ln(50f, 64f, 94f, 64f, ST, 2f))
+                    sb.append(rc(94f, 50f, 72f, 28f, "rgba(108,99,245,.15)", ACC, 1.9f, 4f))
+                    sb.append(tx(130f, 68f, "R1 = ${num(r1)}Ω", ST, "middle", true, 10))
+                    sb.append(ln(166f, 64f, 200f, 64f, ST, 2f))
+                    sb.append(rc(200f, 50f, 72f, 28f, "rgba(108,99,245,.15)", ACC, 1.9f, 4f))
+                    sb.append(tx(236f, 68f, "R2 = ${num(r2)}Ω", ST, "middle", true, 10))
+                    sb.append(ln(272f, 64f, 312f, 64f, ST, 2f))
+                }
+                sb.append(ln(50f, 64f, 50f, 198f, ST, 2f))
+                sb.append(ln(312f, 64f, 312f, 198f, ST, 2f))
+                sb.append(ln(50f, 198f, 152f, 198f, ST, 2f))
+                sb.append(ln(166f, 198f, 240f, 198f, ST, 2f))
+                sb.append(ln(264f, 198f, 312f, 198f, ST, 2f))
+                sb.append(ln(152f, 182f, 152f, 214f, ST, 2.2f))
+                sb.append(ln(166f, 174f, 166f, 222f, PT, 3.2f))
+                sb.append(tx(159f, 168f, "${num(v)}V", PT, "middle", true, 11))
+                drawAmmeter(252f, 198f)
+            }
+        }
+
+        val curI = v / req
+        val powW = v * curI
+        if (show != "given") {
+            sb.append(rc(16f, 238f, 328f, 30f, "#f8fafc", "#cbd5e1", 1.2f, 7f))
+            sb.append(tx(180f, 258f, "R = ${num(req)} Ω   |   I = ${num(curI)} A   |   P = ${num(powW)} W", "#1e293b", "middle", true, 11))
+        }
         return sb.toString()
     }
 
     private fun optics(spec: FigureSpec): String {
-        val concave = spec.xStr("kind", "convex") == "concave"
-        val f = max(2f, spec.xNum("f", 10f))
-        val d = max(1f, spec.xNum("d", 30f))
-        val cx = 190f; val cy = 152f; val s = 2.4f
-        // V322 — وقتی فاصلهٔ جسم برابر فاصلهٔ کانونی بود (d = f) مخرج صفر می‌شد و موتور وب «Infinity» و
-        // موتور بومی مختصات ۲۱٬۴۷۴٬۸۳۶ تولید می‌کرد. حالا حالت «تصویر در بی‌نهایت» صریح نمایش داده می‌شود.
+        val concave = spec.xStr("kind", "convex").lowercase() == "concave"
+        val show = spec.xStr("show", "all").lowercase() // all | rays | blank
+        // V322 — دو باگ هندسی قبلی حفظ و هندسهٔ کامل عدسی محدب/مقعر + پرتوهای مجازی اصلاح شد:
+        val f = spec.xNum("f", 10f).coerceIn(2f, 25f)
+        val d = spec.xNum("d", 30f).coerceIn(2f, 60f)
         val atFocus = !concave && abs(d - f) < 0.05f
-        val di = when {
-            atFocus -> Float.POSITIVE_INFINITY
-            concave -> (f * d) / (d + f)
-            else -> (f * d) / (d - f)
-        }
+        val lx = 180f; val oy = 128f
+        val sc = (130f / max(max(d, 2f * f), 20f)).coerceIn(2.0f, 5.2f)
+        val fPx = f * sc
+        val dPx = d * sc
+
         val sb = StringBuilder()
-        sb.append(ln(36f, cy, 330f, cy, ST, 1.6f)).append(arrowHeadRight(330f, cy))
-        sb.append(path("M $cx ${f(cy - 74f)} Q ${f(cx + 22f)} ${f(cy)} $cx ${f(cy + 74f)}", "none", ACC, 2.4f))
-        if (concave) sb.append(path("M $cx ${f(cy - 74f)} Q ${f(cx + 10f)} ${f(cy)} $cx ${f(cy + 74f)}", "none", ACC, 2.4f))
-        sb.append(tx(cx + 26f, cy - 82f, if (concave) "عدسی مقعر" else "عدسی محدب", ACC, "middle", true, 11))
-        // V322 — با فاصلهٔ کانونی/جسم بزرگ، کانون‌ها و جسم بیرون از بوم می‌افتادند؛ به عرض بوم مهار می‌شوند.
-        val fp = (f * s).coerceIn(12f, 120f)
-        sb.append(cls(cx - fp, cy, 3.4f, PT, "none", 0f)).append(cls(cx + fp, cy, 3.4f, PT, "none", 0f))
-        sb.append(tx(cx - fp, cy + 16f, "F", PT, "middle", true, 11)).append(tx(cx + fp, cy + 16f, "F'", PT, "middle", true, 11))
-        val ox = (cx - d * s).coerceIn(24f, cx - 12f)
-        val oh = 46f
-        sb.append(ln(ox, cy, ox, cy - oh, "#1f8f7a", 2.4f))
-        sb.append(poly("${f(ox - 4f)},${f(cy - oh + 8f)} ${f(ox + 4f)},${f(cy - oh + 8f)} ${f(ox)},${f(cy - oh)}", "#1f8f7a", "none", 0f))
-        sb.append(tx(ox, cy + 18f, "جسم", "#1f8f7a", "middle", true, 10))
-        if (!atFocus) {
-            val ix = (cx + di * s).coerceIn(28f, 332f)
-            val ih = (oh * (di / d)).coerceIn(-120f, 120f)
-            sb.append(ln(ix, cy, ix, cy + ih, GLD, 2.4f))
-            sb.append(poly("${f(ix - 4f)},${f(cy + ih - 8f)} ${f(ix + 4f)},${f(cy + ih - 8f)} ${f(ix)},${f(cy + ih)}", GLD, "none", 0f))
-            sb.append(tx(ix, cy - 8f, "تصویر", GLD, "middle", true, 10))
+        // محور اصلی نوری
+        sb.append(ln(16f, oy, 344f, oy, "#64748b", 1.4f))
+
+        // رسم دقیق عدسی دوطرفه (محدب همگرا یا مقعر واگرا) + محور تقارن عدسی
+        val topY = 48f; val botY = 208f
+        if (!concave) {
+            sb.append(path("M ${f(lx)} ${f(topY)} Q ${f(lx + 16f)} ${f(oy)} ${f(lx)} ${f(botY)} Q ${f(lx - 16f)} ${f(oy)} ${f(lx)} ${f(topY)} Z", "rgba(56,189,248,.18)", "#0284c7", 2f))
+            sb.append(poly("${f(lx)},${f(topY - 4f)} ${f(lx - 5f)},${f(topY + 5f)} ${f(lx + 5f)},${f(topY + 5f)}", "#0284c7", "none", 0f))
+            sb.append(poly("${f(lx)},${f(botY + 4f)} ${f(lx - 5f)},${f(botY - 5f)} ${f(lx + 5f)},${f(botY - 5f)}", "#0284c7", "none", 0f))
         } else {
-            sb.append(tx(180f, 126f, "جسم روی کانون — تصویر در بی‌نهایت", PT, "middle", true, 11))
+            sb.append(path("M ${f(lx - 11f)} ${f(topY)} L ${f(lx + 11f)} ${f(topY)} Q ${f(lx + 3f)} ${f(oy)} ${f(lx + 11f)} ${f(botY)} L ${f(lx - 11f)} ${f(botY)} Q ${f(lx - 3f)} ${f(oy)} ${f(lx - 11f)} ${f(topY)} Z", "rgba(56,189,248,.18)", "#0284c7", 2f))
         }
-        sb.append(ln(ox, cy - oh, cx, cy - oh, MU, 1.1f, "4 4"))
-        sb.append(ln(cx, cy - oh, cx + fp, cy, MU, 1.1f, "4 4"))
-        sb.append(ln(ox, cy - oh, cx, cy, MU, 1.2f))
-        sb.append(tx(180f, 234f, "۱/f = ۱/فاصلهٔ جسم + ۱/فاصلهٔ تصویر", ST, "middle", true, 12))
-        val diText = if (atFocus) "بی‌نهایت" else num((di * 100).roundToInt() / 100f) + " cm"
-        val magText = if (atFocus) "—" else num((abs(di / d) * 100).roundToInt() / 100f) + " برابر"
-        sb.append(tx(180f, 254f, "f = " + num(f) + " cm · d = " + num(d) + " cm → تصویر در " + diText, ACC, "middle", true, 11))
-        sb.append(tx(180f, 272f, "بزرگنمایی = " + magText, MU, "middle", false, 10))
+        sb.append(ln(lx, topY, lx, botY, "#0284c7", 1f, "3 3"))
+        sb.append(tx(lx + 5f, oy + 14f, "O", MU, "start", true, 9))
+
+        // نقاط کانونی F، 2F و F'، 2F'
+        listOf(
+            (lx - fPx) to "F", (lx + fPx) to "F'",
+            (lx - 2f * fPx) to "2F", (lx + 2f * fPx) to "2F'"
+        ).forEach { (pxPt, lbl) ->
+            if (pxPt in 22f..338f) {
+                sb.append(cls(pxPt, oy, 3f, "#d97706", "none", 0f))
+                sb.append(tx(pxPt, oy + 15f, lbl, "#b45309", "middle", true, 9))
+            }
+        }
+
+        // جسم AB در سمت چپ عدسی
+        val objX = (lx - dPx).coerceIn(24f, lx - 14f)
+        val objH = 44f
+        val objTop = oy - objH
+        sb.append(vecArrow(objX, oy, objX, objTop, "#0d9488", 2.6f, 7.5f))
+        sb.append(tx(objX, oy + 26f, "جسم", "#0f766e", "middle", true, 9))
+
+        val fSigned = if (concave) -f else f
+        val di = if (atFocus) 9999f else 1f / (1f / fSigned - 1f / d)
+        val mag = if (atFocus) 0f else -di / d // منفی = وارونه، مثبت = مستقیم
+
+        if (show != "blank") {
+            // پرتو ۱: موازی محور اصلی تا عدسی
+            sb.append(ln(objX, objTop, lx, objTop, "#ea580c", 1.8f))
+
+            if (atFocus) {
+                // جسم روی کانون عدسی همگرا → پرتوهای خروجی موازی، تصویر در بی‌نهایت
+                val slope = objH / fPx
+                val xEnd = 340f
+                sb.append(ln(lx, objTop, xEnd, objTop + slope * (xEnd - lx), "#ea580c", 1.8f))
+                sb.append(ln(objX, objTop, xEnd, oy + slope * (xEnd - lx), PT, 1.7f))
+            } else if (!concave && di > 0f) {
+                // عدسی محدب با d > f: تصویر حقیقی و وارونه در سمت راست
+                val rawImgX = lx + di * sc
+                val imgX = rawImgX.coerceIn(lx + 14f, 336f)
+                val imgH = (objH * abs(mag)).coerceIn(10f, 74f)
+                val imgTipY = oy + imgH
+                sb.append(ln(lx, objTop, imgX, imgTipY, "#ea580c", 1.8f))
+                sb.append(ln(objX, objTop, imgX, imgTipY, PT, 1.7f))
+                if (show == "all") {
+                    sb.append(vecArrow(imgX, oy, imgX, imgTipY, ACC, 2.5f, 7f))
+                }
+            } else if (!concave && di < 0f) {
+                // عدسی محدب با d < f (ذره‌بین): پرتوها واگرا و امتداد مجازی در سمت چپ برخورد می‌کنند
+                val imgX = (lx + di * sc).coerceIn(20f, lx - 10f)
+                val imgH = (objH * abs(mag)).coerceIn(18f, 76f)
+                val imgTipY = oy - imgH
+                val slope1 = objH / fPx
+                sb.append(ln(lx, objTop, 338f, (objTop + slope1 * (338f - lx)).coerceIn(36f, 224f), "#ea580c", 1.8f))
+                sb.append(ln(lx, objTop, imgX, imgTipY, "#ea580c", 1.5f, "4 3"))
+                val slope2 = objH / (lx - objX)
+                sb.append(ln(objX, objTop, 338f, (oy + slope2 * (338f - lx)).coerceIn(36f, 224f), PT, 1.7f))
+                sb.append(ln(objX, objTop, imgX, imgTipY, PT, 1.5f, "4 3"))
+                if (show == "all") {
+                    sb.append(vecArrow(imgX, oy, imgX, imgTipY, ACC, 2.3f, 6.5f, "4 3"))
+                }
+            } else {
+                // عدسی مقعر (واگرا): پرتو موازی طوری واگرا می‌شود که امتداد مجازی‌اش از کانون چپ F بگذرد!
+                val fLeftX = lx - fPx
+                val slopeDiv = (objTop - oy) / (lx - fLeftX) // منفی (رو به بالا در سمت راست)
+                sb.append(ln(lx, objTop, 338f, (objTop + slopeDiv * (338f - lx)).coerceIn(34f, 220f), "#ea580c", 1.8f))
+                sb.append(ln(lx, objTop, fLeftX.coerceAtLeast(20f), oy, "#ea580c", 1.5f, "4 3"))
+                // پرتو دوم از مرکز نوری O
+                val slopeO = (oy - objTop) / (lx - objX)
+                sb.append(ln(objX, objTop, 338f, (oy + slopeO * (338f - lx)).coerceIn(34f, 224f), PT, 1.7f))
+                val imgX = (lx + di * sc).coerceIn(fLeftX + 4f, lx - 6f)
+                val imgH = (objH * abs(mag)).coerceIn(10f, objH - 4f)
+                if (show == "all") {
+                    sb.append(vecArrow(imgX, oy, imgX, oy - imgH, ACC, 2.3f, 6f, "4 3"))
+                }
+            }
+        }
+
+        val diText = if (atFocus) "بی‌نهایت" else "${num(di)} cm"
+        val kindInfo = when {
+            atFocus -> "پرتوهای خروجی موازی"
+            di > 0f -> "حقیقی و وارونه"
+            else -> "مجازی و مستقیم"
+        }
+        if (show == "all") {
+            sb.append(rc(14f, 240f, 332f, 28f, "#f8fafc", "#cbd5e1", 1.2f, 7f))
+            sb.append(tx(180f, 258f, "f=${num(f)}cm ، p=${num(d)}cm  →  q = $diText ($kindInfo)", "#1e293b", "middle", true, 10))
+        } else {
+            sb.append(tx(180f, 258f, "عدسی ${if (concave) "مقعر (واگرا)" else "محدب (همگرا)"}:  f = ${num(f)} cm ، p = ${num(d)} cm", MU, "middle", true, 11))
+        }
         return sb.toString()
     }
 
     private fun heatCurve(spec: FigureSpec): String {
-        val x0 = 62f; val y0 = 214f; val w = 260f; val h = 160f
-        fun px(u: Float) = x0 + u / 100f * w
-        fun py(v: Float) = y0 - (v + 15f) / 130f * h
+        val t0 = spec.xNum("t0", -20f).coerceIn(-60f, -2f)
+        val t1 = spec.xNum("t1", 120f).coerceIn(105f, 180f)
+        val massG = max(1f, spec.xNum("m", 100f))
+        val mode = spec.xStr("mode", "full").lowercase() // full | stages | quiz
+
+        val x0 = 52f; val y0 = 212f; val w = 278f; val h = 166f
         val sb = StringBuilder()
-        sb.append(ln(x0 - 8f, y0, x0 + w + 6f, y0, ST, 1.6f)).append(ln(x0 - 8f, y0, x0 - 8f, y0 - h - 8f, ST, 1.6f))
-        sb.append(tx(x0 + w / 2f, y0 + 20f, "گرما (زمان)", MU, "middle", true, 10))
-        sb.append(tx(x0 - 20f, y0 - h - 4f, "دما", MU, "middle", true, 10))
-        sb.append(path("M ${f(px(0f))} ${f(py(-10f))} L ${f(px(20f))} ${f(py(0f))} L ${f(px(40f))} ${f(py(0f))} L ${f(px(60f))} ${f(py(100f))} L ${f(px(80f))} ${f(py(100f))} L ${f(px(100f))} ${f(py(110f))}", "none", ACC, 2.6f))
-        sb.append(ln(x0 - 12f, py(0f), x0 + w, py(0f), GR, 1f, "4 4"))
-        sb.append(tx(x0 - 18f, py(0f) + 4f, "۰°C", PT, "end", true, 10))
-        sb.append(ln(x0 - 12f, py(100f), x0 + w, py(100f), GR, 1f, "4 4"))
-        sb.append(tx(x0 - 18f, py(100f) + 4f, "۱۰۰°C", PT, "end", true, 10))
-        sb.append(tx(px(10f), py(-4f) - 10f, "جامد", ST, "middle", true, 10))
-        sb.append(tx(px(30f), py(0f) - 12f, "ذوب (دما ثابت)", PT, "middle", true, 10))
-        sb.append(tx(px(50f), py(50f), "مایع", ST, "middle", true, 10))
-        sb.append(tx(px(70f), py(100f) - 12f, "جوش (دما ثابت)", PT, "middle", true, 10))
-        sb.append(tx(px(92f), py(108f) + 12f, "بخار", ST, "middle", true, 10))
-        sb.append(tx(180f, 250f, "منحنی گرمایش آب — در نقطهٔ ذوب و جوش دما تغییر نمی‌کند", MU, "middle", true, 11))
-        sb.append(tx(180f, 270f, "گرمای نهان: Q = mL  ·  گرمای ویژه: Q = mcΔT", MU, "middle", false, 10))
+        fun px(u: Float) = x0 + u / 100f * w
+        fun py(v: Float) = y0 - ((v - (t0 - 5f)) / ((t1 + 10f) - (t0 - 5f))).coerceIn(0f, 1f) * h
+
+        // خطوط راهنمای دمای ذوب ۰°C و جوش ۱۰۰°C
+        sb.append(ln(x0, py(0f), x0 + w, py(0f), "#cbd5e1", 1.2f, "4 4"))
+        sb.append(ln(x0, py(100f), x0 + w, py(100f), "#cbd5e1", 1.2f, "4 4"))
+        sb.append(ln(x0, y0, x0 + w + 8f, y0, ST, 1.8f)); sb.append(arrowHeadRight(x0 + w + 8f, y0))
+        sb.append(ln(x0, y0 - h - 10f, x0, y0, ST, 1.8f)); sb.append(arrowHeadUp(x0, y0 - h - 10f))
+
+        sb.append(tx(x0 - 6f, py(t0) + 4f, "${num(t0)}°", MU, "end", true, 9))
+        sb.append(tx(x0 - 6f, py(0f) + 4f, "0°C", "#0284c7", "end", true, 10))
+        sb.append(tx(x0 - 6f, py(100f) + 4f, "100°C", PT, "end", true, 10))
+        sb.append(tx(x0 + 8f, y0 - h - 2f, "دما (°C)", MU, "start", true, 10))
+
+        // ۵ مرحلهٔ گرمایش: ۱) یخ، ۲) ذوب در ۰°C، ۳) آب مایع، ۴) تبخیر در ۱۰۰°C، ۵) بخار
+        val pts = listOf(0f to t0, 14f to 0f, 36f to 0f, 60f to 100f, 88f to 100f, 100f to t1)
+        for (i in 0 until pts.size - 1) {
+            val isPhaseChange = i == 1 || i == 3
+            sb.append(ln(px(pts[i].first), py(pts[i].second), px(pts[i + 1].first), py(pts[i + 1].second), if (isPhaseChange) PT else ACC, 2.8f))
+            sb.append(cls(px(pts[i].first), py(pts[i].second), 3.2f, if (isPhaseChange) PT else ACC, "#ffffff", 1f))
+        }
+        sb.append(cls(px(100f), py(t1), 3.2f, ACC, "#ffffff", 1f))
+
+        if (mode == "quiz") {
+            sb.append(tx(px(7f), py(t0 / 2f) - 8f, "(۱)", ST, "middle", true, 10))
+            sb.append(tx(px(25f), py(0f) - 8f, "(۲)", PT, "middle", true, 10))
+            sb.append(tx(px(48f), py(50f) - 8f, "(۳)", ST, "middle", true, 10))
+            sb.append(tx(px(74f), py(100f) - 8f, "(۴)", PT, "middle", true, 10))
+            sb.append(tx(px(94f), py((100f + t1) / 2f) - 8f, "(۵)", ST, "middle", true, 10))
+            sb.append(tx(180f, 254f, "گرمای کل Q — مراحل (۱) تا (۵) منحنی گرمایش (${num(massG)}g آب) را مشخص کنید", MU, "middle", true, 10))
+        } else {
+            sb.append(tx(px(8f), py(t0 / 2f) - 8f, "یخ", "#0284c7", "middle", true, 10))
+            sb.append(tx(px(25f), py(0f) - 8f, if (mode == "full") "ذوب (mLf)" else "ذوب", PT, "middle", true, 9))
+            sb.append(tx(px(47f), py(52f) - 8f, "آب", ACC, "middle", true, 10))
+            sb.append(tx(px(74f), py(100f) - 8f, if (mode == "full") "جوش (mLv)" else "تبخیر", PT, "middle", true, 9))
+            sb.append(tx(px(94f), py((100f + t1) / 2f) - 8f, "بخار", "#d97706", "middle", true, 10))
+
+            // محاسبهٔ واقعی گرمای کل بر حسب کیلوژول برای m گرم آب
+            val qIce = massG * 2.1f * abs(t0)
+            val qMelt = massG * 334f
+            val qWater = massG * 4.18f * 100f
+            val qBoil = massG * 2260f
+            val qSteam = massG * 2.0f * (t1 - 100f)
+            val qTotalKj = (qIce + qMelt + qWater + qBoil + qSteam) / 1000f
+            sb.append(rc(20f, 236f, 320f, 28f, "#f8fafc", "#cbd5e1", 1.2f, 7f))
+            sb.append(tx(180f, 254f, "جرم m = ${num(massG)}g  |  گرمای کل ذوب و تبخیر: Q ≈ ${num(qTotalKj)} kJ", "#1e293b", "middle", true, 10))
+        }
         return sb.toString()
     }
 
     private fun dna(spec: FigureSpec): String {
-        val flat = spec.xStr("mode", "helix") == "flat"
-        val seq = spec.xStr("seq", "ATGC").uppercase().take(6).ifBlank { "ATGC" }
-        fun pair(b: Char) = when (b) { 'A' -> 'T'; 'T' -> 'A'; 'G' -> 'C'; 'C' -> 'G'; else -> '?' }
+        val mode = spec.xStr("mode", "helix").lowercase() // helix | flat | mrna | quiz
+        val showLabel = spec.xStr("label", "1") != "0"
+        val seq = spec.xStr("seq", "ATGCGATC").uppercase().filter { it in "ATGC" }.take(10).ifEmpty { "ATGC" }
         val sb = StringBuilder()
-        if (flat) {
-            sb.append(ln(96f, 52f, 96f, 224f, ACC, 2.6f)).append(ln(264f, 52f, 264f, 224f, ACC, 2.6f))
-            seq.forEachIndexed { i, ch ->
-                val y = 68f + i * 26f
-                sb.append(ln(96f, y, 264f, y, GR, 1.8f))
-                sb.append(tx(86f, y + 5f, ch.toString(), PT, "end", true, 13))
-                sb.append(tx(274f, y + 5f, pair(ch).toString(), "#1f8f7a", "start", true, 13))
-                sb.append(tx(180f, y + 5f, if (ch == 'A' || ch == 'T') "۲ پیوند هیدروژنی" else "۳ پیوند هیدروژنی", MU, "middle", false, 9))
+
+        fun compDna(b: Char) = when (b) { 'A' -> 'T'; 'T' -> 'A'; 'G' -> 'C'; 'C' -> 'G'; else -> 'T' }
+        fun compRna(b: Char) = when (b) { 'A' -> 'U'; 'T' -> 'A'; 'G' -> 'C'; 'C' -> 'G'; else -> 'U' }
+        fun baseCol(b: Char) = when (b) { 'A' -> ACC; 'T' -> PT; 'G' -> "#0d9488"; 'C' -> "#d97706"; 'U' -> "#ea580c"; else -> MU }
+        fun hBonds(b: Char) = if (b == 'G' || b == 'C') 3 else 2
+
+        val totalHBonds = seq.sumOf { hBonds(it) }
+        val gcPct = kotlin.math.round(seq.count { it == 'G' || it == 'C' } * 100f / seq.length).toInt()
+
+        if (mode == "flat" || mode == "mrna" || mode == "quiz") {
+            val isRna = mode == "mrna"
+            val isQuiz = mode == "quiz"
+            val n = seq.length
+            val xL = 38f; val xR = 322f
+            val step = (xR - xL) / (n + 0.4f)
+            val yTop = 66f; val yBot = 178f
+
+            // ستون فقرات قند-فسفات با جهت 5'→3' و 3'→5'
+            sb.append(ln(xL, yTop, xR, yTop, ST, 3.2f))
+            sb.append(ln(xL, yBot, xR, yBot, if (isRna) "#ea580c" else ST, 3.2f))
+            sb.append(tx(22f, yTop + 4f, "5'", ACC, "middle", true, 11))
+            sb.append(tx(340f, yTop + 4f, "3'", ACC, "middle", true, 11))
+            sb.append(tx(22f, yBot + 4f, if (isRna) "3'" else "3'", PT, "middle", true, 11))
+            sb.append(tx(340f, yBot + 4f, if (isRna) "5'" else "5'", PT, "middle", true, 11))
+
+            for (i in 0 until n) {
+                val x = xL + (i + 0.7f) * step
+                val b1 = seq[i]
+                val b2 = if (isRna) compRna(b1) else compDna(b1)
+                val hb = hBonds(b1)
+
+                // خطوط پیوند هیدروژنی دوگانه (A=T) و سه‌گانه (G≡C)
+                val offsets = if (hb == 3) listOf(-3.5f, 0f, 3.5f) else listOf(-2.2f, 2.2f)
+                offsets.forEach { dx ->
+                    sb.append(ln(x + dx, yTop + 26f, x + dx, yBot - 26f, "#94a3b8", 1.3f, "3 2"))
+                }
+
+                // باز رشتهٔ اول (الگو)
+                sb.append(rc(x - 12f, yTop + 4f, 24f, 22f, "#ffffff", baseCol(b1), 1.8f, 5f))
+                sb.append(tx(x, yTop + 19f, b1.toString(), baseCol(b1), "middle", true, 12))
+
+                // باز رشتهٔ مکمل (یا خانهٔ خالی در حالت آزمون quiz)
+                if (isQuiz) {
+                    sb.append(rcDash(x - 12f, yBot - 26f, 24f, 22f, "#f8fafc", "#4f46e5", 1.5f, 5f, "4 2"))
+                } else {
+                    sb.append(rc(x - 12f, yBot - 26f, 24f, 22f, "#ffffff", baseCol(b2), 1.8f, 5f))
+                    sb.append(tx(x, yBot - 11f, b2.toString(), baseCol(b2), "middle", true, 12))
+                }
             }
-            sb.append(tx(180f, 244f, "DNA — دو رشتهٔ مکمل و جفت‌بازهای A–T و G–C", ST, "middle", true, 12))
+
+            if (showLabel) {
+                val foot = when {
+                    isQuiz -> "رشتهٔ مکمل را بنویسید (A=T با ۲ پیوند و G≡C با ۳ پیوند هیدروژنی)"
+                    isRna -> "رونویسی DNA به mRNA (جایگزینی U به‌جای T) — GC = $gcPct%"
+                    else -> "جفت‌بازهای مکمل (5'→3' / 3'→5'):  مجموع پیوند هیدروژنی = $totalHBonds  |  GC = $gcPct%"
+                }
+                sb.append(rc(14f, 228f, 332f, 30f, "#f8fafc", "#cbd5e1", 1.2f, 7f))
+                sb.append(tx(180f, 248f, foot, "#1e293b", "middle", true, 10))
+            }
             return sb.toString()
         }
-        val d1 = StringBuilder(); val d2 = StringBuilder()
-        for (i in 0..60) {
-            val x = 70f + i * 3.6f
-            val ph = i / 60.0 * PI * 4
-            d1.append(if (i == 0) "M " else " L ").append(f(x)).append(' ').append(f(132f + 34f * sin(ph).toFloat()))
-            d2.append(if (i == 0) "M " else " L ").append(f(x)).append(' ').append(f(132f - 34f * sin(ph).toFloat()))
+
+        // مارپیچ دوگانهٔ DNA با نمایش جفت‌بازها، جهت دو رشته و آمار پیوندهای هیدروژنی
+        sb.append(tx(34f, 34f, "5'", ACC, "middle", true, 11))
+        sb.append(tx(326f, 34f, "3'", PT, "middle", true, 11))
+        val nPts = 54
+        var p1 = ""; var p2 = ""
+        for (i in 0..nPts) {
+            val t = i.toFloat() / nPts
+            val x = 36f + t * 288f
+            val y1 = 122f + 46f * sin(t * 2.2 * PI).toFloat()
+            val y2 = 122f - 46f * sin(t * 2.2 * PI).toFloat()
+            p1 += (if (i == 0) "M " else " L ") + "${f(x)} ${f(y1)}"
+            p2 += (if (i == 0) "M " else " L ") + "${f(x)} ${f(y2)}"
         }
-        sb.append(path(d1.toString(), "none", ACC, 2.6f)).append(path(d2.toString(), "none", PT, 2.6f))
-        for (i in 0..8) {
-            val x = 74f + i * 27f
-            val ph = (x - 70f) / 3.6f / 60.0 * PI * 4
-            val y1 = 132f + 34f * sin(ph).toFloat()
-            val y2 = 132f - 34f * sin(ph).toFloat()
-            sb.append(ln(x, y1, x, y2, GR, 1.4f))
-            if (i < seq.length) {
-                sb.append(tx(x - 5f, y1 + 4f, seq[i].toString(), ST, "end", true, 10))
-                sb.append(tx(x + 5f, y2 + 4f, pair(seq[i]).toString(), ST, "start", true, 10))
+
+        val rungs = seq.length.coerceIn(4, 10)
+        for (k in 0 until rungs) {
+            val t = (k + 0.5f) / rungs
+            val x = 36f + t * 288f
+            val s = sin(t * 2.2 * PI).toFloat()
+            val y1 = 122f + 46f * s
+            val y2 = 122f - 46f * s
+            val b1 = seq[k % seq.length]
+            val b2 = compDna(b1)
+            val ym = (y1 + y2) / 2f
+            sb.append(ln(x, y1, x, ym - 2f, baseCol(b1), 2.6f))
+            sb.append(ln(x, ym + 2f, x, y2, baseCol(b2), 2.6f))
+            if (abs(y1 - y2) > 26f) {
+                sb.append(rc(x - 8f, y1 + (if (y2 > y1) 4f else -18f), 16f, 14f, "#ffffff", baseCol(b1), 1f, 3f))
+                sb.append(tx(x, y1 + (if (y2 > y1) 14f else -8f), b1.toString(), baseCol(b1), "middle", true, 9))
+                sb.append(rc(x - 8f, y2 + (if (y1 > y2) 4f else -18f), 16f, 14f, "#ffffff", baseCol(b2), 1f, 3f))
+                sb.append(tx(x, y2 + (if (y1 > y2) 14f else -8f), b2.toString(), baseCol(b2), "middle", true, 9))
             }
         }
-        sb.append(tx(180f, 214f, "مارپیچ دوگانهٔ DNA — پیوند فسفودی‌استر و جفت‌بازهای مکمل", ST, "middle", true, 11))
-        sb.append(tx(180f, 236f, "A با T و G با C جفت می‌شوند", MU, "middle", false, 10))
-        sb.append(tx(180f, 256f, "توالی نمونه: $seq", ACC, "middle", true, 11))
+        sb.append(path(p1, "none", ACC, 3.2f))
+        sb.append(path(p2, "none", PT, 3.2f))
+
+        if (showLabel) {
+            sb.append(rc(16f, 232f, 328f, 30f, "#f8fafc", "#cbd5e1", 1.2f, 7f))
+            sb.append(tx(180f, 252f, "مارپیچ دوگانهٔ DNA ($seq) — پیوند هیدروژنی: $totalHBonds  |  GC: $gcPct%", "#1e293b", "middle", true, 10))
+        }
         return sb.toString()
     }
 
@@ -1105,6 +1782,10 @@ object NextMathSvgRenderer {
         "<rect x=\"${f(x)}\" y=\"${f(y)}\" width=\"${f(w)}\" height=\"${f(h)}\"" +
             (if (rx > 0f) " rx=\"${f(rx)}\"" else "") + " fill=\"$fill\"" +
             (if (stroke.isNotBlank() && stroke != "none") " stroke=\"$stroke\" stroke-width=\"${f(sw)}\"" else "") + "/>"
+
+    private fun rcDash(x: Float, y: Float, w: Float, h: Float, fill: String, stroke: String, sw: Float, rx: Float = 0f, dash: String = "4 2"): String =
+        "<rect x=\"${f(x)}\" y=\"${f(y)}\" width=\"${f(w)}\" height=\"${f(h)}\"" +
+            (if (rx > 0f) " rx=\"${f(rx)}\"" else "") + " fill=\"$fill\" stroke=\"$stroke\" stroke-width=\"${f(sw)}\" stroke-dasharray=\"$dash\"/>"
 
     private fun cls(cx: Float, cy: Float, r: Float, fill: String, stroke: String, sw: Float): String =
         "<circle cx=\"${f(cx)}\" cy=\"${f(cy)}\" r=\"${f(r)}\" fill=\"$fill\"" +

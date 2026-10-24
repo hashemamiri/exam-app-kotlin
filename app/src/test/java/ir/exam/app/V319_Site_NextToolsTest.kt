@@ -13,12 +13,13 @@ class V319_Site_NextToolsTest {
     }
 
     private val ids = listOf(
-        "axunitconv", "axperimeter", "axpictograph", "axrounding", "axdivision", "axshapeid",
+        "axunitconv", "axperimeter", "axrounding",
         "axcircleparts", "axcylinder", "axproportion", "axlinear", "axbarchart", "axparabola",
         "axinthales", "axpendulum", "axincline", "axcircuit", "axoptics", "axheatcurve",
-        "axdna", "axcell", "axtimeline", "axmapgeo", "axsentence", "axvectors", "axmatrix",
+        "axdna", "axtimeline", "axmapgeo", "axsentence", "axvectors", "axmatrix",
         "axintegral", "axflowchart", "axstack", "axsort", "axregression"
     )
+    private val legacyRemovedIds = listOf("axpictograph", "axdivision", "axshapeid", "axcell")
 
     @Test
     fun webEngineRendersFieldsIconsAndDropdownsForEveryNextTool() {
@@ -28,6 +29,9 @@ class V319_Site_NextToolsTest {
             assertTrue("Missing fields for $k", g.contains(" $k: ["))
             assertTrue("Missing icon for $k", g.contains("      $k: '<"))
             assertTrue("Missing type in engine for $k", g.contains("if (t === '$k')"))
+        }
+        for (k in legacyRemovedIds) {
+            assertTrue("Missing legacy type in engine for $k", g.contains("if (t === '$k')"))
         }
     }
 
@@ -46,7 +50,7 @@ class V319_Site_NextToolsTest {
     @Test
     fun cycleAndStepParametersAreWiredInWebEngine() {
         val g = File(root(), "app/src/main/assets/print/web/graph_fig.js").readText()
-        assertTrue("unit conv cycle", g.contains("axunitconv: ['kind', ['len', 'mass', 'area']]"))
+        assertTrue("unit conv cell editor", g.contains("state.t === 'axunitconv'"))
         assertTrue("numstep table", g.contains("var NUMSTEP = {"))
         assertTrue("sort step", g.contains("axsort: ['step',"))
         assertTrue("rounding step", g.contains("axrounding: ['n',"))

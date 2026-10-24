@@ -171,18 +171,18 @@ object PrimaryMathSvgRenderer {
     }
 
     // ------------------------------------------------------ ارزش مکانی (میلیارد تا یکی؛ چند ردیف و علامت + / −)
-    /** عرض بوم: چرتکهٔ ۶ستونی (یکان تا صدگان هزار) فضای عریض‌تر ۴۶۰ واحدی دارد تا برچسب‌ها و مهره‌ها کاملاً جا شوند. */
+    /** عرض بوم: چرتکهٔ ۶ستونی و درخت احتمال ۳/۴مرحله‌ای فضای عریض‌تر دارند تا برچسب‌ها و گره‌ها کاملاً جا شوند. */
     fun canvasWidth(spec: FigureSpec): Float = when (spec.type) {
         "axabacus" -> 460f
-        else -> 360f
+        else -> AdvancedMathSvgRenderer.canvasWidth(spec)
     }
 
-    /** ارتفاع بوم: دسته‌های ده‌تایی، جدول ارزش مکانی و چرتکهٔ ستونی ارتفاع اختصاصی دارند. */
+    /** ارتفاع بوم: دسته‌های ده‌تایی، جدول ارزش مکانی، چرتکه و درخت احتمال ۳/۴مرحله‌ای ارتفاع اختصاصی دارند. */
     fun canvasHeight(spec: FigureSpec): Float = when (spec.type) {
         "axbase10" -> 370f
         "axabacus" -> 310f
         "axplace" -> max(280f, 80f * 1f + 40f * placeRows(spec) + 60f)
-        else -> 280f
+        else -> AdvancedMathSvgRenderer.canvasHeight(spec)
     }
 
     private fun placeRows(spec: FigureSpec): Int = spec.xNum("rows", 3f).toInt().coerceIn(1, 6)

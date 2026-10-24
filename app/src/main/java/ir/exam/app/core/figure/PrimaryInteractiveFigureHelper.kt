@@ -366,19 +366,83 @@ object PrimaryInteractiveFigureHelper {
     }
 
     // =========================================================================
-    // ۱۱) تقویم ماهانه، جدول ضرب پازل، چرخ ضرب و جمع، هرم اعداد
+    // ۱۱) خانه‌ها و گره‌های تعاملی (دبستان، متوسطه و کنکور)
     // =========================================================================
+
+    val KEYED_CELL_TYPES: Set<String> = setOf(
+        "axcalendar", "axmultgrid", "axmulwheel", "axtower",
+        "axdicefold", "axunitconv", "axprobtree", "axorbital", "axpunnett", "axkenken"
+    )
+
+    /** انتخاب‌های سریع پیشنهادی برای پاپ‌آپ معلم و دانش‌آموز (مثلاً اسپین الکترون یا نماد شجره‌نامه). */
+    fun quickChipsForCell(spec: FigureSpec, key: String): List<Pair<String, String>> = when (spec.type) {
+        "axorbital" -> {
+            if (spec.xStr("mode", "box").lowercase() == "lewis") {
+                if (key.startsWith("side_")) listOf("2" to "۲ نقطه (جفت)", "1" to "۱ نقطه (تک)", "0" to "۰ (بدون نقطه)")
+                else emptyList()
+            } else if (key != "cfg") {
+                listOf("↑↓" to "↑↓ (جفت)", "↑" to "↑ (تک بالا)", "↓" to "↓ (تک پایین)")
+            } else emptyList()
+        }
+        "axpunnett" -> {
+            if (spec.xStr("kind", "punnett").lowercase() == "pedigree") {
+                listOf(
+                    "M" to "□ مرد سالم", "M*" to "■ مرد مبتلا", "Mc" to "◧ مرد ناقل",
+                    "F" to "○ زن سالم", "F*" to "● زن مبتلا", "Fc" to "◐ زن ناقل"
+                )
+            } else if (key.startsWith("c_")) {
+                listOf("AA" to "AA", "Aa" to "Aa", "aa" to "aa")
+            } else emptyList()
+        }
+        "axdicefold" -> listOf("1" to "۱", "2" to "۲", "3" to "۳", "4" to "۴", "5" to "۵", "6" to "۶")
+        "axprobtree" -> {
+            if (key.startsWith("out_") && spec.xStr("mode", "prob").lowercase() != "count") {
+                listOf("1/2" to "1/2", "1/4" to "1/4", "1/8" to "1/8", "25%" to "25%", "50%" to "50%")
+            } else emptyList()
+        }
+        else -> emptyList()
+    }
+
+    private fun regionsFor(spec: FigureSpec): List<AdvancedMathSvgRenderer.InteractiveRegion> = when (spec.type) {
+        "axunitconv" -> NextMathSvgRenderer.interactiveRegions(spec)
+        "axdicefold", "axprobtree", "axorbital", "axpunnett", "axkenken" -> AdvancedMathSvgRenderer.interactiveRegions(spec)
+        else -> emptyList()
+    }
+
+    private fun hitRegionCell(spec: FigureSpec, sx: Float, sy: Float): CellHit? {
+        val regs = regionsFor(spec)
+        if (regs.isEmpty()) return null
+        val matched = regs.filter { sx in it.x..(it.x + it.w) && sy in it.y..(it.y + it.h) }
+            .minByOrNull { it.w * it.h } ?: return null
+        val emptySet = AdvancedMathSvgRenderer.parseEmptySet(spec)
+        val ovMap = AdvancedMathSvgRenderer.parseCellMap(spec, "ov")
+        val ansMap = AdvancedMathSvgRenderer.parseCellMap(spec, "ans")
+        val isEmpty = matched.key in emptySet || matched.defaultEmpty
+        return CellHit(
+            key = matched.key,
+            title = matched.title,
+            defaultVal = matched.defaultVal,
+            currentVal = ovMap[matched.key]?.trim() ?: matched.defaultVal,
+            isEmpty = isEmpty,
+            studentVal = ansMap[matched.key]?.trim().orEmpty()
+        )
+    }
 
     fun hitEditableNumberCell(spec: FigureSpec, sx: Float, sy: Float): CellHit? = when (spec.type) {
         "axcalendar" -> hitCalendarCell(spec, sx, sy)
         "axmultgrid" -> hitMultGridCell(spec, sx, sy)
         "axmulwheel" -> hitMulWheelCell(spec, sx, sy)
         "axtower" -> hitTowerCell(spec, sx, sy)
+        "axdicefold", "axunitconv", "axprobtree", "axorbital", "axpunnett", "axkenken" -> hitRegionCell(spec, sx, sy)
         else -> null
     }
 
     /** فهرست مرتب همهٔ خانه‌های خالی شکل (برای ساخت پاسخ یکپارچهٔ دانش‌آموز در تصحیح خودکار). */
     fun listEmptyCellKeys(spec: FigureSpec): List<String> = when (spec.type) {
+        "axdicefold", "axunitconv", "axprobtree", "axorbital", "axpunnett", "axkenken" -> {
+            val emptySet = AdvancedMathSvgRenderer.parseEmptySet(spec)
+            regionsFor(spec).filter { it.key in emptySet || it.defaultEmpty }.map { it.key }
+        }
         "axcalendar" -> {
             val days = spec.xNum("days", 30f).toInt().coerceIn(20, 31)
             val blank = spec.xStr("blank", "0") == "1"
@@ -615,18 +679,26 @@ object PrimaryInteractiveFigureHelper {
     fun applyTeacherCellEdit(spec: FigureSpec, key: String, newValue: String?, makeEmpty: Boolean): FigureSpec {
         val emptySet = AdvancedMathSvgRenderer.parseEmptySet(spec).toMutableSet()
         val ovMap = AdvancedMathSvgRenderer.parseCellMap(spec, "ov").toMutableMap()
-        val resetAutoKey = if (spec.type == "axmulwheel") "hide" else "blank"
+        val resetAutoKey = when (spec.type) {
+            "axmulwheel" -> "hide"
+            "axdicefold" -> "ask"
+            else -> "blank"
+        }
         val wasAutoBlank = spec.xStr(resetAutoKey, "0") != "0"
         if (wasAutoBlank) {
             listEmptyCellKeys(spec).forEach { emptySet += it }
         }
         var extraCenter: String? = null
         if (makeEmpty) {
-            emptySet += key
-            ovMap.remove(key)
+            if (spec.type == "axkenken" && emptySet.isEmpty() && key in ovMap) {
+                ovMap.remove(key)
+            } else {
+                emptySet += key
+                ovMap.remove(key)
+            }
         } else {
             emptySet.remove(key)
-            val clean = newValue?.trim().orEmpty()
+            val clean = newValue?.trim()?.replace(';', ',')?.replace('؛', ',').orEmpty()
             if (clean.isEmpty()) {
                 ovMap.remove(key)
             } else {
@@ -673,6 +745,9 @@ object PrimaryInteractiveFigureHelper {
     }
 
     fun encodeStudentCellAnswer(spec: FigureSpec, map: Map<String, String>): String {
+        if (spec.type == "axkenken" && AdvancedMathSvgRenderer.parseEmptySet(spec).isEmpty()) {
+            return map.entries.filter { it.value.isNotBlank() }.joinToString(";") { "${it.key}:${it.value}" }
+        }
         val emptyKeys = listEmptyCellKeys(spec)
         if (emptyKeys.size == 1) {
             return map[emptyKeys[0]]?.trim().orEmpty()
@@ -692,7 +767,7 @@ object PrimaryInteractiveFigureHelper {
                 if (mirror) spec else withX(spec, "ansCells" to rawAnswer)
             }
             "axpaintgrid" -> withX(spec, "ansCells" to rawAnswer)
-            "axcalendar", "axmultgrid", "axmulwheel", "axtower" -> {
+            in KEYED_CELL_TYPES -> {
                 val map = parseStudentCellMap(spec, rawAnswer)
                 if (map.isEmpty()) spec
                 else withX(spec, "ans" to map.entries.joinToString(";") { "${it.key}:${it.value}" })

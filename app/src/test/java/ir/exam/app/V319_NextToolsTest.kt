@@ -24,12 +24,13 @@ class V319_NextToolsTest {
     }
 
     private val ids = listOf(
-        "axunitconv", "axperimeter", "axpictograph", "axrounding", "axdivision", "axshapeid",
+        "axunitconv", "axperimeter", "axrounding",
         "axcircleparts", "axcylinder", "axproportion", "axlinear", "axbarchart", "axparabola",
         "axinthales", "axpendulum", "axincline", "axcircuit", "axoptics", "axheatcurve",
-        "axdna", "axcell", "axtimeline", "axmapgeo", "axsentence", "axvectors", "axmatrix",
+        "axdna", "axtimeline", "axmapgeo", "axsentence", "axvectors", "axmatrix",
         "axintegral", "axflowchart", "axstack", "axsort", "axregression"
     )
+    private val legacyRemovedIds = listOf("axpictograph", "axdivision", "axshapeid", "axcell")
 
     @Test
     fun allNextToolsExistInGalleryAndRenderers() {
@@ -38,6 +39,10 @@ class V319_NextToolsTest {
             assertTrue("Missing $k in AXIS_FIGURES", k in gallery)
             assertTrue("Missing $k in PrimaryMathSvgRenderer.SUPPORTED", k in PrimaryMathSvgRenderer.SUPPORTED)
             assertTrue("Missing $k in NextMathSvgRenderer.SUPPORTED", k in NextMathSvgRenderer.SUPPORTED)
+        }
+        for (k in legacyRemovedIds) {
+            assertTrue("Legacy $k must remain in PrimaryMathSvgRenderer.SUPPORTED", k in PrimaryMathSvgRenderer.SUPPORTED)
+            assertTrue("Legacy $k must remain in NextMathSvgRenderer.SUPPORTED", k in NextMathSvgRenderer.SUPPORTED)
         }
     }
 

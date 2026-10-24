@@ -53,19 +53,15 @@ private val ADV_CYCLE_PARAMS: Map<String, Pair<String, List<String>>> = mapOf(
     "axlever" to ("kind" to listOf("lever1", "lever2", "lever3", "pulley", "gears")),
     "axcycle" to ("kind" to listOf("water", "plant", "frog", "food")),
     "axwordtrain" to ("mode" to listOf("join", "blank")),
-    // V327
-    "axmagnet" to ("mode" to listOf("attract", "repel")),
+    // V327 / V335.11
+    "axmagnet" to ("mode" to listOf("attract", "repel", "repel_s")),
     "axpaintgrid" to ("goal" to listOf("1", "2", "3", "4", "5", "6", "8", "10", "12")),
-    "axtiles" to ("x" to listOf("0", "1", "2", "3", "4", "5", "6", "7", "8")),
-    "axkenken" to ("size" to listOf("3", "4", "5", "6")),
-    "axdicefold" to ("top" to listOf("1", "2", "3", "4", "5", "6")),
+    "axtiles" to ("x" to (0..16).map { it.toString() }),
     "axtransform" to ("op" to listOf("translate", "rotate", "reflect")),
     "axsigntable" to ("lead" to listOf("1", "-1")),
-    "axprobtree" to ("mode" to listOf("prob", "count")),
     "axconic" to ("kind" to listOf("ellipse", "hyperbola", "parabola")),
-    "axpunnett" to ("mode" to listOf("genotype", "ratio")),
     "axecg" to ("kind" to listOf("ecg", "shm")),
-    "axprosody" to ("mode" to listOf("arkan", "taqti")),
+    "axprosody" to ("mode" to listOf("arkan", "taqti", "blank")),
     "axtruthtable" to ("kind" to listOf("truth", "square")),
     "axstaff" to ("kind" to listOf("staff", "color")),
     "axkmap" to ("vars" to listOf("2", "3", "4")),
@@ -76,22 +72,22 @@ private val ADV_CYCLE_PARAMS: Map<String, Pair<String, List<String>>> = mapOf(
     "axbenzene" to ("kind" to listOf("kekule", "chair", "newman", "fischer")),
     "axsupply" to ("kind" to listOf("equilibrium", "shift", "ceiling")),
     "axgame" to ("kind" to listOf("game", "islm")),
-    "axunitconv" to ("kind" to listOf("len", "mass", "area")),
-    "axperimeter" to ("shape" to listOf("rect", "tri", "circle", "poly")),
+    "axperimeter" to ("shape" to listOf("rect", "square", "tri", "para", "trap", "rhomb", "circle", "poly")),
     "axpictograph" to ("mode" to listOf("picto", "bar")),
-    "axrounding" to ("mode" to listOf("ten", "hundred")),
+    "axrounding" to ("mode" to listOf("ten", "hundred", "thousand", "one", "tenth", "hundredth")),
     "axdivision" to ("b" to listOf("2", "3", "4", "5", "6", "7", "8", "9", "10")),
     "axshapeid" to ("kind" to listOf("tri", "square", "rect", "circle", "poly")),
     "axcircleparts" to ("show" to listOf("all", "radius", "diameter", "chord", "tangent", "arc")),
     "axcylinder" to ("kind" to listOf("cylinder", "cone")),
     "axproportion" to ("a" to listOf("1", "2", "3", "4", "5", "6", "8", "10")),
-    "axbarchart" to ("show" to listOf("mean", "median", "none")),
+    "axbarchart" to ("show" to listOf("mean", "median", "mode", "all", "none")),
     "axinthales" to ("ang" to listOf("30", "45", "60", "90", "120", "150")),
-    "axpendulum" to ("amp" to listOf("10", "20", "30", "40")),
+    "axpendulum" to ("mode" to listOf("period", "forces", "energy", "quiz")),
     "axincline" to ("ang" to listOf("15", "30", "45", "60")),
-    "axcircuit" to ("mode" to listOf("series", "parallel")),
+    "axcircuit" to ("mode" to listOf("series", "parallel", "mixed")),
     "axoptics" to ("kind" to listOf("convex", "concave")),
-    "axdna" to ("mode" to listOf("helix", "flat")),
+    "axheatcurve" to ("mode" to listOf("full", "stages", "quiz")),
+    "axdna" to ("mode" to listOf("helix", "flat", "mrna", "quiz")),
     "axcell" to ("kind" to listOf("animal", "plant")),
     "axmapgeo" to ("kind" to listOf("compass", "map")),
     "axsentence" to ("mode" to listOf("verbal", "nominal")),
@@ -105,9 +101,7 @@ private val ADV_CYCLE_PARAMS: Map<String, Pair<String, List<String>>> = mapOf(
 /** V318 — پارامتر عددی با گام مشخص (کلیک = یک گام؛ پس از بیشینه به کمینه برمی‌گردد). */
 private val ADV_NUM_PARAMS: Map<String, Triple<String, Float, ClosedFloatingPointRange<Float>>> = mapOf(
     "axcaliper" to Triple("val", 1f, 0f..50f),
-    "axorbital" to Triple("z", 1f, 1f..36f),
     "axmohr" to Triple("txy", 5f, 0f..120f),
-    "axunitconv" to Triple("val", 1f, 1f..20f),
     "axperimeter" to Triple("w", 1f, 1f..12f),
     "axrounding" to Triple("n", 10f, 10f..990f),
     "axdivision" to Triple("a", 1f, 0f..60f),
@@ -117,10 +111,10 @@ private val ADV_NUM_PARAMS: Map<String, Triple<String, Float, ClosedFloatingPoin
     "axlinear" to Triple("b1", 1f, -5f..5f),
     "axparabola" to Triple("c", 1f, -6f..6f),
     "axinthales" to Triple("ang", 10f, 20f..160f),
-    "axpendulum" to Triple("len", 1f, 1f..3f),
+    "axpendulum" to Triple("len", 0.5f, 0.5f..3f),
     "axincline" to Triple("ang", 5f, 10f..60f),
     "axcircuit" to Triple("r1", 1f, 1f..20f),
-    "axoptics" to Triple("d", 5f, 10f..60f),
+    "axoptics" to Triple("d", 5f, 5f..55f),
     "axsort" to Triple("step", 1f, 0f..4f)
 
 )
@@ -289,7 +283,7 @@ private fun InteractiveClock(
                     val hit = PrimaryInteractiveFigureHelper.hitPaintCell(latest, q.x, q.y) ?: return
                     stuCallback(PrimaryInteractiveFigureHelper.toggleStudentPaintCell(latest, latestStudentAns, hit.first, hit.second))
                 }
-                "axcalendar", "axmultgrid", "axmulwheel", "axtower" -> {
+                in PrimaryInteractiveFigureHelper.KEYED_CELL_TYPES -> {
                     val overlaid = PrimaryInteractiveFigureHelper.injectStudentOverlay(latest, latestStudentAns)
                     val hit = PrimaryInteractiveFigureHelper.hitEditableNumberCell(overlaid, q.x, q.y) ?: return
                     if (hit.isEmpty) {
@@ -422,12 +416,22 @@ private fun InteractiveClock(
                     patternCustomVal = items.getOrElse(slot) { "" }.takeIf { it != "?" && it != "_" }.orEmpty()
                 }
             }
-            "axcalendar", "axmultgrid", "axmulwheel", "axtower" -> {
+            in PrimaryInteractiveFigureHelper.KEYED_CELL_TYPES -> {
                 val hit = PrimaryInteractiveFigureHelper.hitEditableNumberCell(latest, q.x, q.y)
                 if (hit != null) {
                     teacherCellPopup = hit
                     teacherCellInput = if (hit.isEmpty) "" else hit.currentVal
                 }
+            }
+            "axtiles" -> {
+                val (key, maxN) = when {
+                    q.x < 120f -> "x2" to 9
+                    q.x < 240f -> "x" to 16
+                    else -> "k" to 24
+                }
+                val curN = latest.xNum(key, 1f).toInt().coerceIn(0, maxN)
+                val nextN = (curN + 1) % (maxN + 1)
+                emit(FigureSpec(JsonObject(latest.raw + ("X" to JsonObject(x + (key to JsonPrimitive(nextN.toString())))))))
             }
             "axpaintgrid" -> {
                 val hit = PrimaryInteractiveFigureHelper.hitPaintCell(latest, q.x, q.y)
@@ -741,8 +745,9 @@ private fun InteractiveClock(
         )
     }
 
-    // ۳) پاپ‌آپ تنظیم مقدار یا خالی‌کردن خانه بدون «؟» برای معلم (تقویم، جدول ضرب، چرخ ضرب، هرم اعداد)
+    // ۳) پاپ‌آپ تنظیم مقدار یا خالی‌کردن خانه بدون «؟» برای معلم
     teacherCellPopup?.let { hit ->
+        val chips = PrimaryInteractiveFigureHelper.quickChipsForCell(latest, hit.key)
         AlertDialog(
             onDismissRequest = { teacherCellPopup = null },
             title = { Text("تنظیم ${hit.title}") },
@@ -752,9 +757,21 @@ private fun InteractiveClock(
                         value = teacherCellInput,
                         onValueChange = { teacherCellInput = it },
                         singleLine = true,
-                        label = { Text("مقدار این خانه") },
+                        label = { Text("مقدار این بخش") },
                         modifier = Modifier.fillMaxWidth()
                     )
+                    if (chips.isNotEmpty()) {
+                        @OptIn(ExperimentalLayoutApi::class)
+                        FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                            chips.forEach { (chipVal, chipLabel) ->
+                                FilterChip(
+                                    selected = teacherCellInput.trim() == chipVal,
+                                    onClick = { teacherCellInput = chipVal },
+                                    label = { Text(chipLabel) }
+                                )
+                            }
+                        }
+                    }
                     OutlinedButton(
                         onClick = {
                             emit(PrimaryInteractiveFigureHelper.applyTeacherCellEdit(latest, hit.key, null, makeEmpty = true))
@@ -795,19 +812,31 @@ private fun InteractiveClock(
 
     // ۴) پاپ‌آپ ورود پاسخ دانش‌آموز با کلیک روی خانهٔ خالی شکل در جلسهٔ آزمون
     studentCellPopup?.let { hit ->
+        val chips = PrimaryInteractiveFigureHelper.quickChipsForCell(latest, hit.key)
         AlertDialog(
             onDismissRequest = { studentCellPopup = null },
             title = { Text("پاسخ ${hit.title}") },
             text = {
-                Column {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     OutlinedTextField(
                         value = studentCellInput,
                         onValueChange = { studentCellInput = it },
                         singleLine = true,
-                        label = { Text("عدد مورد نظر را بنویسید") },
+                        label = { Text("پاسخ مورد نظر را بنویسید") },
                         modifier = Modifier.fillMaxWidth()
                     )
-                    Spacer(Modifier.height(4.dp))
+                    if (chips.isNotEmpty()) {
+                        @OptIn(ExperimentalLayoutApi::class)
+                        FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                            chips.forEach { (chipVal, chipLabel) ->
+                                FilterChip(
+                                    selected = studentCellInput.trim() == chipVal,
+                                    onClick = { studentCellInput = chipVal },
+                                    label = { Text(chipLabel) }
+                                )
+                            }
+                        }
+                    }
                 }
             },
             confirmButton = {

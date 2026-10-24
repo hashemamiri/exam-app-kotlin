@@ -43,20 +43,20 @@ val MATH_CATEGORIES: List<MathCategory> = listOf(
         emoji = "📐",
         ids = listOf(
             "axtiles", "axkenken", "axdicefold", "axtransform", "axcaliper",
-            "axunitconv", "axperimeter", "axpictograph", "axrounding", "axdivision",
-            "axshapeid", "axcircleparts", "axcylinder", "axproportion", "axlinear"
+            "axunitconv", "axperimeter", "axrounding",
+            "axcircleparts", "axcylinder", "axproportion", "axlinear"
         )
     ),
     MathCategory(
         id = "high",
         title = "متوسطهٔ دوم و کنکور",
-        hint = "ریاضی، فیزیک، شیمی و زیست — از تابع و مثلثات تا مدار و سلول",
+        hint = "ریاضی، فیزیک، شیمی و زیست — از تابع و مثلثات تا مدار و ژنتیک",
         emoji = "🧪",
         ids = listOf(
             "axsigntable", "axtrigcircle", "axmapping", "axprobtree", "axconic", "axorbital",
             "axpunnett", "axecg", "axprosody", "axtruthtable", "axledger", "axstaff",
             "axbarchart", "axparabola", "axinthales", "axpendulum", "axincline", "axcircuit",
-            "axoptics", "axheatcurve", "axdna", "axcell"
+            "axoptics", "axheatcurve", "axdna"
         )
     ),
     MathCategory(

@@ -35,7 +35,7 @@ class V335_8_PrimaryToolsOverhaulTest {
             assertFalse("$id should be removed from MATH_TOOL_IDS", id in MATH_TOOL_IDS)
         }
         assertEquals(41, MATH_CATEGORIES.first { it.id == "elementary" }.ids.size)
-        assertEquals(101, MATH_TOOL_IDS.size)
+        assertEquals(97, MATH_TOOL_IDS.size)
 
         val graphFig = read("app/src/main/assets/print/web/graph_fig.js")
         val axisTypesBlock = graphFig.substringAfter("var AXIS_TYPES = [").substringBefore("];")
