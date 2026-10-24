@@ -34,7 +34,8 @@ object PrimaryMathSvgRenderer {
 
     fun body(spec: FigureSpec): String {
         val title = spec.xStr("title")
-        val head = if (title.isBlank()) "" else text(180f, 14f, title, "#1a2433", "middle", bold = true, size = 13)
+        val cx = canvasWidth(spec) / 2f
+        val head = if (title.isBlank()) "" else text(cx, 15f, title, "#1a2433", "middle", bold = true, size = 13)
         return head + when (spec.type) {
             "axtally" -> tally(spec)
             "axbase10" -> base10(spec)
@@ -129,11 +130,22 @@ object PrimaryMathSvgRenderer {
     private fun ltrLabel(x: Float, y: Float, s: String, color: String, size: Int): String =
         "<text x=\"${f(x)}\" y=\"${f(y)}\" direction=\"ltr\" font-family=\"sans-serif\" font-size=\"$size\" font-weight=\"700\" fill=\"$color\" text-anchor=\"start\">$s</text>"
 
+    /** V335.8 — استخراج دقیق عدد صحیح ۹رقمی (۰ تا ۹۹۹٬۹۹۹٬۹۹۹) بدون خطای گردشدن Float یا جداکنندهٔ هزارگان. */
+    fun parseBase10Long(spec: FigureSpec): Long {
+        val raw = spec.xStr("n", "134").trim()
+        if (raw.isEmpty()) return 134L
+        val ascii = faEnDigits(raw).replace("٬", "").replace(",", "").replace("_", "").replace(" ", "")
+        val intPart = ascii.substringBefore('.')
+        val digitsOnly = intPart.filter { it.isDigit() }
+        if (digitsOnly.isEmpty()) return 0L
+        return digitsOnly.take(9).toLongOrNull()?.coerceIn(0L, 999_999_999L) ?: 0L
+    }
+
     private fun base10(spec: FigureSpec): String {
-        val nb = spec.xNum("n", 134f).toInt().coerceIn(0, 999999999)
+        val nb = parseBase10Long(spec)
         val digits = IntArray(9)
         var q = nb
-        for (k in 0 until 9) { digits[k] = q % 10; q /= 10 }
+        for (k in 0 until 9) { digits[k] = (q % 10L).toInt(); q /= 10L }
         val sb = StringBuilder()
         for (bp in 0 until 9) {
             val blk = BLOCKS[bp]
@@ -154,15 +166,22 @@ object PrimaryMathSvgRenderer {
         }
         val lbl = spec.xStr("label", "1")
         if (lbl == "2") sb.append(text(180f, 362f, "عدد: ؟", PINK, "middle", bold = true, size = 14))
-        else if (lbl != "0") sb.append(text(180f, 362f, "عدد: ${group(nb.toLong())}", ST, "middle", bold = true, size = 13))
+        else if (lbl != "0") sb.append(text(180f, 362f, "عدد: ${group(nb)}", ST, "middle", bold = true, size = 13))
         return sb.toString()
     }
 
     // ------------------------------------------------------ ارزش مکانی (میلیارد تا یکی؛ چند ردیف و علامت + / −)
-    /** ارتفاع بوم (۳۶۰ عرض ثابت): دسته‌های ده‌تایی و جدول ارزش مکانی بسته به تعداد ردیف‌ها بلندتر می‌شوند. */
+    /** عرض بوم: چرتکهٔ ۶ستونی (یکان تا صدگان هزار) فضای عریض‌تر ۴۶۰ واحدی دارد تا برچسب‌ها و مهره‌ها کاملاً جا شوند. */
+    fun canvasWidth(spec: FigureSpec): Float = when (spec.type) {
+        "axabacus" -> 460f
+        else -> 360f
+    }
+
+    /** ارتفاع بوم: دسته‌های ده‌تایی، جدول ارزش مکانی و چرتکهٔ ستونی ارتفاع اختصاصی دارند. */
     fun canvasHeight(spec: FigureSpec): Float = when (spec.type) {
         "axbase10" -> 370f
-        "axplace" -> max(280f, 80f + 40f * placeRows(spec) + 60f)
+        "axabacus" -> 310f
+        "axplace" -> max(280f, 80f * 1f + 40f * placeRows(spec) + 60f)
         else -> 280f
     }
 
@@ -299,35 +318,35 @@ object PrimaryMathSvgRenderer {
 
     // ------------------------------------------------------------ کسر شکلی
     private fun fraction(spec: FigureSpec): String {
-        val den = spec.xNum("den", 4f).toInt().coerceIn(1, 24)
+        val den = spec.xNum("den", 4f).toInt().coerceIn(1, 25)
         val num = spec.xNum("num", 1f).toInt().coerceIn(0, den)
         val shape = spec.xStr("shape", "circle")
         val sb = StringBuilder()
         fun fillOf(i: Int): String = if (i < num) ACC else "#fff"
         when (shape) {
             "bar" -> {
-                val x0 = 30f
-                val w = 300f
-                val y0 = 96f
-                val h = 70f
+                val x0 = 28f
+                val w = 304f
+                val y0 = 82f
+                val h = 68f
                 val cw = w / den
-                for (i in 0 until den) sb.append(rect(x0 + i * cw, y0, cw, h, fillOf(i), ST, 1.6f))
+                for (i in 0 until den) sb.append(rect(x0 + i * cw, y0, cw, h, fillOf(i), ST, if (den > 16) 1.2f else 1.6f))
             }
             "square" -> {
-                val side = 168f
-                val x0 = 96f
-                val y0 = 40f
+                val side = 166f
+                val x0 = (360f - side) / 2f
+                val y0 = 24f
                 val cols = ceil(sqrt(den.toDouble())).toInt()
                 val rows = ceil(den.toDouble() / cols).toInt()
                 val cwd = side / cols
                 val chd = side / rows
-                for (i in 0 until den) sb.append(rect(x0 + (i % cols) * cwd, y0 + (i / cols) * chd, cwd, chd, fillOf(i), ST, 1.6f))
+                for (i in 0 until den) sb.append(rect(x0 + (i % cols) * cwd, y0 + (i / cols) * chd, cwd, chd, fillOf(i), ST, 1.5f))
             }
             "ring" -> {
                 val cx = 180f
-                val cy = 124f
-                val ro = 88f
-                val ri = 44f
+                val cy = 110f
+                val ro = 80f
+                val ri = 40f
                 if (den == 1) {
                     sb.append("<circle cx=\"${f(cx)}\" cy=\"${f(cy)}\" r=\"${f(ro)}\" fill=\"${fillOf(0)}\" stroke=\"$ST\" stroke-width=\"1.8\"/>")
                     sb.append("<circle cx=\"${f(cx)}\" cy=\"${f(cy)}\" r=\"${f(ri)}\" fill=\"#fff\" stroke=\"$ST\" stroke-width=\"1.8\"/>")
@@ -336,13 +355,13 @@ object PrimaryMathSvgRenderer {
                     val a1 = ((i + 1) * 360.0 / den - 90.0) * PI / 180.0
                     val large = if (360.0 / den > 180.0) 1 else 0
                     fun px(rad: Float, a: Double): String = "${f(cx + rad * cos(a).toFloat())} ${f(cy + rad * sin(a).toFloat())}"
-                    sb.append("<path d=\"M ${px(ro, a0)} A ${f(ro)} ${f(ro)} 0 $large 1 ${px(ro, a1)} L ${px(ri, a1)} A ${f(ri)} ${f(ri)} 0 $large 0 ${px(ri, a0)} Z\" fill=\"${fillOf(i)}\" stroke=\"$ST\" stroke-width=\"1.8\"/>")
+                    sb.append("<path d=\"M ${px(ro, a0)} A ${f(ro)} ${f(ro)} 0 $large 1 ${px(ro, a1)} L ${px(ri, a1)} A ${f(ri)} ${f(ri)} 0 $large 0 ${px(ri, a0)} Z\" fill=\"${fillOf(i)}\" stroke=\"$ST\" stroke-width=\"1.6\"/>")
                 }
             }
             else -> {
                 val cx = 180f
-                val cy = 124f
-                val rr = 88f
+                val cy = 110f
+                val rr = 80f
                 if (den == 1) {
                     sb.append("<circle cx=\"${f(cx)}\" cy=\"${f(cy)}\" r=\"${f(rr)}\" fill=\"${fillOf(0)}\" stroke=\"$ST\" stroke-width=\"1.8\"/>")
                 } else for (i in 0 until den) {
@@ -353,19 +372,19 @@ object PrimaryMathSvgRenderer {
                     val y0 = cy + rr * sin(a0).toFloat()
                     val x1 = cx + rr * cos(a1).toFloat()
                     val y1 = cy + rr * sin(a1).toFloat()
-                    sb.append("<path d=\"M ${f(cx)} ${f(cy)} L ${f(x0)} ${f(y0)} A ${f(rr)} ${f(rr)} 0 $large 1 ${f(x1)} ${f(y1)} Z\" fill=\"${fillOf(i)}\" stroke=\"$ST\" stroke-width=\"1.8\"/>")
+                    sb.append("<path d=\"M ${f(cx)} ${f(cy)} L ${f(x0)} ${f(y0)} A ${f(rr)} ${f(rr)} 0 $large 1 ${f(x1)} ${f(y1)} Z\" fill=\"${fillOf(i)}\" stroke=\"$ST\" stroke-width=\"1.6\"/>")
                 }
             }
         }
         val fLbl = spec.xStr("label", "1")
         if (fLbl == "2") {
-            sb.append(text(180f, 242f, "؟", PINK, "middle", bold = true, size = 18))
-            sb.append(line(166f, 248f, 194f, 248f, PINK, 2f))
-            sb.append(text(180f, 268f, "؟", PINK, "middle", bold = true, size = 18))
+            sb.append(text(180f, 226f, "؟", PINK, "middle", bold = true, size = 18))
+            sb.append(line(164f, 234f, 196f, 234f, PINK, 2.2f))
+            sb.append(text(180f, 256f, "؟", PINK, "middle", bold = true, size = 18))
         } else if (fLbl != "0") {
-            sb.append(text(180f, 242f, num.toString(), ST, "middle", bold = true, size = 18))
-            sb.append(line(166f, 248f, 194f, 248f, ST, 2f))
-            sb.append(text(180f, 268f, den.toString(), ST, "middle", bold = true, size = 18))
+            sb.append(text(180f, 226f, num.toString(), ST, "middle", bold = true, size = 18))
+            sb.append(line(164f, 234f, 196f, 234f, ST, 2.2f))
+            sb.append(text(180f, 256f, den.toString(), ST, "middle", bold = true, size = 18))
         }
         return sb.toString()
     }
@@ -405,75 +424,131 @@ object PrimaryMathSvgRenderer {
         return sb.toString()
     }
 
-    // --------------------------------------------------- V314.0 — چرتکهٔ ستونی
+    // --------------------------------------------------- V314.0 / V335.8 — چرتکهٔ ستونی (بوم ۴۶۰×۳۱۰)
     private fun abacus(spec: FigureSpec): String {
-        val cols = spec.xNum("cols", 4f).toInt().coerceIn(2, 6)
-        val n = spec.xNum("n", 2435f).toLong().coerceIn(0L, 999999L)
-        val labels = listOf("یکان", "دهگان", "صدگان", "هزار", "ده‌هزار", "صدهزار")
+        val cols = spec.xNum("cols", 6f).toInt().coerceIn(2, 6)
+        val rawN = faEnDigits(spec.xStr("n", "142536").trim()).replace("٬", "").replace(",", "").substringBefore('.').filter { it.isDigit() }
+        val n = (rawN.take(6).toLongOrNull() ?: 0L).coerceIn(0L, 999999L)
+        val labels = listOf("یکان", "دهگان", "صدگان", "یکان هزار", "دهگان هزار", "صدگان هزار")
         val colors = listOf("#ef5350", "#42a5f5", "#66bb6a", "#ab47bc", "#ffa726", "#26a69a")
         val sb = StringBuilder()
-        val x0 = 36f
-        val w = 288f
+        val x0 = 26f
+        val w = 408f
         val step = w / cols
-        sb.append(rect(24f, 214f, 312f, 22f, "#8d6e63", ST, 1.8f, rx = 6f))
+        // پایهٔ چوبی چرتکه با کادر روشن برای برچسب‌های کاملاً خوانا (یکان تا صدگان هزار)
+        sb.append(rect(16f, 216f, 428f, 40f, "#f6e7d2", "#6d4c41", 2.2f, rx = 8f))
+        sb.append(line(20f, 220f, 440f, 220f, "#d7b894", 1.2f))
         var rem = n
         val digits = IntArray(cols)
         for (i in 0 until cols) { digits[i] = (rem % 10L).toInt(); rem /= 10L }
         for (c in 0 until cols) {
             val idx = cols - 1 - c
             val cx = x0 + c * step + step / 2f
-            sb.append(line(cx, 44f, cx, 214f, ST, 3.2f))
+            if (c > 0) sb.append(line(x0 + c * step, 220f, x0 + c * step, 252f, "#d7b894", 1f))
+            // میلهٔ عمودی چرتکه و کلاهک بالای میله
+            sb.append(line(cx, 30f, cx, 216f, ST, 3.4f))
+            sb.append("<circle cx=\"${f(cx)}\" cy=\"29\" r=\"4\" fill=\"#6d4c41\" stroke=\"$ST\" stroke-width=\"1.2\"/>")
             val d = digits[idx]
             val col = colors[idx % colors.size]
+            val beadW = min(44f, step * 0.66f)
             for (b in 0 until d) {
-                val by = 204f - b * 16f
-                sb.append(rect(cx - 16f, by - 7f, 32f, 14f, col, ST, 1.2f, rx = 7f))
+                val by = 205f - b * 18f
+                sb.append(rect(cx - beadW / 2f, by - 7.5f, beadW, 15f, col, ST, 1.3f, rx = 7.5f))
             }
-            sb.append(text(cx, 230f, labels[idx], "#fff", "middle", bold = true, size = 10))
+            sb.append(text(cx, 241f, labels[idx], "#3e2723", "middle", bold = true, size = if (cols >= 6) 11 else 12))
             if (spec.xStr("blank", "0") != "1") {
-                sb.append(text(cx, 258f, d.toString(), ST, "middle", bold = true, size = 15))
+                sb.append(rect(cx - 17f, 264f, 34f, 28f, "#f8fafc", "#cbd5e1", 1.2f, rx = 6f))
+                sb.append(text(cx, 284f, d.toString(), ST, "middle", bold = true, size = 16))
             }
         }
         return sb.toString()
     }
 
-    // ---------------------------------------------- V314.0 — پرش روی محور اعداد
+    // ---------------------------------------------- V314.0 / V335.8 — پرش روی محور اعداد (جمع، تفریق، ضرب، تقسیم)
     private fun jumpLine(spec: FigureSpec): String {
-        val start = spec.xNum("start", 0f).toInt().coerceIn(0, 50)
-        val step = spec.xNum("step", 3f).toInt().coerceIn(1, 20)
-        val jumps = spec.xNum("jumps", 4f).toInt().coerceIn(1, 10)
-        val maxVal = max(start + step * jumps, spec.xNum("max", (start + step * jumps).toFloat()).toInt()).coerceIn(2, 100)
+        val rawOp = spec.xStr("op", "+").trim()
+        val op = when (rawOp) {
+            "-", "−", "sub" -> "-"
+            "×", "*", "x", "mul" -> "×"
+            "÷", "/", "div" -> "÷"
+            else -> "+"
+        }
+        val rawStart = spec.xNum("start", 0f).toInt().coerceIn(0, 100)
+        val step = spec.xNum("step", 3f).toInt().coerceIn(1, 25)
+        val jumps = spec.xNum("jumps", 4f).toInt().coerceIn(1, 12)
+        val backward = op == "-" || op == "÷"
+        val effStart = when (op) {
+            "-" -> if (rawStart >= step * jumps) rawStart else step * jumps
+            "÷" -> if (rawStart >= step) rawStart else step * jumps
+            else -> rawStart
+        }
+        val effJumps = if (op == "÷") (effStart / step).coerceIn(1, 15) else jumps
+        val endVal = if (backward) (effStart - effJumps * step).coerceAtLeast(0) else effStart + effJumps * step
+        val neededMax = max(effStart, endVal)
+        val maxVal = max(neededMax, spec.xNum("max", neededMax.toFloat()).toInt()).coerceIn(2, 120)
         val sb = StringBuilder()
-        val x0 = 28f
-        val x1 = 332f
+        val x0 = 26f
+        val x1 = 334f
         val y = 186f
         sb.append(line(x0 - 8f, y, x1 + 10f, y, ST, 2.2f))
         fun px(v: Int): Float = x0 + (x1 - x0) * (v.toFloat() / maxVal.toFloat())
-        val tickStep = if (maxVal <= 15) 1 else if (maxVal <= 30) 2 else 5
+        val tickStep = when {
+            maxVal <= 15 -> 1
+            maxVal <= 30 -> 2
+            maxVal <= 60 -> 5
+            else -> 10
+        }
         for (v in 0..maxVal) {
             val x = px(v)
-            val major = v % tickStep == 0
-            sb.append(line(x, y - (if (major) 7f else 4f), x, y + (if (major) 7f else 4f), ST, if (major) 1.8f else 1f))
-            if (major) sb.append(text(x, y + 22f, v.toString(), ST, "middle", bold = true, size = 11))
+            val major = v % tickStep == 0 || v == effStart || v == endVal
+            sb.append(line(x, y - (if (major) 7f else 3.5f), x, y + (if (major) 7f else 3.5f), ST, if (major) 1.8f else 0.9f))
+            if (v % tickStep == 0) sb.append(text(x, y + 22f, v.toString(), ST, "middle", bold = true, size = 11))
         }
-        for (j in 0 until jumps) {
-            val a = start + j * step
-            val b = a + step
-            if (b > maxVal) break
+        // نقطهٔ شروع
+        val xStart = px(effStart)
+        sb.append("<circle cx=\"${f(xStart)}\" cy=\"${f(y)}\" r=\"4.5\" fill=\"$GREEN\" stroke=\"$ST\" stroke-width=\"1.2\"/>")
+        val arcCol = if (backward) "#e53935" else ACC
+        for (j in 0 until effJumps) {
+            val a = if (backward) effStart - j * step else effStart + j * step
+            val b = if (backward) a - step else a + step
+            if (b < 0 || b > maxVal) break
             val xa = px(a)
             val xb = px(b)
             val xm = (xa + xb) / 2f
-            val h = min(85f, max(34f, (xb - xa) * 0.65f))
-            sb.append("<path d=\"M ${f(xa)} ${f(y - 4f)} Q ${f(xm)} ${f(y - h)} ${f(xb)} ${f(y - 4f)}\" fill=\"none\" stroke=\"$ACC\" stroke-width=\"2.4\"/>")
-            sb.append("<circle cx=\"${f(xb)}\" cy=\"${f(y)}\" r=\"4\" fill=\"$PINK\"/>")
-            sb.append(text(xm, y - h * 0.58f, "+$step", PINK, "middle", bold = true, size = 11))
+            val dist = kotlin.math.abs(xb - xa)
+            val h = min(84f, max(32f, dist * 0.65f))
+            sb.append("<path d=\"M ${f(xa)} ${f(y - 4f)} Q ${f(xm)} ${f(y - h)} ${f(xb)} ${f(y - 5f)}\" fill=\"none\" stroke=\"$arcCol\" stroke-width=\"2.4\"/>")
+            // پیکان جهت پرش روی محور
+            val dir = if (backward) 1f else -1f
+            sb.append("<polygon points=\"${f(xb)},${f(y - 3f)} ${f(xb + dir * 6f)},${f(y - 10f)} ${f(xb + dir * 2f)},${f(y - 12f)}\" fill=\"$arcCol\"/>")
+            sb.append("<circle cx=\"${f(xb)}\" cy=\"${f(y)}\" r=\"3.8\" fill=\"$PINK\"/>")
+            val stepLbl = if (backward) "−$step" else "+$step"
+            sb.append(text(xm, y - h * 0.58f, stepLbl, PINK, "middle", bold = true, size = 11))
         }
-        val endVal = start + jumps * step
         val lblMode = spec.xStr("label", "1")
-        if (lblMode == "2") {
-            sb.append(text(180f, 252f, "$start + ($jumps × $step) = ؟", PINK, "middle", bold = true, size = 14))
-        } else if (lblMode != "0") {
-            sb.append(text(180f, 252f, "$start + ($jumps × $step) = $endVal", ST, "middle", bold = true, size = 14))
+        if (lblMode != "0") {
+            val ansPart = if (lblMode == "2") "؟" else when (op) {
+                "÷" -> {
+                    val rem = effStart % step
+                    if (rem == 0) effJumps.toString() else "$effJumps (باقی‌مانده $rem)"
+                }
+                else -> endVal.toString()
+            }
+            val eqStr = when (op) {
+                "+" -> when {
+                    effJumps == 1 -> "$effStart + $step = $ansPart"
+                    effJumps <= 3 -> (listOf(effStart) + List(effJumps) { step }).joinToString(" + ") + " = $ansPart"
+                    else -> "$effStart + ($effJumps × $step) = $ansPart"
+                }
+                "-" -> when {
+                    effJumps == 1 -> "$effStart − $step = $ansPart"
+                    effJumps <= 3 -> (listOf(effStart) + List(effJumps) { step }).joinToString(" − ") + " = $ansPart"
+                    else -> "$effStart − ($effJumps × $step) = $ansPart"
+                }
+                "×" -> if (effStart == 0) "$effJumps × $step = $ansPart" else "$effStart + ($effJumps × $step) = $ansPart"
+                else -> "$effStart ÷ $step = $ansPart"
+            }
+            sb.append(text(180f, 254f, eqStr, if (lblMode == "2") PINK else ST, "middle", bold = true, size = 14))
         }
         return sb.toString()
     }
@@ -560,6 +635,7 @@ object PrimaryMathSvgRenderer {
 
     private fun normalizeSawCell(rawCell: String): String {
         val c = faEnDigits(rawCell.trim())
+        if (c == "_" || c == "-" || c == "empty") return "_"
         if (c.isEmpty() || c == "?" || c == "؟") return "?"
         if (c in SAW_PALETTE) return c
         return when {
@@ -617,16 +693,20 @@ object PrimaryMathSvgRenderer {
                 val cell = rows.getOrNull(r)?.getOrNull(c).orEmpty().ifBlank { "?" }
                 val x = x0 + c * cs
                 val y = y0 + r * cs
+                val isEmptyNoQ = cell == "_"
                 val isQ = cell == "?" || cell == "؟"
                 val tok = SAW_PALETTE[cell]
                 val cellBg = when {
+                    isEmptyNoQ -> "#ffffff"
                     isQ -> "#fff8e1"
                     mode == "color" && tok != null -> tok.tint
                     mode == "color_shape" && tok != null -> tok.tint
                     else -> "#ffffff"
                 }
                 sb.append(rect(x, y, cs, cs, cellBg, "#cbd5e1", 1f))
-                if (isQ) {
+                if (isEmptyNoQ) {
+                    // خانهٔ خالی بدون علامت سؤال
+                } else if (isQ) {
                     sb.append(text(x + cs / 2f, y + cs * 0.66f, "؟", PINK, "middle", bold = true, size = fontSz))
                 } else if (mode == "color" && tok != null) {
                     val pad = max(3.5f, cs * 0.16f)
@@ -668,29 +748,113 @@ object PrimaryMathSvgRenderer {
         return sb.toString()
     }
 
-    // ----------------------------- V314.0 / V317.0 — الگویابی رنگی، شکلی و عددی
+    // ----------------------------- V314.0 / V317.0 / V335.8 — الگویابی رنگی، شکلی، عددی و رشدشونده
     private fun patternTrain(spec: FigureSpec): String {
         val items = spec.xList("seq", "●,▲,●,▲,●,?").map { it.trim() }.filter { it.isNotEmpty() }.take(12)
         if (items.isEmpty()) return ""
         val mode = spec.xStr("mode", "shape").lowercase()
         val sb = StringBuilder()
         val n = items.size
-        val cw = min(42f, 300f / n)
-        val gap = if (n <= 8) 6f else 4f
+        val gap = when {
+            n <= 6 -> 8f
+            n <= 8 -> 6f
+            else -> 4f
+        }
+        val cw = min(if (mode == "growing") 54f else 44f, (324f - (n - 1) * gap) / n)
         val totalW = n * cw + (n - 1) * gap
         val x0 = (360f - totalW) / 2f
-        val y0 = 112f
-        val palette = listOf("#e53935", "#1e88e5", "#43a047", "#fbc02d", "#8e24aa", "#fb8c00")
+        val palette = listOf("#e53935", "#1e88e5", "#43a047", "#fbc02d", "#8e24aa", "#fb8c00", "#00acc1")
+
+        if (mode == "growing") {
+            val cardH = 128f
+            val y0 = 64f
+            items.forEachIndexed { i, it ->
+                val x = x0 + i * (cw + gap)
+                val isEmpty = it == "_" || it == "-"
+                val isQ = it == "?" || it == "؟"
+                val count = faEnDigits(it).toIntOrNull()?.coerceIn(1, 25)
+                val bg = if (isQ) "#fff8e1" else "#f8fafc"
+                val stroke = if (isQ) PINK else ST
+                sb.append(rect(x, y0, cw, cardH, bg, stroke, 1.8f, rx = 10f))
+                if (isQ) {
+                    sb.append(text(x + cw / 2f, y0 + cardH / 2f + 7f, "؟", PINK, "middle", bold = true, size = 22))
+                } else if (!isEmpty && count != null) {
+                    val cols = ceil(sqrt(count.toDouble())).toInt().coerceAtLeast(1)
+                    val rows = ceil(count.toDouble() / cols).toInt().coerceAtLeast(1)
+                    val pad = 6f
+                    val availW = cw - pad * 2f
+                    val availH = cardH - 28f
+                    val dotStep = min(availW / cols, availH / rows).coerceAtMost(15f)
+                    val dotR = (dotStep * 0.38f).coerceAtLeast(2.4f)
+                    val gx0 = x + (cw - cols * dotStep) / 2f
+                    val gyBot = y0 + cardH - 12f
+                    val col = palette[i % palette.size]
+                    for ( idx in 0 until count) {
+                        val r = idx / cols
+                        val c = idx % cols
+                        val cx = gx0 + (c + 0.5f) * dotStep
+                        val cy = gyBot - (r + 0.5f) * dotStep
+                        sb.append("<circle cx=\"${f(cx)}\" cy=\"${f(cy)}\" r=\"${f(dotR)}\" fill=\"$col\" stroke=\"$ST\" stroke-width=\"0.9\"/>")
+                    }
+                    sb.append(text(x + cw / 2f, y0 + 16f, count.toString(), MU, "middle", bold = true, size = 10))
+                } else if (!isEmpty) {
+                    sb.append(text(x + cw / 2f, y0 + cardH / 2f + 6f, it, ACC, "middle", bold = true, size = 16))
+                }
+                sb.append(text(x + cw / 2f, y0 + cardH + 20f, "شکل ${i + 1}", MU, "middle", bold = true, size = if (n > 7) 9 else 11))
+            }
+            return sb.toString()
+        }
+
+        val y0 = if (mode == "number") 122f else 112f
+        val ch = 54f
         if (mode == "bead") {
             sb.append(line(x0 - 14f, y0 + 27f, x0 + totalW + 14f, y0 + 27f, ST, 3f))
         }
+
+        // در حالت عددی، کمان رابطهٔ بین جمله‌های متوالی در بالا رسم می‌شود
+        if (mode == "number" && n >= 2) {
+            val nums = items.map { raw ->
+                val clean = faEnDigits(raw.trim())
+                if (clean == "?" || clean == "؟" || clean == "_") null else clean.toIntOrNull()
+            }
+            val diffs = mutableListOf<Int>()
+            val ratios = mutableListOf<Int>()
+            for (i in 0 until n - 1) {
+                val a = nums[i]
+                val b = nums[i + 1]
+                if (a != null && b != null) {
+                    diffs += (b - a)
+                    if (a != 0 && b % a == 0) ratios += (b / a)
+                }
+            }
+            val useMul = diffs.size >= 2 && diffs.distinct().size > 1 && ratios.size == diffs.size && ratios.distinct().size == 1 && ratios.first() > 1
+            for (i in 0 until n - 1) {
+                val a = nums[i]
+                val b = nums[i + 1]
+                val xa = x0 + i * (cw + gap) + cw / 2f
+                val xb = x0 + (i + 1) * (cw + gap) + cw / 2f
+                val xm = (xa + xb) / 2f
+                sb.append("<path d=\"M ${f(xa + 3f)} ${f(y0 - 6f)} Q ${f(xm)} ${f(y0 - 34f)} ${f(xb - 3f)} ${f(y0 - 6f)}\" fill=\"none\" stroke=\"$ACC\" stroke-width=\"1.6\"/>")
+                sb.append("<polygon points=\"${f(xb - 2f)},${f(y0 - 5f)} ${f(xb - 7f)},${f(y0 - 10f)} ${f(xb - 3f)},${f(y0 - 12f)}\" fill=\"$ACC\"/>")
+                val relLbl = if (a != null && b != null) {
+                    if (useMul) "×${b / a}" else {
+                        val d = b - a
+                        if (d >= 0) "+$d" else "−${-d}"
+                    }
+                } else "؟"
+                sb.append(text(xm, y0 - 24f, relLbl, if (relLbl == "؟") PINK else "#00897b", "middle", bold = true, size = if (n > 8) 9 else 11))
+            }
+        }
+
         items.forEachIndexed { i, it ->
             val x = x0 + i * (cw + gap)
+            val isEmpty = it == "_" || it == "-"
             val isQ = it == "?" || it == "؟"
             val norm = normalizeSawCell(it)
             val tok = SAW_PALETTE[norm]
             val col = when {
-                isQ -> PINK
+                isQ || isEmpty -> PINK
+                mode == "number" -> ACC
                 tok != null -> tok.hex
                 else -> palette[i % palette.size]
             }
@@ -698,15 +862,36 @@ object PrimaryMathSvgRenderer {
                 val r = min(20f, cw * 0.45f)
                 val cx = x + cw / 2f
                 val cy = y0 + 27f
-                sb.append("<circle cx=\"${f(cx)}\" cy=\"${f(cy)}\" r=\"${f(r)}\" fill=\"${if (isQ) "#fff8e1" else col}\" stroke=\"$ST\" stroke-width=\"2\"/>")
+                sb.append("<circle cx=\"${f(cx)}\" cy=\"${f(cy)}\" r=\"${f(r)}\" fill=\"${if (isQ || isEmpty) "#fff8e1" else col}\" stroke=\"$ST\" stroke-width=\"2\"/>")
                 if (isQ) sb.append(text(cx, cy + 6f, "؟", PINK, "middle", bold = true, size = 16))
             } else if (mode == "color") {
-                sb.append(rect(x, y0, cw, 54f, if (isQ) "#fff8e1" else col, ST, 2f, rx = 10f))
+                sb.append(rect(x, y0, cw, ch, if (isQ || isEmpty) "#fff8e1" else col, ST, 2f, rx = 10f))
                 if (isQ) sb.append(text(x + cw / 2f, y0 + 34f, "؟", PINK, "middle", bold = true, size = 20))
+            } else if (mode == "number") {
+                sb.append(rect(x, y0, cw, ch, if (isQ || isEmpty) "#fff8e1" else "#eef2ff", if (isQ) PINK else ACC, 2f, rx = 10f))
+                if (!isEmpty) {
+                    val lbl = if (isQ) "؟" else it
+                    val sz = when {
+                        lbl.length >= 3 || n > 9 -> 13
+                        n > 7 -> 16
+                        else -> 19
+                    }
+                    sb.append(text(x + cw / 2f, y0 + 34f, lbl, if (isQ) PINK else ST, "middle", bold = true, size = sz))
+                }
+            } else if (mode == "mixed") {
+                val tint = if (isQ || isEmpty) "#fff8e1" else (tok?.tint ?: "rgba(108,99,245,.12)")
+                sb.append(rect(x, y0, cw, ch, tint, col, 2f, rx = 10f))
+                if (!isEmpty) {
+                    val label = if (isQ) "؟" else it
+                    val sz = if (label.length >= 3 || n > 8) 13 else 18
+                    sb.append(text(x + cw / 2f, y0 + 34f, label, col, "middle", bold = true, size = sz))
+                }
             } else {
-                sb.append(rect(x, y0, cw, 54f, if (isQ) "#fff8e1" else "rgba(108,99,245,.10)", col, 2f, rx = 9f))
-                val label = if (isQ) "؟" else if (tok != null && it in SAW_PALETTE.keys) tok.sym else it
-                sb.append(text(x + cw / 2f, y0 + 34f, label, col, "middle", bold = true, size = if (n > 8) 15 else 20))
+                sb.append(rect(x, y0, cw, ch, if (isQ || isEmpty) "#fff8e1" else "rgba(108,99,245,.10)", col, 2f, rx = 9f))
+                if (!isEmpty) {
+                    val label = if (isQ) "؟" else if (tok != null && it in SAW_PALETTE.keys) tok.sym else it
+                    sb.append(text(x + cw / 2f, y0 + 34f, label, col, "middle", bold = true, size = if (n > 8) 15 else 20))
+                }
             }
         }
         return sb.toString()
@@ -746,15 +931,24 @@ object PrimaryMathSvgRenderer {
         return sb.toString()
     }
 
-    // -------------------------------------------------- V315.0 — تقارن شطرنجی
+    // -------------------------------------------------- V315.0 / V335.8 — تقارن شطرنجی (کلیک روی خانه‌ها + بدون «؟»)
     private fun symmetryGrid(spec: FigureSpec): String {
         val axis = spec.xStr("axis", "v").lowercase()
         val mirror = spec.xNum("mirror", 1f).toInt() != 0
-        val rawCells = spec.xStr("cells", "1,1;2,1;2,2;3,2")
-        val pairs = rawCells.split(';', '؛').mapNotNull { token ->
-            val p = token.split(',', '،').mapNotNull { it.trim().toIntOrNull() }
-            if (p.size >= 2) (p[0].coerceIn(1, 4) to p[1].coerceIn(1, 4)) else null
+        val hasCellsKey = (spec.raw["X"] as? kotlinx.serialization.json.JsonObject)?.containsKey("cells") == true
+        val rawCells = spec.xStr("cells", "")
+        val pairs = if (rawCells.isBlank() && !hasCellsKey) {
+            listOf(1 to 1, 2 to 1, 2 to 2, 3 to 2)
+        } else {
+            rawCells.split(';', '؛').mapNotNull { token ->
+                val p = token.split(',', '،').mapNotNull { faEnDigits(it.trim()).toIntOrNull() }
+                if (p.size >= 2) (p[0].coerceIn(1, 8) to p[1].coerceIn(1, 8)) else null
+            }
         }
+        val ansPairs = spec.xStr("ansCells", "").split(';', '؛').mapNotNull { token ->
+            val p = token.split(',', '،').mapNotNull { faEnDigits(it.trim()).toIntOrNull() }
+            if (p.size >= 2) ((p[0] - 1).coerceIn(0, 7) to (p[1] - 1).coerceIn(0, 7)) else null
+        }.toSet()
         val sb = StringBuilder()
         val cell = 26f
         val n = 8
@@ -767,27 +961,32 @@ object PrimaryMathSvgRenderer {
                 sb.append(rect(x0 + c * cell, y0 + r * cell, cell, cell, "none", "#cbd5e1", 1f))
             }
         }
+        val givenCoords = mutableSetOf<Pair<Int, Int>>()
         pairs.forEach { (r1, d1) ->
             if (axis == "h") {
-                val rTop = (4 - d1).coerceIn(0, 3)
+                val rMain = if (d1 <= 4) (4 - d1).coerceIn(0, 3) else (d1 - 1).coerceIn(4, 7)
                 val cPos = (r1 - 1).coerceIn(0, 7)
-                sb.append(rect(x0 + cPos * cell + 2f, y0 + rTop * cell + 2f, cell - 4f, cell - 4f, ACC, ST, 1.2f, rx = 3f))
-                val rBot = (3 + d1).coerceIn(4, 7)
+                givenCoords += (rMain to cPos)
+                sb.append(rect(x0 + cPos * cell + 2f, y0 + rMain * cell + 2f, cell - 4f, cell - 4f, ACC, ST, 1.2f, rx = 3f))
                 if (mirror) {
-                    sb.append(rect(x0 + cPos * cell + 2f, y0 + rBot * cell + 2f, cell - 4f, cell - 4f, GREEN, ST, 1.2f, rx = 3f))
-                } else {
-                    sb.append(text(x0 + cPos * cell + cell / 2f, y0 + rBot * cell + cell * 0.68f, "؟", PINK, "middle", bold = true, size = 14))
+                    val rRef = 7 - rMain
+                    sb.append(rect(x0 + cPos * cell + 2f, y0 + rRef * cell + 2f, cell - 4f, cell - 4f, GREEN, ST, 1.2f, rx = 3f))
                 }
             } else {
                 val rPos = (r1 - 1).coerceIn(0, 7)
-                val cLeft = (4 - d1).coerceIn(0, 3)
-                val cRight = (3 + d1).coerceIn(4, 7)
-                sb.append(rect(x0 + cLeft * cell + 2f, y0 + rPos * cell + 2f, cell - 4f, cell - 4f, ACC, ST, 1.2f, rx = 3f))
+                val cMain = if (d1 <= 4) (4 - d1).coerceIn(0, 3) else (d1 - 1).coerceIn(4, 7)
+                givenCoords += (rPos to cMain)
+                sb.append(rect(x0 + cMain * cell + 2f, y0 + rPos * cell + 2f, cell - 4f, cell - 4f, ACC, ST, 1.2f, rx = 3f))
                 if (mirror) {
-                    sb.append(rect(x0 + cRight * cell + 2f, y0 + rPos * cell + 2f, cell - 4f, cell - 4f, GREEN, ST, 1.2f, rx = 3f))
-                } else {
-                    sb.append(text(x0 + cRight * cell + cell / 2f, y0 + rPos * cell + cell * 0.68f, "؟", PINK, "middle", bold = true, size = 14))
+                    val cRef = 7 - cMain
+                    sb.append(rect(x0 + cRef * cell + 2f, y0 + rPos * cell + 2f, cell - 4f, cell - 4f, GREEN, ST, 1.2f, rx = 3f))
                 }
+            }
+        }
+        // خانه‌هایی که دانش‌آموز در جلسهٔ آزمون رنگ کرده است (در حالت عدم نمایش کامل شکل قرینه)
+        ansPairs.forEach { (r, c) ->
+            if ((r to c) !in givenCoords) {
+                sb.append(rect(x0 + c * cell + 2f, y0 + r * cell + 2f, cell - 4f, cell - 4f, GREEN, ST, 1.2f, rx = 3f))
             }
         }
         if (axis == "h") {
@@ -846,36 +1045,104 @@ object PrimaryMathSvgRenderer {
         return sb.toString()
     }
 
-    // --------------------------------------------- V315.0 — استوانهٔ مدرج (حجم)
+    // --------------------------------------------- V315.0 / V335.8 — استوانهٔ مدرج (حجم) — ۱ تا ۴ استوانه
     private fun graduatedBeaker(spec: FigureSpec): String {
         val mx = max(10f, spec.xNum("max", 500f))
-        val v = spec.xNum("val", 350f).coerceIn(0f, mx)
         val unit = spec.xStr("unit", "mL")
-        val sb = StringBuilder()
-        val x0 = 96f
-        val w = 112f
-        val top = 36f
-        val bot = 216f
-        val h = bot - top
-        val vh = h * (v / mx)
-        val vy = bot - vh
-        sb.append(rect(x0, top, w, h, "#f8fafc", "none", 0f))
-        if (v > 0f) {
-            sb.append(rect(x0 + 3f, vy, w - 6f, vh, "rgba(38,166,154,.42)", "#00897b", 1.5f))
+        val lblMode = spec.xStr("label", "1")
+        // پشتیبانی از ۱ تا ۴ استوانه (count + val/val2/val3/val4 یا لیست vals با ویرگول)
+        val rawValsList = spec.xStr("vals", "").split(',', '،', ';').mapNotNull { faEnDigits(it.trim()).toFloatOrNull() }
+        val explicitCount = spec.xNum("count", if (rawValsList.size >= 2) rawValsList.size.toFloat() else 1f).toInt().coerceIn(1, 4)
+        val defaults = listOf(350f, 200f, 450f, 150f)
+        val keys = listOf("val", "val2", "val3", "val4")
+        val values = (0 until explicitCount).map { idx ->
+            val v = rawValsList.getOrNull(idx) ?: spec.xNum(keys[idx], defaults[idx] * (mx / 500f))
+            v.coerceIn(0f, mx)
         }
-        sb.append("<path d=\"M ${f(x0 - 8f)} ${f(top)} L ${f(x0)} ${f(top)} L ${f(x0)} ${f(bot)} L ${f(x0 + w)} ${f(bot)} L ${f(x0 + w)} ${f(top)} L ${f(x0 + w + 8f)} ${f(top)}\" fill=\"none\" stroke=\"$ST\" stroke-width=\"3\"/>")
-        sb.append(text(x0 + w + 34f, top - 8f, "($unit)", MU, "middle", bold = true, size = 11))
-        for (i in 0..10) {
-            val ty = bot - h * (i / 10f)
-            val major = i % 2 == 0
-            sb.append(line(x0 + w - (if (major) 18f else 10f), ty, x0 + w, ty, ST, if (major) 1.8f else 1.1f))
-            if (major && i > 0) {
-                val tv = Math.round(mx * i / 10f)
-                sb.append(text(x0 + w + 34f, ty + 4f, tv.toString(), ST, "middle", bold = true, size = 12))
+        val sb = StringBuilder()
+        if (explicitCount == 1) {
+            val v = values[0]
+            val x0 = 96f
+            val w = 112f
+            val top = 36f
+            val bot = 216f
+            val h = bot - top
+            val vh = h * (v / mx)
+            val vy = bot - vh
+            sb.append(rect(x0, top, w, h, "#f8fafc", "none", 0f))
+            if (v > 0f) {
+                sb.append(rect(x0 + 3f, vy, w - 6f, vh, "rgba(38,166,154,.42)", "#00897b", 1.5f))
+            }
+            sb.append("<path d=\"M ${f(x0 - 8f)} ${f(top)} L ${f(x0)} ${f(top)} L ${f(x0)} ${f(bot)} L ${f(x0 + w)} ${f(bot)} L ${f(x0 + w)} ${f(top)} L ${f(x0 + w + 8f)} ${f(top)}\" fill=\"none\" stroke=\"$ST\" stroke-width=\"3\"/>")
+            sb.append(text(x0 + w + 34f, top - 8f, "($unit)", MU, "middle", bold = true, size = 11))
+            for (i in 0..10) {
+                val ty = bot - h * (i / 10f)
+                val major = i % 2 == 0
+                sb.append(line(x0 + w - (if (major) 18f else 10f), ty, x0 + w, ty, ST, if (major) 1.8f else 1.1f))
+                if (major && i > 0) {
+                    val tv = Math.round(mx * i / 10f)
+                    sb.append(text(x0 + w + 34f, ty + 4f, tv.toString(), ST, "middle", bold = true, size = 12))
+                }
+            }
+            if (lblMode != "0") {
+                val badgeTxt = if (lblMode == "2") "؟ $unit" else "${v.toInt()} $unit"
+                val badgeCol = if (lblMode == "2") PINK else "#00695c"
+                sb.append(rect(x0 - 4f, 230f, w + 8f, 30f, if (lblMode == "2") "#fff8e1" else "#e0f2f1", if (lblMode == "2") PINK else "#00897b", 1.5f, rx = 8f))
+                sb.append(text(x0 + w / 2f, 250f, badgeTxt, badgeCol, "middle", bold = true, size = 15))
+            }
+            return sb.toString()
+        }
+
+        // حالت ۲ تا ۴ استوانه در کنار هم
+        val names = listOf("الف", "ب", "ج", "د")
+        val liquidCols = listOf(
+            "rgba(38,166,154,.44)" to "#00897b",
+            "rgba(66,165,245,.44)" to "#1e88e5",
+            "rgba(171,71,188,.38)" to "#8e24aa",
+            "rgba(255,167,38,.44)" to "#fb8c00"
+        )
+        val slotW = 340f / explicitCount
+        val cylW = when (explicitCount) {
+            2 -> 76f
+            3 -> 54f
+            else -> 42f
+        }
+        val top = 42f
+        val bot = 212f
+        val h = bot - top
+        sb.append(text(344f, 24f, "($unit)", MU, "end", bold = true, size = 10))
+        for (idx in 0 until explicitCount) {
+            val v = values[idx]
+            val slotX = 10f + idx * slotW
+            val x0 = slotX + (slotW - cylW - 22f) / 2f
+            val vh = h * (v / mx)
+            val vy = bot - vh
+            val (fillC, strokeC) = liquidCols[idx % liquidCols.size]
+            sb.append(text(x0 + cylW / 2f, 28f, names[idx], ST, "middle", bold = true, size = 12))
+            sb.append(rect(x0, top, cylW, h, "#f8fafc", "none", 0f))
+            if (v > 0f) {
+                sb.append(rect(x0 + 2.5f, vy, cylW - 5f, vh, fillC, strokeC, 1.3f))
+            }
+            sb.append("<path d=\"M ${f(x0 - 5f)} ${f(top)} L ${f(x0)} ${f(top)} L ${f(x0)} ${f(bot)} L ${f(x0 + cylW)} ${f(bot)} L ${f(x0 + cylW)} ${f(top)} L ${f(x0 + cylW + 5f)} ${f(top)}\" fill=\"none\" stroke=\"$ST\" stroke-width=\"2.4\"/>")
+            for (i in 0..10) {
+                val ty = bot - h * (i / 10f)
+                val major = if (explicitCount == 4) (i % 5 == 0) else (i % 2 == 0)
+                val tickLen = if (major) min(12f, cylW * 0.28f) else min(7f, cylW * 0.18f)
+                sb.append(line(x0 + cylW - tickLen, ty, x0 + cylW, ty, ST, if (major) 1.5f else 0.9f))
+                if (major && i > 0) {
+                    val tv = Math.round(mx * i / 10f)
+                    sb.append(text(x0 + cylW + 3f, ty + 3.5f, tv.toString(), ST, "start", bold = true, size = if (explicitCount >= 4) 9 else 10))
+                }
+            }
+            if (lblMode != "0") {
+                val bw = cylW + 18f
+                val bx = x0 + cylW / 2f - bw / 2f
+                val badgeTxt = if (lblMode == "2") "؟" else if (explicitCount >= 4) "${v.toInt()}" else "${v.toInt()} $unit"
+                val badgeCol = if (lblMode == "2") PINK else strokeC
+                sb.append(rect(bx, 224f, bw, 26f, if (lblMode == "2") "#fff8e1" else "#f8fafc", badgeCol, 1.3f, rx = 7f))
+                sb.append(text(x0 + cylW / 2f, 242f, badgeTxt, badgeCol, "middle", bold = true, size = if (explicitCount >= 3) 11 else 13))
             }
         }
-        sb.append(rect(x0 - 4f, 230f, w + 8f, 30f, "#e0f2f1", "#00897b", 1.5f, rx = 8f))
-        sb.append(text(x0 + w / 2f, 250f, "${v.toInt()} $unit", "#00695c", "middle", bold = true, size = 15))
         return sb.toString()
     }
 
@@ -1140,11 +1407,11 @@ object PrimaryMathSvgRenderer {
     }
 
     private fun functionMachine(spec: FigureSpec): String {
-        val inputs = spec.xStr("in", "2,4,6,8")
+        val inputs = spec.xStr("in", "").ifBlank { spec.xStr("ins", "2,4,6,8") }
             .split(',', '،', ';')
             .mapNotNull { faEnDigits(it.trim()).toIntOrNull() }
             .ifEmpty { listOf(2, 4, 6, 8) }
-            .take(5)
+            .take(8)
         val op1 = spec.xStr("op1", "+ 3").trim()
         val op2 = spec.xStr("op2", "").trim()
         val blank = spec.xNum("blank", 1f).toInt().coerceIn(0, 2)
@@ -1168,28 +1435,29 @@ object PrimaryMathSvgRenderer {
         }
         sb.append(text(322f, 64f, "خروجی", MU, "middle", bold = true, size = 11))
 
-        // جدول ورودی و خروجی در پایین
-        val cols = inputs.size + 1
-        val cw = min(52f, 290f / cols)
-        val tw = cw * cols
+        // جدول ورودی و خروجی در پایین — تا ۸ عدد ورودی با ستون سرستون مجزا
+        val lw = 52f
+        val cw = min(50f, 286f / inputs.size.coerceAtLeast(1))
+        val tw = lw + cw * inputs.size
         val x0 = (360f - tw) / 2f
         val y0 = 116f
         val rh = 44f
+        val numFont = if (inputs.size >= 7) 12 else 14
         sb.append(rect(x0, y0, tw, rh * 2f, "#ffffff", ST, 2f, rx = 8f))
         sb.append(line(x0, y0 + rh, x0 + tw, y0 + rh, ST, 1.6f))
-        sb.append(text(x0 + cw / 2f, y0 + 27f, "ورودی", ACC, "middle", bold = true, size = 12))
-        sb.append(text(x0 + cw / 2f, y0 + rh + 27f, "خروجی", "#00897b", "middle", bold = true, size = 12))
+        sb.append(text(x0 + lw / 2f, y0 + 27f, "ورودی", ACC, "middle", bold = true, size = 11))
+        sb.append(text(x0 + lw / 2f, y0 + rh + 27f, "خروجی", "#00897b", "middle", bold = true, size = 11))
         inputs.forEachIndexed { idx, inp ->
-            val cx = x0 + (idx + 1) * cw
+            val cx = x0 + lw + idx * cw
             sb.append(line(cx, y0, cx, y0 + rh * 2f, ST, 1.2f))
             val out = applyOp(applyOp(inp, op1), op2)
-            sb.append(text(cx + cw / 2f, y0 + 28f, inp.toString(), ST, "middle", bold = true, size = 14))
+            sb.append(text(cx + cw / 2f, y0 + 28f, inp.toString(), ST, "middle", bold = true, size = numFont))
             val hideOut = blank == 1 && idx >= inputs.size / 2
             if (hideOut) {
-                sb.append(rect(cx + 3f, y0 + rh + 3f, cw - 6f, rh - 6f, "#fff8e1", "none", 0f, rx = 5f))
-                sb.append(text(cx + cw / 2f, y0 + rh + 28f, "؟", PINK, "middle", bold = true, size = 16))
+                sb.append(rect(cx + 2.5f, y0 + rh + 3f, cw - 5f, rh - 6f, "#fff8e1", "none", 0f, rx = 5f))
+                sb.append(text(cx + cw / 2f, y0 + rh + 28f, "؟", PINK, "middle", bold = true, size = numFont + 2))
             } else {
-                sb.append(text(cx + cw / 2f, y0 + rh + 28f, out.toString(), ST, "middle", bold = true, size = 14))
+                sb.append(text(cx + cw / 2f, y0 + rh + 28f, out.toString(), ST, "middle", bold = true, size = numFont))
             }
         }
         return sb.toString()

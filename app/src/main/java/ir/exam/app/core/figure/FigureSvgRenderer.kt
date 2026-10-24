@@ -76,14 +76,15 @@ object FigureSvgRenderer {
         // پلاک عنوان‌دار امن می‌گیرند؛ نه JSON خام و نه هندسهٔ نامربوط.
         if (spec.kind in setOf("a", "s")) return renderKindPlate(spec)
         val body = renderBody(spec)
-        // V310.8 — دسته‌های ده‌تایی و ارزش مکانی (چند ردیف) کادر بلندتر دارند.
+        // V310.8 / V335.8 — دسته‌های ده‌تایی، ارزش مکانی و چرتکهٔ ۶ستونی کادر اختصاصی دارند.
+        val vw = PrimaryMathSvgRenderer.canvasWidth(spec)
         val vh = PrimaryMathSvgRenderer.canvasHeight(spec)
-        val viewBox = if (spec.type == "parll") "0 0 380 280" else "0 0 360 ${fmt(vh)}"
-        val xml = wrap(body, viewBox, HEIGHT * vh / 280f)
+        val viewBox = if (spec.type == "parll") "0 0 380 280" else "0 0 ${fmt(vw)} ${fmt(vh)}"
+        val xml = wrap(body, viewBox, HEIGHT * vh / 280f, WIDTH * vw / 360f)
         return MathSvgDocument(
             xml = xml,
-            widthPx = WIDTH,
-            heightPx = HEIGHT,
+            widthPx = WIDTH * vw / 360f,
+            heightPx = HEIGHT * vh / 280f,
             cacheKey = "figure-svg-${sha256(spec.toJson())}",
             editBoxes = emptyList()
         )
@@ -126,8 +127,8 @@ object FigureSvgRenderer {
         else -> renderGeometry(spec)
     }
 
-    private fun wrap(inner: String, viewBox: String, height: Float = HEIGHT): String =
-        "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"$viewBox\" width=\"${fmt(WIDTH)}\" height=\"${fmt(height)}\" overflow=\"hidden\">$inner</svg>"
+    private fun wrap(inner: String, viewBox: String, height: Float = HEIGHT, width: Float = WIDTH): String =
+        "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"$viewBox\" width=\"${fmt(width)}\" height=\"${fmt(height)}\" overflow=\"hidden\">$inner</svg>"
 
     // ------------------------------------------------------------ helpers
 

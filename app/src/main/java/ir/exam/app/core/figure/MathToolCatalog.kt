@@ -28,12 +28,12 @@ val MATH_CATEGORIES: List<MathCategory> = listOf(
         ids = listOf(
             "axtally", "axbase10", "axplace", "axclock", "axruler", "axfrac", "axmoney",
             "axabacus", "axjump", "axbalance", "axthermo", "axsaw", "axpattern",
-            "axtenframe", "axsym", "axspin", "axbeaker", "axgeoboard", "axdice", "axmularea", "axvenn",
+            "axtenframe", "axsym", "axbeaker", "axgeoboard", "axdice", "axmularea", "axvenn",
             "axnumgrid", "axfacttree", "axfnmachine", "axfracwall", "axtangram", "axangle",
             "axrod", "axtower", "axmulwheel", "axmultgrid", "axnet", "axcubes", "axcalendar",
             "axlever", "axcycle", "axwordtrain",
-            // V327 — رنگ‌آمیزی، فارسی و علوم دبستان
-            "axpaintgrid", "axletterforms", "axsyllablechart", "axmagnet", "axsenses", "axseedgrow", "axbodyparts"
+            // V327 / V335.8 — رنگ‌آمیزی، فارسی و علوم دبستان
+            "axpaintgrid", "axletterforms", "axsyllablechart", "axmagnet", "axsenses"
         )
     ),
     MathCategory(

@@ -66,7 +66,10 @@ fun NativeMathText(
     atlasBlankAnswers: Map<Int, String>? = null,
     onAtlasBlankAnswer: ((Int, String) -> Unit)? = null,
     // V58.0 — پنل معلم به جای خالی/کادر نامگذاری نیاز ندارد؛ چاپ و دانش‌آموز دارند.
-    showAtlasBlanks: Boolean = true
+    showAtlasBlanks: Boolean = true,
+    // V335.8 — پاسخ تعاملی دانش‌آموز روی شکل‌های دبستان (رنگ‌آمیزی تقارن/شبکه و ورود عدد در خانه‌های خالی).
+    studentFigureAnswer: String = "",
+    onStudentFigureAnswer: ((String) -> Unit)? = null
 ) {
     // متن ترکیبی در بازترکیب‌های ناشی از تایمر/انتخاب دوباره parse نشود؛
     // فقط با تغییر خود source محاسبه شود.
@@ -120,26 +123,43 @@ fun NativeMathText(
                         // زوم فقط با لمس خود تصویر؛ کادرهای تایپ آزاد می‌مانند.
                         onImageTap = if (zoomableFigures) ({ zoomSpec = figure.spec }) else null
                     )
-                } else Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .then(
-                            if (zoomableFigures) Modifier.clickable { zoomSpec = figure.spec }
-                            else Modifier
+                } else {
+                    val isInteractiveStudentFig = onStudentFigureAnswer != null && (
+                        figure.spec.type in setOf("axpaintgrid", "axcalendar", "axmultgrid", "axmulwheel", "axtower") ||
+                            (figure.spec.type == "axsym" && figure.spec.xNum("mirror", 1f).toInt() == 0)
                         )
-                        .then(
-                            // V310.8 — دسته‌های ده‌تایی کادر بلندتر (نسبت ۳۶۰×۳۷۰) تا همهٔ رتبه‌ها دیده شوند
-                            if (figure.spec.type == "axbase10" || figure.spec.type == "axplace")
-                                Modifier.aspectRatio(360f / PrimaryMathSvgRenderer.canvasHeight(figure.spec))
-                            else Modifier.height(150.dp)
-                        ),
-                    contentAlignment = Alignment.CenterStart
-                ) {
-                    AdjustableFigure(
-                        spec = figure.spec,
-                        modifier = Modifier.fillMaxWidth(),
-                        contentDescription = "شکل"
+                    val tallPrimaryFig = figure.spec.type in setOf(
+                        "axsym", "axpaintgrid", "axcalendar", "axmultgrid", "axmulwheel",
+                        "axtower", "axsaw", "axcubes", "axbeaker", "axsenses", "axlever", "axwordtrain"
                     )
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .then(
+                                if (zoomableFigures && !isInteractiveStudentFig) Modifier.clickable { zoomSpec = figure.spec }
+                                else Modifier
+                            )
+                            .then(
+                                when {
+                                    figure.spec.type == "axbase10" || figure.spec.type == "axplace" || figure.spec.type == "axabacus" ->
+                                        Modifier.aspectRatio(
+                                            PrimaryMathSvgRenderer.canvasWidth(figure.spec) /
+                                                PrimaryMathSvgRenderer.canvasHeight(figure.spec)
+                                        )
+                                    tallPrimaryFig -> Modifier.height(228.dp)
+                                    else -> Modifier.height(164.dp)
+                                }
+                            ),
+                        contentAlignment = Alignment.CenterStart
+                    ) {
+                        AdjustableFigure(
+                            spec = figure.spec,
+                            modifier = Modifier.fillMaxWidth(),
+                            contentDescription = "شکل",
+                            studentAnswer = studentFigureAnswer,
+                            onStudentAnswerChange = if (isInteractiveStudentFig) onStudentFigureAnswer else null
+                        )
+                    }
                 }
             } else if (segments.isEmpty()) {
                 // سطر خالی عمدی معلم (اینتر پشت‌سرهم) حفظ می‌شود.

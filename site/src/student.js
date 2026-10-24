@@ -471,7 +471,9 @@
       if (q.sectionTitle) { var sq = ex.questions.filter(function (x) { return x.sectionTitle === q.sectionTitle; }); var ss = sq.reduce(function (n, x) { return n + num(x.score); }, 0); body.appendChild(el('div', {class: 'card', style: 'padding:10px;margin-bottom:8px;color:var(--brand)'}, [el('b',{text:q.sectionTitle}),el('div',{class:'muted',style:'font-size:12px;margin-top:3px',text:fa(sq.length)+' سؤال · جمع بارم '+fa(S.fmtScore(ss))+(ex.sectionDurations&&ex.sectionDurations[String(q.sectionTitle).trim()]?' · زمان '+fa(ex.sectionDurations[String(q.sectionTitle).trim()])+' دقیقه':'' )})])); }
       body.appendChild(el('div', {class: 'row', style: 'margin-bottom:10px'}, [el('span', {class: 'chip brand', text: 'سؤال ' + fa(run.index + 1)}), el('span', {class: 'chip', text: 'بارم ' + fa(S.fmtScore(q.score))}), el('span', {class: 'chip', text: {multiple: 'چندگزینه‌ای', truefalse: 'صحیح/غلط', fill: 'جای‌خالی', numeric: 'عددی', matching: 'جورکردنی', essay: 'تشریحی'}[q.type] || ''})]));
       body.appendChild(txt);
-      richHtml(q.text).then(function (h) { if (ex.questions[run.index] === q) { txt.innerHTML = h; fitMath(txt); } });
+      var ansHost = el('div');
+      var rebuildAns = function () { var nextA = answerArea(q); ansHost.innerHTML = ''; ansHost.appendChild(nextA); };
+      richHtml(q.text).then(function (h) { if (ex.questions[run.index] === q) { txt.innerHTML = h; fitMath(txt); bindInteractiveQuestionFigs(txt, q, rebuildAns); } });
       if (q.passage) {
         var passageBox = el('div', {class:'card', style:'padding:14px;margin:8px 0;background:var(--soft)'}, [el('b',{text:'متن/صورت مشترک'}), el('div',{style:'margin-top:8px;white-space:pre-wrap',text:q.passage})]);
         body.insertBefore(passageBox, txt);
@@ -479,7 +481,195 @@
       if (p.audio) body.appendChild(el('audio', {controls: 'controls', src: p.audio, style: 'width:100%;margin:8px 0'}));
       else if (ex.primary || q.mode === 'dictation') body.appendChild(readAloudButton(q)); /* V302 — ابتدایی: «بخوان» با صدای مرورگر وقتی معلم صدا نگذاشته */
       if (q.images.length) body.appendChild(el('div', {class: 'st-imgs'}, q.images.map(function (u) { return el('img', {src: u, onclick: function () { lightbox(u); }}); })));
-      body.appendChild(answerArea(q));
+      rebuildAns();
+      body.appendChild(ansHost);
+    }
+    /* V335.8 — تعامل مستقیم دانش‌آموز روی شکل‌های تقارن شطرنجی، شبکهٔ رنگ‌آمیزی، تقویم، جدول ضرب، چرخ ضرب و هرم اعداد */
+    function bindInteractiveQuestionFigs(container, q, onSyncAns) {
+      if (!container || !(q.type === 'fill' || q.type === 'numeric' || q.type === 'essay')) return;
+      ensureMathFrame().then(function (w) {
+        if (!w || !w.GraphFig) return;
+        Array.prototype.forEach.call(container.querySelectorAll('.qmf-fig'), function (figEl) {
+          var baseSpec = null;
+          try { baseSpec = JSON.parse(figEl.getAttribute('data-fig') || '{}'); } catch (_e) { return; }
+          if (!baseSpec || !baseSpec.t) return;
+          var t = baseSpec.t, X = baseSpec.X || {};
+          var isSym = t === 'axsym' && Math.floor(Number(en(String(X.mirror == null ? '1' : X.mirror)))) === 0;
+          var isPaint = t === 'axpaintgrid';
+          var isKeyed = (t === 'axcalendar' || t === 'axmultgrid' || t === 'axmulwheel' || t === 'axtower');
+          if (!isSym && !isPaint && !isKeyed) return;
+          var listEmptyKeys = function () {
+            var empRaw = String(X.empty || '').split(/[,،;؛\s]+/).map(function (z) { return en(z.trim()); }).filter(Boolean);
+            if (empRaw.length) return empRaw;
+            var out = [];
+            if (t === 'axcalendar' && String(X.blank || '0') === '1') {
+              var ds = Math.max(20, Math.min(31, Math.floor(Number(en(String(X.days || '30'))) || 30)));
+              for (var d0 = 1; d0 <= ds; d0++) if (d0 % 5 === 0) out.push(String(d0));
+            } else if (t === 'axmultgrid') {
+              var mb = Math.floor(Number(en(String(X.blank || '0'))) || 0);
+              var rn = String(X.rows || '2,4,7').split(/[,،;]/).filter(Boolean).slice(0, 4).length || 3;
+              var cn = String(X.cols || '3,5,8').split(/[,،;]/).filter(Boolean).slice(0, 4).length || 3;
+              if (mb === 2) {
+                for (var c0 = 0; c0 < cn; c0++) out.push('c' + c0);
+                for (var r0 = 0; r0 < rn; r0++) out.push('r' + r0);
+              } else if (mb === 1) {
+                for (var r1 = 0; r1 < rn; r1++) for (var c1 = 0; c1 < cn; c1++) if ((r1 + c1) % 2 === 1) out.push(r1 + '_' + c1);
+              }
+            } else if (t === 'axmulwheel' && String(X.hide || '0') === '1') {
+              var wn = Math.max(3, Math.min(12, Math.floor(Number(en(String(X.n || '10'))) || 10)));
+              for (var wj = 0; wj < wn; wj++) if (wj % 3 === 2) out.push('s_' + wj);
+            } else if (t === 'axtower' && String(X.blank || '0') === '1') {
+              var bLen = Math.max(2, Math.min(6, String(X.base || '1,2,3,4').split(/[,،;]/).filter(Boolean).length || 4));
+              for (var lv = bLen - 1; lv >= 0; lv--) {
+                var cnt = bLen - lv;
+                for (var tk = 0; tk < cnt; tk++) if ((lv + tk) % 3 === 1) out.push(lv + '_' + tk);
+              }
+            }
+            return out;
+          };
+          var emptyKeys = isKeyed ? listEmptyKeys() : [];
+          if (isKeyed && !emptyKeys.length) return;
+          var parseStuMap = function (raw) {
+            var s0 = String(raw == null ? '' : raw).trim(), m = {};
+            if (!s0) return m;
+            if (s0.indexOf(':') >= 0 || s0.indexOf('=') >= 0) {
+              s0.split(/[;؛]/).forEach(function (p0) {
+                var ix = p0.indexOf(':') > 0 ? p0.indexOf(':') : p0.indexOf('=');
+                if (ix > 0) { var k0 = en(p0.slice(0, ix).trim()), v0 = p0.slice(ix + 1).trim(); if (k0 && v0) m[k0] = v0; }
+              });
+              return m;
+            }
+            if (emptyKeys.length === 1) { m[emptyKeys[0]] = s0; return m; }
+            var sp = s0.split(/[,،;؛]+/).map(function (z) { return z.trim(); });
+            emptyKeys.forEach(function (k0, i0) { if (sp[i0]) m[k0] = sp[i0]; });
+            return m;
+          };
+          var encodeStuMap = function (m) {
+            if (emptyKeys.length === 1) return (m[emptyKeys[0]] || '').trim();
+            var arr = emptyKeys.map(function (k0) { return (m[k0] || '').trim(); });
+            return arr.every(function (x) { return !x; }) ? '' : arr.join('، ');
+          };
+          var saveAns = function (v) {
+            if (!v) delete run.answers[q.id]; else run.answers[q.id] = v;
+            saveDraft(); drawNav();
+            if (onSyncAns) onSyncAns();
+            repaintFig();
+          };
+          var repaintFig = function () {
+            var curAns = String(run.answers[q.id] == null ? '' : run.answers[q.id]);
+            var clone = JSON.parse(JSON.stringify(baseSpec));
+            clone.X = clone.X || {};
+            if (isSym || isPaint) clone.X.ansCells = curAns;
+            else if (isKeyed) {
+              var mp = parseStuMap(curAns);
+              clone.X.ans = Object.keys(mp).map(function (k0) { return k0 + ':' + mp[k0]; }).join(';');
+            }
+            figEl.innerHTML = w.GraphFig.svg(clone);
+            var sv = figEl.querySelector('svg');
+            if (sv) { sv.style.cursor = 'pointer'; sv.style.touchAction = 'manipulation'; }
+          };
+          var svgPoint = function (ev) {
+            var sv = figEl.querySelector('svg');
+            if (!sv || !sv.createSVGPoint || !sv.getScreenCTM) return null;
+            var pt = sv.createSVGPoint(); pt.x = ev.clientX; pt.y = ev.clientY;
+            return pt.matrixTransform(sv.getScreenCTM().inverse());
+          };
+          var openStuCellModal = function (cellKey, titleLbl) {
+            var mp = parseStuMap(run.answers[q.id]);
+            var bg = el('div', {class: 'modal-bg'});
+            var inp = el('input', {type: 'text', class: 'st-input', inputmode: 'decimal', placeholder: 'مقدار این خانه', value: mp[cellKey] || '', style: 'text-align:center;font-size:20px;font-weight:700'});
+            var commit = function (val) {
+              if (val === '') delete mp[cellKey]; else mp[cellKey] = val;
+              bg.remove();
+              saveAns(encodeStuMap(mp));
+            };
+            inp.addEventListener('keydown', function (ev) { if (ev.key === 'Enter') { ev.preventDefault(); commit(inp.value.trim()); } });
+            var modal = el('div', {class: 'modal', style: 'max-width:360px'}, [
+              el('h3', {text: titleLbl, style: 'margin-top:0'}),
+              inp,
+              el('div', {class: 'row', style: 'margin-top:12px;gap:8px'}, [
+                el('button', {type: 'button', class: 'btn', text: 'ثبت', onclick: function () { commit(inp.value.trim()); }}),
+                el('button', {type: 'button', class: 'btn light', text: 'پاک‌کردن خانه', onclick: function () { commit(''); }}),
+                el('button', {type: 'button', class: 'btn light', text: 'انصراف', onclick: function () { bg.remove(); }})
+              ])
+            ]);
+            bg.addEventListener('click', function (ev) { if (ev.target === bg) bg.remove(); });
+            bg.appendChild(modal); document.body.appendChild(bg);
+            setTimeout(function () { try { inp.focus(); inp.select(); } catch (_e) {} }, 20);
+          };
+          figEl.onclick = function (ev) {
+            var p = svgPoint(ev); if (!p) return;
+            if (isSym) {
+              if (p.x < 76 || p.x > 284 || p.y < 32 || p.y > 240) return;
+              var cc = Math.max(1, Math.min(8, Math.floor((p.x - 76) / 26) + 1));
+              var rr = Math.max(1, Math.min(8, Math.floor((p.y - 32) / 26) + 1));
+              var key = rr + ',' + cc;
+              var list = String(run.answers[q.id] || '').split(/[;؛]/).map(function (z) { return en(z.trim()); }).filter(Boolean);
+              var ix = list.indexOf(key);
+              if (ix >= 0) list.splice(ix, 1); else list.push(key);
+              saveAns(list.join(';'));
+            } else if (isPaint) {
+              var rows = Math.max(1, Math.min(8, Math.round(Number(en(String(X.rows || '4'))) || 4)));
+              var cols = Math.max(1, Math.min(8, Math.round(Number(en(String(X.cols || '4'))) || 4)));
+              var goal = Math.max(0, Math.round(Number(en(String(X.goal || '0'))) || 0));
+              var pw = Math.min(300, cols * 42), ph = Math.min(150, rows * 34);
+              var px0 = (360 - pw) / 2, py0 = 62 + (150 - ph) / 2;
+              if (p.x < px0 || p.x > px0 + pw || p.y < py0 || p.y > py0 + ph) return;
+              var pc = Math.max(1, Math.min(cols, Math.floor((p.x - px0) / (pw / cols)) + 1));
+              var pr = Math.max(1, Math.min(rows, Math.floor((p.y - py0) / (ph / rows)) + 1));
+              var pkey = pr + ',' + pc;
+              var plist = String(run.answers[q.id] || '').split(/[;؛]/).map(function (z) { return en(z.trim()); }).filter(Boolean);
+              var pix = plist.indexOf(pkey);
+              if (pix >= 0) plist.splice(pix, 1);
+              else if (goal <= 0 || plist.length < goal) plist.push(pkey);
+              saveAns(plist.join(';'));
+            } else if (t === 'axcalendar') {
+              var clStart = Math.max(0, Math.min(6, Math.floor(Number(en(String(X.start || '3'))) || 0)));
+              var clDays = Math.max(20, Math.min(31, Math.floor(Number(en(String(X.days || '30'))) || 30)));
+              var clX0 = 180 - 44 * 3.5, clY0 = 76;
+              if (p.x < clX0 || p.x > clX0 + 308 || p.y < clY0) return;
+              var col2 = Math.floor((p.x - clX0) / 44), row2 = Math.floor((p.y - clY0) / 30);
+              var dayN = row2 * 7 + (6 - col2) - clStart + 1;
+              if (dayN >= 1 && dayN <= clDays && emptyKeys.indexOf(String(dayN)) >= 0) openStuCellModal(String(dayN), 'عدد این روز تقویم را بنویس');
+            } else if (t === 'axmultgrid') {
+              var rn2 = String(X.rows || '2,4,7').split(/[,،;]/).filter(Boolean).slice(0, 4).length || 3;
+              var cn2 = String(X.cols || '3,5,8').split(/[,،;]/).filter(Boolean).slice(0, 4).length || 3;
+              var mcw = Math.min(56, 268 / (cn2 + 1)), mch = Math.min(42, 216 / (rn2 + 1));
+              var mx0 = 180 - mcw * (cn2 + 1) / 2, my0 = 26 + (218 - mch * (rn2 + 1)) / 2;
+              if (p.x < mx0 || p.x > mx0 + (cn2 + 1) * mcw || p.y < my0 || p.y > my0 + (rn2 + 1) * mch) return;
+              var gc = Math.floor((p.x - mx0) / mcw), gr = Math.floor((p.y - my0) / mch);
+              var mkey = (gr === 0 && gc > 0) ? ('c' + (gc - 1)) : (gc === 0 && gr > 0) ? ('r' + (gr - 1)) : (gr > 0 && gc > 0) ? ((gr - 1) + '_' + (gc - 1)) : '';
+              if (mkey && emptyKeys.indexOf(mkey) >= 0) openStuCellModal(mkey, 'مقدار خانهٔ خالی را بنویس');
+            } else if (t === 'axmulwheel') {
+              var wn2 = Math.max(3, Math.min(12, Math.floor(Number(en(String(X.n || '10'))) || 10)));
+              if (Math.hypot(p.x - 180, p.y - 142) <= 34 && emptyKeys.indexOf('center') >= 0) {
+                openStuCellModal('center', 'عدد مرکز چرخ را بنویس'); return;
+              }
+              for (var j2 = 0; j2 < wn2; j2++) {
+                var a2 = -Math.PI / 2 + j2 * 2 * Math.PI / wn2, ox = 180 + 96 * Math.cos(a2), oy = 142 + 96 * Math.sin(a2);
+                if (Math.hypot(p.x - ox, p.y - oy) <= 22 && emptyKeys.indexOf('s_' + j2) >= 0) {
+                  openStuCellModal('s_' + j2, 'عدد این خانهٔ چرخ را بنویس'); return;
+                }
+              }
+            } else if (t === 'axtower') {
+              var bL = Math.max(2, Math.min(6, String(X.base || '1,2,3,4').split(/[,،;]/).filter(Boolean).length || 4));
+              var tbh = Math.min(34, 216 / bL), tbw = Math.min(58, 300 / bL);
+              for (var trow = 0; trow < bL; trow++) {
+                var lvI = bL - 1 - trow, cntI = bL - lvI, tly = 24 + trow * tbh;
+                if (p.y >= tly && p.y <= tly + tbh) {
+                  for (var tk2 = 0; tk2 < cntI; tk2++) {
+                    var tbx = 180 + (tk2 - (cntI - 1) / 2) * tbw - tbw / 2, tkey = lvI + '_' + tk2;
+                    if (p.x >= tbx && p.x <= tbx + tbw && emptyKeys.indexOf(tkey) >= 0) {
+                      openStuCellModal(tkey, 'عدد این آجر هرم را بنویس'); return;
+                    }
+                  }
+                }
+              }
+            }
+          };
+          repaintFig();
+        });
+      });
     }
     /* ===== V305 — ابزارهای ابتدایی: انتخاب روی تصویر، مرتب‌سازی با کشیدن، پد عددی بزرگ (همان قراردادهای اپ) ===== */
     var PRI_L = ['الف', 'ب', 'ج', 'د', 'ه', 'و', 'ز', 'ح'];
@@ -545,31 +735,48 @@
       });
       return box;
     }
-    /* V314.0 — بخش‌کردن و صداکشی: کادرهای رنگی مجزا + صفحه‌کلید نشانه‌ها و مصوت‌های فارسی */
+    /* V314.0 / V335.8 — بخش‌کردن و صداکشی: کادرهای پویا (+ افزودن کادر / حذف کادر) + نشانه‌های فارسی */
     function syllableAnswer(q, saved, set) {
-      var count = Math.max(2, Math.min(10, q.syllableCount || 2));
+      var minBoxes = (q.syllableCount || 0) >= 2 ? Math.min(8, q.syllableCount) : 1;
       var rawParts = saved ? String(saved).split('-') : [];
-      var parts = []; for (var i = 0; i < count; i++) parts.push(rawParts[i] || '');
+      var initCount = Math.max(minBoxes, Math.min(8, rawParts.length || minBoxes));
+      var parts = []; for (var i = 0; i < initCount; i++) parts.push(rawParts[i] || '');
       var activeIdx = 0;
       var wrap = el('div', {class: 'pri-syllable', style: 'display:flex;flex-direction:column;gap:8px'});
-      wrap.appendChild(el('b', {style: 'font-size:15px', text: 'هر بخش یا صدا را در کادر خودش بنویس:'}));
+      wrap.appendChild(el('b', {style: 'font-size:15px', text: 'هر بخش (هجا) را در یک کادر بنویس (با دکمهٔ + کادر اضافه کن):'}));
       var boxesRow = el('div', {class: 'row', style: 'gap:6px;flex-wrap:wrap;align-items:center'});
       var inputs = [];
       function emit() { set(parts.map(function (x) { return String(x || '').replace(/-/g, '').trim(); }).join('-')); }
-      parts.forEach(function (val, idx) {
-        if (idx > 0) boxesRow.appendChild(el('b', {style: 'font-size:20px;padding:0 2px', text: ' - '}));
-        var inp = el('input', {type: 'text', value: val, placeholder: 'بخش ' + fa(idx + 1), style: 'width:92px;text-align:center;font-size:18px;font-weight:bold;border:2px solid #0E7490;border-radius:10px;padding:6px'});
-        inp.addEventListener('focus', function () { activeIdx = idx; });
-        inp.addEventListener('input', function () { activeIdx = idx; parts[idx] = inp.value; emit(); });
-        inputs.push(inp);
-        boxesRow.appendChild(inp);
-      });
+      function renderBoxes() {
+        boxesRow.innerHTML = '';
+        inputs = [];
+        parts.forEach(function (val, idx) {
+          if (idx > 0) boxesRow.appendChild(el('b', {style: 'font-size:20px;padding:0 2px', text: ' - '}));
+          var inp = el('input', {type: 'text', value: val, placeholder: 'بخش ' + fa(idx + 1), style: 'width:96px;text-align:center;font-size:18px;font-weight:bold;border:2px solid #0E7490;border-radius:10px;padding:6px'});
+          inp.addEventListener('focus', function () { activeIdx = idx; });
+          inp.addEventListener('input', function () { activeIdx = idx; parts[idx] = inp.value; emit(); });
+          inputs.push(inp);
+          boxesRow.appendChild(inp);
+        });
+        if (parts.length < 8) {
+          boxesRow.appendChild(el('button', {type: 'button', class: 'btn soft sm', text: '+ افزودن کادر', onclick: function () {
+            parts.push(''); activeIdx = parts.length - 1; emit(); renderBoxes();
+            if (inputs[activeIdx]) inputs[activeIdx].focus();
+          }}));
+        }
+        if (parts.length > 1) {
+          boxesRow.appendChild(el('button', {type: 'button', class: 'btn light sm', text: '✕ حذف کادر', onclick: function () {
+            parts.pop(); activeIdx = Math.max(0, Math.min(parts.length - 1, activeIdx)); emit(); renderBoxes();
+          }}));
+        }
+      }
+      renderBoxes();
       wrap.appendChild(boxesRow);
       var signsRow = el('div', {class: 'row', style: 'gap:6px;flex-wrap:wrap'});
       ['ـَ', 'ـِ', 'ـُ', 'ـّ', 'ا', 'آ', 'ای', 'او', 'ی', 'و'].forEach(function (sign) {
         var ch = sign.replace(/^ـ/, '');
         signsRow.appendChild(el('button', {type: 'button', class: 'btn soft sm', text: sign, onclick: function () {
-          var idx = Math.max(0, Math.min(count - 1, activeIdx));
+          var idx = Math.max(0, Math.min(parts.length - 1, activeIdx));
           parts[idx] = (parts[idx] || '') + ch;
           if (inputs[idx]) { inputs[idx].value = parts[idx]; inputs[idx].focus(); }
           emit();
@@ -798,8 +1005,8 @@
       } else if (ex.primary && q.type === 'fill' && q.mode === 'order') {
         /* V305 — ابتدایی: مرتب‌سازی با کشیدن؛ پاسخ = ترتیب فعلی با «,» */
         box.appendChild(orderAnswer(q, a, function (arr) { set(arr.join(',')); box.replaceWith(answerArea(q)); }));
-      } else if (ex.primary && q.type === 'fill' && q.mode === 'syllable' && (q.syllableCount || 0) >= 2) {
-        /* V314.0 — بخش‌کردن و صداکشی */
+      } else if (q.type === 'fill' && ((ex.primary && q.mode === 'syllable' && (q.syllableCount || 0) >= 2) || String(q.text || '').indexOf('"axsyllablechart"') >= 0)) {
+        /* V314.0 / V335.8 — بخش‌کردن و صداکشی با کادرهای پویا (+) */
         box.appendChild(syllableAnswer(q, a, set));
       } else if (ex.primary && q.type === 'fill' && q.mode === 'bucket' && q.buckets && q.buckets.length && q.bucketItems && q.bucketItems.length) {
         /* V314.0 — دسته‌بندی در سبد */

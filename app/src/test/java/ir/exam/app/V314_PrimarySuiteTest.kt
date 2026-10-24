@@ -72,7 +72,7 @@ class V314_PrimarySuiteTest {
         val ids = AXIS_FIGURES.map { it.id }.toSet()
         val allNew = listOf(
             "axabacus", "axjump", "axbalance", "axthermo", "axsaw", "axpattern",
-            "axtenframe", "axsym", "axspin", "axbeaker", "axgeoboard", "axdice", "axmularea", "axvenn",
+            "axtenframe", "axsym", "axbeaker", "axgeoboard", "axdice", "axmularea", "axvenn",
             "axnumgrid", "axfacttree", "axfnmachine", "axfracwall", "axtangram", "axangle",
 "axrod", "axtower", "axmulwheel", "axmultgrid", "axnet", "axcubes", "axcalendar", "axlever", "axcycle", "axwordtrain", "axtiles", "axkenken", "axdicefold", "axtransform", "axcaliper", "axsigntable", "axtrigcircle", "axmapping", "axprobtree", "axconic", "axorbital", "axpunnett", "axecg", "axprosody", "axtruthtable", "axledger", "axstaff", "axkmap", "axgate", "axdfa", "axbst", "axbode", "axbeam", "axmohr", "axpv", "axpert", "axbenzene", "axnormal", "axsupply", "axgame"
         )
@@ -108,7 +108,7 @@ class V314_PrimarySuiteTest {
         assertTrue(results.contains("lvl.stars"))
         val adj = File(root(), "app/src/main/java/ir/exam/app/ui/figure/AdjustableFigure.kt").readText()
         for (t in listOf(
-            "axclock", "axfrac", "axabacus", "axthermo", "axtenframe", "axspin", "axbeaker",
+            "axclock", "axfrac", "axabacus", "axthermo", "axtenframe", "axbeaker",
             "axtally", "axbase10", "axplace", "axruler", "axmoney", "axjump", "axbalance",
             "axsaw", "axpattern", "axsym", "axgeoboard", "axdice", "axmularea", "axvenn",
             "axnumgrid", "axfacttree", "axfnmachine", "axfracwall", "axtangram", "axangle",

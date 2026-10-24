@@ -118,15 +118,49 @@ object AdvancedMathSvgRenderer {
         return sb.toString()
     }
 
+    /** V335.8 — استخراج کلید خانه‌های خالی (بدون علامت سؤال) و مقادیر بازنویسی‌شده یا پاسخ دانش‌آموز. */
+    internal fun parseEmptySet(spec: FigureSpec): Set<String> =
+        spec.xStr("empty", "")
+            .split(',', '،', ';', '؛')
+            .map { faEnDigits(it).trim() }
+            .filter { it.isNotEmpty() }
+            .toSet()
+
+    internal fun parseCellMap(spec: FigureSpec, field: String): Map<String, String> {
+        val raw = spec.xStr(field, "").trim()
+        if (raw.isEmpty()) return emptyMap()
+        val out = LinkedHashMap<String, String>()
+        raw.split(';', '؛').forEach { entry ->
+            val idx = entry.indexOf(':').takeIf { it > 0 } ?: entry.indexOf('=').takeIf { it > 0 } ?: -1
+            if (idx > 0) {
+                val k = faEnDigits(entry.substring(0, idx)).trim()
+                val v = entry.substring(idx + 1).trim()
+                if (k.isNotEmpty()) out[k] = v
+            }
+        }
+        return out
+    }
+
     private fun numberTower(spec: FigureSpec): String {
-        var base = ints(spec, "base", "1,2,3,4").ifEmpty { listOf(1, 2, 3, 4) }.take(6)
+        val baseRaw = ints(spec, "base", "1,2,3,4").ifEmpty { listOf(1, 2, 3, 4) }.take(6)
         val minus = spec.xStr("op", "+") == "-"
         val blank = spec.xStr("blank", "0") == "1"
+        val emptySet = parseEmptySet(spec)
+        val ovMap = parseCellMap(spec, "ov")
+        val ansMap = parseCellMap(spec, "ans")
+        val base = baseRaw.mapIndexed { idx, v ->
+            ovMap["0_$idx"]?.let { faEnDigits(it).toIntOrNull() } ?: v
+        }
         val levels = mutableListOf(base)
         var cur = base
         while (cur.size > 1) {
+            val lvIdx = levels.size
             val next = mutableListOf<Int>()
-            for (i in 0 until cur.size - 1) next.add(if (minus) abs(cur[i] - cur[i + 1]) else cur[i] + cur[i + 1])
+            for (i in 0 until cur.size - 1) {
+                val computed = if (minus) abs(cur[i] - cur[i + 1]) else cur[i] + cur[i + 1]
+                val ov = ovMap["${lvIdx}_$i"]?.let { faEnDigits(it).toIntOrNull() }
+                next.add(ov ?: computed)
+            }
             levels.add(next); cur = next
         }
         val bh = min(34f, 216f / levels.size)
@@ -138,9 +172,20 @@ object AdvancedMathSvgRenderer {
             val ly = 24f + row * bh
             for (k in arr.indices) {
                 val bx = 180f + (k - (arr.size - 1) / 2f) * bw - bw / 2f
-                val hide = blank && (lvIdx + k) % 3 == 1
-                sb.append(rc(bx, ly, bw - 3f, bh - 3f, if (hide) "#fff8e1" else if (lvIdx == 0) "rgba(108,99,245,.16)" else "#ffffff", if (hide) PT else ST, 1.6f, 4f))
-                sb.append(tx(bx + (bw - 3f) / 2f, ly + bh * 0.66f, if (hide) "؟" else arr[k].toString(), if (hide) PT else ST, "middle", bold = true, size = 13))
+                val key = "${lvIdx}_$k"
+                val isEmpty = key in emptySet || (blank && (lvIdx + k) % 3 == 1)
+                val stuAns = ansMap[key]?.trim().orEmpty()
+                val shownVal = ovMap[key]?.trim() ?: arr[k].toString()
+                if (isEmpty) {
+                    val fill = if (stuAns.isNotEmpty()) "#eef2ff" else "#ffffff"
+                    sb.append(rc(bx, ly, bw - 3f, bh - 3f, fill, ACC, 1.8f, 4f))
+                    if (stuAns.isNotEmpty()) {
+                        sb.append(tx(bx + (bw - 3f) / 2f, ly + bh * 0.66f, stuAns, ACC, "middle", bold = true, size = 13))
+                    }
+                } else {
+                    sb.append(rc(bx, ly, bw - 3f, bh - 3f, if (lvIdx == 0) "rgba(108,99,245,.16)" else "#ffffff", ST, 1.6f, 4f))
+                    sb.append(tx(bx + (bw - 3f) / 2f, ly + bh * 0.66f, shownVal, ST, "middle", bold = true, size = 13))
+                }
             }
         }
         sb.append(tx(180f, 268f, if (minus) "هر آجر = تفاضل دو آجر زیرین" else "هر آجر = جمع دو آجر زیرین", MU, "middle", size = 11))
@@ -148,49 +193,109 @@ object AdvancedMathSvgRenderer {
     }
 
     private fun multiplicationWheel(spec: FigureSpec): String {
-        val c = spec.xNum("c", 3f).toInt().coerceIn(1, 12)
+        val emptySet = parseEmptySet(spec)
+        val ovMap = parseCellMap(spec, "ov")
+        val ansMap = parseCellMap(spec, "ans")
+        val cBase = spec.xNum("c", 3f).toInt().coerceIn(1, 20)
+        val c = ovMap["center"]?.let { faEnDigits(it).toIntOrNull() } ?: cBase
         val n = spec.xNum("n", 10f).toInt().coerceIn(3, 12)
         val plus = spec.xStr("op", "×") == "+"
         val hide = spec.xStr("hide", "0") == "1"
         val sb = StringBuilder()
         sb.append(cls(180f, 142f, 96f, "none", ACC, 1.6f))
-        sb.append(cls(180f, 142f, 34f, "rgba(108,99,245,.16)", ACC, 2.2f))
-        sb.append(tx(180f, 140f, c.toString(), ACC, "middle", bold = true, size = 18))
-        sb.append(tx(180f, 158f, if (plus) "+" else "×", ACC, "middle", bold = true, size = 12))
+        val cEmpty = "center" in emptySet
+        val cAns = ansMap["center"]?.trim().orEmpty()
+        sb.append(cls(180f, 142f, 34f, if (cEmpty) "#ffffff" else "rgba(108,99,245,.16)", ACC, 2.2f))
+        if (cEmpty) {
+            if (cAns.isNotEmpty()) sb.append(tx(180f, 145f, cAns, ACC, "middle", bold = true, size = 18))
+            sb.append(tx(180f, 162f, if (plus) "+" else "×", ACC, "middle", bold = true, size = 11))
+        } else {
+            sb.append(tx(180f, 140f, (ovMap["center"]?.trim() ?: c.toString()), ACC, "middle", bold = true, size = 18))
+            sb.append(tx(180f, 158f, if (plus) "+" else "×", ACC, "middle", bold = true, size = 12))
+        }
         for (j in 0 until n) {
             val a = (-PI / 2 + j * 2 * PI / n)
             val ox = 180f + 96f * cos(a).toFloat()
             val oy = 142f + 96f * sin(a).toFloat()
-            val v = if (plus) c + (j + 1) else c * (j + 1)
-            val h = hide && j % 3 == 2
+            val ix = 180f + 56f * cos(a).toFloat()
+            val iy = 142f + 56f * sin(a).toFloat()
+            val mFactor = j + 1
+            val v = if (plus) c + mFactor else c * mFactor
+            val key = "s_$j"
+            val isEmpty = key in emptySet || "$j" in emptySet || (hide && j % 3 == 2)
+            val stuAns = (ansMap[key] ?: ansMap["$j"])?.trim().orEmpty()
+            val shownVal = (ovMap[key] ?: ovMap["$j"])?.trim() ?: v.toString()
             sb.append(ln(180f + 34f * cos(a).toFloat(), 142f + 34f * sin(a).toFloat(), ox, oy, "#d5dce6", 1.6f))
-            sb.append(cls(ox, oy, 17f, if (h) "#fff8e1" else "#ffffff", if (h) PT else ST, 1.8f))
-            sb.append(tx(ox, oy + 5f, if (h) "؟" else v.toString(), if (h) PT else ST, "middle", bold = true, size = 12))
+            // نمایش عامل کوچک روی پره تا دانش‌آموز دقیق بداند هر خانهٔ خالی حاصل کدام ضرب/جمع است
+            sb.append(cls(ix, iy, 9.5f, "#f8fafc", "#cbd5e1", 1f))
+            sb.append(tx(ix, iy + 3.5f, mFactor.toString(), MU, "middle", bold = true, size = 9))
+            if (isEmpty) {
+                sb.append(cls(ox, oy, 17f, if (stuAns.isNotEmpty()) "#eef2ff" else "#ffffff", ACC, 1.9f))
+                if (stuAns.isNotEmpty()) {
+                    sb.append(tx(ox, oy + 5f, stuAns, ACC, "middle", bold = true, size = 12))
+                }
+            } else {
+                sb.append(cls(ox, oy, 17f, "#ffffff", ST, 1.8f))
+                sb.append(tx(ox, oy + 5f, shownVal, ST, "middle", bold = true, size = 12))
+            }
         }
         return sb.toString()
     }
 
     private fun multiplicationGrid(spec: FigureSpec): String {
-        var rows = ints(spec, "rows", "2,4,7").ifEmpty { listOf(2, 4, 7) }.take(4)
-        var cols = ints(spec, "cols", "3,5,8").ifEmpty { listOf(3, 5, 8) }.take(4)
+        val baseRows = ints(spec, "rows", "2,4,7").ifEmpty { listOf(2, 4, 7) }.take(4)
+        val baseCols = ints(spec, "cols", "3,5,8").ifEmpty { listOf(3, 5, 8) }.take(4)
         val blank = spec.xNum("blank", 0f).toInt().coerceIn(0, 2)
+        val emptySet = parseEmptySet(spec)
+        val ovMap = parseCellMap(spec, "ov")
+        val ansMap = parseCellMap(spec, "ans")
+        val rows = baseRows.mapIndexed { r, v -> ovMap["r$r"]?.let { faEnDigits(it).toIntOrNull() } ?: v }
+        val cols = baseCols.mapIndexed { c, v -> ovMap["c$c"]?.let { faEnDigits(it).toIntOrNull() } ?: v }
         val cw = min(56f, 268f / (cols.size + 1))
         val ch = min(42f, 216f / (rows.size + 1))
         val x0 = 180f - cw * (cols.size + 1) / 2f
         val y0 = 26f + (218f - ch * (rows.size + 1)) / 2f
         val sb = StringBuilder()
         for (c in cols.indices) {
-            sb.append(rc(x0 + (c + 1) * cw, y0, cw, ch, "rgba(39,196,168,.18)", ST, 1.4f))
-            sb.append(tx(x0 + (c + 1.5f) * cw, y0 + ch * 0.66f, if (blank == 2) "؟" else cols[c].toString(), if (blank == 2) PT else ST, "middle", bold = true, size = 14))
+            val key = "c$c"
+            val isEmpty = key in emptySet || blank == 2
+            val stuAns = ansMap[key]?.trim().orEmpty()
+            val shown = ovMap[key]?.trim() ?: cols[c].toString()
+            sb.append(rc(x0 + (c + 1) * cw, y0, cw, ch, if (isEmpty) "#ffffff" else "rgba(39,196,168,.18)", if (isEmpty) ACC else ST, if (isEmpty) 1.8f else 1.4f))
+            if (isEmpty) {
+                if (stuAns.isNotEmpty()) sb.append(tx(x0 + (c + 1.5f) * cw, y0 + ch * 0.66f, stuAns, ACC, "middle", bold = true, size = 14))
+            } else {
+                sb.append(tx(x0 + (c + 1.5f) * cw, y0 + ch * 0.66f, shown, ST, "middle", bold = true, size = 14))
+            }
         }
         for (r in rows.indices) {
-            sb.append(rc(x0, y0 + (r + 1) * ch, cw, ch, "rgba(39,196,168,.18)", ST, 1.4f))
-            sb.append(tx(x0 + cw / 2f, y0 + (r + 1.5f) * ch, if (blank == 2) "؟" else rows[r].toString(), if (blank == 2) PT else ST, "middle", bold = true, size = 14))
+            val rKey = "r$r"
+            val rEmpty = rKey in emptySet || blank == 2
+            val rAns = ansMap[rKey]?.trim().orEmpty()
+            val rShown = ovMap[rKey]?.trim() ?: rows[r].toString()
+            sb.append(rc(x0, y0 + (r + 1) * ch, cw, ch, if (rEmpty) "#ffffff" else "rgba(39,196,168,.18)", if (rEmpty) ACC else ST, if (rEmpty) 1.8f else 1.4f))
+            if (rEmpty) {
+                if (rAns.isNotEmpty()) sb.append(tx(x0 + cw / 2f, y0 + (r + 1.5f) * ch, rAns, ACC, "middle", bold = true, size = 14))
+            } else {
+                sb.append(tx(x0 + cw / 2f, y0 + (r + 1.5f) * ch, rShown, ST, "middle", bold = true, size = 14))
+            }
             for (c in cols.indices) {
+                val key = "${r}_$c"
                 val v = rows[r] * cols[c]
-                val h = blank == 1 && (r + c) % 2 == 1
-                sb.append(rc(x0 + (c + 1) * cw, y0 + (r + 1) * ch, cw, ch, if (h) "#fff8e1" else "#ffffff", ST, 1.4f))
-                sb.append(tx(x0 + (c + 1.5f) * cw, y0 + (r + 1.5f) * ch, if (h) "؟" else v.toString(), if (h) PT else ACC, "middle", bold = true, size = 14))
+                val isEmpty = key in emptySet || (blank == 1 && (r + c) % 2 == 1)
+                val stuAns = ansMap[key]?.trim().orEmpty()
+                val shown = ovMap[key]?.trim() ?: v.toString()
+                val fill = when {
+                    isEmpty && stuAns.isNotEmpty() -> "#eef2ff"
+                    isEmpty -> "#ffffff"
+                    else -> "#ffffff"
+                }
+                sb.append(rc(x0 + (c + 1) * cw, y0 + (r + 1) * ch, cw, ch, fill, if (isEmpty) ACC else ST, if (isEmpty) 1.8f else 1.4f))
+                if (isEmpty) {
+                    if (stuAns.isNotEmpty()) sb.append(tx(x0 + (c + 1.5f) * cw, y0 + (r + 1.5f) * ch, stuAns, ACC, "middle", bold = true, size = 14))
+                } else {
+                    sb.append(tx(x0 + (c + 1.5f) * cw, y0 + (r + 1.5f) * ch, shown, ACC, "middle", bold = true, size = 14))
+                }
             }
         }
         sb.append(rc(x0, y0, cw, ch, "rgba(108,99,245,.16)", ST, 1.8f))
@@ -244,46 +349,97 @@ object AdvancedMathSvgRenderer {
     private fun cubeStack(spec: FigureSpec): String {
         val view = spec.xStr("view", "iso").lowercase()
         val rowsRaw = spec.xStr("map", "2,1,3;1,0,1;2,2,1").split(Regex("[;؛]"))
-        val map = rowsRaw.map { rw -> rw.split(Regex("[,،]")).map { max(0, min(4, faEnDigits(it.trim()).toIntOrNull() ?: 0)) } }.filter { it.isNotEmpty() }.take(4)
-        val grid = map.ifEmpty { listOf(listOf(2, 1, 3), listOf(1, 0, 1), listOf(2, 2, 1)) }
+        val parsed = rowsRaw
+            .map { rw -> rw.split(Regex("[,،]")).map { max(0, min(6, faEnDigits(it.trim()).toIntOrNull() ?: 0)) } }
+            .filter { it.isNotEmpty() }
+            .take(5)
+        val rawGrid = parsed.ifEmpty { listOf(listOf(2, 1, 3), listOf(1, 0, 1), listOf(2, 2, 1)) }
+        val rowsN = rawGrid.size
+        val colsN = rawGrid.maxOf { it.size }.coerceIn(1, 5)
+        val grid = List(rowsN) { r -> List(colsN) { c -> rawGrid[r].getOrElse(c) { 0 }.coerceIn(0, 6) } }
         val total = grid.sumOf { r -> r.sum() }
+        val maxH = grid.maxOf { it.maxOrNull() ?: 0 }.coerceAtLeast(1)
+        val hide = spec.xStr("hide", "0") == "1"
         val sb = StringBuilder()
-        if (view == "top" || view == "front" || view == "side") {
-            val n = grid.size
-            val m = grid.maxOf { it.size }.coerceAtLeast(1)
-            val gw = min(52f, 260f / n)
-            val gh = min(46f, 200f / m)
-            for (r in 0 until n) for (c in 0 until grid[r].size) {
-                val hh = grid[r][c]
-                val x = 180f + (r - (n - 1) / 2f) * gw - gw / 2f
-                val y = 34f + (c - (m - 1) / 2f) * gh
-                sb.append(rc(x, y, gw - 3f, gh - 3f, if (hh > 0) "rgba(108,99,245,.22)" else "#ffffff", ST, 1.4f, 3f))
-                sb.append(tx(x + (gw - 3f) / 2f, y + gh * 0.62f, if (hh > 0) hh.toString() else "۰", ST, "middle", bold = true, size = 12))
+        when (view) {
+            "top" -> {
+                val s = min(46f, 186f / max(rowsN, colsN))
+                val gw = colsN * s
+                val gh = rowsN * s
+                val x0 = 180f - gw / 2f
+                val y0 = 132f - gh / 2f
+                sb.append(tx(180f, y0 - 12f, "نمای از بالا (تعداد مکعب در هر ستون)", MU, "middle", bold = true, size = 11))
+                for (r in 0 until rowsN) {
+                    for (c in 0 until colsN) {
+                        val hh = grid[r][c]
+                        val x = x0 + c * s
+                        val y = y0 + r * s
+                        sb.append(rc(x, y, s - 2f, s - 2f, if (hh > 0) "rgba(108,99,245,.20)" else "#f8fafc", ST, 1.5f, 4f))
+                        sb.append(tx(x + (s - 2f) / 2f, y + s * 0.62f, hh.toString(), if (hh > 0) ST else "#94a3b8", "middle", bold = true, size = 14))
+                    }
+                }
             }
-        } else {
-            val s = 30f
-            for (ir in grid.indices.reversed()) {
-                for (ic in grid[ir].indices) {
-                    val hh = grid[ir][ic]
-                    if (hh > 0) {
-                        val ox = 92f + (ic - ir) * s * 0.9f
-                        val oy = 196f - (ic + ir) * s * 0.5f
-                        val topY = oy - (hh - 1) * s * 0.98f - s
-                        sb.append(poly("${f(ox)},${f(topY)} ${f(ox + s * 0.9f)},${f(topY + s * 0.5f)} ${f(ox)},${f(topY + s)} ${f(ox - s * 0.9f)},${f(topY + s * 0.5f)}", "#f7f9fd", "#9fb0c6", 1f))
-                        sb.append(poly("${f(ox - s * 0.9f)},${f(topY + s * 0.5f)} ${f(ox)},${f(topY + s)} ${f(ox)},${f(oy)} ${f(ox - s * 0.9f)},${f(oy - s * 0.5f)}", "rgba(108,99,245,.14)", "#9fb0c6", 1f))
-                        sb.append(poly("${f(ox)},${f(topY + s)} ${f(ox + s * 0.9f)},${f(topY + s * 0.5f)} ${f(ox + s * 0.9f)},${f(oy - s * 0.5f)} ${f(ox)},${f(oy)}", "rgba(39,196,168,.14)", "#9fb0c6", 1f))
+            "front" -> {
+                // نمای روبه‌رو: بیشترین ارتفاع هر ستون (در راستای دید روبه‌رو) به‌صورت مکعب‌های مربعی روی خط زمین
+                val colHeights = (0 until colsN).map { c -> (0 until rowsN).maxOf { r -> grid[r][c] } }
+                val s = min(38f, min(220f / colsN, 164f / maxH))
+                val gw = colsN * s
+                val x0 = 180f - gw / 2f
+                val yBase = 216f
+                sb.append(tx(180f, 30f, "نمای روبه‌رو", MU, "middle", bold = true, size = 12))
+                sb.append(ln(x0 - 16f, yBase, x0 + gw + 16f, yBase, ST, 2.2f))
+                for (c in 0 until colsN) {
+                    val h = colHeights[c]
+                    for (z in 0 until h) {
+                        sb.append(rc(x0 + c * s, yBase - (z + 1) * s, s, s, "#c7d2fe", ST, 1.5f, 2f))
+                    }
+                }
+            }
+            "side" -> {
+                // نمای از پهلو: بیشترین ارتفاع هر سطر به‌صورت مکعب‌های مربعی روی خط زمین
+                val rowHeights = (0 until rowsN).map { r -> grid[r].maxOrNull() ?: 0 }
+                val s = min(38f, min(220f / rowsN, 164f / maxH))
+                val gw = rowsN * s
+                val x0 = 180f - gw / 2f
+                val yBase = 216f
+                sb.append(tx(180f, 30f, "نمای از پهلو", MU, "middle", bold = true, size = 12))
+                sb.append(ln(x0 - 16f, yBase, x0 + gw + 16f, yBase, ST, 2.2f))
+                for (r in 0 until rowsN) {
+                    val h = rowHeights[r]
+                    for (z in 0 until h) {
+                        sb.append(rc(x0 + r * s, yBase - (z + 1) * s, s, s, "#99f6e4", ST, 1.5f, 2f))
+                    }
+                }
+            }
+            else -> {
+                // نمای ایزومتریک سه‌بعدی با ترتیب صحیح نقاش (از عقب به جلو و از پایین به بالا) و خطوط تفکیک هر مکعب واحد
+                val spanUnits = (rowsN + colsN).coerceAtLeast(3)
+                val dx = min(22f, 132f / spanUnits)
+                val dy = dx * 0.52f
+                val dz = min(20f, 118f / (maxH + spanUnits * 0.35f))
+                val ox = 180f - (colsN - rowsN) * dx * 0.5f
+                val oy = 172f - (rowsN + colsN) * dy * 0.35f + maxH * dz * 0.25f
+                for (r in 0 until rowsN) {
+                    for (c in 0 until colsN) {
+                        val hh = grid[r][c]
+                        for (z in 0 until hh) {
+                            val cx = ox + (c - r) * dx
+                            val cy = oy + (c + r) * dy - z * dz
+                            sb.append(poly("${f(cx)},${f(cy - dz)} ${f(cx + dx)},${f(cy - dy - dz)} ${f(cx)},${f(cy - 2f * dy - dz)} ${f(cx - dx)},${f(cy - dy - dz)}", "#e0e7ff", ST, 1.15f))
+                            sb.append(poly("${f(cx - dx)},${f(cy - dy - dz)} ${f(cx)},${f(cy - dz)} ${f(cx)},${f(cy)} ${f(cx - dx)},${f(cy - dy)}", "#a5b4fc", ST, 1.15f))
+                            sb.append(poly("${f(cx)},${f(cy - dz)} ${f(cx + dx)},${f(cy - dy - dz)} ${f(cx + dx)},${f(cy - dy)} ${f(cx)},${f(cy)}", "#818cf8", ST, 1.15f))
+                        }
                     }
                 }
             }
         }
-        val hide = spec.xStr("hide", "0") == "1"
         val cap = when (view) {
-            "top" -> "نمای از بالا"
-            "front" -> "نمای روبه‌رو"
-            "side" -> "نمای از پهلو"
+            "top" -> if (hide) "تعداد کل مکعب‌ها: ؟" else "تعداد کل مکعب‌ها: $total"
+            "front" -> "نمای روبه‌رو" + if (hide) "" else " (کل مکعب‌ها: $total)"
+            "side" -> "نمای از پهلو" + if (hide) "" else " (کل مکعب‌ها: $total)"
             else -> "تعداد مکعب‌ها: " + if (hide) "؟" else total.toString()
         }
-        sb.append(tx(180f, 268f, cap, MU, "middle", bold = true, size = 12))
+        sb.append(tx(180f, 258f, cap, if (hide) PT else MU, "middle", bold = true, size = 12))
         return sb.toString()
     }
 
@@ -293,6 +449,9 @@ object AdvancedMathSvgRenderer {
         val days = spec.xNum("days", 30f).toInt().coerceIn(20, 31)
         val mark = ints(spec, "mark", "12,23")
         val blank = spec.xStr("blank", "0") == "1"
+        val emptySet = parseEmptySet(spec)
+        val ovMap = parseCellMap(spec, "ov")
+        val ansMap = parseCellMap(spec, "ans")
         val wd = listOf("ش", "ی", "د", "س", "چ", "پ", "ج")
         val cw = 44f; val ch = 30f
         val x0 = 180f - cw * 3.5f
@@ -308,12 +467,22 @@ object AdvancedMathSvgRenderer {
             val col = 6 - (cell % 7)
             val row = cell / 7
             val day = i + 1
+            val key = day.toString()
             val bx = x0 + col * cw
             val by = y0 + ch + row * ch
             val isMark = mark.contains(day)
-            val isBlank = blank && day % 5 == 0
-            sb.append(rc(bx, by, cw, ch, if (isMark) "rgba(39,196,168,.26)" else "#ffffff", ST, 1.1f))
-            sb.append(tx(bx + cw / 2f, by + ch * 0.66f, if (isBlank) "؟" else day.toString(), if (isBlank) PT else if (isMark) "#00796b" else ST, "middle", bold = isMark || isBlank, size = 12))
+            val isEmpty = key in emptySet || (blank && day % 5 == 0)
+            val stuAns = ansMap[key]?.trim().orEmpty()
+            val shown = ovMap[key]?.trim() ?: key
+            if (isEmpty) {
+                sb.append(rc(bx, by, cw, ch, if (stuAns.isNotEmpty()) "#eef2ff" else "#ffffff", ACC, 1.7f))
+                if (stuAns.isNotEmpty()) {
+                    sb.append(tx(bx + cw / 2f, by + ch * 0.66f, stuAns, ACC, "middle", bold = true, size = 12))
+                }
+            } else {
+                sb.append(rc(bx, by, cw, ch, if (isMark) "rgba(39,196,168,.26)" else "#ffffff", ST, 1.1f))
+                sb.append(tx(bx + cw / 2f, by + ch * 0.66f, shown, if (isMark) "#00796b" else ST, "middle", bold = isMark, size = 12))
+            }
         }
         return sb.toString()
     }
@@ -326,55 +495,153 @@ object AdvancedMathSvgRenderer {
         val l2 = max(0.5f, spec.xNum("l2", 1f))
         val sb = StringBuilder()
         if (kind == "pulley") {
-            sb.append(cls(180f, 60f, 26f, "rgba(108,99,245,.16)", ACC, 2.2f))
-            sb.append(cls(236f, 110f, 20f, "rgba(39,196,168,.18)", GRN, 2.2f))
-            sb.append(ln(180f, 86f, 180f, 130f, ST, 2f)); sb.append(arrow(180f, 130f, 180f, 168f, PT, 2f, 9f))
-            sb.append(ln(180f, 34f, 300f, 34f, ST, 2f)); sb.append(ln(256f, 110f, 300f, 110f, ST, 2f))
-            sb.append(arrow(300f, 110f, 300f, 168f, ACC, 2f, 9f))
-            sb.append(tx(180f, 188f, "بار: ${num(load)} N", PT, "middle", bold = true, size = 12))
-            sb.append(tx(300f, 188f, "نیرو: ${num(effort)} N", ACC, "middle", bold = true, size = 12))
-            sb.append(tx(180f, 252f, "قرقرهٔ متحرک — مزیت مکانیکی ≈ ۲", MU, "middle", bold = true, size = 12))
+            // سقف و قرقرهٔ ثابت + قرقرهٔ متحرک با طناب کاملاً پیوسته و مماس بر چرخ‌ها
+            sb.append(rc(86f, 18f, 188f, 10f, "#cbd5e1", ST, 1.6f, 3f))
+            for (hx in 96..264 step 24) {
+                sb.append(ln(hx.toFloat(), 18f, (hx + 8).toFloat(), 10f, MU, 1.2f))
+            }
+            val fx = 156f; val fy = 66f; val fr = 24f
+            val mx = 206f; val my = 136f; val mr = 22f
+            // اتصال قرقرهٔ ثابت و سر ثابت طناب به سقف
+            sb.append(ln(fx, 28f, fx, fy, ST, 3.2f))
+            sb.append(ln(mx + mr, 28f, mx + mr, my, "#546e7a", 2.4f))
+            // مسیر پیوستهٔ طناب از قرقرهٔ متحرک به قرقرهٔ ثابت و سر آزاد نیروی محرک
+            sb.append(ln(mx - mr, my, fx + fr, fy, "#546e7a", 2.4f))
+            sb.append(ln(fx - fr, fy, 102f, 162f, "#546e7a", 2.6f))
+            sb.append(arrow(112f, 140f, 98f, 170f, ACC, 2.6f, 9f))
+            // چرخ‌های قرقره
+            sb.append(cls(fx, fy, fr, "#eef2ff", ACC, 2.2f))
+            sb.append(cls(fx, fy, 5f, ST, ST, 1f))
+            sb.append(cls(mx, my, mr, "rgba(39,196,168,.20)", GRN, 2.2f))
+            sb.append(cls(mx, my, 5f, GRN, ST, 1f))
+            // وزنهٔ متصل به محور قرقرهٔ متحرک
+            sb.append(ln(mx, my + mr, mx, 174f, ST, 2.6f))
+            sb.append(rc(mx - 28f, 174f, 56f, 36f, "rgba(214,51,108,.16)", PT, 1.8f, 6f))
+            sb.append(tx(mx, 197f, "بار ${num(load)}N", PT, "middle", bold = true, size = 11))
+            sb.append(tx(92f, 192f, "نیرو ${num(effort)}N", ACC, "middle", bold = true, size = 11))
+            sb.append(tx(180f, 252f, "قرقرهٔ ثابت و متحرک — مزیت مکانیکی ≈ ۲", MU, "middle", bold = true, size = 12))
             return sb.toString()
         }
-        if (kind == "gears") {
-            val ra = 40f; val rb = 22f
-            sb.append(cls(140f, 130f, ra, "rgba(108,99,245,.18)", ACC, 2.2f))
-            sb.append(cls(140f + ra + rb, 130f, rb, "rgba(240,162,2,.22)", GLD, 2.2f))
-            for (j in 0 until 16) {
-                val a = j * PI / 8
-                sb.append(ln(140f + (ra - 5f) * cos(a).toFloat(), 130f + (ra - 5f) * sin(a).toFloat(), 140f + (ra + 5f) * cos(a).toFloat(), 130f + (ra + 5f) * sin(a).toFloat(), ACC, 3f))
+        if (kind == "gears" || kind == "gear") {
+            // چرخ‌دنده‌های واقعاً درگیر متناسب با l1 و l2 همراه با دندانه و جهت چرخش معکوس
+            val ratio = (l1 / (l1 + l2)).coerceIn(0.32f, 0.68f)
+            val totalR = 88f
+            val ra = (totalR * ratio).coerceIn(26f, 58f)
+            val rb = (totalR - ra).coerceIn(24f, 58f)
+            val toothH = 6.5f
+            val dist = ra + rb + toothH * 0.95f
+            val cxA = 180f - dist / 2f + (rb - ra) * 0.25f
+            val cxB = cxA + dist
+            val cy = 126f
+            fun drawGear(cx: Float, r: Float, teeth: Int, phase: Float, fill: String, strokeCol: String): String {
+                val pts = StringBuilder()
+                val step = (2.0 * PI / teeth).toFloat()
+                for (i in 0 until teeth) {
+                    val a0 = phase + i * step
+                    val a1 = a0 + step * 0.22f
+                    val a2 = a0 + step * 0.50f
+                    val a3 = a0 + step * 0.72f
+                    fun addPt(rad: Float, ang: Float) {
+                        if (pts.isNotEmpty()) pts.append(' ')
+                        pts.append("${f(cx + rad * cos(ang))},${f(cy + rad * sin(ang))}")
+                    }
+                    addPt(r, a0); addPt(r + toothH, a1); addPt(r + toothH, a2); addPt(r, a3)
+                }
+                return poly(pts.toString(), fill, strokeCol, 1.8f) +
+                    cls(cx, cy, r * 0.66f, "#ffffff", strokeCol, 1.4f) +
+                    cls(cx, cy, 7f, strokeCol, ST, 1.2f)
             }
-            for (j in 0 until 10) {
-                val a = j * PI / 5
-                sb.append(ln(140f + ra + (rb - 4f) * cos(a).toFloat(), 130f + (rb - 4f) * sin(a).toFloat(), 140f + ra + (rb + 4f) * cos(a).toFloat(), 130f + (rb + 4f) * sin(a).toFloat(), GLD, 3f))
-            }
-            sb.append(tx(140f, 136f, "۴۰T", ACC, "middle", bold = true, size = 12))
-            sb.append(tx(140f + ra + rb, 136f, "۲۲T", "#a06a00", "middle", bold = true, size = 11))
-            sb.append(tx(180f, 240f, "چرخ‌دنده — نسبت انتقال = ${num(max(0.1f, ra / rb))}", MU, "middle", bold = true, size = 12))
+            val tA = max(8, (ra / 4f).toInt())
+            val tB = max(6, (rb / 4f).toInt())
+            sb.append(drawGear(cxA, ra, tA, 0f, "rgba(108,99,245,.22)", ACC))
+            sb.append(drawGear(cxB, rb, tB, (PI / tB).toFloat(), "rgba(240,162,2,.28)", "#d97706"))
+            // کمان جهت چرخش معکوس در بالای دو چرخ‌دنده
+            sb.append(path("M ${f(cxA - 18f)} ${f(cy - ra - 14f)} Q ${f(cxA)} ${f(cy - ra - 24f)} ${f(cxA + 18f)} ${f(cy - ra - 14f)}", "none", ACC, 2f))
+            sb.append(poly("${f(cxA + 20f)},${f(cy - ra - 13f)} ${f(cxA + 12f)},${f(cy - ra - 19f)} ${f(cxA + 13f)},${f(cy - ra - 10f)}", ACC, "none", 0f))
+            sb.append(path("M ${f(cxB + 16f)} ${f(cy - rb - 14f)} Q ${f(cxB)} ${f(cy - rb - 24f)} ${f(cxB - 16f)} ${f(cy - rb - 14f)}", "none", "#d97706", 2f))
+            sb.append(poly("${f(cxB - 18f)},${f(cy - rb - 13f)} ${f(cxB - 10f)},${f(cy - rb - 19f)} ${f(cxB - 11f)},${f(cy - rb - 10f)}", "#d97706", "none", 0f))
+            sb.append(tx(cxA, cy + ra + 24f, "محرک (${tA} دندانه)", ACC, "middle", bold = true, size = 10))
+            sb.append(tx(cxB, cy + rb + 24f, "مقاوم (${tB} دندانه)", "#b45309", "middle", bold = true, size = 10))
+            sb.append(tx(180f, 250f, "چرخ‌دنده‌های درگیر — نسبت شعاع‌ها = ${num(l1 / l2)}", MU, "middle", bold = true, size = 11))
             return sb.toString()
         }
-        var fulc = 180f
-        var x1 = 55f
-        var x2 = 305f
-        val y = 150f
-        if (kind == "lever2" || kind == "lever3") { x1 = 75f; x2 = 325f; fulc = x1 + 20f }
-        var ldX = x1 + 45f
-        var efX = x2 - 45f
+        if (kind == "inclined") {
+            sb.append(ln(30f, 210f, 330f, 210f, ST, 2f))
+            sb.append(poly("52,210 306,210 306,86", "rgba(108,99,245,.12)", ST, 2.2f))
+            sb.append(rc(290f, 194f, 16f, 16f, "none", MU, 1.2f))
+            val slopeDeg = -atan2(124f, 254f) * 180f / PI.toFloat()
+            sb.append("<g transform=\"translate(174,150) rotate(${f(slopeDeg)})\">")
+            sb.append(rc(-24f, -34f, 48f, 34f, "rgba(214,51,108,.16)", PT, 1.8f, 5f))
+            sb.append(tx(0f, -13f, "${num(load)}N", PT, "middle", bold = true, size = 11))
+            sb.append(arrow(26f, -17f, 76f, -17f, ACC, 2.6f, 9f))
+            sb.append("</g>")
+            sb.append(tx(246f, 92f, "نیرو ${num(effort)}N", ACC, "middle", bold = true, size = 11))
+            sb.append(tx(180f, 248f, "سطح شیب‌دار — مزیت مکانیکی = ${num(l1 / l2)}", MU, "middle", bold = true, size = 12))
+            return sb.toString()
+        }
+
+        // اهرم‌های نوع اول، دوم و سوم با جهت فیزیکی صحیح نیروها و بازوهای متناسب با l1 و l2
+        val x1 = 48f
+        val x2 = 312f
+        val y = 148f
+        sb.append(ln(x1, y, x2, y, ST, 6f))
         when (kind) {
-            "lever1" -> { ldX = x1 + 45f; efX = x2 - 45f }
-            "lever2" -> { ldX = 220f; efX = x2 - 30f }
-            else -> { ldX = x2 - 30f; efX = 220f }
+            "lever2" -> {
+                val fulc = x1 + 18f
+                val efX = x2 - 22f
+                val ratio = (l2 / max(l1, l2 + 0.5f)).coerceIn(0.28f, 0.72f)
+                val ldX = fulc + (efX - fulc) * ratio
+                sb.append(poly("${f(fulc)},${f(y + 3f)} ${f(fulc - 16f)},${f(y + 36f)} ${f(fulc + 16f)},${f(y + 36f)}", "rgba(108,99,245,.25)", ST, 2f))
+                sb.append(tx(fulc, y + 50f, "تکیه‌گاه", ST, "middle", bold = true, size = 10))
+                // وزنه روی میله و پیکان وزن (بار) به سمت پایین
+                sb.append(rc(ldX - 25f, y - 38f, 50f, 33f, "rgba(214,51,108,.16)", PT, 1.8f, 6f))
+                sb.append(tx(ldX, y - 17f, "${num(load)} N", PT, "middle", bold = true, size = 11))
+                sb.append(arrow(ldX, y + 5f, ldX, y + 40f, PT, 2.8f, 9f))
+                sb.append(tx(ldX, y + 54f, "بار", PT, "middle", bold = true, size = 10))
+                // نیروی محرک رو به بالا در سر میله
+                sb.append(arrow(efX, y - 4f, efX, y - 54f, ACC, 2.8f, 9f))
+                sb.append(rc(efX - 28f, y - 90f, 56f, 30f, "rgba(108,99,245,.14)", ACC, 1.6f, 6f))
+                sb.append(tx(efX, y - 70f, "${num(effort)} N", ACC, "middle", bold = true, size = 11))
+                sb.append(tx(180f, 248f, "اهرم نوع دوم (بار در وسط) — مزیت مکانیکی = ${num(l1 / l2)}", MU, "middle", bold = true, size = 11))
+            }
+            "lever3" -> {
+                val fulc = x1 + 18f
+                val ldX = x2 - 26f
+                val ratio = (l1 / max(l2, l1 + 0.5f)).coerceIn(0.28f, 0.72f)
+                val efX = fulc + (ldX - fulc) * ratio
+                sb.append(poly("${f(fulc)},${f(y + 3f)} ${f(fulc - 16f)},${f(y + 36f)} ${f(fulc + 16f)},${f(y + 36f)}", "rgba(108,99,245,.25)", ST, 2f))
+                sb.append(tx(fulc, y + 50f, "تکیه‌گاه", ST, "middle", bold = true, size = 10))
+                // نیروی محرک رو به بالا در وسط
+                sb.append(arrow(efX, y - 4f, efX, y - 54f, ACC, 2.8f, 9f))
+                sb.append(rc(efX - 28f, y - 90f, 56f, 30f, "rgba(108,99,245,.14)", ACC, 1.6f, 6f))
+                sb.append(tx(efX, y - 70f, "${num(effort)} N", ACC, "middle", bold = true, size = 11))
+                // بار در سر دیگر با پیکان وزن رو به پایین
+                sb.append(rc(ldX - 25f, y - 38f, 50f, 33f, "rgba(214,51,108,.16)", PT, 1.8f, 6f))
+                sb.append(tx(ldX, y - 17f, "${num(load)} N", PT, "middle", bold = true, size = 11))
+                sb.append(arrow(ldX, y + 5f, ldX, y + 40f, PT, 2.8f, 9f))
+                sb.append(tx(ldX, y + 54f, "بار", PT, "middle", bold = true, size = 10))
+                sb.append(tx(180f, 248f, "اهرم نوع سوم (نیرو در وسط) — مزیت مکانیکی = ${num(l1 / l2)}", MU, "middle", bold = true, size = 11))
+            }
+            else -> {
+                val ldX = x1 + 28f
+                val efX = x2 - 28f
+                val fulc = (ldX + (efX - ldX) * (l2 / (l1 + l2))).coerceIn(ldX + 46f, efX - 46f)
+                sb.append(poly("${f(fulc)},${f(y + 3f)} ${f(fulc - 18f)},${f(y + 38f)} ${f(fulc + 18f)},${f(y + 38f)}", "rgba(108,99,245,.25)", ST, 2f))
+                sb.append(tx(fulc, y + 52f, "تکیه‌گاه", ST, "middle", bold = true, size = 10))
+                // وزنه (بار) در سمت چپ با پیکان وزن رو به پایین
+                sb.append(rc(ldX - 25f, y - 38f, 50f, 33f, "rgba(214,51,108,.16)", PT, 1.8f, 6f))
+                sb.append(tx(ldX, y - 17f, "${num(load)} N", PT, "middle", bold = true, size = 11))
+                sb.append(arrow(ldX, y + 5f, ldX, y + 40f, PT, 2.8f, 9f))
+                sb.append(tx(ldX, y + 54f, "بار", PT, "middle", bold = true, size = 10))
+                // نیروی محرک رو به پایین در سمت راست
+                sb.append(rc(efX - 28f, y - 92f, 56f, 30f, "rgba(108,99,245,.14)", ACC, 1.6f, 6f))
+                sb.append(tx(efX, y - 72f, "${num(effort)} N", ACC, "middle", bold = true, size = 11))
+                sb.append(arrow(efX, y - 58f, efX, y - 6f, ACC, 2.8f, 9f))
+                sb.append(tx((ldX + fulc) / 2f, y - 8f, "L₂=${num(l2)}", PT, "middle", bold = true, size = 10))
+                sb.append(tx((fulc + efX) / 2f, y - 8f, "L₁=${num(l1)}", ACC, "middle", bold = true, size = 10))
+                sb.append(tx(180f, 248f, "اهرم نوع اول — مزیت مکانیکی = ${num(l1 / l2)}", MU, "middle", bold = true, size = 12))
+            }
         }
-        sb.append(ln(x1, y, x2, y, ST, 7f))
-        sb.append(poly("${f(fulc)},${f(y + 4f)} ${f(fulc - 20f)},${f(y + 46f)} ${f(fulc + 20f)},${f(y + 46f)}", "rgba(108,99,245,.25)", ST, 2f))
-        sb.append(arrow(ldX, y - 8f, ldX, y - 58f, PT, 3f, 10f))
-        sb.append(rc(ldX - 26f, y - 96f, 52f, 34f, "rgba(214,51,108,.16)", PT, 1.8f, 6f))
-        sb.append(tx(ldX, y - 74f, "${num(load)} N", PT, "middle", bold = true, size = 11))
-        sb.append(arrow(efX, y - 8f, efX, y - 58f, ACC, 3f, 10f))
-        sb.append(rc(efX - 26f, y - 96f, 52f, 34f, "rgba(108,99,245,.16)", ACC, 1.8f, 6f))
-        sb.append(tx(efX, y - 74f, "${num(effort)} N", ACC, "middle", bold = true, size = 11))
-        val name = when (kind) { "lever1" -> "اول"; "lever2" -> "دوم"; else -> "سوم" }
-        sb.append(tx(180f, y + 70f, "اهرم نوع $name — مزیت مکانیکی = ${num(l1 / l2)}", MU, "middle", bold = true, size = 12))
         return sb.toString()
     }
 
@@ -412,20 +679,63 @@ object AdvancedMathSvgRenderer {
     }
 
     private fun wordTrain(spec: FigureSpec): String {
-        val syl = splitList(spec.xStr("syll", "با,با,با")).take(5).ifEmpty { listOf("با", "با", "با") }
-        val word = spec.xStr("word", "بابا")
+        val syl = splitList(spec.xStr("syll", "با,ران")).take(6).ifEmpty { listOf("با", "ران") }
+        val defaultWord = syl.joinToString("")
+        val word = spec.xStr("word", defaultWord).ifBlank { defaultWord }
         val blank = spec.xStr("mode", "join").lowercase() == "blank"
-        val x = 180f - (syl.size * 74f) / 2f
+        val n = syl.size
+        val locoW = 48f
+        val gap = 8f
+        val carW = min(56f, (284f - locoW - n * gap) / n)
+        val totalW = locoW + n * gap + n * carW
+        val startX = 180f - totalW / 2f
+        val carY = 82f
+        val carH = 48f
+        val wheelY = carY + carH + 9f
+        val railY = wheelY + 8f
         val sb = StringBuilder()
-        sb.append(ln(x - 20f, 120f, x + syl.size * 74f + 6f, 120f, ST, 3f))
-        syl.forEachIndexed { i, s ->
-            val sx = x + i * 74f
-            sb.append(poly("${f(sx)},92 ${f(sx + 62f)},92 ${f(sx + 62f)},142 ${f(sx)},142", "rgba(108,99,245,.16)", ST, 1.8f))
-            sb.append(cls(sx + 12f, 152f, 7f, "#ffffff", ST, 1.6f))
-            sb.append(cls(sx + 50f, 152f, 7f, "#ffffff", ST, 1.6f))
-            sb.append(tx(sx + 31f, 128f, s, ST, "middle", bold = true, size = 16))
+
+        // ریل راه‌آهن در پایین چرخ‌ها (بدون عبور از روی متن هجاها!)
+        sb.append(ln(18f, railY, 342f, railY, "#64748b", 3f))
+        for (txPos in 24..336 step 18) {
+            sb.append(ln(txPos.toFloat(), railY, (txPos - 4).toFloat(), railY + 5f, "#94a3b8", 2f))
         }
-        sb.append(rc(88f, 186f, 184f, 44f, if (blank) "#fff8e1" else "rgba(39,196,168,.18)", if (blank) PT else GRN, 2f, 8f))
+
+        // لوکوموتیو در سمت چپ (کشندهٔ قطار در جهت خواندن راست‌به‌چپ فارسی: واگن اول در راست‌ترین جایگاه)
+        val lx = startX
+        // دودکش و بخار
+        sb.append(rc(lx + 8f, carY - 16f, 10f, 16f, "#475569", ST, 1.5f, 2f))
+        sb.append(cls(lx + 13f, carY - 24f, 5f, "#e2e8f0", "none", 0f))
+        sb.append(cls(lx + 21f, carY - 31f, 6.5f, "#cbd5e1", "none", 0f))
+        // بدنه و کابین لوکوموتیو
+        sb.append(rc(lx + 22f, carY - 10f, 26f, carH + 10f, ACC, ST, 1.8f, 5f))
+        sb.append(rc(lx + 27f, carY - 4f, 16f, 16f, "#e0f2fe", ST, 1.2f, 3f))
+        sb.append(rc(lx, carY + 8f, 26f, carH - 8f, "#7c3aed", ST, 1.8f, 5f))
+        sb.append(poly("${f(lx)},${f(carY + carH)} ${f(lx - 8f)},${f(carY + carH)} ${f(lx)},${f(carY + carH - 12f)}", "#ef4444", ST, 1.3f))
+        sb.append(cls(lx + 12f, wheelY, 7.5f, "#334155", ST, 1.6f))
+        sb.append(cls(lx + 36f, wheelY, 8.5f, "#334155", ST, 1.6f))
+
+        val carTints = listOf("#eef2ff", "#ecfdf5", "#fffbeb", "#fdf2f8", "#f0f9ff", "#f5f3ff")
+        val carBorders = listOf(ACC, "#10b981", "#f59e0b", PT, "#0284c7", "#8b5cf6")
+
+        // چیدمان راست‌به‌چپ هجاها: هجای اول (i=0) در راست‌ترین واگن و هجای آخر نزدیک لوکوموتیو
+        for (i in 0 until n) {
+            val posFromLeft = n - 1 - i
+            val cx = startX + locoW + gap + posFromLeft * (carW + gap)
+            // قلاب اتصال کوتاه فقط در فاصلهٔ خالی بین دو واگن (هرگز از روی متن واگن رد نمی‌شود!)
+            val leftGapX = cx - gap
+            sb.append(ln(leftGapX, carY + carH * 0.62f, cx, carY + carH * 0.62f, ST, 2.8f))
+            val fill = carTints[i % carTints.size]
+            val brd = carBorders[i % carBorders.size]
+            sb.append(rc(cx, carY, carW, carH, fill, brd, 1.9f, 7f))
+            sb.append(tx(cx + carW - 9f, carY + 13f, pFa(i + 1), MU, "middle", bold = true, size = 9))
+            val fSize = if (syl[i].length >= 4 || carW < 44f) 13 else 16
+            sb.append(tx(cx + carW / 2f, carY + carH * 0.66f, syl[i], ST, "middle", bold = true, size = fSize))
+            sb.append(cls(cx + carW * 0.25f, wheelY, 6.5f, "#ffffff", ST, 1.6f))
+            sb.append(cls(cx + carW * 0.75f, wheelY, 6.5f, "#ffffff", ST, 1.6f))
+        }
+
+        sb.append(rc(68f, 186f, 224f, 44f, if (blank) "#fff8e1" else "rgba(39,196,168,.18)", if (blank) PT else GRN, 2f, 10f))
         sb.append(tx(180f, 214f, if (blank) "کلمهٔ ساخته‌شده: ؟" else "کلمه: $word", if (blank) PT else "#00796b", "middle", bold = true, size = 15))
         return sb.toString()
     }
@@ -1526,29 +1836,36 @@ object AdvancedMathSvgRenderer {
      * پس شبکه این‌جا باید دقیقاً با آن هم‌شکل باشد: خانه‌ها از بالا-چپ، شمارهٔ سطر/ستون از ۱.
      */
     private fun paintGrid(spec: FigureSpec): String {
-        val rows = spec.xStr("rows", "4").toFloatOrNull()?.toInt()?.coerceIn(1, 8) ?: 4
-        val cols = spec.xStr("cols", "4").toFloatOrNull()?.toInt()?.coerceIn(1, 8) ?: 4
-        val goal = spec.xStr("goal", "1").toFloatOrNull()?.toInt()?.coerceIn(0, rows * cols) ?: 1
-        val cells = spec.xStr("cells", "").split(Regex("[;؛]")).mapNotNull { chunk ->
-            val a = chunk.split(",")
-            val r = a.getOrNull(0)?.trim()?.toFloatOrNull()?.toInt()
-            val c = a.getOrNull(1)?.trim()?.toFloatOrNull()?.toInt()
+        val rows = faEnDigits(spec.xStr("rows", "4")).toFloatOrNull()?.toInt()?.coerceIn(1, 8) ?: 4
+        val cols = faEnDigits(spec.xStr("cols", "4")).toFloatOrNull()?.toInt()?.coerceIn(1, 8) ?: 4
+        val goal = faEnDigits(spec.xStr("goal", "4")).toFloatOrNull()?.toInt()?.coerceIn(0, rows * cols) ?: 0
+        fun parseCoords(raw: String): Set<Pair<Int, Int>> = raw.split(Regex("[;؛]")).mapNotNull { chunk ->
+            val a = chunk.split(",", "،")
+            val r = a.getOrNull(0)?.let { faEnDigits(it.trim()).toFloatOrNull()?.toInt() }
+            val c = a.getOrNull(1)?.let { faEnDigits(it.trim()).toFloatOrNull()?.toInt() }
             if (r != null && c != null && r in 1..rows && c in 1..cols) r to c else null
-        }
+        }.toSet()
+        val cells = parseCoords(spec.xStr("cells", ""))
+        val ansCells = parseCoords(spec.xStr("ansCells", ""))
         val w = min(300f, cols * 42f)
         val h = min(150f, rows * 34f)
         val cw = w / cols
         val ch = h / rows
         val x0 = (360f - w) / 2f
-        val y0 = 66f + (150f - h) / 2f
+        val y0 = 62f + (150f - h) / 2f
         val sb = StringBuilder()
-        sb.append(tx(180f, 40f, "خانه‌ها را رنگ کن", ST, "middle", bold = true, size = 13))
+        sb.append(tx(180f, 38f, "شبکهٔ رنگ‌آمیزی", ST, "middle", bold = true, size = 13))
         for (r in 0 until rows) for (c in 0 until cols) {
-            val on = cells.any { it.first == r + 1 && it.second == c + 1 }
-            sb.append(rc(x0 + c * cw, y0 + r * ch, cw, ch, if (on) "rgba(108,99,245,.55)" else "#ffffff", ST, 1.4f, 4f))
+            val pos = (r + 1) to (c + 1)
+            val fill = when {
+                pos in cells -> "rgba(108,99,245,.58)"
+                pos in ansCells -> "rgba(39,196,168,.62)"
+                else -> "#ffffff"
+            }
+            sb.append(rc(x0 + c * cw, y0 + r * ch, cw, ch, fill, ST, 1.4f, 4f))
         }
-        if (goal > 0) sb.append(tx(180f, y0 + h + 28f, "دقیقاً ${pFa(goal)} خانه را رنگ کن", ACC, "middle", bold = true, size = 12))
-        sb.append(tx(180f, 258f, "رنگ‌آمیزی روی شکل — پاسخ با لمس خانه‌ها ثبت می‌شود", MU, "middle", size = 10))
+        if (goal > 0) sb.append(tx(180f, y0 + h + 26f, "هدف رنگ‌آمیزی: ${pFa(goal)} خانه", ACC, "middle", bold = true, size = 12))
+        sb.append(tx(180f, 258f, "روی هر خانه کلیک کنید تا رنگ شود یا پاک شود", MU, "middle", size = 10))
         return sb.toString()
     }
 
@@ -1584,71 +1901,154 @@ object AdvancedMathSvgRenderer {
         return sb.toString()
     }
 
-    /** V327 — هجاهای کلمه (کلمه با «-» به هجاها شکسته می‌شود). */
+    /** V327 / V335.8 — هجاهای کلمه: طراح کلمه را می‌نویسد و دانش‌آموز خودش کادرهای بخش را با دکمهٔ «+» اضافه و پر می‌کند. */
     private fun syllableChart(spec: FigureSpec): String {
-        val word = spec.xStr("word", "با-با").ifBlank { "با-با" }
-        val list = word.split(Regex("[-–—]")).map { it.trim() }.filter { it.isNotEmpty() }.take(6)
-            .ifEmpty { listOf("با", "با") }
-        val n = list.size
-        val w = min(72f, 300f / n)
-        val x0 = 180f + (n * (w + 8f)) / 2f
+        val rawWord = spec.xStr("word", "مدرسه").ifBlank { "مدرسه" }
+        val mode = spec.xStr("mode", "ask").lowercase()
         val sb = StringBuilder()
-        sb.append(tx(180f, 40f, "هجاهای کلمه", ST, "middle", bold = true, size = 13))
-        list.forEachIndexed { i, syl ->
-            val bx = x0 - (i + 1) * (w + 8f)
-            sb.append(rc(bx, 74f, w, 52f, "rgba(39,196,168,.16)", "#1f8a78", 1.6f, 10f))
-            sb.append(tx(bx + w / 2f, 108f, syl, ST, "middle", bold = true, size = 18))
-            sb.append(cls(bx + w / 2f, 146f, 4f, "#1f8a78", "none", 0f))
+        if (mode == "show") {
+            val list = rawWord.split(Regex("[-–—،,]")).map { it.trim() }.filter { it.isNotEmpty() }.take(6)
+                .ifEmpty { listOf(rawWord) }
+            val n = list.size
+            val w = min(72f, 300f / n)
+            val x0 = 180f + (n * (w + 8f)) / 2f
+            sb.append(tx(180f, 38f, "بخش‌های کلمهٔ «${rawWord.replace(Regex("[-–—]"), "")}»", ST, "middle", bold = true, size = 13))
+            list.forEachIndexed { i, syl ->
+                val bx = x0 - (i + 1) * (w + 8f)
+                sb.append(rc(bx, 74f, w, 52f, "rgba(39,196,168,.16)", "#1f8a78", 1.6f, 10f))
+                sb.append(tx(bx + w / 2f, 108f, syl, ST, "middle", bold = true, size = 18))
+                sb.append(cls(bx + w / 2f, 146f, 4f, "#1f8a78", "none", 0f))
+            }
+            sb.append(tx(180f, 176f, "تعداد بخش: ${pFa(n)}", ACC, "middle", bold = true, size = 12))
+            return sb.toString()
         }
-        sb.append(tx(180f, 174f, "تعداد هجا: ${pFa(n)}", ACC, "middle", bold = true, size = 12))
-        sb.append(tx(180f, 202f, "هر هجا را با یک دست‌زدن بشمار", MU, "middle", size = 10))
+
+        // حالت پیش‌فرض آزمون (ask): نمایش کلمهٔ یکپارچه بدون لو دادن تعداد بخش‌ها
+        val cleanWord = rawWord.replace(Regex("[-–—]"), "").trim().ifBlank { "مدرسه" }
+        sb.append(tx(180f, 42f, "کلمهٔ زیر را به بخش‌های (هجاهای) آن تقسیم کن:", ST, "middle", bold = true, size = 13))
+        sb.append(rc(66f, 68f, 228f, 76f, "#eef2ff", ACC, 2.2f, 14f))
+        val wFont = if (cleanWord.length > 10) 20 else 26
+        sb.append(tx(180f, 116f, cleanWord, ST, "middle", bold = true, size = wFont))
+        // راهنمای تصویری کادرهای بخش‌بندی با دکمهٔ +
+        sb.append(rc(86f, 168f, 68f, 38f, "#ffffff", "#94a3b8", 1.4f, 8f))
+        sb.append(tx(120f, 192f, "بخش ...", "#94a3b8", "middle", size = 11))
+        sb.append(rc(162f, 168f, 38f, 38f, "rgba(39,196,168,.18)", "#1f8a78", 1.6f, 8f))
+        sb.append(tx(181f, 194f, "+", "#1f8a78", "middle", bold = true, size = 20))
+        sb.append(tx(248f, 191f, "افزودن کادر بخش", "#1f8a78", "middle", bold = true, size = 11))
+        sb.append(tx(180f, 240f, "با دکمهٔ «+» در کادر پاسخ، به تعداد بخش‌ها خانه بساز و هر بخش را بنویس", MU, "middle", size = 10))
         return sb.toString()
     }
 
-    /** V327 — آهنربا: جذب/دفع دو قطب. */
+    /** V327 / V335.8 — آهنربا: جذب (قطب‌های ناهم‌نام روبه‌رو) و دفع (قطب‌های هم‌نام روبه‌رو). */
     private fun magnetSpec(spec: FigureSpec): String {
-        val repel = spec.xStr("mode", "attract").lowercase() == "repel"
+        val mode = spec.xStr("mode", "attract").lowercase()
+        val repel = mode == "repel" || mode == "repel_s"
+        val repelSouth = mode == "repel_s"
         val sb = StringBuilder()
         sb.append(tx(180f, 36f, if (repel) "دو قطب هم‌نام — دفع" else "دو قطب ناهم‌نام — جذب", ST, "middle", bold = true, size = 13))
-        val left = 96f
-        val right = 264f
-        val y = 150f
-        listOf(left to "N", right to "S").forEach { (x, pole) ->
-            sb.append(rc(x - 46f, y - 26f, 92f, 52f, "#e8eaf6", ST, 1.8f, 6f))
-            val wx = if (pole == "N") x + 18f else x - 46f
-            sb.append(rc(wx, y - 26f, 28f, 52f, if (pole == "N") "#e53935" else "#1e88e5", "#ffffff", 1f, 4f))
-            sb.append(tx(x + if (pole == "N") 32f else -32f, y + 7f, pole, "#ffffff", "middle", bold = true, size = 16))
+        val leftCx = 88f
+        val rightCx = 272f
+        val y = 136f
+        fun drawBarMagnet(cx: Float, leftPole: String, rightPole: String) {
+            val wHalf = 46f
+            val h = 48f
+            val lCol = if (leftPole == "N") "#e53935" else "#1e88e5"
+            val rCol = if (rightPole == "N") "#e53935" else "#1e88e5"
+            sb.append(rc(cx - wHalf, y - h / 2f, wHalf, h, lCol, ST, 1.6f, 4f))
+            sb.append(rc(cx, y - h / 2f, wHalf, h, rCol, ST, 1.6f, 4f))
+            sb.append(rc(cx - wHalf, y - h / 2f, wHalf * 2f, h, "none", ST, 1.8f, 5f))
+            sb.append(tx(cx - wHalf / 2f, y + 6f, leftPole, "#ffffff", "middle", bold = true, size = 16))
+            sb.append(tx(cx + wHalf / 2f, y + 6f, rightPole, "#ffffff", "middle", bold = true, size = 16))
         }
         if (!repel) {
-            sb.append(arrow(left + 50f, y, left + 78f, y, "#1f8a78", 2f, 8f))
-            sb.append(arrow(right - 50f, y, right - 78f, y, "#1f8a78", 2f, 8f))
-            sb.append(tx(180f, y - 48f, "جذب", "#1f8a78", "middle", bold = true, size = 12))
+            // جذب: قطب N آهنربای چپ روبه‌روی قطب S آهنربای راست
+            drawBarMagnet(leftCx, "S", "N")
+            drawBarMagnet(rightCx, "S", "N")
+            sb.append(arrow(leftCx + 52f, y, leftCx + 82f, y, "#1f8a78", 2.6f, 9f))
+            sb.append(arrow(rightCx - 52f, y, rightCx - 82f, y, "#1f8a78", 2.6f, 9f))
+            sb.append(tx(180f, y - 36f, "ربایش (جذب)", "#1f8a78", "middle", bold = true, size = 12))
         } else {
-            sb.append(arrow(left + 78f, y, left + 40f, y, PT, 2f, 8f))
-            sb.append(arrow(right - 78f, y, right - 40f, y, PT, 2f, 8f))
-            sb.append(tx(180f, y - 48f, "دفع", PT, "middle", bold = true, size = 12))
+            // دفع: دو قطب هم‌نام روبه‌روی یکدیگر (N روبه‌روی N یا S روبه‌روی S)
+            if (repelSouth) {
+                drawBarMagnet(leftCx, "N", "S")
+                drawBarMagnet(rightCx, "S", "N")
+            } else {
+                drawBarMagnet(leftCx, "S", "N")
+                drawBarMagnet(rightCx, "N", "S")
+            }
+            sb.append(arrow(leftCx + 80f, y, leftCx + 50f, y, PT, 2.6f, 9f))
+            sb.append(arrow(rightCx - 80f, y, rightCx - 50f, y, PT, 2.6f, 9f))
+            sb.append(tx(180f, y - 36f, "رانش (دفع)", PT, "middle", bold = true, size = 12))
         }
-        sb.append(tx(180f, 232f, "قطب‌های هم‌نام یکدیگر را می‌رانند و ناهم‌نام‌ها جذب می‌شوند", MU, "middle", size = 10))
+        sb.append(tx(180f, 236f, "قطب‌های هم‌نام یکدیگر را می‌رانند و قطب‌های ناهم‌نام همدیگر را می‌ربایند", MU, "middle", size = 10))
         return sb.toString()
     }
 
-    /** V327 — حواس پنج‌گانه: هر حس با اندامش. */
+    /** V327 / V335.8 — حواس پنج‌گانه با آیکن‌های برداری تمیز و بدون تداخل خطوط با نوشته‌ها. */
     private fun fiveSenses(spec: FigureSpec): String {
-        val items = listOf("بینایی" to "چشم", "شنوایی" to "گوش", "بویایی" to "بینی", "چشایی" to "زبان", "لامسه" to "پوست")
-        val pos = listOf(180f to 62f, 92f to 112f, 268f to 112f, 112f to 188f, 248f to 188f)
-        val lab = listOf(180f to 26f, 92f to 152f, 268f to 152f, 112f to 224f, 248f to 224f)
+        val mode = spec.xStr("mode", "full").lowercase()
+        data class SenseNode(val sense: String, val organ: String, val cx: Float, val cy: Float, val col: String)
+        val nodes = listOf(
+            SenseNode("بینایی", "چشم", 180f, 52f, "#2563eb"),
+            SenseNode("شنوایی", "گوش", 66f, 108f, "#7c3aed"),
+            SenseNode("بویایی", "بینی", 294f, 108f, "#059669"),
+            SenseNode("چشایی", "زبان", 92f, 210f, "#e11d48"),
+            SenseNode("لامسه", "پوست دست", 268f, 210f, "#d97706")
+        )
+        val hubX = 180f; val hubY = 136f; val hubR = 30f; val nodeR = 22f
         val sb = StringBuilder()
-        sb.append(cls(180f, 138f, 34f, "rgba(108,99,245,.12)", ACC, 1.8f))
-        sb.append(tx(180f, 144f, "حواس", ST, "middle", bold = true, size = 12))
-        items.forEachIndexed { i, (sense, organ) ->
-            val (px, py) = pos[i]
-            val (lx, ly) = lab[i]
-            sb.append(ln(180f, 138f, px, py, "#b9c2d0", 1.3f))
-            sb.append(cls(px, py, 22f, "rgba(108,99,245,.16)", ACC, 1.8f))
-            sb.append(tx(px, py + 5f, pFa(i + 1), ACC, "middle", bold = true, size = 12))
-            sb.append(tx(lx, ly, "$sense — $organ", ST, "middle", bold = true, size = 10))
+
+        // ۱) پرتوهای ارتباطی فقط در فضای بیرون دایره‌ها رسم می‌شوند تا از روی متن یا آیکن رد نشوند
+        nodes.forEach { nd ->
+            val dx = nd.cx - hubX
+            val dy = nd.cy - hubY
+            val dist = kotlin.math.hypot(dx.toDouble(), dy.toDouble()).toFloat().coerceAtLeast(1f)
+            val ux = dx / dist
+            val uy = dy / dist
+            sb.append(ln(hubX + ux * (hubR + 3f), hubY + uy * (hubR + 3f), nd.cx - ux * (nodeR + 4f), nd.cy - uy * (nodeR + 4f), "#cbd5e1", 1.8f, "4 3"))
         }
-        sb.append(tx(180f, 246f, "پنج حس بدن و اندام هر حس", MU, "middle", size = 10))
+
+        // ۲) دایرهٔ مرکزی توپر سفید با کادر بنفش
+        sb.append(cls(hubX, hubY, hubR, "#eef2ff", ACC, 2.2f))
+        sb.append(tx(hubX, hubY - 3f, "حواس", ACC, "middle", bold = true, size = 12))
+        sb.append(tx(hubX, hubY + 13f, "پنج‌گانه", ST, "middle", bold = true, size = 10))
+
+        // ۳) هر گره با آیکن برداری واضح اندام + پلاک برچسب بدون هیچ تداخلی
+        nodes.forEachIndexed { idx, nd ->
+            sb.append(cls(nd.cx, nd.cy, nodeR, "#ffffff", nd.col, 2f))
+            when (idx) {
+                0 -> { // چشم
+                    sb.append(path("M ${f(nd.cx - 13f)} ${f(nd.cy)} Q ${f(nd.cx)} ${f(nd.cy - 10f)} ${f(nd.cx + 13f)} ${f(nd.cy)} Q ${f(nd.cx)} ${f(nd.cy + 10f)} ${f(nd.cx - 13f)} ${f(nd.cy)} Z", "#eff6ff", nd.col, 1.5f))
+                    sb.append(cls(nd.cx, nd.cy, 4.2f, nd.col, "none", 0f))
+                }
+                1 -> { // گوش
+                    sb.append(path("M ${f(nd.cx - 3f)} ${f(nd.cy - 10f)} C ${f(nd.cx + 9f)} ${f(nd.cy - 12f)} ${f(nd.cx + 10f)} ${f(nd.cy + 4f)} ${f(nd.cx + 2f)} ${f(nd.cy + 9f)} C ${f(nd.cx - 2f)} ${f(nd.cy + 11f)} ${f(nd.cx - 6f)} ${f(nd.cy + 8f)} ${f(nd.cx - 5f)} ${f(nd.cy + 4f)}", "none", nd.col, 2f))
+                    sb.append(path("M ${f(nd.cx - 1f)} ${f(nd.cy - 4f)} Q ${f(nd.cx + 4f)} ${f(nd.cy)} ${f(nd.cx)} ${f(nd.cy + 4f)}", "none", nd.col, 1.5f))
+                }
+                2 -> { // بینی
+                    sb.append(path("M ${f(nd.cx - 1f)} ${f(nd.cy - 11f)} L ${f(nd.cx - 7f)} ${f(nd.cy + 5f)} Q ${f(nd.cx)} ${f(nd.cy + 10f)} ${f(nd.cx + 7f)} ${f(nd.cy + 5f)}", "none", nd.col, 2f))
+                }
+                3 -> { // زبان
+                    sb.append(ln(nd.cx - 10f, nd.cy - 4f, nd.cx + 10f, nd.cy - 4f, ST, 1.6f))
+                    sb.append(path("M ${f(nd.cx - 7f)} ${f(nd.cy - 4f)} L ${f(nd.cx - 7f)} ${f(nd.cy + 4f)} A 7 7 0 0 0 ${f(nd.cx + 7f)} ${f(nd.cy + 4f)} L ${f(nd.cx + 7f)} ${f(nd.cy - 4f)} Z", "#fecdd3", nd.col, 1.6f))
+                    sb.append(ln(nd.cx, nd.cy - 3f, nd.cx, nd.cy + 6f, nd.col, 1.2f))
+                }
+                else -> { // دست (پوست / لامسه)
+                    sb.append(rc(nd.cx - 7f, nd.cy - 2f, 14f, 11f, "#fef3c7", nd.col, 1.5f, 4f))
+                    for (fx in -5..5 step 3) {
+                        sb.append(ln(nd.cx + fx, nd.cy - 2f, nd.cx + fx, nd.cy - 10f, nd.col, 1.8f))
+                    }
+                }
+            }
+            val labelText = when (mode) {
+                "blank_sense" -> "؟ — ${nd.organ}"
+                "blank_organ" -> "${nd.sense} — ؟"
+                else -> "${nd.sense} (${nd.organ})"
+            }
+            val ly = if (idx == 0) nd.cy - nodeR - 8f else nd.cy + nodeR + 14f
+            sb.append(tx(nd.cx, ly, labelText, if ("؟" in labelText) PT else ST, "middle", bold = true, size = 10))
+        }
+        sb.append(tx(180f, 268f, "حواس پنج‌گانه و اندام‌های حسی بدن", MU, "middle", size = 10))
         return sb.toString()
     }
 

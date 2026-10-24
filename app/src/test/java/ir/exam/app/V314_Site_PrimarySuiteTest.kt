@@ -31,7 +31,7 @@ class V314_Site_PrimarySuiteTest {
         // ۲) ۲۰ ابزار جدید ریاضی/علوم ابتدایی در graph_fig.js (۶ ابزار V314 + ۸ ابزار V315 + ۶ ابزار V317)
         for (k in listOf(
             "axabacus", "axjump", "axbalance", "axthermo", "axsaw", "axpattern",
-            "axtenframe", "axsym", "axspin", "axbeaker", "axgeoboard", "axdice", "axmularea", "axvenn",
+            "axtenframe", "axsym", "axbeaker", "axgeoboard", "axdice", "axmularea", "axvenn",
             "axnumgrid", "axfacttree", "axfnmachine", "axfracwall", "axtangram", "axangle",
 "axrod", "axtower", "axmulwheel", "axmultgrid", "axnet", "axcubes", "axcalendar", "axlever", "axcycle", "axwordtrain", "axtiles", "axkenken", "axdicefold", "axtransform", "axcaliper", "axsigntable", "axtrigcircle", "axmapping", "axprobtree", "axconic", "axorbital", "axpunnett", "axecg", "axprosody", "axtruthtable", "axledger", "axstaff", "axkmap", "axgate", "axdfa", "axbst", "axbode", "axbeam", "axmohr", "axpv", "axpert", "axbenzene", "axnormal", "axsupply", "axgame"
         )) {

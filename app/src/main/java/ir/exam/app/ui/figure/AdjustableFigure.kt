@@ -2,8 +2,16 @@ package ir.exam.app.ui.figure
 
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -15,7 +23,17 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.unit.IntSize
+import androidx.compose.ui.unit.dp
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import ir.exam.app.core.figure.FigureSpec
+import ir.exam.app.core.figure.PrimaryInteractiveFigureHelper
+import ir.exam.app.core.figure.PrimaryMathSvgRenderer
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlin.math.PI
@@ -118,24 +136,32 @@ fun AdjustableFigure(
     spec: FigureSpec,
     modifier: Modifier = Modifier,
     contentDescription: String = "شکل",
+    studentAnswer: String = "",
+    onStudentAnswerChange: ((String) -> Unit)? = null,
     onChanged: (FigureSpec) -> Unit = {}
 ) {
     var current by remember(spec) { mutableStateOf(spec) }
     val interactiveTypes = setOf(
-        "axclock", "axfrac", "axabacus", "axthermo", "axtenframe", "axspin", "axbeaker",
+        "axclock", "axfrac", "axabacus", "axthermo", "axtenframe", "axbeaker",
         "axtally", "axbase10", "axplace", "axruler", "axmoney", "axjump", "axbalance",
         "axsaw", "axpattern", "axsym", "axgeoboard", "axdice", "axmularea", "axvenn",
         "axnumgrid", "axfacttree", "axfnmachine", "axfracwall", "axtangram", "axangle",
         // V319
         "axunitconv", "axperimeter", "axpictograph", "axrounding", "axdivision", "axshapeid", "axcircleparts", "axcylinder", "axproportion", "axlinear", "axbarchart", "axparabola", "axinthales", "axpendulum", "axincline", "axcircuit", "axoptics", "axheatcurve", "axdna", "axcell", "axtimeline", "axmapgeo", "axsentence", "axvectors", "axmatrix", "axintegral", "axflowchart", "axstack", "axsort", "axregression",
         "axrod", "axtower", "axmulwheel", "axmultgrid", "axnet", "axcubes", "axcalendar", "axlever", "axcycle", "axwordtrain",
-        "axpaintgrid", "axletterforms", "axsyllablechart", "axmagnet", "axsenses", "axseedgrow", "axbodyparts",
+        "axpaintgrid", "axletterforms", "axsyllablechart", "axmagnet", "axsenses",
         "axtiles", "axkenken", "axdicefold", "axtransform", "axcaliper", "axsigntable", "axtrigcircle", "axmapping", "axprobtree", "axconic", "axorbital", "axpunnett", "axecg", "axprosody", "axtruthtable", "axledger", "axstaff", "axkmap", "axgate", "axdfa", "axbst", "axbode", "axbeam", "axmohr", "axpv", "axpert", "axbenzene", "axnormal", "axsupply", "axgame",
         "axnumpts", "axnumint", "axnumineq", "axxypts", "axxyline", "axxyvec", "axxycirc", "axpolpts",
         "gauge", "ang", "sec", "arc", "segm", "parll", "ngon"
     )
     if (spec.type in interactiveTypes) {
-        InteractiveClock(current, modifier, contentDescription) { next ->
+        InteractiveClock(
+            spec = current,
+            modifier = modifier,
+            contentDescription = contentDescription,
+            studentAnswer = studentAnswer,
+            onStudentAnswerChange = onStudentAnswerChange
+        ) { next ->
             current = next
             onChanged(next)
         }
@@ -144,31 +170,51 @@ fun AdjustableFigure(
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun InteractiveClock(
     spec: FigureSpec,
     modifier: Modifier,
     contentDescription: String,
+    studentAnswer: String = "",
+    onStudentAnswerChange: ((String) -> Unit)? = null,
     onNext: (FigureSpec) -> Unit
 ) {
     val latest by rememberUpdatedState(spec)
+    val latestStudentAns by rememberUpdatedState(studentAnswer)
+    val emitStudent by rememberUpdatedState(onStudentAnswerChange)
     val emit by rememberUpdatedState(onNext)
     var canvasSize by remember { mutableStateOf(IntSize.Zero) }
     var grab by remember { mutableStateOf<String?>(null) }
 
-    // مختصات صفحه → مختصات SVG (بوم 360×280 یا 360×370 با ContentScale.Fit وسط‌چین)
+    // پنجره‌های پاپ‌آپ انتخاب مقدار خانه‌ها (سودوکو، الگو، تقویم، جدول ضرب، چرخ ضرب، هرم اعداد)
+    var sawPopupCell by remember { mutableStateOf<Pair<Int, Int>?>(null) }
+    var patternPopupIdx by remember { mutableStateOf<Int?>(null) }
+    var patternCustomVal by remember { mutableStateOf("") }
+    var teacherCellPopup by remember { mutableStateOf<PrimaryInteractiveFigureHelper.CellHit?>(null) }
+    var teacherCellInput by remember { mutableStateOf("") }
+    var studentCellPopup by remember { mutableStateOf<PrimaryInteractiveFigureHelper.CellHit?>(null) }
+    var studentCellInput by remember { mutableStateOf("") }
+
+    // مختصات صفحه → مختصات واقعی viewBox شکل (360×280، 360×370، 460×310 و ...)
     fun toSvg(p: Offset): Offset? {
         val w = canvasSize.width.toFloat()
         val h = canvasSize.height.toFloat()
         if (w <= 0f || h <= 0f) return null
-        val vh = if (latest.type == "axbase10") 370f else 280f
-        val sc = min(w / 360f, h / vh)
-        return Offset((p.x - (w - 360f * sc) / 2f) / sc, (p.y - (h - vh * sc) / 2f) / sc)
+        val vw = if (latest.type == "parll") 380f else PrimaryMathSvgRenderer.canvasWidth(latest)
+        val vh = PrimaryMathSvgRenderer.canvasHeight(latest)
+        val sc = min(w / vw, h / vh)
+        return Offset((p.x - (w - vw * sc) / 2f) / sc, (p.y - (h - vh * sc) / 2f) / sc)
     }
 
     fun moveTo(p: Offset) {
+        if (emitStudent != null) return
         val mode = grab ?: return
         val q = toSvg(p) ?: return
+        if (latest.type == "axbeaker") {
+            emit(PrimaryInteractiveFigureHelper.adjustBeakerAt(latest, q.x, q.y))
+            return
+        }
         val deg = (atan2((q.x - 180f).toDouble(), -(q.y - 150f).toDouble()) * 180.0 / PI + 360.0) % 360.0
         val x = (latest.raw["X"] as? JsonObject) ?: JsonObject(emptyMap())
         val nx = if (latest.type == "axthermo") {
@@ -176,12 +222,6 @@ private fun InteractiveClock(
             val mx = kotlin.math.max(mn + 5f, latest.xNum("max", 50f))
             val ratio = ((204f - q.y) / (204f - 34f)).coerceIn(0f, 1f)
             val v = Math.round(mn + ratio * (mx - mn))
-            x + ("val" to JsonPrimitive(v))
-        } else if (latest.type == "axbeaker") {
-            val mx = kotlin.math.max(10f, latest.xNum("max", 500f))
-            val ratio = ((216f - q.y) / (216f - 36f)).coerceIn(0f, 1f)
-            val step = if (mx >= 100f) 10 else 1
-            val v = (Math.round((ratio * mx) / step) * step).coerceIn(0, mx.toInt())
             x + ("val" to JsonPrimitive(v))
         } else if (latest.type == "axruler") {
             val len = latest.xNum("len", 10f).toInt().coerceIn(2, 50)
@@ -235,22 +275,63 @@ private fun InteractiveClock(
 
     fun tapAt(p: Offset) {
         val q = toSvg(p) ?: return
+        // حالت پاسخ‌گویی دانش‌آموز در جلسهٔ آزمون: فقط تعامل مجاز دانش‌آموز روی خانه‌های سؤال انجام می‌شود
+        val stuCallback = emitStudent
+        if (stuCallback != null) {
+            when (latest.type) {
+                "axsym" -> {
+                    if (latest.xNum("mirror", 1f).toInt() == 0) {
+                        val hit = PrimaryInteractiveFigureHelper.hitSymCell(q.x, q.y) ?: return
+                        stuCallback(PrimaryInteractiveFigureHelper.toggleStudentSymCell(latest, latestStudentAns, hit.first, hit.second))
+                    }
+                }
+                "axpaintgrid" -> {
+                    val hit = PrimaryInteractiveFigureHelper.hitPaintCell(latest, q.x, q.y) ?: return
+                    stuCallback(PrimaryInteractiveFigureHelper.toggleStudentPaintCell(latest, latestStudentAns, hit.first, hit.second))
+                }
+                "axcalendar", "axmultgrid", "axmulwheel", "axtower" -> {
+                    val overlaid = PrimaryInteractiveFigureHelper.injectStudentOverlay(latest, latestStudentAns)
+                    val hit = PrimaryInteractiveFigureHelper.hitEditableNumberCell(overlaid, q.x, q.y) ?: return
+                    if (hit.isEmpty) {
+                        studentCellPopup = hit
+                        studentCellInput = hit.studentVal
+                    }
+                }
+                "axclock" -> {
+                    val deg = (atan2((q.x - 180f).toDouble(), -(q.y - 150f).toDouble()) * 180.0 / PI + 360.0) % 360.0
+                    val x = (latest.raw["X"] as? JsonObject) ?: JsonObject(emptyMap())
+                    val nx = if (hypot(q.x - 180f, q.y - 150f) <= 62f) {
+                        x + ("h" to JsonPrimitive(Math.round(deg / 30.0).toInt() % 12))
+                    } else {
+                        x + ("m" to JsonPrimitive(Math.round(deg / 6.0).toInt() % 60))
+                    }
+                    emit(FigureSpec(JsonObject(latest.raw + ("X" to JsonObject(nx)))))
+                }
+            }
+            return
+        }
+
         val x = (latest.raw["X"] as? JsonObject) ?: JsonObject(emptyMap())
         when (latest.type) {
             "axfrac" -> {
-                val den = latest.xNum("den", 4f).toInt().coerceIn(1, 24)
+                val den = latest.xNum("den", 4f).toInt().coerceIn(1, 25)
                 val num = latest.xNum("num", 1f).toInt().coerceIn(0, den)
                 val nextNum = (num + 1) % (den + 1)
                 emit(FigureSpec(JsonObject(latest.raw + ("X" to JsonObject(x + ("num" to JsonPrimitive(nextNum)))))))
             }
             "axabacus" -> {
-                val cols = latest.xNum("cols", 4f).toInt().coerceIn(2, 6)
-                val step = 288f / cols
-                val colIdx = ((q.x - 36f) / step).toInt().coerceIn(0, cols - 1)
+                val cols = latest.xNum("cols", 6f).toInt().coerceIn(2, 6)
+                val step = 408f / cols
+                val colIdx = ((q.x - 26f) / step).toInt().coerceIn(0, cols - 1)
                 val place = cols - 1 - colIdx
                 var pow = 1L
                 repeat(place) { pow *= 10L }
-                val curN = latest.xNum("n", 2435f).toLong().coerceIn(0L, 999999L)
+                val rawDigits = latest.xStr("n", "142536").filter { it.isDigit() || it in '۰'..'۹' }
+                val curN = (PrimaryInteractiveFigureHelper.let {
+                    buildString {
+                        for (ch in rawDigits) append(if (ch in '۰'..'۹') ('0' + (ch - '۰')) else ch)
+                    }.take(6).toLongOrNull() ?: 0L
+                }).coerceIn(0L, 999999L)
                 val curDigit = (curN / pow) % 10L
                 val nextDigit = (curDigit + 1L) % 10L
                 val nextN = curN + (nextDigit - curDigit) * pow
@@ -267,23 +348,19 @@ private fun InteractiveClock(
                 emit(FigureSpec(JsonObject(latest.raw + ("X" to JsonObject(x + ("n" to JsonPrimitive(nextN)))))))
             }
             "axbase10" -> {
-                val cur = latest.xNum("n", 134f).toLong().coerceIn(0L, 1_000_000L)
-                if (q.y >= 340f) {
+                val cur = PrimaryMathSvgRenderer.parseBase10Long(latest)
+                if (q.y >= 332f) {
                     val lb = latest.xStr("label", "1")
                     val nextLb = if (lb == "1") "2" else if (lb == "2") "0" else "1"
                     emit(FigureSpec(JsonObject(latest.raw + ("X" to JsonObject(x + ("label" to JsonPrimitive(nextLb)))))))
                 } else {
-                    val rowIdx = ((q.y - 26f) / 45f).toInt().coerceIn(0, 6)
-                    val pows = longArrayOf(1_000_000L, 100_000L, 10_000L, 1_000L, 100L, 10L, 1L)
-                    val pow = pows[rowIdx]
-                    val nextN = if (pow == 1_000_000L) {
-                        if (cur >= 1_000_000L) 0L else 1_000_000L
-                    } else {
-                        val base = cur % 1_000_000L
-                        val d = (base / pow) % 10L
-                        base + (((d + 1L) % 10L) - d) * pow
-                    }
-                    emit(FigureSpec(JsonObject(latest.raw + ("X" to JsonObject(x + ("n" to JsonPrimitive(nextN)))))))
+                    val rowFromTop = ((q.y - 4f) / 36f).toInt().coerceIn(0, 8)
+                    val bp = 8 - rowFromTop
+                    var pow = 1L
+                    repeat(bp) { pow *= 10L }
+                    val d = (cur / pow) % 10L
+                    val nextN = (cur + (((d + 1L) % 10L) - d) * pow).coerceIn(0L, 999_999_999L)
+                    emit(FigureSpec(JsonObject(latest.raw + ("X" to JsonObject(x + ("n" to JsonPrimitive(nextN.toString())))))))
                 }
             }
             "axplace" -> {
@@ -334,42 +411,41 @@ private fun InteractiveClock(
                 }
             }
             "axsaw" -> {
-                val raw = latest.xStr("vals", "1,2,3,4;3,4,?,2;2,?,4,3;4,3,2,1")
-                val parsed = raw.split(';', '؛').map { it.split(',', '،').map { c -> c.trim() } }.filter { it.isNotEmpty() }
-                val explicitSize = latest.xNum("size", 0f).toInt()
-                val n = (if (explicitSize in 3..9) explicitSize else parsed.size.coerceIn(3, 9)).coerceIn(3, 9)
-                val mode = latest.xStr("mode", "shape").lowercase()
-                val showLegend = mode == "color" || mode == "color_shape"
-                val maxGridPx = if (showLegend) 196f else 216f
-                val cs = kotlin.math.min(52f, maxGridPx / n)
-                val gw = cs * n
-                val x0 = (360f - gw) / 2f
-                val y0 = (if (showLegend) 24f else 28f) + (maxGridPx - gw) / 2f
-                val c = ((q.x - x0) / cs).toInt().coerceIn(0, n - 1)
-                val r = ((q.y - y0) / cs).toInt().coerceIn(0, n - 1)
-                val baseRows = if (parsed.size == n && parsed.all { it.size >= n }) parsed else ir.exam.app.core.figure.PrimaryMathSvgRenderer.defaultSudokuRows(n)
-                val grid = MutableList(n) { ri ->
-                    MutableList(n) { ci -> baseRows.getOrNull(ri)?.getOrNull(ci)?.ifBlank { "?" } ?: "?" }
-                }
-                val cycle = (1..n).map { it.toString() } + "?"
-                val cur = grid[r][c]
-                grid[r][c] = cycle[(cycle.indexOf(cur) + 1) % cycle.size]
-                val nextVals = grid.joinToString(";") { it.joinToString(",") }
-                emit(FigureSpec(JsonObject(latest.raw + ("X" to JsonObject(x + ("size" to JsonPrimitive(n)) + ("vals" to JsonPrimitive(nextVals)))))))
+                val hit = PrimaryInteractiveFigureHelper.hitSawCell(latest, q.x, q.y)
+                if (hit != null) sawPopupCell = hit
             }
             "axpattern" -> {
-                val items = latest.xStr("seq", "●,▲,●,▲,●,?").split(',', '،').map { it.trim() }.filter { it.isNotEmpty() }.toMutableList()
-                if (items.isNotEmpty()) {
-                    val n = items.size
-                    val cw = kotlin.math.min(42f, 300f / n)
-                    val gap = if (n <= 8) 6f else 4f
-                    val tw = n * cw + (n - 1) * gap
-                    val x0 = (360f - tw) / 2f
-                    val idx = ((q.x - x0) / (cw + gap)).toInt().coerceIn(0, n - 1)
-                    val mode = latest.xStr("mode", "shape").lowercase()
-                    val cycle = if (mode == "color" || mode == "bead") listOf("قرمز", "آبی", "سبز", "زرد", "بنفش", "?") else listOf("●", "▲", "■", "★", "?")
-                    items[idx] = cycle[(cycle.indexOf(items[idx]) + 1) % cycle.size]
-                    emit(FigureSpec(JsonObject(latest.raw + ("X" to JsonObject(x + ("seq" to JsonPrimitive(items.joinToString(","))))))))
+                val slot = PrimaryInteractiveFigureHelper.hitPatternSlot(latest, q.x, q.y)
+                if (slot != null) {
+                    val items = PrimaryInteractiveFigureHelper.parsePatternItems(latest)
+                    patternPopupIdx = slot
+                    patternCustomVal = items.getOrElse(slot) { "" }.takeIf { it != "?" && it != "_" }.orEmpty()
+                }
+            }
+            "axcalendar", "axmultgrid", "axmulwheel", "axtower" -> {
+                val hit = PrimaryInteractiveFigureHelper.hitEditableNumberCell(latest, q.x, q.y)
+                if (hit != null) {
+                    teacherCellPopup = hit
+                    teacherCellInput = if (hit.isEmpty) "" else hit.currentVal
+                }
+            }
+            "axpaintgrid" -> {
+                val hit = PrimaryInteractiveFigureHelper.hitPaintCell(latest, q.x, q.y)
+                if (hit != null) {
+                    emit(PrimaryInteractiveFigureHelper.togglePaintCell(latest, hit.first, hit.second))
+                }
+            }
+            "axcubes" -> {
+                val topCell = PrimaryInteractiveFigureHelper.hitCubesTopCell(latest, q.x, q.y)
+                if (topCell != null) {
+                    val grid = PrimaryInteractiveFigureHelper.parseCubesGrid(latest)
+                    val curH = grid[topCell.first][topCell.second]
+                    emit(PrimaryInteractiveFigureHelper.setCubesCell(latest, topCell.first, topCell.second, (curH + 1) % 7))
+                } else {
+                    val views = listOf("iso", "top", "front", "side")
+                    val cur = latest.xStr("view", "iso").lowercase()
+                    val nextV = views[(views.indexOf(cur) + 1) % views.size]
+                    emit(FigureSpec(JsonObject(latest.raw + ("X" to JsonObject(x + ("view" to JsonPrimitive(nextV)))))))
                 }
             }
             "axnumgrid" -> {
@@ -411,19 +487,10 @@ private fun InteractiveClock(
                 emit(FigureSpec(JsonObject(latest.raw + ("X" to JsonObject(x + ("shape" to JsonPrimitive(nextS)))))))
             }
             "axsym" -> {
-                val c = ((q.x - 76f) / 26f).toInt().coerceIn(0, 7)
-                val r = ((q.y - 32f) / 26f).toInt().coerceIn(0, 7)
-                val axis = latest.xStr("axis", "v").lowercase()
-                val pair = if (axis == "h") {
-                    val d1 = if (r < 4) 4 - r else r - 3
-                    "${c + 1},$d1"
-                } else {
-                    val d1 = if (c < 4) 4 - c else c - 3
-                    "${r + 1},$d1"
+                val hit = PrimaryInteractiveFigureHelper.hitSymCell(q.x, q.y)
+                if (hit != null) {
+                    emit(PrimaryInteractiveFigureHelper.toggleTeacherSymCell(latest, hit.first, hit.second))
                 }
-                val cur = latest.xStr("cells", "1,1;2,1;2,2;3,2").split(';', '؛').map { it.trim() }.filter { it.isNotEmpty() }.toMutableList()
-                if (pair in cur && cur.size > 1) cur.remove(pair) else if (pair !in cur) cur.add(pair)
-                emit(FigureSpec(JsonObject(latest.raw + ("X" to JsonObject(x + ("cells" to JsonPrimitive(cur.joinToString(";"))))))))
             }
             "axgeoboard" -> {
                 val g = latest.xNum("grid", 5f).toInt().coerceIn(3, 7)
@@ -543,11 +610,16 @@ private fun InteractiveClock(
         "axnumint", "axnumineq", "axxyline", "axxyvec", "axxycirc",
         "gauge", "ang", "sec", "arc", "segm", "parll"
     )
+    val displaySpec = if (emitStudent != null) {
+        PrimaryInteractiveFigureHelper.injectStudentOverlay(latest, latestStudentAns)
+    } else {
+        latest
+    }
     Box(
         modifier
             .onSizeChanged { canvasSize = it }
-            .pointerInput(latest.type) {
-                if (latest.type !in dragTypes) {
+            .pointerInput(latest.type, emitStudent != null) {
+                if (emitStudent != null || latest.type !in dragTypes) {
                     detectTapGestures { p -> tapAt(p) }
                 } else {
                     detectDragGestures(
@@ -568,6 +640,201 @@ private fun InteractiveClock(
                 }
             }
     ) {
-        InlineFigureView(spec = latest, modifier = Modifier.fillMaxSize(), contentDescription = contentDescription)
+        InlineFigureView(spec = displaySpec, modifier = Modifier.fillMaxSize(), contentDescription = contentDescription)
+    }
+
+    // ۱) پاپ‌آپ انتخاب مقدار خانه برای «جدول شگفت‌انگیز و سودوکو» (axsaw)
+    sawPopupCell?.let { (r, c) ->
+        val choices = PrimaryInteractiveFigureHelper.sawChoices(latest)
+        val (_, grid) = PrimaryInteractiveFigureHelper.parseSawGrid(latest)
+        val curVal = grid.getOrNull(r)?.getOrNull(c).orEmpty()
+        AlertDialog(
+            onDismissRequest = { sawPopupCell = null },
+            title = {
+                Text("انتخاب مقدار خانه (سطر ${PrimaryInteractiveFigureHelper.toFa((r + 1).toString())}، ستون ${PrimaryInteractiveFigureHelper.toFa((c + 1).toString())})")
+            },
+            text = {
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    choices.forEach { ch ->
+                        FilterChip(
+                            selected = curVal == ch.code,
+                            onClick = {
+                                emit(PrimaryInteractiveFigureHelper.setSawCell(latest, r, c, ch.code))
+                                sawPopupCell = null
+                            },
+                            label = { Text(ch.label) }
+                        )
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { sawPopupCell = null }) { Text("بستن") }
+            }
+        )
+    }
+
+    // ۲) پاپ‌آپ انتخاب شکل/رنگ/عدد برای هر خانهٔ «الگویابی» (axpattern)
+    patternPopupIdx?.let { slotIdx ->
+        val items = PrimaryInteractiveFigureHelper.parsePatternItems(latest)
+        val curTok = items.getOrElse(slotIdx) { "?" }
+        AlertDialog(
+            onDismissRequest = { patternPopupIdx = null },
+            title = { Text("ویرایش جملهٔ ${PrimaryInteractiveFigureHelper.toFa((slotIdx + 1).toString())} الگو") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    FlowRow(
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        PrimaryInteractiveFigureHelper.PATTERN_TOKENS.forEach { (tok, lbl) ->
+                            FilterChip(
+                                selected = curTok == tok,
+                                onClick = {
+                                    emit(PrimaryInteractiveFigureHelper.setPatternSlot(latest, slotIdx, tok))
+                                    patternPopupIdx = null
+                                },
+                                label = { Text(lbl) }
+                            )
+                        }
+                    }
+                    OutlinedTextField(
+                        value = patternCustomVal,
+                        onValueChange = { patternCustomVal = it },
+                        singleLine = true,
+                        label = { Text("یا عدد / نماد دلخواه را بنویسید") },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        OutlinedButton(
+                            onClick = {
+                                emit(PrimaryInteractiveFigureHelper.appendPatternSlot(latest, "?"))
+                                patternPopupIdx = null
+                            }
+                        ) { Text("+ افزودن خانه") }
+                        if (items.size > 2) {
+                            OutlinedButton(
+                                onClick = {
+                                    emit(PrimaryInteractiveFigureHelper.removeLastPatternSlot(latest))
+                                    patternPopupIdx = null
+                                }
+                            ) { Text("− حذف خانهٔ آخر") }
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        if (patternCustomVal.isNotBlank()) {
+                            emit(PrimaryInteractiveFigureHelper.setPatternSlot(latest, slotIdx, patternCustomVal.trim()))
+                        }
+                        patternPopupIdx = null
+                    }
+                ) { Text("ثبت مقدار") }
+            },
+            dismissButton = {
+                TextButton(onClick = { patternPopupIdx = null }) { Text("بستن") }
+            }
+        )
+    }
+
+    // ۳) پاپ‌آپ تنظیم مقدار یا خالی‌کردن خانه بدون «؟» برای معلم (تقویم، جدول ضرب، چرخ ضرب، هرم اعداد)
+    teacherCellPopup?.let { hit ->
+        AlertDialog(
+            onDismissRequest = { teacherCellPopup = null },
+            title = { Text("تنظیم ${hit.title}") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    OutlinedTextField(
+                        value = teacherCellInput,
+                        onValueChange = { teacherCellInput = it },
+                        singleLine = true,
+                        label = { Text("مقدار این خانه") },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    OutlinedButton(
+                        onClick = {
+                            emit(PrimaryInteractiveFigureHelper.applyTeacherCellEdit(latest, hit.key, null, makeEmpty = true))
+                            teacherCellPopup = null
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("⬜ خالی گذاشتن این خانه (بدون علامت سؤال)")
+                    }
+                    TextButton(
+                        onClick = {
+                            emit(PrimaryInteractiveFigureHelper.applyTeacherCellEdit(latest, hit.key, null, makeEmpty = false))
+                            teacherCellPopup = null
+                        }
+                    ) {
+                        Text("بازگرداندن به مقدار پیش‌فرض (${PrimaryInteractiveFigureHelper.toFa(hit.defaultVal)})")
+                    }
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        val trimmed = teacherCellInput.trim()
+                        if (trimmed.isEmpty()) {
+                            emit(PrimaryInteractiveFigureHelper.applyTeacherCellEdit(latest, hit.key, null, makeEmpty = true))
+                        } else {
+                            emit(PrimaryInteractiveFigureHelper.applyTeacherCellEdit(latest, hit.key, trimmed, makeEmpty = false))
+                        }
+                        teacherCellPopup = null
+                    }
+                ) { Text("ثبت") }
+            },
+            dismissButton = {
+                TextButton(onClick = { teacherCellPopup = null }) { Text("انصراف") }
+            }
+        )
+    }
+
+    // ۴) پاپ‌آپ ورود پاسخ دانش‌آموز با کلیک روی خانهٔ خالی شکل در جلسهٔ آزمون
+    studentCellPopup?.let { hit ->
+        AlertDialog(
+            onDismissRequest = { studentCellPopup = null },
+            title = { Text("پاسخ ${hit.title}") },
+            text = {
+                Column {
+                    OutlinedTextField(
+                        value = studentCellInput,
+                        onValueChange = { studentCellInput = it },
+                        singleLine = true,
+                        label = { Text("عدد مورد نظر را بنویسید") },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    Spacer(Modifier.height(4.dp))
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        val map = PrimaryInteractiveFigureHelper.parseStudentCellMap(latest, latestStudentAns)
+                        val trimmed = studentCellInput.trim()
+                        if (trimmed.isEmpty()) map.remove(hit.key) else map[hit.key] = trimmed
+                        emitStudent?.invoke(PrimaryInteractiveFigureHelper.encodeStudentCellAnswer(latest, map))
+                        studentCellPopup = null
+                    }
+                ) { Text("ثبت در خانه") }
+            },
+            dismissButton = {
+                if (hit.studentVal.isNotEmpty()) {
+                    TextButton(
+                        onClick = {
+                            val map = PrimaryInteractiveFigureHelper.parseStudentCellMap(latest, latestStudentAns)
+                            map.remove(hit.key)
+                            emitStudent?.invoke(PrimaryInteractiveFigureHelper.encodeStudentCellAnswer(latest, map))
+                            studentCellPopup = null
+                        }
+                    ) { Text("پاک کردن") }
+                } else {
+                    TextButton(onClick = { studentCellPopup = null }) { Text("انصراف") }
+                }
+            }
+        )
     }
 }

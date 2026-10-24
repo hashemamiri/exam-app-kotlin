@@ -437,7 +437,11 @@ fun StudentExamContent(
                             val blanks = AtlasBlankAnswerCodec.parse(answerText).toMutableMap()
                             blanks[n] = value
                             onAnswer(TextAnswer(question.id, AtlasBlankAnswerCodec.merge(blanks, AtlasBlankAnswerCodec.freeText(answerText))))
-                        }
+                        },
+                        studentFigureAnswer = answerText,
+                        onStudentFigureAnswer = if (question is FillBlankQuestion || question is NumericQuestion || question is ir.exam.app.domain.model.DescriptiveQuestion) {
+                            { nextVal -> onAnswer(TextAnswer(question.id, nextVal)) }
+                        } else null
                     )
                     if(presentation.imagePosition!="above") question.images.forEach { img ->
                         StudentCachedImage(img, "تصویر سؤال", Modifier.fillMaxWidth().clickable { zoomImage = img })
@@ -520,7 +524,7 @@ fun StudentExamContent(
                             saved = saved,
                             onChange = { onAnswer(TextAnswer(question.id, it)) }
                         )
-                    } else if (primary && question.syllableCount >= 2) {
+                    } else if ((primary && question.syllableCount >= 2) || "\"axsyllablechart\"" in question.text) {
                         val saved = (state.answers[question.id] as? TextAnswer)?.value.orEmpty()
                         PrimarySyllableAnswer(
                             questionId = question.id,
@@ -1164,9 +1168,15 @@ private fun PrimarySyllableAnswer(
     saved: String,
     onChange: (String) -> Unit
 ) {
-    val parts = remember(questionId, saved, count) {
+    val minBoxes = if (count >= 2) count else 1
+    var boxCount by remember(questionId, count) {
+        val spLen = if (saved.isBlank()) 0 else saved.split('-').size
+        mutableIntStateOf(kotlin.math.max(minBoxes, spLen).coerceIn(1, 8))
+    }
+    val parts = remember(questionId, saved, boxCount) {
         val sp = if (saved.isBlank()) emptyList() else saved.split('-')
-        List(count) { i -> sp.getOrNull(i).orEmpty() }
+        val effCount = kotlin.math.max(boxCount, sp.size).coerceIn(1, 8)
+        List(effCount) { i -> sp.getOrNull(i).orEmpty() }
     }
     var activeBox by remember(questionId) { mutableIntStateOf(0) }
     val signs = listOf("ـَ", "ـِ", "ـُ", "ـّ", "ا", "آ", "ای", "او", "ی", "و")
@@ -1175,7 +1185,7 @@ private fun PrimarySyllableAnswer(
         onChange(next.joinToString("-"))
     }
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text("هر بخش یا صدا را در کادر خودش بنویس:", style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold)
+        Text("هر بخش (هجا) را در یک کادر بنویس (با دکمهٔ + کادر جدید اضافه کن):", style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold)
         Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
             parts.forEachIndexed { idx, txt ->
                 if (idx > 0) Text(" - ", fontWeight = FontWeight.Bold, fontSize = 20.sp)
@@ -1184,8 +1194,27 @@ private fun PrimarySyllableAnswer(
                     onValueChange = { activeBox = idx; updateAt(idx, it) },
                     label = { Text("بخش ${PersianDigits.convert(idx + 1)}") },
                     singleLine = true,
-                    modifier = Modifier.width(96.dp)
+                    modifier = Modifier.width(102.dp)
                 )
+            }
+            if (parts.size < 8) {
+                OutlinedButton(
+                    onClick = {
+                        boxCount = (parts.size + 1).coerceAtMost(8)
+                        activeBox = boxCount - 1
+                        onChange((parts + "").joinToString("-"))
+                    }
+                ) { Text("+ افزودن کادر", fontWeight = FontWeight.Bold) }
+            }
+            if (parts.size > 1) {
+                TextButton(
+                    onClick = {
+                        val next = parts.dropLast(1)
+                        boxCount = next.size.coerceAtLeast(1)
+                        activeBox = activeBox.coerceAtMost(boxCount - 1)
+                        onChange(next.joinToString("-"))
+                    }
+                ) { Text("✕ حذف کادر") }
             }
         }
         Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {

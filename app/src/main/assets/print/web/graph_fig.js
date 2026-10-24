@@ -77,9 +77,13 @@
     var n = parseFloat(faEn(String(v == null ? '' : v)).replace('،', '.'));
     return isFinite(n) ? n : fb;
   }
-  function wrap(inner, vh) {
+  function clamp(v, a, b) {
+    return Math.max(a, Math.min(b, v));
+  }
+  function wrap(inner, vh, vw) {
     vh = vh || 280;
-    return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 ' + vh + '" width="320" height="' + Math.round(250 * vh / 280) + '" direction="ltr" overflow="hidden">' +
+    vw = vw || 360;
+    return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ' + vw + ' ' + vh + '" width="' + Math.round(320 * vw / 360) + '" height="' + Math.round(250 * vh / 280) + '" direction="ltr" overflow="hidden">' +
       '<style>text{font:700 12px Vazirmatn,Tahoma,sans-serif;fill:#243044;direction:ltr;unicode-bidi:embed;paint-order:stroke;stroke:#fff;stroke-width:2.8px;stroke-linejoin:round}.tk{font:600 11px Vazirmatn,Tahoma,sans-serif;fill:#4a5870}.ttl{font:800 13px Vazirmatn,Tahoma,sans-serif;fill:#1a2433}.fa{font:700 11px Vazirmatn,Tahoma,sans-serif;fill:#1a2433}.lg{font:700 11px Vazirmatn,Tahoma,sans-serif;fill:#1a2433}.onf{font:800 11px Vazirmatn,Tahoma,sans-serif;fill:#fff;paint-order:stroke;stroke:#1a2433;stroke-width:2.6;stroke-linejoin:round}</style>' +
       inner + '</svg>';
   }
@@ -265,16 +269,15 @@
     { id: 'axruler', name: 'خط‌کش', X: { len: '10' } },
     { id: 'axfrac', name: 'کسر شکلی', X: { num: '1', den: '4', shape: 'circle' } },
     { id: 'axmoney', name: 'سکه و اسکناس', X: { notes: '1000,2000,5000,10000', coins: '500,1000', unit: 'تومان' } },
-    { id: 'axabacus', name: 'چرتکهٔ ستونی', X: { n: '2435', cols: '4' } },
-    { id: 'axjump', name: 'پرش روی محور', X: { start: '0', step: '3', jumps: '4', max: '12' } },
+    { id: 'axabacus', name: 'چرتکهٔ ستونی', X: { n: '142536', cols: '6' } },
+    { id: 'axjump', name: 'پرش روی محور', X: { start: '0', step: '3', jumps: '4', max: '12', op: '+' } },
     { id: 'axbalance', name: 'ترازوی دوکفه‌ای', X: { left: '5', right: '3', unit: 'کیلوگرم' } },
     { id: 'axthermo', name: 'دماسنج', X: { val: '25', min: '-10', max: '50' } },
     { id: 'axsaw', name: 'جدول شگفت‌انگیز و سودوکو', X: { size: '4', vals: '1,2,3,4;3,4,?,2;2,?,4,3;4,3,2,1', mode: 'shape' } },
     { id: 'axpattern', name: 'الگویابی رنگی/شکلی/عددی', X: { seq: '●,▲,●,▲,●,?', mode: 'shape' } },
     { id: 'axtenframe', name: 'قاب ده‌تایی', X: { a: '7', b: '5', frames: '2' } },
     { id: 'axsym', name: 'تقارن شطرنجی', X: { cells: '1,1;2,1;2,2;3,2', axis: 'v', mirror: '1' } },
-    { id: 'axspin', name: 'چرخندهٔ احتمال', X: { parts: 'قرمز,آبی,سبز,زرد,قرمز,آبی', arrow: '1' } },
-    { id: 'axbeaker', name: 'استوانهٔ مدرج (حجم)', X: { val: '350', max: '500', unit: 'mL' } },
+    { id: 'axbeaker', name: 'استوانهٔ مدرج (حجم)', X: { val: '350', max: '500', unit: 'mL', count: '1' } },
     { id: 'axgeoboard', name: 'ژئوبرد (تختهٔ میخی)', X: { pts: '1,1;4,1;4,3;1,3', grid: '5' } },
     { id: 'axdice', name: 'تاس و مکعب شمارش', X: { dice: '4,6', sum: '1' } },
     { id: 'axmularea', name: 'ضرب مساحتی (مستطیلی)', X: { a: '24', b: '13', blank: '0' } },
@@ -294,15 +297,13 @@
     { id: 'axcalendar', name: 'تقویم ماهانه', X: { month: 'مهر', start: '3', days: '30', mark: '12,23', blank: '0' } },
     { id: 'axlever', name: 'اهرم و ماشین‌های ساده', X: { kind: 'lever1', load: '60', effort: '20', l1: '2', l2: '1' } },
     { id: 'axcycle', name: 'چرخه‌های علوم (آب، گیاه، جانور)', X: { kind: 'water' } },
-    { id: 'axwordtrain', name: 'قطار کلمه‌سازی', X: { syll: 'با,با,با', word: 'بابا', mode: 'join' } },
-    // V327 — ابزارهای تازهٔ دبستان
+    { id: 'axwordtrain', name: 'قطار کلمه‌سازی', X: { syll: 'مد,ر,سه', word: 'مدرسه', mode: 'join' } },
+    // V327 / V335.8 — ابزارهای دبستان
     { id: 'axpaintgrid', name: 'شبکهٔ رنگ‌آمیزی', X: { rows: '4', cols: '4', goal: '4', cells: '' } },
     { id: 'axletterforms', name: 'نویسه‌های حرف (فارسی)', X: { ch: 'ب' } },
-    { id: 'axsyllablechart', name: 'هجاهای کلمه', X: { word: 'با-با' } },
+    { id: 'axsyllablechart', name: 'هجاهای کلمه', X: { word: 'مدرسه', mode: 'ask' } },
     { id: 'axmagnet', name: 'آهنربا و قطب‌ها', X: { mode: 'attract' } },
     { id: 'axsenses', name: 'حواس پنج‌گانه', X: {} },
-    { id: 'axseedgrow', name: 'مراحل رشد دانه', X: {} },
-    { id: 'axbodyparts', name: 'اندام‌های بدن', X: {} },
     { id: 'axtiles', name: 'کاشی‌های جبر', X: { x2: '1', x: '2', k: '3', neg: '0' } },
     { id: 'axkenken', name: 'کن‌کن و کاکورو (هوش ریاضی)', X: { size: '4', cages: '11,12|6|+;13,14|7|+;21,22|3|×;23,24,31,32|10|+;33,34|4|×;41,42,43,44|10|+' } },
     { id: 'axdicefold', name: 'گستردهٔ تاس و وجه مقابل', X: { mode: 'dots', top: '1', ask: '0' } },
@@ -374,7 +375,7 @@
     // V322 — جاگیری خودکار برچسب: متنِ بلندتر از بوم کوچک و در نهایت با «…» کوتاه می‌شود و مختصات داخل بوم مهار می‌شود.
     function fitTxt(x, s, an, sz) {
       var maxW = 344, txt = String(s), fs = sz || 11, est = txt.length * fs * 0.55, keep;
-      if (est > maxW) { fs = Math.max(7, Math.floor(maxW / (txt.length * 0.55) * fs)); est = txt.length * fs * 0.55; }
+      if (est > maxW) { fs = Math.max(7, Math.floor(maxW / (txt.length * 0.55))); est = txt.length * fs * 0.55; }
       if (est > maxW) { keep = Math.max(2, Math.floor(maxW / (fs * 0.55)) - 1); txt = txt.slice(0, keep) + '…'; est = txt.length * fs * 0.55; }
       var half = est / 2, lo = an === 'middle' ? half + 3 : an === 'end' ? est + 3 : 3, hi = an === 'middle' ? 357 - half : an === 'end' ? 357 : 357 - est;
       var xx = lo <= hi ? Math.min(Math.max(x, lo), hi) : Math.min(Math.max(x, 3), 357);
@@ -536,7 +537,9 @@
       return wrap(s);
     }
     if (t === 'axbase10') {
-      var nb = clamp(Math.floor(num(X.n, 134)), 0, 999999999), bd = [], bq = nb, bk, bLbMode = xs('label', '1');
+      var nbClean = faEn(String(X.n == null ? '134' : X.n)).replace(/\D/g, '');
+      var nbParsed = nbClean ? parseInt(nbClean.slice(0, 12), 10) : 134;
+      var nb = clamp(isFinite(nbParsed) ? nbParsed : 134, 0, 999999999), bd = [], bq = nb, bk, bLbMode = xs('label', '1');
       for (bk = 0; bk < 9; bk++) { bd.push(bq % 10); bq = Math.floor(bq / 10); }
       // (a,b,h) واحد؛ نمایش سه‌بعدی؛ مقیاس رتبه‌های بالاتر نمایشی است
       var BSHP = [[1, 1, 1, '#ffd54f', 'یکان', 6], [1, 10, 1, '#66bb6a', 'دهگان', 3], [10, 10, 1, '#42a5f5', 'صدگان', 2.4], [10, 10, 10, '#ab47bc', 'یکان هزار', 1.8], [1, 10, 10, '#ef5350', 'دهگان هزار', 2], [10, 10, 10, '#26a69a', 'صدگان هزار', 1.8], [10, 10, 10, '#ff7043', 'یکان میلیون', 1.8], [10, 10, 10, '#8d6e63', 'دهگان میلیون', 1.8], [10, 10, 10, '#5c6bc0', 'صدگان میلیون', 1.8]];
@@ -633,28 +636,28 @@
       return wrap(s);
     }
     if (t === 'axfrac') {
-      var den = clamp(Math.floor(num(X.den, 4)), 1, 24), nu = clamp(Math.floor(num(X.num, 1)), 0, den), shape = xs('shape', 'circle');
+      var den = clamp(Math.floor(num(X.den, 4)), 1, 25), nu = clamp(Math.floor(num(X.num, 1)), 0, den), shape = xs('shape', 'circle');
       var fillF = function (q) { return q < nu ? ACC : '#fff'; };
-      if (shape === 'bar') { var bw = 300 / den; for (i = 0; i < den; i++) s += rc(30 + i * bw, 100, bw, 70, fillF(i), ST, 1.6); }
+      if (shape === 'bar') { var bw = 300 / den; for (i = 0; i < den; i++) s += rc(30 + i * bw, 82, bw, 68, fillF(i), ST, 1.6); }
       else if (shape === 'square') {
-        var scols = Math.ceil(Math.sqrt(den)), srows = Math.ceil(den / scols), scw = 180 / scols, sch = 180 / srows;
-        for (i = 0; i < den; i++) s += rc(90 + (i % scols) * scw, 50 + Math.floor(i / scols) * sch, scw, sch, fillF(i), ST, 1.6);
+        var scols = Math.ceil(Math.sqrt(den)), srows = Math.ceil(den / scols), scw = 166 / scols, sch = 166 / srows;
+        for (i = 0; i < den; i++) s += rc(97 + (i % scols) * scw, 24 + Math.floor(i / scols) * sch, scw, sch, fillF(i), ST, 1.6);
       }
       else if (shape === 'ring') {
-        if (den === 1) s += '<circle cx="180" cy="124" r="88" fill="' + fillF(0) + '" stroke="' + ST + '" stroke-width="1.8"/><circle cx="180" cy="124" r="44" fill="#fff" stroke="' + ST + '" stroke-width="1.8"/>';
+        if (den === 1) s += '<circle cx="180" cy="110" r="80" fill="' + fillF(0) + '" stroke="' + ST + '" stroke-width="1.8"/><circle cx="180" cy="110" r="40" fill="#fff" stroke="' + ST + '" stroke-width="1.8"/>';
         else for (i = 0; i < den; i++) {
           var ra0 = (i * 360 / den - 90) * Math.PI / 180, ra1 = ((i + 1) * 360 / den - 90) * Math.PI / 180, rlg = 360 / den > 180 ? 1 : 0;
-          s += '<path d="M ' + f2(180 + 88 * Math.cos(ra0)) + ' ' + f2(124 + 88 * Math.sin(ra0)) + ' A 88 88 0 ' + rlg + ' 1 ' + f2(180 + 88 * Math.cos(ra1)) + ' ' + f2(124 + 88 * Math.sin(ra1)) + ' L ' + f2(180 + 44 * Math.cos(ra1)) + ' ' + f2(124 + 44 * Math.sin(ra1)) + ' A 44 44 0 ' + rlg + ' 0 ' + f2(180 + 44 * Math.cos(ra0)) + ' ' + f2(124 + 44 * Math.sin(ra0)) + ' Z" fill="' + fillF(i) + '" stroke="' + ST + '" stroke-width="1.8"/>';
+          s += '<path d="M ' + f2(180 + 80 * Math.cos(ra0)) + ' ' + f2(110 + 80 * Math.sin(ra0)) + ' A 80 80 0 ' + rlg + ' 1 ' + f2(180 + 80 * Math.cos(ra1)) + ' ' + f2(110 + 80 * Math.sin(ra1)) + ' L ' + f2(180 + 40 * Math.cos(ra1)) + ' ' + f2(110 + 40 * Math.sin(ra1)) + ' A 40 40 0 ' + rlg + ' 0 ' + f2(180 + 40 * Math.cos(ra0)) + ' ' + f2(110 + 40 * Math.sin(ra0)) + ' Z" fill="' + fillF(i) + '" stroke="' + ST + '" stroke-width="1.8"/>';
         }
       }
-      else if (den === 1) s += '<circle cx="180" cy="124" r="88" fill="' + (nu === 1 ? ACC : '#fff') + '" stroke="' + ST + '" stroke-width="1.8"/>';
+      else if (den === 1) s += '<circle cx="180" cy="110" r="80" fill="' + (nu === 1 ? ACC : '#fff') + '" stroke="' + ST + '" stroke-width="1.8"/>';
       else for (i = 0; i < den; i++) {
         var a0 = (i * 360 / den - 90) * Math.PI / 180, a1 = ((i + 1) * 360 / den - 90) * Math.PI / 180, lg = 360 / den > 180 ? 1 : 0;
-        s += '<path d="M 180 124 L ' + f2(180 + 88 * Math.cos(a0)) + ' ' + f2(124 + 88 * Math.sin(a0)) + ' A 88 88 0 ' + lg + ' 1 ' + f2(180 + 88 * Math.cos(a1)) + ' ' + f2(124 + 88 * Math.sin(a1)) + ' Z" fill="' + (i < nu ? ACC : '#fff') + '" stroke="' + ST + '" stroke-width="1.8"/>';
+        s += '<path d="M 180 110 L ' + f2(180 + 80 * Math.cos(a0)) + ' ' + f2(110 + 80 * Math.sin(a0)) + ' A 80 80 0 ' + lg + ' 1 ' + f2(180 + 80 * Math.cos(a1)) + ' ' + f2(110 + 80 * Math.sin(a1)) + ' Z" fill="' + (i < nu ? ACC : '#fff') + '" stroke="' + ST + '" stroke-width="1.8"/>';
       }
       var frLb = xs('label', '1');
-      if (frLb === '2') s += tx(180, 242, '؟', PT, 'middle', true, 19) + lnr(166, 250, 194, 250, ST, 2) + tx(180, 272, '؟', PT, 'middle', true, 19);
-      else if (frLb !== '0') s += tx(180, 242, String(nu), ST, 'middle', true, 19) + lnr(166, 250, 194, 250, ST, 2) + tx(180, 272, String(den), ST, 'middle', true, 19);
+      if (frLb === '2') s += tx(180, 228, '؟', PT, 'middle', true, 18) + lnr(164, 236, 196, 236, ST, 2) + tx(180, 258, '؟', PT, 'middle', true, 18);
+      else if (frLb !== '0') s += tx(180, 228, String(nu), ST, 'middle', true, 18) + lnr(164, 236, 196, 236, ST, 2) + tx(180, 258, String(den), ST, 'middle', true, 18);
       return wrap(s);
     }
     if (t === 'axmoney') {
@@ -676,38 +679,69 @@
       return wrap(s);
     }
     if (t === 'axabacus') {
-      var cols = clamp(Math.floor(num(X.cols, 4)), 2, 6), an = clamp(Math.floor(num(X.n, 2435)), 0, 999999);
-      var alabs = ['یکان', 'دهگان', 'صدگان', 'هزار', 'ده‌هزار', 'صدهزار'], acols = ['#ef5350', '#42a5f5', '#66bb6a', '#ab47bc', '#ffa726', '#26a69a'];
-      var astep = 288 / cols, digs = [], arem = an;
+      var cols = clamp(Math.floor(num(X.cols, 6)), 2, 6), an = clamp(Math.floor(num(X.n, 142536)), 0, 999999);
+      var alabs = ['یکان', 'دهگان', 'صدگان', 'یکان هزار', 'دهگان هزار', 'صدگان هزار'];
+      var acols = ['#ef5350', '#42a5f5', '#66bb6a', '#ab47bc', '#ffa726', '#26a69a'];
+      var astep = 408 / cols, digs = [], arem = an, abBeadW = Math.min(44, astep - 16);
       for (i = 0; i < cols; i++) { digs.push(arem % 10); arem = Math.floor(arem / 10); }
-      s += rc(24, 214, 312, 22, '#8d6e63', ST, 1.8, 6);
+      s += rc(16, 216, 428, 40, '#f6e7d2', '#6d4c41', 2.2, 8) + lnr(20, 220, 440, 220, '#d7b894', 1.2);
       for (c = 0; c < cols; c++) {
-        var aidx = cols - 1 - c, acx = 36 + c * astep + astep / 2, ad = digs[aidx], acol = acols[aidx % acols.length];
-        s += lnr(acx, 44, acx, 214, ST, 3.2);
-        for (k = 0; k < ad; k++) s += rc(acx - 16, 204 - k * 16 - 7, 32, 14, acol, ST, 1.2, 7);
-        s += tx(acx, 230, alabs[aidx], '#fff', 'middle', true, 10);
-        if (xs('blank', '0') !== '1') s += tx(acx, 258, String(ad), ST, 'middle', true, 15);
+        var aidx = cols - 1 - c, acx = 26 + c * astep + astep / 2, ad = digs[aidx], acol = acols[aidx % acols.length], alb = alabs[aidx];
+        if (c > 0) s += lnr(26 + c * astep, 220, 26 + c * astep, 252, '#d7b894', 1);
+        s += lnr(acx, 30, acx, 216, ST, 3.4) + '<circle cx="' + f2(acx) + '" cy="29" r="4" fill="#6d4c41" stroke="' + ST + '" stroke-width="1.2"/>';
+        for (k = 0; k < ad; k++) s += rc(acx - abBeadW / 2, 205 - k * 18 - 7.5, abBeadW, 15, acol, ST, 1.3, 7.5);
+        s += '<text x="' + f2(acx) + '" y="241" font-family="Vazirmatn,Tahoma,sans-serif" font-size="' + (cols >= 6 ? '10.2' : '11.5') + '" font-weight="800" fill="#3e2723" text-anchor="middle">' + esc(alb) + '</text>';
+        if (xs('blank', '0') === '1') {
+          s += rc(acx - 17, 264, 34, 28, '#fff8e1', PT, 1.4, 6) + '<text x="' + f2(acx) + '" y="284" font-family="Vazirmatn,Tahoma,sans-serif" font-size="15" font-weight="800" fill="' + PT + '" text-anchor="middle">؟</text>';
+        } else {
+          s += rc(acx - 17, 264, 34, 28, '#f8fafc', '#cbd5e1', 1.2, 6) + '<text x="' + f2(acx) + '" y="284" font-family="Vazirmatn,Tahoma,sans-serif" font-size="16" font-weight="800" fill="' + ST + '" text-anchor="middle">' + esc(String(ad)) + '</text>';
+        }
       }
-      return wrap(s);
+      return wrap(s, 310, 460);
     }
     if (t === 'axjump') {
-      var jst = clamp(Math.floor(num(X.start, 0)), 0, 50), jsp = clamp(Math.floor(num(X.step, 3)), 1, 20), jcnt = clamp(Math.floor(num(X.jumps, 4)), 1, 10);
-      var jmax = clamp(Math.max(jst + jsp * jcnt, Math.floor(num(X.max, jst + jsp * jcnt))), 2, 100), jy = 186;
+      var jopRaw = xs('op', '+').trim(), jop = (jopRaw === '-' || jopRaw === '−') ? '-' : (jopRaw === '×' || jopRaw === '*') ? '×' : (jopRaw === '÷' || jopRaw === '/') ? '÷' : '+';
+      var jsp = clamp(Math.floor(num(X.step, 3)), 1, 20), jcnt = clamp(Math.floor(num(X.jumps, 4)), 1, 10);
+      var jstIn = clamp(Math.floor(num(X.start, 0)), 0, 100), jspan = jsp * jcnt;
+      var jfwd = (jop === '+' || jop === '×');
+      var jfrom = jfwd ? (jop === '×' ? 0 : jstIn) : (jop === '÷' ? (jstIn >= jspan && jstIn > 0 ? jstIn : jspan) : Math.max(jstIn, jspan));
+      var jend = jfwd ? (jfrom + jspan) : Math.max(0, jfrom - jspan);
+      var jneed = Math.max(jfrom, jend);
+      var jmax = clamp(Math.max(jneed, Math.floor(num(X.max, jneed))), 2, 200), jy = 186;
       s += lnr(20, jy, 342, jy, ST, 2.2);
-      var jtk = jmax <= 15 ? 1 : jmax <= 30 ? 2 : 5;
+      var jtk = jmax <= 15 ? 1 : jmax <= 30 ? 2 : jmax <= 60 ? 5 : 10;
       for (i = 0; i <= jmax; i++) {
-        var jx = 28 + 304 * (i / jmax), jmaj = i % jtk === 0;
-        s += lnr(jx, jy - (jmaj ? 7 : 4), jx, jy + (jmaj ? 7 : 4), ST, jmaj ? 1.8 : 1);
-        if (jmaj) s += tx(jx, jy + 22, String(i), ST, 'middle', true, 11);
+        var jx = 28 + 304 * (i / jmax), jmaj = (i % jtk === 0 || i === jfrom || i === jend);
+        s += lnr(jx, jy - (jmaj ? 7 : 3.5), jx, jy + (jmaj ? 7 : 3.5), ST, jmaj ? 1.8 : 0.9);
+        if (i % jtk === 0) s += tx(jx, jy + 22, String(i), ST, 'middle', true, jmax > 50 ? 9.5 : 11);
       }
+      s += '<circle cx="' + f2(28 + 304 * (jfrom / jmax)) + '" cy="' + f2(jy) + '" r="4.8" fill="' + ACC + '"/>';
       for (i = 0; i < jcnt; i++) {
-        var ja = jst + i * jsp, jb = ja + jsp; if (jb > jmax) break;
-        var jxa = 28 + 304 * (ja / jmax), jxb = 28 + 304 * (jb / jmax), jxm = (jxa + jxb) / 2, jh = Math.min(85, Math.max(34, (jxb - jxa) * 0.65));
+        var ja = jfwd ? (jfrom + i * jsp) : (jfrom - i * jsp);
+        var jb = jfwd ? (ja + jsp) : (ja - jsp);
+        if (jb < 0 || jb > jmax) break;
+        var jxa = 28 + 304 * (ja / jmax), jxb = 28 + 304 * (jb / jmax), jxm = (jxa + jxb) / 2;
+        var jh = Math.min(86, Math.max(34, Math.abs(jxb - jxa) * 0.65));
         s += '<path d="M ' + f2(jxa) + ' ' + f2(jy - 4) + ' Q ' + f2(jxm) + ' ' + f2(jy - jh) + ' ' + f2(jxb) + ' ' + f2(jy - 4) + '" fill="none" stroke="' + ACC + '" stroke-width="2.4"/>';
-        s += '<circle cx="' + f2(jxb) + '" cy="' + f2(jy) + '" r="4" fill="' + PT + '"/>' + tx(jxm, jy - jh * 0.58, '+' + jsp, PT, 'middle', true, 11);
+        var jdir = jfwd ? 1 : -1;
+        s += '<polygon points="' + f2(jxb) + ',' + f2(jy - 3) + ' ' + f2(jxb - jdir * 6) + ',' + f2(jy - 11) + ' ' + f2(jxb - jdir * 1.5) + ',' + f2(jy - 12) + '" fill="' + ACC + '"/>';
+        s += '<circle cx="' + f2(jxb) + '" cy="' + f2(jy) + '" r="4" fill="' + PT + '"/>';
+        var jarcLbl = jop === '-' ? ('−' + jsp) : jop === '÷' ? ('−' + jsp) : ('+' + jsp);
+        s += tx(jxm, jy - jh * 0.58, jarcLbl, PT, 'middle', true, 11);
       }
-      if (xs('label', '1') === '2') s += tx(180, 252, jst + ' + (' + jcnt + ' × ' + jsp + ') = ؟', PT, 'middle', true, 14);
-      else if (xs('label', '1') !== '0') s += tx(180, 252, jst + ' + (' + jcnt + ' × ' + jsp + ') = ' + (jst + jcnt * jsp), ST, 'middle', true, 14);
+      var jlbMode = xs('label', '1');
+      if (jlbMode !== '0') {
+        var jans = jop === '÷' ? String(jcnt) : String(jend);
+        var rhs = jlbMode === '2' ? '؟' : jans;
+        var jeq = jop === '+'
+          ? (jcnt === 1 ? (jfrom + ' + ' + jsp + ' = ' + rhs) : (jfrom + ' + (' + jcnt + ' × ' + jsp + ') = ' + rhs))
+          : jop === '-'
+            ? (jcnt === 1 ? (jfrom + ' − ' + jsp + ' = ' + rhs) : (jfrom + ' − (' + jcnt + ' × ' + jsp + ') = ' + rhs))
+            : jop === '×'
+              ? (jcnt + ' × ' + jsp + ' = ' + rhs)
+              : (jfrom + ' ÷ ' + jsp + ' = ' + rhs);
+        s += tx(180, 252, jeq, jlbMode === '2' ? PT : ST, 'middle', true, 14);
+      }
       return wrap(s);
     }
     if (t === 'axbalance') {
@@ -748,6 +782,7 @@
     };
     function normSaw(v0) {
       var c0 = faEn(String(v0 == null ? '' : v0).trim());
+      if (c0 === '_' || c0 === '-' || c0 === 'خالی') return '_';
       if (!c0 || c0 === '?' || c0 === '؟') return '?';
       if (SAW_PAL[c0]) return c0;
       if (c0.indexOf('قرمز') >= 0 || c0.indexOf('سرخ') >= 0 || c0 === '●') return '1';
@@ -788,11 +823,13 @@
       var sx0 = (360 - sgw2) / 2, sy0 = (sleg ? 24 : 28) + (smaxG - sgw2) / 2;
       var sfsz = sn2 <= 4 ? 21 : sn2 <= 6 ? 16 : 12;
       for (r = 0; r < sn2; r++) for (c = 0; c < sn2; c++) {
-        var scell = (srows[r] && srows[r][c]) ? srows[r][c] : '?', sx = sx0 + c * scs, sy = sy0 + r * scs, sisQ = scell === '?' || scell === '؟';
+        var scell = (srows[r] && srows[r][c]) ? srows[r][c] : '?', sx = sx0 + c * scs, sy = sy0 + r * scs;
+        var sisQ = scell === '?' || scell === '؟', sisEmpty = scell === '_';
         var stok = SAW_PAL[scell];
-        var sbg = sisQ ? '#fff8e1' : ((smode === 'color' || smode === 'color_shape') && stok ? stok[2] : '#ffffff');
+        var sbg = sisQ ? '#fff8e1' : sisEmpty ? '#ffffff' : ((smode === 'color' || smode === 'color_shape') && stok ? stok[2] : '#ffffff');
         s += rc(sx, sy, scs, scs, sbg, '#cbd5e1', 1);
-        if (sisQ) s += tx(sx + scs / 2, sy + scs * 0.66, '؟', PT, 'middle', true, sfsz);
+        if (sisEmpty) { /* خانهٔ کاملاً خالی بدون علامت سؤال */ }
+        else if (sisQ) s += tx(sx + scs / 2, sy + scs * 0.66, '؟', PT, 'middle', true, sfsz);
         else if (smode === 'color' && stok) {
           var spad = Math.max(3.5, scs * 0.16);
           s += rc(sx + spad, sy + spad, scs - spad * 2, scs - spad * 2, stok[1], ST, 1.2, Math.max(3, scs * 0.16));
@@ -835,6 +872,33 @@
         } else if (pmode === 'color') {
           s += rc(px2, py0, pcw, 54, pisQ ? '#fff8e1' : pcol2, ST, 2, 10);
           if (pisQ) s += tx(px2 + pcw / 2, py0 + 34, '؟', PT, 'middle', true, 20);
+        } else if (pmode === 'growing') {
+          var gCnt = pisQ ? 0 : clamp(parseInt(faEn(pitems[i]), 10) || (i + 1), 1, 25);
+          s += rc(px2, py0 - 16, pcw, 86, pisQ ? '#fff8e1' : '#f8fafc', pisQ ? PT : '#cbd5e1', 1.6, 8);
+          if (pisQ) {
+            s += tx(px2 + pcw / 2, py0 + 34, '؟', PT, 'middle', true, 20);
+          } else {
+            var gCols = Math.max(1, Math.ceil(Math.sqrt(gCnt))), gRows = Math.max(1, Math.ceil(gCnt / gCols));
+            var gStep = Math.min((pcw - 10) / gCols, 52 / gRows, 13);
+            var gDr = Math.max(2.3, gStep * 0.38);
+            for (var gi = 0; gi < gCnt; gi++) {
+              var gc2 = gi % gCols, gr2 = Math.floor(gi / gCols);
+              var gdx = px2 + pcw / 2 + (gc2 - (gCols - 1) / 2) * gStep;
+              var gdy = py0 + 16 + (gr2 - (gRows - 1) / 2) * gStep;
+              s += '<circle cx="' + f2(gdx) + '" cy="' + f2(gdy) + '" r="' + f2(gDr) + '" fill="' + ACC + '"/>';
+            }
+            s += tx(px2 + pcw / 2, py0 + 62, String(gCnt), ST, 'middle', true, 11);
+          }
+        } else if (pmode === 'number') {
+          s += rc(px2, py0, pcw, 54, pisQ ? '#fff8e1' : '#eff6ff', pisQ ? PT : '#2563eb', 2, 10);
+          s += tx(px2 + pcw / 2, py0 + 34, pisQ ? '؟' : pitems[i], pisQ ? PT : '#1e40af', 'middle', true, pn > 8 ? 14 : 18);
+          if (i < pn - 1) s += tx(px2 + pcw + pgap / 2, py0 + 31, '،', MU, 'middle', true, 12);
+        } else if (pmode === 'mixed') {
+          var mFill = pisQ ? '#fff8e1' : (ptok ? ptok[2] : '#f5f3ff');
+          var mStroke = pisQ ? PT : (ptok ? ptok[1] : ACC);
+          s += rc(px2, py0, pcw, 54, mFill, mStroke, 2, 10);
+          var mlbl = pisQ ? '؟' : (ptok && SAW_PAL[pitems[i]] ? ptok[0] : pitems[i]);
+          s += tx(px2 + pcw / 2, py0 + 34, mlbl, mStroke, 'middle', true, pn > 8 ? 14 : 19);
         } else {
           s += rc(px2, py0, pcw, 54, pisQ ? '#fff8e1' : ACCS, pcol2, 2, 9);
           var plbl = pisQ ? '؟' : (ptok && SAW_PAL[pitems[i]] ? ptok[0] : pitems[i]);
@@ -863,9 +927,14 @@
     }
     if (t === 'axsym') {
       var saxis = xs('axis', 'v').toLowerCase(), smir = Math.floor(num(X.mirror, 1)) !== 0;
-      var scells = xs('cells', '1,1;2,1;2,2;3,2').split(/[;؛]/).map(function (tk) {
+      var scellsRaw = Object.prototype.hasOwnProperty.call(X, 'cells') ? String(X.cells == null ? '' : X.cells) : '1,1;2,1;2,2;3,2';
+      var scells = scellsRaw.split(/[;؛]/).map(function (tk) {
         var pp = tk.split(/[,،]/).map(function (z) { return parseInt(faEn(z.trim()), 10); });
-        return (pp.length >= 2 && isFinite(pp[0]) && isFinite(pp[1])) ? [clamp(pp[0], 1, 4), clamp(pp[1], 1, 4)] : null;
+        return (pp.length >= 2 && isFinite(pp[0]) && isFinite(pp[1])) ? [clamp(pp[0], 1, 8), clamp(pp[1], 1, 8)] : null;
+      }).filter(Boolean);
+      var sansCells = String(xs('ansCells', '')).split(/[;؛]/).map(function (tk) {
+        var pp = tk.split(/[,،]/).map(function (z) { return parseInt(faEn(z.trim()), 10); });
+        return (pp.length >= 2 && isFinite(pp[0]) && isFinite(pp[1])) ? [clamp(pp[0], 1, 8), clamp(pp[1], 1, 8)] : null;
       }).filter(Boolean);
       var sc = 26, sn = 8, sgw = sc * sn, sx00 = (360 - sgw) / 2, sy00 = 32;
       s += rc(sx00, sy00, sgw, sgw, '#f8fafc', ST, 1.8);
@@ -873,16 +942,22 @@
       scells.forEach(function (pr) {
         var r1 = pr[0], d1 = pr[1];
         if (saxis === 'h') {
-          var rTop = clamp(4 - d1, 0, 3), cPos = clamp(r1 - 1, 0, 7), rBot = clamp(3 + d1, 4, 7);
-          s += rc(sx00 + cPos * sc + 2, sy00 + rTop * sc + 2, sc - 4, sc - 4, ACC, ST, 1.2, 3);
-          if (smir) s += rc(sx00 + cPos * sc + 2, sy00 + rBot * sc + 2, sc - 4, sc - 4, GRN, ST, 1.2, 3);
-          else s += tx(sx00 + cPos * sc + sc / 2, sy00 + rBot * sc + sc * 0.68, '؟', PT, 'middle', true, 14);
+          var cPos = clamp(r1 - 1, 0, 7);
+          var rOrig = d1 <= 4 ? clamp(4 - d1, 0, 3) : clamp(d1 - 1, 4, 7);
+          var rRef = 7 - rOrig;
+          s += rc(sx00 + cPos * sc + 2, sy00 + rOrig * sc + 2, sc - 4, sc - 4, ACC, ST, 1.2, 3);
+          if (smir) s += rc(sx00 + cPos * sc + 2, sy00 + rRef * sc + 2, sc - 4, sc - 4, GRN, ST, 1.2, 3);
         } else {
-          var rPos = clamp(r1 - 1, 0, 7), cLeft = clamp(4 - d1, 0, 3), cRight = clamp(3 + d1, 4, 7);
-          s += rc(sx00 + cLeft * sc + 2, sy00 + rPos * sc + 2, sc - 4, sc - 4, ACC, ST, 1.2, 3);
-          if (smir) s += rc(sx00 + cRight * sc + 2, sy00 + rPos * sc + 2, sc - 4, sc - 4, GRN, ST, 1.2, 3);
-          else s += tx(sx00 + cRight * sc + sc / 2, sy00 + rPos * sc + sc * 0.68, '؟', PT, 'middle', true, 14);
+          var rPos = clamp(r1 - 1, 0, 7);
+          var cOrig = d1 <= 4 ? clamp(4 - d1, 0, 3) : clamp(d1 - 1, 4, 7);
+          var cRef = 7 - cOrig;
+          s += rc(sx00 + cOrig * sc + 2, sy00 + rPos * sc + 2, sc - 4, sc - 4, ACC, ST, 1.2, 3);
+          if (smir) s += rc(sx00 + cRef * sc + 2, sy00 + rPos * sc + 2, sc - 4, sc - 4, GRN, ST, 1.2, 3);
         }
+      });
+      sansCells.forEach(function (apr) {
+        var ar = apr[0] - 1, ac = apr[1] - 1;
+        s += rc(sx00 + ac * sc + 2, sy00 + ar * sc + 2, sc - 4, sc - 4, GRN, ST, 1.4, 3);
       });
       if (saxis === 'h') s += ln(sx00 - 12, sy00 + 4 * sc, sx00 + sgw + 12, sy00 + 4 * sc, PT, 3.2, true);
       else s += ln(sx00 + 4 * sc, sy00 - 10, sx00 + 4 * sc, sy00 + sgw + 10, PT, 3.2, true);
@@ -914,18 +989,51 @@
       return wrap(s);
     }
     if (t === 'axbeaker') {
-      var bmx = Math.max(10, num(X.max, 500)), bval = clamp(num(X.val, 350), 0, bmx), bunit = xs('unit', 'mL');
-      var bx0 = 96, bw2 = 112, btop = 36, bbot = 216, bh2 = bbot - btop, bvh = bh2 * (bval / bmx), bvy = bbot - bvh;
-      s += rc(bx0, btop, bw2, bh2, '#f8fafc', 'none', 0);
-      if (bval > 0) s += rc(bx0 + 3, bvy, bw2 - 6, bvh, 'rgba(38,166,154,.42)', '#00897b', 1.5);
-      s += '<path d="M ' + f2(bx0 - 8) + ' ' + f2(btop) + ' L ' + f2(bx0) + ' ' + f2(btop) + ' L ' + f2(bx0) + ' ' + f2(bbot) + ' L ' + f2(bx0 + bw2) + ' ' + f2(bbot) + ' L ' + f2(bx0 + bw2) + ' ' + f2(btop) + ' L ' + f2(bx0 + bw2 + 8) + ' ' + f2(btop) + '" fill="none" stroke="' + ST + '" stroke-width="3"/>';
-      s += tx(bx0 + bw2 + 34, btop - 8, '(' + bunit + ')', MU, 'middle', true, 11);
-      for (i = 0; i <= 10; i++) {
-        var bty = bbot - bh2 * (i / 10), bmaj = (i % 2 === 0);
-        s += lnr(bx0 + bw2 - (bmaj ? 18 : 10), bty, bx0 + bw2, bty, ST, bmaj ? 1.8 : 1.1);
-        if (bmaj && i > 0) s += tx(bx0 + bw2 + 34, bty + 4, String(Math.round(bmx * i / 10)), ST, 'middle', true, 12);
+      var bmx = Math.max(10, num(X.max, 500)), bcnt = clamp(Math.floor(num(X.count, 1)), 1, 4), bunit = xs('unit', 'mL');
+      var bvals = [
+        clamp(num(X.val, 350), 0, bmx),
+        clamp(num(X.val2, Math.round(bmx * 0.4)), 0, bmx),
+        clamp(num(X.val3, Math.round(bmx * 0.8)), 0, bmx),
+        clamp(num(X.val4, Math.round(bmx * 0.2)), 0, bmx)
+      ];
+      var bcols = [
+        ['rgba(38,166,154,.44)', '#00897b', '#e0f2f1', '#00695c'],
+        ['rgba(66,165,245,.42)', '#1e88e5', '#e3f2fd', '#1565c0'],
+        ['rgba(171,71,188,.38)', '#8e24aa', '#f3e5f5', '#6a1b9a'],
+        ['rgba(255,167,38,.44)', '#fb8c00', '#fff3e0', '#ef6c00']
+      ];
+      if (bcnt === 1) {
+        var bval = bvals[0], bx0 = 96, bw2 = 112, btop = 36, bbot = 216, bh2 = bbot - btop, bvh = bh2 * (bval / bmx), bvy = bbot - bvh;
+        s += rc(bx0, btop, bw2, bh2, '#f8fafc', 'none', 0);
+        if (bval > 0) s += rc(bx0 + 3, bvy, bw2 - 6, bvh, bcols[0][0], bcols[0][1], 1.5);
+        s += '<path d="M ' + f2(bx0 - 8) + ' ' + f2(btop) + ' L ' + f2(bx0) + ' ' + f2(btop) + ' L ' + f2(bx0) + ' ' + f2(bbot) + ' L ' + f2(bx0 + bw2) + ' ' + f2(bbot) + ' L ' + f2(bx0 + bw2) + ' ' + f2(btop) + ' L ' + f2(bx0 + bw2 + 8) + ' ' + f2(btop) + '" fill="none" stroke="' + ST + '" stroke-width="3"/>';
+        s += tx(bx0 + bw2 + 34, btop - 8, '(' + bunit + ')', MU, 'middle', true, 11);
+        for (i = 0; i <= 10; i++) {
+          var bty = bbot - bh2 * (i / 10), bmaj = (i % 2 === 0);
+          s += lnr(bx0 + bw2 - (bmaj ? 18 : 10), bty, bx0 + bw2, bty, ST, bmaj ? 1.8 : 1.1);
+          if (bmaj && i > 0) s += tx(bx0 + bw2 + 34, bty + 4, String(Math.round(bmx * i / 10)), ST, 'middle', true, 12);
+        }
+        s += rc(bx0 - 4, 230, bw2 + 8, 30, bcols[0][2], bcols[0][1], 1.5, 8) + tx(bx0 + bw2 / 2, 250, Math.round(bval) + ' ' + bunit, bcols[0][3], 'middle', true, 15);
+      } else {
+        var bslot = 336 / bcnt, mbw = Math.min(58, bslot - (bcnt >= 4 ? 26 : 32)), mbtop = 38, mbbot = 208, mbh = mbbot - mbtop;
+        s += tx(180, 22, 'ظرفیت هر استوانه: ' + Math.round(bmx) + ' ' + bunit, MU, 'middle', true, 11);
+        for (var bi = 0; bi < bcnt; bi++) {
+          var mval = bvals[bi], mc = bcols[bi % bcols.length];
+          var msx = 12 + bi * bslot + (bslot - mbw) / 2 - 6, mvh = mbh * (mval / bmx), mvy = mbbot - mvh;
+          s += rc(msx, mbtop, mbw, mbh, '#f8fafc', 'none', 0);
+          if (mval > 0) s += rc(msx + 2, mvy, mbw - 4, mvh, mc[0], mc[1], 1.3);
+          s += '<path d="M ' + f2(msx - 5) + ' ' + f2(mbtop) + ' L ' + f2(msx) + ' ' + f2(mbtop) + ' L ' + f2(msx) + ' ' + f2(mbbot) + ' L ' + f2(msx + mbw) + ' ' + f2(mbbot) + ' L ' + f2(msx + mbw) + ' ' + f2(mbtop) + ' L ' + f2(msx + mbw + 5) + ' ' + f2(mbtop) + '" fill="none" stroke="' + ST + '" stroke-width="2.4"/>';
+          for (i = 0; i <= 10; i++) {
+            var mty = mbbot - mbh * (i / 10), mmaj = (i % 5 === 0);
+            s += lnr(msx + mbw - (mmaj ? 12 : 6), mty, msx + mbw, mty, ST, mmaj ? 1.5 : 0.9);
+            if (mmaj && i > 0) s += tx(msx + mbw + 15, mty + 3.5, String(Math.round(bmx * i / 10)), MU, 'middle', true, 8.5);
+          }
+          var badgeW = Math.min(bslot - 6, mbw + 18);
+          s += rc(msx + mbw / 2 - badgeW / 2, 222, badgeW, 26, mc[2], mc[1], 1.3, 6);
+          s += tx(msx + mbw / 2, 239, Math.round(mval) + (bcnt <= 3 ? (' ' + bunit) : ''), mc[3], 'middle', true, bcnt >= 4 ? 11 : 12);
+          s += tx(msx + mbw / 2, 264, '(' + (bi + 1) + ')', ST, 'middle', true, 11);
+        }
       }
-      s += rc(bx0 - 4, 230, bw2 + 8, 30, '#e0f2f1', '#00897b', 1.5, 8) + tx(bx0 + bw2 / 2, 250, Math.round(bval) + ' ' + bunit, '#00695c', 'middle', true, 15);
       return wrap(s);
     }
     if (t === 'axgeoboard') {
@@ -1050,7 +1158,7 @@
       return wrap(s);
     }
     if (t === 'axfnmachine') {
-      var finps = xs('in', '2,4,6,8').split(/[,،;]/).map(function (z) { return parseInt(faEn(z.trim()), 10); }).filter(isFinite).slice(0, 5);
+      var finps = (xs('in', '') || xs('ins', '2,4,6,8')).split(/[,،;]/).map(function (z) { return parseInt(faEn(z.trim()), 10); }).filter(isFinite).slice(0, 8);
       if (!finps.length) finps = [2, 4, 6, 8];
       var fop1 = xs('op1', '+ 3').trim(), fop2 = xs('op2', '').trim(), fmblank = clamp(Math.floor(num(X.blank, 1)), 0, 2);
       var fApply = function (v0, opR) {
@@ -1073,14 +1181,15 @@
           lnr(62, 60, 110, 60, ST, 2.2) + lnr(250, 60, 298, 60, ST, 2.2);
       }
       s += tx(322, 64, 'خروجی', MU, 'middle', true, 11);
-      var fcols = finps.length + 1, fcw = Math.min(52, 290 / fcols), ftw = fcw * fcols, fx0 = (360 - ftw) / 2, fy0 = 116, frh = 44;
+      var flw = 52, fcw = Math.min(50, 286 / finps.length), ftw = flw + fcw * finps.length, fx0 = (360 - ftw) / 2, fy0 = 116, frh = 44;
+      var fnumSz = finps.length >= 7 ? 11.5 : 14;
       s += rc(fx0, fy0, ftw, frh * 2, '#ffffff', ST, 2, 8) + lnr(fx0, fy0 + frh, fx0 + ftw, fy0 + frh, ST, 1.6);
-      s += tx(fx0 + fcw / 2, fy0 + 27, 'ورودی', ACC, 'middle', true, 12) + tx(fx0 + fcw / 2, fy0 + frh + 27, 'خروجی', '#00897b', 'middle', true, 12);
+      s += tx(fx0 + flw / 2, fy0 + 27, 'ورودی', ACC, 'middle', true, 11.5) + tx(fx0 + flw / 2, fy0 + frh + 27, 'خروجی', '#00897b', 'middle', true, 11.5);
       finps.forEach(function (inp, idx) {
-        var fcx = fx0 + (idx + 1) * fcw, fout = fApply(fApply(inp, fop1), fop2), fhide = fmblank === 1 && idx >= Math.floor(finps.length / 2);
-        s += lnr(fcx, fy0, fcx, fy0 + frh * 2, ST, 1.2) + tx(fcx + fcw / 2, fy0 + 28, String(inp), ST, 'middle', true, 14);
-        if (fhide) s += rc(fcx + 3, fy0 + frh + 3, fcw - 6, frh - 6, '#fff8e1', 'none', 0, 5) + tx(fcx + fcw / 2, fy0 + frh + 28, '؟', PT, 'middle', true, 16);
-        else s += tx(fcx + fcw / 2, fy0 + frh + 28, String(fout), ST, 'middle', true, 14);
+        var fcx = fx0 + flw + idx * fcw, fout = fApply(fApply(inp, fop1), fop2), fhide = fmblank === 1 && idx >= Math.floor(finps.length / 2);
+        s += lnr(fcx, fy0, fcx, fy0 + frh * 2, ST, 1.2) + tx(fcx + fcw / 2, fy0 + 28, String(inp), ST, 'middle', true, fnumSz);
+        if (fhide) s += rc(fcx + 2.5, fy0 + frh + 3, fcw - 5, frh - 6, '#fff8e1', 'none', 0, 5) + tx(fcx + fcw / 2, fy0 + frh + 28, '؟', PT, 'middle', true, fnumSz + 1);
+        else s += tx(fcx + fcw / 2, fy0 + frh + 28, String(fout), ST, 'middle', true, fnumSz);
       });
       return wrap(s);
     }
@@ -1171,8 +1280,24 @@
       s += tx(180, 268, rdBlank ? 'میله‌ها را بشمار: ؟' : 'میله‌های کوئیزنر (۱ تا ۱۰)', ST, 'middle', true, 12);
       return wrap(s);
     }
+    function pfxCellMap(raw) {
+      var m = {};
+      String(raw == null ? '' : raw).split(/[;؛]/).forEach(function (tk) {
+        var i2 = tk.indexOf(':');
+        if (i2 > 0) { var k0 = faEn(tk.slice(0, i2).trim()), v0 = tk.slice(i2 + 1).trim(); if (k0) m[k0] = v0; }
+      });
+      return m;
+    }
+    function pfxEmptySet(raw) {
+      var m = {};
+      String(raw == null ? '' : raw).split(/[,،;؛\s]+/).forEach(function (tk) {
+        var k0 = faEn(tk.trim()); if (k0) m[k0] = 1;
+      });
+      return m;
+    }
     if (t === 'axtower') {
       var twBase = ilist('base', '1,2,3,4'), twOp = xs('op', '+') === '-' ? '−' : '+', twBlank = xs('blank', '0') === '1';
+      var twOv = pfxCellMap(xs('ov', '')), twEmpty = pfxEmptySet(xs('empty', '')), twAns = pfxCellMap(xs('ans', ''));
       if (twBase.length < 2) twBase = [1, 2, 3, 4];
       twBase = twBase.slice(0, 6);
       var twLv = [twBase], twCur = twBase, twK;
@@ -1185,9 +1310,15 @@
       for (twRow = 0; twRow < twLv.length; twRow++) {
         var lvIdx = twLv.length - 1 - twRow, lvArr = twLv[lvIdx], ly = 24 + twRow * twBh;
         for (twK = 0; twK < lvArr.length; twK++) {
-          var bx = 180 + (twK - (lvArr.length - 1) / 2) * twBw - twBw / 2, hide = twBlank && ((lvIdx + twK) % 3 === 1);
-          s += rc(bx, ly, twBw - 3, twBh - 3, hide ? '#fff8e1' : lvIdx === 0 ? 'rgba(108,99,245,.16)' : '#ffffff', hide ? PT : ST, 1.6, 4) +
-            tx(bx + (twBw - 3) / 2, ly + twBh * 0.66, hide ? '؟' : String(lvArr[twK]), hide ? PT : ST, 'middle', true, 13);
+          var tKey = lvIdx + '_' + twK, bx = 180 + (twK - (lvArr.length - 1) / 2) * twBw - twBw / 2;
+          var isExpEmp = !!twEmpty[tKey], stuVal = twAns[tKey] || '', ovVal = twOv[tKey];
+          var autoHide = !isExpEmp && ovVal == null && twBlank && ((lvIdx + twK) % 3 === 1);
+          var bg = isExpEmp ? (stuVal ? 'rgba(39,196,168,.16)' : '#ffffff') : autoHide ? '#fff8e1' : lvIdx === 0 ? 'rgba(108,99,245,.16)' : '#ffffff';
+          var stk = isExpEmp ? (stuVal ? '#1f8a78' : '#94a3b8') : autoHide ? PT : ST;
+          var txt = isExpEmp ? stuVal : (ovVal != null ? ovVal : (autoHide ? '؟' : String(lvArr[twK])));
+          var tCol = isExpEmp ? '#1f8a78' : autoHide ? PT : ST;
+          s += '<rect x="' + f2(bx) + '" y="' + f2(ly) + '" width="' + f2(twBw - 3) + '" height="' + f2(twBh - 3) + '" rx="4" fill="' + bg + '" stroke="' + stk + '" stroke-width="1.6"' + (isExpEmp && !stuVal ? ' stroke-dasharray="4 3"' : '') + '/>';
+          if (txt) s += tx(bx + (twBw - 3) / 2, ly + twBh * 0.66, txt, tCol, 'middle', true, 13);
         }
       }
       s += tx(180, 268, twOp === '+' ? 'هر آجر = جمع دو آجر زیرین' : 'هر آجر = تفاضل دو آجر زیرین', MU, 'middle', false, 11);
@@ -1196,32 +1327,50 @@
     if (t === 'axmulwheel') {
       var mwC = clamp(Math.floor(num(X.c, 3)), 1, 12), mwN = clamp(Math.floor(num(X.n, 10)), 3, 12);
       var mwOp = xs('op', '×') === '+' ? '+' : '×', mwHide = xs('hide', '0') === '1', mwJ;
-      s += pfxCls(180, 142, 96, 'none', ACC, 1.6) + pfxCls(180, 142, 34, 'rgba(108,99,245,.16)', ACC, 2.2);
-      s += tx(180, 140, String(mwC), ACC, 'middle', true, 18) + tx(180, 158, mwOp, ACC, 'middle', true, 12);
+      var mwOv = pfxCellMap(xs('ov', '')), mwEmpty = pfxEmptySet(xs('empty', '')), mwAns = pfxCellMap(xs('ans', ''));
+      var cEmp = !!mwEmpty.center, cStu = mwAns.center || '', cTxt = cEmp ? cStu : (mwOv.center != null ? mwOv.center : String(mwC));
+      s += pfxCls(180, 142, 96, 'none', ACC, 1.6) + pfxCls(180, 142, 34, cEmp ? '#ffffff' : 'rgba(108,99,245,.16)', cEmp && !cStu ? '#94a3b8' : ACC, 2.2);
+      if (cTxt) s += tx(180, 140, cTxt, cEmp ? '#1f8a78' : ACC, 'middle', true, 18);
+      s += tx(180, 158, mwOp, ACC, 'middle', true, 12);
       for (mwJ = 0; mwJ < mwN; mwJ++) {
-        var ma = -Math.PI / 2 + mwJ * 2 * Math.PI / mwN, ox = 180 + 96 * Math.cos(ma), oy = 142 + 96 * Math.sin(ma);
-        var mv = mwOp === '+' ? mwC + (mwJ + 1) : mwC * (mwJ + 1), oh = mwHide && mwJ % 3 === 2;
+        var mKey = 's_' + mwJ, ma = -Math.PI / 2 + mwJ * 2 * Math.PI / mwN, ox = 180 + 96 * Math.cos(ma), oy = 142 + 96 * Math.sin(ma);
+        var ix = 180 + 56 * Math.cos(ma), iy = 142 + 56 * Math.sin(ma);
+        var mv = mwOp === '+' ? mwC + (mwJ + 1) : mwC * (mwJ + 1);
+        var isEmp = !!mwEmpty[mKey], stuV = mwAns[mKey] || '', ovV = mwOv[mKey];
+        var oh = !isEmp && ovV == null && mwHide && mwJ % 3 === 2;
         s += lnr(180 + 34 * Math.cos(ma), 142 + 34 * Math.sin(ma), ox, oy, GR, 1.6);
-        s += pfxCls(ox, oy, 17, oh ? '#fff8e1' : '#ffffff', oh ? PT : ST, 1.8);
-        s += tx(ox, oy + 5, oh ? '؟' : String(mv), oh ? PT : ST, 'middle', true, 12);
+        s += pfxCls(ix, iy, 11, '#f8fafc', '#cbd5e1', 1.1) + tx(ix, iy + 4, String(mwJ + 1), MU, 'middle', true, 9.5);
+        s += '<circle cx="' + f2(ox) + '" cy="' + f2(oy) + '" r="17" fill="' + (isEmp ? (stuV ? 'rgba(39,196,168,.16)' : '#ffffff') : oh ? '#fff8e1' : '#ffffff') + '" stroke="' + (isEmp ? (stuV ? '#1f8a78' : '#94a3b8') : oh ? PT : ST) + '" stroke-width="1.8"' + (isEmp && !stuV ? ' stroke-dasharray="4 3"' : '') + '/>';
+        var oTxt = isEmp ? stuV : (ovV != null ? ovV : (oh ? '؟' : String(mv)));
+        if (oTxt) s += tx(ox, oy + 5, oTxt, isEmp ? '#1f8a78' : oh ? PT : ST, 'middle', true, 12);
       }
       return wrap(s);
     }
     if (t === 'axmultgrid') {
       var mgRows = ilist('rows', '2,4,7'), mgCols = ilist('cols', '3,5,8'), mgBlank = Math.floor(num(X.blank, 0));
+      var mgOv = pfxCellMap(xs('ov', '')), mgEmpty = pfxEmptySet(xs('empty', '')), mgAns = pfxCellMap(xs('ans', ''));
       if (!mgRows.length) mgRows = [2, 4, 7];
       if (!mgCols.length) mgCols = [3, 5, 8];
       mgRows = mgRows.slice(0, 4); mgCols = mgCols.slice(0, 4);
       var mgCw = Math.min(56, 268 / (mgCols.length + 1)), mgCh = Math.min(42, 216 / (mgRows.length + 1));
       var mgX0 = 180 - mgCw * (mgCols.length + 1) / 2, mgY0 = 26 + (218 - mgCh * (mgRows.length + 1)) / 2, mgR, mgC;
+      var drawMgCell = function (key, x2, y2, defTxt, autoQ, defBg, defCol) {
+        var isE = !!mgEmpty[key], stV = mgAns[key] || '', ovV = mgOv[key];
+        var shQ = !isE && ovV == null && autoQ;
+        var bg = isE ? (stV ? 'rgba(39,196,168,.16)' : '#ffffff') : shQ ? '#fff8e1' : defBg;
+        var stk = isE && stV ? '#1f8a78' : ST;
+        var txt = isE ? stV : (ovV != null ? ovV : (shQ ? '؟' : defTxt));
+        var col = isE ? '#1f8a78' : shQ ? PT : defCol;
+        s += rc(x2, y2, mgCw, mgCh, bg, stk, 1.4);
+        if (txt) s += tx(x2 + mgCw / 2, y2 + mgCh * 0.66, txt, col, 'middle', true, 14);
+      };
       for (mgC = 0; mgC < mgCols.length; mgC++) {
-        s += rc(mgX0 + (mgC + 1) * mgCw, mgY0, mgCw, mgCh, 'rgba(39,196,168,.18)', ST, 1.4) + tx(mgX0 + (mgC + 1.5) * mgCw, mgY0 + mgCh * 0.66, mgBlank === 2 ? '؟' : String(mgCols[mgC]), mgBlank === 2 ? PT : ST, 'middle', true, 14);
+        drawMgCell('c' + mgC, mgX0 + (mgC + 1) * mgCw, mgY0, String(mgCols[mgC]), mgBlank === 2, 'rgba(39,196,168,.18)', ST);
       }
       for (mgR = 0; mgR < mgRows.length; mgR++) {
-        s += rc(mgX0, mgY0 + (mgR + 1) * mgCh, mgCw, mgCh, 'rgba(39,196,168,.18)', ST, 1.4) + tx(mgX0 + mgCw / 2, mgY0 + (mgR + 1.5) * mgCh, mgBlank === 2 ? '؟' : String(mgRows[mgR]), mgBlank === 2 ? PT : ST, 'middle', true, 14);
+        drawMgCell('r' + mgR, mgX0, mgY0 + (mgR + 1) * mgCh, String(mgRows[mgR]), mgBlank === 2, 'rgba(39,196,168,.18)', ST);
         for (mgC = 0; mgC < mgCols.length; mgC++) {
-          var mv2 = mgRows[mgR] * mgCols[mgC], mh2 = mgBlank === 1 && (mgR + mgC) % 2 === 1;
-          s += rc(mgX0 + (mgC + 1) * mgCw, mgY0 + (mgR + 1) * mgCh, mgCw, mgCh, mh2 ? '#fff8e1' : '#ffffff', ST, 1.4) + tx(mgX0 + (mgC + 1.5) * mgCw, mgY0 + (mgR + 1.5) * mgCh, mh2 ? '؟' : String(mv2), mh2 ? PT : ACC, 'middle', true, 14);
+          drawMgCell(mgR + '_' + mgC, mgX0 + (mgC + 1) * mgCw, mgY0 + (mgR + 1) * mgCh, String(mgRows[mgR] * mgCols[mgC]), mgBlank === 1 && (mgR + mgC) % 2 === 1, '#ffffff', ACC);
         }
       }
       s += rc(mgX0, mgY0, mgCw, mgCh, 'rgba(108,99,245,.16)', ST, 1.8) + tx(mgX0 + mgCw / 2, mgY0 + mgCh * 0.66, '×', ACC, 'middle', true, 15);
@@ -1257,82 +1406,131 @@
     }
     if (t === 'axcubes') {
       var cbView = xs('view', 'iso').toLowerCase(), cbRowsRaw = xs('map', '2,1,3;1,0,1;2,2,1').split(/[;؛]/);
-      var cbMap = cbRowsRaw.map(function (rw) { return rw.split(/[,،]/).map(function (q2) { return clamp(Math.floor(parseInt(faEn(q2.trim()), 10)) || 0, 0, 4); }); }).filter(function (rw) { return rw.length; }).slice(0, 4);
-      if (!cbMap.length) cbMap = [[2, 1, 3], [1, 0, 1], [2, 2, 1]];
-      var cbS = 30, cbTotal = 0;
-      cbMap.forEach(function (rw) { rw.forEach(function (h2) { cbTotal += h2; }); });
-      if (cbView === 'top' || cbView === 'front' || cbView === 'side') {
-        var cgN = cbMap.length, cgM = cbMap[0].length || 1, cgW = Math.min(52, 260 / cgN), cgH = Math.min(46, 200 / cgM);
-        for (var cr = 0; cr < cgN; cr++) for (var cc2 = 0; cc2 < (cbMap[cr].length || 0); cc2++) {
-          var chh = cbMap[cr][cc2], cx2 = 180 + (cr - (cgN - 1) / 2) * cgW - cgW / 2, cy2 = 34 + (cc2 - (cgM - 1) / 2) * cgH;
-          var val = cbView === 'top' ? chh : chh;
-          s += rc(cx2, cy2, cgW - 3, cgH - 3, chh ? 'rgba(108,99,245,.22)' : '#ffffff', ST, 1.4, 3) + tx(cx2 + (cgW - 3) / 2, cy2 + cgH * 0.62, chh ? String(val) : '۰', ST, 'middle', true, 12);
+      var cbParsed = cbRowsRaw.map(function (rw) { return rw.split(/[,،]/).map(function (q2) { var iv = parseInt(faEn(q2.trim()), 10); return clamp(isFinite(iv) ? iv : 0, 0, 5); }); }).filter(function (rw) { return rw.length; }).slice(0, 4);
+      if (!cbParsed.length) cbParsed = [[2, 1, 3], [1, 0, 1], [2, 2, 1]];
+      var cgN = cbParsed.length, cgM = 1;
+      cbParsed.forEach(function (rw) { if (rw.length > cgM) cgM = Math.min(4, rw.length); });
+      var cbMap = cbParsed.map(function (rw) { var a = []; for (var k0 = 0; k0 < cgM; k0++) a.push(rw[k0] || 0); return a; });
+      var cbTotal = 0, cbMaxH = 1;
+      cbMap.forEach(function (rw) { rw.forEach(function (h2) { cbTotal += h2; if (h2 > cbMaxH) cbMaxH = h2; }); });
+      if (cbView === 'top') {
+        var cgW = Math.min(54, 220 / cgM), cgH = Math.min(50, 184 / cgN);
+        var cgX0 = 180 - (cgM * cgW) / 2, cgY0 = 126 - (cgN * cgH) / 2;
+        s += tx(180, 26, 'نمای از بالا (تعداد مکعب در هر ستون)', ST, 'middle', true, 12);
+        for (var cr = 0; cr < cgN; cr++) for (var cc2 = 0; cc2 < cgM; cc2++) {
+          var chh = cbMap[cr][cc2], cx2 = cgX0 + cc2 * cgW, cy2 = cgY0 + cr * cgH;
+          var topFill = chh === 0 ? '#f8fafc' : chh === 1 ? 'rgba(108,99,245,.16)' : chh === 2 ? 'rgba(108,99,245,.30)' : 'rgba(108,99,245,.46)';
+          s += rc(cx2 + 1.5, cy2 + 1.5, cgW - 3, cgH - 3, topFill, ST, 1.5, 4) +
+            tx(cx2 + cgW / 2, cy2 + cgH * 0.64, xs('hide', '0') === '1' && chh > 0 ? '' : String(chh), chh === 0 ? MU : ST, 'middle', true, 15);
         }
+        s += tx(180, cgY0 + cgN * cgH + 22, '▼ روبه‌رو', ACC, 'middle', true, 11);
+      } else if (cbView === 'front' || cbView === 'side') {
+        var prof = [];
+        if (cbView === 'front') {
+          for (var fc = 0; fc < cgM; fc++) { var mxF = 0; for (var fr = 0; fr < cgN; fr++) if (cbMap[fr][fc] > mxF) mxF = cbMap[fr][fc]; prof.push(mxF); }
+        } else {
+          for (var sr = 0; sr < cgN; sr++) { var mxS = 0; for (var sc2 = 0; sc2 < cgM; sc2++) if (cbMap[sr][sc2] > mxS) mxS = cbMap[sr][sc2]; prof.push(mxS); }
+        }
+        var pCols = Math.max(1, prof.length), uSz = Math.min(44, 220 / pCols, 172 / Math.max(3, cbMaxH));
+        var pTw = pCols * uSz, pX0 = 180 - pTw / 2, pBaseY = 222;
+        s += tx(180, 26, cbView === 'front' ? 'نمای روبه‌رو' : 'نمای از پهلو (چپ به راست: پشت به جلو)', ST, 'middle', true, 12);
+        s += lnr(pX0 - 18, pBaseY, pX0 + pTw + 18, pBaseY, ST, 2.5);
+        prof.forEach(function (colH, ci2) {
+          var ux = pX0 + ci2 * uSz;
+          for (var lv = 0; lv < colH; lv++) {
+            var uy = pBaseY - (lv + 1) * uSz;
+            s += rc(ux + 1.5, uy + 1.5, uSz - 3, uSz - 3, cbView === 'front' ? 'rgba(108,99,245,.28)' : 'rgba(39,196,168,.28)', ST, 1.6, 3);
+          }
+          if (xs('hide', '0') !== '1') s += tx(ux + uSz / 2, pBaseY + 18, String(colH), MU, 'middle', true, 11);
+        });
       } else {
-        for (var ir = cbMap.length - 1; ir >= 0; ir--) {
-          for (var ic = 0; ic < cbMap[ir].length; ic++) {
+        var cbS = Math.min(26, 175 / Math.max(3, cgN + cgM)), dx = cbS * 0.88, dy = cbS * 0.48, dz = cbS * 0.94;
+        var midDiff = (cgM - cgN) / 2, originX = 180 - midDiff * dx, originY = 216;
+        for (var ir = 0; ir < cgN; ir++) {
+          for (var ic = 0; ic < cgM; ic++) {
             var hh = cbMap[ir][ic];
-            var ox2 = 92 + (ic - ir) * cbS * 0.9, oy2 = 196 - (ic + ir) * cbS * 0.5;
-            if (hh > 0) {
-              var topY = oy2 - (hh - 1) * cbS * 0.98 - cbS;
-              s += pfxPoly(f2(ox2) + ',' + f2(topY) + ' ' + f2(ox2 + cbS * 0.9) + ',' + f2(topY + cbS * 0.5) + ' ' + f2(ox2) + ',' + f2(topY + cbS) + ' ' + f2(ox2 - cbS * 0.9) + ',' + f2(topY + cbS * 0.5), '#f7f9fd', '#9fb0c6', 1);
-              s += pfxPoly(f2(ox2 - cbS * 0.9) + ',' + f2(topY + cbS * 0.5) + ' ' + f2(ox2) + ',' + f2(topY + cbS) + ' ' + f2(ox2) + ',' + f2(oy2) + ' ' + f2(ox2 - cbS * 0.9) + ',' + f2(oy2 - cbS * 0.5), 'rgba(108,99,245,.14)', '#9fb0c6', 1);
-              s += pfxPoly(f2(ox2) + ',' + f2(topY + cbS) + ' ' + f2(ox2 + cbS * 0.9) + ',' + f2(topY + cbS * 0.5) + ' ' + f2(ox2 + cbS * 0.9) + ',' + f2(oy2 - cbS * 0.5) + ' ' + f2(ox2) + ',' + f2(oy2), 'rgba(39,196,168,.14)', '#9fb0c6', 1);
+            var baseX = originX + (ic - ir) * dx, baseY = originY - (cgN - 1 - ir + ic) * dy * 0.65;
+            for (var z = 0; z < hh; z++) {
+              var ty = baseY - (z + 1) * dz, by = baseY - z * dz;
+              s += pfxPoly(f2(baseX) + ',' + f2(ty - dy) + ' ' + f2(baseX + dx) + ',' + f2(ty) + ' ' + f2(baseX) + ',' + f2(ty + dy) + ' ' + f2(baseX - dx) + ',' + f2(ty), '#eef2ff', ST, 1.2);
+              s += pfxPoly(f2(baseX - dx) + ',' + f2(ty) + ' ' + f2(baseX) + ',' + f2(ty + dy) + ' ' + f2(baseX) + ',' + f2(by + dy) + ' ' + f2(baseX - dx) + ',' + f2(by), '#a5b4fc', ST, 1.2);
+              s += pfxPoly(f2(baseX) + ',' + f2(ty + dy) + ' ' + f2(baseX + dx) + ',' + f2(ty) + ' ' + f2(baseX + dx) + ',' + f2(by) + ' ' + f2(baseX) + ',' + f2(by + dy), '#6ee7b7', ST, 1.2);
             }
           }
         }
       }
-      s += tx(180, 268, cbView === 'top' ? 'نمای از بالا' : cbView === 'front' ? 'نمای روبه‌رو' : cbView === 'side' ? 'نمای از پهلو' : ('تعداد مکعب‌ها: ' + (xs('hide', '0') === '1' ? '؟' : cbTotal)), MU, 'middle', true, 12);
+      var cbFooter = xs('hide', '0') === '1' ? 'تعداد کل مکعب‌ها: ؟'
+        : cbView === 'top' ? ('نمای از بالا — مجموع مکعب‌ها: ' + cbTotal)
+        : cbView === 'front' ? 'نمای روبه‌رو — بلندترین ستون هر ردیف عمودی'
+        : cbView === 'side' ? 'نمای از پهلو — بلندترین ستون هر ردیف افقی'
+        : ('تعداد مکعب‌ها: ' + cbTotal);
+      s += tx(180, 266, cbFooter, xs('hide', '0') === '1' ? PT : MU, 'middle', true, 12);
       return wrap(s);
     }
     if (t === 'axcalendar') {
       var clMonth = xs('month', 'مهر'), clStart = clamp(Math.floor(num(X.start, 3)), 0, 6), clDays = clamp(Math.floor(num(X.days, 30)), 20, 31);
       var clMark = String(xs('mark', '12,23')).split(/[,،;]/).map(function (q3) { return parseInt(faEn(q3.trim()), 10); }).filter(function (q3) { return isFinite(q3); });
       var clBlank = xs('blank', '0') === '1', clWd = ['ش', 'ی', 'د', 'س', 'چ', 'پ', 'ج'], clCw = 44, clCh = 30, clX0 = 180 - clCw * 3.5, clY0 = 46;
+      var clOv = pfxCellMap(xs('ov', '')), clEmpty = pfxEmptySet(xs('empty', '')), clAns = pfxCellMap(xs('ans', ''));
       s += tx(180, 30, 'تقویم ' + clMonth, ST, 'middle', true, 14);
       for (var cd = 0; cd < 7; cd++) s += rc(clX0 + cd * clCw, clY0, clCw, clCh, 'rgba(108,99,245,.16)', ST, 1.2) + tx(clX0 + cd * clCw + clCw / 2, clY0 + clCh * 0.68, clWd[6 - cd], ACC, 'middle', true, 12);
       for (var ci = 0; ci < clDays; ci++) {
-        var cellIdx = ci + clStart, col2 = 6 - (cellIdx % 7), row2 = Math.floor(cellIdx / 7), dayN = ci + 1;
-        var bx2 = clX0 + col2 * clCw, by2 = clY0 + clCh + row2 * clCh, isMark = clMark.indexOf(dayN) >= 0, isBlank = clBlank && dayN % 5 === 0;
-        s += rc(bx2, by2, clCw, clCh, isMark ? 'rgba(39,196,168,.26)' : '#ffffff', ST, 1.1) + tx(bx2 + clCw / 2, by2 + clCh * 0.66, isBlank ? '؟' : String(dayN), isBlank ? PT : isMark ? '#00796b' : ST, 'middle', isMark || isBlank, 12);
+        var cellIdx = ci + clStart, col2 = 6 - (cellIdx % 7), row2 = Math.floor(cellIdx / 7), dayN = ci + 1, dKey = String(dayN);
+        var bx2 = clX0 + col2 * clCw, by2 = clY0 + clCh + row2 * clCh, isMark = clMark.indexOf(dayN) >= 0;
+        var isExpE = !!clEmpty[dKey], stVal = clAns[dKey] || '', ovVal2 = clOv[dKey];
+        var autoB = !isExpE && ovVal2 == null && clBlank && dayN % 5 === 0;
+        var cBg = isExpE ? (stVal ? 'rgba(39,196,168,.18)' : '#ffffff') : autoB ? '#fff8e1' : isMark ? 'rgba(39,196,168,.26)' : '#ffffff';
+        var cTxt2 = isExpE ? stVal : (ovVal2 != null ? ovVal2 : (autoB ? '؟' : dKey));
+        var cCol = isExpE ? '#1f8a78' : autoB ? PT : isMark ? '#00796b' : ST;
+        s += rc(bx2, by2, clCw, clCh, cBg, isExpE && stVal ? '#1f8a78' : ST, 1.1);
+        if (cTxt2) s += tx(bx2 + clCw / 2, by2 + clCh * 0.66, cTxt2, cCol, 'middle', isMark || autoB || isExpE, 12);
       }
       return wrap(s);
     }
     if (t === 'axlever') {
       var lvKind = xs('kind', 'lever1').toLowerCase(), lvLoad = num(X.load, 60), lvEff = num(X.effort, 20);
-      var lvL1 = Math.max(0.5, num(X.l1, 2)), lvL2 = Math.max(0.5, num(X.l2, 1)), lvMa = (lvL1 / lvL2);
+      var lvL1 = Math.max(0.5, num(X.l1, 2)), lvL2 = Math.max(0.5, num(X.l2, 1)), lvMa = lvL2 / lvL1;
       if (lvKind === 'pulley') {
-        s += pfxCls(180, 60, 26, 'rgba(108,99,245,.16)', ACC, 2.2) + pfxCls(180, 60, 6, ST, 'none', 0);
-        s += pfxCls(236, 110, 20, 'rgba(39,196,168,.18)', GRN, 2.2) + pfxCls(236, 110, 5, ST, 'none', 0);
-        s += lnr(180, 86, 180, 130, ST, 2) + pfxArrow(180, 130, 180, 168, PT, 2, 9);
-        s += lnr(180, 34, 300, 34, ST, 2) + lnr(256, 110, 300, 110, ST, 2) + pfxArrow(300, 110, 300, 168, ACC, 2, 9);
-        s += tx(180, 188, 'بار: ' + nm(lvLoad) + ' N', PT, 'middle', true, 12) + tx(300, 188, 'نیرو: ' + nm(lvEff) + ' N', ACC, 'middle', true, 12);
-        s += tx(180, 252, 'قرقرهٔ متحرک — مزیت مکانیکی ≈ ۲', MU, 'middle', true, 12);
+        s += rc(96, 18, 168, 8, '#cbd5e1', ST, 1.6, 3);
+        s += lnr(142, 26, 142, 118, ST, 2.2) + lnr(182, 118, 182, 60, ST, 2.2) + lnr(226, 60, 226, 152, ACC, 2.4);
+        s += lnr(204, 26, 204, 60, ST, 3) + pfxCls(204, 60, 22, 'rgba(108,99,245,.16)', ACC, 2.2) + pfxCls(204, 60, 5, ST, 'none', 0);
+        s += pfxCls(162, 118, 20, 'rgba(39,196,168,.22)', GRN, 2.2) + pfxCls(162, 118, 5, ST, 'none', 0);
+        s += lnr(162, 138, 162, 162, ST, 2.4) + rc(134, 162, 56, 38, 'rgba(214,51,108,.16)', PT, 1.8, 6);
+        s += tx(162, 186, 'بار: ' + nm(lvLoad) + ' N', PT, 'middle', true, 11.5);
+        s += pfxArrow(226, 136, 226, 182, ACC, 2.6, 9) + tx(274, 168, 'نیرو: ' + nm(lvEff) + ' N', ACC, 'middle', true, 11.5);
+        s += tx(180, 252, 'قرقرهٔ مرکب (ثابت و متحرک) — مزیت مکانیکی ≈ ۲', MU, 'middle', true, 11.5);
         return wrap(s);
       }
-      if (lvKind === 'gears') {
-        var grA = 40, grB = 22;
-        s += pfxCls(140, 130, grA, 'rgba(108,99,245,.18)', ACC, 2.2) + pfxCls(140 + grA + grB, 130, grB, 'rgba(240,162,2,.22)', GLD, 2.2);
-        for (var gj = 0; gj < 16; gj++) { var ga = gj * Math.PI / 8; s += lnr(140 + (grA - 5) * Math.cos(ga), 130 + (grA - 5) * Math.sin(ga), 140 + (grA + 5) * Math.cos(ga), 130 + (grA + 5) * Math.sin(ga), ACC, 3); }
-        for (var gk = 0; gk < 10; gk++) { var gb2 = gk * Math.PI / 5; s += lnr(140 + grA + (grB - 4) * Math.cos(gb2), 130 + (grB - 4) * Math.sin(gb2), 140 + grA + (grB + 4) * Math.cos(gb2), 130 + (grB + 4) * Math.sin(gb2), GLD, 3); }
-        s += tx(140, 136, nm(grA) + 'T', ACC, 'middle', true, 12) + tx(140 + grA + grB, 136, nm(grB) + 'T', '#a06a00', 'middle', true, 11);
-        s += tx(180, 240, 'چرخ‌دنده — نسبت انتقال = ' + nm(Math.round(grA / grB * 10) / 10), MU, 'middle', true, 12);
+      if (lvKind === 'gears' || lvKind === 'gear') {
+        var grAx = 126, grBx = 198, grCy = 128, grA = 44, grB = 26;
+        for (var gj = 0; gj < 16; gj++) { var ga = gj * Math.PI / 8; s += lnr(grAx + (grA - 5) * Math.cos(ga), grCy + (grA - 5) * Math.sin(ga), grAx + (grA + 6) * Math.cos(ga), grCy + (grA + 6) * Math.sin(ga), ACC, 3.6); }
+        for (var gk = 0; gk < 10; gk++) { var gb2 = gk * Math.PI / 5 + Math.PI / 10; s += lnr(grBx + (grB - 4) * Math.cos(gb2), grCy + (grB - 4) * Math.sin(gb2), grBx + (grB + 5.5) * Math.cos(gb2), grCy + (grB + 5.5) * Math.sin(gb2), GLD, 3.4); }
+        s += pfxCls(grAx, grCy, grA, '#eef2ff', ACC, 2.2) + pfxCls(grAx, grCy, 8, '#ffffff', ACC, 1.8);
+        s += pfxCls(grBx, grCy, grB, '#fef9c3', GLD, 2.2) + pfxCls(grBx, grCy, 6, '#ffffff', GLD, 1.8);
+        s += tx(grAx, grCy + 26, '۱۶ دندانه', ACC, 'middle', true, 10.5) + tx(grBx, grCy + 20, '۱۰ دندانه', '#a06a00', 'middle', true, 10);
+        s += tx(180, 244, 'چرخ‌دنده‌های درگیر — نسبت دور = ۱٫۶ (خلاف جهت هم)', MU, 'middle', true, 11.5);
         return wrap(s);
       }
-      var lvFulc = 180, lvY = 150, lvSpan = 250, lvX1 = lvFulc - lvSpan / 2, lvX2 = lvFulc + lvSpan / 2;
-      if (lvKind === 'lever2') lvFulc = lvX1 + 20;
-      if (lvKind === 'lever3') lvFulc = lvX1 + 20;
-      lvX1 = lvFulc - (lvKind === 'lever1' ? lvSpan / 2 : 20);
-      lvX2 = lvX1 + lvSpan;
-      s += lnr(lvX1, lvY, lvX2, lvY, ST, 7);
-      s += pfxPoly(f2(lvFulc) + ',' + f2(lvY + 4) + ' ' + f2(lvFulc - 20) + ',' + f2(lvY + 46) + ' ' + f2(lvFulc + 20) + ',' + f2(lvY + 46), 'rgba(108,99,245,.25)', ST, 2);
-      var ldX = lvKind === 'lever1' ? lvX1 + 40 : lvX2, efX = lvKind === 'lever1' ? lvX2 - 60 : (lvKind === 'lever2' ? lvX2 : lvX2 - 60);
-      if (lvKind === 'lever1') { ldX = lvX1 + 45; efX = lvX2 - 45; }
-      if (lvKind === 'lever2') { ldX = 180 + 40; efX = lvX2 - 30; }
-      if (lvKind === 'lever3') { ldX = lvX2 - 30; efX = 180 + 40; }
-      s += pfxArrow(ldX, lvY - 8, ldX, lvY - 58, PT, 3, 10) + rc(ldX - 26, lvY - 96, 52, 34, 'rgba(214,51,108,.16)', PT, 1.8, 6) + tx(ldX, lvY - 74, nm(lvLoad) + ' N', PT, 'middle', true, 11);
-      s += pfxArrow(efX, lvY - 8, efX, lvY - 58, ACC, 3, 10) + rc(efX - 26, lvY - 96, 52, 34, 'rgba(108,99,245,.16)', ACC, 1.8, 6) + tx(efX, lvY - 74, nm(lvEff) + ' N', ACC, 'middle', true, 11);
-      s += tx(180, lvY + 70, 'اهرم نوع ' + (lvKind === 'lever1' ? 'اول' : lvKind === 'lever2' ? 'دوم' : 'سوم') + ' — مزیت مکانیکی = ' + nm(Math.round(lvMa * 100) / 100), MU, 'middle', true, 12);
+      var lvX1 = 46, lvX2 = 314, lvY = 158;
+      var lvFulc = lvKind === 'lever1' ? 180 : 68;
+      var ldX = lvKind === 'lever1' ? 76 : lvKind === 'lever2' ? 168 : 286;
+      var efX = lvKind === 'lever1' ? 284 : lvKind === 'lever2' ? 286 : 168;
+      s += lnr(lvX1, lvY, lvX2, lvY, ST, 6.5);
+      s += pfxPoly(f2(lvFulc) + ',' + f2(lvY + 3) + ' ' + f2(lvFulc - 18) + ',' + f2(lvY + 40) + ' ' + f2(lvFulc + 18) + ',' + f2(lvY + 40), 'rgba(108,99,245,.25)', ST, 2);
+      s += tx(lvFulc, lvY + 56, 'تکیه‌گاه', MU, 'middle', true, 10.5);
+      s += rc(ldX - 28, lvY - 46, 56, 36, 'rgba(214,51,108,.18)', PT, 1.8, 6);
+      s += tx(ldX, lvY - 30, 'بار', PT, 'middle', true, 10) + tx(ldX, lvY - 16, nm(lvLoad) + ' N', PT, 'middle', true, 11);
+      s += pfxArrow(ldX, lvY - 8, ldX, lvY + 30, PT, 2.6, 8);
+      if (lvKind === 'lever1') {
+        s += pfxArrow(efX, lvY - 56, efX, lvY - 8, ACC, 2.8, 9);
+        s += rc(efX - 30, lvY - 90, 60, 30, 'rgba(108,99,245,.16)', ACC, 1.6, 6) + tx(efX, lvY - 71, 'نیرو ' + nm(lvEff) + ' N', ACC, 'middle', true, 10.5);
+      } else {
+        s += pfxArrow(efX, lvY + 42, efX, lvY + 6, ACC, 2.8, 9);
+        s += rc(efX - 32, lvY - 86, 64, 30, 'rgba(108,99,245,.16)', ACC, 1.6, 6) + tx(efX, lvY - 67, 'نیرو ' + nm(lvEff) + ' N', ACC, 'middle', true, 10.5);
+        s += ln(efX, lvY - 56, efX, lvY - 4, ACC, 1.2, true);
+      }
+      var kName = lvKind === 'lever1' ? 'اول (تکیه‌گاه وسط)' : lvKind === 'lever2' ? 'دوم (بار وسط)' : 'سوم (نیرو وسط)';
+      s += tx(180, 254, 'اهرم نوع ' + kName + ' — مزیت مکانیکی = ' + nm(lvL2) + ' ÷ ' + nm(lvL1) + ' = ' + nm(Math.round(lvMa * 100) / 100), MU, 'middle', true, 11);
       return wrap(s);
     }
     if (t === 'axcycle') {
@@ -1360,26 +1558,31 @@
     var pFa = function (v) { return String(v).replace(/[0-9]/g, function (d) { return '۰۱۲۳۴۵۶۷۸۹'[+d]; }); };
 
     if (t === 'axpaintgrid') {
-      /* شبکهٔ رنگ‌آمیزی: دانش‌آموز «n خانه» را رنگ می‌کند (پاسخ با لمس خانه‌ها). */
+      /* شبکهٔ رنگ‌آمیزی: با کلیک روی هر خانه در ویرایشگر معلم یا آزمون دانش‌آموز رنگ می‌شود */
       var pgRows = clamp(Math.round(num(xs('rows', '4'), 4)), 1, 8);
       var pgCols = clamp(Math.round(num(xs('cols', '4'), 4)), 1, 8);
-      var pgGoal = clamp(Math.round(num(xs('goal', '1'), 1)), 0, pgRows * pgCols);
-      var pgCells = String(xs('cells', '')).split(/[;؛]/).map(function (q) {
-        var a2 = q.split(',');
-        return a2.length === 2 ? [Math.round(+a2[0]), Math.round(+a2[1])] : null;
-      }).filter(function (c3) { return c3 && c3[0] >= 1 && c3[0] <= pgRows && c3[1] >= 1 && c3[1] <= pgCols; });
+      var pgGoal = clamp(Math.round(num(xs('goal', '0'), 0)), 0, pgRows * pgCols);
+      var parsePgCells = function (raw) {
+        return String(raw || '').split(/[;؛]/).map(function (q) {
+          var a2 = faEn(q).split(/[,،]/);
+          return a2.length >= 2 ? [Math.round(+a2[0]), Math.round(+a2[1])] : null;
+        }).filter(function (c3) { return c3 && c3[0] >= 1 && c3[0] <= pgRows && c3[1] >= 1 && c3[1] <= pgCols; });
+      };
+      var pgCells = parsePgCells(xs('cells', ''));
+      var pgAns = parsePgCells(xs('ansCells', ''));
       var pgW = Math.min(300, pgCols * 42), pgH = Math.min(150, pgRows * 34);
-      var pgCw = pgW / pgCols, pgCh = pgH / pgRows, pgX0 = (360 - pgW) / 2, pgY0 = 66 + (150 - pgH) / 2;
-      s += tx(180, 40, 'خانه‌ها را رنگ کن', ST, 'middle', true, 13);
+      var pgCw = pgW / pgCols, pgCh = pgH / pgRows, pgX0 = (360 - pgW) / 2, pgY0 = 62 + (150 - pgH) / 2;
+      s += tx(180, 38, 'خانه‌ها را رنگ کن', ST, 'middle', true, 13);
       for (var pr = 0; pr < pgRows; pr++) {
         for (var pc = 0; pc < pgCols; pc++) {
-          var onCell = pgCells.some(function (c4) { return c4[0] === pr + 1 && c4[1] === pc + 1; });
-          s += rc(pgX0 + pc * pgCw, pgY0 + pr * pgCh, pgCw, pgCh,
-            onCell ? 'rgba(108,99,245,.55)' : '#ffffff', ST, 1.4, 4);
+          var onTeacher = pgCells.some(function (c4) { return c4[0] === pr + 1 && c4[1] === pc + 1; });
+          var onStudent = pgAns.some(function (c5) { return c5[0] === pr + 1 && c5[1] === pc + 1; });
+          var fillCol = onStudent ? 'rgba(39,196,168,.65)' : onTeacher ? 'rgba(108,99,245,.62)' : '#ffffff';
+          s += rc(pgX0 + pc * pgCw, pgY0 + pr * pgCh, pgCw, pgCh, fillCol, ST, 1.5, 4);
         }
       }
-      if (pgGoal > 0) s += tx(180, pgY0 + pgH + 28, 'دقیقاً ' + pFa(pgGoal) + ' خانه را رنگ کن', ACC, 'middle', true, 12);
-      s += tx(180, 258, 'رنگ‌آمیزی روی شکل — پاسخ با لمس خانه‌ها ثبت می‌شود', MU, 'middle', false, 10);
+      if (pgGoal > 0) s += tx(180, pgY0 + pgH + 26, 'تعداد خانه‌های هدف برای رنگ‌آمیزی: ' + pFa(pgGoal) + ' خانه', ACC, 'middle', true, 12);
+      s += tx(180, 260, 'با کلیک یا لمس هر خانه، آن خانه رنگ یا پاک می‌شود', MU, 'middle', false, 10.5);
       return wrap(s);
     }
 
@@ -1410,59 +1613,104 @@
     }
 
     if (t === 'axsyllablechart') {
-      /* هجاهای کلمه: هر هجا یک کارت + شمارش با دست‌زدن */
-      var syWord = String(xs('word', 'با-با')).trim() || 'با-با';
-      var syList = syWord.split(/[-–—]/).map(function (q5) { return q5.trim(); }).filter(Boolean).slice(0, 6);
-      var syN = Math.max(1, syList.length), syW = Math.min(72, 300 / syN), syX0 = 180 + (syN * (syW + 8)) / 2;
-      s += tx(180, 40, 'هجاهای کلمه', ST, 'middle', true, 13);
-      syList.forEach(function (sy2, si2) {
-        var bx = syX0 - (si2 + 1) * (syW + 8);
-        s += rc(bx, 74, syW, 52, 'rgba(39,196,168,.16)', '#1f8a78', 1.6, 10);
-        s += tx(bx + syW / 2, 108, sy2, ST, 'middle', true, 18);
-        s += pfxCls(bx + syW / 2, 146, 4, '#1f8a78', 'none', 0);
-      });
-      s += tx(180, 174, 'تعداد هجا: ' + pFa(syN), ACC, 'middle', true, 12);
-      s += tx(180, 202, 'هر هجا را با یک دست‌زدن بشمار', MU, 'middle', false, 10);
+      /* هجاهای کلمه: در حالت پرسش (ask) کلمه یکجا نمایش داده می‌شود تا دانش‌آموز بخش کند؛ در حالت آموزش (show) بخش‌ها نمایش داده می‌شوند */
+      var syRaw = String(xs('word', 'مدرسه')).trim() || 'مدرسه';
+      var syMode = xs('mode', 'ask').toLowerCase();
+      var syClean = syRaw.replace(/[-–—]/g, '');
+      s += tx(180, 38, 'بخش‌کردن کلمه (هجاها)', ST, 'middle', true, 13.5);
+      if (syMode === 'show') {
+        var syList = syRaw.split(/[-–—]/).map(function (q5) { return q5.trim(); }).filter(Boolean).slice(0, 6);
+        if (!syList.length) syList = [syClean];
+        var syN = syList.length, syW = Math.min(72, 292 / syN), syX0 = 180 + (syN * (syW + 8) - 8) / 2;
+        syList.forEach(function (sy2, si2) {
+          var bx = syX0 - syW - si2 * (syW + 8);
+          s += rc(bx, 82, syW, 52, 'rgba(39,196,168,.16)', '#1f8a78', 1.8, 10);
+          s += tx(bx + syW / 2, 114, sy2, ST, 'middle', true, 18);
+          s += pfxCls(bx + syW / 2, 150, 4.2, '#1f8a78', 'none', 0);
+        });
+        s += tx(180, 184, 'کلمهٔ «' + syClean + '» ← ' + pFa(syN) + ' بخش', ACC, 'middle', true, 13);
+      } else {
+        s += rc(84, 72, 192, 62, 'rgba(108,99,245,.12)', ACC, 2.2, 14);
+        s += tx(180, 111, syClean, ST, 'middle', true, 24);
+        s += tx(180, 168, 'این کلمه را بخش کن و هر بخش را در یک کادر بنویس', ACC, 'middle', true, 12);
+        for (var sb = 0; sb < 3; sb++) {
+          var sbx = 228 - sb * 72;
+          s += '<rect x="' + f2(sbx) + '" y="186" width="56" height="36" rx="8" fill="#ffffff" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="4 3"/>';
+        }
+        s += tx(72, 209, '+', '#1f8a78', 'middle', true, 18);
+      }
+      s += tx(180, 254, 'دانش‌آموز در آزمون با دکمهٔ + کادر اضافه می‌کند و بخش‌ها را می‌نویسد', MU, 'middle', false, 10);
       return wrap(s);
     }
 
     if (t === 'axmagnet') {
-      /* آهنربا: جذب یا دفع دو قطب */
-      var mgMode = xs('mode', 'attract').toLowerCase() === 'repel' ? 'repel' : 'attract';
-      s += tx(180, 36, mgMode === 'attract' ? 'دو قطب ناهم‌نام — جذب' : 'دو قطب هم‌نام — دفع', ST, 'middle', true, 13);
-      var mgL = 96, mgR = 264, mgY = 150;
-      [[mgL, 'N'], [mgR, 'S']].forEach(function (m1) {
-        var mx1 = m1[0];
-        s += rc(mx1 - 46, mgY - 26, 92, 52, '#e8eaf6', ST, 1.8, 6);
-        s += rc(mx1 + (m1[1] === 'N' ? 18 : -46), mgY - 26, 28, 52, m1[1] === 'N' ? '#e53935' : '#1e88e5', '#ffffff', 1, 4);
-        s += tx(mx1 + (m1[1] === 'N' ? 32 : -32), mgY + 7, m1[1], '#ffffff', 'middle', true, 16);
-      });
+      /* آهنربا و قطب‌ها: دو آهنربای کامل میله‌ای دو رنگ (N قرمز، S آبی) */
+      var mgMode = xs('mode', 'attract').toLowerCase();
+      if (mgMode !== 'repel' && mgMode !== 'repel_s') mgMode = 'attract';
+      var isAttr = mgMode === 'attract';
+      s += tx(180, 36, isAttr ? 'قطب‌های ناهم‌نام — جذب یکدیگر' : 'قطب‌های هم‌نام — دفع یکدیگر', ST, 'middle', true, 13.5);
+      var mgY = 142, mgH = 46;
+      var drawBarMag = function (mx0, leftPole, rightPole) {
+        var lCol = leftPole === 'N' ? '#e53935' : '#1e88e5', rCol = rightPole === 'N' ? '#e53935' : '#1e88e5';
+        s += rc(mx0, mgY - mgH / 2, 52, mgH, lCol, ST, 1.8, 4) + rc(mx0 + 52, mgY - mgH / 2, 52, mgH, rCol, ST, 1.8, 4);
+        s += tx(mx0 + 26, mgY + 6, leftPole, '#ffffff', 'middle', true, 16) + tx(mx0 + 78, mgY + 6, rightPole, '#ffffff', 'middle', true, 16);
+      };
       if (mgMode === 'attract') {
-        s += pfxArrow(mgL + 50, mgY, mgL + 78, mgY, '#1f8a78', 2, 8) + pfxArrow(mgR - 50, mgY, mgR - 78, mgY, '#1f8a78', 2, 8);
-        s += tx(180, mgY - 48, 'جذب', '#1f8a78', 'middle', true, 12);
+        drawBarMag(34, 'S', 'N');
+        drawBarMag(222, 'S', 'N');
+        s += pfxArrow(144, mgY, 174, mgY, '#1f8a78', 2.6, 8) + pfxArrow(216, mgY, 186, mgY, '#1f8a78', 2.6, 8);
+        s += tx(180, mgY - 36, 'جذب (N و S)', '#1f8a78', 'middle', true, 12.5);
+      } else if (mgMode === 'repel_s') {
+        drawBarMag(34, 'N', 'S');
+        drawBarMag(222, 'S', 'N');
+        s += pfxArrow(170, mgY, 142, mgY, PT, 2.6, 8) + pfxArrow(190, mgY, 218, mgY, PT, 2.6, 8);
+        s += tx(180, mgY - 36, 'دفع (S و S)', PT, 'middle', true, 12.5);
       } else {
-        s += pfxArrow(mgL + 78, mgY, mgL + 40, mgY, PT, 2, 8) + pfxArrow(mgR - 78, mgY, mgR - 40, mgY, PT, 2, 8);
-        s += tx(180, mgY - 48, 'دفع', PT, 'middle', true, 12);
+        drawBarMag(34, 'S', 'N');
+        drawBarMag(222, 'N', 'S');
+        s += pfxArrow(170, mgY, 142, mgY, PT, 2.6, 8) + pfxArrow(190, mgY, 218, mgY, PT, 2.6, 8);
+        s += tx(180, mgY - 36, 'دفع (N و N)', PT, 'middle', true, 12.5);
       }
-      s += tx(180, 232, 'قطب‌های هم‌نام یکدیگر را می‌رانند و ناهم‌نام‌ها جذب می‌شوند', MU, 'middle', false, 10);
+      s += tx(180, 236, 'قطب‌های هم‌نام همدیگر را دفع و قطب‌های ناهم‌نام همدیگر را جذب می‌کنند', MU, 'middle', false, 10.5);
       return wrap(s);
     }
 
     if (t === 'axsenses') {
-      /* حواس پنج‌گانه: پنج حس با اندام مربوط */
-      var snItems = [['بینایی', 'چشم'], ['شنوایی', 'گوش'], ['بویایی', 'بینی'], ['چشایی', 'زبان'], ['لامسه', 'پوست']];
-      s += pfxCls(180, 138, 34, 'rgba(108,99,245,.12)', ACC, 1.8);
-      s += tx(180, 144, 'حواس', ST, 'middle', true, 12);
-      var snPos = [[180, 62], [92, 112], [268, 112], [112, 188], [248, 188]];
-      var snLab = [[180, 26, 'middle'], [92, 152, 'middle'], [268, 152, 'middle'], [112, 224, 'middle'], [248, 224, 'middle']];
-      snItems.forEach(function (it2, si3) {
-        var p6 = snPos[si3], l6 = snLab[si3];
-        s += lnr(180, 138, p6[0], p6[1], '#b9c2d0', 1.3);
-        s += pfxCls(p6[0], p6[1], 22, 'rgba(108,99,245,.16)', ACC, 1.8);
-        s += tx(p6[0], p6[1] + 5, pFa(si3 + 1), ACC, 'middle', true, 12);
-        s += tx(l6[0], l6[1], it2[0] + ' — ' + it2[1], ST, l6[2], true, 10.5);
+      /* حواس پنج‌گانه: بدون عبور خط از روی متن + آیکن برداری واضح برای هر اندام */
+      var snCx = 180, snCy = 136, snR0 = 32;
+      var snNodes = [
+        [180, 52, 'بینایی', 'چشم', 180, 18],
+        [78, 102, 'شنوایی', 'گوش', 78, 142],
+        [282, 102, 'بویایی', 'بینی', 282, 142],
+        [106, 200, 'چشایی', 'زبان', 106, 240],
+        [254, 200, 'لامسه', 'پوست (دست)', 254, 240]
+      ];
+      snNodes.forEach(function (nd) {
+        var dx = nd[0] - snCx, dy = nd[1] - snCy, dist = Math.hypot(dx, dy) || 1;
+        s += lnr(snCx + dx / dist * snR0, snCy + dy / dist * snR0, nd[0] - dx / dist * 22, nd[1] - dy / dist * 22, '#94a3b8', 1.8);
       });
-      s += tx(180, 246, 'پنج حس بدن و اندام هر حس', MU, 'middle', false, 10);
+      s += pfxCls(snCx, snCy, snR0, '#eef2ff', ACC, 2.2);
+      s += tx(snCx, snCy - 2, 'حواس', ACC, 'middle', true, 12.5) + tx(snCx, snCy + 14, 'پنج‌گانه', ST, 'middle', true, 10.5);
+      snNodes.forEach(function (nd, idx) {
+        var nx = nd[0], ny = nd[1];
+        s += pfxCls(nx, ny, 22, '#ffffff', ACC, 1.9);
+        if (idx === 0) {
+          s += '<path d="M ' + f2(nx - 13) + ' ' + f2(ny) + ' Q ' + f2(nx) + ' ' + f2(ny - 10) + ' ' + f2(nx + 13) + ' ' + f2(ny) + ' Q ' + f2(nx) + ' ' + f2(ny + 10) + ' ' + f2(nx - 13) + ' ' + f2(ny) + ' Z" fill="#e0f2fe" stroke="' + ST + '" stroke-width="1.4"/>' + pfxCls(nx, ny, 4.2, '#1d4ed8', 'none', 0);
+        } else if (idx === 1) {
+          s += '<path d="M ' + f2(nx - 4) + ' ' + f2(ny - 10) + ' C ' + f2(nx + 10) + ' ' + f2(ny - 12) + ' ' + f2(nx + 10) + ' ' + f2(ny + 6) + ' ' + f2(nx) + ' ' + f2(ny + 11) + ' C ' + f2(nx - 5) + ' ' + f2(ny + 12) + ' ' + f2(nx - 6) + ' ' + f2(ny + 6) + ' ' + f2(nx - 2) + ' ' + f2(ny + 4) + '" fill="none" stroke="#b45309" stroke-width="2" stroke-linecap="round"/>';
+        } else if (idx === 2) {
+          s += '<path d="M ' + f2(nx) + ' ' + f2(ny - 10) + ' L ' + f2(nx - 8) + ' ' + f2(ny + 6) + ' Q ' + f2(nx) + ' ' + f2(ny + 11) + ' ' + f2(nx + 8) + ' ' + f2(ny + 6) + ' Z" fill="#fde68a" stroke="#92400e" stroke-width="1.4"/>';
+        } else if (idx === 3) {
+          s += '<path d="M ' + f2(nx - 11) + ' ' + f2(ny - 3) + ' H ' + f2(nx + 11) + '" stroke="' + ST + '" stroke-width="1.6"/>' +
+            '<path d="M ' + f2(nx - 7) + ' ' + f2(ny - 3) + ' V ' + f2(ny + 5) + ' A 7 7 0 0 0 ' + f2(nx + 7) + ' ' + f2(ny + 5) + ' V ' + f2(ny - 3) + ' Z" fill="#fda4af" stroke="#be123c" stroke-width="1.4"/>';
+        } else {
+          s += rc(nx - 7, ny - 1, 14, 11, '#fed7aa', '#9a3412', 1.3, 4);
+          [-5, -2, 1, 4, 7].forEach(function (ox, fi) { s += lnr(nx + ox, ny - 1, nx + ox, ny - (fi === 2 ? 11 : 9), '#9a3412', 2); });
+        }
+        s += rc(nd[4] - 44, nd[5] - 12, 88, 19, '#f8fafc', '#cbd5e1', 1, 6);
+        s += tx(nd[4], nd[5] + 2, nd[2] + ' (' + nd[3] + ')', ST, 'middle', true, 9.8);
+      });
+      s += tx(180, 268, 'پنج حس بدن انسان و اندام مربوط به هر حس', MU, 'middle', false, 10.5);
       return wrap(s);
     }
 
@@ -1511,18 +1759,32 @@
     }
 
     if (t === 'axwordtrain') {
-      var wtSyl = String(xs('syll', 'با,با,با')).split(/[,،]/).map(function (q4) { return q4.trim(); }).filter(Boolean).slice(0, 5);
-      if (!wtSyl.length) wtSyl = ['با', 'با', 'با'];
-      var wtWord = xs('word', 'بابا'), wtMode = xs('mode', 'join').toLowerCase(), wtX = 180 - (wtSyl.length * 74) / 2;
-      s += lnr(wtX - 20, 120, wtX + wtSyl.length * 74 + 6, 120, ST, 3);
+      /* قطار کلمه‌سازی فارسی (راست به چپ: لوکوموتیو در راست، واگن‌های هجا از راست به چپ) */
+      var wtSyl = String(xs('syll', 'مد,ر,سه')).split(/[,،-]/).map(function (q4) { return q4.trim(); }).filter(Boolean).slice(0, 5);
+      if (!wtSyl.length) wtSyl = ['مد', 'ر', 'سه'];
+      var wtWord = String(xs('word', '')).trim() || wtSyl.join('');
+      var wtMode = xs('mode', 'join').toLowerCase();
+      var wagN = wtSyl.length, locoW = 48, gap = 8;
+      var wagW = Math.min(60, (292 - locoW - wagN * gap) / wagN);
+      var totW = locoW + wagN * (wagW + gap), leftX = (360 - totW) / 2, locoX = leftX + totW - locoW, railY = 152;
+      s += lnr(18, railY, 342, railY, '#475569', 3);
+      for (var sl = 24; sl <= 336; sl += 20) s += lnr(sl, railY, sl - 4, railY + 6, '#64748b', 2);
+      /* دودکش و بدنهٔ لوکوموتیو */
+      s += pfxCls(locoX + 34, 58, 5, '#cbd5e1', 'none', 0) + pfxCls(locoX + 26, 48, 7, '#e2e8f0', 'none', 0);
+      s += rc(locoX + 28, 68, 10, 20, '#334155', ST, 1.5, 2);
+      s += rc(locoX, 88, locoW, 50, '#ef5350', ST, 1.8, 6) + rc(locoX + 5, 76, 22, 22, '#fee2e2', ST, 1.5, 4);
+      s += pfxPoly(f2(locoX + locoW) + ',124 ' + f2(locoX + locoW + 10) + ',138 ' + f2(locoX + locoW) + ',138', '#475569', ST, 1.2);
+      s += pfxCls(locoX + 13, 143, 8.5, '#334155', ST, 1.6) + pfxCls(locoX + 36, 143, 8.5, '#334155', ST, 1.6);
+      var wagCols = ['#ede9fe', '#e0f2fe', '#dcfce7', '#fef3c7', '#fce7f3'];
       wtSyl.forEach(function (sy, si) {
-        var sx2 = wtX + si * 74;
-        s += pfxPoly(f2(sx2) + ',92 ' + f2(sx2 + 62) + ',92 ' + f2(sx2 + 62) + ',142 ' + f2(sx2) + ',142', 'rgba(108,99,245,.16)', ST, 1.8);
-        s += pfxCls(sx2 + 12, 152, 7, '#ffffff', ST, 1.6) + pfxCls(sx2 + 50, 152, 7, '#ffffff', ST, 1.6);
-        s += tx(sx2 + 31, 128, sy, ST, 'middle', true, 16);
+        var wx = locoX - (si + 1) * (wagW + gap);
+        s += lnr(wx + wagW, 122, wx + wagW + gap, 122, ST, 3.2);
+        s += rc(wx, 90, wagW, 48, wagCols[si % wagCols.length], ST, 1.8, 7);
+        s += pfxCls(wx + wagW * 0.26, 143, 7.5, '#475569', ST, 1.5) + pfxCls(wx + wagW * 0.74, 143, 7.5, '#475569', ST, 1.5);
+        s += tx(wx + wagW / 2, 120, sy, ST, 'middle', true, wagW < 48 ? 14 : 16);
       });
-      s += rc(180 - 92, 186, 184, 44, wtMode === 'blank' ? '#fff8e1' : 'rgba(39,196,168,.18)', wtMode === 'blank' ? PT : GRN, 2, 8);
-      s += tx(180, 214, wtMode === 'blank' ? 'کلمهٔ ساخته‌شده: ؟' : 'کلمه: ' + wtWord, wtMode === 'blank' ? PT : '#00796b', 'middle', true, 15);
+      s += rc(76, 184, 208, 44, wtMode === 'blank' ? '#fff8e1' : 'rgba(39,196,168,.16)', wtMode === 'blank' ? PT : '#1f8a78', 2, 10);
+      s += tx(180, 212, wtMode === 'blank' ? 'کلمهٔ ساخته‌شده: ؟' : 'کلمهٔ ساخته‌شده: ' + wtWord, wtMode === 'blank' ? PT : '#0f766e', 'middle', true, 14.5);
       return wrap(s);
     }
     // ============================== V318 — بستهٔ جامع ابزارهای آموزشی (۲) متوسطهٔ اول
@@ -4898,7 +5160,6 @@
       axpattern: '<rect x="3" y="10" width="8" height="10" rx="2" fill="none" stroke="currentColor" stroke-width="1.4"/><rect x="14" y="10" width="8" height="10" rx="2" fill="none" stroke="currentColor" stroke-width="1.4"/><rect x="25" y="10" width="8" height="10" rx="2" fill="none" stroke="currentColor" stroke-width="1.4"/>',
       axtenframe: '<rect x="3" y="7" width="30" height="16" rx="2" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M3,15 H33 M9,7 V23 M15,7 V23 M21,7 V23 M27,7 V23" stroke="currentColor" stroke-width="1"/><circle cx="6" cy="11" r="2" fill="currentColor"/><circle cx="12" cy="11" r="2" fill="currentColor"/>',
       axsym: '<path d="M18,3 V27" stroke="currentColor" stroke-width="1.8" stroke-dasharray="2 2"/><rect x="8" y="8" width="8" height="14" fill="currentColor" opacity=".4"/><rect x="20" y="8" width="8" height="14" fill="none" stroke="currentColor" stroke-width="1.4"/>',
-      axspin: '<circle cx="18" cy="15" r="11" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M18,4 V26 M7,15 H29" stroke="currentColor" stroke-width="1"/><path d="M18,15 L25,9" stroke="currentColor" stroke-width="2.2"/>',
       axbeaker: '<path d="M9,5 H11 V25 H25 V5 H27" fill="none" stroke="currentColor" stroke-width="1.6"/><rect x="11" y="13" width="14" height="12" fill="currentColor" opacity=".35"/>',
       axgeoboard: '<rect x="5" y="5" width="26" height="20" rx="2" fill="none" stroke="currentColor" stroke-width="1.4"/><polygon points="10,9 26,9 22,21 10,21" fill="currentColor" opacity=".25" stroke="currentColor" stroke-width="1.4"/>',
       axdice: '<rect x="4" y="7" width="12" height="14" rx="2" fill="none" stroke="currentColor" stroke-width="1.5"/><rect x="20" y="7" width="12" height="14" rx="2" fill="none" stroke="currentColor" stroke-width="1.5"/><circle cx="10" cy="14" r="1.6" fill="currentColor"/><circle cx="24" cy="11" r="1.4" fill="currentColor"/><circle cx="28" cy="17" r="1.4" fill="currentColor"/>',
@@ -4924,8 +5185,6 @@
       axsyllablechart: '<rect x="3" y="10" width="12" height="9" rx="2" fill="none" stroke="currentColor" stroke-width="1.4"/><rect x="18" y="10" width="12" height="9" rx="2" fill="none" stroke="currentColor" stroke-width="1.4"/><circle cx="9" cy="25" r="2" fill="currentColor"/><circle cx="24" cy="25" r="2" fill="currentColor"/>',
       axmagnet: '<path d="M8,6 v12 a8,8 0 0 0 16,0 V6" fill="none" stroke="currentColor" stroke-width="3"/><path d="M8,6 h5 M23,6 h5" stroke="currentColor" stroke-width="3"/>',
       axsenses: '<circle cx="18" cy="15" r="8" fill="none" stroke="currentColor" stroke-width="1.6"/><circle cx="15" cy="13" r="1.4" fill="currentColor"/><circle cx="21" cy="13" r="1.4" fill="currentColor"/><path d="M15,19 q3,2 6,0" fill="none" stroke="currentColor" stroke-width="1.3"/>',
-      axseedgrow: '<path d="M18,26 V14" stroke="currentColor" stroke-width="2"/><path d="M18,18 q-9,-2 -10,-9 q9,0 10,9" fill="currentColor" opacity=".55"/><path d="M18,15 q9,-3 10,-10 q-9,1 -10,10" fill="currentColor" opacity=".35"/><path d="M8,26 h20" stroke="currentColor" stroke-width="2"/>',
-      axbodyparts: '<circle cx="18" cy="7" r="4" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M18,11 V21 M18,14 L11,18 M18,14 L25,18 M18,21 L13,28 M18,21 L23,28" stroke="currentColor" stroke-width="1.6"/>',
       axwordtrain: '<rect x="3" y="10" width="12" height="10" rx="2" fill="none" stroke="currentColor" stroke-width="1.4"/><rect x="17" y="10" width="12" height="10" rx="2" fill="none" stroke="currentColor" stroke-width="1.4"/><circle cx="8" cy="23" r="2" fill="currentColor"/><circle cx="24" cy="23" r="2" fill="currentColor"/>',
       axtiles: '<rect x="3" y="4" width="16" height="16" rx="2" fill="none" stroke="currentColor" stroke-width="1.4"/><rect x="21" y="4" width="12" height="5" fill="currentColor" opacity=".6"/><rect x="21" y="12" width="5" height="5" fill="currentColor" opacity=".4"/><rect x="28" y="12" width="5" height="5" fill="currentColor" opacity=".4"/>',
       axkenken: '<rect x="4" y="4" width="28" height="24" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M4,12 H22 M4,20 H22 M12,4 V28 M22,4 V28 M22,12 H32" stroke="currentColor" stroke-width="1.6"/>',
@@ -5023,51 +5282,56 @@
       axtime: [['labs', 'زمان‌ها (با ویرگول)'], ['s1', 'نام محور']],
       axpolpts: [['xmax', 'تعداد حلقه'], ['pts', 'نقطه‌ها (r,θ;r,θ)'], ['labs', 'نام نقطه‌ها']],
       ax3dpt: [['xmax', 'تعداد تیک'], ['step', 'گام'], ['x1', 'x نقطه'], ['y1', 'y نقطه'], ['z1', 'z نقطه'], ['labs', 'نام نقطه']],
-      // V304 — ابزار ریاضی ابتدایی (عیناً FigurePickerDialog.kt)
+      // V304 / V335.8 — ابزار ریاضی ابتدایی (عیناً FigurePickerDialog.kt)
       axtally: [['n', 'تعداد (۰ تا ۷۵)'], ['label', 'نمایش تعداد زیر شکل']],
-      axbase10: [['n', 'عدد (۰ تا ۱٬۰۰۰٬۰۰۰)'], ['label', 'نمایش عدد زیر شکل']],
+      axbase10: [['n', 'عدد (۰ تا ۹۹۹٬۹۹۹٬۹۹۹)'], ['label', 'نمایش عدد زیر شکل']],
       axplace: [['n', 'ردیف ۱ (عدد)'], ['n2', 'ردیف ۲ (خالی = ندارد)'], ['op2', 'علامت ردیف ۲ (+ یا −)'], ['n3', 'ردیف ۳ (خالی = ندارد)'], ['op3', 'علامت ردیف ۳ (+ یا −)'], ['rows', 'تعداد ردیف‌ها (۱ تا ۶)'], ['blank', 'خانه‌ها خالی؟ (۱=بله)']],
       axclock: [['h', 'ساعت (۰ تا ۱۲)'], ['m', 'دقیقه (۰ تا ۵۹)'], ['nums', 'نمایش عددها (۱/۰)'], ['label', 'نوشتن ساعت زیر شکل (۱/۰)']],
       axruler: [['len', 'طول خط‌کش (۲ تا ۵۰ سانتی‌متر)'], ['a', 'ابتدای اندازه‌گیری (اختیاری)'], ['b', 'انتهای اندازه‌گیری (اختیاری)'], ['label', 'نمایش طول بازه']],
-      axfrac: [['num', 'صورت'], ['den', 'مخرج'], ['shape', 'شکل'], ['label', 'نوشتن کسر زیر شکل (۱/۰)']],
+      axfrac: [['num', 'صورت'], ['den', 'مخرج (۱ تا ۲۵)'], ['shape', 'شکل'], ['label', 'نوشتن کسر زیر شکل (۱/۰)']],
       axmoney: [['notes', 'اسکناس‌ها (با ویرگول)'], ['coins', 'سکه‌ها (با ویرگول)'], ['unit', 'واحد'], ['sum', 'نوشتن جمع (۱/۰)']],
       axabacus: [['n', 'عدد (۰ تا ۹۹۹٬۹۹۹)'], ['cols', 'تعداد ستون‌ها (۲ تا ۶)'], ['blank', 'مخفی کردن ارقام زیر چرتکه (۱=بله)']],
-      axjump: [['start', 'نقطهٔ شروع'], ['step', 'طول هر پرش'], ['jumps', 'تعداد پرش'], ['max', 'انتهای محور'], ['label', 'نمایش عبارت جمع/ضرب (۱/۰)']],
+      axjump: [['op', 'نوع عملیات روی محور'], ['start', 'نقطهٔ شروع'], ['step', 'طول هر پرش'], ['jumps', 'تعداد پرش'], ['max', 'انتهای محور'], ['label', 'نمایش عبارت ریاضی']],
       axbalance: [['left', 'وزنهٔ کفهٔ چپ'], ['right', 'وزنهٔ کفهٔ راست'], ['unit', 'واحد جرم'], ['label', 'نمایش علامت مقایسه']],
       axthermo: [['val', 'دما (°C)'], ['min', 'کمینهٔ دما'], ['max', 'بیشینهٔ دما']],
-      axsaw: [['size', 'اندازهٔ جدول (۳×۳ تا ۹×۹)'], ['mode', 'نمایش (رنگ / شکل / عدد)'], ['vals', 'سطرها با ; و خانه‌ها با , (جای خالی = ?)']],
-      axpattern: [['seq', 'دنباله با ویرگول (مثلاً ●,▲,●,▲,?)'], ['mode', 'نوع نمایش الگو (شکل / رنگ / مهره)']],
+      axsaw: [['size', 'اندازهٔ جدول (۳×۳ تا ۹×۹)'], ['mode', 'نمایش (رنگ / شکل / عدد)']],
+      axpattern: [['mode', 'نوع نمایش الگو'], ['seq', 'الگوی آماده']],
       axtenframe: [['a', 'مهره‌های قرمز'], ['b', 'مهره‌های آبی'], ['frames', 'تعداد قاب (۱ یا ۲)'], ['label', 'نمایش عبارت جمع']],
-      axsym: [['cells', 'خانه‌ها (ردیف,ستون با ;)'], ['axis', 'خط تقارن (v عمودی / h افقی)'], ['mirror', 'نمایش قرینه (۱=بله، ۰=؟)']],
-      axspin: [['parts', 'بخش‌های چرخنده (با کاما)'], ['arrow', 'شمارهٔ بخش عقربه']],
-      axbeaker: [['val', 'حجم مایع'], ['max', 'ظرفیت کل'], ['unit', 'واحد (mL یا لیتر)']],
+      axsym: [['axis', 'خط تقارن'], ['mirror', 'نمایش قرینه']],
+      axbeaker: (function () {
+        var bc = clamp(Math.floor(num((state && state.X && state.X.count) || 1, 1)), 1, 4);
+        var arr = [['count', 'تعداد استوانه‌های مدرج'], ['val', bc > 1 ? 'حجم استوانهٔ ۱' : 'حجم مایع']];
+        if (bc >= 2) arr.push(['val2', 'حجم استوانهٔ ۲']);
+        if (bc >= 3) arr.push(['val3', 'حجم استوانهٔ ۳']);
+        if (bc >= 4) arr.push(['val4', 'حجم استوانهٔ ۴']);
+        arr.push(['max', 'ظرفیت کل هر استوانه'], ['unit', 'واحد (mL یا لیتر)']);
+        return arr;
+      })(),
       axgeoboard: [['pts', 'مختصات میخ‌ها (x,y با ;)'], ['grid', 'اندازهٔ شبکه (۳ تا ۷)']],
       axdice: [['dice', 'اعداد تاس‌ها (با کاما)'], ['sum', 'نمایش جمع (۱=جمع، ۲=؟، ۰=خیر)']],
       axmularea: [['a', 'عدد اول (افقی)'], ['b', 'عدد دوم (عمودی)'], ['blank', 'مخفی کردن حاصل‌ها (۰ یا ۱)']],
       axvenn: [['left', 'دایرهٔ چپ'], ['right', 'دایرهٔ راست'], ['mid', 'بخش مشترک (وسط)']],
       axnumgrid: [['start', 'عدد شروع'], ['cols', 'تعداد ستون'], ['rows', 'تعداد سطر'], ['rule', 'رنگ‌آمیزی مضرب/الگو'], ['blanks', 'خانه‌های جای خالی (با ویرگول)']],
       axfacttree: [['n', 'عدد مورد تجزیه (۴ تا ۹۹۹)'], ['blank', 'حالت جای خالی (؟)']],
-      axfnmachine: [['in', 'ورودی‌ها (با ویرگول)'], ['op1', 'عملگر مرحلهٔ اول'], ['op2', 'عملگر مرحلهٔ دوم (اختیاری)'], ['blank', 'حالت جای خالی (؟)']],
+      axfnmachine: [['in', 'ورودی‌ها با ویرگول (تا ۸ عدد)'], ['op1', 'عملگر مرحلهٔ اول'], ['op2', 'عملگر مرحلهٔ دوم (اختیاری)'], ['blank', 'حالت جای خالی (؟)']],
       axfracwall: [['dens', 'مخرج ردیف‌ها (با ویرگول)'], ['fills', 'تعداد رنگ‌شدهٔ هر ردیف'], ['mode', 'نحوهٔ نمایش کسرها']],
       axtangram: [['shape', 'طرح تانگرام (۷ تکه)'], ['mode', 'حالت نمایش قطعات']],
       axangle: [['deg', 'زاویه (۰ تا ۱۸۰ درجه)'], ['pro', 'نمایش نقاله'], ['label', 'نمایش اندازهٔ زاویه']],
       axrod: [['nums', 'میله‌ها (۱ تا ۱۰ با ویرگول)'], ['blank', 'جای خالی (؟)']],
-      axtower: [['base', 'آجرهای ردیف پایین'], ['op', 'عمل (+ یا −)'], ['blank', 'جای خالی (؟)']],
-      axmulwheel: [['c', 'عدد مرکز'], ['n', 'تعداد پره (۳ تا ۱۲)'], ['op', 'عمل (× یا +)'], ['hide', 'جای خالی (؟)']],
-      axmultgrid: [['rows', 'عددهای سطر'], ['cols', 'عددهای ستون'], ['blank', 'جای خالی (۰ کامل / ۱ خانه‌ها / ۲ سرستون‌ها)']],
+      axtower: [['base', 'آجرهای ردیف پایین'], ['op', 'عمل (+ یا −)'], ['blank', 'جای خالی خودکار']],
+      axmulwheel: [['c', 'عدد مرکز'], ['n', 'تعداد پره (۳ تا ۱۲)'], ['op', 'عمل (× یا +)'], ['hide', 'جای خالی خودکار']],
+      axmultgrid: [['rows', 'عددهای سطر'], ['cols', 'عددهای ستون'], ['blank', 'جای خالی خودکار']],
       axnet: [['shape', 'نوع حجم'], ['mode', 'حالت نمایش']],
-      axcubes: [['map', 'ارتفاع ستون‌ها (سطرها با ;)'], ['view', 'نما'], ['hide', 'مخفی کردن تعداد (؟)']],
-      axcalendar: [['month', 'نام ماه'], ['start', 'روز شروع (۰ = شنبه)'], ['days', 'تعداد روزها'], ['mark', 'روزهای نشان‌دار (با ویرگول)'], ['blank', 'جای خالی (؟)']],
+      axcubes: [['view', 'نما'], ['hide', 'نمایش تعداد کل مکعب‌ها']],
+      axcalendar: [['month', 'نام ماه'], ['start', 'روز شروع هفته'], ['days', 'تعداد روزها'], ['mark', 'روزهای نشان‌دار (با ویرگول)'], ['blank', 'جای خالی خودکار']],
       axlever: [['kind', 'نوع ماشین'], ['load', 'نیروی بار (N)'], ['effort', 'نیروی محرک (N)'], ['l1', 'بازوی بار'], ['l2', 'بازوی نیرو']],
       axcycle: [['kind', 'نوع چرخه']],
-      axwordtrain: [['syll', 'هجاها (با ویرگول)'], ['word', 'کلمهٔ ساخته‌شده'], ['mode', 'حالت']],
-      axpaintgrid: [['rows', 'تعداد سطر'], ['cols', 'تعداد ستون'], ['goal', 'چند خانه رنگ شود'], ['cells', 'خانه‌های رنگ‌شدهٔ نمونه (سطر,ستون)']],
+      axwordtrain: [['syll', 'هجاهای واگن‌ها (با ویرگول)'], ['word', 'کلمهٔ ساخته‌شده'], ['mode', 'حالت نمایش']],
+      axpaintgrid: [['rows', 'تعداد سطر'], ['cols', 'تعداد ستون'], ['goal', 'تعداد خانه‌های هدف (۰ = آزاد)']],
       axletterforms: [['ch', 'حرف']],
-      axsyllablechart: [['word', 'کلمه با هجاها (با - جدا کنید)']],
-      axmagnet: [['mode', 'حالت (attract/repel)']],
+      axsyllablechart: [['word', 'کلمه'], ['mode', 'نحوهٔ نمایش در سؤال']],
+      axmagnet: [['mode', 'حالت قطب‌های آهنربا']],
       axsenses: [],
-      axseedgrow: [],
-      axbodyparts: [],
       axtiles: [['x2', 'تعداد کاشی x²'], ['x', 'تعداد کاشی x'], ['k', 'تعداد کاشی ۱'], ['neg', 'منفی (۱/۰)']],
       axkenken: [['size', 'ابعاد جدول (۳ تا ۶)'], ['cages', 'قفس‌ها (خانه‌ها|هدف|عمل با ;)']],
       axdicefold: [['mode', 'نمایش وجه‌ها'], ['top', 'شمارهٔ وجه بالا'], ['ask', 'پرسش وجه مقابل (۱/۰)']],
@@ -5307,14 +5571,124 @@
     if (clockDrag === 'hour') state.X.h = String(Math.round(deg / 30) % 12);
     else state.X.m = String(Math.round(deg / 6) % 60);
   }
-  // V310.7 / V314.0 / V315.1 / V315.2 — همهٔ ابزارهای ریاضی/علوم ابتدایی و محورها و نمودار عقربه‌ای با ماوس و لمس در پیش‌نمایش قابل تنظیم‌اند
+  function gfCellPopClose() {
+    var old = document.getElementById('gfCellPop');
+    if (old && old.parentNode) old.parentNode.removeChild(old);
+  }
+  function openGfCellPopup(cfg) {
+    gfCellPopClose();
+    var bd = document.createElement('div');
+    bd.id = 'gfCellPop';
+    bd.className = 'gf-cell-pop-bd';
+    var card = document.createElement('div');
+    card.className = 'gf-cell-pop';
+    card.setAttribute('dir', 'rtl');
+    var h = '<div class="gf-cp-hd"><b>' + esc(cfg.title || 'تنظیم خانه') + '</b><button type="button" class="gf-cp-x" data-act="close">×</button></div>';
+    if (cfg.sub) h += '<div class="gf-cp-sub">' + esc(cfg.sub) + '</div>';
+    if (cfg.chips && cfg.chips.length) {
+      h += '<div class="gf-cp-chips">' + cfg.chips.map(function (ch) {
+        var on = String(cfg.current || '') === String(ch[0]) ? ' on' : '';
+        var st = ch[2] ? ' style="' + ch[2] + '"' : '';
+        return '<button type="button" class="gf-cp-chip' + on + '" data-v="' + esc(ch[0]) + '"' + st + '>' + esc(ch[1]) + '</button>';
+      }).join('') + '</div>';
+    }
+    if (cfg.allowCustom) {
+      h += '<div class="gf-cp-row"><input type="text" class="gf-cp-inp" placeholder="' + esc(cfg.placeholder || 'عدد یا متن دلخواه') + '" value="' + esc(cfg.inputVal == null ? '' : cfg.inputVal) + '">' +
+        '<button type="button" class="gf-btn ok gf-cp-save">ثبت مقدار</button></div>';
+    }
+    h += '<div class="gf-cp-acts">';
+    if (cfg.onEmpty) h += '<button type="button" class="gf-cp-act emp" data-act="empty">' + esc(cfg.emptyLabel || 'خانهٔ خالی (بدون علامت سؤال)') + '</button>';
+    if (cfg.onQuestion) h += '<button type="button" class="gf-cp-act qst" data-act="question">علامت سؤال (؟)</button>';
+    if (cfg.onReset) h += '<button type="button" class="gf-cp-act rst" data-act="reset">برگشت به مقدار پیش‌فرض</button>';
+    h += '</div>';
+    card.innerHTML = h;
+    bd.appendChild(card);
+    document.body.appendChild(bd);
+    bd.addEventListener('click', function (ev) { if (ev.target === bd) gfCellPopClose(); });
+    card.querySelectorAll('[data-act="close"]').forEach(function (b) { b.onclick = gfCellPopClose; });
+    card.querySelectorAll('.gf-cp-chip').forEach(function (b) {
+      b.onclick = function () { cfg.onPick(b.getAttribute('data-v')); gfCellPopClose(); };
+    });
+    var inp = card.querySelector('.gf-cp-inp');
+    var saveBtn = card.querySelector('.gf-cp-save');
+    if (inp && saveBtn) {
+      var commit = function () {
+        var v = inp.value.trim();
+        if (v === '' && cfg.onEmpty) cfg.onEmpty();
+        else if (cfg.onPick) cfg.onPick(v);
+        gfCellPopClose();
+      };
+      saveBtn.onclick = commit;
+      inp.addEventListener('keydown', function (ev) { if (ev.key === 'Enter') { ev.preventDefault(); commit(); } });
+      setTimeout(function () { try { inp.focus(); inp.select(); } catch (_e) {} }, 20);
+    }
+    var empB = card.querySelector('[data-act="empty"]');
+    if (empB && cfg.onEmpty) empB.onclick = function () { cfg.onEmpty(); gfCellPopClose(); };
+    var qstB = card.querySelector('[data-act="question"]');
+    if (qstB && cfg.onQuestion) qstB.onclick = function () { cfg.onQuestion(); gfCellPopClose(); };
+    var rstB = card.querySelector('[data-act="reset"]');
+    if (rstB && cfg.onReset) rstB.onclick = function () { cfg.onReset(); gfCellPopClose(); };
+  }
+  function gfParseMap(raw) {
+    var m = {};
+    String(raw == null ? '' : raw).split(/[;؛]/).forEach(function (tk) {
+      var i2 = tk.indexOf(':');
+      if (i2 > 0) { var k0 = faEn(tk.slice(0, i2).trim()), v0 = tk.slice(i2 + 1).trim(); if (k0) m[k0] = v0; }
+    });
+    return m;
+  }
+  function gfEncodeMap(m) {
+    return Object.keys(m).filter(function (k0) { return m[k0] != null && String(m[k0]) !== ''; }).map(function (k0) { return k0 + ':' + m[k0]; }).join(';');
+  }
+  function gfParseEmpty(raw) {
+    var m = {};
+    String(raw == null ? '' : raw).split(/[,،;؛\s]+/).forEach(function (tk) { var k0 = faEn(tk.trim()); if (k0) m[k0] = 1; });
+    return m;
+  }
+  function gfEncodeEmpty(m) {
+    return Object.keys(m).filter(function (k0) { return !!m[k0]; }).join(',');
+  }
+  function gfOpenKeyedCellEditor(cellKey, cellLabel, defaultVal) {
+    var ovMap = gfParseMap(state.X.ov), empSet = gfParseEmpty(state.X.empty);
+    var isEmp = !!empSet[cellKey], curVal = isEmp ? '' : (ovMap[cellKey] != null ? ovMap[cellKey] : String(defaultVal));
+    openGfCellPopup({
+      title: 'تنظیم ' + cellLabel,
+      sub: 'مقدار دلخواه بنویسید یا این خانه را برای پاسخ دانش‌آموز کاملاً خالی (بدون علامت سؤال) بگذارید.',
+      allowCustom: true,
+      placeholder: 'مقدار خانه (مثلاً ' + defaultVal + ')',
+      inputVal: curVal,
+      onPick: function (v) {
+        delete empSet[cellKey];
+        ovMap[cellKey] = faEn(String(v).trim());
+        state.X.empty = gfEncodeEmpty(empSet);
+        state.X.ov = gfEncodeMap(ovMap);
+        paint(); renderFields();
+      },
+      onEmpty: function () {
+        delete ovMap[cellKey];
+        empSet[cellKey] = 1;
+        state.X.empty = gfEncodeEmpty(empSet);
+        state.X.ov = gfEncodeMap(ovMap);
+        paint(); renderFields();
+      },
+      onReset: function () {
+        delete ovMap[cellKey];
+        delete empSet[cellKey];
+        state.X.empty = gfEncodeEmpty(empSet);
+        state.X.ov = gfEncodeMap(ovMap);
+        paint(); renderFields();
+      }
+    });
+  }
+  // V310.7 / V314.0 / V315.1 / V315.2 / V335.8 — همهٔ ابزارهای ریاضی/علوم ابتدایی و محورها با ماوس و لمس در پیش‌نمایش قابل تنظیم‌اند
   function bindClock(box) {
     var INTERACTIVE_PRIMARY = {
-      axclock: 1, axfrac: 1, axabacus: 1, axthermo: 1, axtenframe: 1, axspin: 1, axbeaker: 1,
+      axclock: 1, axfrac: 1, axabacus: 1, axthermo: 1, axtenframe: 1, axbeaker: 1,
       axtally: 1, axbase10: 1, axplace: 1, axruler: 1, axmoney: 1, axjump: 1, axbalance: 1,
       axsaw: 1, axpattern: 1, axsym: 1, axgeoboard: 1, axdice: 1, axmularea: 1, axvenn: 1,
       axnumgrid: 1, axfacttree: 1, axfnmachine: 1, axfracwall: 1, axtangram: 1, axangle: 1,
-      axrod: 1, axtower: 1, axmulwheel: 1, axmultgrid: 1, axnet: 1, axcubes: 1, axcalendar: 1, axlever: 1, axcycle: 1, axwordtrain: 1, axtiles: 1, axkenken: 1, axdicefold: 1, axtransform: 1, axcaliper: 1, axsigntable: 1, axtrigcircle: 1, axmapping: 1, axprobtree: 1, axconic: 1, axorbital: 1, axpunnett: 1, axecg: 1, axprosody: 1, axtruthtable: 1, axledger: 1, axstaff: 1, axkmap: 1, axgate: 1, axdfa: 1, axbst: 1, axbode: 1, axbeam: 1, axmohr: 1, axpv: 1, axpert: 1, axbenzene: 1, axnormal: 1, axsupply: 1, axgame: 1,
+      axrod: 1, axtower: 1, axmulwheel: 1, axmultgrid: 1, axnet: 1, axcubes: 1, axcalendar: 1, axlever: 1, axcycle: 1, axwordtrain: 1, axpaintgrid: 1, axmagnet: 1,
+      axtiles: 1, axkenken: 1, axdicefold: 1, axtransform: 1, axcaliper: 1, axsigntable: 1, axtrigcircle: 1, axmapping: 1, axprobtree: 1, axconic: 1, axorbital: 1, axpunnett: 1, axecg: 1, axprosody: 1, axtruthtable: 1, axledger: 1, axstaff: 1, axkmap: 1, axgate: 1, axdfa: 1, axbst: 1, axbode: 1, axbeam: 1, axmohr: 1, axpv: 1, axpert: 1, axbenzene: 1, axnormal: 1, axsupply: 1, axgame: 1,
       // V319
       axunitconv: 1, axperimeter: 1, axpictograph: 1, axrounding: 1, axdivision: 1, axshapeid: 1, axcircleparts: 1, axcylinder: 1, axproportion: 1, axlinear: 1, axbarchart: 1, axparabola: 1, axinthales: 1, axpendulum: 1, axincline: 1, axcircuit: 1, axoptics: 1, axheatcurve: 1, axdna: 1, axcell: 1, axtimeline: 1, axmapgeo: 1, axsentence: 1, axvectors: 1, axmatrix: 1, axintegral: 1, axflowchart: 1, axstack: 1, axsort: 1, axregression: 1,
       axnumpts: 1, axnumint: 1, axnumineq: 1, axxypts: 1, axxyline: 1, axxyvec: 1, axxycirc: 1, axpolpts: 1,
@@ -5335,23 +5709,6 @@
         var a = Math.max(0, Math.min(cap, Math.floor(num(state.X.a, 7)))), b = Math.max(0, Math.min(cap - a, Math.floor(num(state.X.b, 5))));
         if (p.x <= 180) state.X.a = String((a + 1) % (cap - b + 1));
         else state.X.b = String((b + 1) % (cap - a + 1));
-        paint(); renderFields();
-      };
-      box.onpointermove = box.onpointerup = box.onpointercancel = null;
-      return;
-    }
-    if (state.t === 'axspin') {
-      box.onpointerdown = function (e) {
-        var p = clockPoint(box, e);
-        var sp = String(state.X.parts || 'قرمز,آبی,سبز,زرد,قرمز,آبی').split(/[,،]/).map(function (x) { return x.trim(); }).filter(Boolean);
-        var n = Math.max(2, sp.length);
-        if (p) {
-          var deg = (Math.atan2(p.y - 142, p.x - 180) * 180 / Math.PI + 90 + 360) % 360;
-          state.X.arrow = String(Math.min(n, Math.max(1, Math.floor(deg / (360 / n)) + 1)));
-        } else {
-          var cur = Math.max(1, Math.min(n, Math.floor(num(state.X.arrow, 1))));
-          state.X.arrow = String((cur % n) + 1);
-        }
         paint(); renderFields();
       };
       box.onpointermove = box.onpointerup = box.onpointercancel = null;
@@ -5460,9 +5817,14 @@
       var setBeaker = function (e) {
         var p = clockPoint(box, e); if (!p) return;
         var mx = Math.max(10, num(state.X.max, 500));
-        var ratio = Math.max(0, Math.min(1, (216 - p.y) / (216 - 36)));
+        var cnt = Math.max(1, Math.min(4, Math.floor(num(state.X.count, 1))));
+        var bot = cnt === 1 ? 216 : 208, topY = cnt === 1 ? 36 : 38;
+        var ratio = Math.max(0, Math.min(1, (bot - p.y) / (bot - topY)));
         var step = mx >= 100 ? 10 : 1;
-        state.X.val = String(Math.min(mx, Math.max(0, Math.round((ratio * mx) / step) * step)));
+        var vNew = String(Math.min(mx, Math.max(0, Math.round((ratio * mx) / step) * step)));
+        var bIdx = cnt === 1 ? 0 : Math.max(0, Math.min(cnt - 1, Math.floor((p.x - 12) / (336 / cnt))));
+        var bKey = bIdx === 0 ? 'val' : ('val' + (bIdx + 1));
+        state.X[bKey] = vNew;
       };
       box.onpointerdown = function (e) { clockDrag = 'beaker'; setBeaker(e); paint(); try { box.setPointerCapture(e.pointerId); } catch (_c) {} };
       box.onpointermove = function (e) { if (!clockDrag) return; setBeaker(e); paint(); };
@@ -5495,7 +5857,8 @@
     if (state.t === 'axbase10') {
       box.onpointerdown = function (e) {
         var p = clockPoint(box, e); if (!p) return;
-        var cur = Math.max(0, Math.min(999999999, Math.floor(num(state.X.n, 134))));
+        var rawClean = faEn(String(state.X.n == null ? '134' : state.X.n)).replace(/\D/g, '');
+        var cur = Math.max(0, Math.min(999999999, rawClean ? parseInt(rawClean.slice(0, 9), 10) : 134));
         if (p.y >= 340) {
           var lb = String(state.X.label || '1');
           state.X.label = lb === '1' ? '2' : (lb === '2' ? '0' : '1');
@@ -5581,6 +5944,7 @@
         var sleg = mode === 'color' || mode === 'color_shape';
         var maxG = sleg ? 196 : 216, cs = Math.min(52, maxG / n2), gw2 = cs * n2;
         var x0 = (360 - gw2) / 2, y0 = (sleg ? 24 : 28) + (maxG - gw2) / 2;
+        if (p.x < x0 || p.x > x0 + gw2 || p.y < y0 || p.y > y0 + gw2) return;
         var c = Math.max(0, Math.min(n2 - 1, Math.floor((p.x - x0) / cs)));
         var r = Math.max(0, Math.min(n2 - 1, Math.floor((p.y - y0) / cs)));
         var grid = [], ri, ci;
@@ -5593,13 +5957,34 @@
           }
           grid.push(rowArr);
         }
-        var cyc = [];
-        for (var k2 = 1; k2 <= n2; k2++) cyc.push(String(k2));
-        cyc.push('?');
-        grid[r][c] = cyc[(cyc.indexOf(grid[r][c]) + 1) % cyc.length];
-        state.X.size = String(n2);
-        state.X.vals = grid.map(function (row) { return row.join(','); }).join(';');
-        paint(); renderFields();
+        var sawPalMeta = [
+          ['1', '●', '#e53935', 'قرمز'], ['2', '▲', '#1e88e5', 'آبی'], ['3', '■', '#43a047', 'سبز'],
+          ['4', '★', '#fbc02d', 'زرد'], ['5', '◆', '#8e24aa', 'بنفش'], ['6', '♥', '#fb8c00', 'نارنجی'],
+          ['7', '⬢', '#00acc1', 'فیروزه‌ای'], ['8', '✿', '#ec407a', 'صورتی'], ['9', '▼', '#6d4c41', 'قهوه‌ای']
+        ];
+        var chips = [];
+        for (var k2 = 0; k2 < n2; k2++) {
+          var pm = sawPalMeta[k2];
+          var lbl = mode === 'num' ? pm[0] : mode === 'color' ? pm[3] : mode === 'color_shape' ? (pm[1] + ' ' + pm[3]) : (pm[1] + ' (' + pm[0] + ')');
+          var st = (mode === 'color' || mode === 'color_shape') ? ('border-color:' + pm[2] + ';color:' + pm[2]) : '';
+          chips.push([pm[0], lbl, st]);
+        }
+        var setCell = function (val) {
+          grid[r][c] = val;
+          state.X.size = String(n2);
+          state.X.vals = grid.map(function (row) { return row.join(','); }).join(';');
+          paint(); renderFields();
+        };
+        openGfCellPopup({
+          title: 'مقدار خانه (سطر ' + (r + 1) + '، ستون ' + (c + 1) + ')',
+          sub: 'یکی از گزینه‌های زیر را برای این خانه انتخاب کنید:',
+          chips: chips,
+          current: grid[r][c],
+          onPick: setCell,
+          onQuestion: function () { setCell('?'); },
+          onEmpty: function () { setCell('_'); },
+          emptyLabel: 'خانهٔ خالی (بدون ؟)'
+        });
       };
       box.onpointermove = box.onpointerup = box.onpointercancel = null;
       return;
@@ -5611,12 +5996,30 @@
         if (!items.length) return;
         var n = items.length, cw = Math.min(42, 300 / n), gap = n <= 8 ? 6 : 4;
         var x0 = (360 - (n * cw + (n - 1) * gap)) / 2;
+        if (p.x < x0 - 8 || p.x > x0 + n * (cw + gap) || p.y < 92 || p.y > 190) return;
         var idx = Math.max(0, Math.min(n - 1, Math.floor((p.x - x0) / (cw + gap))));
         var mode = String(state.X.mode || 'shape').toLowerCase();
-        var cyc = (mode === 'color' || mode === 'bead') ? ['قرمز', 'آبی', 'سبز', 'زرد', 'بنفش', '?'] : ['●', '▲', '■', '★', '?'];
-        items[idx] = cyc[(cyc.indexOf(items[idx]) + 1) % cyc.length];
-        state.X.seq = items.join(',');
-        paint(); renderFields();
+        var chips = (mode === 'color' || mode === 'bead')
+          ? [['قرمز', '🔴 قرمز'], ['آبی', '🔵 آبی'], ['سبز', '🟢 سبز'], ['زرد', '🟡 زرد'], ['بنفش', '🟣 بنفش'], ['نارنجی', '🟠 نارنجی']]
+          : (mode === 'number' || mode === 'growing')
+            ? [['1', '1'], ['2', '2'], ['3', '3'], ['4', '4'], ['5', '5'], ['6', '6'], ['8', '8'], ['10', '10'], ['12', '12'], ['16', '16']]
+            : [['●', '● دایره'], ['▲', '▲ مثلث'], ['■', '■ مربع'], ['★', '★ ستاره'], ['◆', '◆ لوزی'], ['♥', '♥ قلب']];
+        var setSlot = function (val) {
+          items[idx] = val;
+          state.X.seq = items.join(',');
+          paint(); renderFields();
+        };
+        openGfCellPopup({
+          title: 'ویرایش عضو شمارهٔ ' + (idx + 1) + ' الگو',
+          sub: 'از شکل‌ها/رنگ‌ها انتخاب کنید یا عدد/متن دلخواه بنویسید:',
+          chips: chips,
+          current: items[idx],
+          allowCustom: true,
+          placeholder: 'عدد یا نماد دلخواه',
+          inputVal: items[idx] === '?' ? '' : items[idx],
+          onPick: setSlot,
+          onQuestion: function () { setSlot('?'); }
+        });
       };
       box.onpointermove = box.onpointerup = box.onpointercancel = null;
       return;
@@ -5689,17 +6092,157 @@
     if (state.t === 'axsym') {
       box.onpointerdown = function (e) {
         var p = clockPoint(box, e); if (!p) return;
+        if (p.x < 76 || p.x > 284 || p.y < 32 || p.y > 240) return;
         var c = Math.max(0, Math.min(7, Math.floor((p.x - 76) / 26)));
         var r = Math.max(0, Math.min(7, Math.floor((p.y - 32) / 26)));
         var axis = String(state.X.axis || 'v').toLowerCase();
-        var pair = axis === 'h'
-          ? ((c + 1) + ',' + (r < 4 ? 4 - r : r - 3))
-          : ((r + 1) + ',' + (c < 4 ? 4 - c : c - 3));
-        var list = String(state.X.cells || '1,1;2,1;2,2;3,2').split(/[;؛]/).map(function (z) { return faEn(z.trim()); }).filter(Boolean);
+        var mirrorOn = Math.floor(num(state.X.mirror, 1)) !== 0;
+        var pair;
+        if (axis === 'h') {
+          var dH = mirrorOn ? (r < 4 ? 4 - r : r - 3) : (r < 4 ? 4 - r : r + 1);
+          pair = (c + 1) + ',' + dH;
+        } else {
+          var dV = mirrorOn ? (c < 4 ? 4 - c : c - 3) : (c < 4 ? 4 - c : c + 1);
+          pair = (r + 1) + ',' + dV;
+        }
+        var rawCells = Object.prototype.hasOwnProperty.call(state.X, 'cells') ? String(state.X.cells == null ? '' : state.X.cells) : '1,1;2,1;2,2;3,2';
+        var list = rawCells.split(/[;؛]/).map(function (z) { return faEn(z.trim()); }).filter(Boolean);
         var ix = list.indexOf(pair);
-        if (ix >= 0 && list.length > 1) list.splice(ix, 1);
-        else if (ix < 0) list.push(pair);
+        if (ix >= 0) list.splice(ix, 1);
+        else list.push(pair);
         state.X.cells = list.join(';');
+        paint(); renderFields();
+      };
+      box.onpointermove = box.onpointerup = box.onpointercancel = null;
+      return;
+    }
+    if (state.t === 'axpaintgrid') {
+      box.onpointerdown = function (e) {
+        var p = clockPoint(box, e); if (!p) return;
+        var rows = Math.max(1, Math.min(8, Math.round(num(state.X.rows, 4))));
+        var cols = Math.max(1, Math.min(8, Math.round(num(state.X.cols, 4))));
+        var w = Math.min(300, cols * 42), h = Math.min(150, rows * 34);
+        var x0 = (360 - w) / 2, y0 = 62 + (150 - h) / 2;
+        if (p.x < x0 || p.x > x0 + w || p.y < y0 || p.y > y0 + h) return;
+        var cc = Math.max(1, Math.min(cols, Math.floor((p.x - x0) / (w / cols)) + 1));
+        var rr = Math.max(1, Math.min(rows, Math.floor((p.y - y0) / (h / rows)) + 1));
+        var key = rr + ',' + cc;
+        var list = String(state.X.cells || '').split(/[;؛]/).map(function (z) { return faEn(z.trim()); }).filter(Boolean);
+        var ix = list.indexOf(key);
+        if (ix >= 0) list.splice(ix, 1); else list.push(key);
+        state.X.cells = list.join(';');
+        paint(); renderFields();
+      };
+      box.onpointermove = box.onpointerup = box.onpointercancel = null;
+      return;
+    }
+    if (state.t === 'axcalendar') {
+      box.onpointerdown = function (e) {
+        var p = clockPoint(box, e); if (!p) return;
+        var clStart = Math.max(0, Math.min(6, Math.floor(num(state.X.start, 3))));
+        var clDays = Math.max(20, Math.min(31, Math.floor(num(state.X.days, 30))));
+        var clCw = 44, clCh = 30, clX0 = 180 - clCw * 3.5, clY0 = 46 + clCh;
+        if (p.x < clX0 || p.x > clX0 + 7 * clCw || p.y < clY0) return;
+        var col2 = Math.floor((p.x - clX0) / clCw), row2 = Math.floor((p.y - clY0) / clCh);
+        var cellIdx = row2 * 7 + (6 - col2), dayN = cellIdx - clStart + 1;
+        if (dayN < 1 || dayN > clDays) return;
+        gfOpenKeyedCellEditor(String(dayN), 'روز ' + dayN + ' تقویم', String(dayN));
+      };
+      box.onpointermove = box.onpointerup = box.onpointercancel = null;
+      return;
+    }
+    if (state.t === 'axmultgrid') {
+      box.onpointerdown = function (e) {
+        var p = clockPoint(box, e); if (!p) return;
+        var rNums = String(state.X.rows || '2,4,7').split(/[,،;]/).map(function (z) { return parseInt(faEn(z.trim()), 10); }).filter(isFinite).slice(0, 4);
+        var cNums = String(state.X.cols || '3,5,8').split(/[,،;]/).map(function (z) { return parseInt(faEn(z.trim()), 10); }).filter(isFinite).slice(0, 4);
+        if (!rNums.length) rNums = [2, 4, 7];
+        if (!cNums.length) cNums = [3, 5, 8];
+        var cw = Math.min(56, 268 / (cNums.length + 1)), ch = Math.min(42, 216 / (rNums.length + 1));
+        var x0 = 180 - cw * (cNums.length + 1) / 2, y0 = 26 + (218 - ch * (rNums.length + 1)) / 2;
+        if (p.x < x0 || p.x > x0 + (cNums.length + 1) * cw || p.y < y0 || p.y > y0 + (rNums.length + 1) * ch) return;
+        var gc = Math.floor((p.x - x0) / cw), gr = Math.floor((p.y - y0) / ch);
+        if (gr === 0 && gc === 0) return;
+        if (gr === 0) gfOpenKeyedCellEditor('c' + (gc - 1), 'سرستون ' + gc, String(cNums[gc - 1]));
+        else if (gc === 0) gfOpenKeyedCellEditor('r' + (gr - 1), 'سرسطر ' + gr, String(rNums[gr - 1]));
+        else gfOpenKeyedCellEditor((gr - 1) + '_' + (gc - 1), 'خانهٔ (' + rNums[gr - 1] + ' × ' + cNums[gc - 1] + ')', String(rNums[gr - 1] * cNums[gc - 1]));
+      };
+      box.onpointermove = box.onpointerup = box.onpointercancel = null;
+      return;
+    }
+    if (state.t === 'axmulwheel') {
+      box.onpointerdown = function (e) {
+        var p = clockPoint(box, e); if (!p) return;
+        var mwC = Math.max(1, Math.min(12, Math.floor(num(state.X.c, 3))));
+        var mwN = Math.max(3, Math.min(12, Math.floor(num(state.X.n, 10))));
+        var mwOp = String(state.X.op || '×') === '+' ? '+' : '×';
+        if (Math.hypot(p.x - 180, p.y - 142) <= 34) {
+          gfOpenKeyedCellEditor('center', 'عدد مرکز چرخ', String(mwC));
+          return;
+        }
+        for (var j = 0; j < mwN; j++) {
+          var a = -Math.PI / 2 + j * 2 * Math.PI / mwN, ox = 180 + 96 * Math.cos(a), oy = 142 + 96 * Math.sin(a);
+          if (Math.hypot(p.x - ox, p.y - oy) <= 22) {
+            var defV = mwOp === '+' ? (mwC + j + 1) : (mwC * (j + 1));
+            gfOpenKeyedCellEditor('s_' + j, 'خانهٔ بیرونی پرهٔ ' + (j + 1), String(defV));
+            return;
+          }
+        }
+      };
+      box.onpointermove = box.onpointerup = box.onpointercancel = null;
+      return;
+    }
+    if (state.t === 'axtower') {
+      box.onpointerdown = function (e) {
+        var p = clockPoint(box, e); if (!p) return;
+        var base = String(state.X.base || '1,2,3,4').split(/[,،;]/).map(function (z) { return parseInt(faEn(z.trim()), 10); }).filter(isFinite).slice(0, 6);
+        if (base.length < 2) base = [1, 2, 3, 4];
+        var op = String(state.X.op || '+') === '-' ? '−' : '+';
+        var lv = [base], cur = base, k0;
+        while (cur.length > 1) {
+          var nxt = [];
+          for (k0 = 0; k0 < cur.length - 1; k0++) nxt.push(op === '+' ? cur[k0] + cur[k0 + 1] : Math.abs(cur[k0] - cur[k0 + 1]));
+          lv.push(nxt); cur = nxt;
+        }
+        var bh = Math.min(34, 216 / lv.length), bw = Math.min(58, 300 / base.length);
+        for (var row = 0; row < lv.length; row++) {
+          var lvIdx = lv.length - 1 - row, arr = lv[lvIdx], ly = 24 + row * bh;
+          if (p.y >= ly && p.y <= ly + bh) {
+            for (k0 = 0; k0 < arr.length; k0++) {
+              var bx = 180 + (k0 - (arr.length - 1) / 2) * bw - bw / 2;
+              if (p.x >= bx && p.x <= bx + bw) {
+                gfOpenKeyedCellEditor(lvIdx + '_' + k0, 'آجر ردیف ' + (lvIdx + 1) + '، شمارهٔ ' + (k0 + 1), String(arr[k0]));
+                return;
+              }
+            }
+          }
+        }
+      };
+      box.onpointermove = box.onpointerup = box.onpointercancel = null;
+      return;
+    }
+    if (state.t === 'axcubes') {
+      box.onpointerdown = function (e) {
+        var p = clockPoint(box, e);
+        var vw = String(state.X.view || 'iso').toLowerCase();
+        if (vw === 'top' && p) {
+          var rowsRaw = String(state.X.map || '2,1,3;1,0,1;2,2,1').split(/[;؛]/).map(function (rw) { return rw.split(/[,،]/).map(function (q2) { var iv = parseInt(faEn(q2.trim()), 10); return Math.max(0, Math.min(5, isFinite(iv) ? iv : 0)); }); }).filter(function (rw) { return rw.length; }).slice(0, 4);
+          if (!rowsRaw.length) rowsRaw = [[2, 1, 3], [1, 0, 1], [2, 2, 1]];
+          var cgN = rowsRaw.length, cgM = Math.max(1, rowsRaw[0].length);
+          var cgW = Math.min(54, 220 / cgM), cgH = Math.min(50, 184 / cgN);
+          var cgX0 = 180 - (cgM * cgW) / 2, cgY0 = 126 - (cgN * cgH) / 2;
+          if (p.x >= cgX0 && p.x <= cgX0 + cgM * cgW && p.y >= cgY0 && p.y <= cgY0 + cgN * cgH) {
+            var cc2 = Math.max(0, Math.min(cgM - 1, Math.floor((p.x - cgX0) / cgW)));
+            var rr2 = Math.max(0, Math.min(cgN - 1, Math.floor((p.y - cgY0) / cgH)));
+            while (rowsRaw[rr2].length < cgM) rowsRaw[rr2].push(0);
+            rowsRaw[rr2][cc2] = (rowsRaw[rr2][cc2] + 1) % 6;
+            state.X.map = rowsRaw.map(function (rw) { return rw.slice(0, cgM).join(','); }).join(';');
+            paint(); renderFields();
+            return;
+          }
+        }
+        var views = ['iso', 'top', 'front', 'side'];
+        state.X.view = views[(views.indexOf(vw) + 1) % views.length];
         paint(); renderFields();
       };
       box.onpointermove = box.onpointerup = box.onpointercancel = null;
@@ -5747,7 +6290,7 @@
     }
     if (state.t === 'axfrac') {
       box.onpointerdown = function () {
-        var den = Math.max(1, Math.min(24, Math.floor(num(state.X.den, 4))));
+        var den = Math.max(1, Math.min(25, Math.floor(num(state.X.den, 4))));
         var cur = Math.max(0, Math.min(den, Math.floor(num(state.X.num, 1))));
         state.X.num = String((cur + 1) % (den + 1));
         paint(); renderFields();
@@ -5758,10 +6301,10 @@
     if (state.t === 'axabacus') {
       box.onpointerdown = function (e) {
         var p = clockPoint(box, e); if (!p) return;
-        var cols = Math.max(2, Math.min(6, Math.floor(num(state.X.cols, 4))));
-        var cidx = Math.max(0, Math.min(cols - 1, Math.floor((p.x - 36) / (288 / cols))));
+        var cols = Math.max(2, Math.min(6, Math.floor(num(state.X.cols, 6))));
+        var cidx = Math.max(0, Math.min(cols - 1, Math.floor((p.x - 24) / (412 / cols))));
         var place = cols - 1 - cidx, pow = Math.pow(10, place);
-        var curN = Math.max(0, Math.min(999999, Math.floor(num(state.X.n, 2435))));
+        var curN = Math.max(0, Math.min(999999, Math.floor(num(state.X.n, 142536))));
         var curD = Math.floor(curN / pow) % 10, nextD = (curD + 1) % 10;
         state.X.n = String(curN + (nextD - curD) * pow);
         paint(); renderFields();
@@ -5783,15 +6326,11 @@
     }
     var CYCLE = {
       axrod: ['blank', ['0', '1']],
-      axtower: ['op', ['+', '-']],
-      axmulwheel: ['c', ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12']],
-      axmultgrid: ['blank', ['0', '1', '2']],
       axnet: ['shape', ['cube', 'cuboid', 'pyramid', 'prism']],
-      axcubes: ['view', ['iso', 'top', 'front', 'side']],
-      axcalendar: ['start', ['0', '1', '2', '3', '4', '5', '6']],
       axlever: ['kind', ['lever1', 'lever2', 'lever3', 'pulley', 'gears']],
       axcycle: ['kind', ['water', 'plant', 'frog', 'food']],
       axwordtrain: ['mode', ['join', 'blank']],
+      axmagnet: ['mode', ['attract', 'repel', 'repel_s']],
       axtiles: ['x', ['0', '1', '2', '3', '4', '5', '6', '7', '8']],
       axkenken: ['size', ['3', '4', '5', '6']],
       axdicefold: ['top', ['1', '2', '3', '4', '5', '6']],
@@ -5972,9 +6511,53 @@
       ['num', 'عددی (۱ تا ۹)']
     ],
     'axpattern:X.mode': [
-      ['shape', 'شکلی و عددی (● ▲ ■ ★)'],
-      ['color', 'الگوی رنگ‌آمیزی — ویژهٔ اول ابتدایی'],
-      ['bead', 'نخ و مهره‌های رنگی']
+      ['shape', 'الگوی شکلی (● ▲ ■ ★ ◆ ♥)'],
+      ['color', 'الگوی رنگ‌آمیزی (خانه‌های رنگی)'],
+      ['bead', 'الگوی نخ و مهره‌های رنگی'],
+      ['number', 'الگوی عددی (حسابی / هندسی / فیبوناچی)'],
+      ['growing', 'الگوی رشدشونده (افزایشی نقطه و شکل)'],
+      ['mixed', 'الگوی ترکیبی (رنگ، شکل و عدد)']
+    ],
+    'axpattern:X.seq': [
+      ['●,▲,●,▲,●,?', 'تکراری دوتایی شکلی (● ، ▲ ، ● ، ▲ ، ؟)'],
+      ['●,▲,■,●,▲,?', 'تکراری سه‌تایی شکلی (● ، ▲ ، ■ ، ● ، ▲ ، ؟)'],
+      ['●,●,▲,●,●,?', 'تکراری دوبه‌یک (● ، ● ، ▲ ، ● ، ● ، ؟)'],
+      ['●,▲,▲,●,▲,▲,?', 'تکراری یک‌به‌دو (● ، ▲ ، ▲ ، ● ، ▲ ، ▲ ، ؟)'],
+      ['★,◆,♥,★,◆,?', 'ستاره، لوزی و قلب (★ ، ◆ ، ♥ ، ★ ، ◆ ، ؟)'],
+      ['قرمز,آبی,قرمز,آبی,قرمز,?', 'تکراری رنگی دوتایی (قرمز ، آبی ، ...)'],
+      ['قرمز,آبی,سبز,قرمز,آبی,?', 'تکراری رنگی سه‌تایی (قرمز ، آبی ، سبز ، ...)'],
+      ['قرمز,زرد,زرد,قرمز,زرد,?', 'تکراری رنگی یک‌به‌دو (قرمز ، زرد ، زرد ، ...)'],
+      ['2,4,6,8,10,?', 'عددی زوج (+۲): ۲ ، ۴ ، ۶ ، ۸ ، ۱۰ ، ؟'],
+      ['1,3,5,7,9,?', 'عددی فرد (+۲): ۱ ، ۳ ، ۵ ، ۷ ، ۹ ، ؟'],
+      ['5,10,15,20,25,?', 'شمارش پنج‌تاپنج‌تا: ۵ ، ۱۰ ، ۱۵ ، ۲۰ ، ۲۵ ، ؟'],
+      ['10,20,30,40,?', 'شمارش ده‌تاده‌تا: ۱۰ ، ۲۰ ، ۳۰ ، ۴۰ ، ؟'],
+      ['3,6,9,12,15,?', 'مضرب‌های ۳: ۳ ، ۶ ، ۹ ، ۱۲ ، ۱۵ ، ؟'],
+      ['20,17,14,11,?', 'عددی کاهشی (−۳): ۲۰ ، ۱۷ ، ۱۴ ، ۱۱ ، ؟'],
+      ['1,2,4,8,16,?', 'دو برابر شونده (×۲): ۱ ، ۲ ، ۴ ، ۸ ، ۱۶ ، ؟'],
+      ['1,1,2,3,5,8,?', 'الگوی فیبوناچی: ۱ ، ۱ ، ۲ ، ۳ ، ۵ ، ۸ ، ؟'],
+      ['1,3,6,10,?', 'الگوی مثلثی (رشدشونده): ۱ ، ۳ ، ۶ ، ۱۰ ، ؟'],
+      ['1,4,9,16,?', 'الگوی مربعی (رشدشونده): ۱ ، ۴ ، ۹ ، ۱۶ ، ؟']
+    ],
+    'axjump:X.op': [
+      ['+', 'جمع روی محور (+)'],
+      ['-', 'تفریق روی محور (−)'],
+      ['×', 'ضرب روی محور (×)'],
+      ['÷', 'تقسیم روی محور (÷)']
+    ],
+    'axbeaker:X.count': [
+      ['1', '۱ استوانهٔ مدرج'],
+      ['2', '۲ استوانهٔ مدرج'],
+      ['3', '۳ استوانهٔ مدرج'],
+      ['4', '۴ استوانهٔ مدرج']
+    ],
+    'axsyllablechart:X.mode': [
+      ['ask', 'پرسش از دانش‌آموز (نمایش کلمه بدون تفکیک هجا)'],
+      ['show', 'نمایش آموزشی بخش‌ها (جداشده با خط تیره -)']
+    ],
+    'axmagnet:X.mode': [
+      ['attract', 'جذب — قطب‌های ناهم‌نام روبه‌روی هم (N و S)'],
+      ['repel', 'دفع — دو قطب هم‌نام شمال روبه‌روی هم (N و N)'],
+      ['repel_s', 'دفع — دو قطب هم‌نام جنوب روبه‌روی هم (S و S)']
     ],
     'axnumgrid:X.cols': [['10', '۱۰ ستون (جدول صدتایی)'], ['5', '۵ ستون'], ['6', '۶ ستون'], ['8', '۸ ستون']],
     'axnumgrid:X.rows': [['10', '۱۰ سطر (جدول صدتایی)'], ['5', '۵ سطر (۵۰تایی)'], ['6', '۶ سطر'], ['8', '۸ سطر']],
@@ -6047,14 +6630,14 @@
     'axsupply:X.kind': [['equilibrium', 'تعادل بازار'], ['shift', 'افزایش تقاضا'], ['ceiling', 'سقف قیمت']],
     'axgame:X.kind': [['game', 'ماتریس بازی ۲×۲'], ['islm', 'مدل IS-LM']],
     'axsym:X.axis': [['v', 'عمودی (چپ و راست)'], ['h', 'افقی (بالا و پایین)']],
-    'axsym:X.mirror': [['1', 'نمایش کامل شکل قرینه'], ['0', 'جای خالی (؟) برای سؤال']],
+    'axsym:X.mirror': [['1', 'نمایش کامل شکل قرینه'], ['0', 'عدم نمایش کامل شکل قرینه']],
     'axplace:X.op2': [['', 'ندارد'], ['+', 'جمع (+)'], ['-', 'تفریق (−)']],
     'axplace:X.op3': [['', 'ندارد'], ['+', 'جمع (+)'], ['-', 'تفریق (−)']],
     'axplace:X.rows': [['1', '۱ ردیف'], ['2', '۲ ردیف'], ['3', '۳ ردیف'], ['4', '۴ ردیف']],
     'axplace:X.blank': [['0', 'نمایش عددها'], ['1', 'جای خالی (برای طرح سؤال)']],
     'axabacus:X.blank': [['0', 'نمایش عددها'], ['1', 'جای خالی (برای طرح سؤال)']],
     'axmularea:X.blank': [['0', 'نمایش عددها'], ['1', 'جای خالی (برای طرح سؤال)']],
-    'axabacus:X.cols': [['2', '۲ ستون (تا دهگان)'], ['3', '۳ ستون (تا صدگان)'], ['4', '۴ ستون (تا هزار)'], ['5', '۵ ستون (تا ده‌هزار)'], ['6', '۶ ستون (تا صدهزار)']],
+    'axabacus:X.cols': [['2', '۲ ستون (یکان تا دهگان)'], ['3', '۳ ستون (تا صدگان)'], ['4', '۴ ستون (تا یکان هزار)'], ['5', '۵ ستون (تا دهگان هزار)'], ['6', '۶ ستون کامل (یکان تا صدگان هزار)']],
     'axclock:X.nums': [['1', 'نمایش عددهای ۱ تا ۱۲'], ['0', 'بدون عدد (تمرین ساعت)']],
     'axclock:X.label': [['0', 'ندارد'], ['1', 'نمایش ساعت زیر شکل'], ['2', 'نمایش با جای خالی (ساعت = ؟ : ؟)']],
     'axfrac:X.label': [['1', 'نمایش کسر زیر شکل'], ['2', 'نمایش با جای خالی (؟ / ؟)'], ['0', 'ندارد']],
@@ -6082,27 +6665,115 @@
     gfDdClose();
     var host = $('grFields');
     if (!host) return;
+    var extraHtml = '';
+    if (state.t === 'axsaw') {
+      extraHtml += '<div class="gf-hint-box">💡 روی هر خانهٔ جدول در پیش‌نمایش کلیک کنید تا مقدار، علامت سؤال (؟) یا خانهٔ خالی را از پنجره انتخاب کنید.</div>';
+    } else if (state.t === 'axpattern') {
+      extraHtml += '<div class="gf-hint-box">💡 از منوی «الگوی آماده» انتخاب کنید یا روی هر عضو شکل کلیک کنید.<div class="gf-mini-btns">' +
+        '<button type="button" class="gf-mini-btn" data-pact="add">+ افزودن خانه به الگو</button>' +
+        '<button type="button" class="gf-mini-btn" data-pact="rem">− حذف آخرین خانه</button></div></div>';
+    } else if (state.t === 'axsym') {
+      extraHtml += '<div class="gf-hint-box">💡 روی هر خانهٔ شطرنجی کلیک کنید تا رنگ یا پاک شود.<div class="gf-mini-btns">' +
+        '<button type="button" class="gf-mini-btn" data-pact="sym-clear">پاک‌کردن همهٔ خانه‌ها</button></div></div>';
+    } else if (state.t === 'axpaintgrid') {
+      extraHtml += '<div class="gf-hint-box">💡 روی هر خانهٔ شبکه کلیک کنید تا رنگ یا پاک شود.<div class="gf-mini-btns">' +
+        '<button type="button" class="gf-mini-btn" data-pact="pg-clear">پاک‌کردن خانه‌های رنگ‌شده</button></div></div>';
+    } else if (state.t === 'axcalendar' || state.t === 'axmultgrid' || state.t === 'axmulwheel' || state.t === 'axtower') {
+      extraHtml += '<div class="gf-hint-box">💡 روی هر خانه در شکل کلیک کنید تا عدد دلخواه بنویسید یا آن را بدون علامت سؤال خالی بگذارید.' +
+        ((state.X.ov || state.X.empty) ? '<div class="gf-mini-btns"><button type="button" class="gf-mini-btn" data-pact="ov-clear">پاک‌کردن تنظیمات دستی خانه‌ها</button></div>' : '') + '</div>';
+    } else if (state.t === 'axcubes') {
+      var cbRows = String(state.X.map || '2,1,3;1,0,1;2,2,1').split(/[;؛]/).map(function (rw) {
+        return rw.split(/[,،]/).map(function (q2) { var iv = parseInt(faEn(q2.trim()), 10); return Math.max(0, Math.min(5, isFinite(iv) ? iv : 0)); });
+      }).filter(function (rw) { return rw.length; }).slice(0, 4);
+      if (!cbRows.length) cbRows = [[2, 1, 3], [1, 0, 1], [2, 2, 1]];
+      var crN = cbRows.length, ccM = Math.max(1, cbRows[0].length), curDim = crN + 'x' + ccM;
+      var dims = [['2x2', '۲×۲'], ['3x3', '۳×۳'], ['4x4', '۴×۴'], ['2x3', '۲×۳'], ['3x2', '۳×۲']];
+      extraHtml += '<div class="gf-cubes-ed"><div class="gf-cubes-hd"><span>تعداد مکعب در هر ستون (کلیک = تغییر ۰ تا ۵):</span>' +
+        '<div class="gf-mini-btns">' + dims.map(function (dm) {
+          return '<button type="button" class="gf-mini-btn' + (curDim === dm[0] ? ' on' : '') + '" data-cdim="' + dm[0] + '">' + dm[1] + '</button>';
+        }).join('') + '</div></div><div class="gf-cubes-grid" style="grid-template-columns:repeat(' + ccM + ',1fr)">';
+      for (var rci = 0; rci < crN; rci++) {
+        for (var cci = 0; cci < ccM; cci++) {
+          var hv = (cbRows[rci] && cbRows[rci][cci] != null) ? cbRows[rci][cci] : 0;
+          extraHtml += '<button type="button" class="gf-cube-cell' + (hv > 0 ? ' on' : '') + '" data-cr="' + rci + '" data-cc="' + cci + '">' + hv + '</button>';
+        }
+      }
+      extraHtml += '</div><div class="gf-mini-btns"><button type="button" class="gf-mini-btn" data-pact="cubes-zero">صفر کردن همهٔ ستون‌ها</button></div></div>';
+    }
     host.innerHTML = '<h4>داده‌ها و بازه</h4><div class="gf-grid">' + fieldsFor(state.t).map(function (r) {
       var v = getPath(state, r[0]);
       var ddOpts = GF_DROPDOWNS[state.t + ':' + r[0]];
       if (r[0] === 'X.shape' || ddOpts) {
-        // V310.7 / V310.9 / V315.1 — گزینه‌های چندحالته به‌صورت منوی کشویی (در div.gf-field.gf-span تا label کلیک دکمه را به select بومی نفرستد و عرض کامل بگیرد)
-        var opts = ddOpts || [['circle', 'دایره‌ای (قطاع)'], ['ring', 'حلقه‌ای'], ['bar', 'نواری'], ['square', 'مربعی (شبکه)']];
-        var cur = (v != null && v !== '') ? String(v) : opts[0][0];
+        var baseOpts = ddOpts || [['circle', 'دایره‌ای (قطاع)'], ['ring', 'حلقه‌ای'], ['bar', 'نواری'], ['square', 'مربعی (شبکه)']];
+        var cur = (v != null && v !== '') ? String(v) : baseOpts[0][0];
+        var opts = baseOpts.slice();
+        if (cur && !opts.some(function (o) { return o[0] === cur; })) {
+          opts.unshift([cur, 'الگوی سفارشی (' + cur + ')']);
+        }
         var selTag = r[0] === 'X.shape' ? '<select data-k="X.shape" class="gf-sel">' : '<select data-k="' + r[0] + '" class="gf-sel">';
         return '<div class="gf-field gf-span"><span class="gf-lbl">' + esc(r[1]) + '</span>' + selTag + opts.map(function (o) {
           return '<option value="' + esc(o[0]) + '"' + (cur === o[0] ? ' selected' : '') + '>' + esc(o[1]) + '</option>';
         }).join('') + '</select></div>';
       }
-      var wide = /labs|vals|title|xs|ys|zs|rows|cols|mins|q1s|meds|q3s|maxs|opens|highs|lows|closes|cells|pts|seq|parts|dice|left|right|mid/.test(r[0]);
+      var wide = /labs|vals|title|xs|ys|zs|rows|cols|mins|q1s|meds|q3s|maxs|opens|highs|lows|closes|cells|pts|seq|parts|dice|left|right|mid|in|syll/.test(r[0]);
       return '<label class="' + (wide ? 'gf-span' : '') + '">' + esc(r[1]) +
         '<input data-k="' + r[0] + '" value="' + esc(v == null ? '' : v) + '"></label>';
-    }).join('') + '</div>';
+    }).join('') + '</div>' + extraHtml;
     host.querySelectorAll('input,select').forEach(function (inp) {
       inp.addEventListener(inp.tagName === 'SELECT' ? 'change' : 'input', function () {
-        setPath(state, inp.getAttribute('data-k'), inp.value);
+        var dk = inp.getAttribute('data-k');
+        setPath(state, dk, inp.value);
         paint();
+        if (dk === 'X.count') renderFields();
       });
+    });
+    host.querySelectorAll('[data-pact]').forEach(function (btn) {
+      btn.onclick = function () {
+        var act = btn.getAttribute('data-pact');
+        if (act === 'add') {
+          var items = String(state.X.seq || '●,▲,●,▲,●,?').split(/[,،]/).map(function (z) { return z.trim(); }).filter(Boolean);
+          if (items.length < 12) { items.push('?'); state.X.seq = items.join(','); paint(); renderFields(); }
+        } else if (act === 'rem') {
+          var items2 = String(state.X.seq || '●,▲,●,▲,●,?').split(/[,،]/).map(function (z) { return z.trim(); }).filter(Boolean);
+          if (items2.length > 2) { items2.pop(); state.X.seq = items2.join(','); paint(); renderFields(); }
+        } else if (act === 'sym-clear') {
+          state.X.cells = ''; paint(); renderFields();
+        } else if (act === 'pg-clear') {
+          state.X.cells = ''; paint(); renderFields();
+        } else if (act === 'ov-clear') {
+          delete state.X.ov; delete state.X.empty; paint(); renderFields();
+        } else if (act === 'cubes-zero') {
+          var curM = String(state.X.map || '2,1,3;1,0,1;2,2,1').split(/[;؛]/);
+          var rn = Math.max(2, Math.min(4, curM.length)), cn = Math.max(2, Math.min(4, (curM[0] || '').split(/[,،]/).length));
+          var zRows = [];
+          for (var zr = 0; zr < rn; zr++) { var zc = []; for (var zk = 0; zk < cn; zk++) zc.push('0'); zRows.push(zc.join(',')); }
+          state.X.map = zRows.join(';'); paint(); renderFields();
+        }
+      };
+    });
+    host.querySelectorAll('[data-cdim]').forEach(function (btn) {
+      btn.onclick = function () {
+        var sp = btn.getAttribute('data-cdim').split('x'), nr = +sp[0] || 3, nc = +sp[1] || 3;
+        var oldR = String(state.X.map || '2,1,3;1,0,1;2,2,1').split(/[;؛]/).map(function (rw) { return rw.split(/[,،]/).map(function (q2) { return parseInt(faEn(q2.trim()), 10) || 0; }); });
+        var nextR = [];
+        for (var r0 = 0; r0 < nr; r0++) {
+          var rowA = [];
+          for (var c0 = 0; c0 < nc; c0++) rowA.push((oldR[r0] && oldR[r0][c0] != null) ? oldR[r0][c0] : 1);
+          nextR.push(rowA.join(','));
+        }
+        state.X.map = nextR.join(';'); paint(); renderFields();
+      };
+    });
+    host.querySelectorAll('.gf-cube-cell').forEach(function (btn) {
+      btn.onclick = function () {
+        var rr = +btn.getAttribute('data-cr'), cc = +btn.getAttribute('data-cc');
+        var rowsA = String(state.X.map || '2,1,3;1,0,1;2,2,1').split(/[;؛]/).map(function (rw) { return rw.split(/[,،]/).map(function (q2) { var iv = parseInt(faEn(q2.trim()), 10); return Math.max(0, Math.min(5, isFinite(iv) ? iv : 0)); }); });
+        if (rowsA[rr] && rowsA[rr][cc] != null) {
+          rowsA[rr][cc] = (rowsA[rr][cc] + 1) % 6;
+          state.X.map = rowsA.map(function (rw) { return rw.join(','); }).join(';');
+          paint(); renderFields();
+        }
+      };
     });
     host.querySelectorAll('select.gf-sel,select.gf-shape').forEach(gfDdAttach);
   }
@@ -6136,7 +6807,7 @@
   function isMathType(t) { var sp = mathSplit(); for (var i = 0; i < AXIS_TYPES.length; i++) if (AXIS_TYPES[i].id === t) return i >= sp; return false; }
   // V320 — دسته‌بندی ابزارهای ریاضی (هم‌تراز با MathToolCatalog.kt)
   var MATH_CATS = [
-    { id: 'elementary', name: '🧮 دبستان', hint: 'پایهٔ اول تا ششم — شمارش، جمع و تفریق، ضرب، شکل و اندازه', ids: ['axtally', 'axbase10', 'axplace', 'axclock', 'axruler', 'axfrac', 'axmoney', 'axabacus', 'axjump', 'axbalance', 'axthermo', 'axsaw', 'axpattern', 'axtenframe', 'axsym', 'axspin', 'axbeaker', 'axgeoboard', 'axdice', 'axmularea', 'axvenn', 'axnumgrid', 'axfacttree', 'axfnmachine', 'axfracwall', 'axtangram', 'axangle', 'axrod', 'axtower', 'axmulwheel', 'axmultgrid', 'axnet', 'axcubes', 'axcalendar', 'axlever', 'axcycle', 'axwordtrain', 'axpaintgrid', 'axletterforms', 'axsyllablechart', 'axmagnet', 'axsenses', 'axseedgrow', 'axbodyparts'] },
+    { id: 'elementary', name: '🧮 دبستان', hint: 'پایهٔ اول تا ششم — شمارش، جمع و تفریق، ضرب، شکل و اندازه', ids: ['axtally', 'axbase10', 'axplace', 'axclock', 'axruler', 'axfrac', 'axmoney', 'axabacus', 'axjump', 'axbalance', 'axthermo', 'axsaw', 'axpattern', 'axtenframe', 'axsym', 'axbeaker', 'axgeoboard', 'axdice', 'axmularea', 'axvenn', 'axnumgrid', 'axfacttree', 'axfnmachine', 'axfracwall', 'axtangram', 'axangle', 'axrod', 'axtower', 'axmulwheel', 'axmultgrid', 'axnet', 'axcubes', 'axcalendar', 'axlever', 'axcycle', 'axwordtrain', 'axpaintgrid', 'axletterforms', 'axsyllablechart', 'axmagnet', 'axsenses'] },
     { id: 'middle', name: '📐 متوسطهٔ اول', hint: 'پایهٔ هفتم تا نهم — جبر، هندسه، اندازه‌گیری و آمار مقدماتی', ids: ['axtiles', 'axkenken', 'axdicefold', 'axtransform', 'axcaliper', 'axunitconv', 'axperimeter', 'axpictograph', 'axrounding', 'axdivision', 'axshapeid', 'axcircleparts', 'axcylinder', 'axproportion', 'axlinear'] },
     { id: 'high', name: '🧪 متوسطهٔ دوم و کنکور', hint: 'ریاضی، فیزیک، شیمی و زیست — از تابع و مثلثات تا مدار و سلول', ids: ['axsigntable', 'axtrigcircle', 'axmapping', 'axprobtree', 'axconic', 'axorbital', 'axpunnett', 'axecg', 'axprosody', 'axtruthtable', 'axledger', 'axstaff', 'axbarchart', 'axparabola', 'axinthales', 'axpendulum', 'axincline', 'axcircuit', 'axoptics', 'axheatcurve', 'axdna', 'axcell'] },
     { id: 'university', name: '🎓 انسانی و دانشگاه', hint: 'انسانی، هنر، فنی و دانشگاه — از عروض و حسابداری تا منطق دیجیتال و الگوریتم', ids: ['axkmap', 'axgate', 'axdfa', 'axbst', 'axbode', 'axbeam', 'axmohr', 'axpv', 'axpert', 'axbenzene', 'axnormal', 'axsupply', 'axgame', 'axtimeline', 'axmapgeo', 'axsentence', 'axvectors', 'axmatrix', 'axintegral', 'axflowchart', 'axstack', 'axsort', 'axregression'] }
@@ -6297,6 +6968,7 @@
   }
   function close() {
     gfDdClose();
+    gfCellPopClose();
     var ov = $('grOverlay');
     if (ov) ov.classList.remove('open');
     replaceEl = null;

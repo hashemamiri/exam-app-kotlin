@@ -1611,8 +1611,8 @@
       return el('button', {type: 'button', html: '<b>' + c[1] + '</b><span>' + S.esc(c[2]) + '</span><small>' + S.esc(c[3]) + '</small>',
         onclick: function () { m.remove(); insertFigure('math:' + c[0], ta, q); }});
     }).concat([
-      /* V323 — همان پنجرهٔ قبلی با فهرست کامل (برای وقتی کاربر نمی‌خواهد اول دسته را انتخاب کند) */
-      el('button', {type: 'button', html: '<b>🗂</b><span>همهٔ ابزارها</span><small>فهرست هر ۹۷ ابزار با انتخاب دسته در همان پنجره</small>',
+      /* V323 / V335.8 — همان پنجرهٔ قبلی با فهرست کامل (برای وقتی کاربر نمی‌خواهد اول دسته را انتخاب کند) */
+      el('button', {type: 'button', html: '<b>🗂</b><span>همهٔ ابزارها</span><small>فهرست هر ۱۰۱ ابزار با انتخاب دسته در همان پنجره</small>',
         onclick: function () { m.remove(); insertFigure('math', ta, q); }})
     ]));
     placeFloat(m, anchor);

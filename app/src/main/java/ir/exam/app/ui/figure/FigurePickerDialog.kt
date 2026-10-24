@@ -40,6 +40,7 @@ import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.layout.imePadding
 import ir.exam.app.core.figure.FigureSpec
 import ir.exam.app.core.figure.FigureTemplate
+import ir.exam.app.core.figure.PrimaryInteractiveFigureHelper
 import ir.exam.app.core.figure.faEnDigits
 import ir.exam.app.core.ui.LocalTabletLayout
 import ir.exam.app.core.figure.GEOMETRY_FIGURES
@@ -429,11 +430,42 @@ private fun GraphEditorPane(initialSpec: FigureSpec, onInsert: (FigureSpec) -> U
     val graphType = initialSpec.type.takeIf { type -> allTemplates.any { it.id == type } } ?: GRAPH_FIGURES.first().id
     val template = allTemplates.firstOrNull { it.id == graphType } ?: GRAPH_FIGURES.first()
     val isAxis = AXIS_FIGURES.any { it.id == graphType }
+    var currentBase by remember(initialSpec.toJson()) { mutableStateOf(initialSpec) }
     var title by remember(initialSpec.toJson()) { mutableStateOf(initialSpec.xStr("title")) }
     var params by remember(initialSpec.toJson()) {
         mutableStateOf(initialParams(template, initialSpec))
     }
-    val draft = buildGraphSpec(initialSpec, graphType, params, title)
+    val draft = buildGraphSpec(currentBase, graphType, params, title)
+
+    val beakerCount = (params["count"]?.toIntOrNull() ?: 1).coerceIn(1, 4)
+    val hiddenRawKeys = when (graphType) {
+        "axsaw" -> setOf("vals")
+        "axsym" -> setOf("cells")
+        "axpaintgrid" -> setOf("cells")
+        "axcubes" -> setOf("map")
+        "axbeaker" -> buildSet {
+            if (beakerCount < 2) add("val2")
+            if (beakerCount < 3) add("val3")
+            if (beakerCount < 4) add("val4")
+        }
+        else -> emptySet()
+    }
+    val visibleParamKeys = paramKeys(graphType).filter { it !in hiddenRawKeys }
+    val previewHeight = if (graphType in setOf(
+            "axabacus", "axbase10", "axplace", "axsaw", "axpattern", "axsym",
+            "axcalendar", "axmultgrid", "axmulwheel", "axtower", "axpaintgrid", "axcubes", "axbeaker"
+        )
+    ) 264.dp else 208.dp
+
+    val interactiveHint: String? = when (graphType) {
+        "axsaw" -> "💡 روی هر خانهٔ جدول در پیش‌نمایش بزنید تا مقدار آن را از پنجرهٔ بازشونده انتخاب کنید."
+        "axpattern" -> "💡 از منوی کشویی یکی از الگوهای آماده را برگزینید یا روی هر خانهٔ پیش‌نمایش بزنید تا تغییرش دهید."
+        "axsym" -> "💡 روی هر خانهٔ شطرنجی در پیش‌نمایش بزنید تا آن خانه رنگی یا پاک شود."
+        "axpaintgrid" -> "💡 روی هر خانهٔ شبکهٔ رنگ‌آمیزی در پیش‌نمایش بزنید تا رنگ یا پاک شود."
+        "axcalendar", "axmultgrid", "axmulwheel", "axtower" ->
+            "💡 روی هر خانهٔ شکل در پیش‌نمایش بزنید تا عدد دلخواه بنویسید یا آن را بدون علامت سؤال خالی بگذارید."
+        else -> null
+    }
 
     LazyColumn(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         item {
@@ -447,8 +479,8 @@ private fun GraphEditorPane(initialSpec: FigureSpec, onInsert: (FigureSpec) -> U
                 modifier = Modifier.fillMaxWidth()
             )
         }
-        items(paramKeys(graphType), key = { it }) { key ->
-            val ddOpts = dropdownOptionsFor(graphType, key)
+        items(visibleParamKeys, key = { it }) { key ->
+            val ddOpts = dropdownOptionsFor(graphType, key, params[key].orEmpty())
             if (ddOpts != null) {
                 FigureShapeDropdown(
                     label = paramLabel(graphType, key),
@@ -466,16 +498,69 @@ private fun GraphEditorPane(initialSpec: FigureSpec, onInsert: (FigureSpec) -> U
                 )
             }
         }
+        if (graphType == "axcubes") {
+            item {
+                CubesHeightMatrixEditor(
+                    spec = draft,
+                    onUpdateMap = { nextSpec ->
+                        currentBase = nextSpec
+                        params = params + ("map" to nextSpec.xStr("map"))
+                    }
+                )
+            }
+        }
+        if (graphType == "axpattern") {
+            item {
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedButton(
+                        onClick = {
+                            val next = PrimaryInteractiveFigureHelper.appendPatternSlot(draft, "?")
+                            currentBase = next
+                            params = params + ("seq" to next.xStr("seq"))
+                        },
+                        modifier = Modifier.weight(1f)
+                    ) { Text("+ افزودن خانه به الگو") }
+                    OutlinedButton(
+                        onClick = {
+                            val next = PrimaryInteractiveFigureHelper.removeLastPatternSlot(draft)
+                            currentBase = next
+                            params = params + ("seq" to next.xStr("seq"))
+                        },
+                        modifier = Modifier.weight(1f)
+                    ) { Text("− حذف خانهٔ آخر") }
+                }
+            }
+        }
+        if (graphType == "axsym" || graphType == "axpaintgrid") {
+            item {
+                OutlinedButton(
+                    onClick = {
+                        currentBase = PrimaryInteractiveFigureHelper.withX(draft, "cells" to "")
+                        params = params + ("cells" to "")
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                ) { Text("پاک کردن همهٔ خانه‌های رنگ‌شده") }
+            }
+        }
+        if (interactiveHint != null) {
+            item {
+                Text(
+                    interactiveHint,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.primary
+                )
+            }
+        }
         item {
             Card(Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text("پیش‌نمایش", style = MaterialTheme.typography.labelLarge)
-                    // V310.7 / V315.1 — همهٔ ابزارهای ابتدایی با لمس در پیش‌نمایش قابل تنظیم‌اند و مقادیر تازه به فرم برمی‌گردد
+                    Text("پیش‌نمایش (قابل لمس و ویرایش مستقیم)", style = MaterialTheme.typography.labelLarge)
                     AdjustableFigure(
                         draft,
-                        Modifier.fillMaxWidth().height(180.dp),
+                        Modifier.fillMaxWidth().height(previewHeight),
                         contentDescription = "پیش‌نمایش نمودار",
                         onChanged = { s ->
+                            currentBase = s
                             val xo = s.raw["X"] as? JsonObject
                             if (xo != null) {
                                 params = params + paramKeys(graphType).mapNotNull { k ->
@@ -490,6 +575,61 @@ private fun GraphEditorPane(initialSpec: FigureSpec, onInsert: (FigureSpec) -> U
         item {
             Button(onClick = { onInsert(draft) }, modifier = Modifier.fillMaxWidth()) {
                 Text(if (isAxis) "✅ درج محور" else "✅ درج نمودار")
+            }
+        }
+    }
+}
+
+/** V335.8 — ویرایشگر بصری شبکهٔ ارتفاع ستون‌های مکعب (جایگزین ورود متنی با «;»). */
+@Composable
+private fun CubesHeightMatrixEditor(
+    spec: FigureSpec,
+    onUpdateMap: (FigureSpec) -> Unit
+) {
+    val grid = PrimaryInteractiveFigureHelper.parseCubesGrid(spec)
+    val rowsN = grid.size
+    val colsN = grid.firstOrNull()?.size ?: 3
+    val curDim = "${rowsN}x${colsN}"
+    val dimOptions = listOf(
+        "2x2" to "شبکهٔ ۲×۲",
+        "2x3" to "شبکهٔ ۲×۳",
+        "3x3" to "شبکهٔ ۳×۳ (استاندارد)",
+        "3x4" to "شبکهٔ ۳×۴",
+        "4x4" to "شبکهٔ ۴×۴"
+    )
+    Card(Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            FigureShapeDropdown(
+                label = "ابعاد صفحهٔ مکعب‌ها",
+                value = curDim,
+                onSelect = { sel ->
+                    val parts = sel.split('x')
+                    val r = parts.getOrNull(0)?.toIntOrNull() ?: 3
+                    val c = parts.getOrNull(1)?.toIntOrNull() ?: 3
+                    onUpdateMap(PrimaryInteractiveFigureHelper.resizeCubesGrid(spec, r, c))
+                },
+                options = dimOptions
+            )
+            Text(
+                "ارتفاع هر ستون (با زدن روی هر خانه، تعداد مکعب‌های آن ستون از ۰ تا ۶ تغییر می‌کند):",
+                style = MaterialTheme.typography.bodySmall
+            )
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                for (r in 0 until rowsN) {
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        for (c in 0 until colsN) {
+                            val h = grid[r][c]
+                            OutlinedButton(
+                                onClick = {
+                                    onUpdateMap(PrimaryInteractiveFigureHelper.setCubesCell(spec, r, c, (h + 1) % 7))
+                                },
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Text(PrimaryInteractiveFigureHelper.toFa(h.toString()), style = MaterialTheme.typography.titleMedium)
+                            }
+                        }
+                    }
+                }
             }
         }
     }
@@ -580,52 +720,61 @@ private fun paramFields(type: String): List<Pair<String, String>> = when (type) 
     "axlog" -> listOf("xmax" to "x max", "ymax" to "تعداد دههٔ y")
     "axloglog" -> listOf("xmax" to "تعداد دههٔ x", "ymax" to "تعداد دههٔ y")
     "axtime" -> listOf("labs" to "زمان‌ها (با ویرگول)", "s1" to "نام محور")
-    // V304 — ابزار ریاضی ابتدایی
+    // V304 / V335.8 — ابزار ریاضی ابتدایی
     "axtally" -> listOf("n" to "تعداد (۰ تا ۷۵)", "label" to "نمایش تعداد زیر شکل")
-    "axbase10" -> listOf("n" to "عدد (۰ تا ۱٬۰۰۰٬۰۰۰)", "label" to "نمایش عدد زیر شکل")
+    "axbase10" -> listOf("n" to "عدد (۰ تا ۹۹۹٬۹۹۹٬۹۹۹)", "label" to "نمایش عدد زیر شکل")
     "axplace" -> listOf("n" to "ردیف ۱ (عدد)", "n2" to "ردیف ۲ (خالی = ندارد)", "op2" to "علامت ردیف ۲ (+ یا −)", "n3" to "ردیف ۳ (خالی = ندارد)", "op3" to "علامت ردیف ۳ (+ یا −)", "rows" to "تعداد ردیف‌ها (۱ تا ۶)", "blank" to "خانه‌ها خالی؟ (۱=بله)")
     "axclock" -> listOf("h" to "ساعت (۰ تا ۱۲)", "m" to "دقیقه (۰ تا ۵۹)", "nums" to "نمایش عددها (۱/۰)", "label" to "نوشتن ساعت زیر شکل (۱/۰)")
     "axruler" -> listOf("len" to "طول خط‌کش (۲ تا ۵۰ سانتی‌متر)", "a" to "ابتدای اندازه‌گیری (اختیاری)", "b" to "انتهای اندازه‌گیری (اختیاری)", "label" to "نمایش طول بازه")
-    "axfrac" -> listOf("num" to "صورت", "den" to "مخرج", "shape" to "شکل", "label" to "نوشتن کسر زیر شکل (۱/۰)")
-    "axmoney" -> listOf("notes" to "اسکناس‌ها (با ویرگول)", "coins" to "سکه‌ها (با ویرگول)", "unit" to "واحد", "sum" to "نوشتن جمع (۱/۰)")
-    // V314.0 — ۶ ابزار جدید ریاضی و علوم ابتدایی
-    "axabacus" -> listOf("n" to "عدد (۰ تا ۹۹۹٬۹۹۹)", "cols" to "تعداد ستون‌ها (۲ تا ۶)", "blank" to "مخفی کردن ارقام زیر چرتکه (۱=بله)")
-    "axjump" -> listOf("start" to "نقطهٔ شروع", "step" to "طول هر پرش", "jumps" to "تعداد پرش", "max" to "انتهای محور", "label" to "نمایش عبارت جمع/ضرب (۱/۰)")
+    "axfrac" -> listOf("num" to "صورت", "den" to "مخرج (۱ تا ۲۵)", "shape" to "شکل", "label" to "نوشتن کسر زیر شکل")
+    "axmoney" -> listOf("notes" to "اسکناس‌ها (با ویرگول)", "coins" to "سکه‌ها (با ویرگول)", "unit" to "واحد", "sum" to "نوشتن جمع")
+    // V314.0 / V335.8 — ابزارهای ریاضی و علوم ابتدایی
+    "axabacus" -> listOf("n" to "عدد (۰ تا ۹۹۹٬۹۹۹)", "cols" to "تعداد ستون‌ها (یکان تا صدگان هزار)", "blank" to "نمایش ارقام زیر چرتکه")
+    "axjump" -> listOf("op" to "نوع عملیات روی محور", "start" to "نقطهٔ شروع", "step" to "طول هر پرش", "jumps" to "تعداد پرش", "max" to "انتهای محور", "label" to "نمایش عبارت زیر محور")
     "axbalance" -> listOf("left" to "وزنهٔ کفهٔ چپ", "right" to "وزنهٔ کفهٔ راست", "unit" to "واحد جرم", "label" to "نمایش علامت مقایسه")
     "axthermo" -> listOf("val" to "دما (°C)", "min" to "کمینهٔ دما", "max" to "بیشینهٔ دما")
-    "axsaw" -> listOf("size" to "اندازهٔ جدول (۳×۳ تا ۹×۹)", "mode" to "نمایش (رنگ / شکل / عدد)", "vals" to "سطرها با ; و خانه‌ها با , (جای خالی = ?)")
-    "axpattern" -> listOf("seq" to "دنباله با ویرگول (مثلاً ●,▲,●,▲,?)", "mode" to "نوع نمایش الگو (شکل / رنگ / مهره)")
-    // V315.0 — ۸ ابزار جدید ریاضی و علوم ابتدایی
+    "axsaw" -> listOf("size" to "اندازهٔ جدول (۳×۳ تا ۹×۹)", "mode" to "نمایش (رنگ / شکل / عدد)", "vals" to "مقادیر جدول")
+    "axpattern" -> listOf("mode" to "نوع نمایش الگو", "seq" to "الگوی آماده")
+    // V315.0 / V335.8 — ابزارهای ریاضی و علوم ابتدایی
     "axtenframe" -> listOf("a" to "مهره‌های قرمز", "b" to "مهره‌های آبی", "frames" to "تعداد قاب (۱ یا ۲)", "label" to "نمایش عبارت جمع")
-    "axsym" -> listOf("cells" to "خانه‌ها (ردیف,ستون با ;)", "axis" to "خط تقارن (v عمودی / h افقی)", "mirror" to "نمایش قرینه (۱=بله، ۰=؟)")
-    "axspin" -> listOf("parts" to "بخش‌های چرخنده (با کاما)", "arrow" to "شمارهٔ بخش عقربه")
-    "axbeaker" -> listOf("val" to "حجم مایع", "max" to "ظرفیت کل", "unit" to "واحد (mL یا لیتر)")
+    "axsym" -> listOf("axis" to "خط تقارن", "mirror" to "نمایش قرینه", "cells" to "خانه‌های شکل")
+    "axbeaker" -> listOf(
+        "count" to "تعداد استوانه‌های مدرج (۱ تا ۴)",
+        "val" to "حجم استوانهٔ اول",
+        "val2" to "حجم استوانهٔ دوم (ب)",
+        "val3" to "حجم استوانهٔ سوم (ج)",
+        "val4" to "حجم استوانهٔ چهارم (د)",
+        "max" to "ظرفیت کل هر استوانه",
+        "unit" to "واحد حجم",
+        "label" to "نمایش برچسب حجم"
+    )
     "axgeoboard" -> listOf("pts" to "مختصات میخ‌ها (x,y با ;)", "grid" to "اندازهٔ شبکه (۳ تا ۷)")
-    "axdice" -> listOf("dice" to "اعداد تاس‌ها (با کاما)", "sum" to "نمایش جمع (۱=جمع، ۲=؟، ۰=خیر)")
-    "axmularea" -> listOf("a" to "عدد اول (افقی)", "b" to "عدد دوم (عمودی)", "blank" to "مخفی کردن حاصل‌ها (۰ یا ۱)")
+    "axdice" -> listOf("dice" to "اعداد تاس‌ها (با کاما)", "sum" to "نمایش جمع")
+    "axmularea" -> listOf("a" to "عدد اول (افقی)", "b" to "عدد دوم (عمودی)", "blank" to "مخفی کردن حاصل‌ها")
     "axvenn" -> listOf("left" to "دایرهٔ چپ", "right" to "دایرهٔ راست", "mid" to "بخش مشترک (وسط)")
-    // V317.0 — ۶ ابزار پیشرفتهٔ جدید ریاضی ابتدایی
+    // V317.0 / V335.8 — ۶ ابزار پیشرفتهٔ ریاضی ابتدایی
     "axnumgrid" -> listOf("start" to "عدد شروع", "cols" to "تعداد ستون", "rows" to "تعداد سطر", "rule" to "رنگ‌آمیزی مضرب/الگو", "blanks" to "خانه‌های جای خالی (با ویرگول)")
     "axfacttree" -> listOf("n" to "عدد مورد تجزیه (۴ تا ۹۹۹)", "blank" to "حالت جای خالی (؟)")
-    "axfnmachine" -> listOf("in" to "ورودی‌ها (با ویرگول)", "op1" to "عملگر مرحلهٔ اول", "op2" to "عملگر مرحلهٔ دوم (اختیاری)", "blank" to "حالت جای خالی (؟)")
+    "axfnmachine" -> listOf("in" to "ورودی‌ها با ویرگول (تا ۸ عدد)", "op1" to "عملگر مرحلهٔ اول", "op2" to "عملگر مرحلهٔ دوم (اختیاری)", "blank" to "حالت جای خالی")
     "axfracwall" -> listOf("dens" to "مخرج ردیف‌ها (با ویرگول)", "fills" to "تعداد رنگ‌شدهٔ هر ردیف", "mode" to "نحوهٔ نمایش کسرها")
     "axtangram" -> listOf("shape" to "طرح تانگرام (۷ تکه)", "mode" to "حالت نمایش قطعات")
     "axangle" -> listOf("deg" to "زاویه (۰ تا ۱۸۰ درجه)", "pro" to "نمایش نقاله", "label" to "نمایش اندازهٔ زاویه")
     "axrod" -> listOf("nums" to "میله‌ها (۱ تا ۱۰ با ویرگول)", "blank" to "جای خالی (؟)")
-    "axtower" -> listOf("base" to "آجرهای ردیف پایین", "op" to "عمل (+ یا −)", "blank" to "جای خالی (؟)")
-    "axmulwheel" -> listOf("c" to "عدد مرکز", "n" to "تعداد پره (۳ تا ۱۲)", "op" to "عمل (× یا +)", "hide" to "جای خالی (؟)")
-    "axmultgrid" -> listOf("rows" to "عددهای سطر", "cols" to "عددهای ستون", "blank" to "جای خالی (۰ کامل / ۱ خانه‌ها / ۲ سرستون‌ها)")
+    "axtower" -> listOf("base" to "آجرهای ردیف پایین", "op" to "عمل (+ یا −)", "blank" to "حالت اولیهٔ خانه‌ها")
+    "axmulwheel" -> listOf("c" to "عدد مرکز", "n" to "تعداد پره (۳ تا ۱۲)", "op" to "عمل (× یا +)", "hide" to "حالت اولیهٔ خانه‌ها")
+    "axmultgrid" -> listOf("rows" to "عددهای سطر", "cols" to "عددهای ستون", "blank" to "حالت اولیهٔ خانه‌ها")
     "axnet" -> listOf("shape" to "نوع حجم", "mode" to "حالت نمایش")
-    "axcubes" -> listOf("map" to "ارتفاع ستون‌ها (سطرها با ;)", "view" to "نما", "hide" to "مخفی کردن تعداد (؟)")
-    "axcalendar" -> listOf("month" to "نام ماه", "start" to "روز شروع (۰ = شنبه)", "days" to "تعداد روزها", "mark" to "روزهای نشان‌دار (با ویرگول)", "blank" to "جای خالی (؟)")
-    "axlever" -> listOf("kind" to "نوع ماشین", "load" to "نیروی بار (N)", "effort" to "نیروی محرک (N)", "l1" to "بازوی بار", "l2" to "بازوی نیرو")
+    "axcubes" -> listOf("view" to "نمای نمایش مکعب‌ها", "hide" to "نمایش تعداد کل مکعب‌ها", "map" to "ارتفاع ستون‌ها")
+    "axcalendar" -> listOf("month" to "نام ماه", "start" to "روز شروع ماه", "days" to "تعداد روزها", "mark" to "روزهای نشان‌دار (با ویرگول)", "blank" to "حالت اولیهٔ روزها")
+    "axlever" -> listOf("kind" to "نوع ماشین ساده", "load" to "نیروی بار (N)", "effort" to "نیروی محرک (N)", "l1" to "بازوی محرک / طول", "l2" to "بازوی مقاوم / ارتفاع")
     "axcycle" -> listOf("kind" to "نوع چرخه")
-    "axwordtrain" -> listOf("syll" to "هجاها (با ویرگول)", "word" to "کلمهٔ ساخته‌شده", "mode" to "حالت")
-    // V327 — ابزارهای تازهٔ دبستان
-    "axpaintgrid" -> listOf("rows" to "تعداد سطر", "cols" to "تعداد ستون", "goal" to "چند خانه رنگ شود", "cells" to "خانه‌های رنگ‌شدهٔ نمونه (سطر,ستون)")
-    "axletterforms" -> listOf("ch" to "حرف")
-    "axsyllablechart" -> listOf("word" to "کلمه با هجاها (با - جدا کنید)")
-    "axmagnet" -> listOf("mode" to "حالت (جذب/دفع)")
+    "axwordtrain" -> listOf("syll" to "بخش‌ها (با ویرگول، مثلاً با,ران)", "word" to "کلمهٔ کامل", "mode" to "حالت نمایش")
+    // V327 / V335.8 — ابزارهای دبستان
+    "axpaintgrid" -> listOf("rows" to "تعداد سطر", "cols" to "تعداد ستون", "goal" to "هدف رنگ‌آمیزی (۰ = بدون هدف)", "cells" to "خانه‌های رنگ‌شده")
+    "axletterforms" -> listOf("ch" to "حرف فارسی")
+    "axsyllablechart" -> listOf("word" to "کلمهٔ مورد نظر (مثلاً مدرسه)", "mode" to "حالت نمایش")
+    "axmagnet" -> listOf("mode" to "حالت قطب‌ها")
+    "axsenses" -> listOf("mode" to "حالت نمایش برچسب‌ها")
     "axtiles" -> listOf("x2" to "تعداد کاشی x²", "x" to "تعداد کاشی x", "k" to "تعداد کاشی ۱", "neg" to "منفی (۱/۰)")
     "axkenken" -> listOf("size" to "ابعاد جدول (۳ تا ۶)", "cages" to "قفس‌ها (خانه‌ها|هدف|عمل با ;)")
     "axdicefold" -> listOf("mode" to "نمایش وجه‌ها", "top" to "شمارهٔ وجه بالا", "ask" to "پرسش وجه مقابل (۱/۰)")
@@ -728,7 +877,7 @@ private val TEXT_PARAM_KEYS = setOf(
     "month", "mark", "syll", "word", "from", "to", "arrows", "first", "second", "sym",
     "p1", "p2", "states", "accept", "edges", "line", "expr", "title", "debit", "credit",
     "ones", "groups", "cages", "nums", "base", "map", "mat", // V318.0: کلیدهای متنی ۴۰ ابزار جامع
-    "val", "data", "n", "a", "b", "c", "show", "kind", "mode", "seq", "subj", "verb", "obj",
+    "val", "val2", "val3", "val4", "count", "ov", "empty", "data", "n", "a", "b", "c", "show", "kind", "mode", "seq", "subj", "verb", "obj",
     "ax1", "ay1", "bx", "by", "f", "lo", "hi", "steps", "items", "op", "pts", "events", "labs", "w", "h",
     "shape", "r", "m1", "b1", "m2", "b2", // V319.1: کلیدهای متنی ۳۰ ابزار جدید
     "labs", "labs2", "vals", "vals2", "vals3", "xs", "ys", "zs", "s1", "s2", "s3",
@@ -797,9 +946,10 @@ private fun templateLabel(kind: FigureKind, type: String): String =
 private fun trimNum(value: Float): String =
     if (value == value.toInt().toFloat()) value.toInt().toString() else value.toString()
 
-/** V315.1 / V315.2 — گزینه‌های منوی کشویی برای پارامترهای چندحالتهٔ ابزارهای ریاضی/علوم ابتدایی، محورها، نمودارها و هندسه. */
-private fun dropdownOptionsFor(type: String, key: String): List<Pair<String, String>>? = when (type to key) {
-    "axfrac" to "shape" -> listOf("circle" to "دایره‌ای (قطاع)", "ring" to "حلقه‌ای", "bar" to "نواری", "square" to "مربعی (شبکه)")
+/** V315.1 / V335.8 — گزینه‌های منوی کشویی برای پارامترهای چندحالتهٔ ابزارهای ریاضی/علوم ابتدایی، محورها، نمودارها و هندسه. */
+private fun dropdownOptionsFor(type: String, key: String, currentValue: String = ""): List<Pair<String, String>>? = when (type to key) {
+    "axfrac" to "shape" -> listOf("circle" to "دایره‌ای (قطاع)", "ring" to "حلقه‌ای", "bar" to "نواری", "square" to "مربعی (شبکه — تا ۲۵ خانه)")
+    "axjump" to "op" -> listOf("+" to "جمع (+)", "-" to "تفریق (−)", "×" to "ضرب (×)", "÷" to "تقسیم (÷)")
     "axsaw" to "size" -> listOf(
         "3" to "۳×۳ (پایهٔ اول — ۳ خانه)",
         "4" to "۴×۴ (استاندارد ابتدایی — بلوک ۲×۲)",
@@ -816,9 +966,31 @@ private fun dropdownOptionsFor(type: String, key: String): List<Pair<String, Str
         "num" to "عددی (۱ تا ۹)"
     )
     "axpattern" to "mode" -> listOf(
-        "shape" to "شکلی و عددی (● ▲ ■ ★)",
-        "color" to "الگوی رنگ‌آمیزی — ویژهٔ اول ابتدایی",
-        "bead" to "نخ و مهره‌های رنگی"
+        "shape" to "شکلی (● ▲ ■ ★ ◆ ♥)",
+        "color" to "رنگ‌آمیزی خانه‌ها (ویژهٔ پایهٔ اول)",
+        "bead" to "نخ و مهره‌های رنگی",
+        "number" to "الگوی عددی (با کمان رابطهٔ + و ×)",
+        "growing" to "الگوی رشدشوندهٔ نقطه‌ای (شکل ۱، شکل ۲، ...)",
+        "mixed" to "الگوی ترکیبی و جهتی (عدد، شکل، پیکان)"
+    )
+    "axpattern" to "seq" -> {
+        val base = PrimaryInteractiveFigureHelper.PATTERN_PRESETS.map { it.seq to it.label }
+        if (currentValue.isNotBlank() && base.none { it.first == currentValue }) {
+            listOf(currentValue to "دنبالهٔ سفارشی ($currentValue)") + base
+        } else {
+            base
+        }
+    }
+    "axbeaker" to "count" -> listOf(
+        "1" to "۱ استوانهٔ مدرج",
+        "2" to "۲ استوانه در کنار هم (الف و ب)",
+        "3" to "۳ استوانه در کنار هم (الف تا ج)",
+        "4" to "۴ استوانه در کنار هم (الف تا د)"
+    )
+    "axbeaker" to "label" -> listOf(
+        "1" to "نمایش عدد حجم زیر هر استوانه",
+        "2" to "جای خالی حجم (؟) برای سؤال",
+        "0" to "بدون برچسب حجم"
     )
     "axnumgrid" to "cols" -> listOf("10" to "۱۰ ستون (جدول صدتایی)", "5" to "۵ ستون", "6" to "۶ ستون", "8" to "۸ ستون")
     "axnumgrid" to "rows" -> listOf("10" to "۱۰ سطر (جدول صدتایی)", "5" to "۵ سطر (۵۰تایی)", "6" to "۶ سطر", "8" to "۸ سطر")
@@ -845,11 +1017,17 @@ private fun dropdownOptionsFor(type: String, key: String): List<Pair<String, Str
     "axangle" to "pro" -> listOf("1" to "همراه با نقالهٔ مدرج", "0" to "فقط دو ضلع و کمان زاویه")
     "axangle" to "label" -> listOf("1" to "نمایش درجه و نوع زاویه", "2" to "نمایش با جای خالی (؟°)", "0" to "بدون برچسب")
     "axsym" to "axis" -> listOf("v" to "عمودی (چپ و راست)", "h" to "افقی (بالا و پایین)")
-    "axsym" to "mirror" -> listOf("1" to "نمایش کامل شکل قرینه", "0" to "جای خالی (؟) برای سؤال")
+    "axsym" to "mirror" -> listOf("1" to "نمایش کامل شکل قرینه", "0" to "عدم نمایش کامل شکل قرینه")
     "axplace" to "op2", "axplace" to "op3" -> listOf("" to "ندارد", "+" to "جمع (+)", "-" to "تفریق (−)")
     "axplace" to "rows" -> listOf("1" to "۱ ردیف", "2" to "۲ ردیف", "3" to "۳ ردیف", "4" to "۴ ردیف")
     "axplace" to "blank", "axabacus" to "blank", "axmularea" to "blank" -> listOf("0" to "نمایش عددها", "1" to "جای خالی (برای طرح سؤال)")
-    "axabacus" to "cols" -> listOf("2" to "۲ ستون (تا دهگان)", "3" to "۳ ستون (تا صدگان)", "4" to "۴ ستون (تا هزار)", "5" to "۵ ستون (تا ده‌هزار)", "6" to "۶ ستون (تا صدهزار)")
+    "axabacus" to "cols" -> listOf(
+        "6" to "۶ ستون (یکان تا صدگان هزار)",
+        "5" to "۵ ستون (یکان تا دهگان هزار)",
+        "4" to "۴ ستون (یکان تا یکان هزار)",
+        "3" to "۳ ستون (یکان، دهگان، صدگان)",
+        "2" to "۲ ستون (یکان و دهگان)"
+    )
     "axclock" to "nums" -> listOf("1" to "نمایش عددهای ۱ تا ۱۲", "0" to "بدون عدد (تمرین ساعت)")
     "axclock" to "label" -> listOf("0" to "ندارد", "1" to "نمایش ساعت زیر شکل", "2" to "نمایش با جای خالی (ساعت = ؟ : ؟)")
     "axfrac" to "label" -> listOf("1" to "نمایش کسر زیر شکل", "2" to "نمایش با جای خالی (؟ / ؟)", "0" to "ندارد")
@@ -866,20 +1044,33 @@ private fun dropdownOptionsFor(type: String, key: String): List<Pair<String, Str
     "axdice" to "sum" -> listOf("1" to "نمایش جمع کامل (۴ + ۶ = ۱۰)", "2" to "نمایش با جای خالی (۴ + ۶ = ؟)", "0" to "فقط نمایش تاس‌ها")
     "axrod" to "blank" -> listOf("0" to "نمایش طول میله‌ها", "1" to "طول با جای خالی (؟)")
     "axtower" to "op" -> listOf("+" to "جمع (+)", "-" to "تفریق (−)")
-    "axtower" to "blank" -> listOf("0" to "کامل", "1" to "با جای خالی (؟)")
+    "axtower" to "blank" -> listOf("0" to "نمایش همهٔ آجرها (انتخاب دستی خانهٔ خالی با لمس)", "1" to "خالی‌کردن خودکار چند آجر (بدون ؟)")
     "axmulwheel" to "op" -> listOf("×" to "ضرب (×)", "+" to "جمع (+)")
-    "axmulwheel" to "hide" -> listOf("0" to "کامل", "1" to "با جای خالی (؟)")
-    "axmultgrid" to "blank" -> listOf("0" to "کامل", "1" to "خانه‌های خالی (؟)", "2" to "سرستون‌های خالی (؟)")
+    "axmulwheel" to "hide" -> listOf("0" to "نمایش همهٔ پره‌ها (انتخاب دستی خانهٔ خالی با لمس)", "1" to "خالی‌کردن خودکار چند پره (بدون ؟)")
+    "axmultgrid" to "blank" -> listOf("0" to "نمایش کامل (انتخاب دستی خانهٔ خالی با لمس)", "1" to "خالی‌کردن خودکار خانه‌های حاصل (بدون ؟)", "2" to "خالی‌کردن خودکار سرستون‌ها (بدون ؟)")
     "axnet" to "shape" -> listOf("cube" to "مکعب (۶ وجه)", "cuboid" to "مکعب‌مستطیل", "pyramid" to "هرم (۵ وجه)", "prism" to "منشور (۵ وجه)")
     "axnet" to "mode" -> listOf("color" to "رنگی کامل", "num" to "شمارهٔ وجه‌ها", "outline" to "سفید برای رنگ‌آمیزی", "blank" to "جای خالی (؟)")
     "axcubes" to "view" -> listOf("iso" to "نمای سه‌بعدی (ایزومتریک)", "top" to "نمای از بالا", "front" to "نمای روبه‌رو", "side" to "نمای از پهلو")
     "axcubes" to "hide" -> listOf("0" to "نمایش تعداد", "1" to "تعداد با جای خالی (؟)")
     "axcalendar" to "start" -> listOf("0" to "شنبه", "1" to "یکشنبه", "2" to "دوشنبه", "3" to "سه‌شنبه", "4" to "چهارشنبه", "5" to "پنجشنبه", "6" to "جمعه")
-    "axcalendar" to "blank" -> listOf("0" to "همهٔ روزها", "1" to "چند خانه جای خالی (؟)")
-    "axlever" to "kind" -> listOf("lever1" to "اهرم نوع اول", "lever2" to "اهرم نوع دوم", "lever3" to "اهرم نوع سوم", "pulley" to "قرقرهٔ متحرک", "gears" to "چرخ‌دنده")
+    "axcalendar" to "blank" -> listOf("0" to "نمایش همهٔ روزها (انتخاب دستی خانهٔ خالی با لمس)", "1" to "خالی‌کردن خودکار مضرب‌های ۵ (بدون ؟)")
+    "axlever" to "kind" -> listOf("lever1" to "اهرم نوع اول", "lever2" to "اهرم نوع دوم", "lever3" to "اهرم نوع سوم", "pulley" to "قرقرهٔ ثابت و متحرک", "inclined" to "سطح شیب‌دار", "gears" to "چرخ‌دنده‌های درگیر")
     "axcycle" to "kind" -> listOf("water" to "چرخهٔ آب", "plant" to "مراحل رشد گیاه", "frog" to "دگردیسی قورباغه", "food" to "زنجیرهٔ غذایی")
-    // V327 — حالت آهنربا
-    "axmagnet" to "mode" -> listOf("attract" to "جذب (ناهم‌نام)", "repel" to "دفع (هم‌نام)")
+    // V327 / V335.8 — حالت آهنربا، هجاها و حواس پنج‌گانه
+    "axmagnet" to "mode" -> listOf(
+        "attract" to "جذب (قطب‌های ناهم‌نام N و S روبه‌رو)",
+        "repel" to "دفع (قطب‌های هم‌نام N روبه‌رو)",
+        "repel_s" to "دفع (قطب‌های هم‌نام S روبه‌رو)"
+    )
+    "axsyllablechart" to "mode" -> listOf(
+        "ask" to "سؤال آزمون (فقط نمایش کلمه برای بخش‌کردن توسط دانش‌آموز)",
+        "show" to "نمایش آموزشی بخش‌های کلمه (جداشده با خط تیره)"
+    )
+    "axsenses" to "mode" -> listOf(
+        "full" to "نمایش کامل حس و اندام",
+        "blank_sense" to "جای خالی نام حس‌ها (؟)",
+        "blank_organ" to "جای خالی نام اندام‌ها (؟)"
+    )
     "axwordtrain" to "mode" -> listOf("join" to "نمایش کلمه", "blank" to "کلمه با جای خالی (؟)")
     "axtiles" to "neg" -> listOf("0" to "مثبت (آبی)", "1" to "منفی (قرمز)")
     "axkenken" to "size" -> listOf("3" to "۳×۳", "4" to "۴×۴", "5" to "۵×۵", "6" to "۶×۶")
