@@ -1480,27 +1480,190 @@
     function savePage() { pages[cur].data = canvas.toDataURL('image/webp', 0.85); pages[cur].grid = grid; }
     function loadPage(i) { cur = i; grid = pages[i].grid || 'blank'; gridSel.value = grid; if (pages[i].data) { var im = new Image(); im.onload = function () { ctx.drawImage(im, 0, 0); }; im.src = pages[i].data; ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, W, H); } else blank(); undo = []; status.textContent = 'صفحهٔ ' + fa(i + 1) + ' از ' + fa(pages.length); }
     var toolBtns = {};
-    function tb(id, label, title) { var b = el('button', {class: 'wb-tool' + (tool === id ? ' on' : ''), text: label, title: title, onclick: function () { tool = id; Object.keys(toolBtns).forEach(function (k) { toolBtns[k].classList.toggle('on', k === id); }); }}); toolBtns[id] = b; return b; }
-    var gridSel = el('select', {class: 'wb-sel', title: 'زمینه'}); [['blank', 'خالی'], ['lined', 'خط‌دار'], ['grid', 'شطرنجی'], ['line', 'محور اعداد'], ['quad', 'محور ۴ ناحیه'], ['first', 'ناحیهٔ اول'], ['polar', 'قطبی']].forEach(function (o) { gridSel.appendChild(el('option', {value: o[0], text: o[1]})); });
-    gridSel.addEventListener('change', async function () { if (!(await S.confirmDlg('تغییر زمینه', 'تغییر زمینه، رسم‌های این صفحه را پاک می‌کند. ادامه؟', 'ادامه', true))) { gridSel.value = grid; return; } grid = gridSel.value; blank(); }); /* V250 — بدون confirm مرورگر */
-    var colorIn = el('input', {type: 'color', value: color, class: 'wb-color', title: 'رنگ'}); colorIn.addEventListener('input', function () { color = colorIn.value; });
-    var sizeIn = el('input', {type: 'range', min: 1, max: 12, value: size, class: 'wb-size', title: 'ضخامت'}); sizeIn.addEventListener('input', function () { size = Number(sizeIn.value); });
-    var bar = el('div', {class: 'engine-bar wb-bar'}, [
-      el('span', {text: opts && opts.title ? '🖍 ' + opts.title : '🖍 تختهٔ سفید — سؤال ' + fa(run.exam.questions.indexOf(q) + 1)}),
-      tb('pen', '✏️', 'قلم'), tb('eraser', '🧽', 'پاک‌کن'), tb('line', '╱', 'خط'), tb('arrow', '➚', 'پیکان'), tb('rect', '▭', 'مستطیل'), tb('circle', '◯', 'دایره'), tb('text', 'T', 'متن'),
-      (function () { var b = el('button', {class: 'wb-tool', text: '✨', title: 'تشخیص شکل: خط/دایره/مثلث/مستطیل دست‌آزاد به شکل منظم تبدیل می‌شود', 'aria-label': 'تشخیص شکل', onclick: function () { autoShape = !autoShape; b.classList.toggle('on', autoShape); if (autoShape && toolBtns.pen) toolBtns.pen.click(); }}); return b; })(), /* V264 */
-      colorIn, sizeIn, gridSel,
-      el('button', {class: 'wb-tool', text: '↶', title: 'برگرداندن', onclick: function () { var d = undo.pop(); if (!d) return; var im = new Image(); im.onload = function () { ctx.drawImage(im, 0, 0); }; im.src = d; }}),
-      el('button', {class: 'wb-tool', text: '🗑', title: 'پاک کردن صفحه', onclick: async function () { if (await S.confirmDlg('پاک کردن صفحه', 'کل این صفحه پاک شود؟', 'پاک شود', true)) { push(); blank(); } }}),
-      el('span', {class: 'grow'}), status,
-      el('button', {class: 'btn light sm', text: '◀', title: 'صفحهٔ قبل', onclick: function () { if (cur > 0) { savePage(); loadPage(cur - 1); } }}),
-      el('button', {class: 'btn light sm', text: '▶', title: 'صفحهٔ بعد', onclick: function () { savePage(); if (cur < pages.length - 1) loadPage(cur + 1); else if (pages.length < WHITEBOARD_MAX_PAGES) { pages.push(newPage()); loadPage(pages.length - 1); } else toast('حداکثر ' + fa(WHITEBOARD_MAX_PAGES) + ' صفحه.', 'err'); }}),
-      el('button', {class: 'btn sm', text: '✅ ' + (opts && opts.doneLabel ? opts.doneLabel : 'ثبت به‌عنوان پاسخ'), onclick: function () { savePage(); var out = pages.filter(function (p) { return p.data; }).map(function (p) { return p.data; }); close(); if (out.length) onDone(out); }}),
-      el('button', {class: 'btn light sm', text: '✕', title: 'بستن بدون ثبت', onclick: async function () { if (await S.confirmDlg('بستن تخته', 'تخته بدون ثبت بسته شود؟', 'بستن', true)) close(); }})
-    ]);
+    function tb(id, icon, title) {
+      var b = el('button', {
+        type: 'button',
+        class: 'wb-tool' + (tool === id ? ' on' : ''),
+        title: title,
+        'aria-label': title,
+        onclick: function () {
+          tool = id;
+          Object.keys(toolBtns).forEach(function (k) { toolBtns[k].classList.toggle('on', k === id); });
+        }
+      }, [
+        el('span', {class: 'wb-tool-ic', text: icon}),
+        el('span', {class: 'wb-tool-txt', text: title})
+      ]);
+      toolBtns[id] = b;
+      return b;
+    }
+    var gridSel = el('select', {class: 'wb-sel', title: 'زمینه', 'aria-label': 'زمینه'});
+    [['blank', 'زمینهٔ سفید (خالی)'], ['lined', 'خط‌دار'], ['grid', 'شطرنجی'], ['line', 'محور اعداد'], ['quad', 'محور مختصات ۴ ناحیه'], ['first', 'محور مختصات ناحیهٔ اول'], ['polar', 'مختصات قطبی']].forEach(function (o) {
+      gridSel.appendChild(el('option', {value: o[0], text: o[1]}));
+    });
+    gridSel.addEventListener('change', async function () {
+      if (!(await S.confirmDlg('تغییر زمینه', 'تغییر زمینه، رسم‌های این صفحه را پاک می‌کند. ادامه؟', 'ادامه', true))) { gridSel.value = grid; return; }
+      grid = gridSel.value; blank();
+    }); /* V250 — بدون confirm مرورگر */
+
+    var swatchBtns = [];
+    var colorIn = el('input', {type: 'color', value: color, class: 'wb-color', title: 'رنگ دلخواه'});
+    function syncColor(c) {
+      color = c;
+      colorIn.value = c;
+      swatchBtns.forEach(function (sb) { sb.classList.toggle('on', sb.getAttribute('data-col') === c.toLowerCase()); });
+    }
+    colorIn.addEventListener('input', function () { syncColor(colorIn.value); });
+    var swatches = ['#1a237e', '#111827', '#dc2626', '#059669', '#7c3aed', '#d97706'].map(function (hex) {
+      var sw = el('button', {
+        type: 'button',
+        class: 'wb-swatch' + (hex === color ? ' on' : ''),
+        'data-col': hex,
+        title: 'رنگ قلم',
+        style: 'background:' + hex,
+        onclick: function () { syncColor(hex); }
+      });
+      swatchBtns.push(sw);
+      return sw;
+    });
+
+    var sizeVal = el('span', {class: 'wb-size-val', text: fa(size)});
+    var sizeIn = el('input', {type: 'range', min: 1, max: 12, value: size, class: 'wb-size', title: 'ضخامت قلم'});
+    sizeIn.addEventListener('input', function () { size = Number(sizeIn.value); sizeVal.textContent = fa(size); });
+
+    var autoShapeBtn = (function () {
+      var b = el('button', {
+        type: 'button',
+        class: 'wb-tool',
+        title: 'تشخیص شکل: خط/دایره/مثلث/مستطیل دست‌آزاد به شکل منظم تبدیل می‌شود',
+        'aria-label': 'تشخیص شکل',
+        onclick: function () {
+          autoShape = !autoShape;
+          b.classList.toggle('on', autoShape);
+          if (autoShape && toolBtns.pen) toolBtns.pen.click();
+        }
+      }, [
+        el('span', {class: 'wb-tool-ic', text: '✨'}),
+        el('span', {class: 'wb-tool-txt', text: 'تشخیص شکل'})
+      ]);
+      return b;
+    })(); /* V264 */
+
+    var qIdx = (run && run.exam && Array.isArray(run.exam.questions)) ? run.exam.questions.indexOf(q) : -1;
+    var boardTitle = opts && opts.title ? '🖍 ' + opts.title : ('🖍 تختهٔ سفید' + (qIdx >= 0 ? ' — سؤال ' + fa(qIdx + 1) : ''));
+
     function close() { window.removeEventListener('pointerup', up); bg.remove(); document.body.style.overflow = ''; }
+    async function requestClose() {
+      if (await S.confirmDlg('بستن تخته', 'تخته بدون ثبت بسته شود؟', 'بستن', true)) close();
+    }
+    bg.__onBack = requestClose;
+
+    /* V335.15 — چیدمان دسکتاپ: ستون راست = ابزارهای ترسیم و قلم؛ وسط = بوم تمام‌قد؛ ستون چپ = زمینه، ویرایش، صفحات و ثبت/بستن */
+    var rightSide = el('aside', {class: 'wb-side wb-right', 'aria-label': 'ابزارهای ترسیم تخته'}, [
+      el('div', {class: 'wb-title'}, [el('span', {text: boardTitle})]),
+      el('div', {class: 'wb-sec'}, [
+        el('div', {class: 'wb-sec-lbl', text: 'ابزارهای رسم'}),
+        el('div', {class: 'wb-tools-grid'}, [
+          tb('pen', '✏️', 'قلم'),
+          tb('eraser', '🧽', 'پاک‌کن'),
+          tb('line', '╱', 'خط'),
+          tb('arrow', '➚', 'پیکان'),
+          tb('rect', '▭', 'مستطیل'),
+          tb('circle', '◯', 'دایره'),
+          tb('text', 'T', 'متن'),
+          autoShapeBtn
+        ])
+      ]),
+      el('div', {class: 'wb-sec wb-stroke-sec'}, [
+        el('div', {class: 'wb-sec-lbl', text: 'رنگ و ضخامت قلم'}),
+        el('div', {class: 'wb-swatches'}, swatches.concat([colorIn])),
+        el('div', {class: 'wb-size-row'}, [
+          el('span', {class: 'wb-size-lbl', text: 'ضخامت'}),
+          sizeIn,
+          sizeVal
+        ])
+      ])
+    ]);
+
+    var undoBtn = el('button', {
+      type: 'button',
+      class: 'wb-tool wb-act',
+      title: 'برگرداندن آخرین تغییر',
+      onclick: function () {
+        var d = undo.pop(); if (!d) return;
+        var im = new Image(); im.onload = function () { ctx.drawImage(im, 0, 0); }; im.src = d;
+      }
+    }, [el('span', {class: 'wb-tool-ic', text: '↶'}), el('span', {class: 'wb-tool-txt', text: 'برگرداندن'})]);
+
+    var clearBtn = el('button', {
+      type: 'button',
+      class: 'wb-tool wb-act is-danger',
+      title: 'پاک کردن صفحه',
+      onclick: async function () {
+        if (await S.confirmDlg('پاک کردن صفحه', 'کل این صفحه پاک شود؟', 'پاک شود', true)) { push(); blank(); }
+      }
+    }, [el('span', {class: 'wb-tool-ic', text: '🗑'}), el('span', {class: 'wb-tool-txt', text: 'پاک کردن صفحه'})]);
+
+    var prevBtn = el('button', {
+      type: 'button',
+      class: 'btn light sm wb-nav-btn',
+      text: '◀ قبل',
+      title: 'صفحهٔ قبل',
+      onclick: function () { if (cur > 0) { savePage(); loadPage(cur - 1); } }
+    });
+    var nextBtn = el('button', {
+      type: 'button',
+      class: 'btn light sm wb-nav-btn',
+      text: 'بعد ▶',
+      title: 'صفحهٔ بعد / صفحهٔ جدید',
+      onclick: function () {
+        savePage();
+        if (cur < pages.length - 1) loadPage(cur + 1);
+        else if (pages.length < WHITEBOARD_MAX_PAGES) { pages.push(newPage()); loadPage(pages.length - 1); }
+        else toast('حداکثر ' + fa(WHITEBOARD_MAX_PAGES) + ' صفحه.', 'err');
+      }
+    });
+    var doneBtn = el('button', {
+      type: 'button',
+      class: 'btn sm wb-done-btn',
+      text: '✅ ' + (opts && opts.doneLabel ? opts.doneLabel : 'ثبت به‌عنوان پاسخ'),
+      onclick: function () {
+        savePage();
+        var out = pages.filter(function (p) { return p.data; }).map(function (p) { return p.data; });
+        close();
+        if (out.length) onDone(out);
+      }
+    });
+    var closeBtn = el('button', {
+      type: 'button',
+      class: 'btn light sm wb-close-btn',
+      text: '✕ بستن',
+      title: 'بستن بدون ثبت',
+      onclick: requestClose
+    });
+
+    var leftSide = el('aside', {class: 'wb-side wb-left', 'aria-label': 'مدیریت صفحه و ثبت تخته'}, [
+      el('div', {class: 'wb-top-close'}, [closeBtn]),
+      el('div', {class: 'wb-sec'}, [
+        el('div', {class: 'wb-sec-lbl', text: 'زمینهٔ صفحه'}),
+        gridSel
+      ]),
+      el('div', {class: 'wb-sec'}, [
+        el('div', {class: 'wb-sec-lbl', text: 'ویرایش صفحه'}),
+        el('div', {class: 'wb-edit-row'}, [undoBtn, clearBtn])
+      ]),
+      el('div', {class: 'wb-sec wb-pages-sec'}, [
+        el('div', {class: 'wb-sec-lbl', text: 'صفحه‌های تخته'}),
+        status,
+        el('div', {class: 'wb-nav-row'}, [prevBtn, nextBtn])
+      ]),
+      el('div', {class: 'wb-spacer'}),
+      doneBtn
+    ]);
+
     var area = el('div', {class: 'wb-area'}, [canvas]);
-    bg.appendChild(bar); bg.appendChild(area); document.body.appendChild(bg); document.body.style.overflow = 'hidden';
+    bg.appendChild(rightSide); bg.appendChild(area); bg.appendChild(leftSide);
+    document.body.appendChild(bg); document.body.style.overflow = 'hidden';
     /* صفحه‌های قبلی تخته (اگر پاسخ فعلی از تخته آمده) بارگذاری می‌شوند */
     var prev = opts ? (opts.prev || []) : (run.images[q.id] || []).filter(function (u) { return /^data:/.test(u); });
     if (prev.length && (opts || q.maxAnswerImages <= 0)) prev.forEach(function (d) { var p = newPage(); p.data = d; pages.push(p); }); else pages.push(newPage());
