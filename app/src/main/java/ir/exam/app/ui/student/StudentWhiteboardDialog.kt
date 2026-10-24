@@ -1214,6 +1214,12 @@ fun StudentWhiteboardDialog(
                     HelpRow(Icons.Outlined.ContentCopy, "تکثیر مورد", "یک نسخهٔ جابه‌جاشده از موارد انتخاب‌شده می‌سازد (Ctrl+D).")
                     HelpRow(Icons.Outlined.OpenWith, "جابه‌جایی دقیق", "با کلیدهای جهت ۲dp و با Shift+جهت ۱۰dp جابه‌جا می‌شود.")
                     Text("پایین نوار: رنگ‌ها و ضخامت، سبک خط (ممتد/خط‌چین/نقطه‌چین)، توپرِ ملایم، زمینه، صفحه‌های قبلی/بعدی، + صفحه، کپی صفحه، ذخیرهٔ PNG، پاک‌کردن صفحه.", style = MaterialTheme.typography.bodySmall)
+                    Text("ابزارهای هندسی", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
+                    HelpRow(BoardInstrument.NONE.icon, "بدون ابزار", "ابزار هندسی برداشته می‌شود.")
+                    HelpRow(BoardInstrument.RULER.icon, "خط‌کش", "قلم/خط نزدیک لبه به لبه می‌چسبد.")
+                    HelpRow(BoardInstrument.SETSQUARE.icon, "گونیا", "سه لبهٔ شماره‌دار؛ قلم به لبه می‌چسبد.")
+                    HelpRow(BoardInstrument.PROTRACTOR.icon, "نقاله", "قلم نزدیک کمان روی کمان و نزدیک خط پایه روی خط می‌رود.")
+                    HelpRow(BoardInstrument.COMPASS.icon, "پرگار", "هر کشیدن یک کمان به مرکز و شعاع پرگار است.")
                     Text("دستگیره‌های ابزار هندسی: دایرهٔ خاکستری (چهارپیکان) = جابه‌جایی ابزار؛ دایرهٔ آبی = چرخش و تغییر اندازه.", style = MaterialTheme.typography.bodySmall)
                 }
             },
