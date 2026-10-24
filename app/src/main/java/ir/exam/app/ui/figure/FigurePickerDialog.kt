@@ -266,8 +266,8 @@ fun FigurePickerDialog(
                     Text(
                         when {
                             resolvedKind == GEOMETRY -> "✏️ ویرایش شکل"
-                            resolvedKind == FigureKind.AXIS -> "✏️ ویرایش محور"
                             isMathTool -> "✏️ تنظیمات ابزار"
+                            resolvedKind == FigureKind.AXIS -> "✏️ ویرایش محور"
                             else -> "✏️ ویرایش نمودار"
                         },
                         style = MaterialTheme.typography.titleLarge,
@@ -290,7 +290,7 @@ fun FigurePickerDialog(
 }
 
 private fun isMathToolId(type: String): Boolean =
-    MATH_CATEGORIES.any { cat -> mathTemplatesOf(cat.key).any { it.id == type } }
+    MATH_CATEGORIES.any { cat -> type in cat.ids }
 
 private data class GeometryField(
     val group: String,
@@ -482,7 +482,7 @@ private fun GraphEditorPane(initialSpec: FigureSpec, onInsert: (FigureSpec) -> U
     LazyColumn(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         item {
             Text(
-                (if (isAxis) "تنظیمات محور: " else if (isMathTool) "تنظیمات ابزار: " else "نوع نمودار: ") + template.label,
+                (if (isMathTool) "تنظیمات ابزار: " else if (isAxis) "تنظیمات محور: " else "نوع نمودار: ") + template.label,
                 style = MaterialTheme.typography.titleMedium
             )
         }
@@ -490,7 +490,7 @@ private fun GraphEditorPane(initialSpec: FigureSpec, onInsert: (FigureSpec) -> U
             OutlinedTextField(
                 title,
                 { title = it },
-                label = { Text(if (isAxis) "عنوان محور (اختیاری)" else if (isMathTool) "عنوان ابزار (اختیاری)" else "عنوان نمودار (اختیاری)") },
+                label = { Text(if (isMathTool) "عنوان ابزار (اختیاری)" else if (isAxis) "عنوان محور (اختیاری)" else "عنوان نمودار (اختیاری)") },
                 modifier = Modifier.fillMaxWidth()
             )
         }

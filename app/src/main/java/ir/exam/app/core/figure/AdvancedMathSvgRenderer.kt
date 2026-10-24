@@ -3,8 +3,10 @@ package ir.exam.app.core.figure
 import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.atan2
+import kotlin.math.ceil
 import kotlin.math.cos
 import kotlin.math.exp
+import kotlin.math.floor
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.pow
@@ -2538,7 +2540,8 @@ object AdvancedMathSvgRenderer {
                     sb.append(rcDash(cx + 4f, cy + 4f, cell - 8f, cell - 8f, "#ffffff", "#6366f1", 1.3f, 6f, "4 2.5"))
                 }
                 // اندیس مینترم در گوشهٔ بالا-راست با زیرنویس یونیکد تا با شمارش «۱» و «۰» تداخل نکند
-                sb.append(tx(cx + cell - 4f, cy + 10f, "m${toSubscript(idx)}", "#94a3b8", "end", bold = false, size = 8))
+                val subIdx = idx.toString().map { if (it in '0'..'9') ('₀' + (it - '0')) else it }.joinToString("")
+                sb.append(tx(cx + cell - 4f, cy + 10f, "m$subIdx", "#94a3b8", "end", bold = false, size = 8))
                 if (disp.isNotEmpty()) {
                     val txtCol = when {
                         isEmpty -> "#1d4ed8"
