@@ -5298,15 +5298,11 @@
       axpattern: [['mode', 'نوع نمایش الگو'], ['seq', 'الگوی آماده']],
       axtenframe: [['a', 'مهره‌های قرمز'], ['b', 'مهره‌های آبی'], ['frames', 'تعداد قاب (۱ یا ۲)'], ['label', 'نمایش عبارت جمع']],
       axsym: [['axis', 'خط تقارن'], ['mirror', 'نمایش قرینه']],
-      axbeaker: (function () {
-        var bc = clamp(Math.floor(num((state && state.X && state.X.count) || 1, 1)), 1, 4);
-        var arr = [['count', 'تعداد استوانه‌های مدرج'], ['val', bc > 1 ? 'حجم استوانهٔ ۱' : 'حجم مایع']];
-        if (bc >= 2) arr.push(['val2', 'حجم استوانهٔ ۲']);
-        if (bc >= 3) arr.push(['val3', 'حجم استوانهٔ ۳']);
-        if (bc >= 4) arr.push(['val4', 'حجم استوانهٔ ۴']);
-        arr.push(['max', 'ظرفیت کل هر استوانه'], ['unit', 'واحد (mL یا لیتر)']);
-        return arr;
-      })(),
+      axbeaker: [['count', 'تعداد استوانه‌های مدرج'], ['val', num((state && state.X && state.X.count) || 1, 1) >= 2 ? 'حجم استوانهٔ ۱' : 'حجم مایع']]
+        .concat(num((state && state.X && state.X.count) || 1, 1) >= 2 ? [['val2', 'حجم استوانهٔ ۲']] : [])
+        .concat(num((state && state.X && state.X.count) || 1, 1) >= 3 ? [['val3', 'حجم استوانهٔ ۳']] : [])
+        .concat(num((state && state.X && state.X.count) || 1, 1) >= 4 ? [['val4', 'حجم استوانهٔ ۴']] : [])
+        .concat([['max', 'ظرفیت کل هر استوانه'], ['unit', 'واحد (mL یا لیتر)']]),
       axgeoboard: [['pts', 'مختصات میخ‌ها (x,y با ;)'], ['grid', 'اندازهٔ شبکه (۳ تا ۷)']],
       axdice: [['dice', 'اعداد تاس‌ها (با کاما)'], ['sum', 'نمایش جمع (۱=جمع، ۲=؟، ۰=خیر)']],
       axmularea: [['a', 'عدد اول (افقی)'], ['b', 'عدد دوم (عمودی)'], ['blank', 'مخفی کردن حاصل‌ها (۰ یا ۱)']],
