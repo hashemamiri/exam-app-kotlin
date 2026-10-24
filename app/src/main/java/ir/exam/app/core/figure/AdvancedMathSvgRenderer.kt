@@ -89,6 +89,7 @@ object AdvancedMathSvgRenderer {
             "axprobtree" -> probabilityTreeRender(spec, out)
             "axorbital" -> orbitalDiagramRender(spec, out)
             "axpunnett" -> punnettSquareRender(spec, out)
+            "axkmap" -> karnaughMapRender(spec, out)
         }
         return out
     }
@@ -2454,39 +2455,104 @@ object AdvancedMathSvgRenderer {
         return sb.toString()
     }
 
-    private fun karnaughMap(spec: FigureSpec): String {
+    private fun karnaughMap(spec: FigureSpec): String = karnaughMapRender(spec, null)
+
+    private fun karnaughMapRender(spec: FigureSpec, regions: MutableList<InteractiveRegion>?): String {
         val vars = spec.xNum("vars", 3f).toInt().coerceIn(2, 4)
-        val ones = ints(spec, "ones", "0,1,3,5")
+        val ones = ints(spec, "ones", "0,1,3,5").toSet()
+        val dcSet = ints(spec, "dc", "").toSet()
         val groups = spec.xStr("groups", "").split(Regex("[;؛]")).filter { it.isNotBlank() }
-        // V318.1 — چیدمان درست: ۲ متغیره ۲×۲، ۳ متغیره ۲×۴ (سطر=A، ستون=BC خاکستری)، ۴ متغیره ۴×۴
+        val exprRaw = spec.xStr("expr", "").trim()
+        val emptySet = parseEmptySet(spec)
+        val ovMap = parseCellMap(spec, "ov")
+        val ansMap = parseCellMap(spec, "ans")
+        val autoBlank = spec.xNum("blank", 0f).toInt() != 0
+
         val rowN = if (vars >= 4) 4 else 2
         val colN = if (vars == 2) 2 else 4
-        val rowLbl = if (vars >= 4) listOf("00", "01", "11", "10") else listOf("0", "1")
-        val colLbl = if (vars == 2) listOf("0", "1") else listOf("00", "01", "11", "10")
-        val cell = min(56f, 220f / max(rowN, colN))
-        val x0 = 180f - cell * colN / 2f + 14f
-        val y0 = 56f
+        val rowLbl = if (vars >= 4) listOf("00", "01", "11", "10") else listOf("A=0", "A=1")
+        val colLbl = if (vars == 2) listOf("B=0", "B=1") else listOf("00", "01", "11", "10")
+        val cornerVar = when (vars) {
+            2 -> "A \\ B"
+            3 -> "A \\ BC"
+            else -> "AB \\ CD"
+        }
+        val hdrW = 42f
+        val hdrH = 26f
+        val hasExprBox = exprRaw.isNotEmpty() || "expr" in emptySet
+        val maxGridH = if (hasExprBox) 162f else 188f
+        val cell = min(52f, min(maxGridH / rowN, 236f / colN))
+        val x0 = 180f - (colN * cell - hdrW) / 2f
+        val y0 = if (rowN == 4) 48f else 66f
         val gray = listOf(0, 1, 3, 2)
         fun valueAt(r: Int, c: Int): Int = when (vars) {
             2 -> r * 2 + c
             3 -> r * 4 + gray[c]
             else -> gray[r] * 4 + gray[c]
         }
+
         val sb = StringBuilder()
+        // گوشهٔ متغیرهای سطر و ستون
+        sb.append(rc(x0 - hdrW, y0 - hdrH, hdrW, hdrH, "#eef2ff", ST, 1.2f))
+        sb.append(ln(x0 - hdrW, y0 - hdrH, x0, y0, "#94a3b8", 1f))
+        sb.append(tx(x0 - hdrW / 2f, y0 - 8f, cornerVar, "#334155", "middle", bold = true, size = 9))
+
         for (c in 0 until colN) {
-            sb.append(rc(x0 + c * cell, y0 - 26f, cell, 26f, "rgba(108,99,245,.14)", ST, 1.2f))
-            sb.append(tx(x0 + c * cell + cell / 2f, y0 - 8f, colLbl[c], ACC, "middle", bold = true, size = 11))
+            sb.append(rc(x0 + c * cell, y0 - hdrH, cell, hdrH, "rgba(108,99,245,.14)", ST, 1.2f))
+            sb.append(tx(x0 + c * cell + cell / 2f, y0 - 8f, colLbl[c], ACC, "middle", bold = true, size = 10))
         }
         for (r in 0 until rowN) {
-            sb.append(rc(x0 - 34f, y0 + r * cell, 34f, cell, "rgba(108,99,245,.14)", ST, 1.2f))
-            sb.append(tx(x0 - 17f, y0 + r * cell + cell / 2f + 4f, rowLbl[r], ACC, "middle", bold = true, size = 11))
+            sb.append(rc(x0 - hdrW, y0 + r * cell, hdrW, cell, "rgba(108,99,245,.14)", ST, 1.2f))
+            sb.append(tx(x0 - hdrW / 2f, y0 + r * cell + cell / 2f + 4f, rowLbl[r], ACC, "middle", bold = true, size = 10))
             for (c in 0 until colN) {
                 val idx = valueAt(r, c)
-                val on = ones.contains(idx)
-                sb.append(rc(x0 + c * cell, y0 + r * cell, cell, cell, if (on) "rgba(39,196,168,.26)" else "#ffffff", ST, 1.4f))
-                sb.append(tx(x0 + c * cell + cell / 2f, y0 + r * cell + cell / 2f + 6f, if (on) "۱" else "۰", if (on) "#00796b" else "#9aa7ba", "middle", bold = true, size = 14))
+                val key = "m_$idx"
+                val cx = x0 + c * cell
+                val cy = y0 + r * cell
+                val defRaw = when {
+                    idx in dcSet -> "X"
+                    idx in ones -> "1"
+                    else -> "0"
+                }
+                val isEmpty = key in emptySet || (autoBlank && emptySet.isEmpty() && idx in ones)
+                val effRaw = if (isEmpty) ansMap[key]?.trim().orEmpty() else (ovMap[key]?.trim() ?: defRaw)
+                val norm = faEnDigits(effRaw).uppercase()
+                val disp = when {
+                    effRaw.isEmpty() -> ""
+                    norm == "1" -> "۱"
+                    norm == "0" -> "۰"
+                    norm == "X" || norm == "D" -> "X"
+                    else -> effRaw
+                }
+                val bg = when {
+                    isEmpty -> "#eef2ff"
+                    norm == "1" -> "rgba(39,196,168,.26)"
+                    norm == "X" || norm == "D" -> "rgba(245,158,11,.20)"
+                    else -> "#ffffff"
+                }
+                val borderCol = if (isEmpty) "#4f46e5" else ST
+                val borderW = if (isEmpty) 1.8f else 1.4f
+                regions?.add(InteractiveRegion(key, "خانهٔ m$idx (${rowLbl[r]} , ${colLbl[c]})", defRaw, cx, cy, cell, cell, defaultEmpty = autoBlank && emptySet.isEmpty() && idx in ones))
+                sb.append(rc(cx, cy, cell, cell, bg, borderCol, borderW))
+                if (isEmpty) {
+                    sb.append(rcDash(cx + 4f, cy + 4f, cell - 8f, cell - 8f, "#ffffff", "#6366f1", 1.3f, 6f, "4 2.5"))
+                }
+                // اندیس مینترم در گوشهٔ بالا-راست با زیرنویس یونیکد تا با شمارش «۱» و «۰» تداخل نکند
+                sb.append(tx(cx + cell - 4f, cy + 10f, "m${toSubscript(idx)}", "#94a3b8", "end", bold = false, size = 8))
+                if (disp.isNotEmpty()) {
+                    val txtCol = when {
+                        isEmpty -> "#1d4ed8"
+                        norm == "1" -> "#00796b"
+                        norm == "X" || norm == "D" -> "#b45309"
+                        else -> "#64748b"
+                    }
+                    sb.append(tx(cx + cell / 2f, cy + cell / 2f + 6f, disp, txtCol, "middle", bold = true, size = 14))
+                }
             }
         }
+
+        // گروه‌های ساده‌سازی کارنو (شامل پشتیبانی از حلقه‌های چرخشی لبهٔ چپ-راست و بالا-پایین)
+        val grpColors = listOf(ACC, PT, "#059669", "#d97706")
         groups.forEachIndexed { gi, g ->
             val cells = g.split(Regex("[,،]")).mapNotNull { faEnDigits(it.trim()).toIntOrNull() }
             val pos = cells.mapNotNull { v ->
@@ -2495,58 +2561,175 @@ object AdvancedMathSvgRenderer {
                 found
             }
             if (pos.isNotEmpty()) {
-                val minR = pos.minOf { it.first }; val maxR = pos.maxOf { it.first }
-                val minC = pos.minOf { it.second }; val maxC = pos.maxOf { it.second }
-                val gx = x0 + minC * cell + 3f + gi * 2f
-                val gy = y0 + minR * cell + 3f + gi * 2f
-                val gw = (maxC - minC + 1) * cell - 6f
-                val gh = (maxR - minR + 1) * cell - 6f
-                sb.append("<rect x=\"${f(gx)}\" y=\"${f(gy)}\" width=\"${f(gw)}\" height=\"${f(gh)}\" rx=\"10\" fill=\"none\" stroke=\"${if (gi % 2 == 1) PT else ACC}\" stroke-width=\"2\" stroke-dasharray=\"6 4\"/>")
+                val rs = pos.map { it.first }.distinct().sorted()
+                val cs = pos.map { it.second }.distinct().sorted()
+                val gCol = grpColors[gi % grpColors.size]
+                val pad = 4f + (gi % 3) * 2.2f
+                val wrapC = colN == 4 && cs.size == 2 && cs[0] == 0 && cs[1] == 3
+                val wrapR = rowN == 4 && rs.size == 2 && rs[0] == 0 && rs[1] == 3
+                val minR = rs.first(); val maxR = rs.last()
+                val minC = cs.first(); val maxC = cs.last()
+                if (wrapC && !wrapR) {
+                    val gy = y0 + minR * cell + pad
+                    val gh = (maxR - minR + 1) * cell - pad * 2f
+                    val lx = x0 + cell - pad
+                    val rx = x0 + 3 * cell + pad
+                    sb.append(path("M ${f(x0 - 3f)} ${f(gy)} L ${f(lx - 6f)} ${f(gy)} Q ${f(lx)} ${f(gy)} ${f(lx)} ${f(gy + 6f)} L ${f(lx)} ${f(gy + gh - 6f)} Q ${f(lx)} ${f(gy + gh)} ${f(lx - 6f)} ${f(gy + gh)} L ${f(x0 - 3f)} ${f(gy + gh)}", "none", gCol, 2f))
+                    sb.append(path("M ${f(x0 + 4 * cell + 3f)} ${f(gy)} L ${f(rx + 6f)} ${f(gy)} Q ${f(rx)} ${f(gy)} ${f(rx)} ${f(gy + 6f)} L ${f(rx)} ${f(gy + gh - 6f)} Q ${f(rx)} ${f(gy + gh)} ${f(rx + 6f)} ${f(gy + gh)} L ${f(x0 + 4 * cell + 3f)} ${f(gy + gh)}", "none", gCol, 2f))
+                } else if (wrapR && !wrapC) {
+                    val gx = x0 + minC * cell + pad
+                    val gw = (maxC - minC + 1) * cell - pad * 2f
+                    val ty = y0 + cell - pad
+                    val by = y0 + 3 * cell + pad
+                    sb.append(path("M ${f(gx)} ${f(y0 - 3f)} L ${f(gx)} ${f(ty - 6f)} Q ${f(gx)} ${f(ty)} ${f(gx + 6f)} ${f(ty)} L ${f(gx + gw - 6f)} ${f(ty)} Q ${f(gx + gw)} ${f(ty)} ${f(gx + gw)} ${f(ty - 6f)} L ${f(gx + gw)} ${f(y0 - 3f)}", "none", gCol, 2f))
+                    sb.append(path("M ${f(gx)} ${f(y0 + 4 * cell + 3f)} L ${f(gx)} ${f(by + 6f)} Q ${f(gx)} ${f(by)} ${f(gx + 6f)} ${f(by)} L ${f(gx + gw - 6f)} ${f(by)} Q ${f(gx + gw)} ${f(by)} ${f(gx + gw)} ${f(by + 6f)} L ${f(gx + gw)} ${f(y0 + 4 * cell + 3f)}", "none", gCol, 2f))
+                } else {
+                    val gx = x0 + minC * cell + pad
+                    val gy = y0 + minR * cell + pad
+                    val gw = (maxC - minC + 1) * cell - pad * 2f
+                    val gh = (maxR - minR + 1) * cell - pad * 2f
+                    sb.append("<rect x=\"${f(gx)}\" y=\"${f(gy)}\" width=\"${f(gw)}\" height=\"${f(gh)}\" rx=\"9\" fill=\"none\" stroke=\"$gCol\" stroke-width=\"2\" stroke-dasharray=\"6 3.5\"/>")
+                }
             }
         }
-        sb.append(tx(180f, y0 + rowN * cell + 26f, "جدول کارنو — $vars متغیره", MU, "middle", bold = true, size = 12))
+
+        val gridBottom = y0 + rowN * cell
+        if (hasExprBox) {
+            val exEmpty = "expr" in emptySet
+            val exBoxY = gridBottom + 8f
+            regions?.add(InteractiveRegion("expr", "عبارت بول ساده‌شده (F)", exprRaw.ifEmpty { "F" }, 62f, exBoxY, 236f, 24f))
+            sb.append(rc(62f, exBoxY, 236f, 24f, if (exEmpty) "#eef2ff" else "#f8fafc", if (exEmpty) "#4f46e5" else "#cbd5e1", 1.3f, 6f))
+            if (exEmpty) sb.append(rcDash(66f, exBoxY + 3f, 228f, 18f, "#ffffff", "#6366f1", 1.2f, 4f, "4 2.5"))
+            val exDisp = if (exEmpty) ansMap["expr"]?.trim().orEmpty() else (ovMap["expr"]?.trim() ?: exprRaw)
+            if (exDisp.isNotEmpty()) {
+                sb.append(tx(180f, exBoxY + 16f, exDisp, if (exEmpty) "#1d4ed8" else ST, "middle", bold = true, size = 11))
+            }
+            sb.append(tx(180f, min(273f, exBoxY + 40f), "جدول کارنو — $vars متغیره", MU, "middle", bold = true, size = 11))
+        } else {
+            sb.append(tx(180f, min(270f, gridBottom + 22f), "جدول کارنو — $vars متغیره", MU, "middle", bold = true, size = 11))
+        }
         return sb.toString()
     }
 
     private fun logicGate(spec: FigureSpec): String {
         val kind = spec.xStr("kind", "and").lowercase()
-        val a = if (spec.xStr("a", "1") == "1") 1 else 0
-        val b = if (spec.xStr("b", "0") == "1") 1 else 0
-        var out = when (kind) {
-            "and", "nand" -> if (a == 1 && b == 1) 1 else 0
-            "or", "nor" -> if (a == 1 || b == 1) 1 else 0
-            "xor" -> if (a != b) 1 else 0
-            else -> 1 - a
+        val show = spec.xStr("show", "all").lowercase()
+        val a = if (faEnDigits(spec.xStr("a", "1")).trim() == "1") 1 else 0
+        val b = if (faEnDigits(spec.xStr("b", "0")).trim() == "1") 1 else 0
+        fun evalGate(ia: Int, ib: Int): Int = when (kind) {
+            "and" -> if (ia == 1 && ib == 1) 1 else 0
+            "nand" -> if (ia == 1 && ib == 1) 0 else 1
+            "or" -> if (ia == 1 || ib == 1) 1 else 0
+            "nor" -> if (ia == 1 || ib == 1) 0 else 1
+            "xor" -> if (ia != ib) 1 else 0
+            "xnor" -> if (ia == ib) 1 else 0
+            else -> 1 - ia
         }
-        if (kind == "nand" || kind == "nor") out = 1 - out
-        val gx = 118f; val gy = 92f; val gw = 96f; val gh = 84f
+        val out = evalGate(a, b)
+        val quiz = show == "quiz"
+        val withTable = show != "gate"
+        val gx = if (withTable) 76f else 122f
+        val gy = 74f
+        val gw = 84f
+        val gh = 72f
+        val hasBubble = kind in setOf("not", "nand", "nor", "xnor")
+        val colA = if (a == 1) "#059669" else "#64748b"
+        val colB = if (b == 1) "#059669" else "#64748b"
+        val colY = if (quiz) ACC else if (out == 1) "#059669" else PT
         val sb = StringBuilder()
+
         if (kind == "not") {
-            sb.append(poly("${f(gx)},${f(gy)} ${f(gx)},${f(gy + gh)} ${f(gx + gw)},${f(gy + gh / 2f)}", "rgba(108,99,245,.14)", ST, 2f))
-            sb.append(cls(gx + gw + 8f, gy + gh / 2f, 8f, "#ffffff", ST, 2f))
-            sb.append(ln(gx - 52f, gy + gh / 2f, gx, gy + gh / 2f, ST, 2f))
-            sb.append(tx(gx - 30f, gy + gh / 2f - 10f, "A = $a", ACC, "middle", bold = true, size = 12))
-            sb.append(ln(gx + gw + 16f, gy + gh / 2f, gx + gw + 56f, gy + gh / 2f, PT, 2f))
-            sb.append(tx(gx + gw + 40f, gy + gh / 2f - 10f, "Y = $out", PT, "middle", bold = true, size = 12))
+            sb.append(poly("${f(gx)},${f(gy + 6f)} ${f(gx)},${f(gy + gh - 6f)} ${f(gx + gw - 10f)},${f(gy + gh / 2f)}", "rgba(108,99,245,.14)", ST, 2f))
+            sb.append(cls(gx + gw - 3f, gy + gh / 2f, 6.5f, "#ffffff", ST, 2f))
+            sb.append(ln(gx - 48f, gy + gh / 2f, gx, gy + gh / 2f, colA, 2.2f))
+            sb.append(cls(gx - 48f, gy + gh / 2f, 3.5f, colA, "none", 0f))
+            sb.append(tx(gx - 28f, gy + gh / 2f - 9f, "A=$a", colA, "middle", bold = true, size = 11))
+            val ox = gx + gw + 4f
+            sb.append(ln(ox, gy + gh / 2f, ox + 44f, gy + gh / 2f, colY, 2.2f))
+            sb.append(cls(ox + 44f, gy + gh / 2f, 3.5f, colY, "none", 0f))
+            sb.append(tx(ox + 24f, gy + gh / 2f - 9f, if (quiz) "Y=؟" else "Y=$out", colY, "middle", bold = true, size = 11))
         } else {
-            if (kind == "and" || kind == "nand") {
-                sb.append(path("M ${f(gx)},${f(gy)} L ${f(gx + gw * 0.5f)},${f(gy)} A ${f(gh / 2f)} ${f(gh / 2f)} 0 0 1 ${f(gx + gw * 0.5f)},${f(gy + gh)} L ${f(gx)},${f(gy + gh)} Z", "rgba(108,99,245,.14)", ST, 2f))
+            val isCurved = kind in setOf("or", "nor", "xor", "xnor")
+            if (!isCurved) {
+                // AND / NAND استاندارد IEEE (پشت تخت + کمان نیم‌دایره)
+                sb.append(path("M ${f(gx)} ${f(gy)} L ${f(gx + gw - gh / 2f)} ${f(gy)} A ${f(gh / 2f)} ${f(gh / 2f)} 0 0 1 ${f(gx + gw - gh / 2f)} ${f(gy + gh)} L ${f(gx)} ${f(gy + gh)} Z", "rgba(108,99,245,.14)", ST, 2f))
             } else {
-                sb.append(path("M ${f(gx)},${f(gy)} L ${f(gx + gw * 0.55f)},${f(gy)} Q ${f(gx + gw)},${f(gy + gh / 2f)} ${f(gx + gw * 0.55f)},${f(gy + gh)} L ${f(gx)},${f(gy + gh)} Z", "rgba(108,99,245,.14)", ST, 2f))
-                if (kind == "xor") sb.append(path("M ${f(gx - 12f)},${f(gy)} Q ${f(gx + 22f)},${f(gy + gh / 2f)} ${f(gx - 12f)},${f(gy + gh)}", "none", ST, 2f))
+                // OR / NOR / XOR / XNOR استاندارد IEEE با پشت مقعر واقعی و نوک تیز منحنی
+                sb.append(path("M ${f(gx)} ${f(gy)} C ${f(gx + gw * 0.45f)} ${f(gy)} ${f(gx + gw * 0.78f)} ${f(gy + gh * 0.18f)} ${f(gx + gw)} ${f(gy + gh / 2f)} C ${f(gx + gw * 0.78f)} ${f(gy + gh * 0.82f)} ${f(gx + gw * 0.45f)} ${f(gy + gh)} ${f(gx)} ${f(gy + gh)} Q ${f(gx + 18f)} ${f(gy + gh / 2f)} ${f(gx)} ${f(gy)} Z", "rgba(108,99,245,.14)", ST, 2f))
+                if (kind == "xor" || kind == "xnor") {
+                    sb.append(path("M ${f(gx - 9f)} ${f(gy)} Q ${f(gx + 9f)} ${f(gy + gh / 2f)} ${f(gx - 9f)} ${f(gy + gh)}", "none", ST, 2f))
+                }
             }
-            if (kind == "nand" || kind == "nor") sb.append(cls(gx + gw + 8f, gy + gh / 2f, 8f, "#ffffff", ST, 2f))
-            sb.append(ln(gx - 56f, gy + 22f, gx + 4f, gy + 22f, ST, 2f))
-            sb.append(tx(gx - 40f, gy + 12f, "A = $a", ACC, "middle", bold = true, size = 12))
-            sb.append(ln(gx - 56f, gy + 62f, gx + 4f, gy + 62f, ST, 2f))
-            sb.append(tx(gx - 40f, gy + 52f, "B = $b", ACC, "middle", bold = true, size = 12))
-            val ox = gx + gw + (if (kind == "nand" || kind == "nor") 16f else 6f)
-            sb.append(ln(ox, gy + gh / 2f, ox + 52f, gy + gh / 2f, PT, 2f))
-            sb.append(tx(ox + 26f, gy + gh / 2f - 10f, "Y = $out", PT, "middle", bold = true, size = 12))
+            if (hasBubble) sb.append(cls(gx + gw + 7f, gy + gh / 2f, 6.5f, "#ffffff", ST, 2f))
+            val inEnd = when {
+                kind == "xor" || kind == "xnor" -> gx - 3f
+                isCurved -> gx + 6f
+                else -> gx
+            }
+            val yA = gy + 20f
+            val yB = gy + gh - 20f
+            sb.append(ln(gx - 48f, yA, inEnd, yA, colA, 2.2f))
+            sb.append(cls(gx - 48f, yA, 3.5f, colA, "none", 0f))
+            sb.append(tx(gx - 28f, yA - 8f, "A=$a", colA, "middle", bold = true, size = 11))
+            sb.append(ln(gx - 48f, yB, inEnd, yB, colB, 2.2f))
+            sb.append(cls(gx - 48f, yB, 3.5f, colB, "none", 0f))
+            sb.append(tx(gx - 28f, yB - 8f, "B=$b", colB, "middle", bold = true, size = 11))
+            val ox = gx + gw + (if (hasBubble) 14f else 1f)
+            sb.append(ln(ox, gy + gh / 2f, ox + 42f, gy + gh / 2f, colY, 2.2f))
+            sb.append(cls(ox + 42f, gy + gh / 2f, 3.5f, colY, "none", 0f))
+            sb.append(tx(ox + 22f, gy + gh / 2f - 9f, if (quiz) "Y=؟" else "Y=$out", colY, "middle", bold = true, size = 11))
         }
-        val names = mapOf("and" to "AND — و", "or" to "OR — یا", "not" to "NOT — نقیض", "nand" to "NAND — نقیض و", "nor" to "NOR — نقیض یا", "xor" to "XOR — یا انحصاری")
-        sb.append(tx(180f, 224f, names[kind] ?: "گیت منطقی", ST, "middle", bold = true, size = 14))
-        sb.append(tx(180f, 250f, "Y = $out", if (out == 1) "#1b7f4c" else PT, "middle", bold = true, size = 13))
+
+        // جدول درستی کوچک در سمت راست برای درک کامل کارکرد گیت
+        if (withTable) {
+            val tx0 = 236f
+            val ty0 = 50f
+            val cw = if (kind == "not") 48f else 33f
+            val rh = 22f
+            val cols = if (kind == "not") listOf("A", "Y") else listOf("A", "B", "Y")
+            cols.forEachIndexed { ci, h ->
+                sb.append(rc(tx0 + ci * cw, ty0, cw, rh, "#eef2ff", ST, 1.1f))
+                sb.append(tx(tx0 + ci * cw + cw / 2f, ty0 + 15f, h, ACC, "middle", bold = true, size = 10))
+            }
+            val rows = if (kind == "not") listOf(0 to 0, 1 to 0) else listOf(0 to 0, 0 to 1, 1 to 0, 1 to 1)
+            rows.forEachIndexed { ri, (ra, rb) ->
+                val activeRow = if (kind == "not") (ra == a) else (ra == a && rb == b)
+                val ry = ty0 + (ri + 1) * rh
+                val bg = if (activeRow) "rgba(16,185,129,.18)" else "#ffffff"
+                val rv = evalGate(ra, rb)
+                val vals = if (kind == "not") {
+                    listOf(ra.toString(), if (quiz && activeRow) "؟" else rv.toString())
+                } else {
+                    listOf(ra.toString(), rb.toString(), if (quiz && activeRow) "؟" else rv.toString())
+                }
+                vals.forEachIndexed { ci, v ->
+                    sb.append(rc(tx0 + ci * cw, ry, cw, rh, bg, ST, 1.1f))
+                    val vc = if (ci == vals.lastIndex && activeRow) colY else ST
+                    sb.append(tx(tx0 + ci * cw + cw / 2f, ry + 15f, v, vc, "middle", bold = activeRow || ci == vals.lastIndex, size = 10))
+                }
+            }
+        }
+
+        val names = mapOf(
+            "and" to "AND — عطف منطقی (و)",
+            "or" to "OR — فصل منطقی (یا)",
+            "not" to "NOT — وارون‌ساز (نقیض)",
+            "nand" to "NAND — نقیض و",
+            "nor" to "NOR — نقیض یا",
+            "xor" to "XOR — یای انحصاری",
+            "xnor" to "XNOR — هم‌ارزی منطقی"
+        )
+        val exprs = mapOf(
+            "and" to "Y = A · B",
+            "or" to "Y = A + B",
+            "not" to "Y = A'",
+            "nand" to "Y = (A · B)'",
+            "nor" to "Y = (A + B)'",
+            "xor" to "Y = A ⊕ B",
+            "xnor" to "Y = (A ⊕ B)'"
+        )
+        sb.append(tx(180f, 218f, "${names[kind] ?: "گیت منطقی"}   |   ${exprs[kind] ?: ""}", ST, "middle", bold = true, size = 12))
+        sb.append(tx(180f, 246f, if (quiz) "خروجی Y را تعیین کنید" else "خروجی مدار: Y = $out", colY, "middle", bold = true, size = 12))
         return sb.toString()
     }
 
@@ -2592,135 +2775,420 @@ object AdvancedMathSvgRenderer {
     }
 
     private fun binaryTree(spec: FigureSpec): String {
-        val vals = ints(spec, "vals", "50,30,70,20,40,60,80").take(12).ifEmpty { listOf(50, 30, 70, 20, 40, 60, 80) }
-        val heap = spec.xStr("mode", "bst").lowercase() == "heap"
-        class Node(val v: Int) { var l: Node? = null; var r: Node? = null }
-        fun insert(node: Node?, v: Int): Node {
+        val rawVals = ints(spec, "vals", "50,30,70,20,40,60,80").take(15).ifEmpty { listOf(50, 30, 70, 20, 40, 60, 80) }
+        val mode = spec.xStr("mode", "bst").lowercase()
+        val trav = spec.xStr("trav", "in").lowercase()
+        class Node(var v: Int) { var l: Node? = null; var r: Node? = null; var x: Float = 180f; var y: Float = 38f }
+        fun insertBst(node: Node?, v: Int): Node {
             val n = node ?: return Node(v)
-            if (v < n.v) n.l = insert(n.l, v) else n.r = insert(n.r, v)
+            if (v < n.v) n.l = insertBst(n.l, v) else if (v > n.v) n.r = insertBst(n.r, v) else n.r = insertBst(n.r, v)
             return n
         }
-        fun build(i: Int): Node? = if (i >= vals.size) null else Node(vals[i]).also { it.l = build(i * 2 + 1); it.r = build(i * 2 + 2) }
-        var root: Node? = null
-        if (heap) root = build(0) else vals.forEach { root = insert(root, it) }
-        var maxD = 0
-        fun depth(n: Node?, d: Int) { if (n == null) return; maxD = max(maxD, d); depth(n.l, d + 1); depth(n.r, d + 1) }
-        depth(root, 0)
-        val rowH = min(46f, 190f / max(1, maxD + 1))
-        val sb = StringBuilder()
-        fun draw(n: Node?, x: Float, d: Int, span: Float) {
-            if (n == null) return
-            val y = 40f + d * rowH
-            if (n.l != null) { sb.append(ln(x, y, x - span, y + rowH, ST, 1.4f)); draw(n.l, x - span, d + 1, span / 2f) }
-            if (n.r != null) { sb.append(ln(x, y, x + span, y + rowH, ST, 1.4f)); draw(n.r, x + span, d + 1, span / 2f) }
-            sb.append(cls(x, y, 15f, "rgba(108,99,245,.16)", ACC, 1.8f))
-            sb.append(tx(x, y + 5f, n.v.toString(), ST, "middle", bold = true, size = 11))
+        val heapArr = rawVals.toMutableList()
+        if (mode == "minheap") {
+            heapArr.clear()
+            rawVals.forEach { v ->
+                heapArr.add(v)
+                var ci = heapArr.lastIndex
+                while (ci > 0) {
+                    val pi = (ci - 1) / 2
+                    if (heapArr[ci] < heapArr[pi]) { val t = heapArr[ci]; heapArr[ci] = heapArr[pi]; heapArr[pi] = t; ci = pi } else break
+                }
+            }
+        } else if (mode == "maxheap") {
+            heapArr.clear()
+            rawVals.forEach { v ->
+                heapArr.add(v)
+                var ci = heapArr.lastIndex
+                while (ci > 0) {
+                    val pi = (ci - 1) / 2
+                    if (heapArr[ci] > heapArr[pi]) { val t = heapArr[ci]; heapArr[ci] = heapArr[pi]; heapArr[pi] = t; ci = pi } else break
+                }
+            }
         }
-        draw(root, 180f, 0, min(84f, 210f / 2f.pow(max(0, maxD - 1).toFloat())))
-        sb.append(tx(180f, 258f, if (heap) "درخت هرم (آرایه‌ای)" else "درخت دودویی جستجو (BST)", MU, "middle", bold = true, size = 12))
+        val isHeap = mode in setOf("heap", "minheap", "maxheap")
+        fun buildHeap(i: Int): Node? = if (i >= heapArr.size) null else Node(heapArr[i]).also { it.l = buildHeap(i * 2 + 1); it.r = buildHeap(i * 2 + 2) }
+        var root: Node? = null
+        if (isHeap) root = buildHeap(0) else rawVals.distinct().forEach { root = insertBst(root, it) }
+
+        var maxD = 0
+        val inOrd = mutableListOf<Node>()
+        val preOrd = mutableListOf<Int>()
+        val postOrd = mutableListOf<Int>()
+        fun walk(n: Node?, d: Int) {
+            if (n == null) return
+            maxD = max(maxD, d)
+            preOrd.add(n.v)
+            walk(n.l, d + 1)
+            inOrd.add(n)
+            walk(n.r, d + 1)
+            postOrd.add(n.v)
+        }
+        walk(root, 0)
+
+        val totalN = inOrd.size.coerceAtLeast(1)
+        val nr = when {
+            totalN >= 11 || maxD >= 4 -> 12.5f
+            totalN >= 8 -> 13.5f
+            else -> 15f
+        }
+        val topY = 34f
+        val availH = if (trav == "none" && !isHeap) 186f else 156f
+        val rowH = if (maxD == 0) 0f else min(44f, availH / maxD)
+
+        // مختصات افقی بر اساس رتبهٔ In-order تا هیچ دو گره‌ای حتی در درخت‌های کج روی هم نیفتند
+        inOrd.forEachIndexed { idx, nd ->
+            nd.x = if (totalN == 1) 180f else 36f + idx * (288f / (totalN - 1))
+        }
+        fun assignY(n: Node?, d: Int) {
+            if (n == null) return
+            n.y = topY + d * rowH
+            assignY(n.l, d + 1)
+            assignY(n.r, d + 1)
+        }
+        assignY(root, 0)
+
+        val sb = StringBuilder()
+        fun drawEdges(n: Node?) {
+            if (n == null) return
+            listOfNotNull(n.l, n.r).forEach { ch ->
+                val dx = ch.x - n.x; val dy = ch.y - n.y
+                val dl = sqrt(dx * dx + dy * dy).coerceAtLeast(1f)
+                sb.append(ln(n.x + dx / dl * nr, n.y + dy / dl * nr, ch.x - dx / dl * nr, ch.y - dy / dl * nr, "#475569", 1.6f))
+                drawEdges(ch)
+            }
+        }
+        fun drawNodes(n: Node?, isRoot: Boolean) {
+            if (n == null) return
+            val fill = if (isRoot) "#ecfdf5" else "#eef2ff"
+            val stroke = if (isRoot) "#059669" else ACC
+            sb.append(cls(n.x, n.y, nr, fill, stroke, 1.9f))
+            sb.append(tx(n.x, n.y + 4f, n.v.toString(), ST, "middle", bold = true, size = if (nr < 13.5f) 9 else 11))
+            drawNodes(n.l, false)
+            drawNodes(n.r, false)
+        }
+        drawEdges(root)
+        drawNodes(root, true)
+
+        if (isHeap) {
+            val showArr = heapArr.take(10)
+            val cw = min(28f, 276f / showArr.size.coerceAtLeast(1))
+            val ax0 = 180f - cw * showArr.size / 2f
+            val ay0 = 214f
+            showArr.forEachIndexed { i, v ->
+                sb.append(rc(ax0 + i * cw, ay0, cw, 20f, if (i == 0) "#ecfdf5" else "#f8fafc", "#94a3b8", 1f))
+                sb.append(tx(ax0 + i * cw + cw / 2f, ay0 + 14f, v.toString(), ST, "middle", bold = true, size = 9))
+            }
+            val title = when (mode) {
+                "minheap" -> "درخت هرم کمینه (Min-Heap)"
+                "maxheap" -> "درخت هرم بیشینه (Max-Heap)"
+                else -> "درخت هرم (آرایه‌ای) — ارتفاع h = $maxD"
+            }
+            sb.append(tx(180f, 256f, title, MU, "middle", bold = true, size = 11))
+        } else {
+            if (trav != "none") {
+                val (tLbl, seq) = when (trav) {
+                    "pre", "preorder" -> "Pre-order" to preOrd
+                    "post", "postorder" -> "Post-order" to postOrd
+                    else -> "In-order" to inOrd.map { it.v }
+                }
+                val seqText = if (trav == "quiz") "؟ ، ؟ ، ..." else seq.joinToString(" , ")
+                sb.append(rc(24f, 214f, 312f, 22f, "#f8fafc", "#cbd5e1", 1f, 6f))
+                sb.append(tx(180f, 229f, "$tLbl: $seqText", if (trav == "quiz") PT else "#1e293b", "middle", bold = true, size = 9))
+            }
+            sb.append(tx(180f, 258f, "درخت دودویی جستجو (BST) — ارتفاع h = $maxD", MU, "middle", bold = true, size = 11))
+        }
         return sb.toString()
     }
 
     private fun bodePlot(spec: FigureSpec): String {
         val kind = spec.xStr("kind", "bode").lowercase()
         val sb = StringBuilder()
-        val poles = splitList(spec.xStr("poles", "1,10")).mapNotNull { faEnDigits(it).toFloatOrNull()?.let { v -> max(0.1f, v) } }.take(3)
+        val poles = splitList(spec.xStr("poles", "1,10")).mapNotNull { faEnDigits(it).toFloatOrNull()?.let { v -> max(0.05f, v) } }.take(4).ifEmpty { listOf(1f, 10f) }
+        val zeros = splitList(spec.xStr("zeros", "")).mapNotNull { faEnDigits(it).toFloatOrNull()?.let { v -> max(0.05f, v) } }.take(3)
+        val gainDb = spec.xNum("gain", 20f)
+        val gainLin = 10.0.pow((gainDb / 20f).toDouble()).coerceIn(0.1, 20.0)
+
         if (kind == "nyquist") {
-            val pts = StringBuilder()
-            for (i in 0..120) {
-                val w = 10.0.pow(-2 + 4.0 * i / 120)
-                var re = 1.0
+            val cx = 186f; val cy = 132f
+            fun evalH(w: Double): Pair<Double, Double> {
+                var re = min(gainLin, 2.5)
                 var im = 0.0
+                zeros.forEach { z ->
+                    val zr = 1.0; val zi = w / z
+                    val nr = re * zr - im * zi; val ni = re * zi + im * zr
+                    re = nr; im = ni
+                }
                 poles.forEach { pl ->
                     val dr = 1.0; val di = w / pl
-                    val nr = re * dr + im * di
-                    val ni = im * dr - re * di
                     val dd = dr * dr + di * di
-                    re = nr / dd; im = ni / dd
+                    val nr = (re * dr + im * di) / dd
+                    val ni = (im * dr - re * di) / dd
+                    re = nr; im = ni
                 }
-                pts.append("${f(180f + re.toFloat() * 110f)},${f(140f - im.toFloat() * 110f)} ")
+                return re to im
             }
-            sb.append(ln(30f, 140f, 330f, 140f, ST, 1.4f)); sb.append(ln(180f, 20f, 180f, 260f, ST, 1.4f))
-            sb.append("<polyline points=\"${pts.toString().trim()}\" fill=\"none\" stroke=\"$PT\" stroke-width=\"2\"/>")
-            sb.append(tx(316f, 156f, "Re", MU, "middle", bold = true, size = 11))
-            sb.append(tx(196f, 30f, "Im", MU, "middle", bold = true, size = 11))
-            sb.append(tx(180f, 272f, "نمودار نایکوئیست", MU, "middle", bold = true, size = 12))
+            val samples = (0..140).map { i -> evalH(10.0.pow(-2.0 + 4.2 * i / 140.0)) }
+            val maxExt = max(1.25, samples.maxOf { max(abs(it.first), abs(it.second)) })
+            val sc = (92.0 / maxExt).toFloat()
+
+            // دایرهٔ واحد مرجع + محورهای صفحهٔ مختلط
+            sb.append(cls(cx, cy, sc, "rgba(108,99,245,.04)", "#cbd5e1", 1.1f))
+            sb.append(ln(28f, cy, 336f, cy, ST, 1.3f)); sb.append(arrow(326f, cy, 340f, cy, ST, 1.3f, 6f))
+            sb.append(ln(cx, 244f, cx, 22f, ST, 1.3f)); sb.append(arrow(cx, 32f, cx, 18f, ST, 1.3f, 6f))
+            sb.append(tx(332f, cy + 15f, "Re", MU, "middle", bold = true, size = 10))
+            sb.append(tx(cx + 15f, 28f, "jIm", MU, "middle", bold = true, size = 10))
+
+            // تصویر مزدوج برای ω < 0 (خط‌چین) و شاخهٔ اصلی ω ≥ 0 (پررنگ)
+            val posPts = StringBuilder()
+            val negPts = StringBuilder()
+            samples.forEach { (re, im) ->
+                val px = cx + re.toFloat() * sc
+                val pyPos = cy - im.toFloat() * sc
+                val pyNeg = cy + im.toFloat() * sc
+                posPts.append("${f(px)},${f(pyPos)} ")
+                negPts.append("${f(px)},${f(pyNeg)} ")
+            }
+            sb.append("<polyline points=\"${negPts.toString().trim()}\" fill=\"none\" stroke=\"#94a3b8\" stroke-width=\"1.4\" stroke-dasharray=\"5 3\"/>")
+            sb.append("<polyline points=\"${posPts.toString().trim()}\" fill=\"none\" stroke=\"$PT\" stroke-width=\"2.2\"/>")
+
+            // فلش جهت افزایش فرکانس ω
+            val midA = samples[46]; val midB = samples[52]
+            sb.append(arrow(cx + midA.first.toFloat() * sc, cy - midA.second.toFloat() * sc, cx + midB.first.toFloat() * sc, cy - midB.second.toFloat() * sc, PT, 2f, 7f))
+
+            // نقطهٔ بحرانی (-1 + j0) و نقطهٔ شروع ω=0
+            val critX = cx - sc
+            sb.append(ln(critX - 4f, cy - 4f, critX + 4f, cy + 4f, "#dc2626", 1.8f))
+            sb.append(ln(critX - 4f, cy + 4f, critX + 4f, cy - 4f, "#dc2626", 1.8f))
+            sb.append(tx(critX, cy - 8f, "-1", "#dc2626", "middle", bold = true, size = 9))
+            val p0 = samples.first()
+            sb.append(cls(cx + p0.first.toFloat() * sc, cy - p0.second.toFloat() * sc, 3.8f, "#059669", "#ffffff", 1f))
+            sb.append(tx(cx + p0.first.toFloat() * sc + 4f, cy + 13f, "ω=0", "#059669", "start", bold = true, size = 8))
+
+            sb.append(tx(180f, 266f, "نمودار نایکوئیست — قطب‌ها: ${poles.joinToString(" , ") { num(it) }}", MU, "middle", bold = true, size = 11))
             return sb.toString()
         }
-        val gain = spec.xNum("gain", 20f)
+
+        val xL = 50f; val wPlot = 286f
+        fun wx(logW: Float): Float = xL + (logW + 1f) / 3f * wPlot // log10(ω) in [-1..2] => ω in [0.1..100]
         fun magDb(w: Float): Float {
-            var m = gain
-            poles.forEach { pl -> m -= (10 * Math.log(1 + (w / pl).pow(2f).toDouble()) / Math.log(10.0)).toFloat() }
+            var m = gainDb
+            zeros.forEach { z -> m += (10.0 * Math.log10(1.0 + (w / z).pow(2f).toDouble())).toFloat() }
+            poles.forEach { pl -> m -= (10.0 * Math.log10(1.0 + (w / pl).pow(2f).toDouble())).toFloat() }
+            return m
+        }
+        fun asympDb(w: Float): Float {
+            var m = gainDb
+            zeros.forEach { z -> if (w > z) m += (20.0 * Math.log10((w / z).toDouble())).toFloat() }
+            poles.forEach { pl -> if (w > pl) m -= (20.0 * Math.log10((w / pl).toDouble())).toFloat() }
             return m
         }
         fun phase(w: Float): Float {
             var p = 0f
+            zeros.forEach { z -> p += (atan2(w / z, 1f) * 180 / PI).toFloat() }
             poles.forEach { pl -> p -= (atan2(w / pl, 1f) * 180 / PI).toFloat() }
             return p
         }
-        fun plot(y0: Float, h: Float, fn: (Float) -> Float, label: String, col: String): String {
-            val out = StringBuilder(rc(40f, y0, 292f, h, "#ffffff", ST, 1.2f, 3f))
-            for (i in 0..3) { val yy = y0 + h * i / 3f; out.append(ln(40f, yy, 332f, yy, "#e8eef6", 1f)) }
-            val pts = StringBuilder()
-            for (i in 0..120) {
-                val w = 10.0.pow(-1 + 3.0 * i / 120).toFloat()
-                pts.append("${f(40f + 292f * i / 120f)},${f(y0 + h / 2f - fn(w))} ")
-            }
-            out.append("<polyline points=\"${pts.toString().trim()}\" fill=\"none\" stroke=\"$col\" stroke-width=\"2\"/>")
-            out.append(tx(44f, y0 + 13f, label, col, "start", bold = true, size = 10))
-            return out.toString()
+
+        // مقیاس خودکار اندازه (dB)
+        val mVals = (0..120).map { magDb(10.0.pow(-1.0 + 3.0 * it / 120.0).toFloat()) }
+        val mMax = ceil(((mVals.maxOrNull() ?: 20f) + 8f) / 20f) * 20f
+        val mMin = min(mMax - 40f, floor(((mVals.minOrNull() ?: -40f) - 8f) / 20f) * 20f)
+        val magY0 = 26f; val magH = 88f
+        fun my(v: Float): Float = (magY0 + magH - ((v - mMin) / (mMax - mMin).coerceAtLeast(1f)) * magH).coerceIn(magY0 + 1f, magY0 + magH - 1f)
+
+        sb.append(rc(xL, magY0, wPlot, magH, "#ffffff", ST, 1.2f, 3f))
+        for (i in 0..2) {
+            val v = mMax - i * (mMax - mMin) / 2f
+            val yy = my(v)
+            sb.append(ln(xL, yy, xL + wPlot, yy, "#e2e8f0", 1f))
+            sb.append(tx(xL - 5f, yy + 3f, "${v.toInt()}", MU, "end", size = 8))
         }
-        sb.append(plot(34f, 92f, { w -> (magDb(w) * 0.9f).coerceIn(-46f, 46f) }, "اندازه (dB)", ACC))
-        sb.append(plot(142f, 92f, { w -> (phase(w) * 0.5f).coerceIn(-46f, 46f) }, "فاز (°)", "#00796b"))
-        sb.append(tx(180f, 250f, "نمودار بود — بهره ${num(gain)} dB ، قطب‌ها: ${poles.joinToString(" , ") { num(it) }}", MU, "middle", bold = true, size = 11))
+        if (0f in mMin..mMax) sb.append(ln(xL, my(0f), xL + wPlot, my(0f), "#94a3b8", 1.1f, "4 3"))
+        for (d in -1..2) {
+            val xx = wx(d.toFloat())
+            sb.append(ln(xx, magY0, xx, magY0 + magH, "#e2e8f0", 1f))
+        }
+        poles.forEach { pl ->
+            val lw = Math.log10(pl.toDouble()).toFloat()
+            if (lw in -1f..2f) sb.append(ln(wx(lw), magY0, wx(lw), magY0 + magH, "rgba(214,51,108,.35)", 1f, "3 3"))
+        }
+        val asymPts = StringBuilder()
+        val magPts = StringBuilder()
+        for (i in 0..120) {
+            val lw = -1f + 3f * i / 120f
+            val w = 10.0.pow(lw.toDouble()).toFloat()
+            asymPts.append("${f(wx(lw))},${f(my(asympDb(w)))} ")
+            magPts.append("${f(wx(lw))},${f(my(magDb(w)))} ")
+        }
+        sb.append("<polyline points=\"${asymPts.toString().trim()}\" fill=\"none\" stroke=\"#94a3b8\" stroke-width=\"1.4\" stroke-dasharray=\"5 3\"/>")
+        sb.append("<polyline points=\"${magPts.toString().trim()}\" fill=\"none\" stroke=\"$ACC\" stroke-width=\"2.1\"/>")
+        sb.append(tx(xL + 6f, magY0 + 13f, "اندازه (dB)", ACC, "start", bold = true, size = 9))
+
+        // مقیاس خودکار فاز (°)
+        val pVals = (0..120).map { phase(10.0.pow(-1.0 + 3.0 * it / 120.0).toFloat()) }
+        val pMax = max(0f, ceil(((pVals.maxOrNull() ?: 0f) + 5f) / 45f) * 45f)
+        val pMin = min(pMax - 90f, floor(((pVals.minOrNull() ?: -180f) - 10f) / 45f) * 45f)
+        val phY0 = 130f; val phH = 86f
+        fun py(v: Float): Float = (phY0 + phH - ((v - pMin) / (pMax - pMin).coerceAtLeast(1f)) * phH).coerceIn(phY0 + 1f, phY0 + phH - 1f)
+
+        sb.append(rc(xL, phY0, wPlot, phH, "#ffffff", ST, 1.2f, 3f))
+        for (i in 0..2) {
+            val v = pMax - i * (pMax - pMin) / 2f
+            val yy = py(v)
+            sb.append(ln(xL, yy, xL + wPlot, yy, "#e2e8f0", 1f))
+            sb.append(tx(xL - 5f, yy + 3f, "${v.toInt()}°", MU, "end", size = 8))
+        }
+        val wLabels = listOf(-1 to "0.1", 0 to "1", 1 to "10", 2 to "100")
+        wLabels.forEach { (d, lbl) ->
+            val xx = wx(d.toFloat())
+            sb.append(ln(xx, phY0, xx, phY0 + phH, "#e2e8f0", 1f))
+            sb.append(tx(xx, phY0 + phH + 13f, lbl, MU, "middle", size = 8))
+        }
+        val phPts = StringBuilder()
+        for (i in 0..120) {
+            val lw = -1f + 3f * i / 120f
+            val w = 10.0.pow(lw.toDouble()).toFloat()
+            phPts.append("${f(wx(lw))},${f(py(phase(w)))} ")
+        }
+        sb.append("<polyline points=\"${phPts.toString().trim()}\" fill=\"none\" stroke=\"#00796b\" stroke-width=\"2.1\"/>")
+        sb.append(tx(xL + 6f, phY0 + 13f, "فاز (درجه)", "#00796b", "start", bold = true, size = 9))
+        sb.append(tx(346f, phY0 + phH + 13f, "ω", ST, "middle", bold = true, size = 9))
+        val bodeFooter = if (kind == "bode_quiz") "نمودار بود — قطب‌ها و بهرهٔ سیستم را از روی نمودار تعیین کنید" else "نمودار بود — بهره ${num(gainDb)} dB ، قطب‌ها: ${poles.joinToString(" , ") { num(it) }}"
+        sb.append(tx(186f, 252f, bodeFooter, MU, "middle", bold = true, size = 10))
         return sb.toString()
     }
 
     private fun beamDiagrams(spec: FigureSpec): String {
         val len = max(2f, spec.xNum("len", 6f))
-        val p = spec.xNum("p", 10f)
+        val p = max(0.5f, spec.xNum("p", 10f))
         val a = spec.xNum("a", 2f).coerceIn(0.2f, len - 0.2f)
-        val q = spec.xNum("q", 2f)
-        val udl = spec.xStr("load", "point").lowercase() == "udl"
-        val x0 = 46f; val x1 = 320f
+        val q = max(0.5f, spec.xNum("q", 2f))
+        val load = spec.xStr("load", "point").lowercase()
+        val quiz = spec.xStr("show", "all").lowercase() == "quiz"
+        val isCantilever = load == "cantilever" || load == "cantilever_udl"
+        val isUdl = load == "udl" || load == "cantilever_udl"
+
+        val x0 = 54f; val x1 = 318f
         fun sx(v: Float) = x0 + (v / len) * (x1 - x0)
-        val y = 74f
+        val yB = 62f
+        val sfY = 148f
+        val bmY = 228f
         val sb = StringBuilder()
-        sb.append(ln(x0, y, x1, y, ST, 6f))
-        sb.append(poly("${f(x0)},${f(y)} ${f(x0 + 12f)},${f(y + 16f)} ${f(x0 - 12f)},${f(y + 16f)}", "#ffffff", ST, 1.6f))
-        sb.append(cls(x1, y + 9f, 6f, "#ffffff", ST, 1.6f))
-        sb.append(ln(x1 - 10f, y + 20f, x1 + 10f, y + 20f, ST, 1.6f))
-        val r1 = if (udl) q * len / 2f else p * (len - a) / len
-        val r2 = if (udl) q * len / 2f else p * a / len
-        if (udl) {
-            var i = 0
-            while (i <= (len * 4).toInt()) { val ux = sx(i / 4f); sb.append(arrow(ux, y - 40f, ux, y - 6f, ACC, 1.2f, 5f)); i++ }
-            sb.append(ln(x0, y - 40f, x1, y - 40f, ACC, 1.6f))
-            sb.append(tx(180f, y - 48f, "بار گسترده ${num(q)} N/m", ACC, "middle", bold = true, size = 11))
+
+        // خطوط راهنمای عمودی تراز بین تیر، نمودار V و نمودار M
+        val keyXs = if (isCantilever) listOf(0f, len) else if (isUdl) listOf(0f, len / 2f, len) else listOf(0f, a, len)
+        keyXs.forEach { kx -> sb.append(ln(sx(kx), yB + 4f, sx(kx), bmY + 12f, "#e2e8f0", 1f, "3 3")) }
+
+        // رسم تیر و تکیه‌گاه‌ها (بدون برخورد پیکان عکس‌العمل با مثلث تکیه‌گاه)
+        sb.append(rc(x0, yB - 3.5f, x1 - x0, 7f, "#cbd5e1", ST, 1.5f, 1.5f))
+        if (isCantilever) {
+            sb.append(rc(x0 - 8f, yB - 24f, 8f, 48f, "#e2e8f0", ST, 1.6f))
+            for (hi in -20..20 step 8) sb.append(ln(x0 - 8f, yB + hi.toFloat(), x0 - 15f, yB + hi + 6f, "#64748b", 1.1f))
+            val rWall = if (isUdl) q * len else p
+            val mWall = if (isUdl) q * len * len / 2f else p * len
+            sb.append(arrow(x0, yB + 38f, x0, yB + 14f, "#059669", 1.9f, 6f))
+            if (!quiz) sb.append(tx(x0 + 8f, yB + 34f, "R=${num(rWall)} , M₀=${num(mWall)}", "#059669", "start", bold = true, size = 9))
         } else {
-            sb.append(arrow(sx(a), y - 46f, sx(a), y - 6f, PT, 2.4f, 9f))
-            sb.append(tx(sx(a), y - 54f, "${num(p)} N", PT, "middle", bold = true, size = 11))
-            sb.append(tx(sx(a), y + 34f, "${num(a)} m", MU, "middle", size = 10))
+            // تکیه‌گاه مفصلی چپ و غلتکی راست
+            sb.append(poly("${f(x0)},${f(yB + 4f)} ${f(x0 + 10f)},${f(yB + 18f)} ${f(x0 - 10f)},${f(yB + 18f)}", "#ffffff", ST, 1.5f))
+            sb.append(ln(x0 - 13f, yB + 18f, x0 + 13f, yB + 18f, ST, 1.5f))
+            sb.append(poly("${f(x1)},${f(yB + 4f)} ${f(x1 + 10f)},${f(yB + 16f)} ${f(x1 - 10f)},${f(yB + 16f)}", "#ffffff", ST, 1.5f))
+            sb.append(cls(x1 - 5f, yB + 19.5f, 2.8f, "#ffffff", ST, 1.2f))
+            sb.append(cls(x1 + 5f, yB + 19.5f, 2.8f, "#ffffff", ST, 1.2f))
+            sb.append(ln(x1 - 13f, yB + 23f, x1 + 13f, yB + 23f, ST, 1.5f))
+            val r1 = if (isUdl) q * len / 2f else p * (len - a) / len
+            val r2 = if (isUdl) q * len / 2f else p * a / len
+            sb.append(arrow(x0, yB + 39f, x0, yB + 21f, "#059669", 1.8f, 6f))
+            sb.append(arrow(x1, yB + 39f, x1, yB + 25f, "#059669", 1.8f, 6f))
+            if (!quiz) {
+                sb.append(tx(x0 + 6f, yB + 36f, "R₁=${num(r1)}", "#059669", "start", bold = true, size = 9))
+                sb.append(tx(x1 - 6f, yB + 36f, "R₂=${num(r2)}", "#059669", "end", bold = true, size = 9))
+            }
         }
-        sb.append(arrow(x0, y + 34f, x0, y + 8f, "#00796b", 2f, 7f))
-        sb.append(tx(x0 + 2f, y + 46f, "R₁=${num(r1)}", "#00796b", "start", bold = true, size = 10))
-        sb.append(arrow(x1, y + 34f, x1, y + 8f, "#00796b", 2f, 7f))
-        sb.append(tx(x1 - 2f, y + 46f, "R₂=${num(r2)}", "#00796b", "end", bold = true, size = 10))
-        fun sf(v: Float) = if (udl) r1 - q * v else r1 - (if (v >= a) p else 0f)
-        val maxS = max(abs(r1), abs(r1 - (if (udl) q * len else p))).coerceAtLeast(1f)
-        val sfY = 152f
-        sb.append(ln(x0, sfY, x1, sfY, ST, 1.4f)); sb.append(tx(44f, sfY - 6f, "V", MU, "end", bold = true, size = 11))
-        val sfPts = StringBuilder()
-        for (i in 0..100) { val bv = len * i / 100f; sfPts.append("${f(sx(bv))},${f(sfY - sf(bv) / maxS * 44f)} ") }
-        sb.append("<polyline points=\"${sfPts.toString().trim()}\" fill=\"none\" stroke=\"$ACC\" stroke-width=\"2\"/>")
-        fun bm(v: Float) = if (udl) r1 * v - q * v * v / 2f else if (v <= a) r1 * v else r2 * (len - v)
-        val maxB = max(1f, if (udl) q * len * len / 8f else p * a * (len - a) / len)
-        val bmY = 232f
-        sb.append(ln(x0, bmY, x1, bmY, ST, 1.4f)); sb.append(tx(44f, bmY - 6f, "M", MU, "end", bold = true, size = 11))
-        val bmPts = StringBuilder()
-        for (i in 0..100) { val bv = len * i / 100f; bmPts.append("${f(sx(bv))},${f(bmY + bm(bv) / maxB * 34f)} ") }
-        sb.append("<polyline points=\"${bmPts.toString().trim()}\" fill=\"none\" stroke=\"$PT\" stroke-width=\"2\"/>")
-        sb.append(tx(180f, 274f, "تیر دو سر مفصل — نمودار برش (V) و گشتاور (M)", MU, "middle", bold = true, size = 11))
+
+        // بارگذاری روی تیر
+        if (isUdl) {
+            val nArr = 8
+            for (i in 0..nArr) {
+                val ux = x0 + (x1 - x0) * i / nArr.toFloat()
+                sb.append(arrow(ux, yB - 28f, ux, yB - 5f, ACC, 1.3f, 5f))
+            }
+            sb.append(ln(x0, yB - 28f, x1, yB - 28f, ACC, 1.7f))
+            sb.append(tx((x0 + x1) / 2f, yB - 35f, "q = ${num(q)} kN/m   (L = ${num(len)} m)", ACC, "middle", bold = true, size = 10))
+        } else {
+            val pxLoad = if (isCantilever) x1 else sx(a)
+            sb.append(arrow(pxLoad, yB - 34f, pxLoad, yB - 5f, PT, 2.3f, 8f))
+            sb.append(tx(pxLoad, yB - 39f, "P = ${num(p)} kN", PT, "middle", bold = true, size = 10))
+            if (!isCantilever) sb.append(tx(pxLoad, yB + 17f, "a=${num(a)}m", MU, "middle", size = 8))
+        }
+
+        // توابع برش V(x) و گشتاور M(x)
+        val rLeft = if (isCantilever) (if (isUdl) q * len else p) else (if (isUdl) q * len / 2f else p * (len - a) / len)
+        val rRight = if (isCantilever) 0f else (if (isUdl) q * len / 2f else p * a / len)
+        fun sf(v: Float): Float = when {
+            isCantilever && isUdl -> q * (len - v)
+            isCantilever -> p
+            isUdl -> rLeft - q * v
+            v < a -> rLeft
+            else -> -rRight
+        }
+        fun bm(v: Float): Float = when {
+            isCantilever && isUdl -> -q * (len - v).pow(2f) / 2f
+            isCantilever -> -p * (len - v)
+            isUdl -> rLeft * v - q * v * v / 2f
+            v <= a -> rLeft * v
+            else -> rRight * (len - v)
+        }
+
+        val maxS = max(abs(rLeft), abs(rRight)).coerceAtLeast(1f)
+        val sfAmp = 26f
+        sb.append(ln(x0, sfY, x1, sfY, ST, 1.3f))
+        sb.append(tx(x0 - 10f, sfY + 4f, "V", ACC, "end", bold = true, size = 11))
+        val sfPoly = StringBuilder("${f(x0)},${f(sfY)} ")
+        if (!isCantilever && !isUdl) {
+            val yTop = sfY - (rLeft / maxS) * sfAmp
+            val yBot = sfY + (rRight / maxS) * sfAmp
+            sfPoly.append("${f(x0)},${f(yTop)} ${f(sx(a))},${f(yTop)} ${f(sx(a))},${f(yBot)} ${f(x1)},${f(yBot)} ")
+        } else {
+            for (i in 0..80) {
+                val bv = len * i / 80f
+                sfPoly.append("${f(sx(bv))},${f(sfY - sf(bv) / maxS * sfAmp)} ")
+            }
+        }
+        sfPoly.append("${f(x1)},${f(sfY)}")
+        sb.append(poly(sfPoly.toString(), "rgba(108,99,245,.16)", ACC, 1.9f))
+        if (!quiz) {
+            sb.append(tx(x0 + 4f, sfY - (rLeft / maxS) * sfAmp - 4f, "+${num(rLeft)}", ACC, "start", bold = true, size = 8))
+            if (!isCantilever) sb.append(tx(x1 - 4f, sfY + (rRight / maxS) * sfAmp + 10f, "−${num(rRight)}", ACC, "end", bold = true, size = 8))
+        }
+
+        val mPeak = when {
+            isCantilever && isUdl -> q * len * len / 2f
+            isCantilever -> p * len
+            isUdl -> q * len * len / 8f
+            else -> p * a * (len - a) / len
+        }.coerceAtLeast(1f)
+        val bmAmp = 28f
+        sb.append(ln(x0, bmY, x1, bmY, ST, 1.3f))
+        sb.append(tx(x0 - 10f, bmY + 4f, "M", PT, "end", bold = true, size = 11))
+        val bmPoly = StringBuilder("${f(x0)},${f(bmY)} ")
+        for (i in 0..80) {
+            val bv = len * i / 80f
+            bmPoly.append("${f(sx(bv))},${f(bmY - bm(bv) / mPeak * bmAmp)} ")
+        }
+        bmPoly.append("${f(x1)},${f(bmY)}")
+        sb.append(poly(bmPoly.toString(), "rgba(214,51,108,.15)", PT, 1.9f))
+        if (!quiz) {
+            if (isCantilever) {
+                sb.append(tx(x0 + 6f, bmY + bmAmp - 2f, "−${num(mPeak)}", PT, "start", bold = true, size = 8))
+            } else {
+                val xMaxM = if (isUdl) sx(len / 2f) else sx(a)
+                sb.append(tx(xMaxM, bmY - bmAmp - 4f, "Mmax=${num(mPeak)}", PT, "middle", bold = true, size = 8))
+            }
+        }
+        val title = if (isCantilever) "تیر یک‌سر گیردار — نمودار برش (V) و گشتاور (M)" else "تیر دو سر مفصل — نمودار برش (V) و گشتاور (M)"
+        sb.append(tx(180f, 268f, title, MU, "middle", bold = true, size = 10))
         return sb.toString()
     }
 
@@ -2760,94 +3228,236 @@ object AdvancedMathSvgRenderer {
 
     private fun pvCycle(spec: FigureSpec): String {
         val kind = spec.xStr("kind", "carnot").lowercase()
+        val quiz = spec.xStr("show", "all").lowercase() == "quiz"
         val sb = StringBuilder()
+
+        // محورهای استاندارد P-V
+        val axX = 56f; val axY = 222f
+        sb.append(ln(44f, axY, 326f, axY, ST, 1.6f)); sb.append(arrow(316f, axY, 332f, axY, ST, 1.6f, 7f))
+        sb.append(ln(axX, axY + 8f, axX, 26f, ST, 1.6f)); sb.append(arrow(axX, 36f, axX, 20f, ST, 1.6f, 7f))
+        sb.append(tx(328f, 238f, "V", ST, "middle", bold = true, size = 12))
+        sb.append(tx(42f, 30f, "P", ST, "middle", bold = true, size = 12))
+
+        fun midArrow(x1: Float, y1: Float, x2: Float, y2: Float, col: String) {
+            val mx = (x1 + x2) / 2f; val my = (y1 + y2) / 2f
+            val dx = x2 - x1; val dy = y2 - y1
+            val dl = sqrt(dx * dx + dy * dy).coerceAtLeast(1f)
+            sb.append(arrow(mx - dx / dl * 6f, my - dy / dl * 6f, mx + dx / dl * 6f, my + dy / dl * 6f, col, 1.8f, 6f))
+        }
+        fun stateDot(x: Float, y: Float, n: String, dx: Float, dy: Float) {
+            sb.append(cls(x, y, 3.6f, "#ffffff", ST, 1.8f))
+            sb.append(tx(x + dx, y + dy, n, ST, "middle", bold = true, size = 10))
+        }
+
         when (kind) {
-            "otto", "diesel" -> {
-                sb.append(path("M 96 96 L 252 96 L 150 214 L 96 214 Z", "rgba(108,99,245,.10)", ACC, 2.2f))
-                sb.append(tx(174f, 84f, "احتراق (حجم ثابت)", PT, "middle", bold = true, size = 10))
-                sb.append(tx(150f, 232f, "انبساط", MU, "middle", size = 10))
+            "otto" -> {
+                // اتو: ۱→۲ تراکم بی‌دررو، ۲→۳ دریافت گرمای هم‌حجم (عمودی)، ۳→۴ انبساط بی‌دررو، ۴→۱ دفع گرمای هم‌حجم (عمودی)
+                val v1 = 278f; val v2 = 106f
+                val p1 = 198f; val p2 = 136f; val p3 = 52f; val p4 = 148f
+                sb.append(path("M ${f(v1)} ${f(p1)} Q 178 190 ${f(v2)} ${f(p2)} L ${f(v2)} ${f(p3)} Q 182 126 ${f(v1)} ${f(p4)} Z", "rgba(108,99,245,.13)", ACC, 2.2f))
+                sb.append(ln(v2, p3, v2, axY, "#cbd5e1", 1f, "3 3"))
+                sb.append(ln(v1, p1, v1, axY, "#cbd5e1", 1f, "3 3"))
+                sb.append(tx(v2, axY + 13f, "Vmin", MU, "middle", size = 8))
+                sb.append(tx(v1, axY + 13f, "Vmax", MU, "middle", size = 8))
+                midArrow(v1, p1, v2, p2 + 18f, ACC)
+                midArrow(v2, p2, v2, p3, PT)
+                midArrow(v2, p3 + 18f, v1, p4, ACC)
+                midArrow(v1, p4, v1, p1, "#0284c7")
+                stateDot(v1, p1, "1", 10f, 10f); stateDot(v2, p2, "2", -10f, 4f)
+                stateDot(v2, p3, "3", -10f, -4f); stateDot(v1, p4, "4", 10f, -4f)
+                if (!quiz) {
+                    sb.append(tx(v2 - 8f, (p2 + p3) / 2f + 3f, "هم‌حجم (Qin)", PT, "end", bold = true, size = 9))
+                    sb.append(tx(v1 + 8f, (p4 + p1) / 2f + 3f, "دفع گرما", "#0284c7", "start", bold = true, size = 9))
+                    sb.append(tx(192f, 100f, "بی‌دررو", ACC, "middle", bold = true, size = 9))
+                }
+            }
+            "diesel" -> {
+                // دیزل: ۱→۲ تراکم بی‌دررو، ۲→۳ احتراق هم‌فشار (افقی!)، ۳→۴ انبساط بی‌دررو، ۴→۱ دفع گرمای هم‌حجم (عمودی)
+                val v1 = 282f; val v2 = 98f; val v3 = 178f
+                val p1 = 198f; val p2 = 60f; val p4 = 150f
+                sb.append(path("M ${f(v1)} ${f(p1)} Q 168 184 ${f(v2)} ${f(p2)} L ${f(v3)} ${f(p2)} Q 226 122 ${f(v1)} ${f(p4)} Z", "rgba(108,99,245,.13)", ACC, 2.2f))
+                midArrow(v1, p1, v2 + 12f, p2 + 48f, ACC)
+                midArrow(v2, p2, v3, p2, PT)
+                midArrow(v3, p2 + 12f, v1, p4, ACC)
+                midArrow(v1, p4, v1, p1, "#0284c7")
+                stateDot(v1, p1, "1", 10f, 10f); stateDot(v2, p2, "2", -10f, -4f)
+                stateDot(v3, p2, "3", 8f, -6f); stateDot(v1, p4, "4", 10f, -4f)
+                if (!quiz) {
+                    sb.append(tx((v2 + v3) / 2f, p2 - 10f, "احتراق هم‌فشار (P=ثابت)", PT, "middle", bold = true, size = 9))
+                    sb.append(tx(v1 + 6f, (p4 + p1) / 2f + 3f, "هم‌حجم", "#0284c7", "start", bold = true, size = 9))
+                }
             }
             "rankine" -> {
-                sb.append(path("M 96 96 L 252 96 L 252 216 L 96 216 Z", "rgba(108,99,245,.10)", ACC, 2.2f))
-                sb.append(tx(174f, 84f, "گرم شدن", PT, "middle", bold = true, size = 10))
+                // رانکین همراه گنبد اشباع کم‌رنگ
+                sb.append(path("M 80 214 Q 148 42 272 214", "none", "#cbd5e1", 1.5f))
+                val x1 = 104f; val y1 = 184f; val x2 = 104f; val y2 = 76f; val x3 = 228f; val y3 = 76f; val x4 = 258f; val y4 = 184f
+                sb.append(path("M ${f(x1)} ${f(y1)} L ${f(x2)} ${f(y2)} L ${f(x3)} ${f(y3)} Q 248 134 ${f(x4)} ${f(y4)} Z", "rgba(108,99,245,.13)", ACC, 2.2f))
+                midArrow(x1, y1, x2, y2, ACC); midArrow(x2, y2, x3, y3, PT)
+                midArrow(x3, y3, x4, y4, ACC); midArrow(x4, y4, x1, y1, "#0284c7")
+                stateDot(x1, y1, "1", -10f, 10f); stateDot(x2, y2, "2", -10f, -6f)
+                stateDot(x3, y3, "3", 10f, -6f); stateDot(x4, y4, "4", 10f, 10f)
+                if (!quiz) {
+                    sb.append(tx((x2 + x3) / 2f, y2 - 10f, "دیگ بخار (P=ثابت)", PT, "middle", bold = true, size = 9))
+                    sb.append(tx((x1 + x4) / 2f, y1 + 15f, "چگالنده", "#0284c7", "middle", bold = true, size = 9))
+                }
             }
             else -> {
-                sb.append(path("M 104 78 C 176 54 250 92 262 150 C 238 206 160 226 104 196 C 66 170 70 110 104 78 Z", "rgba(108,99,245,.10)", ACC, 2.2f))
-                sb.append(tx(180f, 52f, "هم‌دما", PT, "middle", bold = true, size = 10))
+                // کارنو: دو فرایند هم‌دما (T_H و T_C) + دو فرایند بی‌دررو با شیب تندتر
+                val x1 = 98f; val y1 = 56f
+                val x2 = 198f; val y2 = 98f
+                val x3 = 282f; val y3 = 178f
+                val x4 = 156f; val y4 = 148f
+                sb.append(path("M ${f(x1)} ${f(y1)} Q 146 84 ${f(x2)} ${f(y2)} Q 238 148 ${f(x3)} ${f(y3)} Q 214 168 ${f(x4)} ${f(y4)} Q 120 112 ${f(x1)} ${f(y1)} Z", "rgba(108,99,245,.13)", ACC, 2.2f))
+                midArrow(x1, y1, x2, y2, PT)
+                midArrow(x2, y2, x3, y3, ACC)
+                midArrow(x3, y3, x4, y4, "#0284c7")
+                midArrow(x4, y4, x1, y1, ACC)
+                stateDot(x1, y1, "1", -9f, -5f); stateDot(x2, y2, "2", 10f, -5f)
+                stateDot(x3, y3, "3", 10f, 8f); stateDot(x4, y4, "4", -11f, 9f)
+                if (!quiz) {
+                    sb.append(tx(158f, 66f, "انبساط هم‌دما (TH)", PT, "middle", bold = true, size = 9))
+                    sb.append(tx(260f, 134f, "بی‌دررو", ACC, "start", bold = true, size = 9))
+                    sb.append(tx(212f, 186f, "تراکم هم‌دما (TC)", "#0284c7", "middle", bold = true, size = 9))
+                    sb.append(tx(182f, 126f, "Wnet", "#334155", "middle", bold = true, size = 9))
+                }
             }
         }
-        sb.append(ln(40f, 226f, 328f, 226f, ST, 1.6f)); sb.append(arrow(316f, 226f, 332f, 226f, ST, 1.6f, 7f))
-        sb.append(ln(66f, 226f, 66f, 30f, ST, 1.6f)); sb.append(arrow(66f, 42f, 66f, 24f, ST, 1.6f, 7f))
-        sb.append(tx(320f, 242f, "V", MU, "middle", bold = true, size = 12))
-        sb.append(tx(54f, 34f, "P", MU, "middle", bold = true, size = 12))
-        val name = when (kind) { "otto" -> "چرخهٔ اتو"; "diesel" -> "چرخهٔ دیزل"; "rankine" -> "چرخهٔ رانکین"; else -> "چرخهٔ کارنو" }
-        sb.append(tx(180f, 258f, name, ST, "middle", bold = true, size = 13))
+        val name = when (kind) {
+            "otto" -> "چرخهٔ اتو (حجم ثابت)"
+            "diesel" -> "چرخهٔ دیزل (فشار ثابت)"
+            "rankine" -> "چرخهٔ رانکین (نیروگاه بخار)"
+            else -> "چرخهٔ کارنو (دو هم‌دما و دو بی‌دررو)"
+        }
+        sb.append(tx(180f, 258f, if (quiz) "نمودار P-V — نوع چرخه و فرایندها را مشخص کنید" else name, ST, "middle", bold = true, size = 11))
         return sb.toString()
     }
 
     private fun projectNetwork(spec: FigureSpec): String {
+        val rawMode = spec.xStr("mode", "").ifBlank { spec.xStr("show", "cpm") }.lowercase()
+        val mode = if (rawMode == "plain") "simple" else rawMode
         val acts = spec.xStr("acts", "A:1-2:3;B:2-3:2;C:2-4:4;D:3-4:1").split(Regex("[;؛]")).filter { it.isNotBlank() }
         class Act(val name: String, val from: String, val to: String, val dur: Float)
         val list = acts.mapNotNull { ac ->
             val m = ac.split(":").map { it.trim() }
             if (m.size < 3) return@mapNotNull null
             val nd = m[1].split(Regex("[-—]")).map { it.trim() }
-            Act(m[0], nd[0], nd.getOrElse(1) { nd[0] }, faEnDigits(m[2]).toFloatOrNull() ?: 0f)
+            Act(m[0], nd[0], nd.getOrElse(1) { nd[0] }, max(0f, faEnDigits(m[2]).toFloatOrNull() ?: 0f))
         }.ifEmpty { listOf(Act("A", "1", "2", 3f)) }
+
         val nodes = LinkedHashSet<String>()
         list.forEach { nodes.add(it.from); nodes.add(it.to) }
         val depth = HashMap<String, Int>()
         nodes.forEach { depth[it] = 0 }
-        repeat(6) { list.forEach { a -> depth[a.to] = max(depth[a.to] ?: 0, (depth[a.from] ?: 0) + 1) } }
-        val maxD = nodes.maxOf { depth[it] ?: 0 }
-        val pos = HashMap<String, Pair<Float, Float>>()
-        nodes.forEach { k ->
-            val same = nodes.filter { depth[it] == depth[k] }
-            val idx = same.indexOf(k)
-            pos[k] = (48f + (if (maxD > 0) (depth[k] ?: 0) / maxD.toFloat() else 0f) * 260f) to (54f + idx * min(58f, 160f / max(1, same.size)))
+        repeat(nodes.size + 2) {
+            list.forEach { a ->
+                if (a.from != a.to) depth[a.to] = max(depth[a.to] ?: 0, (depth[a.from] ?: 0) + 1)
+            }
         }
+        val maxD = nodes.maxOf { depth[it] ?: 0 }
+
+        // محاسبهٔ رفت و برگشت CPM (ES/EF و LS/LF و مسیر بحرانی)
+        val es = HashMap<String, Float>()
+        nodes.forEach { es[it] = 0f }
+        val topo = nodes.sortedBy { depth[it] ?: 0 }
+        repeat(nodes.size + 1) {
+            list.forEach { a ->
+                if (a.from != a.to) es[a.to] = max(es[a.to] ?: 0f, (es[a.from] ?: 0f) + a.dur)
+            }
+        }
+        val projDur = es.values.maxOrNull() ?: 0f
+        val lf = HashMap<String, Float>()
+        val outDeg = HashMap<String, Int>()
+        nodes.forEach { outDeg[it] = 0 }
+        list.forEach { if (it.from != it.to) outDeg[it.from] = (outDeg[it.from] ?: 0) + 1 }
+        nodes.forEach { lf[it] = projDur }
+        repeat(nodes.size + 1) {
+            topo.asReversed().forEach { u ->
+                val outs = list.filter { it.from == u && it.from != it.to }
+                if (outs.isNotEmpty()) {
+                    lf[u] = outs.minOf { (lf[it.to] ?: projDur) - it.dur }
+                }
+            }
+        }
+
+        // چیدمان متقارن عمودی در هر لایه تا مسیرهای موازی کاملاً خوانا و بدون برخورد باشند
+        val pos = HashMap<String, Pair<Float, Float>>()
+        val midY = 126f
+        for (d in 0..maxD) {
+            val colNodes = nodes.filter { (depth[it] ?: 0) == d }
+            val stepY = min(76f, 152f / max(1, colNodes.size))
+            colNodes.forEachIndexed { idx, k ->
+                val x = if (maxD > 0) 46f + (d / maxD.toFloat()) * 268f else 180f
+                val y = midY + (idx - (colNodes.size - 1) / 2f) * stepY
+                pos[k] = x to y
+            }
+        }
+
+        val showCpm = mode == "cpm"
+        val nodeR = 15f
         val sb = StringBuilder()
+
         list.forEach { a ->
             val p1 = pos[a.from]; val p2 = pos[a.to]
             if (p1 != null && p2 != null) {
+                val floatVal = (lf[a.to] ?: projDur) - (es[a.from] ?: 0f) - a.dur
+                val isCrit = showCpm && abs(floatVal) < 0.01f && abs((lf[a.from] ?: 0f) - (es[a.from] ?: 0f)) < 0.01f && abs((lf[a.to] ?: 0f) - (es[a.to] ?: 0f)) < 0.01f
+                val eCol = if (isCrit) PT else ACC
+                val eW = if (isCrit) 2.5f else 1.7f
+                val tCol = if (isCrit) "#be123c" else "#0d47a1"
+
                 val d = sqrt((p2.first - p1.first).pow(2) + (p2.second - p1.second).pow(2)).coerceAtLeast(1f)
-                val sxx = p1.first + (p2.first - p1.first) / d * 15f
-                val syy = p1.second + (p2.second - p1.second) / d * 15f
-                val exx = p2.first - (p2.first - p1.first) / d * 15f
-                val eyy = p2.second - (p2.second - p1.second) / d * 15f
-                // V326 — فعالیتی که از روی یک گره می‌پرد (مثل C: ۲→۴) با کمان زیر ردیف کشیده می‌شود
-                // تا خط و برچسبش روی گرهٔ میانی نیفتد؛ برچسب بقیهٔ یال‌ها هم با بردار عمود جدا می‌شود.
-                val jump = if (abs(eyy - syy) < 6f) nodes.firstOrNull { k ->
+                val sxx = p1.first + (p2.first - p1.first) / d * (nodeR + 1f)
+                val syy = p1.second + (p2.second - p1.second) / d * (nodeR + 1f)
+                val exx = p2.first - (p2.first - p1.first) / d * (nodeR + 1f)
+                val eyy = p2.second - (p2.second - p1.second) / d * (nodeR + 1f)
+                val jump = if (abs(eyy - syy) < 8f) nodes.firstOrNull { k ->
                     val q = pos[k]!!
-                    abs(q.second - p1.second) <= 12f && q.first > min(p1.first, p2.first) + 14f && q.first < max(p1.first, p2.first) - 14f
+                    abs(q.second - p1.second) <= 14f && q.first > min(p1.first, p2.first) + 14f && q.first < max(p1.first, p2.first) - 14f
                 } else null
                 if (jump != null) {
                     val jmx = (sxx + exx) / 2f
-                    val jmy = max(syy, eyy) + 44f
+                    val jmy = max(syy, eyy) + 48f
                     val apy = (syy + 2f * jmy + eyy) / 4f
                     val tdx = exx - jmx; val tdy = eyy - jmy
                     val tl = sqrt(tdx * tdx + tdy * tdy).coerceAtLeast(1f)
                     val tux = tdx / tl; val tuy = tdy / tl
                     val tbx = exx - tux * 8f; val tby = eyy - tuy * 8f
-                    sb.append(path("M ${num(sxx)} ${num(syy)} Q ${num(jmx)} ${num(jmy)} ${num(tbx)} ${num(tby)}", "none", ACC, 1.8f))
-                    sb.append(poly(
-                        "${num(exx)},${num(eyy)} ${num(tbx - tuy * 4f)},${num(tby + tux * 4f)} ${num(tbx + tuy * 4f)},${num(tby - tux * 4f)}",
-                        ACC, ACC, 1f
-                    ))
-                    sb.append(tx(jmx, apy + 14f, "${a.name} (${num(a.dur)})", "#0d47a1", "middle", bold = true, size = 10))
+                    sb.append(path("M ${num(sxx)} ${num(syy)} Q ${num(jmx)} ${num(jmy)} ${num(tbx)} ${num(tby)}", "none", eCol, eW))
+                    sb.append(poly("${num(exx)},${num(eyy)} ${num(tbx - tuy * 4f)},${num(tby + tux * 4f)} ${num(tbx + tuy * 4f)},${num(tby - tux * 4f)}", eCol, eCol, 1f))
+                    sb.append(tx(jmx, apy + 13f, "${a.name}(${num(a.dur)})", tCol, "middle", bold = true, size = 10))
                 } else {
                     val wdx = exx - sxx; val wdy = eyy - syy
                     val wl = sqrt(wdx * wdx + wdy * wdy).coerceAtLeast(1f)
                     var wnx = -wdy / wl; var wny = wdx / wl
                     if (wny > 0f) { wnx = -wnx; wny = -wny }
-                    sb.append(arrow(sxx, syy, exx, eyy, ACC, 1.8f, 8f))
-                    sb.append(tx((sxx + exx) / 2f + wnx * 13f, (syy + eyy) / 2f + wny * 13f + 4f,
-                        "${a.name} (${num(a.dur)})", "#0d47a1", "middle", bold = true, size = 10))
+                    sb.append(arrow(sxx, syy, exx, eyy, eCol, eW, 8f))
+                    sb.append(tx((sxx + exx) / 2f + wnx * 13f, (syy + eyy) / 2f + wny * 13f + 4f, "${a.name}(${num(a.dur)})", tCol, "middle", bold = true, size = 10))
                 }
             }
         }
-        nodes.forEach { k -> val p = pos[k]!!; sb.append(cls(p.first, p.second, 14f, "#ffffff", ST, 2f)); sb.append(tx(p.first, p.second + 4f, k, ST, "middle", bold = true, size = 10)) }
-        sb.append(tx(180f, 262f, "شبکهٔ فعالیت‌ها (CPM/PERT) — ${list.size} فعالیت", MU, "middle", bold = true, size = 11))
+
+        nodes.forEach { k ->
+            val p = pos[k]!!
+            val critNode = showCpm && abs((lf[k] ?: 0f) - (es[k] ?: 0f)) < 0.01f
+            sb.append(cls(p.first, p.second, nodeR, if (critNode) "#fff1f2" else "#ffffff", if (critNode) PT else ST, 2f))
+            sb.append(tx(p.first, p.second + 4f, k, ST, "middle", bold = true, size = 10))
+            if (showCpm) {
+                val pillY = if (p.second > 152f) p.second + nodeR + 4f else p.second - nodeR - 18f
+                sb.append(rc(p.first - 21f, pillY, 42f, 14f, "#f8fafc", "#cbd5e1", 0.9f, 4f))
+                sb.append(tx(p.first, pillY + 10f, "${num(es[k] ?: 0f)}|${num(lf[k] ?: 0f)}", "#334155", "middle", bold = true, size = 8))
+            } else if (mode == "quiz") {
+                val pillY = if (p.second > 152f) p.second + nodeR + 4f else p.second - nodeR - 18f
+                sb.append(rc(p.first - 20f, pillY, 40f, 14f, "#eef2ff", "#6366f1", 0.9f, 4f))
+                sb.append(tx(p.first, pillY + 10f, "  |  ", "#6366f1", "middle", bold = true, size = 8))
+            }
+        }
+
+        val footer = when (mode) {
+            "quiz" -> "شبکهٔ فعالیت‌ها (CPM) — زمان اتمام و مسیر بحرانی را بیابید"
+            "simple" -> "شبکهٔ فعالیت‌ها (CPM/PERT) — ${list.size} فعالیت"
+            else -> "شبکهٔ CPM/PERT — زمان کل: ${num(projDur)} (مسیر بحرانی قرمز)"
+        }
+        sb.append(tx(180f, 260f, footer, MU, "middle", bold = true, size = 10))
         return sb.toString()
     }
 
@@ -3015,69 +3625,124 @@ object AdvancedMathSvgRenderer {
         return sb.toString()
     }
 
-    /** V327 / V335.8 — حواس پنج‌گانه با آیکن‌های برداری تمیز و بدون تداخل خطوط با نوشته‌ها. */
+    /** V327 / V335.8 / V335.13 — حواس پنج‌گانه با آیکن‌های برداری آناتومیک و حرفه‌ای اندام‌های حسی. */
     private fun fiveSenses(spec: FigureSpec): String {
         val mode = spec.xStr("mode", "full").lowercase()
-        data class SenseNode(val sense: String, val organ: String, val cx: Float, val cy: Float, val col: String)
+        val active = spec.xNum("active", 0f).toInt().coerceIn(0, 5)
+        data class SenseNode(val sense: String, val organ: String, val cx: Float, val cy: Float, val col: String, val bg: String)
         val nodes = listOf(
-            SenseNode("بینایی", "چشم", 180f, 52f, "#2563eb"),
-            SenseNode("شنوایی", "گوش", 66f, 108f, "#7c3aed"),
-            SenseNode("بویایی", "بینی", 294f, 108f, "#059669"),
-            SenseNode("چشایی", "زبان", 92f, 210f, "#e11d48"),
-            SenseNode("لامسه", "پوست دست", 268f, 210f, "#d97706")
+            SenseNode("بینایی", "چشم", 180f, 54f, "#2563eb", "#eff6ff"),
+            SenseNode("شنوایی", "گوش", 62f, 108f, "#7c3aed", "#f5f3ff"),
+            SenseNode("بویایی", "بینی", 298f, 108f, "#059669", "#ecfdf5"),
+            SenseNode("چشایی", "زبان", 88f, 208f, "#e11d48", "#fff1f2"),
+            SenseNode("لامسه", "پوست دست", 272f, 208f, "#d97706", "#fffbeb")
         )
-        val hubX = 180f; val hubY = 136f; val hubR = 30f; val nodeR = 22f
+        val hubX = 180f; val hubY = 136f; val hubR = 29f; val halfBox = 24f
         val sb = StringBuilder()
 
-        // ۱) پرتوهای ارتباطی فقط در فضای بیرون دایره‌ها رسم می‌شوند تا از روی متن یا آیکن رد نشوند
-        nodes.forEach { nd ->
+        // ۱) پرتوهای ارتباطی شعاعی در بیرون کادرها (با برجسته‌سازی در صورت انتخاب active)
+        nodes.forEachIndexed { idx, nd ->
+            val isHi = active == 0 || active == idx + 1
             val dx = nd.cx - hubX
             val dy = nd.cy - hubY
             val dist = kotlin.math.hypot(dx.toDouble(), dy.toDouble()).toFloat().coerceAtLeast(1f)
             val ux = dx / dist
             val uy = dy / dist
-            sb.append(ln(hubX + ux * (hubR + 3f), hubY + uy * (hubR + 3f), nd.cx - ux * (nodeR + 4f), nd.cy - uy * (nodeR + 4f), "#cbd5e1", 1.8f, "4 3"))
+            sb.append(ln(
+                hubX + ux * (hubR + 3f),
+                hubY + uy * (hubR + 3f),
+                nd.cx - ux * (halfBox + 5f),
+                nd.cy - uy * (halfBox + 5f),
+                if (active == idx + 1) nd.col else if (isHi) "#94a3b8" else "#e2e8f0",
+                if (active == idx + 1) 2.4f else 1.7f,
+                if (active == idx + 1) "" else "4 3"
+            ))
         }
 
-        // ۲) دایرهٔ مرکزی توپر سفید با کادر بنفش
+        // ۲) هستهٔ مرکزی
         sb.append(cls(hubX, hubY, hubR, "#eef2ff", ACC, 2.2f))
+        sb.append(cls(hubX, hubY, hubR - 4f, "none", "#c7d2fe", 1f))
         sb.append(tx(hubX, hubY - 3f, "حواس", ACC, "middle", bold = true, size = 12))
-        sb.append(tx(hubX, hubY + 13f, "پنج‌گانه", ST, "middle", bold = true, size = 10))
+        sb.append(tx(hubX, hubY + 12f, "پنج‌گانه", ST, "middle", bold = true, size = 10))
 
-        // ۳) هر گره با آیکن برداری واضح اندام + پلاک برچسب بدون هیچ تداخلی
+        // ۳) آیکن‌های برداری دقیق برای هر اندام حسی
         nodes.forEachIndexed { idx, nd ->
-            sb.append(rc(nd.cx - 21f, nd.cy - 21f, 42f, 42f, "#ffffff", nd.col, 2f, 14f))
+            val isSelected = active == idx + 1
+            val dimmed = active != 0 && !isSelected
+            val cardStroke = if (dimmed) "#cbd5e1" else nd.col
+            val cardW = if (isSelected) 2.8f else 2f
+            val x = nd.cx
+            val y = nd.cy
+            if (isSelected) {
+                sb.append(rc(x - halfBox - 3f, y - halfBox - 3f, (halfBox + 3f) * 2f, (halfBox + 3f) * 2f, nd.bg, nd.col, 1.1f, 16f))
+            }
+            sb.append(rc(x - halfBox, y - halfBox, halfBox * 2f, halfBox * 2f, if (dimmed) "#f8fafc" else nd.bg, cardStroke, cardW, 14f))
+
             when (idx) {
-                0 -> { // چشم
-                    sb.append(path("M ${f(nd.cx - 13f)} ${f(nd.cy)} Q ${f(nd.cx)} ${f(nd.cy - 10f)} ${f(nd.cx + 13f)} ${f(nd.cy)} Q ${f(nd.cx)} ${f(nd.cy + 10f)} ${f(nd.cx - 13f)} ${f(nd.cy)} Z", "#eff6ff", nd.col, 1.5f))
-                    sb.append(cls(nd.cx, nd.cy, 4.2f, nd.col, "none", 0f))
+                0 -> {
+                    // چشم: پلک بالا، مژه‌ها، صلبیه بادامی، عنبیه، مردمک و نقطهٔ بازتاب نور
+                    sb.append(path("M ${f(x - 15f)} ${f(y - 3f)} Q ${f(x)} ${f(y - 14f)} ${f(x + 15f)} ${f(y - 3f)}", "none", "#93c5fd", 1.2f))
+                    sb.append(ln(x - 9f, y - 8f, x - 12f, y - 13f, nd.col, 1.4f))
+                    sb.append(ln(x, y - 10f, x, y - 15.5f, nd.col, 1.4f))
+                    sb.append(ln(x + 9f, y - 8f, x + 12f, y - 13f, nd.col, 1.4f))
+                    sb.append(path("M ${f(x - 16f)} ${f(y + 2f)} Q ${f(x)} ${f(y - 11f)} ${f(x + 16f)} ${f(y + 2f)} Q ${f(x)} ${f(y + 15f)} ${f(x - 16f)} ${f(y + 2f)} Z", "#ffffff", nd.col, 1.8f))
+                    sb.append(cls(x, y + 2f, 6.2f, "#60a5fa", "#1d4ed8", 1.3f))
+                    sb.append(cls(x, y + 2f, 2.8f, "#0f172a", "none", 0f))
+                    sb.append(cls(x - 2f, y, 1.3f, "#ffffff", "none", 0f))
                 }
-                1 -> { // گوش
-                    sb.append(path("M ${f(nd.cx - 3f)} ${f(nd.cy - 10f)} C ${f(nd.cx + 9f)} ${f(nd.cy - 12f)} ${f(nd.cx + 10f)} ${f(nd.cy + 4f)} ${f(nd.cx + 2f)} ${f(nd.cy + 9f)} C ${f(nd.cx - 2f)} ${f(nd.cy + 11f)} ${f(nd.cx - 6f)} ${f(nd.cy + 8f)} ${f(nd.cx - 5f)} ${f(nd.cy + 4f)}", "none", nd.col, 2f))
-                    sb.append(path("M ${f(nd.cx - 1f)} ${f(nd.cy - 4f)} Q ${f(nd.cx + 4f)} ${f(nd.cy)} ${f(nd.cx)} ${f(nd.cy + 4f)}", "none", nd.col, 1.5f))
+                1 -> {
+                    // گوش: لالهٔ بیرونی گوش، چین حلزونی میانی، نرمهٔ گوش و امواج صوتی
+                    sb.append(path("M ${f(x - 5f)} ${f(y - 13f)} C ${f(x + 7f)} ${f(y - 17f)} ${f(x + 11f)} ${f(y - 3f)} ${f(x + 6f)} ${f(y + 7f)} C ${f(x + 4f)} ${f(y + 13f)} ${f(x - 3f)} ${f(y + 16f)} ${f(x - 7f)} ${f(y + 11f)} C ${f(x - 9f)} ${f(y + 8f)} ${f(x - 7f)} ${f(y + 4f)} ${f(x - 5f)} ${f(y + 4f)}", "#ede9fe", nd.col, 1.9f))
+                    sb.append(path("M ${f(x - 3f)} ${f(y - 7f)} C ${f(x + 3f)} ${f(y - 8f)} ${f(x + 4f)} ${f(y + 1f)} ${f(x - 1f)} ${f(y + 5f)}", "none", nd.col, 1.5f))
+                    sb.append(cls(x - 3.5f, y + 2f, 2f, nd.col, "none", 0f))
+                    sb.append(path("M ${f(x + 11f)} ${f(y - 7f)} Q ${f(x + 15f)} ${f(y)} ${f(x + 11f)} ${f(y + 7f)}", "none", "#8b5cf6", 1.5f))
+                    sb.append(path("M ${f(x + 15f)} ${f(y - 11f)} Q ${f(x + 20f)} ${f(y)} ${f(x + 15f)} ${f(y + 11f)}", "none", "#a78bfa", 1.3f))
                 }
-                2 -> { // بینی
-                    sb.append(path("M ${f(nd.cx - 1f)} ${f(nd.cy - 11f)} L ${f(nd.cx - 7f)} ${f(nd.cy + 5f)} Q ${f(nd.cx)} ${f(nd.cy + 10f)} ${f(nd.cx + 7f)} ${f(nd.cy + 5f)}", "none", nd.col, 2f))
+                2 -> {
+                    // بینی: تیغهٔ نیم‌رخ طبیعی، نوک گرد، پرهٔ بینی، حفرهٔ بینی و موج بو
+                    sb.append(path("M ${f(x - 2f)} ${f(y - 15f)} C ${f(x - 2f)} ${f(y - 8f)} ${f(x - 9f)} ${f(y + 1f)} ${f(x - 11f)} ${f(y + 5f)} C ${f(x - 12f)} ${f(y + 9f)} ${f(x - 7f)} ${f(y + 11f)} ${f(x - 2f)} ${f(y + 10f)} C ${f(x + 2f)} ${f(y + 12f)} ${f(x + 9f)} ${f(y + 11f)} ${f(x + 10f)} ${f(y + 6f)} C ${f(x + 10f)} ${f(y + 2f)} ${f(x + 6f)} ${f(y)} ${f(x + 4f)} ${f(y - 2f)}", "#d1fae5", nd.col, 1.9f))
+                    sb.append("<ellipse cx=\"${f(x - 2.5f)}\" cy=\"${f(y + 8.2f)}\" rx=\"2.6\" ry=\"1.5\" fill=\"#065f46\"/>")
+                    sb.append("<ellipse cx=\"${f(x + 4.5f)}\" cy=\"${f(y + 8.2f)}\" rx=\"2.2\" ry=\"1.4\" fill=\"#065f46\"/>")
+                    sb.append(path("M ${f(x - 5f)} ${f(y + 17f)} Q ${f(x - 8f)} ${f(y + 14f)} ${f(x - 4f)} ${f(y + 12f)}", "none", "#10b981", 1.3f))
+                    sb.append(path("M ${f(x + 4f)} ${f(y + 17f)} Q ${f(x + 7f)} ${f(y + 14f)} ${f(x + 3f)} ${f(y + 12f)}", "none", "#10b981", 1.3f))
                 }
-                3 -> { // زبان
-                    sb.append(ln(nd.cx - 10f, nd.cy - 4f, nd.cx + 10f, nd.cy - 4f, ST, 1.6f))
-                    sb.append(path("M ${f(nd.cx - 7f)} ${f(nd.cy - 4f)} L ${f(nd.cx - 7f)} ${f(nd.cy + 4f)} A 7 7 0 0 0 ${f(nd.cx + 7f)} ${f(nd.cy + 4f)} L ${f(nd.cx + 7f)} ${f(nd.cy - 4f)} Z", "#fecdd3", nd.col, 1.6f))
-                    sb.append(ln(nd.cx, nd.cy - 3f, nd.cx, nd.cy + 6f, nd.col, 1.2f))
+                3 -> {
+                    // زبان و دهان: کمان لب بالا، حفرهٔ دهان، زبان صورتی با شیار میانی و پرزهای چشایی
+                    sb.append(path("M ${f(x - 15f)} ${f(y - 3f)} Q ${f(x - 7f)} ${f(y - 10f)} ${f(x)} ${f(y - 6f)} Q ${f(x + 7f)} ${f(y - 10f)} ${f(x + 15f)} ${f(y - 3f)} Q ${f(x)} ${f(y + 4f)} ${f(x - 15f)} ${f(y - 3f)} Z", "#881337", nd.col, 1.5f))
+                    sb.append(path("M ${f(x - 9f)} ${f(y - 2f)} L ${f(x - 9f)} ${f(y + 6f)} A 9 9.5 0 0 0 ${f(x + 9f)} ${f(y + 6f)} L ${f(x + 9f)} ${f(y - 2f)} Q ${f(x)} ${f(y + 1f)} ${f(x - 9f)} ${f(y - 2f)} Z", "#fda4af", nd.col, 1.7f))
+                    sb.append(ln(x, y - 1f, x, y + 10f, nd.col, 1.3f))
+                    sb.append(cls(x - 4f, y + 6f, 1.1f, nd.col, "none", 0f))
+                    sb.append(cls(x + 4f, y + 6f, 1.1f, nd.col, "none", 0f))
+                    sb.append(cls(x - 3f, y + 10.5f, 1f, nd.col, "none", 0f))
+                    sb.append(cls(x + 3f, y + 10.5f, 1f, nd.col, "none", 0f))
                 }
-                else -> { // دست (پوست / لامسه)
-                    sb.append(rc(nd.cx - 7f, nd.cy - 2f, 14f, 11f, "#fef3c7", nd.col, 1.5f, 4f))
-                    for (fx in -5..5 step 3) {
-                        sb.append(ln(nd.cx + fx, nd.cy - 2f, nd.cx + fx, nd.cy - 10f, nd.col, 1.8f))
-                    }
+                else -> {
+                    // دست ۵ انگشتی واقعی: شست زاویه‌دار + ۴ انگشت با قد طبیعی و کف دست + موج لمس
+                    sb.append(path(
+                        "M ${f(x - 8f)} ${f(y + 15f)} " +
+                            "C ${f(x - 11f)} ${f(y + 12f)} ${f(x - 16f)} ${f(y + 6f)} ${f(x - 16f)} ${f(y + 2f)} " +
+                            "C ${f(x - 16f)} ${f(y - 1f)} ${f(x - 12f)} ${f(y - 1f)} ${f(x - 10f)} ${f(y + 3f)} " +
+                            "L ${f(x - 9f)} ${f(y - 10f)} A 2.2 2.2 0 0 1 ${f(x - 4.5f)} ${f(y - 10f)} L ${f(x - 4.5f)} ${f(y - 1f)} " +
+                            "L ${f(x - 4.2f)} ${f(y - 14f)} A 2.2 2.2 0 0 1 ${f(x + 0.3f)} ${f(y - 14f)} L ${f(x + 0.3f)} ${f(y - 1f)} " +
+                            "L ${f(x + 0.6f)} ${f(y - 12f)} A 2.2 2.2 0 0 1 ${f(x + 5.1f)} ${f(y - 12f)} L ${f(x + 5.1f)} ${f(y)} " +
+                            "L ${f(x + 5.4f)} ${f(y - 7.5f)} A 2.1 2.1 0 0 1 ${f(x + 9.6f)} ${f(y - 7.5f)} " +
+                            "L ${f(x + 9.6f)} ${f(y + 7f)} C ${f(x + 9.6f)} ${f(y + 13f)} ${f(x + 5f)} ${f(y + 16f)} ${f(x - 8f)} ${f(y + 15f)} Z",
+                        "#fde68a", nd.col, 1.7f
+                    ))
+                    sb.append(path("M ${f(x - 6f)} ${f(y + 6f)} Q ${f(x + 1f)} ${f(y + 4f)} ${f(x + 6f)} ${f(y + 8f)}", "none", nd.col, 1.1f))
+                    sb.append(path("M ${f(x + 11f)} ${f(y - 13f)} Q ${f(x + 15f)} ${f(y - 10f)} ${f(x + 13f)} ${f(y - 5f)}", "none", "#f59e0b", 1.3f))
                 }
             }
-            val labelText = when (mode) {
-                "blank_sense" -> "؟ — ${nd.organ}"
-                "blank_organ" -> "${nd.sense} — ؟"
-                else -> "${nd.sense} (${nd.organ})"
+
+            if (mode != "icon_only") {
+                val labelText = when (mode) {
+                    "blank_sense" -> "؟ — ${nd.organ}"
+                    "blank_organ" -> "${nd.sense} — ؟"
+                    else -> "${nd.sense} (${nd.organ})"
+                }
+                val ly = if (idx == 0) y - halfBox - 7f else y + halfBox + 14f
+                sb.append(tx(x, ly, labelText, if ("؟" in labelText) PT else if (dimmed) MU else ST, "middle", bold = true, size = 10))
             }
-            val ly = if (idx == 0) nd.cy - nodeR - 8f else nd.cy + nodeR + 14f
-            sb.append(tx(nd.cx, ly, labelText, if ("؟" in labelText) PT else ST, "middle", bold = true, size = 10))
         }
         sb.append(tx(180f, 268f, "حواس پنج‌گانه و اندام‌های حسی بدن", MU, "middle", size = 10))
         return sb.toString()
@@ -3232,66 +3897,236 @@ object AdvancedMathSvgRenderer {
     private fun supplyDemand(spec: FigureSpec): String {
         val kind = spec.xStr("kind", "equilibrium").lowercase()
         val ceiling = spec.xNum("ceiling", 0f)
+        val quiz = kind == "quiz"
         val x0 = 54f; val x1 = 320f; val y0 = 206f; val y1 = 44f
         val sb = StringBuilder()
+
+        // محورهای قیمت (P) و مقدار (Q)
         sb.append(ln(x0, y0, x1, y0, ST, 1.6f)); sb.append(arrow(x1 - 12f, y0, x1 + 6f, y0, ST, 1.6f, 7f))
-        sb.append(ln(x0, y0, x0, y1 + 18f, ST, 1.6f)); sb.append(arrow(x0, y1 + 30f, x0, y1 + 12f, ST, 1.6f, 7f))
-        sb.append(tx(x1 + 2f, y0 + 16f, "Q", MU, "middle", bold = true, size = 12))
-        sb.append(tx(x0 - 14f, y1 + 22f, "P", MU, "middle", bold = true, size = 12))
-        sb.append(arrow(x0 + 16f, y0 - 30f, x1 - 22f, y0 - 150f, PT, 2.4f, 9f))
-        sb.append(arrow(x0 + 16f, y0 - 32f, x1 - 22f, y1 + 40f, "#00796b", 2.4f, 9f))
-        sb.append(tx(x0 + 22f, y0 - 34f, "تقاضا", PT, "start", bold = true, size = 11))
-        sb.append(tx(x1 - 30f, y1 + 60f, "عرضه", "#00796b", "end", bold = true, size = 11))
-        if (kind == "shift") sb.append(arrow(x0 + 60f, y0 - 55f, x1 - 60f, y0 - 162f, "rgba(214,51,108,.45)", 2f, 8f))
-        if (ceiling > 0) {
+        sb.append(ln(x0, y0, x0, y1 + 12f, ST, 1.6f)); sb.append(arrow(x0, y1 + 24f, x0, y1 + 6f, ST, 1.6f, 7f))
+        sb.append(tx(x1 + 2f, y0 + 16f, "Q", ST, "middle", bold = true, size = 12))
+        sb.append(tx(x0 - 14f, y1 + 16f, "P", ST, "middle", bold = true, size = 12))
+
+        // تقاضا (D): شیب نزولی استاندارد!  عرضه (S): شیب صعودی استاندارد!
+        // خط D1: از (72, 66) به (292, 188)   |   خط S1: از (72, 188) به (292, 66)   => نقطهٔ تعادل دقیق: (182, 127)
+        val dx1 = 72f; val dy1 = 66f; val dx2 = 292f; val dy2 = 188f
+        val sx1 = 72f; val sy1 = 188f; val sx2 = 292f; val sy2 = 66f
+        val eqX = 182f; val eqY = 127f
+
+        if (kind == "equilibrium") {
+            // رنگ‌آمیزی مازاد مصرف‌کننده (CS) و مازاد تولیدکننده (PS)
+            sb.append(poly("${f(x0)},${f(dy1 - 10f)} ${f(eqX)},${f(eqY)} ${f(x0)},${f(eqY)}", "rgba(59,130,246,.12)", "none", 0f))
+            sb.append(poly("${f(x0)},${f(eqY)} ${f(eqX)},${f(eqY)} ${f(x0)},${f(sy1 + 10f)}", "rgba(16,185,129,.12)", "none", 0f))
+            sb.append(tx(x0 + 28f, eqY - 14f, "CS", "#2563eb", "middle", bold = true, size = 9))
+            sb.append(tx(x0 + 28f, eqY + 22f, "PS", "#059669", "middle", bold = true, size = 9))
+        }
+
+        sb.append(ln(dx1, dy1, dx2, dy2, PT, 2.4f))
+        sb.append(ln(sx1, sy1, sx2, sy2, "#00796b", 2.4f))
+        if (!quiz) {
+            sb.append(tx(dx2 + 6f, dy2 + 4f, if (kind == "shift") "D₁" else "D (تقاضا)", PT, "start", bold = true, size = 10))
+            sb.append(tx(sx2 + 6f, sy2 + 4f, if (kind == "shift_s") "S₁" else "S (عرضه)", "#00796b", "start", bold = true, size = 10))
+        }
+
+        // خطوط نقطه‌چین تعادل اولیه
+        sb.append(ln(x0, eqY, eqX, eqY, "#94a3b8", 1.1f, "4 3"))
+        sb.append(ln(eqX, eqY, eqX, y0, "#94a3b8", 1.1f, "4 3"))
+        sb.append(cls(eqX, eqY, 4.5f, ST, "#ffffff", 1.2f))
+        if (!quiz) {
+            sb.append(tx(x0 - 6f, eqY + 4f, if (kind == "shift" || kind == "shift_s") "P₁" else "P*", ST, "end", bold = true, size = 9))
+            sb.append(tx(eqX, y0 + 14f, if (kind == "shift" || kind == "shift_s") "Q₁" else "Q*", ST, "middle", bold = true, size = 9))
+            sb.append(tx(eqX + 8f, eqY - 7f, if (kind == "shift" || kind == "shift_s") "E₁" else "E", ST, "start", bold = true, size = 10))
+        }
+
+        if (kind == "shift") {
+            // انتقال تقاضا به راست (D1 -> D2): موازی به اندازهٔ +44px افقی => تعادل جدید روی S1 در (204, 114.8)
+            val sh = 44f
+            val eq2X = eqX + sh / 2f
+            val eq2Y = eqY - (sh / 2f) * (122f / 220f)
+            sb.append(ln(dx1 + sh, dy1, min(312f, dx2 + sh), dy1 + (min(312f, dx2 + sh) - (dx1 + sh)) * (122f / 220f), "#fb7185", 2.2f, "6 3"))
+            sb.append(arrow(dx1 + 22f, dy1 + 14f, dx1 + sh + 14f, dy1 + 14f, PT, 1.6f, 6f))
+            sb.append(ln(x0, eq2Y, eq2X, eq2Y, "#cbd5e1", 1f, "3 3"))
+            sb.append(ln(eq2X, eq2Y, eq2X, y0, "#cbd5e1", 1f, "3 3"))
+            sb.append(cls(eq2X, eq2Y, 4.5f, PT, "#ffffff", 1.2f))
+            sb.append(tx(min(314f, dx2 + sh) - 2f, dy2 - 8f, "D₂", PT, "end", bold = true, size = 10))
+            sb.append(tx(x0 - 6f, eq2Y + 3f, "P₂", PT, "end", bold = true, size = 9))
+            sb.append(tx(eq2X, y0 + 14f, "Q₂", PT, "middle", bold = true, size = 9))
+            sb.append(tx(eq2X + 7f, eq2Y - 6f, "E₂", PT, "start", bold = true, size = 10))
+        } else if (kind == "shift_s") {
+            // انتقال عرضه به راست (S1 -> S2): تعادل جدید روی D1 با قیمت کمتر و مقدار بیشتر
+            val sh = 44f
+            val eq2X = eqX + sh / 2f
+            val eq2Y = eqY + (sh / 2f) * (122f / 220f)
+            sb.append(ln(sx1 + sh, sy1, min(312f, sx2 + sh), sy1 - (min(312f, sx2 + sh) - (sx1 + sh)) * (122f / 220f), "#14b8a6", 2.2f, "6 3"))
+            sb.append(arrow(sx1 + 26f, sy1 - 16f, sx1 + sh + 16f, sy1 - 16f, "#00796b", 1.6f, 6f))
+            sb.append(ln(x0, eq2Y, eq2X, eq2Y, "#cbd5e1", 1f, "3 3"))
+            sb.append(ln(eq2X, eq2Y, eq2X, y0, "#cbd5e1", 1f, "3 3"))
+            sb.append(cls(eq2X, eq2Y, 4.5f, "#00796b", "#ffffff", 1.2f))
+            sb.append(tx(min(314f, sx2 + sh) - 2f, sy2 + 18f, "S₂", "#00796b", "end", bold = true, size = 10))
+            sb.append(tx(x0 - 6f, eq2Y + 4f, "P₂", "#00796b", "end", bold = true, size = 9))
+            sb.append(tx(eq2X, y0 + 14f, "Q₂", "#00796b", "middle", bold = true, size = 9))
+            sb.append(tx(eq2X + 7f, eq2Y + 12f, "E₂", "#00796b", "start", bold = true, size = 10))
+        }
+
+        if (ceiling > 0f || kind == "ceiling") {
             // V322 — سقف قیمت بزرگ خط را از کادر بیرون می‌برد؛ حالا در ناحیهٔ نمودار مهار می‌شود.
             val cy = (y0 - 40f - ceiling * 12f).coerceIn(y1 + 40f, y0 - 30f)
-            sb.append(ln(x0, cy, x1 - 10f, cy, ACC, 1.8f, "6 4"))
-            sb.append(tx(x1 - 14f, cy - 6f, "سقف قیمت", ACC, "end", bold = true, size = 10))
+            val lineY = if (ceiling > 0f) cy else (eqY + 32f)
+            sb.append(ln(x0, lineY, x1 - 10f, lineY, ACC, 1.9f, "6 4"))
+            sb.append(tx(x1 - 12f, lineY - 5f, "سقف قیمت (Pc)", ACC, "end", bold = true, size = 9))
+            if (lineY > eqY + 6f) {
+                val qS = sx1 + (sy1 - lineY) * (220f / 122f)
+                val qD = dx1 + (lineY - dy1) * (220f / 122f)
+                sb.append(ln(qS, lineY, qS, y0, ACC, 1f, "3 3"))
+                sb.append(ln(qD, lineY, qD, y0, ACC, 1f, "3 3"))
+                sb.append(tx(qS, y0 + 14f, "Qs", ACC, "middle", bold = true, size = 8))
+                sb.append(tx(qD, y0 + 14f, "Qd", ACC, "middle", bold = true, size = 8))
+                sb.append(tx((qS + qD) / 2f, lineY + 13f, "کمبود", PT, "middle", bold = true, size = 9))
+            }
+        } else if (kind == "floor") {
+            val fy = eqY - 32f
+            sb.append(ln(x0, fy, x1 - 10f, fy, "#d97706", 1.9f, "6 4"))
+            sb.append(tx(x1 - 12f, fy - 5f, "کف قیمت (Pf)", "#d97706", "end", bold = true, size = 9))
+            val qD = dx1 + (fy - dy1) * (220f / 122f)
+            val qS = sx1 + (sy1 - fy) * (220f / 122f)
+            sb.append(ln(qD, fy, qD, y0, "#d97706", 1f, "3 3"))
+            sb.append(ln(qS, fy, qS, y0, "#d97706", 1f, "3 3"))
+            sb.append(tx((qD + qS) / 2f, fy - 7f, "مازاد عرضه", "#b45309", "middle", bold = true, size = 9))
         }
-        sb.append(cls(x0 + 118f, y0 - 118f, 5f, ST, "none", 0f))
-        sb.append(tx(x0 + 130f, y0 - 122f, "تعادل", ST, "start", bold = true, size = 11))
+
         val name = when (kind) {
-            "shift" -> "افزایش تقاضا — قیمت و مقدار تعادلی بالا می‌رود"
-            "ceiling" -> "سقف قیمت — کمبود عرضه"
-            else -> "تعادل بازار — تلاقی عرضه و تقاضا"
+            "shift" -> "افزایش تقاضا (D₁ → D₂) — افزایش قیمت و مقدار تعادلی"
+            "shift_s" -> "افزایش عرضه (S₁ → S₂) — کاهش قیمت و افزایش مقدار"
+            "ceiling" -> "سقف قیمت الزام‌آور — ایجاد کمبود (Qd > Qs)"
+            "floor" -> "کف قیمت الزام‌آور — ایجاد مازاد عرضه (Qs > Qd)"
+            "quiz" -> "نمودار عرضه و تقاضا — نقطهٔ تعادل و منحنی‌ها را مشخص کنید"
+            else -> "تعادل بازار — تلاقی عرضه و تقاضا (P*, Q*)"
         }
-        sb.append(tx(180f, 258f, name, ST, "middle", bold = true, size = 11))
+        sb.append(tx(180f, 256f, name, ST, "middle", bold = true, size = 10))
         return sb.toString()
     }
 
     private fun gameMatrix(spec: FigureSpec): String {
         val kind = spec.xStr("kind", "game").lowercase()
         val sb = StringBuilder()
-        if (kind == "islm") {
-            val x0 = 54f; val x1 = 320f; val y0 = 210f; val y1 = 44f
+        if (kind.startsWith("islm")) {
+            val x0 = 54f; val x1 = 320f; val y0 = 208f; val y1 = 42f
             sb.append(ln(x0, y0, x1, y0, ST, 1.6f)); sb.append(arrow(x1 - 12f, y0, x1 + 6f, y0, ST, 1.6f, 7f))
             sb.append(ln(x0, y0, x0, y1, ST, 1.6f)); sb.append(arrow(x0, y1 + 14f, x0, y1 - 4f, ST, 1.6f, 7f))
-            sb.append(tx(x1 + 2f, y0 + 16f, "Y", MU, "middle", bold = true, size = 12))
-            sb.append(tx(x0 - 14f, y1 + 10f, "i", MU, "middle", bold = true, size = 12))
-            sb.append(arrow(x0 + 20f, y0 - 24f, x1 - 26f, y1 + 46f, ACC, 2.4f, 9f))
-            sb.append(tx(66f, 66f, "IS", ACC, "start", bold = true, size = 12))
-            sb.append(arrow(x0 + 20f, y1 + 52f, x1 - 26f, y0 - 30f, "#00796b", 2.4f, 9f))
-            sb.append(tx(x1 - 30f, y0 - 34f, "LM", "#00796b", "end", bold = true, size = 12))
-            sb.append(cls((x0 + x1) / 2f, (y0 + y1) / 2f + 14f, 5f, ST, "none", 0f))
-            sb.append(tx((x0 + x1) / 2f + 10f, (y0 + y1) / 2f + 10f, "E", ST, "start", bold = true, size = 12))
-            sb.append(tx(180f, 258f, "مدل IS-LM — تعادل هم‌زمان بازار کالا و پول", MU, "middle", bold = true, size = 12))
+            sb.append(tx(x1 + 2f, y0 + 16f, "Y", ST, "middle", bold = true, size = 12))
+            sb.append(tx(x0 - 14f, y1 + 8f, "i", ST, "middle", bold = true, size = 12))
+
+            // تصحیح علمی شیب‌ها: IS نزولی (رابطهٔ معکوس نرخ بهره i و تولید Y) و LM صعودی!
+            val ix1 = 74f; val iy1 = 66f; val ix2 = 290f; val iy2 = 186f
+            val lx1 = 74f; val ly1 = 186f; val lx2 = 290f; val ly2 = 66f
+            val eqX = 182f; val eqY = 126f
+
+            sb.append(ln(ix1, iy1, ix2, iy2, ACC, 2.4f))
+            sb.append(tx(ix2 + 6f, iy2 + 4f, if (kind == "islm_fiscal") "IS₁" else "IS", ACC, "start", bold = true, size = 11))
+            sb.append(ln(lx1, ly1, lx2, ly2, "#00796b", 2.4f))
+            sb.append(tx(lx2 + 6f, ly2 + 4f, if (kind == "islm_monetary") "LM₁" else "LM", "#00796b", "start", bold = true, size = 11))
+
+            sb.append(ln(x0, eqY, eqX, eqY, "#94a3b8", 1.1f, "4 3"))
+            sb.append(ln(eqX, eqY, eqX, y0, "#94a3b8", 1.1f, "4 3"))
+            sb.append(cls(eqX, eqY, 4.5f, ST, "#ffffff", 1.2f))
+            sb.append(tx(x0 - 6f, eqY + 4f, if (kind == "islm") "i*" else "i₁", ST, "end", bold = true, size = 9))
+            sb.append(tx(eqX, y0 + 14f, if (kind == "islm") "Y*" else "Y₁", ST, "middle", bold = true, size = 9))
+            sb.append(tx(eqX + 8f, eqY - 7f, if (kind == "islm") "E" else "E₁", ST, "start", bold = true, size = 10))
+
+            if (kind == "islm_fiscal") {
+                val sh = 44f
+                val e2x = eqX + sh / 2f
+                val e2y = eqY - (sh / 2f) * (120f / 216f)
+                sb.append(ln(ix1 + sh, iy1, min(312f, ix2 + sh), iy1 + (min(312f, ix2 + sh) - (ix1 + sh)) * (120f / 216f), "#818cf8", 2.2f, "6 3"))
+                sb.append(arrow(ix1 + 24f, iy1 + 14f, ix1 + sh + 14f, iy1 + 14f, ACC, 1.6f, 6f))
+                sb.append(ln(x0, e2y, e2x, e2y, "#cbd5e1", 1f, "3 3"))
+                sb.append(ln(e2x, e2y, e2x, y0, "#cbd5e1", 1f, "3 3"))
+                sb.append(cls(e2x, e2y, 4.5f, ACC, "#ffffff", 1.2f))
+                sb.append(tx(min(314f, ix2 + sh) - 2f, iy2 - 8f, "IS₂", ACC, "end", bold = true, size = 10))
+                sb.append(tx(x0 - 6f, e2y + 3f, "i₂", ACC, "end", bold = true, size = 9))
+                sb.append(tx(e2x, y0 + 14f, "Y₂", ACC, "middle", bold = true, size = 9))
+                sb.append(tx(e2x + 7f, e2y - 6f, "E₂", ACC, "start", bold = true, size = 10))
+            } else if (kind == "islm_monetary") {
+                val sh = 44f
+                val e2x = eqX + sh / 2f
+                val e2y = eqY + (sh / 2f) * (120f / 216f)
+                sb.append(ln(lx1 + sh, ly1, min(312f, lx2 + sh), ly1 - (min(312f, lx2 + sh) - (lx1 + sh)) * (120f / 216f), "#14b8a6", 2.2f, "6 3"))
+                sb.append(arrow(lx1 + 24f, ly1 - 14f, lx1 + sh + 14f, ly1 - 14f, "#00796b", 1.6f, 6f))
+                sb.append(ln(x0, e2y, e2x, e2y, "#cbd5e1", 1f, "3 3"))
+                sb.append(ln(e2x, e2y, e2x, y0, "#cbd5e1", 1f, "3 3"))
+                sb.append(cls(e2x, e2y, 4.5f, "#00796b", "#ffffff", 1.2f))
+                sb.append(tx(min(314f, lx2 + sh) - 2f, ly2 + 18f, "LM₂", "#00796b", "end", bold = true, size = 10))
+                sb.append(tx(x0 - 6f, e2y + 4f, "i₂", "#00796b", "end", bold = true, size = 9))
+                sb.append(tx(e2x, y0 + 14f, "Y₂", "#00796b", "middle", bold = true, size = 9))
+                sb.append(tx(e2x + 7f, e2y + 12f, "E₂", "#00796b", "start", bold = true, size = 10))
+            }
+
+            val caption = when (kind) {
+                "islm_fiscal" -> "سیاست مالی انبساطی (IS₁ → IS₂) — افزایش تولید و نرخ بهره"
+                "islm_monetary" -> "سیاست پولی انبساطی (LM₁ → LM₂) — افزایش تولید و کاهش بهره"
+                else -> "مدل IS-LM — تعادل هم‌زمان بازار کالا (IS نزولی) و پول (LM صعودی)"
+            }
+            sb.append(tx(180f, 256f, caption, MU, "middle", bold = true, size = 10))
             return sb.toString()
         }
-        var m = spec.xStr("mat").ifBlank { spec.xStr("m", "3,0;5,1") }.split(Regex("[;؛]")).map { rw -> rw.split(Regex("[,،]")).map { it.trim() } }.take(2)
-        if (m.size < 2) m = listOf(listOf("3", "0"), listOf("5", "1"))
-        val cell = min(62f, 240f / 3)
-        val x0 = 180f - cell * 1.5f
-        val y0 = 56f
-        sb.append(tx(x0 + cell * 1.5f, 40f, "بازیکن ستون", MU, "middle", bold = true, size = 11))
-        sb.append(tx(x0 - 26f, y0 + cell * 1.5f, "بازیکن", MU, "middle", bold = true, size = 11))
+
+        // ماتریس بازی ۲×۲ دوگانی (Bimatrix) با محاسبهٔ خودکار تعادل نش خالص
+        val quiz = kind == "game_quiz"
+        val rawRows = spec.xStr("mat").ifBlank { spec.xStr("m", "3,0;5,1") }
+            .split(Regex("[;؛]")).map { rw -> rw.split(Regex("[,،]")).map { it.trim() } }.take(2)
+        val rNames = splitList(spec.xStr("rows", "همکاری,تخطی")).let { if (it.size >= 2) it.take(2) else listOf("راهبرد ۱", "راهبرد ۲") }
+        val cNames = splitList(spec.xStr("cols", "همکاری,تخطی")).let { if (it.size >= 2) it.take(2) else listOf("راهبرد ۱", "راهبرد ۲") }
+
+        val u1 = Array(2) { FloatArray(2) }
+        val u2 = Array(2) { FloatArray(2) }
+        var hasExplicitPair = false
         for (r in 0..1) for (c in 0..1) {
-            val v = m.getOrNull(r)?.getOrNull(c) ?: "0"
-            sb.append(rc(x0 + c * cell, y0 + r * cell, cell, cell, "#ffffff", ST, 1.6f))
-            sb.append(tx(x0 + c * cell + cell / 2f, y0 + r * cell + cell / 2f + 6f, v, ST, "middle", bold = true, size = 14))
+            val token = rawRows.getOrNull(r)?.getOrNull(c).orEmpty()
+            val parts = token.replace("(", "").replace(")", "").split(Regex("[:/|]")).map { it.trim() }
+            if (parts.size >= 2) {
+                hasExplicitPair = true
+                u1[r][c] = faEnDigits(parts[0]).toFloatOrNull() ?: 0f
+                u2[r][c] = faEnDigits(parts[1]).toFloatOrNull() ?: 0f
+            } else {
+                u1[r][c] = faEnDigits(parts.firstOrNull().orEmpty()).toFloatOrNull() ?: (if (r == 0 && c == 0) 3f else if (r == 0) 0f else if (c == 0) 5f else 1f)
+            }
         }
-        sb.append(rc(x0, y0, cell * 2, cell * 2, "none", ST, 2f))
-        sb.append(tx(180f, y0 + cell * 2 + 30f, "ماتریس بازی ۲×۲ — سود بازیکن سطر", MU, "middle", bold = true, size = 11))
+        if (!hasExplicitPair) {
+            for (r in 0..1) for (c in 0..1) u2[r][c] = u1[c][r]
+        }
+
+        val cw = 84f; val ch = 62f
+        val x0 = 132f; val y0 = 66f
+        sb.append(tx(x0 + cw, 28f, "بازیکن ستون", "#00796b", "middle", bold = true, size = 11))
+        sb.append(tx(38f, y0 + ch, "بازیکن سطر", ACC, "middle", bold = true, size = 9))
+
+        for (c in 0..1) {
+            sb.append(rc(x0 + c * cw, y0 - 24f, cw, 24f, "#ecfdf5", ST, 1.2f))
+            sb.append(tx(x0 + c * cw + cw / 2f, y0 - 8f, cNames[c], "#00796b", "middle", bold = true, size = 10))
+        }
+        for (r in 0..1) {
+            sb.append(rc(x0 - 54f, y0 + r * ch, 54f, ch, "#eef2ff", ST, 1.2f))
+            sb.append(tx(x0 - 27f, y0 + r * ch + ch / 2f + 4f, rNames[r], ACC, "middle", bold = true, size = 10))
+            for (c in 0..1) {
+                val br1 = u1[r][c] >= max(u1[0][c], u1[1][c]) - 1e-4f
+                val br2 = u2[r][c] >= max(u2[r][0], u2[r][1]) - 1e-4f
+                val isNash = !quiz && br1 && br2
+                val cx = x0 + c * cw
+                val cy = y0 + r * ch
+                sb.append(rc(cx, cy, cw, ch, if (isNash) "#fef3c7" else "#ffffff", if (isNash) "#d97706" else ST, if (isNash) 2.2f else 1.4f))
+                sb.append(ln(cx, cy, cx + cw, cy + ch, "#e2e8f0", 1f))
+                // پایین-چپ: سود بازیکن سطر A  |  بالا-راست: سود بازیکن ستون B
+                val s1 = num(u1[r][c]) + (if (!quiz && br1) "*" else "")
+                val s2 = num(u2[r][c]) + (if (!quiz && br2) "*" else "")
+                sb.append(tx(cx + 22f, cy + ch - 12f, s1, ACC, "middle", bold = true, size = 12))
+                sb.append(tx(cx + cw - 22f, cy + 20f, s2, "#00796b", "middle", bold = true, size = 12))
+                if (isNash) {
+                    sb.append(tx(cx + cw - 12f, cy + ch - 8f, "★", "#d97706", "middle", bold = true, size = 11))
+                }
+            }
+        }
+        val footer = if (quiz) "ماتریس بازی ۲×۲ — تعادل نش بازی را مشخص کنید" else "ماتریس بازی ۲×۲ — (پایین-چپ: A ، بالا-راست: B ، ★ تعادل نش)"
+        sb.append(tx(180f, 252f, footer, MU, "middle", bold = true, size = 10))
         return sb.toString()
     }
 

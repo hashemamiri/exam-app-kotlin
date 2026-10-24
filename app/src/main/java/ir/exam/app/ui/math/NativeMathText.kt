@@ -133,7 +133,7 @@ fun NativeMathText(
                     val tallPrimaryFig = figure.spec.type in setOf(
                         "axsym", "axpaintgrid", "axcalendar", "axmultgrid", "axmulwheel",
                         "axtower", "axsaw", "axcubes", "axbeaker", "axsenses", "axlever", "axwordtrain",
-                        "axdicefold", "axunitconv", "axorbital", "axpunnett", "axkenken"
+                        "axdicefold", "axunitconv", "axorbital", "axpunnett", "axkenken", "axkmap"
                     )
                     Box(
                         modifier = Modifier

@@ -371,11 +371,15 @@ object PrimaryInteractiveFigureHelper {
 
     val KEYED_CELL_TYPES: Set<String> = setOf(
         "axcalendar", "axmultgrid", "axmulwheel", "axtower",
-        "axdicefold", "axunitconv", "axprobtree", "axorbital", "axpunnett", "axkenken"
+        "axdicefold", "axunitconv", "axprobtree", "axorbital", "axpunnett", "axkenken", "axkmap"
     )
 
     /** انتخاب‌های سریع پیشنهادی برای پاپ‌آپ معلم و دانش‌آموز (مثلاً اسپین الکترون یا نماد شجره‌نامه). */
     fun quickChipsForCell(spec: FigureSpec, key: String): List<Pair<String, String>> = when (spec.type) {
+        "axkmap" -> {
+            if (key == "expr") emptyList()
+            else listOf("1" to "۱ (روشن)", "0" to "۰ (خاموش)", "X" to "X (بی‌تفاوت)")
+        }
         "axorbital" -> {
             if (spec.xStr("mode", "box").lowercase() == "lewis") {
                 if (key.startsWith("side_")) listOf("2" to "۲ نقطه (جفت)", "1" to "۱ نقطه (تک)", "0" to "۰ (بدون نقطه)")
@@ -405,7 +409,7 @@ object PrimaryInteractiveFigureHelper {
 
     fun regionsFor(spec: FigureSpec): List<AdvancedMathSvgRenderer.InteractiveRegion> = when (spec.type) {
         "axunitconv" -> NextMathSvgRenderer.interactiveRegions(spec)
-        "axdicefold", "axprobtree", "axorbital", "axpunnett", "axkenken" -> AdvancedMathSvgRenderer.interactiveRegions(spec)
+        "axdicefold", "axprobtree", "axorbital", "axpunnett", "axkenken", "axkmap" -> AdvancedMathSvgRenderer.interactiveRegions(spec)
         else -> emptyList()
     }
 
@@ -433,13 +437,13 @@ object PrimaryInteractiveFigureHelper {
         "axmultgrid" -> hitMultGridCell(spec, sx, sy)
         "axmulwheel" -> hitMulWheelCell(spec, sx, sy)
         "axtower" -> hitTowerCell(spec, sx, sy)
-        "axdicefold", "axunitconv", "axprobtree", "axorbital", "axpunnett", "axkenken" -> hitRegionCell(spec, sx, sy)
+        "axdicefold", "axunitconv", "axprobtree", "axorbital", "axpunnett", "axkenken", "axkmap" -> hitRegionCell(spec, sx, sy)
         else -> null
     }
 
     /** فهرست مرتب همهٔ خانه‌های خالی شکل (برای ساخت پاسخ یکپارچهٔ دانش‌آموز در تصحیح خودکار). */
     fun listEmptyCellKeys(spec: FigureSpec): List<String> = when (spec.type) {
-        "axdicefold", "axunitconv", "axprobtree", "axorbital", "axpunnett", "axkenken" -> {
+        "axdicefold", "axunitconv", "axprobtree", "axorbital", "axpunnett", "axkenken", "axkmap" -> {
             val emptySet = AdvancedMathSvgRenderer.parseEmptySet(spec)
             regionsFor(spec).filter { it.key in emptySet || it.defaultEmpty }.map { it.key }
         }

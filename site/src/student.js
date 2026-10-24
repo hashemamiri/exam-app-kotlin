@@ -496,7 +496,7 @@
           var t = baseSpec.t, X = baseSpec.X || {};
           var isSym = t === 'axsym' && Math.floor(Number(en(String(X.mirror == null ? '1' : X.mirror)))) === 0;
           var isPaint = t === 'axpaintgrid';
-          var isDomKeyed = (t === 'axdicefold' || t === 'axunitconv' || t === 'axprobtree' || t === 'axorbital' || t === 'axpunnett' || t === 'axkenken');
+          var isDomKeyed = (t === 'axdicefold' || t === 'axunitconv' || t === 'axprobtree' || t === 'axorbital' || t === 'axpunnett' || t === 'axkenken' || t === 'axkmap');
           var isKeyed = (t === 'axcalendar' || t === 'axmultgrid' || t === 'axmulwheel' || t === 'axtower') || isDomKeyed;
           if (!isSym && !isPaint && !isKeyed) return;
           if (isDomKeyed && !figEl.querySelector('svg')) figEl.innerHTML = w.GraphFig.svg(baseSpec);
@@ -578,6 +578,9 @@
               for (var kd = 1; kd <= ksz; kd++) kr.push([String(kd), fa(kd)]);
               return kr;
             }
+            if (t === 'axkmap') {
+              return cellKey === 'expr' ? null : [['1', '۱'], ['0', '۰'], ['X', 'X']];
+            }
             return null;
           };
           var saveAns = function (v) {
@@ -608,7 +611,7 @@
           var openStuCellModal = function (cellKey, titleLbl) {
             var mp = parseStuMap(run.answers[q.id]);
             var bg = el('div', {class: 'modal-bg'});
-            var textMode = (t === 'axorbital' || t === 'axpunnett' || t === 'axprobtree');
+            var textMode = (t === 'axorbital' || t === 'axpunnett' || t === 'axprobtree' || t === 'axkmap');
             var inp = el('input', {type: 'text', class: 'st-input', inputmode: textMode ? 'text' : 'decimal', placeholder: 'مقدار این خانه', value: mp[cellKey] || '', style: 'text-align:center;font-size:20px;font-weight:700'});
             var commit = function (val) {
               var clean = String(val == null ? '' : val).replace(/[;؛]/g, ',').trim();

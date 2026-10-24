@@ -259,11 +259,17 @@ fun FigurePickerDialog(
         onDismissRequest = onDismiss,
         properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)
     ) {
+        val isMathTool = isMathToolId(baseSpec.type)
         Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
             Column(Modifier.fillMaxSize().systemBarsPadding().imePadding().padding(10.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) { // V247 — زیر نوار وضعیت نرود
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                     Text(
-                        if (resolvedKind == GEOMETRY) "✏️ ویرایش شکل" else if (resolvedKind == FigureKind.AXIS) "✏️ ویرایش محور" else "✏️ ویرایش نمودار",
+                        when {
+                            resolvedKind == GEOMETRY -> "✏️ ویرایش شکل"
+                            resolvedKind == FigureKind.AXIS -> "✏️ ویرایش محور"
+                            isMathTool -> "✏️ تنظیمات ابزار"
+                            else -> "✏️ ویرایش نمودار"
+                        },
                         style = MaterialTheme.typography.titleLarge,
                         modifier = Modifier.weight(1f)
                     )
@@ -282,6 +288,9 @@ fun FigurePickerDialog(
         }
     }
 }
+
+private fun isMathToolId(type: String): Boolean =
+    MATH_CATEGORIES.any { cat -> mathTemplatesOf(cat.key).any { it.id == type } }
 
 private data class GeometryField(
     val group: String,
@@ -430,6 +439,7 @@ private fun GraphEditorPane(initialSpec: FigureSpec, onInsert: (FigureSpec) -> U
     val graphType = initialSpec.type.takeIf { type -> allTemplates.any { it.id == type } } ?: GRAPH_FIGURES.first().id
     val template = allTemplates.firstOrNull { it.id == graphType } ?: GRAPH_FIGURES.first()
     val isAxis = AXIS_FIGURES.any { it.id == graphType }
+    val isMathTool = isMathToolId(graphType)
     var currentBase by remember(initialSpec.toJson()) { mutableStateOf(initialSpec) }
     var title by remember(initialSpec.toJson()) { mutableStateOf(initialSpec.xStr("title")) }
     var params by remember(initialSpec.toJson()) {
@@ -454,7 +464,7 @@ private fun GraphEditorPane(initialSpec: FigureSpec, onInsert: (FigureSpec) -> U
     val previewHeight = if (graphType in setOf(
             "axabacus", "axbase10", "axplace", "axsaw", "axpattern", "axsym",
             "axcalendar", "axmultgrid", "axmulwheel", "axtower", "axpaintgrid", "axcubes", "axbeaker",
-            "axdicefold", "axunitconv", "axprobtree", "axorbital", "axpunnett", "axkenken"
+            "axdicefold", "axunitconv", "axprobtree", "axorbital", "axpunnett", "axkenken", "axkmap"
         )
     ) 264.dp else 208.dp
 
@@ -464,20 +474,23 @@ private fun GraphEditorPane(initialSpec: FigureSpec, onInsert: (FigureSpec) -> U
         "axsym" -> "💡 روی هر خانهٔ شطرنجی در پیش‌نمایش بزنید تا آن خانه رنگی یا پاک شود."
         "axpaintgrid" -> "💡 روی هر خانهٔ شبکهٔ رنگ‌آمیزی در پیش‌نمایش بزنید تا رنگ یا پاک شود."
         "axcalendar", "axmultgrid", "axmulwheel", "axtower",
-        "axdicefold", "axunitconv", "axprobtree", "axorbital", "axpunnett", "axkenken" ->
+        "axdicefold", "axunitconv", "axprobtree", "axorbital", "axpunnett", "axkenken", "axkmap" ->
             "💡 روی هر بخش یا خانهٔ شکل در پیش‌نمایش بزنید تا مقدارش را تغییر دهید یا آن را بدون علامت سؤال برای دانش‌آموز خالی بگذارید."
         else -> null
     }
 
     LazyColumn(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         item {
-            Text((if (isAxis) "نوع محور: " else "نوع نمودار: ") + template.label, style = MaterialTheme.typography.titleMedium)
+            Text(
+                (if (isAxis) "تنظیمات محور: " else if (isMathTool) "تنظیمات ابزار: " else "نوع نمودار: ") + template.label,
+                style = MaterialTheme.typography.titleMedium
+            )
         }
         item {
             OutlinedTextField(
                 title,
                 { title = it },
-                label = { Text(if (isAxis) "عنوان محور (اختیاری)" else "عنوان نمودار (اختیاری)") },
+                label = { Text(if (isAxis) "عنوان محور (اختیاری)" else if (isMathTool) "عنوان ابزار (اختیاری)" else "عنوان نمودار (اختیاری)") },
                 modifier = Modifier.fillMaxWidth()
             )
         }
@@ -776,7 +789,7 @@ private fun paramFields(type: String): List<Pair<String, String>> = when (type) 
     "axletterforms" -> listOf("ch" to "حرف فارسی")
     "axsyllablechart" -> listOf("word" to "کلمهٔ مورد نظر (مثلاً مدرسه)", "mode" to "حالت نمایش")
     "axmagnet" -> listOf("mode" to "حالت قطب‌ها")
-    "axsenses" -> listOf("mode" to "حالت نمایش برچسب‌ها")
+    "axsenses" -> listOf("mode" to "حالت نمایش برچسب‌ها", "active" to "برجسته‌سازی یکی از حواس")
     "axtiles" -> listOf("x2" to "تعداد کاشی x² (۰ تا ۹)", "x" to "تعداد کاشی x (۰ تا ۱۶)", "k" to "تعداد کاشی ۱ (۰ تا ۲۴)", "neg" to "علامت کاشی‌ها", "show" to "نمایش عبارت جبری زیر کاشی‌ها")
     "axkenken" -> listOf("kind" to "نوع پازل", "size" to "ابعاد جدول (۳ تا ۶)", "cages" to "قفس‌ها / سرنخ‌ها (با ;)")
     "axdicefold" -> listOf("net" to "الگوی گستردهٔ مکعب", "mode" to "نمایش وجه‌ها", "top" to "شمارهٔ وجه بالا", "ask" to "حالت اولیهٔ وجه‌ها")
@@ -794,19 +807,19 @@ private fun paramFields(type: String): List<Pair<String, String>> = when (type) 
     "axtruthtable" -> listOf("kind" to "نوع", "expr" to "عبارت (عنوان ستون)")
     "axledger" -> listOf("title" to "عنوان حساب", "debit" to "اقلام بدهکار (با ویرگول)", "credit" to "اقلام بستانکار (با ویرگول)")
     "axstaff" -> listOf("kind" to "نوع ابزار هنری", "clef" to "کلید موسیقی", "time" to "کسر میزان", "notes" to "نت‌ها (MIDI با # و b مجاز)", "dur" to "کشش نت‌ها (w,h,q,e با ویرگول)", "label" to "نمایش نام نت‌ها", "harmony" to "هم‌نشینی رنگ‌ها (چرخهٔ ایتن)")
-    "axkmap" -> listOf("vars" to "تعداد متغیر", "ones" to "خانه‌های ۱ (شماره)", "groups" to "گروه‌ها (خانه‌ها با ;)")
-    "axgate" -> listOf("kind" to "نوع گیت", "a" to "ورودی A (۱/۰)", "b" to "ورودی B (۱/۰)")
+    "axkmap" -> listOf("vars" to "تعداد متغیر", "ones" to "خانه‌های ۱ (شمارهٔ مینترم‌ها)", "dc" to "خانه‌های بی‌تفاوت X (اختیاری)", "groups" to "گروه‌ها (خانه‌ها با ;)", "expr" to "عبارت ساده‌شدهٔ بول (اختیاری)", "blank" to "حالت اولیهٔ خانه‌ها")
+    "axgate" -> listOf("kind" to "نوع گیت", "a" to "ورودی A (۱/۰)", "b" to "ورودی B (۱/۰)", "show" to "حالت نمایش")
     "axdfa" -> listOf("states" to "حالت‌ها", "start" to "حالت شروع", "accept" to "حالت پایانی", "edges" to "یال‌ها (مبدأ-مقصد:برچسب با ;)")
-    "axbst" -> listOf("vals" to "مقدارها (با ویرگول)", "mode" to "نوع درخت")
-    "axbode" -> listOf("kind" to "نوع نمودار", "gain" to "بهره (dB)", "poles" to "قطب‌ها (با ویرگول)")
-    "axbeam" -> listOf("len" to "طول تیر (m)", "load" to "نوع بار", "p" to "بار متمرکز (N)", "a" to "فاصلهٔ بار (m)", "q" to "بار گسترده (N/m)")
+    "axbst" -> listOf("vals" to "مقدارها (با ویرگول)", "mode" to "نوع درخت", "trav" to "نمایش پیمایش زیر درخت")
+    "axbode" -> listOf("kind" to "نوع نمودار", "gain" to "بهره (dB)", "poles" to "قطب‌ها (با ویرگول)", "zeros" to "صفرها (اختیاری، با ویرگول)")
+    "axbeam" -> listOf("len" to "طول تیر L (m)", "load" to "نوع تیر و بارگذاری", "p" to "بار متمرکز P (kN)", "a" to "فاصلهٔ بار a (m)", "q" to "بار گسترده q (kN/m)", "show" to "نمایش مقادیر محاسباتی")
     "axmohr" -> listOf("sx" to "تنش σx", "sy" to "تنش σy", "txy" to "تنش برشی τxy")
-    "axpv" -> listOf("kind" to "نوع چرخه")
-    "axpert" -> listOf("acts" to "فعالیت‌ها (نام:شروع-پایان:مدت با ;)")
+    "axpv" -> listOf("kind" to "نوع چرخهٔ ترمودینامیکی", "show" to "حالت نمایش برچسب‌ها")
+    "axpert" -> listOf("acts" to "فعالیت‌ها (نام:شروع-پایان:مدت با ;)", "mode" to "حالت تحلیل شبکه")
     "axbenzene" -> listOf("kind" to "نوع ساختار", "mode" to "نمایش حلقه")
     "axnormal" -> listOf("lo" to "کران پایین", "hi" to "کران بالا", "mu" to "میانگین μ", "sd" to "انحراف معیار σ")
-    "axsupply" -> listOf("kind" to "نوع نمودار", "shift" to "مقدار جابه‌جایی", "ceiling" to "سقف قیمت (۰ = ندارد)")
-    "axgame" -> listOf("kind" to "نوع", "mat" to "ماتریس سود (سطرها با ;)")
+    "axsupply" -> listOf("kind" to "نوع نمودار بازار", "ceiling" to "سقف قیمت سفارشی (۰ = خودکار)")
+    "axgame" -> listOf("kind" to "نوع مدل اقتصادی / بازی", "mat" to "ماتریس سود (مثلاً 3:3,0:5;5:0,1:1)", "rows" to "راهبردهای بازیکن سطر", "cols" to "راهبردهای بازیکن ستون")
     "axunitconv" -> listOf("kind" to "کمیت و زنجیرهٔ واحدها", "val" to "مقدار پلهٔ اول", "blank" to "حالت اولیهٔ خانه‌ها")
     "axperimeter" -> listOf("shape" to "شکل هندسی", "w" to "طول / قاعده / شعاع / قطر اول", "h" to "عرض / ارتفاع / قطر دوم", "a" to "قاعدهٔ کوچک ذوزنقه", "n" to "تعداد ضلع چندضلعی منتظم", "show" to "نمایش محیط و مساحت زیر شکل")
     "axpictograph" -> listOf("mode" to "نوع نمودار", "data" to "داده‌ها (با ویرگول)", "labs" to "نام دسته‌ها")
@@ -827,13 +840,13 @@ private fun paramFields(type: String): List<Pair<String, String>> = when (type) 
     "axheatcurve" -> listOf("t0" to "دمای اولیهٔ یخ (°C)", "t1" to "دمای نهایی بخار (°C)", "m" to "جرم آب/یخ (گرم)", "mode" to "حالت نمایش")
     "axdna" -> listOf("mode" to "حالت نمایش ملکول", "seq" to "توالی بازها (A, T, G, C)", "label" to "نمایش پیوند هیدروژنی و درصد GC")
     "axcell" -> listOf("kind" to "نوع سلول")
-    "axtimeline" -> listOf("events" to "رویدادها (سال:عنوان)")
-    "axmapgeo" -> listOf("kind" to "نوع نمایش")
-    "axsentence" -> listOf("subj" to "نهاد", "verb" to "گزاره", "obj" to "مفعول (اختیاری)", "mode" to "نوع جمله")
-    "axvectors" -> listOf("ax1" to "مؤلفهٔ x بردار a", "ay1" to "مؤلفهٔ y بردار a", "bx" to "مؤلفهٔ x بردار b", "by" to "مؤلفهٔ y بردار b", "mode" to "عمل")
-    "axmatrix" -> listOf("a" to "ماتریس A (سطرها با ;)", "b" to "ماتریس B (سطرها با ;)")
+    "axtimeline" -> listOf("events" to "رویدادها (سال:عنوان با ویرگول)", "dir" to "جهت محور زمان", "mode" to "حالت نمایش")
+    "axmapgeo" -> listOf("kind" to "نوع نمایش جغرافیایی", "cities" to "شهرها (نام:طول,عرض با ;)")
+    "axsentence" -> listOf("subj" to "نهاد (سمت راست)", "prep" to "متمم / قید (اختیاری)", "obj" to "مفعول (اختیاری)", "verb" to "فعل / مسند (سمت چپ)", "mode" to "نوع جمله و نمایش")
+    "axvectors" -> listOf("ax1" to "مؤلفهٔ x بردار a", "ay1" to "مؤلفهٔ y بردار a", "bx" to "مؤلفهٔ x بردار b", "by" to "مؤلفهٔ y بردار b", "mode" to "عملیات برداری")
+    "axmatrix" -> listOf("op" to "عملیات ماتریسی", "a" to "ماتریس A (سطرها با ;)", "b" to "ماتریس B (سطرها با ;)")
     "axintegral" -> listOf("f" to "تابع", "lo" to "کران پایین a", "hi" to "کران بالا b")
-    "axflowchart" -> listOf("steps" to "مراحل (با ویرگول)")
+    "axflowchart" -> listOf("steps" to "مراحل (با ویرگول)", "mode" to "ساختار فلوچارت")
     "axstack" -> listOf("mode" to "ساختار", "items" to "عناصر", "op" to "عملیات")
     "axsort" -> listOf("vals" to "اعداد آرایه", "step" to "شمارهٔ دور")
     "axregression" -> listOf("pts" to "نقطه‌ها (x,y;x,y)")
@@ -878,7 +891,8 @@ private val TEXT_PARAM_KEYS = setOf(
     "rule", "blanks", "in", "op1", "dens", "fills", "label", // V317.0: کلیدهای متنی ابزارهای پیشرفتهٔ ابتدایی
     "month", "mark", "syll", "word", "from", "to", "arrows", "first", "second", "third", "fourth", "stages", "sym",
     "p1", "p2", "gens", "states", "accept", "edges", "line", "verse", "expr", "title", "debit", "credit",
-    "ones", "groups", "cages", "nums", "base", "map", "mat", "net", "time", "dur", "harmony", // V318.0 / V335.11: کلیدهای متنی
+    "ones", "dc", "groups", "cages", "nums", "base", "map", "mat", "net", "time", "dur", "harmony", // V318.0 / V335.11 / V335.13: کلیدهای متنی
+    "poles", "zeros", "acts", "trav", "dir", "cities", "prep", "blank", "active", "load", "view", "clef",
     "val", "val2", "val3", "val4", "count", "ov", "empty", "data", "n", "a", "b", "c", "show", "kind", "mode", "seq", "subj", "verb", "obj",
     "ax1", "ay1", "bx", "by", "f", "lo", "hi", "steps", "items", "op", "pts", "events", "labs", "w", "h",
     "shape", "r", "m1", "b1", "m2", "b2", // V319.1: کلیدهای متنی ۳۰ ابزار جدید
@@ -1071,7 +1085,16 @@ private fun dropdownOptionsFor(type: String, key: String, currentValue: String =
     "axsenses" to "mode" -> listOf(
         "full" to "نمایش کامل حس و اندام",
         "blank_sense" to "جای خالی نام حس‌ها (؟)",
-        "blank_organ" to "جای خالی نام اندام‌ها (؟)"
+        "blank_organ" to "جای خالی نام اندام‌ها (؟)",
+        "icon_only" to "فقط آیکن‌های تصویری (برای پرسش)"
+    )
+    "axsenses" to "active" -> listOf(
+        "0" to "همهٔ حواس پنج‌گانه با هم",
+        "1" to "برجسته‌سازی بینایی (چشم)",
+        "2" to "برجسته‌سازی شنوایی (گوش)",
+        "3" to "برجسته‌سازی بویایی (بینی)",
+        "4" to "برجسته‌سازی چشایی (زبان)",
+        "5" to "برجسته‌سازی لامسه (دست)"
     )
     "axwordtrain" to "mode" -> listOf("join" to "نمایش کلمه", "blank" to "کلمه با جای خالی (؟)")
     "axtiles" to "neg" -> listOf("0" to "مثبت (آبی)", "1" to "منفی (قرمز)")
@@ -1107,18 +1130,24 @@ private fun dropdownOptionsFor(type: String, key: String, currentValue: String =
     "axstaff" to "time" -> listOf("4/4" to "۴/۴", "3/4" to "۳/۴", "2/4" to "۲/۴", "6/8" to "۶/۸", "none" to "بدون کسر میزان")
     "axstaff" to "label" -> listOf("1" to "نمایش نام فارسی نت‌ها (دو، ر، می، ...)", "0" to "بدون نام نت زیر حامل")
     "axstaff" to "harmony" -> listOf("triad" to "سه‌گانهٔ رنگ‌های اصلی", "comp" to "رنگ‌های مکمل (روبه‌رو)", "analog" to "رنگ‌های هم‌جوار", "warmcool" to "تفکیک رنگ‌های گرم و سرد", "none" to "بدون خطوط راهنما")
-    "axkmap" to "vars" -> listOf("2" to "۲ متغیره", "3" to "۳ متغیره", "4" to "۴ متغیره")
-    "axgate" to "kind" -> listOf("and" to "AND (و)", "or" to "OR (یا)", "not" to "NOT (نقیض)", "nand" to "NAND", "nor" to "NOR", "xor" to "XOR")
+    "axkmap" to "vars" -> listOf("2" to "۲ متغیره (۲×۲)", "3" to "۳ متغیره (۲×۴)", "4" to "۴ متغیره (۴×۴)")
+    "axkmap" to "blank" -> listOf("0" to "نمایش کامل (انتخاب دستی خانهٔ خالی با لمس)", "1" to "خالی‌کردن خودکار خانه‌های ۱ (بدون ؟)")
+    "axgate" to "kind" -> listOf("and" to "AND (و)", "or" to "OR (یا)", "not" to "NOT (نقیض)", "nand" to "NAND (نقیض و)", "nor" to "NOR (نقیض یا)", "xor" to "XOR (یای انحصاری)", "xnor" to "XNOR (هم‌ارزی)")
     "axgate" to "a" -> listOf("0" to "۰", "1" to "۱")
     "axgate" to "b" -> listOf("0" to "۰", "1" to "۱")
-    "axbst" to "mode" -> listOf("bst" to "درخت جستجوی دودویی", "heap" to "درخت هرم (آرایه‌ای)")
-    "axbode" to "kind" -> listOf("bode" to "نمودار بود (اندازه و فاز)", "nyquist" to "نمودار نایکوئیست")
-    "axbeam" to "load" -> listOf("point" to "بار متمرکز", "udl" to "بار گسترده")
-    "axpv" to "kind" -> listOf("carnot" to "چرخهٔ کارنو", "otto" to "چرخهٔ اتو", "diesel" to "چرخهٔ دیزل", "rankine" to "چرخهٔ رانکین")
+    "axgate" to "show" -> listOf("all" to "گیت + جدول درستی + فرمول بول", "gate" to "فقط مدار گیت و مقادیر", "quiz" to "حالت آزمون (خروجی Y = ؟)")
+    "axbst" to "mode" -> listOf("bst" to "درخت جستجوی دودویی (BST)", "heap" to "درخت هرم آرایه‌ای", "minheap" to "مین‌هیپ خودکار (Min-Heap)", "maxheap" to "مکس‌هیپ خودکار (Max-Heap)")
+    "axbst" to "trav" -> listOf("in" to "پیمایش میانوندی (In-order)", "pre" to "پیمایش پیشوندی (Pre-order)", "post" to "پیمایش پسوندی (Post-order)", "quiz" to "پرسش دنبالهٔ پیمایش", "none" to "بدون نوار پیمایش")
+    "axbode" to "kind" -> listOf("bode" to "نمودار بود (اندازه dB و فاز با مجانب)", "nyquist" to "نمودار نایکوئیست (صفحهٔ مختلط و دایرهٔ واحد)", "bode_quiz" to "نمودار بود پرسشی (تعیین قطب‌ها)")
+    "axbeam" to "load" -> listOf("point" to "تیر دو سر مفصل — بار متمرکز", "udl" to "تیر دو سر مفصل — بار گسترده", "cantilever" to "تیر یک‌سر گیردار — بار متمرکز انتهایی", "cantilever_udl" to "تیر یک‌سر گیردار — بار گسترده")
+    "axbeam" to "show" -> listOf("all" to "نمایش کامل عکس‌العمل‌ها و مقادیر V و M", "load_only" to "فقط شکل تیر و بارگذاری", "quiz" to "حالت آزمون (رسم نمودار V و M توسط دانشجو)")
+    "axpv" to "kind" -> listOf("carnot" to "چرخهٔ کارنو (هم‌دما و بی‌دررو)", "otto" to "چرخهٔ اتو (احتراق هم‌حجم)", "diesel" to "چرخهٔ دیزل (احتراق هم‌فشار)", "rankine" to "چرخهٔ رانکین (نیروگاه بخار)")
+    "axpv" to "show" -> listOf("all" to "نمایش نام فرایندها و چرخه", "quiz" to "حالت آزمون (بدون نام فرایندها)")
+    "axpert" to "mode" -> listOf("cpm" to "تحلیل کامل CPM (ES|LF و مسیر بحرانی)", "simple" to "فقط شبکه و مدت فعالیت‌ها", "quiz" to "حالت آزمون (جای خالی زمان‌ها)")
     "axbenzene" to "kind" -> listOf("kekule" to "بنزن (ککوله)", "chair" to "صندلی سیکلوهگزان", "newman" to "تصویر نیومن", "fischer" to "تصویر فیشر")
     "axbenzene" to "mode" -> listOf("label" to "پیوندهای دوگانه", "circle" to "حلقهٔ آروماتیک")
-    "axsupply" to "kind" -> listOf("equilibrium" to "تعادل بازار", "shift" to "افزایش تقاضا", "ceiling" to "سقف قیمت")
-    "axgame" to "kind" -> listOf("game" to "ماتریس بازی ۲×۲", "islm" to "مدل IS-LM")
+    "axsupply" to "kind" -> listOf("equilibrium" to "تعادل بازار + مازاد مصرف‌کننده و تولیدکننده", "shift" to "افزایش تقاضا (D₁ → D₂)", "shift_s" to "افزایش عرضه (S₁ → S₂)", "ceiling" to "سقف قیمت الزام‌آور (کمبود)", "floor" to "کف قیمت الزام‌آور (مازاد عرضه)", "quiz" to "حالت آزمون (بدون برچسب‌ها)")
+    "axgame" to "kind" -> listOf("game" to "ماتریس بازی ۲×۲ دوگانی + تعادل نش", "game_quiz" to "ماتریس بازی ۲×۲ (حالت آزمون بدون تعادل نش)", "islm" to "مدل IS-LM (تعادل کلان)", "islm_fiscal" to "مدل IS-LM — سیاست مالی انبساطی", "islm_monetary" to "مدل IS-LM — سیاست پولی انبساطی")
     // محورها و نمودارها
     "axnumint" to "lc" -> listOf("1" to "بسته [ (نقطهٔ توپر)", "0" to "باز ( (نقطهٔ توخالی)")
     "axnumint" to "hc" -> listOf("0" to "باز ) (نقطهٔ توخالی)", "1" to "بسته ] (نقطهٔ توپر)")
@@ -1184,9 +1213,13 @@ private fun dropdownOptionsFor(type: String, key: String, currentValue: String =
     "axdna" to "mode" -> listOf("helix" to "مارپیچ دوگانهٔ DNA", "flat" to "نردبان جفت‌بازها (با ۲ و ۳ پیوند هیدروژنی)", "mrna" to "رونویسی DNA به mRNA (باز U)", "quiz" to "جای خالی رشتهٔ مکمل برای آزمون")
     "axdna" to "label" -> listOf("1" to "نمایش مجموع پیوند هیدروژنی و درصد GC", "0" to "بدون نوار اطلاعات پایین")
     "axcell" to "kind" -> listOf("animal" to "سلول جانوری", "plant" to "سلول گیاهی")
-    "axmapgeo" to "kind" -> listOf("compass" to "گل‌آویز جهت‌ها", "map" to "نقشه و مقیاس")
-    "axsentence" to "mode" -> listOf("verbal" to "جملهٔ فعلیه", "nominal" to "جملهٔ اسمیه")
-    "axvectors" to "mode" -> listOf("sum" to "جمع a + b", "diff" to "تفاضل a − b")
+    "axtimeline" to "dir" -> listOf("ltr" to "چپ به راست", "rtl" to "راست به چپ (فارسی)")
+    "axtimeline" to "mode" -> listOf("full" to "نمایش کامل سال و رویداد", "diff" to "همراه با فاصلهٔ زمانی (Δ) بین رویدادها", "blank_year" to "جای خالی سال‌ها برای آزمون (؟)", "blank_event" to "جای خالی عنوان رویدادها برای آزمون (؟)")
+    "axmapgeo" to "kind" -> listOf("compass" to "گل‌باد ۸جهته (اصلی و فرعی)", "compass_quiz" to "گل‌باد بدون برچسب (حالت آزمون)", "map" to "نقشهٔ مختصات جغرافیایی و مقیاس")
+    "axsentence" to "mode" -> listOf("verbal" to "جملهٔ فعلیه (نهاد + گزارهٔ فعلی)", "nominal" to "جملهٔ اسنادی / اسمیه (نهاد + مسند و رابط)", "blank" to "حالت آزمون (جای خالی نقش‌های دستوری)")
+    "axvectors" to "mode" -> listOf("sum" to "جمع دو بردار (a + b) با متوازی‌الاضلاع", "diff" to "تفاضل دو بردار (a − b)", "dot" to "ضرب داخلی (a · b) و زاویهٔ بین دو بردار", "quiz" to "حالت آزمون (بردار برآیند R = ؟)")
+    "axmatrix" to "op" -> listOf("mul" to "ضرب دو ماتریس (A × B)", "add" to "جمع دو ماتریس (A + B)", "sub" to "تفاضل دو ماتریس (A − B)", "inv" to "دترمینان و وارون ماتریس (A⁻¹)", "quiz" to "حالت آزمون (حاصل ضرب = ؟)")
+    "axflowchart" to "mode" -> listOf("branch" to "شرطی با انشعاب «بله» و «خیر»", "loop" to "حلقه‌ای با مسیر برگشت تکرار", "seq" to "ترتیبی خطی", "quiz" to "حالت آزمون (جای خالی شرط لوزی)")
     "axintegral" to "f" -> listOf("quad" to "f(x) = ¼x²", "sin" to "f(x) = sin x", "line" to "f(x) = ۰٫۶x + ۰٫۴")
     "axstack" to "mode" -> listOf("stack" to "پشته (LIFO)", "queue" to "صف (FIFO)")
     "axstack" to "op" -> listOf("push" to "افزودن", "pop" to "حذف")
