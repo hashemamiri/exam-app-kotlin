@@ -396,14 +396,14 @@ object PrimaryInteractiveFigureHelper {
         }
         "axdicefold" -> listOf("1" to "۱", "2" to "۲", "3" to "۳", "4" to "۴", "5" to "۵", "6" to "۶")
         "axprobtree" -> {
-            if (key.startsWith("out_") && spec.xStr("mode", "prob").lowercase() != "count") {
+            if ((key.startsWith("r_") || key.startsWith("e_") || key.startsWith("out_")) && spec.xStr("mode", "prob").lowercase() != "count") {
                 listOf("1/2" to "1/2", "1/4" to "1/4", "1/8" to "1/8", "25%" to "25%", "50%" to "50%")
             } else emptyList()
         }
         else -> emptyList()
     }
 
-    private fun regionsFor(spec: FigureSpec): List<AdvancedMathSvgRenderer.InteractiveRegion> = when (spec.type) {
+    fun regionsFor(spec: FigureSpec): List<AdvancedMathSvgRenderer.InteractiveRegion> = when (spec.type) {
         "axunitconv" -> NextMathSvgRenderer.interactiveRegions(spec)
         "axdicefold", "axprobtree", "axorbital", "axpunnett", "axkenken" -> AdvancedMathSvgRenderer.interactiveRegions(spec)
         else -> emptyList()

@@ -55,7 +55,7 @@ class V335_11_MiddleHighToolsOverhaulTest {
 
     @Test
     fun item1_algebraTilesCapacityAndTopModelBottomExpression() {
-        val spec = FigureSpec.parse("""{"t":"axtiles","X":{"x2":"9","x":"16","k":"24","neg":"0","label":"1"}}""")!!
+        val spec = FigureSpec.parse("""{"t":"axtiles","X":{"x2":"9","x":"16","k":"24","neg":"0","show":"1"}}""")!!
         val svg = FigureSvgRenderer.render(spec).xml
         assertFalse(svg.contains("NaN"))
         assertTrue("Top tile model legend missing", svg.contains("مدل کاشی"))
@@ -75,9 +75,9 @@ class V335_11_MiddleHighToolsOverhaulTest {
             Triple("axdicefold", """{"t":"axdicefold","X":{"net":"cross","mode":"num","top":"1"}}""", "f4"),
             Triple("axunitconv", """{"t":"axunitconv","X":{"kind":"len","val":"2"}}""", "u1"),
             Triple("axprobtree", """{"t":"axprobtree","X":{"stages":"4","first":"A,B","second":"A,B","third":"A,B","fourth":"A,B"}}""", "n_1_0"),
-            Triple("axorbital", """{"t":"axorbital","X":{"z":"54","mode":"box"}}""", "5p_2"),
-            Triple("axpunnett", """{"t":"axpunnett","X":{"kind":"pedigree","gens":"4"}}""", "g3_1"),
-            Triple("axkenken", """{"t":"axkenken","X":{"kind":"kenken","size":"4"}}""", "0_1")
+            Triple("axorbital", """{"t":"axorbital","X":{"z":"54","mode":"box"}}""", "o_5p_2"),
+            Triple("axpunnett", """{"t":"axpunnett","X":{"kind":"pedigree","gens":"4"}}""", "p_4_0"),
+            Triple("axkenken", """{"t":"axkenken","X":{"kind":"kenken","size":"4"}}""", "k_1_2")
         )
         for ((id, rawJson, emptyKey) in cases) {
             val base = FigureSpec.parse(rawJson)!!
@@ -110,7 +110,7 @@ class V335_11_MiddleHighToolsOverhaulTest {
 
         val xe54 = FigureSpec.parse("""{"t":"axorbital","X":{"z":"54","mode":"box"}}""")!!
         val xeSvg = FigureSvgRenderer.render(xe54).xml
-        assertTrue("Xenon Z=54 must include 5p orbital", xeSvg.contains("5p"))
+        assertTrue("Xenon Z=54 must include 5p orbital", xeSvg.contains("5p") || xeSvg.contains("۵p"))
         assertTrue("Xenon symbol missing", xeSvg.contains("Xe"))
     }
 

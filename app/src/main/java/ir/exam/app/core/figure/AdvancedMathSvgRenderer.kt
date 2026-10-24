@@ -2185,7 +2185,7 @@ object AdvancedMathSvgRenderer {
         val rawLine = spec.xStr("line", "فعولن فعولن فعولن فعل").trim()
         val verse = spec.xStr("verse", "").trim()
         val mode = spec.xStr("mode", "arkan").lowercase()
-        val feet = rawLine.split(Regex("\s+")).filter { it.isNotBlank() }.take(4).ifEmpty { listOf("فعولن", "فعولن", "فعولن", "فعل") }
+        val feet = rawLine.split(Regex("\\s+")).filter { it.isNotBlank() }.take(4).ifEmpty { listOf("فعولن", "فعولن", "فعولن", "فعل") }
         val cols = feet.size
         val cw = min(80f, 320f / cols)
         val totalW = cw * cols
@@ -2353,15 +2353,19 @@ object AdvancedMathSvgRenderer {
             if (harmony == "comp") {
                 sb.append(ln(cx, cy - ri + 4f, cx, cy + ri - 4f, ST, 2f))
                 sb.append(ln(cx - (ri - 4f) * 0.866f, cy - (ri - 4f) * 0.5f, cx + (ri - 4f) * 0.866f, cy + (ri - 4f) * 0.5f, "#dc2626", 1.8f, "4 3"))
-            } else {
+            } else if (harmony == "analog") {
+                val rArc = ri - 6f
+                sb.append(path("M ${rimPt(0, rArc).replace(',', ' ')} A ${f(rArc)} ${f(rArc)} 0 0 1 ${rimPt(2, rArc).replace(',', ' ')}", "none", "#ea580c", 2.8f))
+            } else if (harmony != "none" && harmony != "warm_cool" && harmony != "warmcool") {
                 val rTri = ri - 4f
                 sb.append(poly("${rimPt(2, rTri)} ${rimPt(6, rTri)} ${rimPt(10, rTri)}", "rgba(39,196,168,.16)", "#0f766e", 1.4f))
                 sb.append(poly("${rimPt(0, rTri)} ${rimPt(4, rTri)} ${rimPt(8, rTri)}", "rgba(250,204,21,.22)", ST, 1.8f))
             }
             val foot = when (harmony) {
                 "comp" -> "چرخهٔ رنگ ایتن — رنگ‌های مکمل روبه‌روی هم روی قطر دایره"
-                "warm_cool" -> "نیمهٔ راست: رنگ‌های گرم (زرد تا قرمز) | نیمهٔ چپ: رنگ‌های سرد"
-                "quiz" -> "چرخهٔ ۱۲ رنگ ایتن — جایگاه رنگ‌های اصلی و ثانویه را مشخص کنید"
+                "analog" -> "چرخهٔ رنگ ایتن — رنگ‌های هم‌جوار (کنار هم روی چرخه)"
+                "warm_cool", "warmcool" -> "نیمهٔ راست: رنگ‌های گرم (زرد تا قرمز) | نیمهٔ چپ: رنگ‌های سرد"
+                "quiz", "none" -> "چرخهٔ ۱۲ رنگ ایتن — جایگاه رنگ‌های اصلی و ثانویه"
                 else -> "چرخهٔ ۱۲ رنگ ایتن — مثلث مرکزی: ۳ رنگ اصلی (زرد، قرمز، آبی)"
             }
             sb.append(tx(180f, 258f, foot, MU, "middle", bold = true, size = 10))

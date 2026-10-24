@@ -1897,7 +1897,7 @@
             if (cl[0] !== '-' && cl[0] !== '0' && cl[0] !== '') s += tx(kbx + kkCs * 0.74, kby + kkCs * 0.40, cl[0], '#f8fafc', 'middle', true, 9);
             if (cl[1] !== '-' && cl[1] !== '0' && cl[1] !== '') s += tx(kbx + kkCs * 0.28, kby + kkCs * 0.84, cl[1], '#cbd5e1', 'middle', true, 9);
           } else {
-            var cellId = (kr + 1) + ',' + (kc + 1);
+            var cellId = 'k_' + (kr + 1) + '_' + (kc + 1);
             var isEmpK = hasExplicitEmp ? !!kkEmp[cellId] : (kkOv[cellId] == null);
             var innerK = rc(kbx, kby, kkCs, kkCs, '#ffffff', '#64748b', 1.1);
             if (isEmpK) {
@@ -1933,7 +1933,7 @@
       });
 
       for (var r2 = 0; r2 < kkN; r2++) for (var c2 = 0; c2 < kkN; c2++) {
-        var bx = kkX0 + c2 * kkCs, by = kkY0 + r2 * kkCs, cid = (r2 + 1) + ',' + (c2 + 1);
+        var bx = kkX0 + c2 * kkCs, by = kkY0 + r2 * kkCs, cid = 'k_' + (r2 + 1) + '_' + (c2 + 1);
         var cgIdx = cageMap[r2 + '_' + c2], fillC = cgIdx != null ? cageTints[cgIdx % cageTints.length] : '#ffffff';
         var isEmp = hasExplicitEmp ? !!kkEmp[cid] : (kkOv[cid] == null);
         var cellInner = rc(bx, by, kkCs, kkCs, fillC, '#cbd5e1', 0.9);
@@ -2323,12 +2323,14 @@
       var gcd = function (a, b) { a = Math.abs(a); b = Math.abs(b); while (b) { var t2 = a % b; a = b; b = t2; } return a || 1; };
       var totalLeaves = stageLists.reduce(function (a, b) { return a * b.length; }, 1);
       var leafCounter = 0;
+      var stageFlatIdx = [0, 0, 0, 0, 0];
 
       function buildStage(stIdx, pathIdxs, probNum, probDen, pathNames) {
         if (stIdx === nSt) {
+          var leafIdx = leafCounter;
           var ly = totalLeaves === 1 ? (yTop + yBot) / 2 : (yTop + (leafCounter + 0.5) * ((yBot - yTop) / totalLeaves));
           leafCounter++;
-          var outKey = 'out_' + pathIdxs.join('_'), g2 = gcd(probNum, probDen);
+          var outKey = 'r_' + leafIdx, g2 = gcd(probNum, probDen);
           var simpFrac = (probNum / g2) + '/' + (probDen / g2), pct = Math.round(probNum * 100 / probDen) + '%';
           var defOut = pbMode === 'count' ? pathNames.join('،') : (pbMode === 'pct' ? pct : simpFrac);
           var autoE = pbMode === 'blank', isE = !!pbEmp[outKey] || autoE;
@@ -2356,7 +2358,8 @@
         var py = childYs.reduce(function (a, b) { return a + b; }, 0) / childYs.length;
         s += pfxCls(xParent, py, 3.8, ACC, '#ffffff', 1.2);
         opts.forEach(function (opt, idx) {
-          var cy2 = childYs[idx], nKey = 'n_' + stIdx + '_' + pathIdxs.concat([idx]).join('_'), defLbl = opt[0];
+          var flatIdx = stageFlatIdx[stIdx]++;
+          var cy2 = childYs[idx], nKey = 'n_' + (stIdx + 1) + '_' + flatIdx, defLbl = opt[0];
           var isNE = !!pbEmp[nKey];
           var pillW = nSt >= 4 ? 40 : (nSt === 3 ? 46 : 54), pillH = totalLeaves >= 12 ? 18 : 21;
           var pillX = xChild - pillW / 2, pillY = cy2 - pillH / 2;
@@ -2493,7 +2496,7 @@
           for (var bi = 0; bi < nBoxes; bi++) {
             var up = eCnt > bi, down = eCnt > bi + nBoxes;
             var defSpin = (up && down) ? '↑↓' : (up ? '↑' : '');
-            var key = sName + '_' + bi, isE = !!obEmp[key];
+            var key = 'o_' + sName + '_' + bi, isE = !!obEmp[key];
             var boxIn = rc(curX, ry, bw, bh, isE ? '#ffffff' : 'rgba(108,99,245,.08)', isE ? '#4f46e5' : ST, isE ? 1.7 : 1.4, 3);
             if (isE) {
               boxIn += rcDash(curX + 2.5, ry + 2.5, bw - 5, bh - 5, '#f8fafc', '#6366f1', 1.1, 2, '3 2');
@@ -2530,7 +2533,7 @@
         var yForGen = function (g) { return gens === 2 ? (74 + g * 92) : (gens === 3 ? (48 + g * 74) : (38 + g * 55)); };
         var rNode = gens >= 4 ? 11.5 : 14;
         var drawPed = function (key, label, cx, cy, defState) {
-          var isE = !!pnEmp[key] || (pnMode === 'blank' && key.indexOf('g' + (gens - 1)) === 0);
+          var isE = !!pnEmp[key] || (pnMode === 'blank' && key.indexOf('p_' + gens + '_') === 0);
           var rawSt = isE ? (pnAns[key] || '').trim() : (pnOv[key] != null ? pnOv[key] : defState).trim();
           var up = rawSt.toUpperCase(), isMale = up.indexOf('M') === 0, isFem = up.indexOf('F') === 0;
           var aff = up.indexOf('*') >= 0 || up.indexOf('A') >= 0, car = up.indexOf('C') >= 0;
@@ -2551,31 +2554,31 @@
         for (var g0 = 0; g0 < gens; g0++) s += tx(24, yForGen(g0) + 4, rom[g0], MU, 'middle', true, 11);
         var y0 = yForGen(0), y1 = yForGen(1);
         s += ln(124 + rNode, y0, 224 - rNode, y0, ST, 1.7) + ln(174, y0, 174, y1 - 24, ST, 1.7);
-        drawPed('g0_1', 'نسل I فرد ۱', 124, y0, 'Mc');
-        drawPed('g0_2', 'نسل I فرد ۲', 224, y0, 'Fc');
+        drawPed('p_1_0', 'نسل I فرد ۱', 124, y0, 'Mc');
+        drawPed('p_1_1', 'نسل I فرد ۲', 224, y0, 'Fc');
         s += ln(96, y1 - 24, 232, y1 - 24, ST, 1.7);
         [96, 164, 232].forEach(function (x10) { s += ln(x10, y1 - 24, x10, y1 - rNode, ST, 1.7); });
-        drawPed('g1_1', 'نسل II فرد ۱', 96, y1, 'M*');
-        drawPed('g1_2', 'نسل II فرد ۲', 164, y1, 'F');
-        drawPed('g1_3', 'نسل II فرد ۳', 232, y1, 'Mc');
+        drawPed('p_2_0', 'نسل II فرد ۱', 96, y1, 'M*');
+        drawPed('p_2_1', 'نسل II فرد ۲', 164, y1, 'F');
+        drawPed('p_2_2', 'نسل II فرد ۳', 232, y1, 'Mc');
         if (gens >= 3) {
           var y2 = yForGen(2);
-          drawPed('g1_4', 'نسل II همسر (۴)', 296, y1, 'Fc');
+          drawPed('p_2_3', 'نسل II همسر (۴)', 296, y1, 'Fc');
           s += ln(232 + rNode, y1, 296 - rNode, y1, ST, 1.7) + ln(264, y1, 264, y2 - 22, ST, 1.7);
           s += ln(196, y2 - 22, 312, y2 - 22, ST, 1.7);
           [196, 254, 312].forEach(function (x20) { s += ln(x20, y2 - 22, x20, y2 - rNode, ST, 1.7); });
-          drawPed('g2_1', 'نسل III فرد ۱', 196, y2, 'F*');
-          drawPed('g2_2', 'نسل III فرد ۲', 254, y2, 'M');
-          drawPed('g2_3', 'نسل III فرد ۳', 312, y2, 'Fc');
+          drawPed('p_3_0', 'نسل III فرد ۱', 196, y2, 'F*');
+          drawPed('p_3_1', 'نسل III فرد ۲', 254, y2, 'M');
+          drawPed('p_3_2', 'نسل III فرد ۳', 312, y2, 'Fc');
         }
         if (gens >= 4) {
           var y2b = yForGen(2), y3 = yForGen(3);
-          drawPed('g2_0', 'نسل III همسر', 128, y2b, 'M');
+          drawPed('p_3_3', 'نسل III همسر', 128, y2b, 'M');
           s += ln(128 + rNode, y2b, 196 - rNode, y2b, ST, 1.7) + ln(162, y2b, 162, y3 - 20, ST, 1.7);
           s += ln(122, y3 - 20, 202, y3 - 20, ST, 1.7);
           s += ln(122, y3 - 20, 122, y3 - rNode, ST, 1.7) + ln(202, y3 - 20, 202, y3 - rNode, ST, 1.7);
-          drawPed('g3_1', 'نسل IV فرد ۱', 122, y3, 'Mc');
-          drawPed('g3_2', 'نسل IV فرد ۲', 202, y3, 'Fc');
+          drawPed('p_4_0', 'نسل IV فرد ۱', 122, y3, 'Mc');
+          drawPed('p_4_1', 'نسل IV فرد ۲', 202, y3, 'Fc');
         }
         s += rc(16, 244, 328, 24, '#f8fafc', '#cbd5e1', 1, 6);
         s += tx(180, 260, '□ مرد   ○ زن   ■/● مبتلا   نیمه‌پر: ناقل (روی هر فرد بزنید)', MU, 'middle', true, 9.5);
@@ -2602,14 +2605,14 @@
       s += rc(x0 - hdr, y0 - hdr, hdr, hdr, '#f1f5f9', '#94a3b8', 1.2, 3) + ln(x0 - hdr, y0 - hdr, x0, y0, '#94a3b8', 1);
 
       gCols.forEach(function (gc, c) {
-        var hk = 'hc_' + c, isHE = !!pnEmp[hk], bx = x0 + c * cs, by = y0 - hdr;
+        var hk = 'g1_' + c, isHE = !!pnEmp[hk], bx = x0 + c * cs, by = y0 - hdr;
         var hIn = isHE
           ? (rcDash(bx + 1, by + 1, cs - 2, hdr - 2, '#ffffff', '#4f46e5', 1.3, 3, '3 2') + ((pnAns[hk] || '').trim() ? tx(bx + cs / 2, by + hdr * 0.72, pnAns[hk].trim(), '#1d4ed8', 'middle', true, isDihybrid ? 10 : 13) : ''))
           : (rc(bx, by, cs, hdr, '#eef2ff', ACC, 1.3, 2) + tx(bx + cs / 2, by + hdr * 0.72, (pnOv[hk] != null ? pnOv[hk] : gc).trim(), ACC, 'middle', true, isDihybrid ? 10 : 13));
         s += icWrap(hk, 'گامت والد اول (' + (c + 1) + ')', gc, isHE, hIn);
       });
       gRows.forEach(function (gr, r) {
-        var hk = 'hr_' + r, isHE = !!pnEmp[hk], bx = x0 - hdr, by = y0 + r * cs;
+        var hk = 'g2_' + r, isHE = !!pnEmp[hk], bx = x0 - hdr, by = y0 + r * cs;
         var hIn = isHE
           ? (rcDash(bx + 1, by + 1, hdr - 2, cs - 2, '#ffffff', '#4f46e5', 1.3, 3, '3 2') + ((pnAns[hk] || '').trim() ? tx(bx + hdr / 2, by + cs * 0.58, pnAns[hk].trim(), '#1d4ed8', 'middle', true, isDihybrid ? 10 : 13) : ''))
           : (rc(bx, by, hdr, cs, '#fdf2f8', PT, 1.3, 2) + tx(bx + hdr / 2, by + cs * 0.58, (pnOv[hk] != null ? pnOv[hk] : gr).trim(), PT, 'middle', true, isDihybrid ? 10 : 13));
