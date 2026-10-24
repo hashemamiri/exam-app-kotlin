@@ -1424,66 +1424,521 @@
     opts = opts || null;
     var W = 1400, H = 1000;
     var bg = el('div', {class: 'engine-bg wb'});
-    var pages = [], cur = 0, tool = 'pen', color = '#1a237e', size = 3, grid = 'blank', undo = [], drawing = false, last = null, startPt = null, snapshotImg = null;
-    var canvas = el('canvas', {width: W, height: H, class: 'wb-canvas'}); var ctx = canvas.getContext('2d');
+    var pages = [], cur = 0, tool = 'pen', color = '#1a237e', size = 3, grid = 'blank';
+    var lineStyle = 'solid', fillShape = false, zoomPct = 100;
+    var undoStack = [], redoStack = [], drawing = false, last = null, startPt = null, endPt = null;
+    var autoShape = false, penPts = [], rulerSnapEdge = null;
+
+    var canvas = el('canvas', {width: W, height: H, class: 'wb-canvas'});
+    var ctx = canvas.getContext('2d');
+    var inkCanvas = document.createElement('canvas');
+    inkCanvas.width = W; inkCanvas.height = H;
+    var inkCtx = inkCanvas.getContext('2d');
+
     var status = el('span', {class: 'muted', style: 'font-size:12px'});
-    function newPage() { return {strokes: null, data: null}; }
-    function blank() { ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, W, H); drawGrid(); }
+    var hud = el('div', {class: 'wb-hud', style: 'display:none'});
+
+    /* خط‌کش دیجیتال تعاملی (فقط روی نمایشگر؛ وارد خروجی ثبت پاسخ نمی‌شود) */
+    var rulerOn = false, rulerState = {x: W / 2, y: H / 2 + 120, deg: 0, len: 680, halfH: 45};
+    var rulerDegLbl = el('span', {class: 'wb-ruler-deg', text: '۰°'});
+    var rulerEl = el('div', {class: 'wb-ruler', style: 'display:none'});
+
+    function newPage() { return {ink: null, data: null, grid: 'blank'}; }
+    function clearInk() { inkCtx.clearRect(0, 0, W, H); }
+
     function drawGrid() {
-      ctx.save(); ctx.strokeStyle = '#d7dce5'; ctx.lineWidth = 1;
-      if (grid === 'grid' || grid === 'quad' || grid === 'first') { for (var x = 0; x <= W; x += 40) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke(); } for (var y = 0; y <= H; y += 40) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke(); } }
+      ctx.save();
+      ctx.strokeStyle = '#d7dce5'; ctx.lineWidth = 1;
+      if (grid === 'mm') {
+        ctx.strokeStyle = '#eef2f7'; ctx.lineWidth = 0.8;
+        for (var mx = 0; mx <= W; mx += 10) { ctx.beginPath(); ctx.moveTo(mx, 0); ctx.lineTo(mx, H); ctx.stroke(); }
+        for (var my = 0; my <= H; my += 10) { ctx.beginPath(); ctx.moveTo(0, my); ctx.lineTo(W, my); ctx.stroke(); }
+        ctx.strokeStyle = '#cbd5e1'; ctx.lineWidth = 1.2;
+        for (var mx5 = 0; mx5 <= W; mx5 += 50) { ctx.beginPath(); ctx.moveTo(mx5, 0); ctx.lineTo(mx5, H); ctx.stroke(); }
+        for (var my5 = 0; my5 <= H; my5 += 50) { ctx.beginPath(); ctx.moveTo(0, my5); ctx.lineTo(W, my5); ctx.stroke(); }
+      }
+      if (grid === 'dots') {
+        ctx.fillStyle = '#94a3b8';
+        for (var dx = 40; dx < W; dx += 40) {
+          for (var dy = 40; dy < H; dy += 40) {
+            ctx.beginPath(); ctx.arc(dx, dy, 1.8, 0, Math.PI * 2); ctx.fill();
+          }
+        }
+      }
+      if (grid === 'iso') {
+        ctx.fillStyle = '#94a3b8';
+        var rowH = 34.64, colW = 40, rowIdx = 0;
+        for (var iy = 36; iy < H - 20; iy += rowH, rowIdx++) {
+          var off = (rowIdx % 2) * (colW / 2);
+          for (var ix = 36 + off; ix < W - 20; ix += colW) {
+            ctx.beginPath(); ctx.arc(ix, iy, 1.8, 0, Math.PI * 2); ctx.fill();
+          }
+        }
+      }
+      if (grid === 'grid' || grid === 'quad' || grid === 'first') {
+        for (var x = 0; x <= W; x += 40) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke(); }
+        for (var y = 0; y <= H; y += 40) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke(); }
+      }
       ctx.strokeStyle = '#333'; ctx.lineWidth = 2; ctx.fillStyle = '#333'; ctx.font = '18px Vazirmatn, sans-serif';
-      function arrow(x1, y1, x2, y2) { ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke(); var a = Math.atan2(y2 - y1, x2 - x1); ctx.beginPath(); ctx.moveTo(x2, y2); ctx.lineTo(x2 - 12 * Math.cos(a - 0.4), y2 - 12 * Math.sin(a - 0.4)); ctx.lineTo(x2 - 12 * Math.cos(a + 0.4), y2 - 12 * Math.sin(a + 0.4)); ctx.closePath(); ctx.fill(); }
-      if (grid === 'quad') { var cx = W / 2, cy = H / 2; arrow(20, cy, W - 20, cy); arrow(cx, H - 20, cx, 20); ctx.fillText('x', W - 30, cy - 10); ctx.fillText('y', cx + 10, 30); for (var i = -15; i <= 15; i++) { if (!i) continue; var px = cx + i * 40, py = cy - i * 40; if (px > 0 && px < W) { ctx.beginPath(); ctx.moveTo(px, cy - 5); ctx.lineTo(px, cy + 5); ctx.stroke(); if (i % 2 === 0) ctx.fillText(fa(i), px - 8, cy + 24); } if (py > 0 && py < H) { ctx.beginPath(); ctx.moveTo(cx - 5, py); ctx.lineTo(cx + 5, py); ctx.stroke(); if (i % 2 === 0) ctx.fillText(fa(i), cx + 10, py + 6); } } }
-      if (grid === 'first') { var ox = 80, oy = H - 80; arrow(ox, oy, W - 20, oy); arrow(ox, oy, ox, 20); ctx.fillText('x', W - 30, oy - 10); ctx.fillText('y', ox + 10, 30); for (var j = 1; j <= 30; j++) { var qx = ox + j * 40, qy = oy - j * 40; if (qx < W - 30) { ctx.beginPath(); ctx.moveTo(qx, oy - 5); ctx.lineTo(qx, oy + 5); ctx.stroke(); if (j % 2 === 0) ctx.fillText(fa(j), qx - 8, oy + 24); } if (qy > 30) { ctx.beginPath(); ctx.moveTo(ox - 5, qy); ctx.lineTo(ox + 5, qy); ctx.stroke(); if (j % 2 === 0) ctx.fillText(fa(j), ox - 34, qy + 6); } } }
-      if (grid === 'line') { var ly = H / 2; arrow(20, ly, W - 20, ly); for (var n = -16; n <= 16; n++) { var nx = W / 2 + n * 40; if (nx > 30 && nx < W - 30) { ctx.beginPath(); ctx.moveTo(nx, ly - 8); ctx.lineTo(nx, ly + 8); ctx.stroke(); ctx.fillText(fa(n), nx - 6, ly + 30); } } }
-      if (grid === 'polar') { var pcx = W / 2, pcy = H / 2; ctx.strokeStyle = '#c5cad6'; for (var r = 60; r < 520; r += 60) { ctx.beginPath(); ctx.arc(pcx, pcy, r, 0, Math.PI * 2); ctx.stroke(); } for (var d = 0; d < 360; d += 30) { var rad = d * Math.PI / 180; ctx.beginPath(); ctx.moveTo(pcx, pcy); ctx.lineTo(pcx + 480 * Math.cos(rad), pcy - 480 * Math.sin(rad)); ctx.stroke(); ctx.fillText(fa(d) + '°', pcx + 500 * Math.cos(rad) - 12, pcy - 500 * Math.sin(rad) + 6); } ctx.strokeStyle = '#333'; arrow(pcx - 500, pcy, pcx + 500, pcy); arrow(pcx, pcy + 500, pcx, pcy - 500); }
-      if (grid === 'lined') { ctx.strokeStyle = '#cfd6e4'; for (var yy = 60; yy < H; yy += 50) { ctx.beginPath(); ctx.moveTo(40, yy); ctx.lineTo(W - 40, yy); ctx.stroke(); } }
+      function arrow(x1, y1, x2, y2) {
+        ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
+        var a = Math.atan2(y2 - y1, x2 - x1);
+        ctx.beginPath(); ctx.moveTo(x2, y2);
+        ctx.lineTo(x2 - 12 * Math.cos(a - 0.4), y2 - 12 * Math.sin(a - 0.4));
+        ctx.lineTo(x2 - 12 * Math.cos(a + 0.4), y2 - 12 * Math.sin(a + 0.4));
+        ctx.closePath(); ctx.fill();
+      }
+      if (grid === 'quad') {
+        var cx = W / 2, cy = H / 2;
+        arrow(20, cy, W - 20, cy); arrow(cx, H - 20, cx, 20);
+        ctx.fillText('x', W - 30, cy - 10); ctx.fillText('y', cx + 10, 30);
+        for (var i = -15; i <= 15; i++) {
+          if (!i) continue;
+          var px = cx + i * 40, py = cy - i * 40;
+          if (px > 0 && px < W) { ctx.beginPath(); ctx.moveTo(px, cy - 5); ctx.lineTo(px, cy + 5); ctx.stroke(); if (i % 2 === 0) ctx.fillText(fa(i), px - 8, cy + 24); }
+          if (py > 0 && py < H) { ctx.beginPath(); ctx.moveTo(cx - 5, py); ctx.lineTo(cx + 5, py); ctx.stroke(); if (i % 2 === 0) ctx.fillText(fa(i), cx + 10, py + 6); }
+        }
+      }
+      if (grid === 'first') {
+        var ox = 80, oy = H - 80;
+        arrow(ox, oy, W - 20, oy); arrow(ox, oy, ox, 20);
+        ctx.fillText('x', W - 30, oy - 10); ctx.fillText('y', ox + 10, 30);
+        for (var j = 1; j <= 30; j++) {
+          var qx = ox + j * 40, qy = oy - j * 40;
+          if (qx < W - 30) { ctx.beginPath(); ctx.moveTo(qx, oy - 5); ctx.lineTo(qx, oy + 5); ctx.stroke(); if (j % 2 === 0) ctx.fillText(fa(j), qx - 8, oy + 24); }
+          if (qy > 30) { ctx.beginPath(); ctx.moveTo(ox - 5, qy); ctx.lineTo(ox + 5, qy); ctx.stroke(); if (j % 2 === 0) ctx.fillText(fa(j), ox - 34, qy + 6); }
+        }
+      }
+      if (grid === 'line') {
+        var ly = H / 2; arrow(20, ly, W - 20, ly);
+        for (var n = -16; n <= 16; n++) {
+          var nx = W / 2 + n * 40;
+          if (nx > 30 && nx < W - 30) { ctx.beginPath(); ctx.moveTo(nx, ly - 8); ctx.lineTo(nx, ly + 8); ctx.stroke(); ctx.fillText(fa(n), nx - 6, ly + 30); }
+        }
+      }
+      if (grid === 'polar') {
+        var pcx = W / 2, pcy = H / 2; ctx.strokeStyle = '#c5cad6';
+        for (var r = 60; r < 520; r += 60) { ctx.beginPath(); ctx.arc(pcx, pcy, r, 0, Math.PI * 2); ctx.stroke(); }
+        for (var d = 0; d < 360; d += 30) {
+          var rad = d * Math.PI / 180;
+          ctx.beginPath(); ctx.moveTo(pcx, pcy); ctx.lineTo(pcx + 480 * Math.cos(rad), pcy - 480 * Math.sin(rad)); ctx.stroke();
+          ctx.fillText(fa(d) + '°', pcx + 500 * Math.cos(rad) - 12, pcy - 500 * Math.sin(rad) + 6);
+        }
+        ctx.strokeStyle = '#333'; arrow(pcx - 500, pcy, pcx + 500, pcy); arrow(pcx, pcy + 500, pcx, pcy - 500);
+      }
+      if (grid === 'lined') {
+        ctx.strokeStyle = '#cfd6e4';
+        for (var yy = 60; yy < H; yy += 50) { ctx.beginPath(); ctx.moveTo(40, yy); ctx.lineTo(W - 40, yy); ctx.stroke(); }
+      }
       ctx.restore();
     }
-    function push() { undo.push(canvas.toDataURL('image/png')); if (undo.length > 30) undo.shift(); }
-    function pos(e) { var r = canvas.getBoundingClientRect(); var t = e.touches ? e.touches[0] : e; return {x: (t.clientX - r.left) * W / r.width, y: (t.clientY - r.top) * H / r.height}; }
-    function down(e) { e.preventDefault(); drawing = true; last = startPt = pos(e); push(); penPts = [last]; if (tool !== 'pen' && tool !== 'eraser') { snapshotImg = new Image(); snapshotImg.src = canvas.toDataURL(); } if (tool === 'text') { drawing = false; var at = last; S.promptDlg('متن روی تخته', '', 'متن', '').then(function (t) { if (t && t.trim()) { ctx.fillStyle = color; ctx.font = (size * 6 + 10) + 'px Vazirmatn, sans-serif'; ctx.direction = 'rtl'; ctx.fillText(t.trim(), at.x, at.y); } }); } }
-    function move(e) {
-      if (!drawing) return; e.preventDefault(); var p = pos(e);
-      if (tool === 'pen') penPts.push(p);
-      if (tool === 'pen' || tool === 'eraser') { ctx.save(); ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.strokeStyle = tool === 'eraser' ? '#fff' : color; ctx.lineWidth = tool === 'eraser' ? size * 8 : size; ctx.beginPath(); ctx.moveTo(last.x, last.y); ctx.lineTo(p.x, p.y); ctx.stroke(); ctx.restore(); last = p; }
-      else { if (snapshotImg && snapshotImg.complete) ctx.drawImage(snapshotImg, 0, 0); shape(startPt, p); }
+
+    function renderComposite(previewFn) {
+      ctx.fillStyle = '#FFFFFF';
+      ctx.fillRect(0, 0, W, H);
+      drawGrid();
+      ctx.drawImage(inkCanvas, 0, 0);
+      if (previewFn) previewFn(ctx);
     }
-    function shape(a, b) {
-      ctx.save(); ctx.strokeStyle = color; ctx.lineWidth = size; ctx.beginPath();
-      if (tool === 'line') { ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); }
-      if (tool === 'rect') ctx.rect(a.x, a.y, b.x - a.x, b.y - a.y);
-      if (tool === 'circle') { var r = Math.hypot(b.x - a.x, b.y - a.y); ctx.arc(a.x, a.y, r, 0, Math.PI * 2); }
-      if (tool === 'arrow') { ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); var an = Math.atan2(b.y - a.y, b.x - a.x); ctx.moveTo(b.x, b.y); ctx.lineTo(b.x - 14 * Math.cos(an - 0.45), b.y - 14 * Math.sin(an - 0.45)); ctx.moveTo(b.x, b.y); ctx.lineTo(b.x - 14 * Math.cos(an + 0.45), b.y - 14 * Math.sin(an + 0.45)); }
-      ctx.stroke(); ctx.restore();
+
+    function blank() { clearInk(); renderComposite(); }
+
+    function updateHistoryBtns() {
+      if (undoBtn) undoBtn.disabled = !undoStack.length;
+      if (redoBtn) redoBtn.disabled = !redoStack.length;
     }
-    /* V264 — تشخیص شکل (آیتم ۱۲): همان الگوریتم ShapeRecognizer.kt اپ؛ وقتی «تشخیص شکل» روشن است ضربهٔ قلم پس از رها شدن به خط/دایره/مثلث/مستطیل تبدیل می‌شود */
-    var autoShape = false, penPts = [];
-    function up(e) {
-      if (!drawing) return; drawing = false; snapshotImg = null;
-      if (autoShape && tool === 'pen' && penPts.length >= 8) {
-        var sh = recognizeShape(penPts); penPts = [];
-        if (sh) { var base = undo[undo.length - 1]; if (!base) return; var im = new Image(); im.onload = function () { ctx.drawImage(im, 0, 0); drawRecognized(sh); }; im.src = base; }
+    function pushUndo() {
+      undoStack.push(inkCanvas.toDataURL('image/png'));
+      if (undoStack.length > 30) undoStack.shift();
+      redoStack = [];
+      updateHistoryBtns();
+    }
+    function restoreInkFrom(url) {
+      var im = new Image();
+      im.onload = function () { clearInk(); inkCtx.drawImage(im, 0, 0); renderComposite(); };
+      im.src = url;
+    }
+    function doUndo() {
+      if (!undoStack.length) return;
+      redoStack.push(inkCanvas.toDataURL('image/png'));
+      var prevUrl = undoStack.pop();
+      updateHistoryBtns();
+      restoreInkFrom(prevUrl);
+    }
+    function doRedo() {
+      if (!redoStack.length) return;
+      undoStack.push(inkCanvas.toDataURL('image/png'));
+      var nextUrl = redoStack.pop();
+      updateHistoryBtns();
+      restoreInkFrom(nextUrl);
+    }
+
+    function applyDash(c, w) {
+      if (lineStyle === 'dashed') c.setLineDash([w * 3.5 + 7, w * 2.2 + 5]);
+      else if (lineStyle === 'dotted') c.setLineDash([Math.max(1.5, w * 0.9), w * 2.4 + 4]);
+      else c.setLineDash([]);
+    }
+    function hexRgba(hex, alpha) {
+      var h = (hex || '#1a237e').replace('#', '');
+      if (h.length === 3) h = h[0] + h[0] + h[1] + h[1] + h[2] + h[2];
+      var rv = parseInt(h.slice(0, 2), 16) || 0, gv = parseInt(h.slice(2, 4), 16) || 0, bv = parseInt(h.slice(4, 6), 16) || 0;
+      return 'rgba(' + rv + ',' + gv + ',' + bv + ',' + alpha + ')';
+    }
+
+    function snapPointToRuler(p, checkOnly) {
+      if (!rulerOn) return null;
+      var rad = rulerState.deg * Math.PI / 180;
+      var cos = Math.cos(rad), sin = Math.sin(rad);
+      var dx = p.x - rulerState.x, dy = p.y - rulerState.y;
+      var lx = dx * cos + dy * sin;
+      var ly = -dx * sin + dy * cos;
+      if (Math.abs(lx) > rulerState.len / 2 + 24) return null;
+      if (checkOnly) {
+        if (Math.abs(ly + rulerState.halfH) <= 28) return -rulerState.halfH;
+        if (Math.abs(ly - rulerState.halfH) <= 28) return rulerState.halfH;
+        return null;
       }
-      penPts = [];
+      var clampedX = Math.max(-rulerState.len / 2, Math.min(rulerState.len / 2, lx));
+      var edgeY = rulerSnapEdge;
+      return {
+        x: rulerState.x + clampedX * cos - edgeY * sin,
+        y: rulerState.y + clampedX * sin + edgeY * cos
+      };
     }
+
+    function constrainPoint(a, b, shiftKey) {
+      if (!shiftKey) return b;
+      var dx = b.x - a.x, dy = b.y - a.y;
+      if (tool === 'line' || tool === 'arrow' || tool === 'dblarrow') {
+        var dist = Math.hypot(dx, dy);
+        var ang = Math.round(Math.atan2(dy, dx) / (Math.PI / 12)) * (Math.PI / 12);
+        return {x: a.x + dist * Math.cos(ang), y: a.y + dist * Math.sin(ang)};
+      }
+      if (tool === 'rect' || tool === 'ellipse' || tool === 'triangle' || tool === 'rtriangle' || tool === 'diamond' || tool === 'axes') {
+        var m = Math.max(Math.abs(dx), Math.abs(dy));
+        return {x: a.x + (dx >= 0 ? m : -m), y: a.y + (dy >= 0 ? m : -m)};
+      }
+      return b;
+    }
+
+    function drawHighlighterPath(c, pts) {
+      if (!pts.length) return;
+      c.save();
+      c.globalAlpha = 0.30;
+      c.strokeStyle = color;
+      c.lineWidth = Math.max(16, size * 6);
+      c.lineCap = 'round';
+      c.lineJoin = 'round';
+      c.beginPath();
+      c.moveTo(pts[0].x, pts[0].y);
+      for (var k = 1; k < pts.length; k++) c.lineTo(pts[k].x, pts[k].y);
+      if (pts.length === 1) c.lineTo(pts[0].x + 0.5, pts[0].y);
+      c.stroke();
+      c.restore();
+    }
+
+    function drawArrowHead(c, x1, y1, x2, y2, headLen) {
+      var an = Math.atan2(y2 - y1, x2 - x1);
+      c.save(); c.setLineDash([]);
+      c.beginPath();
+      c.moveTo(x2, y2); c.lineTo(x2 - headLen * Math.cos(an - 0.45), y2 - headLen * Math.sin(an - 0.45));
+      c.moveTo(x2, y2); c.lineTo(x2 - headLen * Math.cos(an + 0.45), y2 - headLen * Math.sin(an + 0.45));
+      c.stroke(); c.restore();
+    }
+
+    function drawShapeOn(c, a, b) {
+      c.save();
+      c.strokeStyle = color;
+      c.lineWidth = size;
+      c.lineCap = 'round';
+      c.lineJoin = 'round';
+      applyDash(c, size);
+      var headLen = Math.max(13, size * 3 + 6);
+      var closed = (tool === 'rect' || tool === 'circle' || tool === 'ellipse' || tool === 'triangle' || tool === 'rtriangle' || tool === 'diamond');
+      c.beginPath();
+      if (tool === 'line') { c.moveTo(a.x, a.y); c.lineTo(b.x, b.y); }
+      else if (tool === 'arrow' || tool === 'dblarrow') { c.moveTo(a.x, a.y); c.lineTo(b.x, b.y); }
+      else if (tool === 'rect') { c.rect(a.x, a.y, b.x - a.x, b.y - a.y); }
+      else if (tool === 'circle') { var r = Math.hypot(b.x - a.x, b.y - a.y); c.arc(a.x, a.y, r, 0, Math.PI * 2); }
+      else if (tool === 'ellipse') {
+        var ecx = (a.x + b.x) / 2, ecy = (a.y + b.y) / 2;
+        c.ellipse(ecx, ecy, Math.max(1, Math.abs(b.x - a.x) / 2), Math.max(1, Math.abs(b.y - a.y) / 2), 0, 0, Math.PI * 2);
+      }
+      else if (tool === 'triangle') {
+        c.moveTo((a.x + b.x) / 2, a.y); c.lineTo(b.x, b.y); c.lineTo(a.x, b.y); c.closePath();
+      }
+      else if (tool === 'rtriangle') {
+        c.moveTo(a.x, a.y); c.lineTo(a.x, b.y); c.lineTo(b.x, b.y); c.closePath();
+      }
+      else if (tool === 'diamond') {
+        var dcx = (a.x + b.x) / 2, dcy = (a.y + b.y) / 2;
+        c.moveTo(dcx, a.y); c.lineTo(b.x, dcy); c.lineTo(dcx, b.y); c.lineTo(a.x, dcy); c.closePath();
+      }
+      else if (tool === 'axes') {
+        var xMin = Math.min(a.x, b.x), xMax = Math.max(a.x, b.x), yMin = Math.min(a.y, b.y), yMax = Math.max(a.y, b.y);
+        var axCx = (xMin + xMax) / 2, axCy = (yMin + yMax) / 2;
+        c.moveTo(xMin, axCy); c.lineTo(xMax, axCy);
+        c.moveTo(axCx, yMax); c.lineTo(axCx, yMin);
+      }
+      if (closed && fillShape) {
+        c.fillStyle = hexRgba(color, 0.16);
+        c.fill();
+      }
+      c.stroke();
+      if (tool === 'arrow') drawArrowHead(c, a.x, a.y, b.x, b.y, headLen);
+      else if (tool === 'dblarrow') {
+        drawArrowHead(c, a.x, a.y, b.x, b.y, headLen);
+        drawArrowHead(c, b.x, b.y, a.x, a.y, headLen);
+      }
+      else if (tool === 'rtriangle' && Math.abs(b.x - a.x) > 22 && Math.abs(b.y - a.y) > 22) {
+        var sq = Math.min(18, Math.abs(b.x - a.x) * 0.25, Math.abs(b.y - a.y) * 0.25);
+        var sx = b.x >= a.x ? 1 : -1, sy = a.y <= b.y ? -1 : 1;
+        c.save(); c.setLineDash([]); c.lineWidth = Math.max(1.5, size * 0.75);
+        c.beginPath();
+        c.moveTo(a.x + sx * sq, b.y);
+        c.lineTo(a.x + sx * sq, b.y + sy * sq);
+        c.lineTo(a.x, b.y + sy * sq);
+        c.stroke(); c.restore();
+      }
+      else if (tool === 'axes' && Math.abs(b.x - a.x) > 30 && Math.abs(b.y - a.y) > 30) {
+        var x0 = Math.min(a.x, b.x), x1 = Math.max(a.x, b.x), y0 = Math.min(a.y, b.y), y1 = Math.max(a.y, b.y);
+        var mCx = (x0 + x1) / 2, mCy = (y0 + y1) / 2;
+        drawArrowHead(c, x0, mCy, x1, mCy, 11);
+        drawArrowHead(c, mCx, y1, mCx, y0, 11);
+        c.save(); c.setLineDash([]); c.fillStyle = color; c.font = 'bold 16px Vazirmatn, sans-serif';
+        c.fillText('x', x1 - 12, mCy - 8);
+        c.fillText('y', mCx + 8, y0 + 16);
+        c.restore();
+      }
+      c.restore();
+    }
+
+    function updateHud(a, b) {
+      var dx = b.x - a.x, dy = b.y - a.y;
+      var txt = '';
+      if (tool === 'line' || tool === 'arrow' || tool === 'dblarrow') {
+        var lenU = (Math.hypot(dx, dy) / 40).toFixed(1);
+        var deg = Math.round((-Math.atan2(dy, dx) * 180 / Math.PI + 360) % 360);
+        txt = 'طول: ' + fa(lenU) + ' واحد  •  زاویه: ' + fa(deg) + '°';
+      } else if (tool === 'circle') {
+        txt = 'شعاع: ' + fa((Math.hypot(dx, dy) / 40).toFixed(1)) + ' واحد';
+      } else if (tool !== 'pen' && tool !== 'highlighter' && tool !== 'eraser' && tool !== 'text') {
+        txt = 'ابعاد: ' + fa((Math.abs(dx) / 40).toFixed(1)) + ' × ' + fa((Math.abs(dy) / 40).toFixed(1)) + ' واحد';
+      }
+      if (txt) { hud.textContent = txt; hud.style.display = ''; }
+      else hud.style.display = 'none';
+    }
+
+    function pos(e) {
+      var r = canvas.getBoundingClientRect();
+      var t = e.touches ? e.touches[0] : e;
+      return {x: (t.clientX - r.left) * W / r.width, y: (t.clientY - r.top) * H / r.height};
+    }
+
+    function down(e) {
+      e.preventDefault();
+      var p0 = pos(e);
+      if (tool === 'text') {
+        drawing = false;
+        S.promptDlg('متن روی تخته', '', 'متن', '').then(function (t) {
+          if (t && t.trim()) {
+            pushUndo();
+            inkCtx.save();
+            inkCtx.fillStyle = color;
+            inkCtx.font = (size * 6 + 12) + 'px Vazirmatn, sans-serif';
+            inkCtx.direction = 'rtl';
+            inkCtx.fillText(t.trim(), p0.x, p0.y);
+            inkCtx.restore();
+            renderComposite();
+          }
+        });
+        return;
+      }
+      drawing = true;
+      pushUndo();
+      rulerSnapEdge = (tool === 'pen') ? snapPointToRuler(p0, true) : null;
+      if (rulerSnapEdge !== null) p0 = snapPointToRuler(p0, false) || p0;
+      last = startPt = endPt = p0;
+      penPts = [p0];
+      if (tool === 'highlighter') renderComposite(function (c) { drawHighlighterPath(c, penPts); });
+    }
+
+    function move(e) {
+      if (!drawing) return;
+      e.preventDefault();
+      var p = pos(e);
+      if (tool === 'pen') {
+        if (rulerSnapEdge !== null) p = snapPointToRuler(p, false) || p;
+        penPts.push(p);
+        inkCtx.save();
+        inkCtx.lineCap = 'round'; inkCtx.lineJoin = 'round';
+        inkCtx.strokeStyle = color; inkCtx.lineWidth = size;
+        applyDash(inkCtx, size);
+        inkCtx.beginPath(); inkCtx.moveTo(last.x, last.y); inkCtx.lineTo(p.x, p.y); inkCtx.stroke();
+        inkCtx.restore();
+        last = p;
+        renderComposite();
+      } else if (tool === 'eraser') {
+        inkCtx.save();
+        inkCtx.globalCompositeOperation = 'destination-out';
+        inkCtx.lineCap = 'round'; inkCtx.lineJoin = 'round';
+        inkCtx.lineWidth = Math.max(16, size * 8);
+        inkCtx.beginPath(); inkCtx.moveTo(last.x, last.y); inkCtx.lineTo(p.x, p.y); inkCtx.stroke();
+        inkCtx.restore();
+        last = p;
+        renderComposite();
+      } else if (tool === 'highlighter') {
+        penPts.push(p);
+        last = p;
+        renderComposite(function (c) { drawHighlighterPath(c, penPts); });
+      } else {
+        endPt = constrainPoint(startPt, p, !!e.shiftKey);
+        updateHud(startPt, endPt);
+        renderComposite(function (c) { drawShapeOn(c, startPt, endPt); });
+      }
+    }
+
     function drawRecognized(sh) {
-      ctx.save(); ctx.strokeStyle = color; ctx.lineWidth = size; ctx.beginPath();
-      if (sh.kind === 'line') { ctx.moveTo(sh.a.x, sh.a.y); ctx.lineTo(sh.b.x, sh.b.y); }
-      else if (sh.kind === 'rect') ctx.rect(sh.a.x, sh.a.y, sh.b.x - sh.a.x, sh.b.y - sh.a.y);
-      else if (sh.kind === 'circle') ctx.ellipse((sh.a.x + sh.b.x) / 2, (sh.a.y + sh.b.y) / 2, Math.max(1, (sh.b.x - sh.a.x) / 2), Math.max(1, (sh.b.y - sh.a.y) / 2), 0, 0, Math.PI * 2);
-      else if (sh.kind === 'triangle') { ctx.moveTo((sh.a.x + sh.b.x) / 2, sh.a.y); ctx.lineTo(sh.b.x, sh.b.y); ctx.lineTo(sh.a.x, sh.b.y); ctx.closePath(); }
-      ctx.stroke(); ctx.restore();
+      inkCtx.save();
+      inkCtx.strokeStyle = color; inkCtx.lineWidth = size;
+      inkCtx.lineCap = 'round'; inkCtx.lineJoin = 'round';
+      applyDash(inkCtx, size);
+      inkCtx.beginPath();
+      if (sh.kind === 'line') { inkCtx.moveTo(sh.a.x, sh.a.y); inkCtx.lineTo(sh.b.x, sh.b.y); }
+      else if (sh.kind === 'rect') inkCtx.rect(sh.a.x, sh.a.y, sh.b.x - sh.a.x, sh.b.y - sh.a.y);
+      else if (sh.kind === 'circle') inkCtx.ellipse((sh.a.x + sh.b.x) / 2, (sh.a.y + sh.b.y) / 2, Math.max(1, (sh.b.x - sh.a.x) / 2), Math.max(1, (sh.b.y - sh.a.y) / 2), 0, 0, Math.PI * 2);
+      else if (sh.kind === 'triangle') { inkCtx.moveTo((sh.a.x + sh.b.x) / 2, sh.a.y); inkCtx.lineTo(sh.b.x, sh.b.y); inkCtx.lineTo(sh.a.x, sh.b.y); inkCtx.closePath(); }
+      if (fillShape && sh.kind !== 'line') { inkCtx.fillStyle = hexRgba(color, 0.16); inkCtx.fill(); }
+      inkCtx.stroke();
+      inkCtx.restore();
     }
-    canvas.addEventListener('pointerdown', down); canvas.addEventListener('pointermove', move); window.addEventListener('pointerup', up);
-    function savePage() { pages[cur].data = canvas.toDataURL('image/webp', 0.85); pages[cur].grid = grid; }
-    function loadPage(i) { cur = i; grid = pages[i].grid || 'blank'; gridSel.value = grid; if (pages[i].data) { var im = new Image(); im.onload = function () { ctx.drawImage(im, 0, 0); }; im.src = pages[i].data; ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, W, H); } else blank(); undo = []; status.textContent = 'صفحهٔ ' + fa(i + 1) + ' از ' + fa(pages.length); }
+
+    function up() {
+      if (!drawing) return;
+      drawing = false;
+      hud.style.display = 'none';
+      if (tool === 'highlighter') {
+        drawHighlighterPath(inkCtx, penPts);
+        renderComposite();
+      } else if (tool !== 'pen' && tool !== 'eraser' && tool !== 'text' && startPt && endPt) {
+        drawShapeOn(inkCtx, startPt, endPt);
+        renderComposite();
+      } else if (autoShape && tool === 'pen' && rulerSnapEdge === null && penPts.length >= 8) {
+        var sh = recognizeShape(penPts);
+        if (sh) {
+          var base = undoStack[undoStack.length - 1];
+          if (base) {
+            var im = new Image();
+            im.onload = function () { clearInk(); inkCtx.drawImage(im, 0, 0); drawRecognized(sh); renderComposite(); };
+            im.src = base;
+          }
+        }
+      }
+      penPts = []; rulerSnapEdge = null;
+    }
+
+    /* خط‌کش دیجیتال قابل جابه‌جایی و چرخش */
+    function syncRulerDom() {
+      rulerEl.style.display = rulerOn ? '' : 'none';
+      if (!rulerOn) return;
+      rulerEl.style.left = (rulerState.x / W * 100) + '%';
+      rulerEl.style.top = (rulerState.y / H * 100) + '%';
+      rulerEl.style.width = (rulerState.len / W * 100) + '%';
+      rulerEl.style.height = (rulerState.halfH * 2 / H * 100) + '%';
+      rulerEl.style.transform = 'translate(-50%, -50%) rotate(' + rulerState.deg + 'deg)';
+      var normDeg = ((rulerState.deg % 360) + 360) % 360;
+      if (normDeg > 180) normDeg -= 360;
+      rulerDegLbl.textContent = fa(Math.round(normDeg)) + '°';
+    }
+    function rotateRuler(delta, exact) {
+      rulerState.deg = exact !== undefined ? exact : (rulerState.deg + delta);
+      syncRulerDom();
+    }
+    (function buildRuler() {
+      var ticks = el('div', {class: 'wb-ruler-ticks'});
+      for (var u = 0; u <= 16; u++) {
+        var tk = el('span', {class: 'wb-rtick' + (u % 2 === 0 ? ' maj' : ''), style: 'left:' + (u / 16 * 100) + '%'},
+          u % 2 === 0 ? [el('b', {text: fa(u)})] : []);
+        ticks.appendChild(tk);
+      }
+      var ctrls = el('div', {class: 'wb-ruler-ctrls'}, [
+        el('button', {type: 'button', text: '−۱۵°', title: 'چرخش ۱۵ درجه پادساعتگرد', onclick: function (ev) { ev.stopPropagation(); rotateRuler(-15); }}),
+        rulerDegLbl,
+        el('button', {type: 'button', text: '+۱۵°', title: 'چرخش ۱۵ درجه ساعتگرد', onclick: function (ev) { ev.stopPropagation(); rotateRuler(15); }}),
+        el('button', {type: 'button', text: '۰°', title: 'افقی (۰ درجه)', onclick: function (ev) { ev.stopPropagation(); rotateRuler(0, 0); }}),
+        el('button', {type: 'button', text: '۹۰°', title: 'عمودی (۹۰ درجه)', onclick: function (ev) { ev.stopPropagation(); rotateRuler(0, 90); }})
+      ]);
+      rulerEl.appendChild(ticks);
+      rulerEl.appendChild(ctrls);
+      var rDrag = null;
+      rulerEl.addEventListener('pointerdown', function (ev) {
+        if (ev.target && ev.target.tagName === 'BUTTON') return;
+        ev.preventDefault(); ev.stopPropagation();
+        var p = pos(ev);
+        rDrag = {ox: p.x - rulerState.x, oy: p.y - rulerState.y};
+        rulerEl.setPointerCapture(ev.pointerId);
+      });
+      rulerEl.addEventListener('pointermove', function (ev) {
+        if (!rDrag) return;
+        var p = pos(ev);
+        rulerState.x = Math.max(80, Math.min(W - 80, p.x - rDrag.ox));
+        rulerState.y = Math.max(60, Math.min(H - 60, p.y - rDrag.oy));
+        syncRulerDom();
+      });
+      rulerEl.addEventListener('pointerup', function () { rDrag = null; });
+      rulerEl.addEventListener('wheel', function (ev) {
+        ev.preventDefault();
+        rotateRuler((ev.deltaY > 0 ? 1 : -1) * (ev.shiftKey ? 1 : 5));
+      }, {passive: false});
+    })();
+
+    function insertImageUrl(url) {
+      var im = new Image();
+      im.onload = function () {
+        pushUndo();
+        var maxW = 760, maxH = 560;
+        var sc = Math.min(1, maxW / Math.max(1, im.naturalWidth), maxH / Math.max(1, im.naturalHeight));
+        var dw = Math.round(im.naturalWidth * sc), dh = Math.round(im.naturalHeight * sc);
+        inkCtx.drawImage(im, Math.round((W - dw) / 2), Math.round((H - dh) / 2), dw, dh);
+        renderComposite();
+      };
+      im.src = url;
+    }
+
+    canvas.addEventListener('pointerdown', down);
+    canvas.addEventListener('pointermove', move);
+    window.addEventListener('pointerup', up);
+
+    function savePage() {
+      renderComposite();
+      pages[cur].ink = inkCanvas.toDataURL('image/png');
+      pages[cur].data = canvas.toDataURL('image/webp', 0.85);
+      pages[cur].grid = grid;
+    }
+    function loadPage(i) {
+      cur = i;
+      grid = pages[i].grid || 'blank';
+      gridSel.value = grid;
+      undoStack = []; redoStack = [];
+      updateHistoryBtns();
+      status.textContent = 'صفحهٔ ' + fa(i + 1) + ' از ' + fa(pages.length);
+      clearInk();
+      var src = pages[i].ink || pages[i].data;
+      if (src) {
+        var im = new Image();
+        im.onload = function () { clearInk(); inkCtx.drawImage(im, 0, 0); renderComposite(); };
+        im.src = src;
+        renderComposite();
+      } else {
+        renderComposite();
+      }
+    }
+
     var toolBtns = {};
-    function tb(id, icon, title) {
+    function tb(id, icon, title, dkOnly) {
       var b = el('button', {
         type: 'button',
-        class: 'wb-tool' + (tool === id ? ' on' : ''),
+        class: 'wb-tool' + (tool === id ? ' on' : '') + (dkOnly ? ' wb-dk-only' : ''),
         title: title,
         'aria-label': title,
         onclick: function () {
@@ -1497,14 +1952,26 @@
       toolBtns[id] = b;
       return b;
     }
-    var gridSel = el('select', {class: 'wb-sel', title: 'زمینه', 'aria-label': 'زمینه'});
-    [['blank', 'زمینهٔ سفید (خالی)'], ['lined', 'خط‌دار'], ['grid', 'شطرنجی'], ['line', 'محور اعداد'], ['quad', 'محور مختصات ۴ ناحیه'], ['first', 'محور مختصات ناحیهٔ اول'], ['polar', 'مختصات قطبی']].forEach(function (o) {
+
+    var gridSel = el('select', {class: 'wb-sel', title: 'زمینهٔ صفحه (تغییر آنی بدون پاک شدن رسم‌ها)', 'aria-label': 'زمینه'});
+    [
+      ['blank', 'زمینهٔ سفید (خالی)'],
+      ['lined', 'خط‌دار (دفتر)'],
+      ['dots', 'نقطه‌ای (Dot Grid)'],
+      ['grid', 'شطرنجی'],
+      ['mm', 'کاغذ میلی‌متری'],
+      ['iso', 'نقطه‌ای سه‌بعدی (ایزومتریک)'],
+      ['line', 'محور اعداد'],
+      ['quad', 'محور مختصات ۴ ناحیه'],
+      ['first', 'محور مختصات ناحیهٔ اول'],
+      ['polar', 'مختصات قطبی']
+    ].forEach(function (o) {
       gridSel.appendChild(el('option', {value: o[0], text: o[1]}));
     });
-    gridSel.addEventListener('change', async function () {
-      if (!(await S.confirmDlg('تغییر زمینه', 'تغییر زمینه، رسم‌های این صفحه را پاک می‌کند. ادامه؟', 'ادامه', true))) { gridSel.value = grid; return; }
-      grid = gridSel.value; blank();
-    }); /* V250 — بدون confirm مرورگر */
+    gridSel.addEventListener('change', function () {
+      grid = gridSel.value;
+      renderComposite();
+    });
 
     var swatchBtns = [];
     var colorIn = el('input', {type: 'color', value: color, class: 'wb-color', title: 'رنگ دلخواه'});
@@ -1514,7 +1981,7 @@
       swatchBtns.forEach(function (sb) { sb.classList.toggle('on', sb.getAttribute('data-col') === c.toLowerCase()); });
     }
     colorIn.addEventListener('input', function () { syncColor(colorIn.value); });
-    var swatches = ['#1a237e', '#111827', '#dc2626', '#059669', '#7c3aed', '#d97706'].map(function (hex) {
+    var swatches = ['#1a237e', '#111827', '#dc2626', '#059669', '#0284c7', '#7c3aed', '#d97706'].map(function (hex) {
       var sw = el('button', {
         type: 'button',
         class: 'wb-swatch' + (hex === color ? ' on' : ''),
@@ -1528,7 +1995,7 @@
     });
 
     var sizeVal = el('span', {class: 'wb-size-val', text: fa(size)});
-    var sizeIn = el('input', {type: 'range', min: 1, max: 12, value: size, class: 'wb-size', title: 'ضخامت قلم'});
+    var sizeIn = el('input', {type: 'range', min: 1, max: 16, value: size, class: 'wb-size', title: 'ضخامت قلم'});
     sizeIn.addEventListener('input', function () { size = Number(sizeIn.value); sizeVal.textContent = fa(size); });
 
     var autoShapeBtn = (function () {
@@ -1549,30 +2016,114 @@
       return b;
     })(); /* V264 */
 
+    var fillBtn = (function () {
+      var b = el('button', {
+        type: 'button',
+        class: 'wb-tool wb-dk-only',
+        title: 'پر کردن ملایم داخل اشکال بسته (مستطیل، دایره، بیضی، مثلث و لوزی)',
+        'aria-label': 'توپر ملایم',
+        onclick: function () {
+          fillShape = !fillShape;
+          b.classList.toggle('on', fillShape);
+        }
+      }, [
+        el('span', {class: 'wb-tool-ic', text: '▣'}),
+        el('span', {class: 'wb-tool-txt', text: 'توپر ملایم'})
+      ]);
+      return b;
+    })();
+
+    var styleBtns = {};
+    var strokeStyleRow = el('div', {class: 'wb-seg wb-dk-only', role: 'group', 'aria-label': 'نوع خط'}, [
+      ['solid', '─── ممتد'],
+      ['dashed', '- - خط‌چین'],
+      ['dotted', '··· نقطه‌چین']
+    ].map(function (st) {
+      var sb = el('button', {
+        type: 'button',
+        class: 'wb-seg-btn' + (lineStyle === st[0] ? ' on' : ''),
+        text: st[1],
+        onclick: function () {
+          lineStyle = st[0];
+          Object.keys(styleBtns).forEach(function (k) { styleBtns[k].classList.toggle('on', k === st[0]); });
+        }
+      });
+      styleBtns[st[0]] = sb;
+      return sb;
+    }));
+
     var qIdx = (run && run.exam && Array.isArray(run.exam.questions)) ? run.exam.questions.indexOf(q) : -1;
     var boardTitle = opts && opts.title ? '🖍 ' + opts.title : ('🖍 تختهٔ سفید' + (qIdx >= 0 ? ' — سؤال ' + fa(qIdx + 1) : ''));
 
-    function close() { window.removeEventListener('pointerup', up); bg.remove(); document.body.style.overflow = ''; }
+    function onKeyDown(ev) {
+      if (!document.body.contains(bg)) return;
+      if (document.querySelector('.modal-bg')) return;
+      var mod = ev.ctrlKey || ev.metaKey;
+      if (mod && (ev.key === 'z' || ev.key === 'Z')) {
+        ev.preventDefault();
+        if (ev.shiftKey) doRedo(); else doUndo();
+      } else if (mod && (ev.key === 'y' || ev.key === 'Y')) {
+        ev.preventDefault();
+        doRedo();
+      }
+    }
+    function onPaste(ev) {
+      if (!document.body.contains(bg) || document.querySelector('.modal-bg')) return;
+      var items = ev.clipboardData && ev.clipboardData.items;
+      if (!items) return;
+      for (var idx = 0; idx < items.length; idx++) {
+        if (items[idx].type && items[idx].type.indexOf('image/') === 0) {
+          var fl = items[idx].getAsFile();
+          if (fl) { ev.preventDefault(); fileToDataUrl(fl).then(insertImageUrl); break; }
+        }
+      }
+    }
+    window.addEventListener('keydown', onKeyDown);
+    window.addEventListener('paste', onPaste);
+
+    function close() {
+      window.removeEventListener('pointerup', up);
+      window.removeEventListener('keydown', onKeyDown);
+      window.removeEventListener('paste', onPaste);
+      bg.remove();
+      document.body.style.overflow = '';
+    }
     async function requestClose() {
       if (await S.confirmDlg('بستن تخته', 'تخته بدون ثبت بسته شود؟', 'بستن', true)) close();
     }
     bg.__onBack = requestClose;
 
-    /* V335.15 — چیدمان دسکتاپ: ستون راست = ابزارهای ترسیم و قلم؛ وسط = بوم تمام‌قد؛ ستون چپ = زمینه، ویرایش، صفحات و ثبت/بستن */
+    /* V335.15/16 — چیدمان دسکتاپ: ستون راست = قلم‌ها، اشکال هندسی، سبک خط و رنگ؛ وسط = بوم تمام‌قد؛ ستون چپ = زمینه، ویرایش، خط‌کش، بزرگ‌نمایی، صفحات و ثبت */
     var rightSide = el('aside', {class: 'wb-side wb-right', 'aria-label': 'ابزارهای ترسیم تخته'}, [
       el('div', {class: 'wb-title'}, [el('span', {text: boardTitle})]),
       el('div', {class: 'wb-sec'}, [
-        el('div', {class: 'wb-sec-lbl', text: 'ابزارهای رسم'}),
+        el('div', {class: 'wb-sec-lbl', text: 'قلم و نوشتن'}),
         el('div', {class: 'wb-tools-grid'}, [
           tb('pen', '✏️', 'قلم'),
+          tb('highlighter', '🖍', 'ماژیک هایلایت'),
           tb('eraser', '🧽', 'پاک‌کن'),
+          tb('text', 'T', 'متن')
+        ])
+      ]),
+      el('div', {class: 'wb-sec'}, [
+        el('div', {class: 'wb-sec-lbl', text: 'اشکال هندسی و محور (Shift=دقیق)'}),
+        el('div', {class: 'wb-tools-grid'}, [
           tb('line', '╱', 'خط'),
           tb('arrow', '➚', 'پیکان'),
+          tb('dblarrow', '↔', 'پیکان دوسر', true),
           tb('rect', '▭', 'مستطیل'),
           tb('circle', '◯', 'دایره'),
-          tb('text', 'T', 'متن'),
-          autoShapeBtn
+          tb('ellipse', '⬭', 'بیضی', true),
+          tb('triangle', '△', 'مثلث', true),
+          tb('rtriangle', '◿', 'قائم‌الزاویه', true),
+          tb('diamond', '◇', 'لوزی', true),
+          tb('axes', '✚', 'محور سریع', true)
         ])
+      ]),
+      el('div', {class: 'wb-sec'}, [
+        el('div', {class: 'wb-sec-lbl', text: 'کمک‌رسم و سبک خط'}),
+        el('div', {class: 'wb-tools-grid'}, [autoShapeBtn, fillBtn]),
+        strokeStyleRow
       ]),
       el('div', {class: 'wb-sec wb-stroke-sec'}, [
         el('div', {class: 'wb-sec-lbl', text: 'رنگ و ضخامت قلم'}),
@@ -1588,21 +2139,79 @@
     var undoBtn = el('button', {
       type: 'button',
       class: 'wb-tool wb-act',
-      title: 'برگرداندن آخرین تغییر',
-      onclick: function () {
-        var d = undo.pop(); if (!d) return;
-        var im = new Image(); im.onload = function () { ctx.drawImage(im, 0, 0); }; im.src = d;
-      }
+      title: 'برگرداندن آخرین تغییر (Ctrl+Z)',
+      'aria-label': 'برگرداندن',
+      onclick: doUndo
     }, [el('span', {class: 'wb-tool-ic', text: '↶'}), el('span', {class: 'wb-tool-txt', text: 'برگرداندن'})]);
+
+    var redoBtn = el('button', {
+      type: 'button',
+      class: 'wb-tool wb-act',
+      title: 'انجام مجدد (Ctrl+Y)',
+      'aria-label': 'انجام مجدد',
+      onclick: doRedo
+    }, [el('span', {class: 'wb-tool-ic', text: '↷'}), el('span', {class: 'wb-tool-txt', text: 'انجام مجدد'})]);
+
+    var rulerBtn = el('button', {
+      type: 'button',
+      class: 'wb-tool wb-act wb-dk-only',
+      title: 'نمایش/مخفی کردن خط‌کش و زاویه‌سنج کمکی روی تخته (چرخ ماوس = چرخش)',
+      'aria-label': 'خط‌کش کمکی',
+      onclick: function () {
+        rulerOn = !rulerOn;
+        rulerBtn.classList.toggle('on', rulerOn);
+        syncRulerDom();
+      }
+    }, [el('span', {class: 'wb-tool-ic', text: '📏'}), el('span', {class: 'wb-tool-txt', text: 'خط‌کش کمکی'})]);
+
+    var imgBtn = el('button', {
+      type: 'button',
+      class: 'wb-tool wb-act wb-dk-only',
+      title: 'درج تصویر روی تخته (یا چسباندن با Ctrl+V)',
+      'aria-label': 'درج تصویر',
+      onclick: async function () {
+        var f = await pickFile();
+        if (!f) return;
+        var url = await fileToDataUrl(f);
+        insertImageUrl(url);
+      }
+    }, [el('span', {class: 'wb-tool-ic', text: '🖼'}), el('span', {class: 'wb-tool-txt', text: 'درج تصویر'})]);
 
     var clearBtn = el('button', {
       type: 'button',
       class: 'wb-tool wb-act is-danger',
-      title: 'پاک کردن صفحه',
+      title: 'پاک کردن رسم‌های صفحه (زمینه حفظ می‌شود)',
       onclick: async function () {
-        if (await S.confirmDlg('پاک کردن صفحه', 'کل این صفحه پاک شود؟', 'پاک شود', true)) { push(); blank(); }
+        if (await S.confirmDlg('پاک کردن صفحه', 'کل رسم‌های این صفحه پاک شود؟', 'پاک شود', true)) { pushUndo(); blank(); }
       }
     }, [el('span', {class: 'wb-tool-ic', text: '🗑'}), el('span', {class: 'wb-tool-txt', text: 'پاک کردن صفحه'})]);
+
+    var stage = el('div', {class: 'wb-stage'}, [canvas, rulerEl, hud]);
+    var zoomLbl = el('button', {
+      type: 'button',
+      class: 'btn light sm wb-zoom-Mid',
+      text: '۱۰۰٪',
+      title: 'بازنشانی اندازهٔ بوم به ۱۰۰٪',
+      onclick: function () { setZoom(100); }
+    });
+    function setZoom(z) {
+      zoomPct = Math.max(75, Math.min(200, z));
+      zoomLbl.textContent = fa(zoomPct) + '٪';
+      if (zoomPct === 100) {
+        stage.style.width = '';
+        stage.style.maxWidth = '100%';
+        stage.style.maxHeight = '100%';
+      } else {
+        stage.style.width = Math.round(920 * zoomPct / 100) + 'px';
+        stage.style.maxWidth = 'none';
+        stage.style.maxHeight = 'none';
+      }
+    }
+    var zoomRow = el('div', {class: 'wb-zoom-row wb-dk-only'}, [
+      el('button', {type: 'button', class: 'btn light sm', text: '−', title: 'کوچک‌نمایی', onclick: function () { setZoom(zoomPct - 25); }}),
+      zoomLbl,
+      el('button', {type: 'button', class: 'btn light sm', text: '+', title: 'بزرگ‌نمایی', onclick: function () { setZoom(zoomPct + 25); }})
+    ]);
 
     var prevBtn = el('button', {
       type: 'button',
@@ -1621,6 +2230,33 @@
         if (cur < pages.length - 1) loadPage(cur + 1);
         else if (pages.length < WHITEBOARD_MAX_PAGES) { pages.push(newPage()); loadPage(pages.length - 1); }
         else toast('حداکثر ' + fa(WHITEBOARD_MAX_PAGES) + ' صفحه.', 'err');
+      }
+    });
+    var dupBtn = el('button', {
+      type: 'button',
+      class: 'btn light sm wb-nav-btn wb-dk-only',
+      text: '⧉ کپی صفحه',
+      title: 'کپی کردن صفحهٔ فعلی در یک صفحهٔ جدید',
+      onclick: function () {
+        if (pages.length >= WHITEBOARD_MAX_PAGES) { toast('حداکثر ' + fa(WHITEBOARD_MAX_PAGES) + ' صفحه.', 'err'); return; }
+        savePage();
+        var copy = {ink: pages[cur].ink, data: pages[cur].data, grid: pages[cur].grid};
+        pages.splice(cur + 1, 0, copy);
+        loadPage(cur + 1);
+        toast('صفحه کپی شد.', 'ok');
+      }
+    });
+    var dlBtn = el('button', {
+      type: 'button',
+      class: 'btn light sm wb-nav-btn wb-dk-only',
+      text: '⬇ ذخیرهٔ عکس',
+      title: 'دانلود تصویر صفحهٔ فعلی تخته (PNG)',
+      onclick: function () {
+        renderComposite();
+        var a = document.createElement('a');
+        a.href = canvas.toDataURL('image/png');
+        a.download = 'whiteboard-page-' + (cur + 1) + '.png';
+        a.click();
       }
     });
     var doneBtn = el('button', {
@@ -1645,23 +2281,30 @@
     var leftSide = el('aside', {class: 'wb-side wb-left', 'aria-label': 'مدیریت صفحه و ثبت تخته'}, [
       el('div', {class: 'wb-top-close'}, [closeBtn]),
       el('div', {class: 'wb-sec'}, [
-        el('div', {class: 'wb-sec-lbl', text: 'زمینهٔ صفحه'}),
+        el('div', {class: 'wb-sec-lbl', text: 'زمینهٔ صفحه (بدون پاک شدن رسم)'}),
         gridSel
       ]),
       el('div', {class: 'wb-sec'}, [
-        el('div', {class: 'wb-sec-lbl', text: 'ویرایش صفحه'}),
-        el('div', {class: 'wb-edit-row'}, [undoBtn, clearBtn])
+        el('div', {class: 'wb-sec-lbl', text: 'ویرایش و ابزار کمکی'}),
+        el('div', {class: 'wb-tools-grid wb-edit-grid'}, [undoBtn, redoBtn, rulerBtn, imgBtn]),
+        clearBtn
+      ]),
+      el('div', {class: 'wb-sec wb-dk-only'}, [
+        el('div', {class: 'wb-sec-lbl', text: 'بزرگ‌نمایی بوم'}),
+        zoomRow
       ]),
       el('div', {class: 'wb-sec wb-pages-sec'}, [
-        el('div', {class: 'wb-sec-lbl', text: 'صفحه‌های تخته'}),
+        el('div', {class: 'wb-sec-lbl', text: 'صفحه‌ها و خروجی'}),
         status,
-        el('div', {class: 'wb-nav-row'}, [prevBtn, nextBtn])
+        el('div', {class: 'wb-nav-row'}, [prevBtn, nextBtn]),
+        el('div', {class: 'wb-nav-row wb-dk-only'}, [dupBtn, dlBtn])
       ]),
       el('div', {class: 'wb-spacer'}),
+      el('div', {class: 'wb-kbd-hint wb-dk-only', text: 'میانبرها: Ctrl+Z / Ctrl+Y • Shift: زاویه/مربع دقیق • Ctrl+V: تصویر'}),
       doneBtn
     ]);
 
-    var area = el('div', {class: 'wb-area'}, [canvas]);
+    var area = el('div', {class: 'wb-area'}, [stage]);
     bg.appendChild(rightSide); bg.appendChild(area); bg.appendChild(leftSide);
     document.body.appendChild(bg); document.body.style.overflow = 'hidden';
     /* صفحه‌های قبلی تخته (اگر پاسخ فعلی از تخته آمده) بارگذاری می‌شوند */
