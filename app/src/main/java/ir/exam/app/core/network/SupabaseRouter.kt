@@ -106,18 +106,55 @@ object SupabaseRouter {
         refreshAsync(force = true)
     }
 
-    /** سنجش همهٔ مسیرها در پس‌زمینه و انتخاب بهترین؛ `onDone` روی نخ IO صدا زده می‌شود. */
+    /**
+     * سنجش همهٔ مسیرها در پس‌زمینه و انتخاب بهترین؛ `onDone` روی نخ IO صدا زده می‌شود.
+     *
+     * V335.23 — «نخستین پاسخ سالم برنده است»: تا پیش از این نسخه، انتخاب مسیر تا پایان سنجش همهٔ
+     * مسیرها (تا ۶ ثانیه، چون سنجش اتصال بستهٔ مستقیم تا تایم‌اوت معطل می‌ماند) عقب می‌افتاد و در همین
+     * فاصله درخواست‌های ورود روی مسیر بسته می‌رفتند. اکنون هر مسیری که اول سالم پاسخ دهد همان لحظه
+     * انتخاب و کلاینت بازسازی می‌شود.
+     */
     fun refreshAsync(force: Boolean = false, onDone: (List<Probe>) -> Unit = {}) {
         val now = System.currentTimeMillis()
         if (!force && now - lastRefreshAt < REFRESH_DEBOUNCE_MS) return
         lastRefreshAt = now
         scope.launch {
-            val results = runCatching { probeAll() }.getOrDefault(emptyList())
-            lastProbe = results
-            runCatching { onDone(results) }
-            val best = results.firstOrNull { it.ok } ?: return@launch
-            if (manualBase() == null) remember(best.base)
+            val results = java.util.Collections.synchronizedList(mutableListOf<Probe>())
+            val decided = java.util.concurrent.atomic.AtomicBoolean(false)
+            runCatching {
+                coroutineScope {
+                    candidates().map { base ->
+                        async {
+                            val probe = probe(base)
+                            results += probe
+                            if (probe.ok && manualBase() == null && decided.compareAndSet(false, true)) {
+                                remember(probe.base)
+                            }
+                        }
+                    }.awaitAll()
+                }
+            }
+            val list = results.toList()
+            lastProbe = list
+            runCatching { onDone(list) }
+            if (!decided.get()) {
+                val best = list.firstOrNull { it.ok } ?: return@launch
+                if (manualBase() == null) remember(best.base)
+            }
         }
+    }
+
+    /**
+     * V335.23 — «نجات فوری مسیر»: وقتی درخواستی با خطای شبکه شکست خورد، بی‌درنگ همهٔ مسیرها را
+     * می‌سنجد و اگر مسیر سالمی هست آن را فعال می‌کند. خروجی `true` یعنی دست‌کم یک مسیر سالم وجود دارد
+     * و تکرار همان درخواست منطقی است (مثلاً یک بار تلاش دوبارهٔ ورود).
+     */
+    suspend fun recover(timeoutMs: Int = 3_500): Boolean {
+        val results = runCatching { probeAll(timeoutMs) }.getOrDefault(emptyList())
+        if (results.isNotEmpty()) lastProbe = results
+        val best = results.firstOrNull { it.ok } ?: return false
+        if (manualBase() == null) remember(best.base)
+        return true
     }
 
     /** ذخیرهٔ مسیر سالم؛ اگر مسیر عوض شود، کلاینت Supabase بازسازی می‌شود. */

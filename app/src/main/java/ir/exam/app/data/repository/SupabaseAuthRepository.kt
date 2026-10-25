@@ -135,7 +135,20 @@ class SupabaseAuthRepository(context: Context) : AuthRepository {
         )
     }
 
-    override suspend fun signInWithPassword(identifier: String, password: String): Result<AppUser> = runCatching {
+    /**
+     * V335.23 — ورود مقاوم در برابر تغییر شبکه: اگر نخستین تلاش با خطای شبکه (مثلاً بسته بودن
+     * دامنهٔ مستقیم Supabase در دادهٔ همراه اول یا عوض شدن Wi‑Fi/داده) شکست بخورد، مسیر سالم
+     * دوباره انتخاب و همان ورود یک بار دیگر تکرار می‌شود؛ خطاهای واقعی (رمز اشتباه، قفل) دست‌نخورده برمی‌گردند.
+     */
+    override suspend fun signInWithPassword(identifier: String, password: String): Result<AppUser> {
+        val first = runCatching { signInOnce(identifier, password) }
+        val error = first.exceptionOrNull() ?: return first
+        if (!ir.exam.app.core.network.NetworkFailureClassifier.isNetworkFailure(error)) return first
+        if (!ir.exam.app.core.network.SupabaseRouter.recover()) return first
+        return runCatching { signInOnce(identifier, password) }
+    }
+
+    private suspend fun signInOnce(identifier: String, password: String): AppUser = runCatching {
         require(password.isNotBlank()) { "رمز عبور را وارد کنید." }
         // V60.0 — نام کاربری بدون @: اول نگاشت کادر مدرسه (معلم/مدیر) از سرور؛
         // اگر نبود، همان مسیر دانش‌آموز (username@student.exam.local).
@@ -149,7 +162,7 @@ class SupabaseAuthRepository(context: Context) : AuthRepository {
         }
         signInQueued(loginEmail, password)
         persistUser(currentProfile())
-    }
+    }.getOrThrow()
 
     /**
      * V268 — صف ورود: سطل Supabase Auth حداکثر ۳۰ ورود آنی به ازای هر IP دارد و با نرخ تنظیم‌شده پر می‌شود.
