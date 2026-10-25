@@ -1,0 +1,229 @@
+package ir.exam.app.core.network
+
+import android.content.Context
+import android.content.SharedPreferences
+import android.net.ConnectivityManager
+import android.net.Network
+import android.net.NetworkCapabilities
+import android.net.NetworkRequest
+import ir.exam.app.BuildConfig
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.io.IOException
+import java.net.ConnectException
+import java.net.HttpURLConnection
+import java.net.SocketTimeoutException
+import java.net.URL
+import java.net.UnknownHostException
+import javax.net.ssl.SSLException
+
+/**
+ * V335.20 — مسیریابِ اتصال Supabase برای شبکه‌هایی که دسترسی مستقیم به دامنهٔ پروژه را می‌بندند.
+ *
+ * ریشهٔ مشکل «اپ با اینترنت همراه اول کار نمی‌کند»: سایت روی دامنهٔ خودمان (Cloudflare) باز می‌شود،
+ * ولی اپ به `https://<project>.supabase.co` وصل می‌شود و این دامنه از شبکهٔ برخی اپراتورها در دسترس
+ * نیست. راه‌حل: یک «مسیر جایگزین» روی دامنهٔ خودمان (Cloudflare Worker یا Caddy روی VPS) که همان
+ * درخواست‌ها را به پروژهٔ Supabase می‌رساند. این کلاس:
+ *
+ * ۱) فهرست مسیرها را می‌سازد: مسیرهای جایگزین (از `BuildConfig.SUPABASE_RELAY_URLS` یا مقدار
+ *    پیش‌فرض `https://sb.onlineexam.ir`) و سپس اتصال مستقیم.
+ * ۲) در پس‌زمینه با درخواست سبک `/auth/v1/health` هر مسیر را می‌سنجد، مسیر سالم را در حافظهٔ
+ *    برنامه نگه می‌دارد و در صورت تغییر مسیر، کلاینت Supabase را بازسازی می‌کند.
+ * ۳) با تغییر شبکه (Wi-Fi ↔ دادهٔ همراه) دوباره می‌سنجد؛ بنابراین اگر کاربر از Wi-Fi به همراه اول
+ *    برود، برنامه خودکار روی مسیر جایگزین می‌رود.
+ * ۴) نشانی‌های مطلقِ ذخیره‌شده در بانک (تصویر/صوت سؤال) را هم به همان مسیر ترجمه می‌کند.
+ *
+ * هیچ‌کدام از این کارها روی نخ اصلی انجام نمی‌شود؛ `currentBase()` فقط حافظهٔ محلی را می‌خواند.
+ */
+object SupabaseRouter {
+    /** مسیر جایگزینِ پیش‌فرض؛ اگر Worker روی زیردامنهٔ دیگری ساخته شد، با SUPABASE_RELAY_URLS عوض می‌شود. */
+    const val DEFAULT_RELAY = "https://sb.onlineexam.ir"
+
+    private const val PREFS = "supabase_router"
+    private const val KEY_BASE = "active_base"
+    private const val KEY_AT = "active_at_ms"
+    private const val KEY_MANUAL = "manual_base"
+    private const val REFRESH_DEBOUNCE_MS = 8_000L
+
+    @Volatile private var prefs: SharedPreferences? = null
+    @Volatile private var watcherRegistered = false
+    @Volatile private var lastRefreshAt = 0L
+
+    /** نتیجهٔ آخرین سنجش (برای صفحهٔ «تست اتصال به سرور»). */
+    @Volatile
+    var lastProbe: List<Probe> = emptyList()
+        private set
+
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
+    /** اتصال مستقیم به پروژهٔ Supabase (نشانی زمان ساخت). */
+    val directBase: String get() = BuildConfig.SUPABASE_URL.trim().trimEnd('/')
+
+    /** مسیرهای جایگزین؛ اولویت با مقدار زمان ساخت و در نبود آن پل پیش‌فرض. */
+    fun relayBases(): List<String> {
+        val configured = runCatching { BuildConfig.SUPABASE_RELAY_URLS }
+            .getOrDefault("")
+            .split(',', ';', ' ')
+            .map { it.trim().trimEnd('/') }
+            .filter { it.startsWith("http://", true) || it.startsWith("https://", true) }
+            .distinct()
+        return configured.ifEmpty { listOf(DEFAULT_RELAY) }
+    }
+
+    /** ترتیب تلاش: مسیرهای جایگزین، سپس اتصال مستقیم. */
+    fun candidates(): List<String> = (relayBases() + directBase)
+        .filter { it.isNotBlank() }
+        .distinct()
+
+    fun attach(context: Context) {
+        if (prefs == null) prefs = context.applicationContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+    }
+
+    /** مسیر دستیِ انتخاب‌شده توسط کاربر در صفحهٔ تست اتصال (خالی = انتخاب خودکار). */
+    fun manualBase(): String? = prefs?.getString(KEY_MANUAL, null)?.takeIf { it.isNotBlank() }
+
+    /**
+     * نشانی فعال؛ فقط از حافظهٔ محلی خوانده می‌شود و روی نخ اصلی هم امن است.
+     * تا پیش از نخستین سنجش پس‌زمینه، اتصال مستقیم (رفتار همهٔ نسخه‌های قبلی) استفاده می‌شود تا هیچ
+     * نصبی که پل را هنوز نساخته، با آدرس پلِ ناساخته روبه‌رو نشود.
+     */
+    fun currentBase(): String {
+        manualBase()?.let { return it }
+        val cached = prefs?.getString(KEY_BASE, null)?.takeIf { it.isNotBlank() }
+        return cached ?: directBase
+    }
+
+    /** نقطهٔ آغاز: ثبت شنوندهٔ شبکه و سنجش پس‌زمینه. */
+    fun bootstrap(context: Context) {
+        attach(context)
+        registerNetworkWatcher(context)
+        refreshAsync(force = true)
+    }
+
+    /** سنجش همهٔ مسیرها در پس‌زمینه و انتخاب بهترین؛ `onDone` روی نخ IO صدا زده می‌شود. */
+    fun refreshAsync(force: Boolean = false, onDone: (List<Probe>) -> Unit = {}) {
+        val now = System.currentTimeMillis()
+        if (!force && now - lastRefreshAt < REFRESH_DEBOUNCE_MS) return
+        lastRefreshAt = now
+        scope.launch {
+            val results = runCatching { probeAll() }.getOrDefault(emptyList())
+            lastProbe = results
+            runCatching { onDone(results) }
+            val best = results.firstOrNull { it.ok } ?: return@launch
+            if (manualBase() == null) remember(best.base)
+        }
+    }
+
+    /** ذخیرهٔ مسیر سالم؛ اگر مسیر عوض شود، کلاینت Supabase بازسازی می‌شود. */
+    fun remember(base: String) {
+        val p = prefs ?: return
+        val old = p.getString(KEY_BASE, null)
+        p.edit().putString(KEY_BASE, base).putLong(KEY_AT, System.currentTimeMillis()).apply()
+        if (old != base) resetClient()
+    }
+
+    /** انتخاب دستی از صفحهٔ تست اتصال؛ `null` = بازگشت به انتخاب خودکار. */
+    fun selectManual(base: String?) {
+        val p = prefs ?: return
+        if (base.isNullOrBlank()) p.edit().remove(KEY_MANUAL).apply() else p.edit().putString(KEY_MANUAL, base).apply()
+        resetClient()
+    }
+
+    private fun resetClient() {
+        runCatching { ir.exam.app.data.remote.SupabaseProvider.reset() }
+    }
+
+    /** سنجش همهٔ مسیرها به‌صورت موازی. */
+    suspend fun probeAll(timeoutMs: Int = 6_000): List<Probe> = withContext(Dispatchers.IO) {
+        coroutineScope { candidates().map { base -> async { probe(base, timeoutMs) } }.awaitAll() }
+    }
+
+    /** یک درخواست سبک به `/auth/v1/health` (بدون توکن کاربر) و اندازه‌گیری زمان. */
+    fun probe(base: String, timeoutMs: Int = 6_000): Probe {
+        val started = System.currentTimeMillis()
+        var conn: HttpURLConnection? = null
+        return try {
+            conn = (URL("${base.trimEnd('/')}/auth/v1/health").openConnection() as HttpURLConnection).apply {
+                requestMethod = "GET"
+                connectTimeout = timeoutMs
+                readTimeout = timeoutMs
+                instanceFollowRedirects = true
+                setRequestProperty("apikey", BuildConfig.SUPABASE_ANON_KEY)
+                setRequestProperty("Authorization", "Bearer ${BuildConfig.SUPABASE_ANON_KEY}")
+                setRequestProperty("Accept", "application/json")
+            }
+            val code = conn.responseCode
+            val ms = System.currentTimeMillis() - started
+            Probe(base, code in 200..299, ms, if (code in 200..299) "سالم" else "پاسخ سرور: $code")
+        } catch (e: Throwable) {
+            Probe(base, false, System.currentTimeMillis() - started, describe(e))
+        } finally {
+            runCatching { conn?.disconnect() }
+        }
+    }
+
+    /** ترجمهٔ خطای شبکه به توضیح کوتاه فارسی (بدون افشای آدرس/توکن). */
+    private fun describe(error: Throwable): String = when (error) {
+        is UnknownHostException -> "نام دامنه پیدا نشد (DNS)"
+        is SocketTimeoutException -> "پاسخی نداد (قطع/کندی شبکه)"
+        is SSLException -> "خطای اتصال امن (TLS)"
+        is ConnectException -> "اتصال برقرار نشد"
+        is IOException -> "خطای شبکه"
+        else -> "خطای نامشخص"
+    }
+
+    /**
+     * نشانی مطلق Supabase (تصویر/صوت ذخیره‌شده در بانک) را به مسیر فعال ترجمه می‌کند؛
+     * اگر نشانی از همین پروژه نباشد، دست‌نخورده برمی‌گردد.
+     */
+    fun rewrite(url: String): String {
+        val trimmed = url.trim()
+        if (!trimmed.startsWith("http://", true) && !trimmed.startsWith("https://", true)) return url
+        val base = currentBase()
+        val own = candidates() + directBase
+        val match = own.firstOrNull { trimmed.startsWith("$it/", ignoreCase = true) } ?: return url
+        if (match.equals(base, ignoreCase = true)) return url
+        return base.trimEnd('/') + trimmed.substring(match.length)
+    }
+
+    /** آیا نشانی به فضای ذخیره‌سازی همین پروژه اشاره می‌کند (برای فرستادن توکن نشست)؟ */
+    fun isOwnStorageUrl(url: String): Boolean {
+        if (!url.contains("/storage/v1/object/")) return false
+        val own = candidates() + directBase
+        return own.any { url.startsWith("$it/storage/v1/object/", ignoreCase = true) }
+    }
+
+    /** گزارش یک‌خطی برای دکمهٔ «کپی گزارش» در صفحهٔ تست اتصال. */
+    fun report(): String {
+        val lines = mutableListOf<String>()
+        lines += "مسیر فعال: ${currentBase()}"
+        lines += "نوع انتخاب: " + (manualBase()?.let { "دستی" } ?: "خودکار")
+        lastProbe.forEach { p ->
+            val kind = if (p.base.equals(directBase, true)) "مستقیم" else "جایگزین"
+            lines += "$kind | ${p.ok.let { if (it) "سالم" else "ناموفق" }} | ${p.ms}ms | ${p.detail} | ${p.base}"
+        }
+        return lines.joinToString("\n")
+    }
+
+    data class Probe(val base: String, val ok: Boolean, val ms: Long, val detail: String)
+
+    private fun registerNetworkWatcher(context: Context) {
+        if (watcherRegistered) return
+        val cm = context.applicationContext.getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager ?: return
+        val request = NetworkRequest.Builder()
+            .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+            .build()
+        val callback = object : ConnectivityManager.NetworkCallback() {
+            override fun onAvailable(network: Network) { refreshAsync() }
+            override fun onLost(network: Network) { refreshAsync() }
+            override fun onCapabilitiesChanged(network: Network, capabilities: NetworkCapabilities) { refreshAsync() }
+        }
+        runCatching { cm.registerNetworkCallback(request, callback); watcherRegistered = true }
+    }
+}

@@ -121,6 +121,8 @@ fun ProfileSettingsScreen(
     val state by viewModel.state.collectAsState()
     // V326 — کارت «حافظه و ارسال‌های در انتظار» در بخش داده‌ها
     var localStorageOpen by remember(destination) { mutableStateOf(false) }
+    // V335.20 — کارت «تست اتصال به سرور»
+    var networkOpen by remember(destination) { mutableStateOf(false) }
     var settingsSection by remember(destination, initialSettingsSection) {
         mutableStateOf(initialSettingsSection)
     }
@@ -251,6 +253,11 @@ fun ProfileSettingsScreen(
                 Spacer(Modifier.height(12.dp))
                 SettingsAccordionCard(title = "حافظه و ارسال‌های در انتظار", expanded = localStorageOpen, onToggle = { localStorageOpen = !localStorageOpen }) {
                     LocalStorageBlock(LocalContext.current, viewModel.currentUserId())
+                }
+                // V335.20 — اگر اپ در شبکهٔ یک اپراتور (مثل دادهٔ همراه اول) به سرور نمی‌رسد، این بخش مسیر سالم را نشان می‌دهد.
+                Spacer(Modifier.height(12.dp))
+                SettingsAccordionCard(title = "تست اتصال به سرور", expanded = networkOpen, onToggle = { networkOpen = !networkOpen }) {
+                    NetworkDiagnosticsCard()
                 }
                 Spacer(Modifier.height(24.dp))
             }

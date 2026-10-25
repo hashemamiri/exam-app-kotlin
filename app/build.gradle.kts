@@ -30,6 +30,8 @@ val pushEnabledDebug = "ir.exam.app.native" in googleServicesPackages
 val supabaseUrl = localProperties.getProperty("SUPABASE_URL", "")
 val supabaseAnonKey = localProperties.getProperty("SUPABASE_ANON_KEY", "")
 val googleWebClientId = localProperties.getProperty("GOOGLE_WEB_CLIENT_ID", "")
+// V335.20 — فهرست مسیرهای جایگزین Supabase (جدا با ویرگول). خالی = پل پیش‌فرض در SupabaseRouter.DEFAULT_RELAY
+val supabaseRelayUrls = localProperties.getProperty("SUPABASE_RELAY_URLS", "").trim().replace("\\", "").replace("\"", "")
 val appVersionCode = localProperties.getProperty("APP_VERSION_CODE")
     ?.toIntOrNull()
     ?.takeIf { it > 0 }
@@ -59,6 +61,7 @@ android {
         buildConfigField("String", "SUPABASE_URL", "\"$supabaseUrl\"")
         buildConfigField("String", "SUPABASE_ANON_KEY", "\"$supabaseAnonKey\"")
         buildConfigField("String", "GOOGLE_WEB_CLIENT_ID", "\"$googleWebClientId\"")
+        buildConfigField("String", "SUPABASE_RELAY_URLS", "\"$supabaseRelayUrls\"") // V335.20
         buildConfigField("Boolean", "PUSH_ENABLED", "false") // V232 — در buildTypes بر اساس google-services.json مقدار می‌گیرد
         buildConfigField("Boolean", "IS_BETA", "$isBetaBuild") // V298
         resValue("string", "app_label", if (isBetaBuild) "آزمون (آزمایشی)" else "آزمون آنلاین") // V298

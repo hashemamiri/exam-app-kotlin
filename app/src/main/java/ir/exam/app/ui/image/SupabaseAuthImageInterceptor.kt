@@ -48,9 +48,7 @@ class SupabaseAuthImageInterceptor : Interceptor {
         return chain.proceed(authorized)
     }
 
-    private fun isOwnStorageUrl(value: String): Boolean {
-        val base = BuildConfig.SUPABASE_URL.trim().trimEnd('/')
-        if (base.isBlank()) return false
-        return value.startsWith("$base/storage/v1/object/")
-    }
+    private fun isOwnStorageUrl(value: String): Boolean =
+        // V335.20 — هم نشانی مستقیم پروژه و هم مسیر جایگزین (پل) «همین پروژه» حساب می‌شوند.
+        ir.exam.app.core.network.SupabaseRouter.isOwnStorageUrl(value)
 }

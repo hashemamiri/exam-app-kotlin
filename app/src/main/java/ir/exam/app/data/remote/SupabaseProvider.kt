@@ -8,14 +8,27 @@ import io.github.jan.supabase.postgrest.Postgrest
 import io.github.jan.supabase.storage.Storage
 import io.ktor.client.engine.okhttp.OkHttp
 import ir.exam.app.BuildConfig
+import ir.exam.app.core.network.SupabaseRouter
 
-/** کلاینت مرکزی Supabase؛ Auth، Postgrest و Storage باید همگی نصب شوند. */
+/**
+ * کلاینت مرکزی Supabase؛ Auth، Postgrest و Storage باید همگی نصب شوند.
+ *
+ * V335.20 — نشانی کلاینت از `SupabaseRouter` می‌آید: اگر دسترسی مستقیم به دامنهٔ پروژه در شبکه‌ای
+ * (مثل دادهٔ همراه اول) بسته باشد، برنامه از «مسیر جایگزین» روی دامنهٔ خودمان وصل می‌شود. با تغییر
+ * شبکه یا تغییر مسیر، `reset()` صدا زده می‌شود و کلاینت با نشانی تازه دوباره ساخته می‌شود.
+ */
 object SupabaseProvider {
     @Volatile
     private var appContext: android.content.Context? = null
 
     @Volatile
     private var testOverride: SupabaseClient? = null
+
+    /** V335.20 — کلاینت ساخته‌شده برای نشانی فعلی (با تغییر مسیر پاک می‌شود). */
+    @Volatile
+    private var cachedClient: SupabaseClient? = null
+
+    private val buildLock = Any()
 
     internal fun overrideForTesting(client: SupabaseClient?) {
         testOverride = client
@@ -30,12 +43,18 @@ object SupabaseProvider {
         appContext = context.applicationContext
     }
 
-    private val defaultClient: SupabaseClient by lazy {
+    /** V335.20 — دور انداختن کلاینت فعلی تا با مسیر تازهٔ شبکه دوباره ساخته شود. */
+    fun reset() {
+        synchronized(buildLock) { cachedClient = null }
+    }
+
+    private fun buildClient(): SupabaseClient {
         require(BuildConfig.SUPABASE_URL.isNotBlank()) { "SUPABASE_URL در تنظیمات build وارد نشده است" }
         require(BuildConfig.SUPABASE_ANON_KEY.isNotBlank()) { "SUPABASE_ANON_KEY در تنظیمات build وارد نشده است" }
+        val baseUrl = SupabaseRouter.currentBase().ifBlank { BuildConfig.SUPABASE_URL.trim().trimEnd('/') }
 
-        createSupabaseClient(
-            supabaseUrl = BuildConfig.SUPABASE_URL,
+        return createSupabaseClient(
+            supabaseUrl = baseUrl,
             supabaseKey = BuildConfig.SUPABASE_ANON_KEY
         ) {
             useHTTPS = !BuildConfig.SUPABASE_URL.startsWith("http://", ignoreCase = true)
@@ -57,5 +76,7 @@ object SupabaseProvider {
     }
 
     val client: SupabaseClient
-        get() = testOverride ?: defaultClient
+        get() = testOverride ?: cachedClient ?: synchronized(buildLock) {
+            cachedClient ?: buildClient().also { cachedClient = it }
+        }
 }

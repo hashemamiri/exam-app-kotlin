@@ -15,6 +15,8 @@ class ExamApplication : Application(), ImageLoaderFactory {
     override fun onCreate() {
         super.onCreate()
         SupabaseProvider.attach(this)
+        // V335.20 — انتخاب مسیر سالم Supabase (پل روی دامنهٔ خودمان) و پایش تغییر شبکه
+        ir.exam.app.core.network.SupabaseRouter.bootstrap(this)
         ir.exam.app.core.cache.ExamListCache.attach(this) // V213 — فهرست آزمون‌ها روی دیسک
         // V321 — عکس فوری کارنامه/آمار برای باز شدن آفلاین (فقط عنوان/نام/درصد، بدون سؤال و پاسخ)
         ir.exam.app.core.cache.ReportsSnapshot.attachDir(java.io.File(filesDir, "list_cache"))

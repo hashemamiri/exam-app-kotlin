@@ -32,11 +32,13 @@ object RemoteMediaBytes {
         val dir = File(context.cacheDir, CACHE_DIR).apply { mkdirs() }
         val cached = File(dir, url.hashCode().toUInt().toString(16) + ".bin")
         if (cached.isFile && cached.length() > 0) return cached.readBytes()
-        val conn = URL(url).openConnection() as HttpURLConnection
+        // V335.20 — اگر دامنهٔ مستقیم در این شبکه بسته باشد، همان رسانه از مسیر جایگزین خوانده می‌شود.
+        val target = ir.exam.app.core.network.SupabaseRouter.rewrite(url)
+        val conn = URL(target).openConnection() as HttpURLConnection
         conn.connectTimeout = 15_000
         conn.readTimeout = 30_000
         conn.instanceFollowRedirects = true
-        authHeaders(url).forEach { (k, v) -> conn.setRequestProperty(k, v) }
+        authHeaders(target).forEach { (k, v) -> conn.setRequestProperty(k, v) }
         try {
             val code = conn.responseCode
             check(code in 200..299) { "دانلود رسانه ناموفق بود (HTTP $code)" }
@@ -56,8 +58,8 @@ object RemoteMediaBytes {
 
     /** نشانی Storage همین پروژه → هدر نشست (باکت خصوصی)؛ بقیه بدون هدر. */
     internal fun authHeaders(url: String): Map<String, String> {
-        val base = BuildConfig.SUPABASE_URL.trim().trimEnd('/')
-        if (base.isBlank() || !url.startsWith("$base/storage/v1/object/")) return emptyMap()
+        // V335.20 — نشانی مستقیم و مسیر جایگزین هر دو «Storage همین پروژه» شمرده می‌شوند.
+        if (!ir.exam.app.core.network.SupabaseRouter.isOwnStorageUrl(url)) return emptyMap()
         val token = runCatching { SupabaseProvider.client.auth.currentSessionOrNull()?.accessToken }.getOrNull()
         if (token.isNullOrBlank()) return emptyMap()
         return mapOf("Authorization" to "Bearer $token", "apikey" to BuildConfig.SUPABASE_ANON_KEY)
