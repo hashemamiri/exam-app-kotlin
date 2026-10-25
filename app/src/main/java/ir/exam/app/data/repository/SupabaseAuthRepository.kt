@@ -141,11 +141,17 @@ class SupabaseAuthRepository(context: Context) : AuthRepository {
      * دوباره انتخاب و همان ورود یک بار دیگر تکرار می‌شود؛ خطاهای واقعی (رمز اشتباه، قفل) دست‌نخورده برمی‌گردند.
      */
     override suspend fun signInWithPassword(identifier: String, password: String): Result<AppUser> {
-        val first = runCatching { signInOnce(identifier, password) }
-        val error = first.exceptionOrNull() ?: return first
-        if (!ir.exam.app.core.network.NetworkFailureClassifier.isNetworkFailure(error)) return first
-        if (!ir.exam.app.core.network.SupabaseRouter.recover()) return first
-        return runCatching { signInOnce(identifier, password) }
+        var last: Result<AppUser> = runCatching { signInOnce(identifier, password) }
+        // V335.24 — تا سه تلاش: شبکهٔ موبایل (و کش منفی DNS زیردامنهٔ تازه) ممکن است یک یا دو بار
+        // خطای گذرا بدهد؛ هر تلاش، مسیر سالم را دوباره می‌سنجد و نام دامنه را از نو می‌پرسد.
+        repeat(2) { attempt ->
+            val error = last.exceptionOrNull() ?: return last
+            if (!ir.exam.app.core.network.NetworkFailureClassifier.isNetworkFailure(error)) return last
+            delay(600L * (attempt + 1))
+            if (!ir.exam.app.core.network.SupabaseRouter.recover()) return last
+            last = runCatching { signInOnce(identifier, password) }
+        }
+        return last
     }
 
     private suspend fun signInOnce(identifier: String, password: String): AppUser = runCatching {

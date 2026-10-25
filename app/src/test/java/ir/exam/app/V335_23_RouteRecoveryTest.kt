@@ -36,7 +36,7 @@ class V335_23_RouteRecoveryTest {
         )
         assertTrue(
             "سنجش موازی مسیرها باید باقی بماند",
-            "val probe = probe(base)" in router
+            "val outcome = probe(base)" in router
         )
         assertTrue(
             "انتخاب دستی کاربر نباید با انتخاب خودکار بازنویسی شود",
@@ -76,7 +76,7 @@ class V335_23_RouteRecoveryTest {
         )
         assertTrue(
             "خطای غیرشبکه‌ای نباید تلاش دوباره بسازد",
-            "if (!ir.exam.app.core.network.NetworkFailureClassifier.isNetworkFailure(error)) return first" in auth
+            "if (!ir.exam.app.core.network.NetworkFailureClassifier.isNetworkFailure(error)) return last" in auth
         )
         assertFalse(
             "بدنهٔ ورود نباید به‌صورت Result تودرتو باقی بماند",

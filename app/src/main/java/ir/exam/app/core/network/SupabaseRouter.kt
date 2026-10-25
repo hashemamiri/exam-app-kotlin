@@ -45,6 +45,19 @@ object SupabaseRouter {
     /** مسیر جایگزینِ پیش‌فرض؛ اگر Worker روی زیردامنهٔ دیگری ساخته شد، با SUPABASE_RELAY_URLS عوض می‌شود. */
     const val DEFAULT_RELAY = "https://sb.onlineexam.ir"
 
+    /**
+     * V335.24 — فهرست مسیرهای جایگزین پیش‌فرض.
+     *
+     * چرا چند مسیر: زیردامنهٔ تازه‌ساخته تا حدود ۳۰ دقیقه ممکن است در برخی مسیریاب‌های DNS
+     * «وجود ندارد» (منفی‌کش SOA) پاسخ بگیرد؛ تجربه نشان داد همین باعث می‌شد اپ روی دادهٔ همراه اول
+     * یک‌بار وصل شود و بار بعد «نام دامنه پیدا نشد» بدهد. با داشتن یک نام تازهٔ دیگر (که هرگز
+     * منفی‌کش نشده) برنامه در همان ثانیه راه سالم را پیدا می‌کند.
+     */
+    val DEFAULT_RELAYS: List<String> = listOf(
+        DEFAULT_RELAY,
+        "https://relay.onlineexam.ir"
+    )
+
     private const val PREFS = "supabase_router"
     private const val KEY_BASE = "active_base"
     private const val KEY_AT = "active_at_ms"
@@ -73,7 +86,7 @@ object SupabaseRouter {
             .map { it.trim().trimEnd('/') }
             .filter { it.startsWith("http://", true) || it.startsWith("https://", true) }
             .distinct()
-        return configured.ifEmpty { listOf(DEFAULT_RELAY) }
+        return configured.ifEmpty { DEFAULT_RELAYS }
     }
 
     /** ترتیب تلاش: مسیرهای جایگزین، سپس اتصال مستقیم. */
@@ -125,10 +138,10 @@ object SupabaseRouter {
                 coroutineScope {
                     candidates().map { base ->
                         async {
-                            val probe = probe(base)
-                            results += probe
-                            if (probe.ok && manualBase() == null && decided.compareAndSet(false, true)) {
-                                remember(probe.base)
+                            val outcome = probe(base)
+                            results += outcome
+                            if (outcome.ok && manualBase() == null && decided.compareAndSet(false, true)) {
+                                remember(outcome.base)
                             }
                         }
                     }.awaitAll()
@@ -182,7 +195,9 @@ object SupabaseRouter {
     }
 
     /** یک درخواست سبک به `/auth/v1/health` (بدون توکن کاربر) و اندازه‌گیری زمان. */
-    fun probe(base: String, timeoutMs: Int = 6_000): Probe {
+    fun probe(base: String, timeoutMs: Int = 6_000): Probe = probe(base, timeoutMs, 0)
+
+    private fun probe(base: String, timeoutMs: Int, attempt: Int): Probe {
         val started = System.currentTimeMillis()
         var conn: HttpURLConnection? = null
         return try {
@@ -199,6 +214,11 @@ object SupabaseRouter {
             val ms = System.currentTimeMillis() - started
             Probe(base, code in 200..299, ms, if (code in 200..299) "سالم" else "پاسخ سرور: $code")
         } catch (e: Throwable) {
+            // V335.24 — خطای گذرای «نام دامنه پیدا نشد» یک‌بار دیگر (پس از ۲۵۰ میلی‌ثانیه) آزمایش می‌شود.
+            if (e is UnknownHostException && attempt < 1) {
+                runCatching { Thread.sleep(250) }
+                return probe(base, timeoutMs, attempt + 1)
+            }
             Probe(base, false, System.currentTimeMillis() - started, describe(e))
         } finally {
             runCatching { conn?.disconnect() }
