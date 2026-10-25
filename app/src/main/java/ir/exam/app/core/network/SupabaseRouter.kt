@@ -55,7 +55,10 @@ object SupabaseRouter {
      */
     val DEFAULT_RELAYS: List<String> = listOf(
         DEFAULT_RELAY,
-        "https://relay.onlineexam.ir"
+        "https://relay.onlineexam.ir",
+        // V335.26 — مسیر روی سرور خودمان با رکورد A ساده (بدون Cloudflare)؛ چون شبکهٔ همراه اول
+        // IPهای پروکسی Cloudflare را باز نمی‌کند و هر دو نام بالا از همان IPها سرو می‌شوند.
+        "https://sb2.onlineexam.ir"
     )
 
     private const val PREFS = "supabase_router"
@@ -259,7 +262,10 @@ object SupabaseRouter {
     /** گزارش یک‌خطی برای دکمهٔ «کپی گزارش» در صفحهٔ تست اتصال. */
     fun report(): String {
         val lines = mutableListOf<String>()
+        // V335.26 — نسخهٔ اپ و زمان در گزارش، برای تشخیص اینکه گزارش از کدام ساخت آمده است.
+        lines += "نسخهٔ اپ: " + runCatching { BuildConfig.VERSION_NAME }.getOrDefault("?")
         lines += "مسیر فعال: ${currentBase()}"
+        lines += "فهرست مسیرها: " + candidates().joinToString(" , ")
         lines += "نوع انتخاب: " + (manualBase()?.let { "دستی" } ?: "خودکار")
         lastProbe.forEach { p ->
             val kind = if (p.base.equals(directBase, true)) "مستقیم" else "جایگزین"
