@@ -1,5 +1,8 @@
 package ir.exam.app.ui.profile
 
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -23,8 +26,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalClipboardManager
-import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import ir.exam.app.core.network.SupabaseRouter
 import kotlinx.coroutines.Dispatchers
@@ -38,7 +40,8 @@ import kotlinx.coroutines.withContext
  */
 @Composable
 internal fun NetworkDiagnosticsCard() {
-    val clipboard = LocalClipboardManager.current
+    // V335.21 — به‌جای API منسوخِ کلیپ‌بورد در Compose، از ClipboardManager خودِ اندروید استفاده می‌شود.
+    val clipboard = LocalContext.current.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
     val scope = rememberCoroutineScope()
     var testing by remember { mutableStateOf(false) }
     var probes by remember { mutableStateOf(SupabaseRouter.lastProbe) }
@@ -84,7 +87,10 @@ internal fun NetworkDiagnosticsCard() {
                 enabled = manual != null
             ) { Text("انتخاب خودکار") }
             TextButton(
-                onClick = { clipboard.setText(AnnotatedString(SupabaseRouter.report())) },
+                onClick = {
+                    clipboard?.setPrimaryClip(ClipData.newPlainText("گزارش اتصال به سرور", SupabaseRouter.report()))
+                    message = "گزارش در حافظه کپی شد."
+                },
                 enabled = probes.isNotEmpty()
             ) { Text("کپی گزارش") }
         }

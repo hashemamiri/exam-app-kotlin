@@ -59,7 +59,10 @@ object RemoteMediaBytes {
     /** نشانی Storage همین پروژه → هدر نشست (باکت خصوصی)؛ بقیه بدون هدر. */
     internal fun authHeaders(url: String): Map<String, String> {
         // V335.20 — نشانی مستقیم و مسیر جایگزین هر دو «Storage همین پروژه» شمرده می‌شوند.
-        if (!ir.exam.app.core.network.SupabaseRouter.isOwnStorageUrl(url)) return emptyMap()
+        val base = ir.exam.app.core.network.SupabaseRouter.directBase.trimEnd('/')
+        val ownStorage = url.startsWith("$base/storage/v1/object/") ||
+            ir.exam.app.core.network.SupabaseRouter.isOwnStorageUrl(url)
+        if (!ownStorage) return emptyMap()
         val token = runCatching { SupabaseProvider.client.auth.currentSessionOrNull()?.accessToken }.getOrNull()
         if (token.isNullOrBlank()) return emptyMap()
         return mapOf("Authorization" to "Bearer $token", "apikey" to BuildConfig.SUPABASE_ANON_KEY)
