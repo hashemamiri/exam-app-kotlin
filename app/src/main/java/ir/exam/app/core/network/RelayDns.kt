@@ -25,7 +25,10 @@ object RelayDns : Dns {
     val PINNED: Map<String, List<String>> = mapOf(
         "sb.onlineexam.ir" to listOf("104.21.72.122", "172.67.184.28"),
         "relay.onlineexam.ir" to listOf("104.21.72.122", "172.67.184.28"),
-        "eazwuyrymsvdkwckdpco.supabase.co" to listOf("104.18.38.10", "172.64.149.246")
+        "eazwuyrymsvdkwckdpco.supabase.co" to listOf("104.18.38.10", "172.64.149.246"),
+        // V335.28 — لبهٔ میزبان پل (بدون Cloudflare). اگر روزی نشانی عوض شود، پاسخ سیستم هم در
+        // انتهای فهرست می‌آید و اتصال از دست نمی‌رود.
+        "exam-relay-onlineexam.vercel.app" to listOf("216.198.79.195", "64.29.17.195")
     )
 
     override fun lookup(hostname: String): List<InetAddress> {
