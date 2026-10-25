@@ -1,12 +1,10 @@
 # هندآف جامع مهاجرت سامانه آزمون از WebView به Native Kotlin
 
-**آخرین به‌روزرسانی:** ۲۰۲۶-۱۰-۲۵ — بستهٔ V335.29 (**اپ 1.03.11** — پل اتصال روی Netlify برای عبور از قطعی همراه اول، فایل نصاب خودکار: `/home/user/apply_v335_3.py`، مقصد تأییدشده: **هر دو شاخهٔ `main` و `staging`**، بدون نیاز به اسکریپت SQL جدید):
-  - **شواهد اندازه‌گیری‌شده روی دادهٔ همراه اول (WSL کاربر):** `curl -4` به `https://eazwuyrymsvdkwckdpco.supabase.co/rest/v1/` با HTTP/2 بعد از ۲۰ ثانیه `000` (تایم‌اوت) و با HTTP/1.1 بعد از ۱۵ ثانیه «پاسخ خالی از سرور»؛ `curl -6` حتی نام دامنه را پیدا نکرد. در همان اجرا `onlineexam.ir` (`200 h2`, ۰٫۹s)، `vercel.com` (`200`, ۱٫۶s)، `www.netlify.com` (`200`, ۱٫۲s)، `render.com` (`200`) و `api.github.com` (`200`) سالم بودند. نتیجه: **TCP 443 به IPهای Cloudflare از این شبکه بسته است**؛ مرورگر فقط به‌خاطر QUIC/UDP کار می‌کند.
-  - **پل Netlify (انتخاب کاربر):** `relay/netlify/functions/relay.js` (تابع بدون هیچ کلید/رمز)، `relay/netlify/netlify.toml` (بازنویسی همهٔ مسیرها با `force = true` به تابع)، `relay/netlify/public/index.html` و `relay/netlify/README_FA.md`. تابع فقط `/rest/v1`, `/auth/v1`, `/storage/v1`, `/functions/v1`, `/realtime/v1` را عبور می‌دهد، `set-cookie` را نمی‌فرستد، پاسخ دودویی را base64 برمی‌گرداند و `/api/health` دارد.
-  - **آزمون پل با هارنس محلی Node:** `health=200`، `auth/v1/health=401` و `rest/v1=401` (یعنی پروکسی سالم و کلید قلابی رد شد)، `POST` با بدنه عبور کرد، مسیر نامجاز `404`، `OPTIONS=204`.
-  - **`SupabaseRouter`:** ثابت تازهٔ `DEFAULT_RELAY_NETLIFY = "https://exam-relay-onlineexam.netlify.app"` و قرار گرفتن آن به‌عنوان **نخستین** گزینه؛ پل Vercel (`DEFAULT_RELAY_EDGE`) به‌عنوان گزینهٔ دوم حفظ شد؛ سپس `sb`, `relay`, `sb2` و اتصال مستقیم. انتخاب همچنان «نخستین پاسخ سالم برنده است».
-  - **تست نگهبان `V335_29_NetlifyRelayRouteTest.kt`** (۵ تست: ترتیب فهرست، ماندن پل Vercel، محدودهٔ عبور و پاسخ دودویی تابع، تنظیمات بازنویسی Netlify، نبود کلید)، ارتقای نسخه به `1.03.11` و `python3 scripts/preflight.py` سبز.
-  - **کار باقی‌مانده:** ساخت سایت Netlify با نام `exam-relay-onlineexam` (ریشه: `relay/netlify`)، سپس نصب ۱٫۰۳٫۱۱ و سنجش از گوشی. هم‌ترازی `TeacherExamFlowUiTest` و `FullVisualJourneyUiTest` با چیدمان سازندهٔ V334 («گام ۴») پس از این رفع اتصال انجام می‌شود.
+**آخرین به‌روزرسانی:** ۲۰۲۶-۱۰-۲۵ — بستهٔ V335.30 (**اپ 1.03.12** — اصلاح تست نگهبان مسیرها و سبز شدن ساخت اندروید، فایل نصاب خودکار: `/home/user/apply_v335_4.py`، مقصد تأییدشده: **هر دو شاخهٔ `main` و `staging`**، بدون نیاز به اسکریپت SQL جدید):
+  - **شاهد زنده از پل Netlify:** `https://exam-relay-onlineexam.netlify.app/api/health` → `200` با `{"ok":true,"upstream":"https://eazwuyrymsvdkwckdpco.supabase.co"}` و `/auth/v1/health` → `401` از خود Supabase (یعنی درخواست واقعاً به Supabase می‌رسد). پیش از «Make public» همهٔ مسیرها صفحهٔ Login Redirect با کد `401` برمی‌گرداندند.
+  - **علت قرمز شدن CI نسخهٔ ۱٫۰۳٫۱۱:** تنها یک تست، `V335_29_NetlifyRelayRouteTest.vercel relay stays as a secondary option`؛ در آن، پایان فهرست `DEFAULT_RELAYS` با `router.indexOf(")", listStart)` پیدا می‌شد و به پرانتز داخل کامنت فارسی «(بدون Cloudflare)» می‌خورد؛ در نتیجه متن بریده می‌شد و `DEFAULT_RELAY_EDGE` در آن نبود.
+  - **اصلاح:** پایان فهرست با `router.indexOf("\n    )", listStart)` و بازگشت امن به انتهای فایل اگر پیدا نشد؛ هر ۵ تست همان فایل با شبیه‌سازی منطق کاتلین روی کد فعلی سبز شد (۱۹ شرط).
+  - **بدون تغییر در کد برنامه:** این نسخه فقط تست + نسخه (`1.03.12`) است تا CI فایل نصبی دارای پل Netlify را بسازد. `python3 scripts/preflight.py` سبز.
 
 ---
 

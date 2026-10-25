@@ -50,7 +50,11 @@ class V335_29_NetlifyRelayRouteTest {
             "const val DEFAULT_RELAY_EDGE = \"https://exam-relay-onlineexam.vercel.app/api\"" in router
         )
         val listStart = router.indexOf("val DEFAULT_RELAYS: List<String> = listOf(")
-        val body = router.substring(listStart, router.indexOf(")", listStart))
+        assertTrue("فهرست مسیرها پیدا نشد", listStart >= 0)
+        // پایان فهرست با الگوی خطِ بستنِ پرانتز پیدا می‌شود؛ جست‌وجوی سادهٔ «)» به پرانتزهای داخل
+        // کامنت‌های فارسی («(بدون Cloudflare)») می‌خورد و متن را زودتر از موعد می‌برد.
+        val listEnd = router.indexOf("\n    )", listStart)
+        val body = router.substring(listStart, if (listEnd > listStart) listEnd else router.length)
         assertTrue("پل Vercel در فهرست بماند", "DEFAULT_RELAY_EDGE" in body)
         assertTrue("مسیر قدیمی sb هم بماند", "DEFAULT_RELAY," in body)
     }
