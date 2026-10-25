@@ -40,7 +40,7 @@ class V335_23_RouteRecoveryTest {
         )
         assertTrue(
             "انتخاب دستی کاربر نباید با انتخاب خودکار بازنویسی شود",
-            "probe.ok && manualBase() == null" in router
+            "manualBase() == null && decided.compareAndSet(false, true)" in router
         )
     }
 
