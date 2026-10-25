@@ -5,8 +5,6 @@ import io.github.jan.supabase.auth.auth
 import ir.exam.app.BuildConfig
 import ir.exam.app.data.remote.SupabaseProvider
 import java.io.File
-import java.net.HttpURLConnection
-import java.net.URL
 
 /**
  * V160 — خواندن بایت‌های یک رسانهٔ راه‌دور (تصویر/صوت سؤال) برای ویرایش دوباره.
@@ -34,23 +32,24 @@ object RemoteMediaBytes {
         if (cached.isFile && cached.length() > 0) return cached.readBytes()
         // V335.20 — اگر دامنهٔ مستقیم در این شبکه بسته باشد، همان رسانه از مسیر جایگزین خوانده می‌شود.
         val target = ir.exam.app.core.network.SupabaseRouter.rewrite(url)
-        val conn = URL(target).openConnection() as HttpURLConnection
-        conn.connectTimeout = 15_000
-        conn.readTimeout = 30_000
-        conn.instanceFollowRedirects = true
-        authHeaders(target).forEach { (k, v) -> conn.setRequestProperty(k, v) }
-        try {
-            val code = conn.responseCode
-            check(code in 200..299) { "دانلود رسانه ناموفق بود (HTTP $code)" }
-            check(conn.contentLengthLong <= MAX_BYTES) { "حجم فایل رسانه بیش از حد مجاز است." }
-            val bytes = conn.inputStream.use { it.readBytes() }
+        // V335.27 — دانلود با همان کلاینت مشترک (نشانی تثبیت‌شده) تا تصویر/صوت هم در شبکه‌ای که
+        // نام دامنه را پیدا نمی‌کند از راه نشانی درست همان سرور خوانده شود.
+        val builder = okhttp3.Request.Builder().url(target).get()
+        authHeaders(target).forEach { (k, v) -> builder.header(k, v) }
+        val client = ir.exam.app.core.network.RelayHttp.client.newBuilder()
+            .connectTimeout(15, java.util.concurrent.TimeUnit.SECONDS)
+            .readTimeout(30, java.util.concurrent.TimeUnit.SECONDS)
+            .build()
+        client.newCall(builder.build()).execute().use { response ->
+            check(response.isSuccessful) { "دانلود رسانه ناموفق بود (HTTP ${response.code})" }
+            val body = response.body ?: error("پاسخ سرور خالی بود.")
+            check(body.contentLength() <= MAX_BYTES) { "حجم فایل رسانه بیش از حد مجاز است." }
+            val bytes = body.bytes()
             check(bytes.isNotEmpty()) { "پاسخ سرور خالی بود." }
             val tmp = File(dir, cached.name + ".part")
             tmp.writeBytes(bytes)
             tmp.renameTo(cached)
             return bytes
-        } finally {
-            conn.disconnect()
         }
     }
 

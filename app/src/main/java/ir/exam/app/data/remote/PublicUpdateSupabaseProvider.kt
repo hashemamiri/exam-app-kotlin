@@ -29,7 +29,9 @@ object PublicUpdateSupabaseProvider {
             supabaseKey = BuildConfig.SUPABASE_ANON_KEY
         ) {
             useHTTPS = !BuildConfig.SUPABASE_URL.startsWith("http://", ignoreCase = true)
-            httpEngine = OkHttp.create()
+            // V335.27 — کلاینت OkHttp مشترک با نشانی تثبیت‌شده (RelayDns) تا در شبکه‌ای که DNS
+            // نام دامنه را پیدا نمی‌کند، اتصال از راه نشانی درست همان سرور انجام شود.
+            httpEngine = OkHttp.create { preconfigured = ir.exam.app.core.network.RelayHttp.client }
             install(Postgrest)
         }
     }

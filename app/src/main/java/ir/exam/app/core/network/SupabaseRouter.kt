@@ -17,9 +17,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.IOException
 import java.net.ConnectException
-import java.net.HttpURLConnection
 import java.net.SocketTimeoutException
-import java.net.URL
 import java.net.UnknownHostException
 import javax.net.ssl.SSLException
 
@@ -200,22 +198,24 @@ object SupabaseRouter {
     /** یک درخواست سبک به `/auth/v1/health` (بدون توکن کاربر) و اندازه‌گیری زمان. */
     fun probe(base: String, timeoutMs: Int = 6_000): Probe = probe(base, timeoutMs, 0)
 
+    /**
+     * V335.27 — سنجش با همان کلاینتی انجام می‌شود که ورود واقعی از آن استفاده می‌کند
+     * (`RelayHttp` + `RelayDns`)، تا نتیجهٔ «تست اتصال» با تجربهٔ واقعی یکی باشد.
+     */
     private fun probe(base: String, timeoutMs: Int, attempt: Int): Probe {
         val started = System.currentTimeMillis()
-        var conn: HttpURLConnection? = null
         return try {
-            conn = (URL("${base.trimEnd('/')}/auth/v1/health").openConnection() as HttpURLConnection).apply {
-                requestMethod = "GET"
-                connectTimeout = timeoutMs
-                readTimeout = timeoutMs
-                instanceFollowRedirects = true
-                setRequestProperty("apikey", BuildConfig.SUPABASE_ANON_KEY)
-                setRequestProperty("Authorization", "Bearer ${BuildConfig.SUPABASE_ANON_KEY}")
-                setRequestProperty("Accept", "application/json")
+            val request = okhttp3.Request.Builder()
+                .url(base.trimEnd('/') + "/auth/v1/health")
+                .header("apikey", BuildConfig.SUPABASE_ANON_KEY)
+                .header("Authorization", "Bearer ${BuildConfig.SUPABASE_ANON_KEY}")
+                .header("Accept", "application/json")
+                .get()
+                .build()
+            RelayHttp.withTimeout(timeoutMs.toLong()).newCall(request).execute().use { response ->
+                val ms = System.currentTimeMillis() - started
+                Probe(base, response.isSuccessful, ms, if (response.isSuccessful) "سالم" else "پاسخ سرور: ${response.code}")
             }
-            val code = conn.responseCode
-            val ms = System.currentTimeMillis() - started
-            Probe(base, code in 200..299, ms, if (code in 200..299) "سالم" else "پاسخ سرور: $code")
         } catch (e: Throwable) {
             // V335.24 — خطای گذرای «نام دامنه پیدا نشد» یک‌بار دیگر (پس از ۲۵۰ میلی‌ثانیه) آزمایش می‌شود.
             if (e is UnknownHostException && attempt < 1) {
@@ -223,8 +223,6 @@ object SupabaseRouter {
                 return probe(base, timeoutMs, attempt + 1)
             }
             Probe(base, false, System.currentTimeMillis() - started, describe(e))
-        } finally {
-            runCatching { conn?.disconnect() }
         }
     }
 
@@ -232,6 +230,7 @@ object SupabaseRouter {
     private fun describe(error: Throwable): String = when (error) {
         is UnknownHostException -> "نام دامنه پیدا نشد (DNS)"
         is SocketTimeoutException -> "پاسخی نداد (قطع/کندی شبکه)"
+        is java.io.InterruptedIOException -> "پاسخی نداد (قطع/کندی شبکه)"
         is SSLException -> "خطای اتصال امن (TLS)"
         is ConnectException -> "اتصال برقرار نشد"
         is IOException -> "خطای شبکه"
@@ -266,6 +265,7 @@ object SupabaseRouter {
         lines += "نسخهٔ اپ: " + runCatching { BuildConfig.VERSION_NAME }.getOrDefault("?")
         lines += "مسیر فعال: ${currentBase()}"
         lines += "فهرست مسیرها: " + candidates().joinToString(" , ")
+        lines += "نشانی تثبیت‌شده: " + RelayDns.PINNED.keys.joinToString(" , ")
         lines += "نوع انتخاب: " + (manualBase()?.let { "دستی" } ?: "خودکار")
         lastProbe.forEach { p ->
             val kind = if (p.base.equals(directBase, true)) "مستقیم" else "جایگزین"

@@ -186,6 +186,8 @@ dependencies {
     implementation(platform("com.google.firebase:firebase-bom:33.7.0")) // V232
     implementation("com.google.firebase:firebase-messaging") // V232 — اعلان‌ها
     implementation("io.ktor:ktor-client-okhttp:3.0.3")
+    // V335.27 — وابستگی صریح OkHttp برای حل نام با نشانی تثبیت‌شده (RelayDns)
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.3")
     testImplementation("junit:junit:4.13.2")
     // V276 — تست UI خودکار (Compose) روی شبیه‌ساز
