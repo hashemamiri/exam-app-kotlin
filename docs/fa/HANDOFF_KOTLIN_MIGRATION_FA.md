@@ -1,6 +1,14 @@
 # هندآف جامع مهاجرت سامانه آزمون از WebView به Native Kotlin
 
-**آخرین به‌روزرسانی:** ۲۰۲۶-۱۰-۲۵ — بستهٔ V335.21 (**اپ 1.03.03** — رفع خطای تست‌های ساخت اندروید و سبز شدن دوبارهٔ CI پس از نسخهٔ مسیر جایگزین، فایل نصاب خودکار: `/home/user/apply_v335_21.py`، مقصد تأییدشده: **هر دو شاخهٔ `main` و `staging`**، بدون نیاز به اسکریپت SQL جدید):
+**آخرین به‌روزرسانی:** ۲۰۲۶-۱۰-۲۵ — بستهٔ V335.22 (**اپ 1.03.04** — اصلاح تنها تست قرمز باقی‌مانده (نگهبان تازهٔ V335.21) و سبز شدن کامل ساخت اندروید، فایل نصاب خودکار: `/home/user/apply_v335_22.py`، مقصد تأییدشده: **هر دو شاخهٔ `main` و `staging`**، بدون نیاز به اسکریپت SQL جدید):
+  - **ریشهٔ خطای CI در نسخهٔ گذشته:** از ۱٬۲۴۵ تست، تنها `V335_21_NetworkRelayGuardTest > image interceptor keeps the storage guard before sending the token` قرمز شد؛ دلیل، فرض نادرستِ تست بود: تابع `isOwnStorageUrl` در انتهای کلاس میان‌گیر تعریف شده و متن آن پس از خط خواندن نشست می‌آید، در حالی که ترتیب اجرا در `intercept` مهم است.
+  - **اصلاح تست نگهبان (`V335_21_NetworkRelayGuardTest.kt`):** مقایسهٔ جایگاه متنی به فراخوانی واقعی `!isOwnStorageUrl(target)) return chain.proceed(request)` (خط ۳۱) در برابر `currentSessionOrNull()?.accessToken` (خط ۳۸) تغییر کرد؛ پین وجود `value.contains("/storage/v1/object/")` هم جداگانه بررسی می‌شود.
+  - **ممیزی محلی پیش از انتشار:** هر چهار تست نگهبان و ۱۹ پین اصلی (مسیر جایگزین، پیشوند Storage، هدر نشست، ممیزی صفر-هشدار منسوخ روی ۶۳۷ فایل کاتلین) به‌صورت اسکریپتی روی سورس واقعی بازبینی و سبز شدند؛ `python3 scripts/preflight.py` هم PASS است.
+  - **ارتقای نسخه به `1.03.04`:** تا نسخهٔ اندروید بالاتر از ۱.۰۳.۰۳ باشد و نصب روی نسخهٔ قبل ممکن شود (versionCode = 1001030400).
+
+---
+
+## سابقهٔ بستهٔ V335.21 — ۲۰۲۶-۱۰-۲۵ (اپ 1.03.03 — رفع چهار تست قرمز CI پس از نسخهٔ مسیر جایگزین، فایل نصاب خودکار: `/home/user/apply_v335_21.py`، مقصد تأییدشده: **هر دو شاخهٔ `main` و `staging`**، بدون نیاز به اسکریپت SQL جدید):
   - **ریشهٔ خطای CI در نسخهٔ گذشته:** ساخت اندروید با ۴ تست قرمز متوقف شد؛ `V335_2` و `V335_3` (ممیزی صفر-هشدار منسوخ) به‌خاطر استفادهٔ `LocalClipboardManager` در کارت تازهٔ «تست اتصال به سرور»، `V160` به‌خاطر از دست رفتن پین `url.startsWith("$base/storage/v1/object/")` در `RemoteMediaBytes.authHeaders`، و `V75_8` به‌خاطر از دست رفتن پین `/storage/v1/object/` در `SupabaseAuthImageInterceptor.isOwnStorageUrl`.
   - **کپی گزارش با API رسمی اندروید:** در `ui/profile/NetworkDiagnostics.kt` جای `LocalClipboardManager`ِ منسوخ، `LocalContext.current.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager` به‌همراه `setPrimaryClip(ClipData.newPlainText("گزارش اتصال به سرور", SupabaseRouter.report()))` استفاده می‌شود؛ هشدار کامپایل نسخهٔ قبل هم از همین‌جا بود و پاک شد.
   - **حفظ نگهبان‌های قدیمی همراه منطق مسیر جایگزین:** در `RemoteMediaBytes.authHeaders` پیشوند `directBase/storage/v1/object/` دوباره صریح بررسی می‌شود و سپس `SupabaseRouter.isOwnStorageUrl(url)` هم مسیر جایگزین را «Storage همین پروژه» می‌شناسد؛ در `SupabaseAuthImageInterceptor` بررسی `value.contains("/storage/v1/object/")` پیش از خواندن نشست برگشت تا توکن هرگز به میزبان بیرونی نرود.

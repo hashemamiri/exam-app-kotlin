@@ -64,11 +64,16 @@ class V335_21_NetworkRelayGuardTest {
 
     @Test
     fun `image interceptor keeps the storage guard before sending the token`() {
-        val guardIndex = interceptor.indexOf("value.contains(\"/storage/v1/object/\")")
+        // بررسی مسیر Storage باید در خودِ تابع intercept و پیش از خواندن نشست انجام شود.
+        val callIndex = interceptor.indexOf("!isOwnStorageUrl(target)) return chain.proceed(request)")
         val tokenIndex = interceptor.indexOf("currentSessionOrNull()?.accessToken")
-        assertTrue("بررسی مسیر Storage باید در میان‌گیر وجود داشته باشد", guardIndex >= 0)
+        assertTrue("فراخوانی بررسی مسیر Storage باید در میان‌گیر باشد", callIndex >= 0)
         assertTrue("توکن باید از نشست خوانده شود", tokenIndex >= 0)
-        assertTrue("بررسی مسیر Storage باید پیش از خواندن توکن باشد", guardIndex < tokenIndex)
+        assertTrue("بررسی مسیر Storage باید پیش از خواندن توکن باشد", callIndex < tokenIndex)
+        assertTrue(
+            "تابع بررسی مسیر باید مسیر Storage را بشناسد",
+            "value.contains(\"/storage/v1/object/\")" in interceptor
+        )
         assertTrue(
             "مسیر جایگزین هم باید Storage همین پروژه شمرده شود",
             "SupabaseRouter.isOwnStorageUrl(value)" in interceptor
