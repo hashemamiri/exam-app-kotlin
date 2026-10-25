@@ -44,7 +44,19 @@ object SupabaseRouter {
     const val DEFAULT_RELAY = "https://sb.onlineexam.ir"
 
     /**
-     * V335.28 — پل روی میزبانی Vercel.
+     * V335.29 — پل روی Netlify (گزینهٔ انتخاب‌شده).
+     *
+     * چرا Netlify و نه Cloudflare: اندازه‌گیری از دادهٔ همراه اول نشان داد TCP 443 به IPهای Cloudflare
+     * (دامنهٔ پروژهٔ Supabase و هر سه زیردامنهٔ خودمان) بسته است، در حالی که `netlify.com` از همان شبکه
+     * پاسخ `200` می‌دهد. این پل روی Netlify می‌نشیند و خودش (از دیتاسنتر) درخواست را به Supabase می‌رساند.
+     *
+     * نشانی پیش‌فرض عمداً ثابت است تا برای فعال شدن مسیر لازم نباشد کاربر کاری کند؛ اگر نام سایت عوض شد،
+     * با `SUPABASE_RELAY_URLS` در زمان ساخت جایگزین می‌شود.
+     */
+    const val DEFAULT_RELAY_NETLIFY = "https://exam-relay-onlineexam.netlify.app"
+
+    /**
+     * V335.28 — پل روی میزبانی Vercel (گزینهٔ پشتیبان؛ اگر روزی حساب Vercel هم فعال شد همان‌جا می‌نشیند).
      *
      * چرا: اندازه‌گیری روی دادهٔ همراه اول نشان داد اتصال TCP به IPهای Cloudflare (هم دامنهٔ پروژهٔ
      * Supabase و هم هر دو زیردامنهٔ خودمان) کاملاً بسته است — همان چیزی که هم `curl` و هم اپ
@@ -66,7 +78,10 @@ object SupabaseRouter {
      * منفی‌کش نشده) برنامه در همان ثانیه راه سالم را پیدا می‌کند.
      */
     val DEFAULT_RELAYS: List<String> = listOf(
-        // V335.28 — اول از همه: پل روی میزبانی‌ای که شبکهٔ همراه اول باز می‌گذارد (بدون Cloudflare).
+        // V335.29 — اول از همه: پل Netlify (بدون Cloudflare) که شبکهٔ همراه اول باز می‌گذارد.
+        DEFAULT_RELAY_NETLIFY,
+        // V335.28 — پل Vercel هم به‌عنوان گزینهٔ دوم می‌ماند تا اگر یکی از این دو میزبان روزی کند شد،
+        // مسیر دیگر در همان لحظه جواب دهد.
         DEFAULT_RELAY_EDGE,
         DEFAULT_RELAY,
         "https://relay.onlineexam.ir",

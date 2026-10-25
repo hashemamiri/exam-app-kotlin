@@ -1,0 +1,14 @@
+[build]
+  functions = "functions"
+  publish = "public"
+  command = ""
+
+[build.environment]
+  NODE_VERSION = "20"
+
+# همهٔ درخواست‌ها به تابع پل می‌روند؛ تابع خودش فقط مسیرهای مجاز Supabase را عبور می‌دهد.
+[[redirects]]
+  from = "/*"
+  to = "/.netlify/functions/relay"
+  status = 200
+  force = true
