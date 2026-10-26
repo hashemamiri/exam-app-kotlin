@@ -30,11 +30,26 @@ type VerifyResult = { ok: true; refId: string } | { ok: false; message: string; 
 
 const env = (name: string) => (Deno.env.get(name) || '').trim();
 
+/** V335.32b — تعمیر مقدار خراب‌شده در سکرت‌ها (چسباندن لینک از چت): [url](url) ، <url> ، گیومه، اسلش انتهایی.
+ *  اگر مقدار درست باشد هیچ تغییری نمی‌دهد. */
+function cleanUrl(name: string, raw: string): string {
+  const original = raw;
+  let v = (raw || '').replace(/[\s\u200c]+/g, '');
+  if (!v) return '';
+  const md = v.match(/\[?([^\[\]()]+)\]?\(([^()]+)\)/);
+  if (md) v = /^https?:\/\//i.test((md[1] || '').trim()) ? md[1].trim() : (md[2] || '').trim();
+  v = v.replace(/^[<"'\[]+/, '').replace(/[>"'\]]+$/, '').trim();
+  if (v && !/^https?:\/\//i.test(v)) v = 'https://' + v.replace(/^\/+/, '');
+  v = v.replace(/^http:\/\//i, 'https://').replace(/\/+$/, '');
+  if (v !== original.trim() && v) console.warn('[env] repaired', name, '->', v);
+  return v;
+}
+
 // V187 — پلِ IP ثابت (relay/pay_relay.py روی سرور ایرانی): شاپرک فقط از IPهای ثبت‌شده تراکنش می‌پذیرد و
 // Edge Functionها IP ثابت ندارند. اگر PAY_RELAY_URL تنظیم باشد، دو فراخوانی زرین‌پال از آن عبور می‌کند؛
 // وگرنه مثل قبل مستقیم (sandbox/idpay بدون تغییر).
 async function zarinpalPost(path: 'request' | 'verify', payload: unknown): Promise<Response> {
-  const relay = env('PAY_RELAY_URL').replace(/\/+$/, '');
+  const relay = cleanUrl('PAY_RELAY_URL', env('PAY_RELAY_URL'));
   const token = env('PAY_RELAY_TOKEN');
   const body = JSON.stringify(payload);
   if (relay && token) {
@@ -53,7 +68,7 @@ async function zarinpalPost(path: 'request' | 'verify', payload: unknown): Promi
 // V335.32 — زیبال: مسیر request/verify. اگر پل IP ثابت تنظیم شده باشد از /zibal/... رد می‌شود،
 // وگرنه مستقیم (که در دیتاسنترهای خارج از ایران جواب نمی‌دهد و کد 115 می‌گیرد).
 async function zibalPost(path: 'request' | 'verify', payload: unknown): Promise<Response> {
-  const relay = env('PAY_RELAY_URL').replace(/\/+$/, '');
+  const relay = cleanUrl('PAY_RELAY_URL', env('PAY_RELAY_URL'));
   const token = env('PAY_RELAY_TOKEN');
   const body = JSON.stringify(payload);
   if (relay && token) {
@@ -125,7 +140,7 @@ function callbackUrl(req: Request): string {
   // نکتهٔ مهم: هیچ کوئری‌ای به نشانی پایه اضافه نمی‌کنیم؛ درگاه‌ها پارامترهای خودشان را
   // با `?` می‌چسبانند و اگر ما هم `?action=verify` بگذاریم نشانی خراب می‌شود
   // (…?action=verify?trackId=…). بازگشت همیشه GET است و خودِ تابع هر GET را «تأیید» می‌داند.
-  const base = env('PAY_CALLBACK_BASE');
+  const base = cleanUrl('PAY_CALLBACK_BASE', env('PAY_CALLBACK_BASE'));
   if (base) return base;
   const requestUrl = new URL(req.url);
   return `${requestUrl.origin}${requestUrl.pathname}?action=verify`;
