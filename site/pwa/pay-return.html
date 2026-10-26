@@ -1,0 +1,32 @@
+<!doctype html>
+<!-- این فایل باید با site/pay-return.html یکسان بماند (تست V335_32 نسخهٔ site/ را می‌خواند؛ نسخهٔ منتشرشده زیر pwa/ است) -->
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>بازگشت از درگاه پرداخت</title>
+<style>
+  body{font-family:Tahoma,sans-serif;background:#101827;color:#fff;display:flex;align-items:center;
+       justify-content:center;min-height:100vh;margin:0;padding:20px}
+  .card{max-width:420px;background:#1f2937;border:1px solid #374151;border-radius:18px;padding:28px;text-align:center}
+  a{color:#93c5fd}
+</style>
+</head>
+<body>
+<main class="card">
+  <h2>در حال بازگشت به برنامه…</h2>
+  <p>اگر بیش از چند ثانیه طول کشید، <a id="manual" href="#">اینجا را بزنید</a>.</p>
+</main>
+<script>
+  // V335.32 — درگاه زیبال بازگشت را به دامنهٔ ثبت‌شده (onlineexam.ir) می‌فرستد؛ این صفحه
+  // همان پارامترها را دست‌نخورده به تابع wallet-payment در Supabase پاس می‌دهد.
+  (function () {
+    var base = 'https://eazwuyrymsvdkwckdpco.supabase.co/functions/v1/wallet-payment';
+    var search = window.location.search || '';
+    var target = base + (search ? search : '?action=verify');
+    document.getElementById('manual').setAttribute('href', target);
+    window.location.replace(target);
+  })();
+</script>
+</body>
+</html>
