@@ -81,6 +81,7 @@ class V335_32_IranRelayAndZibalTest {
         assertTrue("نشانی پایه بدون پارامتر اضافه برمی‌گردد", "if (base) return base;" in walletFn)
         assertTrue("صفحهٔ بازگشت موجود است", "wallet-payment" in returnPage)
         assertTrue("پارامترها دست‌نخورده پاس می‌شوند", "window.location.search" in returnPage)
-        assertTrue("انتقال فوری", "window.location.replace(target)" in returnPage)
+        assertTrue("درخواست حالت JSON", "format=json" in returnPage)
+        assertTrue("درخواست از تابع پرداخت", "/functions/v1/wallet-payment" in returnPage)
     }
 }

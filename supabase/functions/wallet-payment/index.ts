@@ -356,6 +356,16 @@ function paymentPage(ok: boolean, message: string, reference = ''): Response {
   });
 }
 
+
+/** V335.32e — صفحهٔ بازگشت خودمان نتیجه را به‌صورت JSON می‌خواهد (چون Supabase پاسخ HTML را
+ *  با text/plain برمی‌گرداند و مرورگر متن خام نشان می‌دهد). */
+function callbackResponder(wantsJson: boolean) {
+  return (ok: boolean, message: string, reference = '') =>
+    wantsJson
+      ? json({ ok, message, ref: reference }, ok ? 200 : 400)
+      : paymentPage(ok, message, reference);
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS });
   const url = new URL(req.url);
@@ -365,21 +375,23 @@ Deno.serve(async (req) => {
 
   // بازگشت بانک عمومی است، اما authority فقط با سفارش سرور و verify رسمی پذیرفته می‌شود.
   if (url.searchParams.get('action') === 'verify' || req.method === 'GET') {
+    const wantsJson = url.searchParams.get('format') === 'json';
+    const respond = callbackResponder(wantsJson);
     try {
       const params = await callbackParameters(req, url);
       const authority = callbackAuthority(params);
-      if (!authority || authority.length > 200) return paymentPage(false, 'اطلاعات بازگشت ناقص است.');
+      if (!authority || authority.length > 200) return respond(false, 'اطلاعات بازگشت ناقص است.');
       const { data: orderData, error: orderError } = await service
         .from('wallet_payment_orders').select('*').eq('authority', authority).maybeSingle();
-      if (orderError || !orderData) return paymentPage(false, 'سفارش پرداخت یافت نشد.');
+      if (orderError || !orderData) return respond(false, 'سفارش پرداخت یافت نشد.');
       const order = orderData as Order;
-      if (order.status === 'paid') return paymentPage(true, 'این پرداخت قبلاً با موفقیت ثبت شده است.', order.ref_id || '');
+      if (order.status === 'paid') return respond(true, 'این پرداخت قبلاً با موفقیت ثبت شده است.', order.ref_id || '');
       if (order.provider === 'sandbox' && !sandboxRequestAllowed(req)) {
-        return paymentPage(false, 'شارژ آزمایشی روی این سرور مجاز نیست.');
+        return respond(false, 'شارژ آزمایشی روی این سرور مجاز نیست.');
       }
       if (callbackCanceled(order.provider, params)) {
         await service.rpc('native_fail_wallet_payment_order', { p_order: order.id, p_status: 'canceled', p_code: 'user_canceled' });
-        return paymentPage(false, 'پرداخت لغو شد.');
+        return respond(false, 'پرداخت لغو شد.');
       }
 
       await service.from('wallet_payment_orders').update({ status: 'verifying' })
@@ -389,16 +401,16 @@ Deno.serve(async (req) => {
         // خطای verify ممکن است موقت باشد؛ سفارش باز می‌ماند تا callback دوباره قابل بررسی باشد.
         await service.from('wallet_payment_orders').update({ status: 'requested', error_code: verified.code })
           .eq('id', order.id).eq('status', 'verifying');
-        return paymentPage(false, verified.message);
+        return respond(false, verified.message);
       }
       const { data: credit, error: creditError } = await service.rpc('native_credit_wallet_payment', {
         p_order: order.id,
         p_ref: verified.refId,
       });
-      if (creditError || credit?.error) return paymentPage(false, 'پرداخت تأیید شد اما ثبت موجودی نیازمند بررسی پشتیبانی است.');
-      return paymentPage(true, 'مبلغ با موفقیت به کیف پول افزوده شد.', verified.refId);
+      if (creditError || credit?.error) return respond(false, 'پرداخت تأیید شد اما ثبت موجودی نیازمند بررسی پشتیبانی است.');
+      return respond(true, 'مبلغ با موفقیت به کیف پول افزوده شد.', verified.refId);
     } catch {
-      return paymentPage(false, 'بررسی پرداخت کامل نشد؛ دوباره از برنامه موجودی را تازه‌سازی کنید.');
+      return respond(false, 'بررسی پرداخت کامل نشد؛ دوباره از برنامه موجودی را تازه‌سازی کنید.');
     }
   }
 
