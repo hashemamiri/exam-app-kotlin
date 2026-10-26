@@ -121,8 +121,12 @@ function callbackUrl(req: Request): string {
   // V335.32 — زیبال می‌خواهد دامنهٔ callback با دامنهٔ ثبت‌شدهٔ درگاه یکی باشد؛ اگر
   // PAY_CALLBACK_BASE تنظیم شده باشد، بازگشت از سایت خودمان می‌آید و همان صفحه
   // پارامترها را به همین تابع می‌فرستد. در نبود آن، مثل قبل روی دامنهٔ Supabase می‌ماند.
+  //
+  // نکتهٔ مهم: هیچ کوئری‌ای به نشانی پایه اضافه نمی‌کنیم؛ درگاه‌ها پارامترهای خودشان را
+  // با `?` می‌چسبانند و اگر ما هم `?action=verify` بگذاریم نشانی خراب می‌شود
+  // (…?action=verify?trackId=…). بازگشت همیشه GET است و خودِ تابع هر GET را «تأیید» می‌داند.
   const base = env('PAY_CALLBACK_BASE');
-  if (base) return `${base}${base.includes('?') ? '&' : '?'}action=verify`;
+  if (base) return base;
   const requestUrl = new URL(req.url);
   return `${requestUrl.origin}${requestUrl.pathname}?action=verify`;
 }
@@ -165,7 +169,9 @@ async function requestGateway(provider: Provider, order: Order, callback: string
 
   if (provider === 'zibal') {
     const merchant = env('PAY_ZIBAL_MERCHANT');
-    if (!/^[A-Za-z0-9]{6,64}$/.test(merchant)) {
+    // خط تیره در کدهای واقعی دیده می‌شود، ولی جای‌نگهدارهایی مثل MERCHANT_CODE زیرخط دارند
+    // و باید همان‌جا با پیام روشن رد شوند (نه با خطای مبهم درگاه).
+    if (!/^[A-Za-z0-9-]{4,64}$/.test(merchant)) {
       return { ok: false, code: 'zibal_not_configured', message: 'مرچنت کد زیبال پیکربندی نشده است.' };
     }
     const response = await zibalPost('request', {

@@ -27,6 +27,7 @@ if new_tests:
 step('verify_native_final', ['python3', 'scripts/verify_native_final.py'])
 step('data_api_grants', ['python3', 'scripts/check_supabase_data_api_grants.py', '--quiet'])  # V324 — تغییر ۳۰ اکتبر Supabase
 step('kotlin_braces', ['python3', 'scripts/check_kotlin_braces.py'])  # V325 — آکولاد نامتوازن فقط در CI دیده می‌شد
+step('kotlin_escapes', ['python3', 'scripts/check_kotlin_escapes.py', 'app/src'])  # V335.32 — دنبالهٔ گریز نامجاز مثل \\{ فقط در CI دیده می‌شد
 before = hashlib.sha1(open('site/index.html', 'rb').read()).hexdigest()
 step('build_site', ['python3', 'site/build_site.py'])
 after = hashlib.sha1(open('site/index.html', 'rb').read()).hexdigest()
