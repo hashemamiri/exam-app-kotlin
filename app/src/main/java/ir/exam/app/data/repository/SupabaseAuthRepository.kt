@@ -148,7 +148,11 @@ class SupabaseAuthRepository(context: Context) : AuthRepository {
             val error = last.exceptionOrNull() ?: return last
             if (!ir.exam.app.core.network.NetworkFailureClassifier.isNetworkFailure(error)) return last
             delay(600L * (attempt + 1))
-            if (!ir.exam.app.core.network.SupabaseRouter.recover()) return last
+            // V335.31 — اگر سنجش مسیر سالمی پیدا نکرد، باز هم مسیر بعدی را فعال و دوباره تلاش می‌کنیم؛
+            // گاهی شبکه پاسخ سنجش را می‌بندد ولی درخواست ورود روی مسیر دیگر جواب می‌دهد.
+            if (!ir.exam.app.core.network.SupabaseRouter.recover()) {
+                ir.exam.app.core.network.SupabaseRouter.rotateNext()
+            }
             last = runCatching { signInOnce(identifier, password) }
         }
         return last

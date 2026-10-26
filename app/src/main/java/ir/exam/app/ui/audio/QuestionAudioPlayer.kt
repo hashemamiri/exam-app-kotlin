@@ -177,22 +177,21 @@ private suspend fun cachedAudioFile(context: android.content.Context, url: Strin
             reason = e.message.orEmpty().take(120)
         }
     }
-    // ۲) HTTP مستقیم با هدرهای نشست
+    // ۲) HTTP با نشانی مسیر فعال (پل) و هدرهای نشست
+    // V335.31 — پیش‌تر این مسیر به نشانی مستقیم Supabase می‌رفت و در شبکهٔ مسدود (همراه اول) شکست می‌خورد.
     try {
-        val conn = java.net.URL(url).openConnection() as java.net.HttpURLConnection
-        conn.connectTimeout = 15_000; conn.readTimeout = 30_000
-        conn.instanceFollowRedirects = true
-        authHeaders(url).forEach { (k, v) -> conn.setRequestProperty(k, v) }
-        try {
-            val code = conn.responseCode
-            if (code in 200..299) {
-                conn.inputStream.use { input -> tmp.outputStream().use { input.copyTo(it) } }
+        val target = ir.exam.app.core.network.SupabaseRouter.rewrite(url)
+        val builder = okhttp3.Request.Builder().url(target).get()
+        authHeaders(target).forEach { (k, v) -> builder.header(k, v) }
+        ir.exam.app.core.network.RelayHttp.client.newCall(builder.build()).execute().use { response ->
+            if (response.isSuccessful) {
+                response.body?.byteStream()?.use { input -> tmp.outputStream().use { input.copyTo(it) } }
                 if (tmp.length() > 0) { tmp.renameTo(out); return out }
                 reason = "پاسخ خالی"
             } else {
-                reason = "HTTP $code" + (if (reason.isNotBlank()) " · $reason" else "")
+                reason = "HTTP ${response.code}" + (if (reason.isNotBlank()) " · $reason" else "")
             }
-        } finally { conn.disconnect() }
+        }
     } catch (e: Throwable) {
         reason = (e.message ?: e.javaClass.simpleName).take(120) + (if (reason.isNotBlank()) " · $reason" else "")
     }
@@ -212,8 +211,8 @@ private fun storagePathOf(url: String): Pair<String, String>? {
 }
 
 private fun authHeaders(url: String): Map<String, String> {
-    val base = BuildConfig.SUPABASE_URL.trim().trimEnd('/')
-    if (base.isBlank() || !url.startsWith("$base/storage/v1/object/")) return emptyMap()
+    // V335.31 — هم نشانی مستقیم و هم مسیر پل «Storage همین پروژه» شمرده می‌شوند.
+    if (!ir.exam.app.core.network.SupabaseRouter.isOwnStorageUrl(url)) return emptyMap()
     val token = runCatching { SupabaseProvider.client.auth.currentSessionOrNull()?.accessToken }.getOrNull()
     if (token.isNullOrBlank()) return emptyMap()
     return mapOf("Authorization" to "Bearer $token", "apikey" to BuildConfig.SUPABASE_ANON_KEY)

@@ -137,7 +137,10 @@ class SupabaseBillingRepository : BillingRepository {
         require(uri.scheme.equals("https", true)) { "درگاه پرداخت باید از اتصال امن استفاده کند." }
         val host = uri.host?.lowercase() ?: error("میزبان درگاه معتبر نیست.")
         val supabaseHost = runCatching { URI(BuildConfig.SUPABASE_URL).host?.lowercase() }.getOrNull()
-        val allowed = host == "payment.zarinpal.com" || host.endsWith(".idpay.ir") || host == "idpay.ir" || host == supabaseHost
+        // V335.32 — درگاه زیبال (gateway.zibal.ir) هم مجاز است؛ نشانی شروع پرداخت آن
+        // https://gateway.zibal.ir/start/<trackId> است و پرداخت از پل ایرانی ما ساخته می‌شود.
+        val allowed = host == "payment.zarinpal.com" || host == "gateway.zibal.ir" ||
+            host.endsWith(".idpay.ir") || host == "idpay.ir" || host == supabaseHost
         require(allowed) { "نشانی درگاه در فهرست مجاز نیست." }
     }
 }

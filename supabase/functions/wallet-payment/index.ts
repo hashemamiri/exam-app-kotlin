@@ -9,12 +9,12 @@ const JSON_HEADERS = { ...CORS, 'Content-Type': 'application/json; charset=utf-8
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: JSON_HEADERS });
 
-const PROVIDERS = new Set(['zarinpal', 'idpay', 'sandbox']);
+const PROVIDERS = new Set(['zarinpal', 'idpay', 'sandbox', 'zibal']);
 const MIN_TOP_UP = 100_000;
 const MAX_TOP_UP = 10_000_000;
 const STEP = 10_000;
 
-type Provider = 'zarinpal' | 'idpay' | 'sandbox';
+type Provider = 'zarinpal' | 'idpay' | 'sandbox' | 'zibal';
 type Order = {
   id: number;
   user_id: string;
@@ -50,6 +50,41 @@ async function zarinpalPost(path: 'request' | 'verify', payload: unknown): Promi
     body,
   });
 }
+// V335.32 — زیبال: مسیر request/verify. اگر پل IP ثابت تنظیم شده باشد از /zibal/... رد می‌شود،
+// وگرنه مستقیم (که در دیتاسنترهای خارج از ایران جواب نمی‌دهد و کد 115 می‌گیرد).
+async function zibalPost(path: 'request' | 'verify', payload: unknown): Promise<Response> {
+  const relay = env('PAY_RELAY_URL').replace(/\/+$/, '');
+  const token = env('PAY_RELAY_TOKEN');
+  const body = JSON.stringify(payload);
+  if (relay && token) {
+    return await fetch(`${relay}/zibal/${path}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Accept: 'application/json', 'X-Relay-Token': token },
+      body,
+    });
+  }
+  return await fetch(`https://gateway.zibal.ir/v1/${path}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+    body,
+  });
+}
+
+/** پیام فارسی کد نتیجهٔ زیبال (جدول رسمی) برای نمایش به کاربر. */
+function zibalMessage(result: unknown): string {
+  switch (Number(result)) {
+    case 102: return 'مرچنت کد زیبال یافت نشد.';
+    case 103: return 'درگاه زیبال غیرفعال است یا قرارداد آن امضا نشده.';
+    case 104: return 'مرچنت کد زیبال نامعتبر است.';
+    case 105: return 'مبلغ تراکنش کمتر از حد مجاز است.';
+    case 106: return 'نشانی بازگشت (callbackUrl) نامعتبر است.';
+    case 112: return 'کیف پول کارمزد زیبال شارژ نیست.';
+    case 113: return 'مبلغ تراکنش از سقف مجاز بیشتر است.';
+    case 115: return 'IP سرور در پنل زیبال ثبت نشده است.';
+    default: return 'خطای درگاه زیبال.';
+  }
+}
+
 const sandboxAllowed = () => env('PAY_ALLOW_SANDBOX').toLowerCase() === 'true';
 
 function safeProvider(): Provider {
@@ -83,6 +118,11 @@ function publicError(code: string, message: string, status = 400) {
 }
 
 function callbackUrl(req: Request): string {
+  // V335.32 — زیبال می‌خواهد دامنهٔ callback با دامنهٔ ثبت‌شدهٔ درگاه یکی باشد؛ اگر
+  // PAY_CALLBACK_BASE تنظیم شده باشد، بازگشت از سایت خودمان می‌آید و همان صفحه
+  // پارامترها را به همین تابع می‌فرستد. در نبود آن، مثل قبل روی دامنهٔ Supabase می‌ماند.
+  const base = env('PAY_CALLBACK_BASE');
+  if (base) return `${base}${base.includes('?') ? '&' : '?'}action=verify`;
   const requestUrl = new URL(req.url);
   return `${requestUrl.origin}${requestUrl.pathname}?action=verify`;
 }
@@ -121,6 +161,30 @@ async function requestGateway(provider: Provider, order: Order, callback: string
       return { ok: true, authority, url: `https://payment.zarinpal.com/pg/StartPay/${authority}` };
     }
     return { ok: false, code: `zarinpal_${body?.errors?.code || response.status}`, message: 'اتصال به زرین‌پال ناموفق بود.' };
+  }
+
+  if (provider === 'zibal') {
+    const merchant = env('PAY_ZIBAL_MERCHANT');
+    if (!/^[A-Za-z0-9]{6,64}$/.test(merchant)) {
+      return { ok: false, code: 'zibal_not_configured', message: 'مرچنت کد زیبال پیکربندی نشده است.' };
+    }
+    const response = await zibalPost('request', {
+      merchant,
+      amount: order.amount_rial,
+      callbackUrl: callback,
+      description: `شارژ کیف پول سامانه آزمون - سفارش ${order.id}`,
+      orderId: String(order.id),
+    });
+    const body = await response.json().catch(() => ({}));
+    if (response.ok && Number(body?.result) === 100 && body?.trackId != null) {
+      const trackId = String(body.trackId);
+      return { ok: true, authority: trackId, url: `https://gateway.zibal.ir/start/${trackId}` };
+    }
+    return {
+      ok: false,
+      code: `zibal_${body?.result ?? response.status}`,
+      message: zibalMessage(body?.result),
+    };
   }
 
   const apiKey = env('PAY_IDPAY_API_KEY');
@@ -164,6 +228,25 @@ async function verifyGateway(provider: Provider, order: Order, params: URLSearch
       return { ok: true, refId: String(body.data.ref_id) };
     }
     return { ok: false, code: `zarinpal_verify_${body?.errors?.code || response.status}`, message: 'تأیید پرداخت زرین‌پال ناموفق بود.' };
+  }
+
+  if (provider === 'zibal') {
+    const merchant = env('PAY_ZIBAL_MERCHANT');
+    const response = await zibalPost('verify', { merchant, trackId: order.authority });
+    const body = await response.json().catch(() => ({}));
+    const result = Number(body?.result);
+    if (response.ok && (result === 100 || result === 201) && body?.refNumber != null) {
+      const paidAmount = Number(body?.amount);
+      if (Number.isFinite(paidAmount) && paidAmount > 0 && paidAmount !== order.amount_rial) {
+        return { ok: false, code: 'zibal_amount_mismatch', message: 'مبلغ پرداخت‌شده با سفارش مطابقت ندارد.' };
+      }
+      return { ok: true, refId: String(body.refNumber) };
+    }
+    return {
+      ok: false,
+      code: `zibal_verify_${result || response.status}`,
+      message: result === 201 ? 'این پرداخت قبلاً تأیید شده است.' : 'تأیید پرداخت زیبال ناموفق بود.',
+    };
   }
 
   const apiKey = env('PAY_IDPAY_API_KEY');
@@ -215,11 +298,20 @@ async function callbackParameters(req: Request, url: URL): Promise<URLSearchPara
 }
 
 function callbackAuthority(params: URLSearchParams): string {
-  return params.get('Authority') || params.get('authority') || params.get('id') || '';
+  // V335.32 — زیبال شناسهٔ تراکنش را trackId می‌فرستد.
+  return params.get('Authority') || params.get('authority') || params.get('trackId') ||
+    params.get('trackid') || params.get('id') || '';
 }
 
 function callbackCanceled(provider: Provider, params: URLSearchParams): boolean {
   const status = (params.get('Status') || params.get('status') || '').toUpperCase();
+  if (provider === 'zibal') {
+    // زیبال: success=1 با status 1 (پرداخت‌شده) یا 2 (پرداخت‌شده و تأییدنشده) برمی‌گردد.
+    const success = params.get('success');
+    if (success != null) return success !== '1';
+    const code = Number(status);
+    return Number.isFinite(code) && code !== 1 && code !== 2;
+  }
   if (provider === 'zarinpal' || provider === 'sandbox') return status !== 'OK';
   return status !== '' && !['10', '100', '101'].includes(status);
 }

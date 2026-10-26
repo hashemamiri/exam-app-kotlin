@@ -29,18 +29,23 @@ class V335_29_NetlifyRelayRouteTest {
     private val toml by lazy { source("relay/netlify/netlify.toml") }
 
     @Test
-    fun `netlify relay is declared and listed first`() {
+    fun `netlify relay is declared and comes before cloudflare routes`() {
         assertTrue(
             "ثابت پل Netlify",
             "const val DEFAULT_RELAY_NETLIFY = \"https://exam-relay-onlineexam.netlify.app\"" in router
         )
+        // V335.32 — از این نسخه، پل ایرانی (sb3) نخستین مسیر است؛ پس ترتیب درست این است که
+        // هر دو پل Netlify **پیش از** مسیرهای Cloudflare (`sb`/`relay`/`sb2`) و اتصال مستقیم بیایند.
         val listStart = router.indexOf("val DEFAULT_RELAYS: List<String> = listOf(")
         assertTrue("فهرست مسیرها پیدا نشد", listStart >= 0)
-        val firstEntry = router.substring(listStart).lineSequence()
-            .drop(1)
-            .firstOrNull { it.trim().isNotEmpty() && !it.trim().startsWith("//") }
-            .orEmpty()
-        assertTrue("نخستین مسیر باید پل Netlify باشد: $firstEntry", firstEntry.trim().startsWith("DEFAULT_RELAY_NETLIFY"))
+        val listEnd = router.indexOf("\n    )", listStart)
+        val body = router.substring(listStart, if (listEnd > listStart) listEnd else router.length)
+        val posNetlify = body.indexOf("DEFAULT_RELAY_NETLIFY,")
+        val posCustom = body.indexOf("DEFAULT_RELAY_NETLIFY_CUSTOM")
+        val posSb = body.indexOf("DEFAULT_RELAY,")
+        assertTrue("پل Netlify در فهرست باشد", posNetlify > 0)
+        assertTrue("نام اختصاصی پیش از نام netlify.app", posCustom in 1 until posNetlify)
+        assertTrue("Netlify باید پیش از مسیر Cloudflare بیاید", posSb < 0 || posNetlify < posSb)
     }
 
     @Test

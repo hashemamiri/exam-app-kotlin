@@ -283,6 +283,7 @@ private fun String.faReason(): String = when {
 private fun providerFa(raw: String): String = when (raw.substringBefore(':').lowercase()) {
     "zarinpal" -> " (زرین‌پال)"
     "idpay" -> " (آیدی‌پی)"
+    "zibal" -> " (زیبال)"
     else -> ""
 }
 

@@ -44,6 +44,15 @@ object SupabaseRouter {
     const val DEFAULT_RELAY = "https://sb.onlineexam.ir"
 
     /**
+     * V335.32 — پل روی سرور خودمان با IP ایرانی ثابت (`sb3.onlineexam.ir`).
+     *
+     * چرا اول از همه: این مسیر نه از IPهای Cloudflare می‌گذرد (که شبکهٔ همراه اول می‌بندد) و نه
+     * نام میزبان عمومی دارد (که برخی اپراتورها شکار می‌کنند)؛ سرور خودمان در ایران است و خودش
+     * درخواست را به Supabase می‌رساند. پل Netlify به‌عنوان مسیر پشتیبان می‌ماند.
+     */
+    const val DEFAULT_RELAY_IRAN = "https://sb3.onlineexam.ir"
+
+    /**
      * V335.29 — پل روی Netlify (گزینهٔ انتخاب‌شده).
      *
      * چرا Netlify و نه Cloudflare: اندازه‌گیری از دادهٔ همراه اول نشان داد TCP 443 به IPهای Cloudflare
@@ -54,6 +63,16 @@ object SupabaseRouter {
      * با `SUPABASE_RELAY_URLS` در زمان ساخت جایگزین می‌شود.
      */
     const val DEFAULT_RELAY_NETLIFY = "https://exam-relay-onlineexam.netlify.app"
+
+    /**
+     * V335.31 — همان پل Netlify، ولی روی دامنهٔ خودمان با رکورد CNAME و ابر خاکستری (DNS only).
+     *
+     * چرا: شبکهٔ همراه اول هم IPهای پروکسی Cloudflare را می‌بندد و هم — بر اساس تجربه — نام‌های
+     * میزبان‌های عمومی مثل `*.netlify.app` را. با این نام (SNI = دامنهٔ خودمان) ترافیک همچنان به
+     * همان لبهٔ Netlify می‌رود، ولی نامی که در TLS دیده می‌شود دامنهٔ خودمان است و گواهی هم برای
+     * همین نام صادر می‌شود؛ در نتیجه هیچ‌کدام از دو فیلتر بالا در مسیر نیست.
+     */
+    const val DEFAULT_RELAY_NETLIFY_CUSTOM = "https://relay2.onlineexam.ir"
 
     /**
      * V335.28 — پل روی میزبانی Vercel (گزینهٔ پشتیبان؛ اگر روزی حساب Vercel هم فعال شد همان‌جا می‌نشیند).
@@ -78,7 +97,11 @@ object SupabaseRouter {
      * منفی‌کش نشده) برنامه در همان ثانیه راه سالم را پیدا می‌کند.
      */
     val DEFAULT_RELAYS: List<String> = listOf(
-        // V335.29 — اول از همه: پل Netlify (بدون Cloudflare) که شبکهٔ همراه اول باز می‌گذارد.
+        // V335.32 — اول از همه: پل روی سرور ایرانی خودمان (IP ثابت، بدون Cloudflare، بدون نام عمومی).
+        DEFAULT_RELAY_IRAN,
+        // V335.31 — سپس همان پل Netlify روی دامنهٔ خودمان (اگر سرور ایرانی روزی خاموش بود).
+        DEFAULT_RELAY_NETLIFY_CUSTOM,
+        // V335.29 — سپس پل Netlify روی نام پیش‌فرض خودش.
         DEFAULT_RELAY_NETLIFY,
         // V335.28 — پل Vercel هم به‌عنوان گزینهٔ دوم می‌ماند تا اگر یکی از این دو میزبان روزی کند شد،
         // مسیر دیگر در همان لحظه جواب دهد.
@@ -202,6 +225,22 @@ object SupabaseRouter {
         return true
     }
 
+    /**
+     * V335.31 — «مسیر بعدی»: اگر سنجش هیچ مسیر سالمی پیدا نکرد، برنامه به‌جای اصرار روی همان مسیر
+     * ناموفق، مسیر بعدی فهرست را فعال می‌کند و دوباره تلاش می‌کند (چرخه‌ای). این کار وقتی حیاتی است
+     * که سنجش (`/auth/v1/health`) در شبکه‌ای پاسخ نگیرد ولی درخواست اصلی (ورود) روی مسیر دیگری
+     * جواب بدهد. خروجی: نشانی فعالِ تازه.
+     */
+    fun rotateNext(): String {
+        val all = candidates()
+        if (all.isEmpty()) return directBase
+        val current = currentBase()
+        val index = all.indexOfFirst { it.equals(current, ignoreCase = true) }
+        val next = all[(index + 1).mod(all.size)]
+        remember(next)
+        return next
+    }
+
     /** ذخیرهٔ مسیر سالم؛ اگر مسیر عوض شود، کلاینت Supabase بازسازی می‌شود. */
     fun remember(base: String) {
         val p = prefs ?: return
@@ -289,6 +328,37 @@ object SupabaseRouter {
         return own.any { url.startsWith("$it/storage/v1/object/", ignoreCase = true) }
     }
 
+    /**
+     * V335.31 — آخرین پاسخ DNS هر مسیر.
+     *
+     * صفحهٔ «تست اتصال» اندازه‌گیری را روی نخ پس‌زمینه انجام می‌دهد و نتیجه را همین‌جا می‌گذارد؛
+     * دکمهٔ «کپی گزارش» هم از همین حافظه می‌خواند تا هنگام لمس دکمه هیچ پرس‌وجوی DNS روی نخ رابط
+     * کاربر اجرا نشود (اگر شبکه فیلتر باشد هر پرس‌وجو ثانیه‌ها طول می‌کشد).
+     */
+    @Volatile private var dnsCache: Map<String, String> = emptyMap()
+
+    /** ثبت نتیجهٔ اندازه‌گیری DNS برای استفاده در گزارش. */
+    fun cacheDns(values: Map<String, String>) {
+        if (values.isNotEmpty()) dnsCache = dnsCache + values
+    }
+
+    /** نشانی میزبان یک مسیر (بدون مسیر اضافی). */
+    fun hostOf(base: String): String = runCatching { java.net.URI(base).host }.getOrNull().orEmpty()
+
+    /**
+     * V335.31 — «این میزبان در این شبکه چه نشانی‌ای می‌گیرد؟»
+     * برای تشخیص قطعی: اگر شبکه نام دامنه را نگیرد یا نشانی اشتباه بدهد، همین‌جا دیده می‌شود.
+     * فراخوانی شبکه‌ای است، پس باید از نخ پس‌زمینه صدا زده شود.
+     */
+    fun dnsInfo(base: String): String {
+        val host = hostOf(base)
+        if (host.isBlank()) return "نشانی نامعتبر"
+        return runCatching {
+            val addresses = RelayDns.lookup(host)
+            if (addresses.isEmpty()) "نشانی پیدا نشد" else addresses.joinToString(", ") { it.hostAddress ?: "?" }
+        }.getOrElse { "خطای نام دامنه" }
+    }
+
     /** گزارش یک‌خطی برای دکمهٔ «کپی گزارش» در صفحهٔ تست اتصال. */
     fun report(): String {
         val lines = mutableListOf<String>()
@@ -301,6 +371,8 @@ object SupabaseRouter {
         lastProbe.forEach { p ->
             val kind = if (p.base.equals(directBase, true)) "مستقیم" else "جایگزین"
             lines += "$kind | ${p.ok.let { if (it) "سالم" else "ناموفق" }} | ${p.ms}ms | ${p.detail} | ${p.base}"
+            // V335.31 — نشانی‌ای که شبکه برای این میزبان گرفته است (کلید تشخیص فیلتر شبکه).
+            lines += "   DNS: " + (dnsCache[p.base] ?: "اندازه‌گیری نشد")
         }
         return lines.joinToString("\n")
     }

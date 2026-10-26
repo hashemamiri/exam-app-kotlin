@@ -447,8 +447,8 @@
           if (d.credited) { msg.appendChild(el('div', {class: 'alert ok', text: '✅ شارژ انجام شد (حالت آزمایشی). موجودی: ' + S.money(d.balance)})); refresh(); return; }
           var u; try { u = new URL(d.url); } catch (e) { throw new Error('نشانی درگاه معتبر نیست.'); }
           var h = u.hostname.toLowerCase(), sb = new URL(S.config.url).hostname;
-          if (u.protocol !== 'https:' || !(h === 'payment.zarinpal.com' || h === 'idpay.ir' || /\.idpay\.ir$/.test(h) || h === sb)) throw new Error('نشانی درگاه در فهرست مجاز نیست.');
-          msg.appendChild(el('div', {class: 'alert info', html: 'سفارش ' + fa(d.order_id) + ' ثبت شد؛ در حال انتقال به درگاه امن' + (d.provider === 'zarinpal' ? ' زرین‌پال' : d.provider === 'idpay' ? ' آیدی‌پی' : '') + (d.sandbox ? ' (آزمایشی)' : '') + '… <a href="' + esc(d.url) + '" target="_blank" rel="noopener">اگر منتقل نشدید اینجا بزنید</a>'}));
+          if (u.protocol !== 'https:' || !(h === 'payment.zarinpal.com' || h === 'gateway.zibal.ir' || h === 'idpay.ir' || /\.idpay\.ir$/.test(h) || h === sb)) throw new Error('نشانی درگاه در فهرست مجاز نیست.');
+          msg.appendChild(el('div', {class: 'alert info', html: 'سفارش ' + fa(d.order_id) + ' ثبت شد؛ در حال انتقال به درگاه امن' + (d.provider === 'zarinpal' ? ' زرین‌پال' : d.provider === 'zibal' ? ' زیبال' : d.provider === 'idpay' ? ' آیدی‌پی' : '') + (d.sandbox ? ' (آزمایشی)' : '') + '… <a href="' + esc(d.url) + '" target="_blank" rel="noopener">اگر منتقل نشدید اینجا بزنید</a>'}));
           window.open(d.url, '_blank', 'noopener');
         } catch (e) { msg.appendChild(el('div', {class: 'alert error', text: errMsg(e)})); }
       }})]), msg]);

@@ -190,7 +190,7 @@
   /* V156 — آینهٔ WalletScreen.faReason اپ: هیچ کلید انگلیسی wallet_tx.reason به کاربر نشان داده نمی‌شود */
   function faReason(r) {
     r = String(r || '');
-    function prov(x) { x = x.split(':')[0].toLowerCase(); return x === 'zarinpal' ? ' (زرین‌پال)' : x === 'idpay' ? ' (آیدی‌پی)' : ''; }
+    function prov(x) { x = x.split(':')[0].toLowerCase(); return x === 'zarinpal' ? ' (زرین‌پال)' : x === 'zibal' ? ' (زیبال)' : x === 'idpay' ? ' (آیدی‌پی)' : ''; }
     if (r.indexOf('payment:') === 0) return 'شارژ از درگاه' + prov(r.slice(8));
     if (r.indexOf('exam:create:') === 0) return 'ساخت آزمون';
     if (r.indexOf('exam:update:') === 0) return 'ویرایش آزمون';

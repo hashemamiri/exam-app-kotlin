@@ -45,6 +45,8 @@ internal fun NetworkDiagnosticsCard() {
     val scope = rememberCoroutineScope()
     var testing by remember { mutableStateOf(false) }
     var probes by remember { mutableStateOf(SupabaseRouter.lastProbe) }
+    // V335.31 — نشانی DNS هر میزبان در همین شبکه (برای تشخیص فیلتر شبکه).
+    var dnsByBase by remember { mutableStateOf<Map<String, String>>(emptyMap()) }
     var message by remember { mutableStateOf<String?>(null) }
     var active by remember { mutableStateOf(SupabaseRouter.currentBase()) }
     var manual by remember { mutableStateOf(SupabaseRouter.manualBase()) }
@@ -53,6 +55,12 @@ internal fun NetworkDiagnosticsCard() {
         testing = true
         val results = withContext(Dispatchers.IO) { SupabaseRouter.probeAll() }
         probes = results
+        // V335.31 — نشانی‌های DNS هر مسیر، همان لحظه و روی همان شبکه اندازه‌گیری می‌شود.
+        dnsByBase = withContext(Dispatchers.IO) {
+            // V335.31 — نتیجه هم در همین صفحه و هم در حافظهٔ مسیریاب (برای گزارش) ذخیره می‌شود.
+            results.associate { it.base to SupabaseRouter.dnsInfo(it.base) }
+                .also { SupabaseRouter.cacheDns(it) }
+        }
         SupabaseRouter.refreshAsync(force = true)
         active = SupabaseRouter.currentBase()
         manual = SupabaseRouter.manualBase()
@@ -99,16 +107,25 @@ internal fun NetworkDiagnosticsCard() {
             val isActive = probe.base.equals(active, ignoreCase = true)
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
+                    // V335.31 — نام میزبان هم دیده شود؛ چند مسیر جایگزین بدون نام، تشخیص را سخت می‌کرد.
                     Text(
-                        (if (isDirect) "اتصال مستقیم" else "مسیر جایگزین") + (if (isActive) " — فعال" else ""),
+                        SupabaseRouter.hostOf(probe.base).ifBlank { probe.base } + (if (isActive) " — فعال" else ""),
                         style = MaterialTheme.typography.labelLarge,
                         color = if (probe.ok) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
                     )
                     Text(
-                        (if (probe.ok) "سالم" else "ناموفق") + " · " + probe.ms + " میلی‌ثانیه · " + probe.detail,
+                        (if (isDirect) "اتصال مستقیم" else "پل") + " · " +
+                            (if (probe.ok) "سالم" else "ناموفق") + " · " + probe.ms + " میلی‌ثانیه · " + probe.detail,
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
+                    dnsByBase[probe.base]?.let { dns ->
+                        Text(
+                            "DNS: " + dns,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                 }
                 if (probe.ok && !isActive) {
                     TextButton(onClick = {

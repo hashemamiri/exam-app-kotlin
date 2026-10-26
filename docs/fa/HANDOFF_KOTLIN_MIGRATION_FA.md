@@ -1,6 +1,28 @@
 # هندآف جامع مهاجرت سامانه آزمون از WebView به Native Kotlin
 
-**آخرین به‌روزرسانی:** ۲۰۲۶-۱۰-۲۵ — بستهٔ V335.30 (**اپ 1.03.12** — اصلاح تست نگهبان مسیرها و سبز شدن ساخت اندروید، فایل نصاب خودکار: `/home/user/apply_v335_4.py`، مقصد تأییدشده: **هر دو شاخهٔ `main` و `staging`**، بدون نیاز به اسکریپت SQL جدید):
+**آخرین به‌روزرسانی:** ۲۰۲۶-۱۰-۲۶ — بستهٔ V335.32 (**اپ 1.03.14** — پل ایرانی `sb3.onlineexam.ir` به‌عنوان مسیر اول، درگاه زیبال با عبور از پل IP ثابت، صفحهٔ بازگشت روی دامنهٔ خودمان؛ فایل نصاب: `/home/user/apply_v335_32.py`، بدون SQL جدید):
+  - **زیرساخت آماده و تست‌شده (خارج از کد):** یک ابرک آروان (۱ هسته/۲ گیگ، Ubuntu 24.04، IPv4 `95.38.160.168`) با دو پل روی یک سرور: `pay.onlineexam.ir` (پورت ۸۷۸۸، پل پرداخت) و `sb3.onlineexam.ir` (پورت ۸۷۸۷، پل Supabase). هر دو با HTTPS و گواهی سالم: `/health` → `{"ok":true,…}`.
+  - **اندازه‌گیری شبکهٔ آروان:** IP عمومی `95.38.160.168` ایرانی است، ولی IP خروجی تست بین‌المللی `205.252.135.194` (PCCW/آلمان) بود؛ با این حال زیبال سه درخواست پیاپی را با `result:100` پذیرفت ⇒ ترافیک مقاصد ایرانی از مسیر داخلی می‌رود.
+  - **پل ایرانی اول شد:** `DEFAULT_RELAY_IRAN = "https://sb3.onlineexam.ir"` نخستین عضو `DEFAULT_RELAYS` است؛ بعد relay2، Netlify، Vercel، sb، relay و sb2 می‌آیند.
+  - **درگاه زیبال:** `wallet-payment` مقدار `zibal` را می‌پذیرد؛ `zibalPost('request'|'verify')` از `PAY_RELAY_URL/zibal/...` می‌رود، نشانی شروع `gateway.zibal.ir/start/<trackId>` است، تأیید با `trackId` و بررسی مبلغ انجام می‌شود و پیام فارسی کدهای ۱۰۲–۱۱۵ برگردانده می‌شود. مرچنت فقط در سکرت `PAY_ZIBAL_MERCHANT` است.
+  - **بازگشت از درگاه روی دامنهٔ خودمان:** با تنظیم `PAY_CALLBACK_BASE`، `callbackUrl` روی `https://onlineexam.ir/pay-return.html` ساخته می‌شود و همان صفحه پارامترها را به تابع پرداخت پاس می‌دهد.
+  - **اپ و سایت:** `gateway.zibal.ir` به میزبان‌های مجاز درگاه اضافه شد (اپ + `site/src/admin.js`)، برچسب «(زیبال)» به کیف پول اضافه شد و `site/pay-return.html` ساخته شد.
+  - **SQL لازم:** جدول سفارش‌ها قید `provider in ('zarinpal','idpay','sandbox')` داشت؛ مهاجرت `supabase/migrations/20261026_wallet_zibal_provider.sql` (کپی: `sql/manual/SQL_WALLET_ZIBAL_V335_32.sql`) این قید و تابع `native_create_wallet_payment_order` را با `zibal` هماهنگ می‌کند. بدون آن، ساخت سفارش «درگاه نامعتبر است» می‌دهد.
+  - **تست‌ها:** نگهبان تازهٔ `V335_32_IranRelayAndZibalTest.kt` (۴ تست) و به‌روزرسانی `V335_29`/`V335_31` چون ترتیب `DEFAULT_RELAYS` عوض شد. نسخه `1.03.14`، `check_kotlin_braces` روی ۶۴۵ فایل سالم.
+
+---
+
+## سابقهٔ بستهٔ V335.31 — ۲۰۲۶-۱۰-۲۶ (اپ 1.03.13 — نام اختصاصی پل، نمایش DNS و چرخش مسیر، فایل نصاب: `/home/user/apply_v335_31.py`):
+  - **وضعیت سنجیده‌شده (از بیرون، نه حدس):** پل Netlify (`exam-relay-onlineexam.netlify.app`) **منتشر شده و کامل سالم است**: `/` و `/health` → `{"ok":true,…}`؛ `GET /auth/v1/health` با anon key → `200 GoTrue`؛ `POST /auth/v1/token?grant_type=password` با ایمیل قلابی → **همان پاسخ ۴۰۰ `invalid_credentials` خود Supabase** (یعنی بدنهٔ POST سالم عبور می‌کند)؛ `POST /rest/v1/rpc/native_login_gate_v283` → `200` با پیام فارسی؛ `GET /rest/v1/` → پیام Supabase. پل Vercel همچنان `DEPLOYMENT_NOT_FOUND` است (منتشر نشده) و فقط هزینهٔ زمانی دارد.
+  - **دوگانهٔ فیلتر شبکهٔ همراه اول:** شواهد کاربر نشان می‌داد هم TCP به IPهای پروکسی Cloudflare بسته است و هم نام‌های `sb`/`relay` خطای تونل می‌دهند؛ برای اینکه نام میزبان عمومی (`*.netlify.app`) هم ریسک نکند، پل با **نام اختصاصی** `relay2.onlineexam.ir` (CNAME به پل Netlify با ابر خاکستری) به‌عنوان نخستین مسیر اضافه شد (`DEFAULT_RELAY_NETLIFY_CUSTOM`). گواهی LE برای همین نام صادر می‌شود، پس SNI دیگر نام میزبان عمومی نیست.
+  - **تشخیص روی گوشی (`ui/profile/NetworkDiagnostics.kt` + `SupabaseRouter.dnsInfo`):** هر ردیف اکنون **نام میزبان** و خط **`DNS: <نشانی‌ها>`** را نشان می‌دهد (اندازه‌گیری روی نخ IO)؛ گزارش کپی‌شده هم برای هر مسیر خط DNS دارد، پس فیلتر DNS و فیلتر IP از هم قابل تفکیک می‌شوند.
+  - **چرخش مسیر در ورود (`SupabaseRouter.rotateNext()` + `SupabaseAuthRepository`):** اگر `recover()` مسیر سالمی پیدا نکند، ورود مسیر بعدی فهرست را فعال (`remember`) و دوباره تلاش می‌کند (سه تلاش)؛ اگر سنجش در شبکه‌ای بسته باشد ولی درخواست اصلی روی مسیر دیگر جواب دهد، ورود موفق می‌شود.
+  - **رفع باگ رسانه:** `QuestionAudioPlayer` پیش‌تر نشانی مستقیم `BuildConfig.SUPABASE_URL` را می‌ساخت و در شبکهٔ مسدود، صوت دانلود نمی‌شد؛ اکنون از `SupabaseRouter.rewrite`/`isOwnStorageUrl` و `RelayHttp` استفاده می‌کند.
+  - **تست‌ها:** نگهبان تازهٔ `V335_31_RelayDiagnosticsTest.kt` (۴ تست) و به‌روزرسانی نگهبان `V335_29` (نخستین مسیر از خانوادهٔ Netlify)، ارتقای نسخه به `1.03.13`، `check_kotlin_braces` روی ۶۴۴ فایل سالم و `python3 scripts/preflight.py` سبز.
+
+---
+
+## سابقهٔ بستهٔ V335.30 — ۲۰۲۶-۱۰-۲۵ (اپ 1.03.12 — پل Netlify و اصلاح تست نگهبان مسیرها، فایل نصاب خودکار: `/home/user/apply_v335_30.py`، مقصد تأییدشده: **هر دو شاخهٔ `main` و `staging`**، بدون نیاز به اسکریپت SQL جدید):
   - **شاهد زنده از پل Netlify:** `https://exam-relay-onlineexam.netlify.app/api/health` → `200` با `{"ok":true,"upstream":"https://eazwuyrymsvdkwckdpco.supabase.co"}` و `/auth/v1/health` → `401` از خود Supabase (یعنی درخواست واقعاً به Supabase می‌رسد). پیش از «Make public» همهٔ مسیرها صفحهٔ Login Redirect با کد `401` برمی‌گرداندند.
   - **علت قرمز شدن CI نسخهٔ ۱٫۰۳٫۱۱:** تنها یک تست، `V335_29_NetlifyRelayRouteTest.vercel relay stays as a secondary option`؛ در آن، پایان فهرست `DEFAULT_RELAYS` با `router.indexOf(")", listStart)` پیدا می‌شد و به پرانتز داخل کامنت فارسی «(بدون Cloudflare)» می‌خورد؛ در نتیجه متن بریده می‌شد و `DEFAULT_RELAY_EDGE` در آن نبود.
   - **اصلاح:** پایان فهرست با `router.indexOf("\n    )", listStart)` و بازگشت امن به انتهای فایل اگر پیدا نشد؛ هر ۵ تست همان فایل با شبیه‌سازی منطق کاتلین روی کد فعلی سبز شد (۱۹ شرط).
