@@ -19,3 +19,7 @@ supabase/.temp/
 __pycache__/
 *.pyc
 app/google-services.json
+
+# V335.43 — خروجی‌های محلی هم‌گام‌سازی دامنه (نباید در WIP یا کامیت بروند)
+site_out/
+site_mirror/

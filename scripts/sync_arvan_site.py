@@ -306,6 +306,25 @@ def check(source=DEFAULT_SOURCE, live=LIVE_URL, quiet=False):
 
 # ---------- ۳) apply ----------
 
+KEY_HELP = """\n🔑 کلید SSH پیدا نشد: {path}
+   یک‌بار این دو دستور را بزنید (رمز سرور را می‌پرسد، فقط همان یک‌بار):
+     ssh-keygen -t ed25519 -f ~/.ssh/arvan -N ""
+     ssh-copy-id -i ~/.ssh/arvan.pub root@95.38.160.168
+   بعد تست:  ssh -i ~/.ssh/arvan root@95.38.160.168 "echo OK"
+   (اگر ssh-copy-id نصب نیست:  cat ~/.ssh/arvan.pub | ssh root@95.38.160.168 "mkdir -p ~/.ssh && cat >> ~/.ssh/authorized_keys")\n"""
+
+
+def ensure_key(key):
+    """V335.43 — نبود کلید را با راهنمای روشن گزارش می‌کند (پیش‌تر فقط Warning ssh بود)."""
+    if not key:
+        return True
+    path = os.path.expanduser(key)
+    if os.path.isfile(path):
+        return True
+    log(KEY_HELP.format(path=path))
+    return False
+
+
 def ssh_base(host, key=None, port=22):
     cmd = ["ssh", "-o", "BatchMode=yes", "-o", "StrictHostKeyChecking=accept-new", "-o", "ConnectTimeout=15"]
     if key:
@@ -387,9 +406,19 @@ def detect_webroot(host, key=None, port=22):
 
 
 def apply(src_dir, host, webroot=None, key=None, port=22, dry_run=False, yes=False, reload=True, empty_webroot=None):
-    if not os.path.isfile(os.path.join(src_dir, "index.html")):
-        log(f"❌ {src_dir}/index.html نیست — چیزی برای ارسال وجود ندارد.")
+    if not ensure_key(key):
         return 4
+    if not os.path.isfile(os.path.join(src_dir, "index.html")):
+        # V335.43 — اگر پوشه نبود/پاک شده بود، خودکار از مخزن ساخته می‌شود
+        if os.path.abspath(src_dir) in (os.path.abspath("site_out"),):
+            log(f"ℹ️  {src_dir}/index.html نیست؛ از مخزن ساخته می‌شود…")
+            r = subprocess.run([sys.executable, os.path.join("scripts", "build_site_out.py")])
+            if r.returncode != 0:
+                log("❌ ساخت site_out ناموفق بود. اول این را اجرا کنید: python3 scripts/build_site_out.py")
+                return r.returncode
+        if not os.path.isfile(os.path.join(src_dir, "index.html")):
+            log(f"❌ {src_dir}/index.html نیست — چیزی برای ارسال وجود ندارد.")
+            return 4
     # V335.42 — اگر ریشه پیدا نشد، می‌توان پوشهٔ تازه ساخت (پیش‌فرض پیشنهادی /var/www/onlineexam)
     if webroot in (None, "", "auto") and empty_webroot:
         webroot = empty_webroot if empty_webroot is not True else "/var/www/onlineexam"
@@ -477,6 +506,8 @@ def main():
 
     prefer_ipv4()  # V335.41 — پیش از هر درخواست شبکه
     if a.probe:
+        if not ensure_key(a.ssh_key):
+            return 4
         return probe_server(a.target, a.ssh_key, a.port)
     if a.source == "auto":
         a.source = SOURCE_CANDIDATES[0]
