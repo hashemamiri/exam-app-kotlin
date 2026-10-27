@@ -102,10 +102,10 @@ fun ReportsScreen(
         )
         "class" -> PickerDialog(
             title = "انتخاب کلاس",
-            items = state.classOptions.map { PickItem(it.id, it.name, listOfNotNull(it.grade, it.fieldOfStudy).filter(String::isNotBlank).joinToString(" · ").ifBlank { null }) },
-            selected = state.selectedClass?.id?.let(::setOf) ?: emptySet(), multi = false,
+            items = listOf(PickItem("", "بدون کلاس — بر اساس آزمون")) + state.classOptions.map { PickItem(it.id, it.name, listOfNotNull(it.grade, it.fieldOfStudy).filter(String::isNotBlank).joinToString(" · ").ifBlank { null }) },
+            selected = setOf(state.selectedClass?.id ?: ""), multi = false,
             onDismiss = { picker = null },
-            onConfirm = { ids -> state.classOptions.firstOrNull { it.id == ids.firstOrNull() }?.let(viewModel::selectClass); picker = null }
+            onConfirm = { ids -> if (ids.firstOrNull().isNullOrBlank()) viewModel.selectSchool(null) else state.classOptions.firstOrNull { it.id == ids.firstOrNull() }?.let(viewModel::selectClass); picker = null }
         )
         "students" -> PickerDialog(
             title = "انتخاب دانش‌آموزان",
@@ -176,20 +176,20 @@ fun ReportsScreen(
                             PickerRow("${PersianDigits.convert(n++)}. مدرسه", state.schools.firstOrNull { it.id == state.selectedSchoolId }?.name ?: "همهٔ کلاس‌های من") { picker = "school" }
                             HorizontalDivider()
                         }
-                        PickerRow("${PersianDigits.convert(n++)}. کلاس", state.selectedClass?.name ?: "انتخاب کنید", enabled = state.classOptions.isNotEmpty() || state.selectedSchoolId != null) { picker = "class" }
+                        PickerRow("${PersianDigits.convert(n++)}. کلاس", state.selectedClass?.name ?: "بدون کلاس — بر اساس آزمون", enabled = true) { picker = "class" }
                         if (state.selectedClass != null) {
                             HorizontalDivider()
                             PickerRow("${PersianDigits.convert(n)}. دانش‌آموزان", if (state.rosterLoading) "در حال دریافت…" else "${PersianDigits.convert(state.selectedStudentIds.size)} از ${PersianDigits.convert(state.roster.size)}", enabled = !state.rosterLoading && state.roster.isNotEmpty()) { picker = "students" }
-                            HorizontalDivider()
-                            PickerRow("${PersianDigits.convert(n + 1)}. آزمون‌ها", "${PersianDigits.convert(state.selectedExamIds.size)} از ${PersianDigits.convert(state.exams.size)}", enabled = state.exams.isNotEmpty()) { picker = "exams" }
                         }
+                        HorizontalDivider()
+                        PickerRow("${PersianDigits.convert(n + if (state.selectedClass != null) 1 else 0)}. آزمون‌ها", "${PersianDigits.convert(state.selectedExamIds.size)} از ${PersianDigits.convert(state.exams.size)}", enabled = state.exams.isNotEmpty()) { picker = "exams" }
                     }
                 }
             }
-            if (state.selectedClass != null) {
+            if (state.exams.isNotEmpty()) {
                 item {
                     Button(
-                        enabled = state.selectedStudentIds.isNotEmpty() && state.selectedExamIds.isNotEmpty() && !state.loading,
+                        enabled = (state.selectedClass == null || state.selectedStudentIds.isNotEmpty()) && state.selectedExamIds.isNotEmpty() && !state.loading,
                         onClick = viewModel::showReports,
                         modifier = Modifier.fillMaxWidth()
                     ) { Text("نمایش کارنامه‌ها") }

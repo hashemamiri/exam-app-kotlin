@@ -75,6 +75,18 @@
 
   /* ================================================================ گزارش کلاس (ReportsScreen) */
   /* V172 — مثل ReportsScreen اپ: section 'stats' (کارت «آمار») = خلاصه + تحلیل کیفیت سؤال؛ 'grades' (کارت «کارنامه») = فقط گزارش کلاس */
+  function answerStudentKey(a) { return a.student_id || ('answer:' + a.id); }
+  function independentRoster(selectedExams, answersByExam) {
+    var people = new Map();
+    selectedExams.forEach(function (e) {
+      (answersByExam[e.id] || []).forEach(function (a) {
+        if (!a.graded) return;
+        var id = answerStudentKey(a);
+        if (!people.has(id)) people.set(id, {id: id, full_name: a.student_name || 'دانش‌آموز'});
+      });
+    });
+    return Array.from(people.values());
+  }
   async function reportsPage(c, arg) {
     var section = (arg && arg.section === 'grades') ? 'grades' : 'stats', statsOnly = section === 'stats', gradesOnly = section === 'grades';
     S.loading(c);
@@ -90,15 +102,15 @@
       var answersByExam = {};
       (async function () {
         try {
-          var all = await S.select('answers', 'select=id,exam_id,student_id,total_grade,graded,meta&exam_id=in.(' + exams.map(function (e) { return e.id; }).join(',') + ')');
+          var all = await S.select('answers', 'select=id,exam_id,student_id,student_name,total_grade,graded,meta&exam_id=in.(' + exams.map(function (e) { return e.id; }).join(',') + ')');
           (all || []).forEach(function (a) { (answersByExam[a.exam_id] = answersByExam[a.exam_id] || []).push(a); });
           var graded = (all || []).filter(function (a) { return a.graded; }), max = {}; exams.forEach(function (e) { max[e.id] = Number(e.total_score) || 0; });
           var pct = graded.map(function (a) { var m = answerMax(a, max[a.exam_id]); return m > 0 ? Number(a.total_grade) * 100 / m : null; }).filter(function (x) { return x != null; });
           var avg = pct.length ? pct.reduce(function (s, x) { return s + x; }, 0) / pct.length : null;
           summary.innerHTML = '';
           [[fa(exams.length), 'آزمون'], [fa((all || []).length), 'پاسخ'], [fa(graded.length), 'تصحیح‌شده'], [avg == null ? '—' : fa(avg.toFixed(1)) + '٪', 'میانگین درصد']].forEach(function (x) { summary.appendChild(el('div', {class: 'card stat'}, [el('div', {class: 'v', text: x[0]}), el('div', {class: 'l', text: x[1]})])); });
-          st.answersLoaded = true; st.allAnswers = all || []; if (st.onAnswers) st.onAnswers(st.allAnswers); if (st.classId && st.shown) compute();
-        } catch (e) { summary.innerHTML = ''; summary.appendChild(el('div', {class: 'alert error', text: errMsg(e)})); }
+          st.answersLoaded = true; st.allAnswers = all || []; if (st.onAnswers) st.onAnswers(st.allAnswers); if (st.shown) compute();
+        } catch (e) { st.answersError = e; summary.innerHTML = ''; summary.appendChild(el('div', {class: 'alert error', text: errMsg(e)})); if (st.shown) compute(); }
       })();
       if (!exams.length) { c.appendChild(el('div', {class: 'card'}, [S.emptyBox('📈', 'هنوز آزمونی ندارید.')])); return; }
       if (statsOnly) {
@@ -183,22 +195,21 @@
           }));
         }
         var co = classOptions(), k0 = co.filter(function (x) { return x.id === st.classId; })[0];
-        box.appendChild(pickRow(fa(n++) + '. کلاس', k0 ? k0.name : (st.schoolId && !st.schoolClasses ? 'در حال دریافت…' : (co.length ? 'انتخاب کنید' : 'کلاسی یافت نشد')), co.length > 0, function () {
-          pickerDlg({title: 'انتخاب کلاس', multi: false, selected: (function () { var o = {}; if (st.classId) o[st.classId] = true; return o; })(), items: co.map(function (x) { return {id: x.id, title: x.name, sub: [x.grade, x.field_of_study].filter(Boolean).join(' · ')}; }), onOk: async function (ids) {
-            resetFrom(1); st.classId = ids[0]; st.rosterLoading = true; drawFilter();
+        box.appendChild(pickRow(fa(n++) + '. کلاس', k0 ? k0.name : (st.schoolId && !st.schoolClasses ? 'در حال دریافت…' : 'بدون کلاس — بر اساس آزمون'), true, function () {
+          pickerDlg({title: 'انتخاب کلاس', multi: false, selected: (function () { var o = {}; if (st.classId) o[st.classId] = true; return o; })(), items: [{id: '', title: 'بدون کلاس — بر اساس آزمون'}].concat(co.map(function (x) { return {id: x.id, title: x.name, sub: [x.grade, x.field_of_study].filter(Boolean).join(' · ')}; })), onOk: async function (ids) {
+            resetFrom(1); st.classId = ids[0]; if (!st.classId) { st.schoolId = ''; drawFilter(); return; } st.rosterLoading = true; drawFilter();
             try { st.roster = (await S.rpc('class_roster', {p_class: st.classId})) || []; st.students = {}; st.roster.forEach(function (x) { st.students[x.id] = true; }); } catch (e) { st.roster = []; toast(errMsg(e), 'err'); }
             st.rosterLoading = false; drawFilter();
           }});
         }));
-        if (!st.classId) return;
-        box.appendChild(pickRow(fa(n) + '. دانش‌آموزان', st.rosterLoading ? 'در حال دریافت…' : fa(countOn(st.students)) + ' از ' + fa(st.roster.length), !st.rosterLoading && st.roster.length > 0, function () {
+        if (st.classId) box.appendChild(pickRow(fa(n) + '. دانش‌آموزان', st.rosterLoading ? 'در حال دریافت…' : fa(countOn(st.students)) + ' از ' + fa(st.roster.length), !st.rosterLoading && st.roster.length > 0, function () {
           pickerDlg({title: 'انتخاب دانش‌آموزان', multi: true, selected: st.students, items: st.roster.map(function (x) { return {id: x.id, title: x.full_name, sub: x.username || ''}; }), onOk: function (ids) { st.students = {}; ids.forEach(function (id) { st.students[id] = true; }); st.shown = false; out.innerHTML = ''; out.style.display = 'none'; drawFilter(); }});
         }));
         box.appendChild(pickRow(fa(n + 1) + '. آزمون‌ها', fa(countOn(st.selected)) + ' از ' + fa(exams.length), exams.length > 0, function () {
           pickerDlg({title: 'انتخاب آزمون‌ها', multi: true, selected: st.selected, items: exams.map(function (e) { return {id: e.id, title: e.title, sub: e.subject || ''}; }), onOk: function (ids) { st.selected = {}; ids.forEach(function (id) { st.selected[id] = true; }); st.shown = false; out.innerHTML = ''; out.style.display = 'none'; drawFilter(); }});
         }));
         var showBtn = el('button', {class: 'btn rp-show', text: 'نمایش کارنامه‌ها', onclick: function () { st.shown = true; compute(); }});
-        showBtn.disabled = !(countOn(st.students) && countOn(st.selected));
+        showBtn.disabled = !((!st.classId || countOn(st.students)) && countOn(st.selected));
         filt.appendChild(showBtn);
       }
       drawFilter();
@@ -221,11 +232,14 @@
         document.body.appendChild(bg);
       }
       function compute() {
+        out.style.display = '';
+        if (st.answersError) { S.showErr(out, st.answersError); return; }
         if (!st.answersLoaded) { S.loading(out); return; }
         var sel = exams.filter(function (e) { return st.selected[e.id]; });
-        var rows = st.roster.filter(function (s) { return !!st.students[s.id]; }).map(function (s) { /* V278 — فقط دانش‌آموزان انتخاب‌شده */
+        var roster = st.classId ? st.roster.filter(function (s) { return !!st.students[s.id]; }) : independentRoster(sel, answersByExam);
+        var rows = roster.map(function (s) { /* V278 — فقط دانش‌آموزان انتخاب‌شده */
           var scores = {}, maxes = {}, pcts = [];
-          sel.forEach(function (e) { var mine = (answersByExam[e.id] || []).filter(function (a) { return a.graded && a.student_id === s.id; }); if (mine.length) { var bestA = mine.reduce(function (p, a) { return (Number(a.total_grade) || 0) > (Number(p.total_grade) || 0) ? a : p; }, mine[0]); var best = Number(bestA.total_grade) || 0; scores[e.id] = best; var mx = answerMax(bestA, Number(e.total_score)); maxes[e.id] = mx; if (mx > 0) pcts.push(best * 100 / mx); } });
+          sel.forEach(function (e) { var mine = (answersByExam[e.id] || []).filter(function (a) { return a.graded && answerStudentKey(a) === s.id; }); if (mine.length) { var bestA = mine.reduce(function (p, a) { return (Number(a.total_grade) || 0) > (Number(p.total_grade) || 0) ? a : p; }, mine[0]); var best = Number(bestA.total_grade) || 0; scores[e.id] = best; var mx = answerMax(bestA, Number(e.total_score)); maxes[e.id] = mx; if (mx > 0) pcts.push(best * 100 / mx); } });
           return {id: s.id, name: s.full_name, scores: scores, maxes: maxes, avg: pcts.length ? pcts.reduce(function (a, b) { return a + b; }, 0) / pcts.length : null};
         });
         st.rows = rows;
@@ -238,7 +252,7 @@
           el('button', {class: 'btn light sm', text: '📄 CSV', onclick: function () { download('گزارش-' + safeName(cls ? cls.name : 'کلاس') + '.csv', csv(tableRows()), 'text/csv;charset=utf-8'); }}),
           /* V230 — بدون پاپ‌آپ: چاپ همین جدول با S.printSection (گزینهٔ «ذخیره به‌صورت PDF» مرورگر) */
           el('button', {class: 'btn light sm', text: '🖨 ذخیرهٔ PDF', onclick: function () { if (S.printSection) S.printSection(cls ? 'گزارش کلاس ' + cls.name : 'گزارش کلاس', out); else printTable((cls ? 'گزارش کلاس ' + cls.name : 'گزارش کلاس'), tableRows()); }})]));
-        if (!rows.length) { out.appendChild(S.emptyBox('🎓', 'دانش‌آموزی انتخاب نشده است.')); return; }
+        if (!rows.length) { out.appendChild(S.emptyBox('🎓', 'پاسخ تصحیح‌شده‌ای برای این انتخاب وجود ندارد.')); return; }
         /* V278 — ستون آخر: آیکن کارنامهٔ تکی */
         out.appendChild(el('div', {style: 'overflow:auto'}, [el('table', {class: 'tbl rp-grades'}, [el('thead', {}, [el('tr', {}, header.map(function (h, i) { return el('th', {text: h, class: i ? 'num' : 'name'}); }).concat([el('th', {class: 'num', text: 'کارنامه'})]))]),
           el('tbody', {}, rows.map(function (r) { return el('tr', {}, [el('td', {class: 'name', html: '<b>' + esc(r.name) + '</b>'})].concat(sel.map(function (e) { return el('td', {class: 'num', text: r.scores[e.id] != null ? fa(S.fmtScore(r.scores[e.id])) : '—'}); }), [el('td', {class: 'num'}, [r.avg == null ? el('span', {class: 'muted', text: '—'}) : el('span', {class: 'chip ' + (r.avg >= 50 ? 'ok' : 'danger'), text: fa(r.avg.toFixed(1)) + '٪'})]), el('td', {class: 'num'}, [el('button', {class: 'rp-ic', title: 'کارنامهٔ ' + r.name, 'aria-label': 'کارنامهٔ ' + r.name, html: docIcon(), onclick: function () { reportCardModal(r, sel, cls); }})])])); }))])]));
@@ -512,5 +526,5 @@
     return card;
   }
 
-  window.SiteExtras = {reportsPage: reportsPage, gradesExcelButton: gradesExcelButton, exportExamDlg: exportExamDlg, importExam: importExam, parseExamPackage: parseExamPackage, backupCard: backupCard, mediaDiagCard: mediaDiagCard, audioDlg: audioDlg, googleButton: googleButton, handleOAuthReturn: handleOAuthReturn, recoveryFlow: recoveryFlow, deleteAccountCard: deleteAccountCard, xlsx: xlsx, csv: csv, download: download};
+  window.SiteExtras = {independentRoster: independentRoster, answerStudentKey: answerStudentKey, reportsPage: reportsPage, gradesExcelButton: gradesExcelButton, exportExamDlg: exportExamDlg, importExam: importExam, parseExamPackage: parseExamPackage, backupCard: backupCard, mediaDiagCard: mediaDiagCard, audioDlg: audioDlg, googleButton: googleButton, handleOAuthReturn: handleOAuthReturn, recoveryFlow: recoveryFlow, deleteAccountCard: deleteAccountCard, xlsx: xlsx, csv: csv, download: download};
 })();

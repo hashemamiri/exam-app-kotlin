@@ -195,10 +195,9 @@ class ReportsViewModel(
 
     private fun computeRows() = viewModelScope.launch {
         val snapshot = state.value
-        if (snapshot.selectedClass == null) return@launch
+        if (snapshot.selectedExamIds.isEmpty()) return@launch
         _state.update { it.copy(loading = true, error = null) }
         runCatching {
-            val roster = snapshot.roster.filter { it.id in snapshot.selectedStudentIds }
             val selectedExams = snapshot.exams.filter { it.id in snapshot.selectedExamIds }
             // دریافت پاسخ آزمون‌های مستقل به‌صورت موازی؛ نتیجه همچنان با همان
             // ترتیب selectedExams ساخته می‌شود.
@@ -208,9 +207,17 @@ class ReportsViewModel(
                         exam.id to grading.getAnswers(exam.id).getOrThrow()
                             .asSequence()
                             .filter { it.graded }
-                            .groupBy { it.studentId }
+                            .groupBy { it.studentId ?: "answer:${it.id}" }
                     }
                 }.associate { it.await() }
+            }
+            // V335.38 — no fabricated class or profile lookup; names come from owned answers.
+            val roster = if (snapshot.selectedClass != null) {
+                snapshot.roster.filter { it.id in snapshot.selectedStudentIds }
+            } else {
+                answerMap.values.flatMap { it.entries }.distinctBy { it.key }.map { (id, attempts) ->
+                    StudentProfile(id = id, fullName = attempts.first().studentName.ifBlank { "دانش‌آموز" })
+                }
             }
             roster.map { student ->
                 val scores = selectedExams.associate { exam ->

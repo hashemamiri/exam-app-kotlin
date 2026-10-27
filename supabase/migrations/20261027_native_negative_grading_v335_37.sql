@@ -17,7 +17,7 @@ begin
  ('native_finalize_bulk_grades_v1',ARRAY['9d1b5da0eb633ab95e7d061467a38160','ddad7ceacf54dae965dbf44283af6817','05e46b6ef7fabf33867954e83feb10dc','3df87c853cc1db3af0442b97206f3749']),
  ('exam_autograde_info',ARRAY['c6b208e44abcce00f949c2bd5feb4630','ece718f58c668a6003ad46ad12f4a9c6','ece718f58c668a6003ad46ad12f4a9c6'])
  ) as expected(name,allowed) loop
-   select count(*),min(md5(p.prosrc)) into v_count,v_hash from pg_proc p
+   select count(*),min(md5(replace(p.prosrc, E'\r\n', E'\n'))) into v_count,v_hash from pg_proc p
      join pg_namespace n on n.oid=p.pronamespace where n.nspname='public' and p.proname=r.name and p.prokind='f';
    if v_count<>1 or not (v_hash=any(r.allowed)) then
      raise exception 'V335.37 safety stop: function % has an unreviewed/missing/overloaded definition; no migration applied. Compare server metadata first.',r.name;
