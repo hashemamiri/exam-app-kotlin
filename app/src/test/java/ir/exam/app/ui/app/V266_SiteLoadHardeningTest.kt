@@ -19,8 +19,9 @@ class V266_SiteLoadHardeningTest {
     @Test
     fun `session refresh is spread and retried later`() {
         assertTrue("var REFRESH_LEAD_MS = (2 + Math.random() * 10) * 60 * 1000;" in app)
-        assertTrue("if (exp && exp - Date.now() > REFRESH_LEAD_MS) return Promise.resolve();" in app)
-        assertTrue("else refreshRetryAt = Date.now() + 20000 + Math.random() * 40000;" in app)
+        // V335.47 — همان پنجره، فقط با امکان «تازه‌سازی اجباری» پس از ۴۰۱.
+        assertTrue("if (!force && exp && exp - Date.now() > REFRESH_LEAD_MS) return Promise.resolve('fresh');" in app)
+        assertTrue("refreshRetryAt = Date.now() + 20000 + Math.random() * 40000;" in app)
         assertTrue(app.indexOf("var RETRY_DELAYS") < app.indexOf("async function http("))
     }
 }

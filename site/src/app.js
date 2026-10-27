@@ -339,8 +339,30 @@
 
   /* ================================================================ کلاینتِ سبکِ Supabase (بدون کتابخانه) */
   var session = null;
+  /* V335.47 — دفترچهٔ کوچکِ تشخیص نشست: چرا و کِی نشست پاک/تازه شد؛ برای پشتیبانی و عیب‌یابی.
+     هیچ توکنی این‌جا نوشته نمی‌شود؛ فقط نام رخداد و کد وضعیت. */
+  var LS_DIAG = 'examsite.session.diag.v1';
+  function sessionDiag(event, detail) {
+    try {
+      var list = JSON.parse(localStorage.getItem(LS_DIAG) || '[]');
+      if (!Array.isArray(list)) list = [];
+      list.unshift({at: new Date().toISOString(), event: String(event || ''), detail: detail == null ? '' : String(detail).slice(0, 120)});
+      localStorage.setItem(LS_DIAG, JSON.stringify(list.slice(0, 10)));
+    } catch (e) {}
+  }
   function loadSession() { try { session = JSON.parse(localStorage.getItem(LS_SESSION) || 'null'); } catch (e) { session = null; } }
-  function saveSession(s) { session = s; try { if (s) localStorage.setItem(LS_SESSION, JSON.stringify(s)); else { localStorage.removeItem(LS_SESSION); localStorage.removeItem(LS_PROFILE); Object.keys(localStorage).filter(function (k) { return k.indexOf(LS_DASH) === 0; }).forEach(function (k) { localStorage.removeItem(k); }); } } catch (e) {} }
+  function saveSession(s, why) { session = s; try { if (s) localStorage.setItem(LS_SESSION, JSON.stringify(s)); else { localStorage.removeItem(LS_SESSION); localStorage.removeItem(LS_PROFILE); Object.keys(localStorage).filter(function (k) { return k.indexOf(LS_DASH) === 0; }).forEach(function (k) { localStorage.removeItem(k); }); } } catch (e) {} if (!s) sessionDiag('clear', why || ''); }
+  /* V335.47 — یک مرورگر با چند تب = چند نسخهٔ در حافظه از یک نشست. توکن تازه‌سازی یک‌بارمصرف است؛
+     اگر تبی تازه کند و تبِ دیگر با توکن قدیمی تازه کند، سرور ۴۰۰ می‌دهد و همه بیرون می‌افتادند.
+     حالا تغییر نشست در هر تب به بقیه منتقل می‌شود. */
+  try {
+    window.addEventListener('storage', function (e) {
+      if (e && e.key && e.key !== LS_SESSION) return;
+      var before = session && session.access_token;
+      loadSession();
+      if (session && session.access_token !== before) sessionDiag('storage-sync', '');
+    });
+  } catch (e) {}
   /* V260.4 — روی اتصال کند (rtt≈600ms) هر رفت‌وبرگشت گران است: پروفایل و دادهٔ داشبورد روی همین دستگاه کش می‌شوند؛
      صفحه فوراً با دادهٔ قبلی نشان داده می‌شود و در پس‌زمینه تازه می‌شود (stale-while-revalidate). با خروج پاک می‌شود. */
   var LS_PROFILE = 'examsite.profile.v1', LS_DASH = 'examsite.dash.v1.';
@@ -409,6 +431,19 @@
     if (!res.ok) {
       var m = (data && (data.msg || data.message || data.error_description || data.error)) || ('HTTP ' + res.status);
       if (data && data.code === 'PGRST202') m = 'تابع «' + path.replace('/rest/v1/rpc/', '') + '» روی سرور پیدا نشد (مهاجرت اجرا نشده).';
+      /* V335.47 — ۴۰۱ اغلب یعنی «توکن کهنه شد»، نه «نشست باطل». یک‌بار تازه‌سازی اجباری و تکرار همان درخواست؛
+         فقط اگر تازه‌سازی واقعاً نشست را باطل کرد، خطا بالا می‌رود. */
+      if (res.status === 401 && opts.auth !== false && !opts.__authRetry && session && session.refresh_token) {
+        var tokenBefore = session.access_token;
+        var outcome = await ensureFreshSession(true);
+        if (session && session.access_token && session.access_token !== tokenBefore) {
+          var retryOpts = {}; Object.keys(opts).forEach(function (k) { retryOpts[k] = opts[k]; });
+          retryOpts.__authRetry = true;
+          return http(path, retryOpts);
+        }
+        sessionDiag('401-unresolved', outcome || '');
+        if (session) { var netErr = new Error('اتصال به سرور برقرار نشد. اینترنت را بررسی کنید.'); netErr.status = 0; throw netErr; }
+      }
       var err = new Error(translateAuthError(m)); err.status = res.status; err.data = data; throw err;
     }
     return data;
@@ -435,23 +470,54 @@
      همهٔ دانش‌آموزان هم‌زمان توکن تازه نکنند (سقف ۱۵۰ تازه‌سازی در ۵ دقیقه به ازای هر IP). */
   var REFRESH_LEAD_MS = (2 + Math.random() * 10) * 60 * 1000;
   var refreshRetryAt = 0;
-  function ensureFreshSession() {
-    if (!session || !session.refresh_token) return Promise.resolve();
-    var exp = Number(session.expires_at || 0) * 1000;
-    if (exp && exp - Date.now() > REFRESH_LEAD_MS) return Promise.resolve();
-    if (Date.now() < refreshRetryAt && exp - Date.now() > 60 * 1000) return Promise.resolve();
+  var NET_REFRESH_BACKOFF_MS = 45000;
+  /* V335.47 — «توکن کهنه» با «نشست باطل» یکی نبود و همین کاربر را بیرون می‌انداخت:
+     با اینترنت ضعیف، تازه‌سازی ۸ ثانیه‌ای تایم‌اوت می‌شد، درخواست با توکن منقضی می‌رفت، ۴۰۱ می‌گرفت
+     و بوت نشست را پاک می‌کرد. حالا: تایم‌اوت ۱۵ ثانیه + یک تلاش دوباره، خطای شبکه نشست را نگه می‌دارد،
+     و اگر سرور «توکن نامعتبر» گفت اول می‌بینیم تبِ دیگری نشست را تازه نکرده باشد. */
+  function readStoredSession() { try { return JSON.parse(localStorage.getItem(LS_SESSION) || 'null'); } catch (e) { return null; } }
+  function adoptSessionFromStorage(triedRefreshToken) {
+    var stored = readStoredSession();
+    if (stored && stored.refresh_token && stored.refresh_token !== triedRefreshToken) {
+      session = stored; sessionDiag('adopt-other-tab', '');
+      return true;
+    }
+    return false;
+  }
+  function refreshSession(force) {
+    var exp = Number(session && session.expires_at || 0) * 1000;
+    if (!force && exp && exp - Date.now() > REFRESH_LEAD_MS) return Promise.resolve('fresh');
+    if (!force && Date.now() < refreshRetryAt && exp - Date.now() > 60 * 1000) return Promise.resolve('backoff');
     if (refreshing) return refreshing;
     refreshing = (async function () {
+      var tried = session && session.refresh_token;
       try {
-        var res = await fetchWithTimeout(SUPABASE_URL + '/auth/v1/token?grant_type=refresh_token', {method: 'POST', headers: {'apikey': ANON, 'Content-Type': 'application/json'}, body: JSON.stringify({refresh_token: session.refresh_token})}, 8000);
+        var res = null;
+        for (var attempt = 0; attempt < 2 && !res; attempt++) {
+          try {
+            res = await fetchWithTimeout(SUPABASE_URL + '/auth/v1/token?grant_type=refresh_token', {method: 'POST', headers: {'apikey': ANON, 'Content-Type': 'application/json'}, body: JSON.stringify({refresh_token: tried})}, 15000);
+          } catch (netErr) {
+            if (attempt === 0) await sleep(900 + Math.random() * 1200);
+            else { refreshRetryAt = Date.now() + NET_REFRESH_BACKOFF_MS; sessionDiag('refresh-network', ''); return 'network'; }
+          }
+        }
         var data = null; try { data = await res.json(); } catch (e) { data = null; }
-        if (res.ok && data && data.access_token) { saveSession(data); refreshRetryAt = 0; }
-        else if (res.status === 400 || res.status === 401 || res.status === 403) saveSession(null);
-        else refreshRetryAt = Date.now() + 20000 + Math.random() * 40000; /* ۴۲۹/۵xx: ۲۰ تا ۶۰ ثانیهٔ بعد دوباره */
-      } catch (e) { /* شبکه: نشست می‌ماند؛ درخواست بعدی دوباره تلاش می‌کند */ }
-      finally { refreshing = null; }
+        if (res.ok && data && data.access_token) { saveSession(data); refreshRetryAt = 0; sessionDiag('refresh-ok', ''); return 'ok'; }
+        if (res.status === 400 || res.status === 401 || res.status === 403) {
+          if (adoptSessionFromStorage(tried)) return 'adopted';
+          saveSession(null, 'refresh-invalid-' + res.status);
+          return 'invalid';
+        }
+        refreshRetryAt = Date.now() + 20000 + Math.random() * 40000; /* ۴۲۹/۵xx: ۲۰ تا ۶۰ ثانیهٔ بعد دوباره */
+        sessionDiag('refresh-' + res.status, '');
+        return 'server';
+      } finally { refreshing = null; }
     })();
     return refreshing;
+  }
+  function ensureFreshSession(force) {
+    if (!session || !session.refresh_token) return Promise.resolve();
+    return refreshSession(!!force);
   }
   function rpc(name, params) { return http('/rest/v1/rpc/' + name, {method: 'POST', body: params || {}}); }
   async function rpcObj(name, params) {
@@ -491,7 +557,7 @@
     },
     signOut: async function () {
       try { await http('/auth/v1/logout', {method: 'POST'}); } catch (e) {}
-      saveSession(null);
+      saveSession(null, 'user-logout');
     },
     user: function () { return session && session.user ? session.user : null; }
   };
@@ -2587,7 +2653,8 @@
       /* V260.4 — پروفایل کش‌شدهٔ همین کاربر: رندر فوری، تأیید در پس‌زمینه (بدون یک رفت‌وبرگشت قبل از اولین نقاشی) */
       var cachedProfile = session.user && !window.__googleReturn ? cacheGet(LS_PROFILE, session.user.id) : null;
       if (cachedProfile && !cachedProfile.requiresSetup) { user = cachedProfile; profileStale = true; }
-      else { try { user = await currentProfile(); } catch (e) { user = null; if (/نشست|JWT|401/.test(errMsg(e))) saveSession(null); else setTimeout(function () { toast(errMsg(e), 'err'); }, 300); } }
+      /* V335.47 — این‌جا دیگر نشست پاک نمی‌شود؛ پاک‌کردن فقط کارِ لایهٔ تازه‌سازی است (وقتی سرور نشست را باطل کند). */
+      else { try { user = await currentProfile(); } catch (e) { user = null; if (session) setTimeout(function () { toast(errMsg(e), 'err'); }, 300); } }
     }
     /* V237 — بازگشت از گوگل با حساب کاملِ موجود: اگر نقش با پنل انتخابی فرق دارد یا در حال «ثبت‌نام» بود،
        پنجرهٔ «ورود به‌عنوان …» / «انصراف» (انصراف = خروج از نشست گوگل و ماندن در صفحهٔ ورود) */
@@ -2609,7 +2676,7 @@
     if (profileStale) currentProfile().then(function (fresh) {
       if (!user || !session) return;
       if (JSON.stringify(fresh) !== JSON.stringify(user)) { user = fresh; if (user.requiresSetup) renderSetupGate(); else render(); }
-    }).catch(function (e) { if (/نشست|JWT|401/.test(errMsg(e))) { saveSession(null); user = null; render(); } });
+    }).catch(function (e) { if (!session) { user = null; render(); } else { sessionDiag('profile-stale-error', (e && e.status) || ''); } });
   }
   /* V144 — بارگذاری رسانه: اول R2 (لینک موقت از Edge Function media-upload)، در نبود پیکربندی → Supabase Storage */
   var MEDIA_BUCKET = 'exam-images', r2Disabled = false;

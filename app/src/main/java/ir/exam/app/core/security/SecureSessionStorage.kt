@@ -4,12 +4,14 @@ import android.content.Context
 import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyProperties
 import android.util.Base64
+import android.util.Log
 import java.nio.charset.StandardCharsets
 import java.security.KeyStore
 import javax.crypto.Cipher
 import javax.crypto.KeyGenerator
 import javax.crypto.SecretKey
 import javax.crypto.spec.GCMParameterSpec
+import kotlinx.coroutines.delay
 
 /**
  * V75.7 — نگه‌داریِ یک رشتهٔ حساس (نشستِ ورود) به‌صورت رمزنگاری‌شده.
@@ -19,6 +21,12 @@ import javax.crypto.spec.GCMParameterSpec
  *   نه خودِ نشست؛ بنابراین با روت‌بودن دستگاه یا دسترسی به فایل‌های برنامه،
  *   access token و refresh token قابل خواندن نیستند.
  * - کلید با حذف برنامه از بین می‌رود و نشستِ قبلی دیگر قابل بازیابی نیست.
+ *
+ * V335.47 — درسِ میدانی «بعد از هر آپدیت باید دوباره وارد شوم»: خواندنِ قبلی هر استثنایی را
+ * «خرابی» حساب می‌کرد و **نشست را پاک** می‌کرد. اما AndroidKeyStore در اولین اجرا پس از
+ * جایگزینیِ بسته (یا درست بعد از بوت) می‌تواند موقتاً در دسترس نباشد؛ همان استثنای گذرا
+ * نشستِ سالم را نابود می‌کرد. حالا فقط خرابیِ ساختاری پاک می‌شود و خطای گذرا با تلاش
+ * دوباره و بدون حذف داده رد می‌شود.
  */
 class SecureSessionStorage(context: Context) {
     private val preferences = context.applicationContext.getSharedPreferences(
@@ -41,21 +49,65 @@ class SecureSessionStorage(context: Context) {
         check(preferences.edit().putString(KEY_VALUE, payload).commit()) { "ذخیرهٔ رمزنگاری‌شده انجام نشد." }
     }
 
+    /** V335.47 — آخرین خطای خواندن (فقط نام خطا، هرگز محتوای نشست) برای تشخیص. */
+    @Volatile
+    var lastError: String? = null
+        private set
+
     @Synchronized
-    fun read(): String? {
-        val payload = preferences.getString(KEY_VALUE, null) ?: return null
-        return runCatching {
-            val parts = payload.split(SEPARATOR, limit = 2)
-            require(parts.size == 2)
-            val iv = Base64.decode(parts[0], Base64.NO_WRAP)
-            val encrypted = Base64.decode(parts[1], Base64.NO_WRAP)
+    fun read(): String? = readInternal()
+
+    /**
+     * V335.47 — خواندن با تلاش دوباره. خطای گذرای Keystore (اولین اجرا بعد از آپدیت،
+     * یا لحظهٔ باز شدن قفل صفحه) نباید نشست را از بین ببرد.
+     */
+    suspend fun readWithRetry(attempts: Int = 3): String? {
+        var waitMs = 120L
+        repeat(attempts.coerceAtLeast(1)) { index ->
+            val value = readInternal()
+            if (value != null) return value
+            val error = lastError ?: return null          // نشستی ذخیره نشده است
+            if (index == attempts - 1) {
+                Log.w(TAG, "نشست خوانده نشد پس از تلاش دوباره: $error")
+                return null
+            }
+            delay(waitMs)
+            waitMs *= 3
+        }
+        return null
+    }
+
+    private fun readInternal(): String? {
+        val payload = preferences.getString(KEY_VALUE, null) ?: run {
+            lastError = null
+            return null
+        }
+        val parts = payload.split(SEPARATOR, limit = 2)
+        if (parts.size != 2) {                            // ساختار خراب: قطعاً غیرقابل بازیابی
+            lastError = "corrupt-payload"
+            clear()
+            return null
+        }
+        val iv: ByteArray
+        val encrypted: ByteArray
+        try {
+            iv = Base64.decode(parts[0], Base64.NO_WRAP)
+            encrypted = Base64.decode(parts[1], Base64.NO_WRAP)
+        } catch (error: IllegalArgumentException) {
+            lastError = "bad-base64"
+            clear()
+            return null
+        }
+        return try {
             val cipher = Cipher.getInstance(TRANSFORMATION)
             cipher.init(Cipher.DECRYPT_MODE, getOrCreateKey(), GCMParameterSpec(GCM_TAG_BITS, iv))
             cipher.updateAAD(AAD)
+            lastError = null
             String(cipher.doFinal(encrypted), StandardCharsets.UTF_8)
-        }.getOrElse {
-            // payload خراب یا کلید از بین رفته: نشستِ نیمه‌کاره پاک می‌شود.
-            clear()
+        } catch (error: Throwable) {
+            // V335.47 — گذرا یا کشنده؟ پاک نمی‌کنیم؛ فقط ثبت می‌کنیم تا تلاش دوباره/اجرای بعدی شانس داشته باشد.
+            lastError = "decrypt:" + (error.javaClass.simpleName ?: "unknown")
+            Log.w(TAG, "رمزگشایی نشست ناموفق بود ($lastError) — داده دست‌نخورده ماند")
             null
         }
     }
@@ -91,6 +143,7 @@ class SecureSessionStorage(context: Context) {
         const val TRANSFORMATION = "AES/GCM/NoPadding"
         const val GCM_TAG_BITS = 128
         const val SEPARATOR = "."
+        const val TAG = "SessionDiag"
         val AAD = "secure_session_v75".toByteArray(StandardCharsets.UTF_8)
     }
 }
