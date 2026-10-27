@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""V335.45 — افزودن مسیرهای حساس به فهرست no-cache در Caddyfile سرور، به‌صورت ایمن و تکرارپذیر.
+"""V335.46 — افزودن مسیرهای حساس به فهرست no-cache در Caddyfile سرور، به‌صورت ایمن و تکرارپذیر.
 
 چرا؟ صفحهٔ بازگشت درگاه (`/pay-return.html`) در Caddyfile فعلی داخل `@nocache` نبود؛
 مرورگر می‌تواند نسخهٔ کش‌شدهٔ آن را پس از آپدیت‌ها نشان دهد. این ابزار همان یک خط را
@@ -13,9 +13,13 @@
   • با `--dry-run` فقط diff نمایش داده می‌شود؛
   • اجرای دوباره بی‌اثر است (idempotent).
 
+پیش‌فرض دو مسیر را تضمین می‌کند: `/pay-return.html` و نسخهٔ PWA آن `/pwa/pay-return.html`.
+با `--path` می‌توان هر مسیر دیگری را هم (چند بار) اضافه کرد.
+
 نمونه:
   python3 scripts/caddy_ensure_nocache.py --ssh-key ~/.ssh/arvan --dry-run
   python3 scripts/caddy_ensure_nocache.py --ssh-key ~/.ssh/arvan
+  python3 scripts/caddy_ensure_nocache.py --ssh-key ~/.ssh/arvan --path /exam.html --dry-run
 """
 import argparse
 import difflib
@@ -27,7 +31,7 @@ import time
 
 DEFAULT_HOST = "root@95.38.160.168"
 CADDYFILE = "/etc/caddy/Caddyfile"
-WANTED = ["/pay-return.html"]
+WANTED = ["/pay-return.html", "/pwa/pay-return.html"]
 RESET_HINT = "/reset.html"     # اگر بلوک @nocache اصلاً نبود، پیشنهاد می‌شود
 NOCACHE_RE = re.compile(r"^(\s*)@nocache\s+path\s+(.*)$")
 
@@ -48,6 +52,20 @@ def ssh_cmd(host, key, port=22):
 def run_remote(host, key, command, stdin=None, port=22):
     return subprocess.run(ssh_cmd(host, key, port) + [command], input=stdin,
                           capture_output=True, text=True, timeout=120)
+
+
+def normalize(paths):
+    """مسیرها را یکتا و با «/» ابتدایی برمی‌گرداند؛ ترتیب ورودی حفظ می‌شود."""
+    out = []
+    for raw in paths:
+        p = (raw or "").strip().strip('"').strip("'")
+        if not p:
+            continue
+        if not p.startswith("/"):
+            p = "/" + p
+        if p not in out:
+            out.append(p)
+    return out
 
 
 def patch(text, wanted):
@@ -74,6 +92,8 @@ def main():
     ap.add_argument("--target", default=DEFAULT_HOST)
     ap.add_argument("--ssh-key", default=os.environ.get("ARVAN_SSH_KEY_FILE"))
     ap.add_argument("--port", type=int, default=22)
+    ap.add_argument("--path", action="append", default=[], metavar="PATH",
+                    help="مسیر اضافه برای no-cache (قابل تکرار)؛ مثلاً --path /exam.html")
     ap.add_argument("--dry-run", action="store_true")
     ap.add_argument("--no-reload", action="store_true")
     a = ap.parse_args()
@@ -83,13 +103,20 @@ def main():
         log("   ssh-keygen -t ed25519 -f ~/.ssh/arvan -N \"\"  و  ssh-copy-id -i ~/.ssh/arvan.pub root@…")
         return 4
 
+    wanted = normalize(WANTED + list(a.path))
+    log("🎯 مسیرهای تضمین‌شده: " + " · ".join(wanted))
+
     r = run_remote(a.target, a.ssh_key, f"cat {CADDYFILE} 2>/dev/null", port=a.port)
     if r.returncode != 0 or not r.stdout.strip():
         log(f"❌ خواندن {CADDYFILE} ناموفق: {(r.stderr or '').strip()[:200]}")
         return 3
     original = r.stdout
 
-    new, changed = patch(original, WANTED)
+    new, changed = patch(original, wanted)
+    if changed == 0 and not any(NOCACHE_RE.match(l) for l in original.splitlines()):
+        log(f"⚠️  هیچ بلوک `@nocache path …` در {CADDYFILE} پیدا نشد — چیزی تغییر نکرد.")
+        log(f"   پیشنهاد: یک بلوک دستی بسازید یا {RESET_HINT} و بقیه را در همان فهرست بگذارید.")
+        return 0
     if not changed:
         log("✅ از قبل درست است؛ هیچ تغییری لازم نبود (همهٔ خطوط @nocache این مسیرها را دارند).")
         return 0
@@ -107,7 +134,7 @@ def main():
         return 0
 
     stamp = time.strftime("%Y%m%d-%H%M%S")
-    remote_new = f"/tmp/Caddyfile.v33545.{stamp}"
+    remote_new = f"/tmp/Caddyfile.nocache.{stamp}"
     log(f"\n📤 ارسال نسخهٔ پیشنهادی به {remote_new} …")
     w = run_remote(a.target, a.ssh_key, f"cat > {remote_new}", stdin=new, port=a.port)
     if w.returncode != 0:

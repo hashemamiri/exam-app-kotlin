@@ -1,5 +1,27 @@
 # هندآف جامع مهاجرت سامانه آزمون از WebView به Native Kotlin
 
+## V335.46 / 1.03.26 — نسخهٔ PWA صفحهٔ بازگشت درگاه + `--path` دلخواه — ۲۰۲۶-۱۰-۲۸
+
+**یافتهٔ میدانی:** پس از اعمال V335.45 روی سرور، `/pay-return.html` و `/reset.html` هر دو `Cache-Control: no-store, must-revalidate` گرفتند، ولی `/pwa/pay-return.html` روی `onlineexam.ir` **بدون** `no-store` بود؛ چون در بلوک دامنهٔ اصلی فهرست `@nocache` نبود (آن مسیر فقط در بلوک `sb3.onlineexam.ir` بود).
+
+**تغییرها در `scripts/caddy_ensure_nocache.py`:**
+- `WANTED = ["/pay-return.html", "/pwa/pay-return.html"]` — هر دو مسیر به‌صورت پیش‌فرض در **همهٔ** بلوک‌های `@nocache` تضمین می‌شوند.
+- `--path PATH` **قابل تکرار**: `--path /exam.html --path /wallet.html` — مسیرهای آینده بدون تغییر کد.
+- `normalize()`: حذف فاصله/کوتیشن، افزودن `/` ابتدایی، **یکتاسازی**؛ سپس `WANTED + list(a.path)`.
+- پیام `🎯 مسیرهای تضمین‌شده: …` پیش از هر تغییر؛ و اگر هیچ بلوک `@nocache` نبود، هشدار روشن.
+- فایل موقت سرور از `/tmp/Caddyfile.v33545.<stamp>` به `/tmp/Caddyfile.nocache.<stamp>` تغییر کرد (بی‌وابسته به شمارهٔ نسخه).
+
+**آزمون عملی (ssh شبیه‌سازی‌شده با همان Caddyfile واقعی — دو بلوک):**
+- اجرای اول: ۲ خط تکمیل شد (`/pwa/pay-return.html` به بلوک دامنه، `/pay-return.html` به بلوک `handle`)؛
+- `caddy validate` → **Valid configuration** → پشتیبان → `reload` → `active`؛
+- اجرای دوم: **«از قبل درست است؛ هیچ تغییری لازم نبود»** (idempotent).
+
+**تست:** `V335_46_CaddyExtraPathsTest.kt` (۵ تست، ۱۷ پین). مستند `docs/fa/ARVAN_SITE_SYNC_FA.md` بخش «۴.۱» گرفت.
+
+**بدون SQL جدید. مقصد: هر دو شاخهٔ `main` و `staging`.**
+
+---
+
 ## V335.45 / 1.03.25 — صفحهٔ بازنشانی کش و تازگی صفحهٔ بازگشت درگاه — ۲۰۲۶-۱۰-۲۸
 
 **زمینه:** در هم‌گام‌سازی V335.39، `rsync --delete` فایل `reset.html` را از `/var/www/onlineexam` برد؛ آن فایل **در گیت نبود** (فقط روی سرور، تاریخ ۲۶ اکتبر ۲۱:۱۶، با بیت اجرایی). همچنین `/pay-return.html` در بلوک `@nocache` در Caddyfile سرور نبود.

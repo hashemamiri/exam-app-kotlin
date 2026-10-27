@@ -140,6 +140,21 @@ ssh -i ~/.ssh/arvan root@95.38.160.168 \
 اثر: مسیرهای ناموجود ۴۰۴ واقعی می‌دهند (به‌جای index با کد ۲۰۰) و دارایی‌های
 hash‌دار با `immutable` کش می‌شوند.
 
+## ۴.۱) تازگی صفحه‌های حساس در وب‌سرور (V335.45 / V335.46)
+
+اگر مرورگر نسخهٔ کش‌شدهٔ صفحهٔ بازگشت درگاه را نشان دهد، این ابزار همان مسیرها را به
+بلوک `@nocache` در Caddyfile اضافه می‌کند — ایمن و تکرارپذیر:
+
+```bash
+python3 scripts/caddy_ensure_nocache.py --ssh-key ~/.ssh/arvan --dry-run   # فقط diff
+python3 scripts/caddy_ensure_nocache.py --ssh-key ~/.ssh/arvan             # اعمال
+```
+
+- **پیش‌فرض:** `/pay-return.html` و `/pwa/pay-return.html` در همهٔ بلوک‌های `@nocache`.
+- **مسیر دلخواه (قابل تکرار):** `--path /exam.html --path /wallet.html`
+- **ایمنی:** پشتیبان `.bak-<timestamp>` → `caddy validate` روی فایل موقت → جایگزینی → `systemctl reload caddy`؛ در خطا خودکار به پشتیبان برمی‌گردد. اجرای دوباره هیچ تغییری نمی‌دهد.
+- **تأیید:** `curl -sI https://onlineexam.ir/pay-return.html | grep -i cache-control` باید `no-store, must-revalidate` بدهد.
+
 ## ۵) بررسی نهایی
 
 ```bash
