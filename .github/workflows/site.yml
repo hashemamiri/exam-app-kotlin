@@ -56,6 +56,7 @@ jobs:
           cp site/terms.html site/privacy.html site_out/  # V282 — شرایط استفاده و حریم خصوصی
           cp site/robots.txt site/sitemap.xml site/favicon.ico site_out/  # V248 — سئو؛ V248.3 — favicon.ico
           cp site/pay-return.html site_out/  # V335.39 — صفحهٔ بازگشت درگاه در ریشهٔ دامنه (پیش‌تر ۴۰۴/صفحهٔ فرود می‌شد)
+          cp site/reset.html site_out/  # V335.45 — صفحهٔ بازنشانی کش (بازسازی ops/reset که فقط روی سرور بود)
           # V162 / V312.1 — موتورهای چاپ/فرمول و پنل‌های پس از ورود در فایل‌های جداگانه با hash در نام (کش دائمی)
           cp site/engines.*.js site_out/
           cp site/panels.*.js site_out/

@@ -105,7 +105,7 @@ def main():
     # ۲) کپی‌های ثابت (همان فهرست site.yml)
     site = os.path.join(ROOT, "site")
     shutil.copytree(os.path.join(site, "pwa"), os.path.join(out, "pwa"))
-    for name in ("status.html", "terms.html", "privacy.html", "robots.txt", "sitemap.xml", "favicon.ico", "pay-return.html"):
+    for name in ("status.html", "terms.html", "privacy.html", "robots.txt", "sitemap.xml", "favicon.ico", "pay-return.html", "reset.html"):
         p = os.path.join(site, name)
         if os.path.isfile(p):
             shutil.copy2(p, os.path.join(out, name))

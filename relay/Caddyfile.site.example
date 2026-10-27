@@ -21,7 +21,7 @@ onlineexam.ir, www.onlineexam.ir {
 	header @immutable Cache-Control "public, max-age=31536000, immutable"
 
 	# ——— index و سرویس‌ورکر: همیشه تازه ———
-	@fresh path / /index.html /pwa/sw.js /status.html
+	@fresh path / /index.html /pwa/sw.js /status.html /reset.html
 	header @fresh Cache-Control "no-store, must-revalidate"
 
 	# Alt-Svc را پاک می‌کنیم تا QUIC/HTTP3 در اپراتورهای ایران گیر نکند (تجربهٔ V182.4/V248)

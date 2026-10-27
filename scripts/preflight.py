@@ -31,6 +31,7 @@ step('kotlin_escapes', ['python3', 'scripts/check_kotlin_escapes.py', 'app/src']
 step('site_sync', ['python3', 'scripts/check_site_sync.py'])  # V335.39 — نگهبان هم‌گام‌سازی دامنهٔ onlineexam.ir با نسخهٔ منتشرشده
 step('version_bump', ['python3', 'scripts/check_version_bump.py'])  # V335.40 — بدون بالا رفتن نسخه، job اندروید «قبلاً منتشر شده» می‌دهد
 step('build_site_out', ['python3', "-c", 'import ast,sys; ast.parse(open("scripts/build_site_out.py",encoding="utf-8").read()); print("دستور ساخت محلی site_out سالم است")'])  # V335.41
+step('caddy_nocache', ['python3', "-c", 'import ast; ast.parse(open("scripts/caddy_ensure_nocache.py",encoding="utf-8").read()); print("ابزار no-cache سالم است")'])  # V335.45
 before = hashlib.sha1(open('site/index.html', 'rb').read()).hexdigest()
 step('build_site', ['python3', 'site/build_site.py'])
 after = hashlib.sha1(open('site/index.html', 'rb').read()).hexdigest()
