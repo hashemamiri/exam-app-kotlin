@@ -2142,6 +2142,20 @@ body.site-locked .app{filter:blur(3px);pointer-events:none;user-select:none}
 /* V335.34 — Native StaggeredItem: 480ms / FastOutSlowIn / 55ms steps.
    No forwards transform: cards keep their normal pressed state after entering. */
 @keyframes m-native-card-in{from{opacity:0;transform:translateY(48px)}to{opacity:1;transform:none}}
+/* V335.48 — گذارِ صفحه‌ها هم‌اندازهٔ اپ (ExamApp.kt → AnimatedContent):
+   کیف پول: محو ۳۰۰ + بالا‌آمدن ۵۸۰ | خانه: محو ۲۸۰ + از چپ ۵۸۰
+   کارت‌ها: محو ۳۲۰ + بزرگ‌شدن ۶۶۰ از ۰٫۹۰ | بقیه: محو ۲۶۰ + از راست ۵۲۰ */
+@keyframes m-page-fade{from{opacity:0}to{opacity:1}}
+@keyframes m-page-from-right{from{transform:translateX(12.5%)}to{transform:none}}
+@keyframes m-page-from-left{from{transform:translateX(-14.3%)}to{transform:none}}
+@keyframes m-page-up{from{transform:translateY(20%)}to{transform:none}}
+@keyframes m-page-scale{from{transform:scale(.9)}to{transform:none}}
+@media (max-width:860px) and (pointer:coarse){
+  .m-mode .m-content.m-pg-other{animation:m-page-fade 260ms cubic-bezier(.4,0,.2,1) both,m-page-from-right 520ms cubic-bezier(.4,0,.2,1) both}
+  .m-mode .m-content.m-pg-home{animation:m-page-fade 280ms cubic-bezier(.4,0,.2,1) both,m-page-from-left 580ms cubic-bezier(.4,0,.2,1) both}
+  .m-mode .m-content.m-pg-wallet{animation:m-page-fade 300ms cubic-bezier(.4,0,.2,1) both,m-page-up 580ms cubic-bezier(.4,0,.2,1) both}
+  .m-mode .m-content.m-pg-cards{animation:m-page-fade 320ms cubic-bezier(.4,0,.2,1) both,m-page-scale 660ms cubic-bezier(.4,0,.2,1) both}
+}
 @media (max-width:860px) and (pointer:coarse){
   .m-mode .m-profile,.m-mode .m-tile,.m-mode .m-rowcard,.m-mode .m-exam{
     animation-name:m-native-card-in;animation-duration:480ms;
@@ -2164,4 +2178,5 @@ body.site-locked .app{filter:blur(3px);pointer-events:none;user-select:none}
 }
 @media (prefers-reduced-motion:reduce){
   .m-mode .m-profile,.m-mode .m-tile,.m-mode .m-rowcard,.m-mode .m-exam{animation:none!important}
+  .m-mode .m-content{animation:none!important}
 }

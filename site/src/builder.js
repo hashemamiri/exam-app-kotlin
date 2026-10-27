@@ -403,6 +403,28 @@
   function localToIso(v) { if (!v) return null; var d = new Date(v); return isNaN(d.getTime()) ? null : d.toISOString(); }
   function saveDraft() { if (!state || state.bankEdit) return; try { localStorage.setItem(LS_DRAFT, JSON.stringify(state)); } catch (e) {} }
 
+  /* V335.48 — درسِ میدانی «کارت سؤال نصفه دیده می‌شود»: در اپ، باز‌کردن/افزودن کارت با
+     scrollQuestionToHeader همان کارت را درست زیر نوار بالا می‌آورد؛ سایت این را نداشت و کارت
+     بازشده پایینِ صفحه می‌ماند (نیمهٔ بالایی بیرون از دید). این‌جا همان رفتار برای پوستهٔ گوشی. */
+  function mScrollToQuestion(i) {
+    try {
+      if (!document.getElementById('m-shell')) return;
+      var head = document.querySelector('.m-head');
+      var off = (head ? Math.round(head.getBoundingClientRect().height) : 56) + 6;
+      /* دو فریم صبر می‌کنیم تا کارت بازشده و ویرایشگرش چیده شوند؛ اسکرول «نرم» با
+         بازرسمِ هم‌زمان لغو می‌شد و صفحه به بالا می‌پرید، پس مستقیم می‌رویم. */
+      requestAnimationFrame(function () {
+        requestAnimationFrame(function () {
+          try {
+            var row = document.querySelectorAll('.m-builder .b-q')[i];
+            if (!row) return;
+            var y = Math.round(row.getBoundingClientRect().top + (window.pageYOffset || document.documentElement.scrollTop || 0) - off);
+            window.scrollTo(0, Math.max(0, y));
+          } catch (e) {}
+        });
+      });
+    } catch (e) {}
+  }
   async function page(c, arg) {
     arg = arg || {};
     S.loading(c);
@@ -706,7 +728,7 @@
         return;
       }
       var old = document.getElementById('b-addmenu'); if (old) { old.remove(); return; }
-      var menu = el('div', {class: 'b-addmenu card', id: 'b-addmenu'}, TYPES.map(function (t) { return el('button', {class: 'btn light sm', text: t[2] + ' ' + t[1], onclick: function () { menu.remove(); state.questions.push(newQuestion(t[0])); state.selected = state.questions.length - 1; mark(); drawList(); drawEditor(); }}); })
+      var menu = el('div', {class: 'b-addmenu card', id: 'b-addmenu'}, TYPES.map(function (t) { return el('button', {class: 'btn light sm', text: t[2] + ' ' + t[1], onclick: function () { menu.remove(); state.questions.push(newQuestion(t[0])); state.selected = state.questions.length - 1; mark(); drawList(); drawEditor(); mScrollToQuestion(state.selected); }}); })
         .concat(bankAllowed() ? [el('button', {class: 'btn soft sm', text: '🏦 از بانک سؤال', onclick: function () { menu.remove(); openBank(); }})] : []));
       var r = anchor.getBoundingClientRect(); menu.style.top = r.top + 'px'; menu.style.left = (r.right + 10) + 'px';
       document.body.appendChild(menu);
@@ -824,16 +846,16 @@
       list.innerHTML = '';
       list.appendChild(el('div', {class: 'row', style: 'margin-bottom:10px'}, [el('b', {class: 'grow', text: 'سؤال‌ها (' + fa(state.questions.length) + ')'}), el('span', {class: 'muted', style: 'font-size:12px', text: 'جمع بارم: ' + fa(S.fmtScore(state.questions.reduce(function (s, q) { return s + (Number(q.score) || 0); }, 0)))})]));
       var addRow = el('div', {class: 'b-add'});
-      TYPES.forEach(function (t) { addRow.appendChild(el('button', {class: 'btn light sm', title: t[1], text: t[2] + ' ' + t[1], onclick: function () { state.questions.push(newQuestion(t[0])); state.selected = state.questions.length - 1; mark(); drawList(); drawEditor(); }})); });
+      TYPES.forEach(function (t) { addRow.appendChild(el('button', {class: 'btn light sm', title: t[1], text: t[2] + ' ' + t[1], onclick: function () { state.questions.push(newQuestion(t[0])); state.selected = state.questions.length - 1; mark(); drawList(); drawEditor(); mScrollToQuestion(state.selected); }})); });
       /* V325 — ثبت میان‌برهای همین صفحه: Ctrl+Enter سؤال تازه (فقط در آزمون چندسؤالی)، Ctrl+S ذخیره */
-      SC.addq = state.bankEdit ? null : function () { state.questions.push(newQuestion('multiple')); state.selected = state.questions.length - 1; mark(); drawList(); drawEditor(); };
+      SC.addq = state.bankEdit ? null : function () { state.questions.push(newQuestion('multiple')); state.selected = state.questions.length - 1; mark(); drawList(); drawEditor(); mScrollToQuestion(state.selected); };
       try { SC.save = save; } catch (e) {}
       list.appendChild(addRow);
       if (bankAllowed()) list.appendChild(el('button', {class: 'btn soft sm', style: 'width:100%;margin-top:8px', text: '🏦 از بانک سؤال', onclick: openBank}));
       if (bankAllowed() && state.primaryMode && !state.bankEdit) list.appendChild(el('button', {class: 'btn soft sm', style: 'width:100%;margin-top:8px', text: '🏫 بانک آمادهٔ ابتدایی', onclick: openPrimaryBank}));
       var ul = el('div', {class: 'b-qs'});
       state.questions.forEach(function (q, i) {
-        var row = el('div', {class: 'b-q' + (i === state.selected ? ' on' : ''), onclick: function () { state.selected = i; drawList(); drawEditor(); }}, [
+        var row = el('div', {class: 'b-q' + (i === state.selected ? ' on' : ''), onclick: function () { state.selected = i; drawList(); drawEditor(); mScrollToQuestion(i); }}, [
           el('span', {class: 'n', text: fa(i + 1)}),
           el('span', {class: 'grow t', text: (q.text || '').replace(/%%FIG:[\s\S]*?%%/g, '[شکل]').replace(/\$[^$]*\$/g, '[فرمول]').slice(0, 60) || '— بدون متن —'}),
           el('span', {class: 'chip', text: TYPE_LABEL[q.type]}),

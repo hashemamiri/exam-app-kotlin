@@ -1,5 +1,34 @@
 # هندآف جامع مهاجرت سامانه آزمون از WebView به Native Kotlin
 
+## V335.48 / 1.03.28 — گذارِ صفحه‌ها و «کارت سؤال نصفه» در سایت گوشی — ۲۰۲۶-۱۰-۲۸
+
+**گزارش:** «انیمیشن کارت‌های کارنامه/تصحیح/مانده در سایت گوشی مثل اپ شود» و «کارت‌های سؤال در حال ویرایش در ایجاد آزمون نصفه دیده می‌شود». فقط وب؛ بدون CI اپ.
+
+**۱) گذارِ صفحه — منبع اپ:** `ExamApp.kt` → `AnimatedContent(transitionSpec)`: `WALLET` = `fadeIn(300)+slideInVertically(580){it/5}`، `HOME` = `fadeIn(280)+slideInHorizontally(580){-it/7}`، `CARDS` = `fadeIn(320)+scaleIn(660, .90f)`، بقیه = `fadeIn(260)+slideInHorizontally(520){it/8}`؛ خروج `fadeOut(170)+slideOut(240)`.
+سایت تا پیش از این فقط ورودِ **کارت‌ها** را داشت (`m-native-card-in` + تأخیر پله‌ای) و خودِ **صفحه** بی‌گذار ظاهر می‌شد.
+- `site/src/site.css`: کی‌فریم‌های `m-page-fade/from-right/from-left/up/scale` و `.m-content.m-pg-{wallet,home,cards,other}` با **دو انیمیشن هم‌زمان** (محو و جابه‌جایی، هرکدام با مدت خودش).
+- `site/src/mobile.js`: `pageAnim(page)` — `wallet→m-pg-wallet`، `cards→m-pg-cards`، `dashboard→m-pg-home`، بقیه `m-pg-other`؛ روی هر دو مسیر `paint()` و `paintStudent()`.
+- `prefers-reduced-motion` هر دو را خاموش می‌کند.
+
+**۲) کارت سؤال نصفه — منبع اپ:** `ExamBuilderScreen.onToggle/onAdd` → `scrollQuestionToHeader(index)` کارت را با دنبال‌کنندهٔ نرم زیر نوار بالا می‌آورد.
+- `site/src/builder.js`: `mScrollToQuestion(i)` — دو `requestAnimationFrame` (تا کارت و ویرایشگرش چیده شوند) و سپس اسکرول آنی با جبران ارتفاع `.m-head` (+۶px). اسکرول «نرم» با بازرسمِ هم‌زمان لغو می‌شد و صفحه به بالا می‌پرید؛ آزمون شد که نسخهٔ آنی دقیق می‌نشیند.
+- فراخوانی در: کلیک روی کارت، ردیف دکمه‌های افزودن، منوی افزودن، میان‌بر `Ctrl+Enter`.
+
+**آزمون میدانی (Chromium 360×732، `pointer:coarse`، نشست ساختگی + پاسخ‌های REST جعلی):** سه سؤال افزوده شد → آخرین کارت `top=66px` با نوار ۶۰px؛ کلیک روی کارت اول → `scrollY=206`, `top=66`. گذارها: `wallet` = `m-page-fade 0.3s + m-page-up 0.58s`، `cards` = `0.32s + m-page-scale 0.66s`، `dashboard` = `0.28s + m-page-from-left 0.58s`، بقیه `0.26s + m-page-from-right 0.52s`.
+
+**تست:** `V335_48_MobileParityAnimAndBuilderScrollTest` (۳ تست، ۲۲ پین). `python3 scripts/preflight.py` → **PASS**؛ بستهٔ نصب روی main و staging بازآزمایی و با `git archive` مقایسه شد → **IDENTICAL**.
+
+**فایل نصاب خودکار:** `/home/user/apply_v335_48.py` (۱۱ فایل، ۲ حذف، از پایهٔ `99d16e8d`، ۱.۶ MB) — مستقل و خود-استخراج‌گر طبق §۱۱؛ `verify_native_final.py` و `git diff --check` درونش اجرا می‌شود و پس از اعمال، فایل نصاب را پاک می‌کند.
+
+**دستور استاندارد (تک‌خطی، §۱۱):**
+```bash
+cd /mnt/c/Users/Hashem/Downloads/exam-app-kotlin && python3 /mnt/c/Users/Hashem/Downloads/apply_v335_48.py
+```
+
+**بدون SQL جدید. مقصد تأییدشده: هر دو شاخهٔ `main` و `staging`.**
+
+---
+
 ## V335.47 / 1.03.27 — ماندگاری نشست: توکن کهنه ≠ نشست باطل — ۲۰۲۶-۱۰-۲۸
 
 **شکایت:** «اپ و سایت بعد از آپدیت/رفرش/باز و بستن، لاگین نمی‌مانند». با سه پرسش تفکیک شد: سایت **بی‌قاعده و بیشتر با اینترنت ضعیف**، اپ **فقط بعد از آپدیت APK**، استفاده در **تب مرورگر**.

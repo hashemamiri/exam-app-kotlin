@@ -1348,6 +1348,13 @@
     if (p.role !== 'student' && window.SiteExtras) c.appendChild(acc('delete', 'حذف حساب', function () { var k = window.SiteExtras.deleteAccountCard(async function () { S.logout(); }); k.className = ''; return [k]; }));
   }
   var accPwRecovery = false;
+  /* V335.48 — گذارِ صفحه مثل ExamApp.kt: wallet عمودی، کارت‌ها مقیاسی، خانه از چپ، بقیه از راست */
+  function pageAnim(page) {
+    if (page === 'wallet') return 'm-pg-wallet';
+    if (page === 'cards') return 'm-pg-cards';
+    if (page === 'dashboard') return 'm-pg-home';
+    return 'm-pg-other';
+  }
   function paint() {
     cleanupBuilder();
     var root = document.getElementById('root'); if (!root) return;
@@ -1371,7 +1378,7 @@
       var backTo = (page === 'builder' && view.arg && view.arg.mode === 'print') ? 'print' : (page === 'join' ? 'cards' : home);
       head = el('div', {class: 'm-head'}, [el('button', {class: 'm-back', 'aria-label': 'بازگشت', onclick: function () { go(backTo); }}, [ic('chevron')]), el('h1', {text: ttl})]);
     }
-    var content = el('div', {class: 'm-content' + (head ? '' : ' no-head'), id: 'content'});
+    var content = el('div', {class: 'm-content' + (head ? '' : ' no-head') + ' ' + pageAnim(page), id: 'content'});
     if (head) shell.appendChild(head);
     shell.appendChild(content);
     /* V156 — مثل ExamApp.kt (page == BUILDER تمام‌صفحه و بدون bottomBar): در سازنده داک پایین نمایش داده نمی‌شود */
@@ -1402,7 +1409,7 @@
   /* دانش‌آموز: نوار بالا (عنوان + ☰ مثل اپ)، بدون داک؛ در حین آزمون نوار حذف می‌شود (StudentExamScreen تمام‌صفحه) */
   function paintStudent(shell, page) {
     var inExam = window.SiteStudent && window.SiteStudent.inExam();
-    var content = el('div', {class: 'm-content m-student-content', id: 'content'});
+    var content = el('div', {class: 'm-content m-student-content ' + pageAnim(page), id: 'content'});
     if (!inExam) {
       shell.appendChild(el('div', {class: 'm-head m-head-student'}, [
         el('button', {class: 'm-back', 'aria-label': 'منو', onclick: function () { ui.menuOpen = !ui.menuOpen; if (ui.menuOpen) closeOverlays(); paint(); }}, [ic(ui.menuOpen ? 'close' : 'menu')]),
