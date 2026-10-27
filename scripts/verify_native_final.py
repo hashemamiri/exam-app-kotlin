@@ -281,6 +281,14 @@ try:
 except (json.JSONDecodeError, AttributeError) as exc:
     errors.append(f"invalid header schema: {exc}")
 
+# V335.34 — mobile polish and removal of user-facing diagnostics.
+for relative in ("ui/auth/SignInScreen.kt", "ui/profile/ProfileSettingsScreen.kt"):
+    screen = (MAIN / "java/ir/exam/app" / relative).read_text()
+    require("NetworkDiagnosticsCard()" not in screen, "diagnostics entry reintroduced: " + relative)
+mobile_css = (ROOT / "site/src/site.css").read_text()
+require("@keyframes m-native-card-in" in mobile_css, "native mobile card animation missing")
+require("max-height:100vh;max-height:100dvh;overflow-y:auto" in mobile_css, "exam sheet viewport guard missing")
+
 if errors:
     print("Print renderer verification: FAILED")
     for error in errors:

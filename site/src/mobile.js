@@ -186,7 +186,7 @@
         ic('chevron', 'm-chev')
       ]),
       el('div', {class: 'm-grid'}, cards.map(function (c, i) {
-        return el('button', {class: 'm-tile neo' + (sel === c[2] ? ' sel' : '') + (c[4] ? ' danger' : ''), style: 'animation-delay:' + (20 + i * 18) + 'ms', onclick: c[3]}, [ic(c[2], 'm-tile-ic'), el('b', {text: c[0]}), el('span', {text: c[1]})]);
+        return el('button', {class: 'm-tile neo' + (sel === c[2] ? ' sel' : '') + (c[4] ? ' danger' : ''), style: 'animation-delay:' + (i * 55) + 'ms', onclick: c[3]}, [ic(c[2], 'm-tile-ic'), el('b', {text: c[0]}), el('span', {text: c[1]})]);
       }))
     ]);
   }
@@ -205,9 +205,9 @@
       el('button', {class: 'm-outline', text: 'واردکردن', onclick: function () { if (window.SiteExtras) window.SiteExtras.importExam(); }})
     ]));
     if (!list.length) { wrap.appendChild(el('p', {class: 'm-note', text: 'هنوز آزمونی برای نمایش وجود ندارد.'})); c.appendChild(wrap); return; }
-    list.forEach(function (x) {
+    list.forEach(function (x, index) {
       var open = ui.expanded === x.id;
-      var card = el('div', {class: 'm-exam neo' + (open ? ' open' : ''), 'data-exam': x.id, onclick: function (e) { if (e.target.closest('.m-exam-acts')) return; ui.expanded = open ? null : x.id; ui.scrollTo = open ? null : x.id; examsScreen(c); }}, [
+      var card = el('div', {class: 'm-exam neo' + (open ? ' open' : ''), style: 'animation-delay:' + Math.min(index, 12) * 55 + 'ms', 'data-exam': x.id, onclick: function (e) { if (e.target.closest('.m-exam-acts')) return; ui.expanded = open ? null : x.id; ui.scrollTo = open ? null : x.id; examsScreen(c); }}, [
         el('div', {class: 'm-exam-h'}, [el('b', {text: x.title || 'بدون عنوان'}), el('span', {class: 'm-exam-state', text: x.is_open ? 'باز' : 'بسته'})]),
         el('div', {class: 'm-exam-m', text: (x.subject || 'بدون درس') + ' · ' + (x.code || '—') + ' · ' + fa(x.duration || 0) + ' دقیقه · بارم ' + fa(S.fmtScore(x.total_score))})
       ]);
@@ -332,7 +332,7 @@
         ic('chevron', 'm-chev')
       ]),
       el('div', {class: 'm-grid'}, cards.map(function (c, i) {
-        return el('button', {class: 'm-tile neo' + (sel === c[2] ? ' sel' : '') + (c[4] ? ' danger' : ''), style: 'animation-delay:' + (20 + i * 18) + 'ms', onclick: c[3]}, [ic(c[2], 'm-tile-ic'), el('b', {text: c[0]}), el('span', {text: c[1]})]);
+        return el('button', {class: 'm-tile neo' + (sel === c[2] ? ' sel' : '') + (c[4] ? ' danger' : ''), style: 'animation-delay:' + (i * 55) + 'ms', onclick: c[3]}, [ic(c[2], 'm-tile-ic'), el('b', {text: c[0]}), el('span', {text: c[1]})]);
       }))
     ]);
   }
@@ -382,7 +382,7 @@
       /* کارت ویژه، وسط‌چین با عرض ۵۲٪ (featuredCard) */
       el('div', {class: 'm-featured'}, [el('button', {class: 'm-tile neo' + (sel === 'dashboard' ? ' sel' : ''), onclick: function () { go('dashboard'); }}, [ic('cards', 'm-tile-ic'), el('b', {text: 'داشبورد'}), el('span', {text: 'اطلاعات مدرسه و آمار'})])]),
       el('div', {class: 'm-grid'}, cards.map(function (c, i) {
-        return el('button', {class: 'm-tile neo' + (sel === c[2] ? ' sel' : '') + (c[4] ? ' danger' : ''), style: 'animation-delay:' + (20 + i * 18) + 'ms', onclick: c[3]}, [ic(c[2], 'm-tile-ic'), el('b', {text: c[0]}), el('span', {text: c[1]})]);
+        return el('button', {class: 'm-tile neo' + (sel === c[2] ? ' sel' : '') + (c[4] ? ' danger' : ''), style: 'animation-delay:' + (i * 55) + 'ms', onclick: c[3]}, [ic(c[2], 'm-tile-ic'), el('b', {text: c[0]}), el('span', {text: c[1]})]);
       }))
     ]);
   }
@@ -486,7 +486,7 @@
     var list = el('div', {class: 'm-rows'});
     rows.forEach(function (tr, ri) {
       var cells = Array.prototype.slice.call(tr.cells);
-      var card = el('div', {class: 'm-rowcard neo', style: 'animation-delay:' + Math.min(ri, 12) * 25 + 'ms'});
+      var card = el('div', {class: 'm-rowcard neo', style: 'animation-delay:' + Math.min(ri, 12) * 55 + 'ms'});
       var head = el('div', {class: 'm-rowcard-h'}), body = el('div', {class: 'm-rowcard-b'}), acts = el('div', {class: 'm-rowcard-acts'});
       cells.forEach(function (td, i) {
         var h = heads[i] || '';

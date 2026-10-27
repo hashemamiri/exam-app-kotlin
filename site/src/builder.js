@@ -1383,8 +1383,8 @@
       drawAud(); m_.appendChild(aud);
     }
     function openSettings() {
-      var bg = el('div', {class: 'modal-bg'});
-      var m = el('div', {class: 'modal wide'});
+      var bg = el('div', {class: 'modal-bg b-exam-settings-bg'});
+      var m = el('div', {class: 'modal wide b-exam-settings'});
       m.appendChild(el('button', {class: 'x', text: '✕', onclick: function () { bg.remove(); syncMeta(); }}));
       m.appendChild(el('h2', {text: '⚙ مشخصات آزمون'}));
       settingsForm(m);

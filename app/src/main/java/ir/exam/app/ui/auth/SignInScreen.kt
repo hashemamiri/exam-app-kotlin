@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -19,7 +18,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.MailOutline
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -43,7 +41,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.launch
-import ir.exam.app.ui.profile.NetworkDiagnosticsCard
 import ir.exam.app.ui.common.PasswordVisibilityButton
 import ir.exam.app.ui.common.passwordTransformation
 
@@ -161,25 +158,7 @@ fun SignInScreen(viewModel: AuthViewModel) {
                     modifier = Modifier.fillMaxWidth()
                 )
             }
-            // V335.26 — «تست اتصال به سرور» پیش از ورود: تشخیص روی همان گوشی و همان شبکه،
-            // بدون نیاز به وارد شدن؛ گزارش با دکمهٔ «کپی گزارش» برای پشتیبانی قابل ارسال است.
-            var showNetDiag by remember { mutableStateOf(false) }
-            Spacer(Modifier.height(4.dp))
-            TextButton(onClick = { showNetDiag = true }) { Text("تست اتصال به سرور") }
-            if (showNetDiag) {
-                AlertDialog(
-                    onDismissRequest = { showNetDiag = false },
-                    confirmButton = { TextButton(onClick = { showNetDiag = false }) { Text("بستن") } },
-                    title = { Text("تست اتصال به سرور") },
-                    text = {
-                        Column(
-                            Modifier
-                                .heightIn(max = 440.dp)
-                                .verticalScroll(rememberScrollState())
-                        ) { NetworkDiagnosticsCard() }
-                    }
-                )
-            }
+
         }
     }
 }

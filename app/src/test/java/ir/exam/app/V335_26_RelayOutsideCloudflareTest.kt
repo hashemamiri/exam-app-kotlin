@@ -8,7 +8,7 @@ import org.junit.Test
  * V335.26 — نگهبان «پل بدون Cloudflare و تست اتصال پیش از ورود»:
  * ۱) مسیر جایگزین سوم (`sb2.onlineexam.ir`) باید در فهرست پیش‌فرض باشد؛ چون شبکهٔ همراه اول
  *    IPهای پروکسی Cloudflare را باز نمی‌کند و دو مسیر قبلی روی همان IPها هستند.
- * ۲) صفحهٔ ورود باید دکمهٔ «تست اتصال به سرور» را پیش از وارد شدن نشان دهد.
+ * ۲) از V335.34 ابزار عیب‌یابی نباید در صفحهٔ ورود نمایش داده شود.
  * ۳) گزارش پشتیبانی باید نسخهٔ اپ و فهرست مسیرها را داشته باشد.
  */
 class V335_26_RelayOutsideCloudflareTest {
@@ -39,11 +39,10 @@ class V335_26_RelayOutsideCloudflareTest {
     }
 
     @Test
-    fun `sign in screen offers the connection test before login`() {
-        assertTrue("دکمهٔ تست اتصال باید در صفحهٔ ورود باشد", "TextButton(onClick = { showNetDiag = true }) { Text(\"تست اتصال به سرور\") }" in signIn)
-        assertTrue("کارت تست اتصال باید داخل پنجره باز شود", "NetworkDiagnosticsCard()" in signIn)
-        assertTrue("پنجره باید بسته شود", "onDismissRequest = { showNetDiag = false }" in signIn)
-        assertTrue("کارت باید اسکرول‌پذیر باشد", "heightIn(max = 440.dp)" in signIn)
+    fun `sign in screen no longer exposes connection diagnostics`() {
+        assertTrue("showNetDiag" !in signIn)
+        assertTrue("NetworkDiagnosticsCard()" !in signIn)
+        assertTrue("تست اتصال به سرور" !in signIn)
     }
 
     @Test

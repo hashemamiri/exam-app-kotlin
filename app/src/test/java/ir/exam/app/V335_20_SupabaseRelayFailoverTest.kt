@@ -75,10 +75,10 @@ class V335_20_SupabaseRelayFailoverTest {
     }
 
     @Test
-    fun settingsExposeConnectionTestCard() {
+    fun diagnosticsRemainInternalWithoutSettingsEntry() {
         val settings = src("app/src/main/java/ir/exam/app/ui/profile/ProfileSettingsScreen.kt")
-        assertTrue("SettingsAccordionCard(title = \"تست اتصال به سرور\"" in settings)
-        assertTrue("NetworkDiagnosticsCard()" in settings)
+        assertTrue("SettingsAccordionCard(title = \"تست اتصال به سرور\"" !in settings)
+        assertTrue("NetworkDiagnosticsCard()" !in settings)
         val card = src("app/src/main/java/ir/exam/app/ui/profile/NetworkDiagnostics.kt")
         assertTrue("internal fun NetworkDiagnosticsCard()" in card)
         assertTrue("SupabaseRouter.probeAll()" in card)
