@@ -1,5 +1,25 @@
 # هندآف جامع مهاجرت سامانه آزمون از WebView به Native Kotlin
 
+## V335.44 / 1.03.24 — کلید SSH در CI: پایان‌خط ویندوز و پذیرش base64 — ۲۰۲۶-۱۰-۲۸
+
+**یافتهٔ عملی (لاگ Actions اجرای `40587799259`):** گام آروان با
+`Load key "/home/runner/.ssh/arvan": error in libcrypto` و سپس `Permission denied` شکست،
+در حالی که همان کلید از WSL کار می‌کرد (`REMOTE_OK`). علت با آزمایش موضعی قطعی شد:
+**الف) خط‌های CRLF** در مقدار Secret، **ب)** **نبودِ newline در انتهای کلید** — هر دو دقیقاً همین پیام `error in libcrypto` را می‌دهند، **ج)** مقدار مثله/ناقص.
+(آزمون: کلید خام با CRLF و کلید بدون خط آخر ⇒ نامعتبر؛ همان کلید پس از `tr -d '\r'` و افزودن خط آخر، یا به‌صورت base64 ⇒ سالم.)
+
+**اصلاح گام `Sync domain onlineexam.ir (Arvan)` در `.github/workflows/site.yml`:**
+- `tr -d '\r'` برای حذف CR؛
+- تضمین newline پایانی با `[ -n "$(tail -c1 …)" ] && echo >> …`؛
+- پذیرش **هر دو شکل** ورودی: متن PEM (شناسایی با `BEGIN .*PRIVATE KEY`) یا **base64** (رمزگشایی با `base64 -d`)؛
+- **سنجش سلامت کلید پیش از rsync** با `ssh-keygen -y -f`؛ در صورت خرابی، `::error::` با راهنمای `base64 -w0 ~/.ssh/arvan | clip.exe` و خروج؛
+- پیش‌فرض `ARVAN_WEBROOT` روی `/var/www/onlineexam` تثبیت شد.
+همان تغییرها در `docs/ci/site_arvan_sync_step.yml` هم آینه شد.
+
+**تست:** `app/src/test/java/ir/exam/app/V335_44_CiKeyHandlingTest.kt` (۴ تست، ۱۰ پین). **بدون SQL جدید. مقصد: هر دو شاخهٔ `main` و `staging`.**
+
+---
+
 ## V335.43 / 1.03.23 — کلید SSH و پوشهٔ انتشار خودترمیم — ۲۰۲۶-۱۰-۲۸
 
 **یافتهٔ عملی (از لاگ کاربر):** دو مانع هم‌زمان —

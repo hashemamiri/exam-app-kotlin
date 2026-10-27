@@ -206,10 +206,27 @@ jobs:
             exit 0
           fi
           mkdir -p ~/.ssh && chmod 700 ~/.ssh
-          printf '%s\n' "$ARVAN_SSH_KEY" > ~/.ssh/arvan && chmod 600 ~/.ssh/arvan
+          # V335.44 — کلید می‌تواند متن خام PEM باشد یا base64 آن؛ CRLF و فاصلهٔ اضافه هم تحمل می‌شود.
+          RAW=$(mktemp)
+          printf '%s' "$ARVAN_SSH_KEY" | tr -d '\r' > "$RAW"
+          [ -n "$(tail -c1 "$RAW" 2>/dev/null)" ] && echo >> "$RAW"   # خط آخر الزامی است
+          if grep -q "BEGIN .*PRIVATE KEY" "$RAW"; then
+            cp "$RAW" ~/.ssh/arvan
+          else
+            tr -d ' \n\t' < "$RAW" | base64 -d > ~/.ssh/arvan 2>/dev/null || cp "$RAW" ~/.ssh/arvan
+          fi
+          rm -f "$RAW"
+          chmod 600 ~/.ssh/arvan
+          if ! ssh-keygen -y -f ~/.ssh/arvan > /dev/null 2>&1; then
+            echo "::error::ARVAN_SSH_KEY قابل خواندن نیست (error in libcrypto)."
+            echo "راه‌حل: کلید را base64 کن و همان رشته را در Secret بگذار:"
+            echo "  base64 -w0 ~/.ssh/arvan | clip.exe"
+            exit 1
+          fi
+          echo "🔑 کلید SSH سالم است: $(ssh-keygen -y -f ~/.ssh/arvan | cut -c1-32)…"
           ssh-keyscan -H "${ARVAN_HOST#*@}" >> ~/.ssh/known_hosts 2>/dev/null || true
           python3 scripts/sync_arvan_site.py --apply --from-dir site_out \
-            --target "$ARVAN_HOST" --webroot "${ARVAN_WEBROOT:-auto}" \
+            --target "$ARVAN_HOST" --webroot "${ARVAN_WEBROOT:-/var/www/onlineexam}" \
             --ssh-key ~/.ssh/arvan --yes --no-reload
           echo "### ✅ هم‌گام‌سازی دامنه" >> "$GITHUB_STEP_SUMMARY"
           echo 'دامنهٔ `onlineexam.ir` با همین انتشار هم‌تراز شد.' >> "$GITHUB_STEP_SUMMARY"
