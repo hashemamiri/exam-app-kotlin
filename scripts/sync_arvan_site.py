@@ -315,33 +315,93 @@ def ssh_base(host, key=None, port=22):
     return cmd + [host]
 
 
+def probe_server(host, key=None, port=22):
+    """V335.42 — عکس فوری از وضعیت سرور: SSH، Caddyfile، ریشه‌ها و فایل‌های وب."""
+    cmd = ("echo '== whoami =='; whoami; hostname; "
+           "echo '== ssh ok =='; "
+           "echo '== /etc/caddy/Caddyfile (40 خط) =='; head -40 /etc/caddy/Caddyfile 2>/dev/null || echo 'Caddyfile نیست'; "
+           "echo '== index.html ها =='; find /var/www /srv /opt /home /root /usr/share/caddy -maxdepth 4 -name index.html 2>/dev/null | head -15; "
+           "echo '== پوشه‌های وب =='; ls -la /var/www 2>/dev/null; "
+           "echo '== nginx? =='; ls /etc/nginx/sites-enabled 2>/dev/null; "
+           "echo '== سرویس‌ها =='; systemctl is-active caddy nginx 2>/dev/null; "
+           "echo '== نسخهٔ سایتِ الان =='; grep -oE 'c[0-9][.][0-9a-f]{12}[.]js' /var/www/*/index.html /srv/*/index.html 2>/dev/null | head -3")
+    r = subprocess.run(ssh_base(host, key, port) + [cmd], capture_output=True, text=True)
+    out = (r.stdout or "") + (("\n" + r.stderr) if r.stderr else "")
+    print(out.strip()[:4000] if out.strip() else "❌ هیچ پاسخی از SSH نرسید.")
+    if r.returncode != 0:
+        log("⚠️  کد خروج SSH: %d — احتمالاً کلید/دسترسی مشکل دارد." % r.returncode)
+        log("   ssh -i ~/.ssh/arvan root@95.38.160.168 'echo OK'")
+        return 3
+    return 0
+
+
 def detect_webroot(host, key=None, port=22):
     """ریشهٔ وب را از Caddyfile یا مسیرهای رایج پیدا می‌کند."""
+    # V335.42 — تشخیص چندلایه: Caddyfile، مسیرهای رایج، سپس جست‌وجوی خودکار index.html
     probe = ("cat /etc/caddy/Caddyfile 2>/dev/null; echo '---'; "
-             + "; ".join(f"echo W:{p}; test -f {p}/index.html && echo YES:{p}" for p in CANDIDATE_WEBROOTS))
+             + "; ".join(f"echo W:{p}; test -f {p}/index.html && echo YES:{p}" for p in CANDIDATE_WEBROOTS)
+             + "; echo '---'; "
+             + "find /var/www /srv /opt /home /root /usr/share/caddy -maxdepth 5 -name index.html "
+               "-not -path '*/node_modules/*' -not -path '*/.git/*' 2>/dev/null | head -20 | "
+               "while read -r f; do echo FOUND:$(dirname \"$f\"); done")
     try:
         r = subprocess.run(ssh_base(host, key, port) + [probe], capture_output=True, text=True, timeout=60)
     except Exception as e:  # noqa: BLE001
         log(f"⚠️  SSH برای تشخیص مسیر ناموفق بود: {e}")
         return None
     out = r.stdout or ""
-    caddy, _, probe_out = out.partition("---")
+    if r.returncode != 0 and not out.strip():
+        log("⚠️  SSH پاسخ نداد (کد %d): %s" % (r.returncode, (r.stderr or "").strip()[:200]))
+        log("   بررسی کنید:  ssh -i ~/.ssh/arvan root@95.38.160.168 'echo OK'")
+        return None
+    parts = out.split("---")
+    caddy = parts[0]
     roots = re.findall(r"^\s*root\s+\*?\s*(\S+)", caddy, re.M)
     for cand in CANDIDATE_WEBROOTS:
-        if f"YES:{cand}" in probe_out:
+        if f"YES:{cand}" in out:
             if roots and cand not in roots:
                 log(f"ℹ️  Caddy می‌گوید root={roots[0]} ولی index در {cand} است؛ {cand} انتخاب شد.")
             return cand
     if roots:
+        log(f"ℹ️  ریشه از Caddyfile: {roots[0].strip(chr(34)+chr(39))}")
         return roots[0].strip("\"'")
+    found = []
+    for line in out.splitlines():
+        if line.startswith("FOUND:"):
+            d = line[6:].strip()
+            if d and d not in found:
+                found.append(d)
+    if found:
+        log("ℹ️  index.html در این مسیرها پیدا شد: " + " · ".join(found[:6]))
+        for d in found:
+            if "onlineexam" in d:
+                return d
+        return found[0]
+    log("⚠️  هیچ‌کدام از مسیرهای رایج index.html نداشت و Caddyfile هم root نداشت.")
+    log("   سه راه: ۱) ببینید سایت الان از کجا سرو می‌شود:")
+    log("            ssh -i ~/.ssh/arvan root@95.38.160.168 \"cat /etc/caddy/Caddyfile | head -40\"")
+    log("            ssh -i ~/.ssh/arvan root@95.38.160.168 \"ls -la /var/www /srv /opt /home\"")
+    log("   ۲) همان مسیر را با --webroot بدهید")
+    log("   ۳) یا در حالت جدید --empty-webroot یک پوشهٔ تازه (/var/www/onlineexam) بسازید")
     return None
 
 
-def apply(src_dir, host, webroot=None, key=None, port=22, dry_run=False, yes=False, reload=True):
+def apply(src_dir, host, webroot=None, key=None, port=22, dry_run=False, yes=False, reload=True, empty_webroot=None):
     if not os.path.isfile(os.path.join(src_dir, "index.html")):
         log(f"❌ {src_dir}/index.html نیست — چیزی برای ارسال وجود ندارد.")
         return 4
-    if webroot in (None, "", "auto"):
+    # V335.42 — اگر ریشه پیدا نشد، می‌توان پوشهٔ تازه ساخت (پیش‌فرض پیشنهادی /var/www/onlineexam)
+    if webroot in (None, "", "auto") and empty_webroot:
+        webroot = empty_webroot if empty_webroot is not True else "/var/www/onlineexam"
+        log(f"🆕 پوشهٔ وب تازه استفاده می‌شود: {webroot}")
+        r = subprocess.run(ssh_base(host, key, port) + [f"mkdir -p {webroot} && echo OK"],
+                           capture_output=True, text=True)
+        if "OK" not in (r.stdout or ""):
+            log(f"❌ ساخت پوشه ناموفق: {(r.stderr or '').strip()[:200]}")
+            return 4
+        log("   یادآوری: بعد از ارسال، root در Caddyfile باید به این مسیر اشاره کند:")
+        log(f"   root * {webroot}")
+    elif webroot in (None, "", "auto"):
         webroot = detect_webroot(host, key, port)
         if not webroot:
             log("❌ ریشهٔ وب پیدا نشد. با --webroot /مسیر/دقیق دوباره اجرا کنید.")
@@ -403,6 +463,9 @@ def main():
     p.add_argument("--build-local", action="store_true", help="site_out را از همین مخزن بساز و بفرست (بدون pages.dev)")
     p.add_argument("--target", default=DEFAULT_HOST, help=f"مقصد SSH (پیش‌فرض {DEFAULT_HOST})")
     p.add_argument("--webroot", default="auto", help="ریشهٔ وب روی سرور یا auto")
+    p.add_argument("--empty-webroot", nargs="?", const="/var/www/onlineexam", default=None,
+                   help="ریشهٔ وب پیدا نشد؛ این پوشه را بساز و همان را مقصد بگیر (پیش‌فرض /var/www/onlineexam)")
+    p.add_argument("--probe", action="store_true", help="فقط وضعیت سرور را نشان بده: Caddyfile، ریشه‌های کاندید و SSH")
     p.add_argument("--ssh-key", default=os.environ.get("ARVAN_SSH_KEY_FILE"), help="مسیر کلید SSH")
     p.add_argument("--port", type=int, default=22)
     p.add_argument("--yes", "-y", action="store_true", help="بدون پرسش تأیید")
@@ -413,6 +476,8 @@ def main():
     a = p.parse_args()
 
     prefer_ipv4()  # V335.41 — پیش از هر درخواست شبکه
+    if a.probe:
+        return probe_server(a.target, a.ssh_key, a.port)
     if a.source == "auto":
         a.source = SOURCE_CANDIDATES[0]
     if a.apply:
@@ -435,7 +500,7 @@ def main():
                     src_dir = "site_out"
             if not src_dir:
                 src_dir = a.out
-        return apply(src_dir, a.target, a.webroot, a.ssh_key, a.port, a.dry_run, a.yes, not a.no_reload)
+        return apply(src_dir, a.target, a.webroot, a.ssh_key, a.port, a.dry_run, a.yes, not a.no_reload, a.empty_webroot)
 
     if a.mirror:
         info = mirror(a.source, a.out, a.allow_missing)

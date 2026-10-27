@@ -1,5 +1,18 @@
 # هندآف جامع مهاجرت سامانه آزمون از WebView به Native Kotlin
 
+## V335.42 / 1.03.22 — تشخیص ریشهٔ وب سرور و ساخت پوشهٔ تازه — ۲۰۲۶-۱۰-۲۸
+
+**یافتهٔ عملی:** `--apply` با پیام `❌ ریشهٔ وب پیدا نشد` متوقف شد. علت: `detect_webroot` فقط `root` را از `/etc/caddy/Caddyfile` می‌خواند و پنج مسیر رایج را با وجود `index.html` می‌آزمود؛ اگر سایت جای دیگری سرو شود (یا Caddyfile در مسیر دیگر باشد) نتیجه خالی می‌ماند و کار متوقف می‌شد. نکتهٔ دیگر همان اجرا: `getent hosts onlineexam-1q1.pages.dev` فقط `2001:4188:…` (IPv6) داد — تأیید همان تشخیص V335.41.
+
+**سه اصلاح در `scripts/sync_arvan_site.py`:**
+1. **`--probe`** (تازه): عکس فوری از سرور — `whoami`/`hostname`، ۴۰ خط اول `/etc/caddy/Caddyfile`، همهٔ `index.html`های یافت‌شده، فهرست `/var/www`، وضعیت `caddy`/`nginx` و **نسخهٔ سایتِ روی سرور** (`c[0-9].<hash>.js`).
+2. **تشخیص سه‌لایه:** Caddyfile → پنج مسیر رایج → **جست‌وجوی خودکار** `find /var/www /srv /opt /home /root -maxdepth 5 -name index.html`؛ اگر چند مسیر باشد، آن‌که در نامش `onlineexam` دارد ترجیح داده می‌شود.
+3. **`--empty-webroot [/path]`** (تازه): اگر ریشه پیدا نشد، پوشه ساخته می‌شود (`mkdir -p`) و همان مقصد ارسال می‌شود، با یادآوری `root * <path>` برای Caddyfile. پیام‌های SSH (کد خروج و پیشنهاد `ssh -i … echo OK`) هم اضافه شد.
+
+**تست‌ها:** `app/src/test/java/ir/exam/app/V335_42_WebrootDiscoveryTest.kt` (۳ تست، ۱۰ پین). **بدون SQL جدید. مقصد: هر دو شاخهٔ `main` و `staging`.** نسخه فقط برای قاعدهٔ «هر نسخه یک‌بار» بالا رفت.
+
+---
+
 ## V335.41 / 1.03.21 — هم‌گام‌سازی دامنه بدون وابستگی به pages.dev و رفع «Network is unreachable» — ۲۰۲۶-۱۰-۲۸
 
 **یافتهٔ عملی (از اجرای کاربر):** `sync_arvan_site.py --check` روی WSL شکست:
