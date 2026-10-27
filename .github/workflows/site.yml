@@ -55,6 +55,7 @@ jobs:
           cp site/status.html site_out/status.html  # V228 — صفحهٔ وضعیت سرویس
           cp site/terms.html site/privacy.html site_out/  # V282 — شرایط استفاده و حریم خصوصی
           cp site/robots.txt site/sitemap.xml site/favicon.ico site_out/  # V248 — سئو؛ V248.3 — favicon.ico
+          cp site/pay-return.html site_out/  # V335.39 — صفحهٔ بازگشت درگاه در ریشهٔ دامنه (پیش‌تر ۴۰۴/صفحهٔ فرود می‌شد)
           # V162 / V312.1 — موتورهای چاپ/فرمول و پنل‌های پس از ورود در فایل‌های جداگانه با hash در نام (کش دائمی)
           cp site/engines.*.js site_out/
           cp site/panels.*.js site_out/
@@ -185,3 +186,30 @@ jobs:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           command: pages deploy site_out --project-name=onlineexam --branch=${{ github.ref_name }} --commit-dirty=true
+      # V335.39 — SYNC_ARVAN: هم‌گام‌سازی دامنهٔ onlineexam.ir روی ابرک آروان (Caddy)
+      # چرا: site.yml فقط روی Cloudflare Pages منتشر می‌کند و کپیِ آروان دستی بود؛
+      # نتیجه این‌که دامنه در V335.39 روی V335.32 مانده بود. این گام همان شکاف را می‌بندد.
+      # فعال‌سازی (یک‌بار): Settings → Variables → New variable: ARVAN_SYNC = on
+      #                       Settings → Secrets → ARVAN_SSH_KEY / ARVAN_HOST / ARVAN_WEBROOT
+      # بدون این‌ها گام با پیام «skipped» رد می‌شود و CI هرگز نمی‌شکند.
+      - name: Sync domain onlineexam.ir (Arvan)
+        id: sync_arvan
+        if: vars.ARVAN_SYNC == 'on' && github.ref_name == 'main'
+        continue-on-error: true
+        env:
+          ARVAN_SSH_KEY: ${{ secrets.ARVAN_SSH_KEY }}
+          ARVAN_HOST: ${{ secrets.ARVAN_HOST }}
+          ARVAN_WEBROOT: ${{ secrets.ARVAN_WEBROOT }}
+        run: |
+          if [ -z "$ARVAN_HOST" ] || [ -z "$ARVAN_SSH_KEY" ]; then
+            echo "::warning::ARVAN_SYNC=on ولی ARVAN_HOST/ARVAN_SSH_KEY تنظیم نشده — هم‌گام‌سازی انجام نشد."
+            exit 0
+          fi
+          mkdir -p ~/.ssh && chmod 700 ~/.ssh
+          printf '%s\n' "$ARVAN_SSH_KEY" > ~/.ssh/arvan && chmod 600 ~/.ssh/arvan
+          ssh-keyscan -H "${ARVAN_HOST#*@}" >> ~/.ssh/known_hosts 2>/dev/null || true
+          python3 scripts/sync_arvan_site.py --apply --from-dir site_out \
+            --target "$ARVAN_HOST" --webroot "${ARVAN_WEBROOT:-auto}" \
+            --ssh-key ~/.ssh/arvan --yes --no-reload
+          echo "### ✅ هم‌گام‌سازی دامنه" >> "$GITHUB_STEP_SUMMARY"
+          echo 'دامنهٔ `onlineexam.ir` با همین انتشار هم‌تراز شد.' >> "$GITHUB_STEP_SUMMARY"

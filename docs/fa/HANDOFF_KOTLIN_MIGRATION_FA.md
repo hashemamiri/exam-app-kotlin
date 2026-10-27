@@ -1,5 +1,22 @@
 # هندآف جامع مهاجرت سامانه آزمون از WebView به Native Kotlin
 
+## V335.39 / 1.03.19 — هم‌گام‌سازی دامنهٔ `onlineexam.ir` با نسخهٔ منتشرشده (فقط وب و CI — کد اندروید تغییر نکرد) — ۲۰۲۶-۱۰-۲۷
+
+**یافتهٔ سنجیده‌شده (نه حدس):** دامنهٔ `onlineexam.ir` **قطع نبود**؛ با `check-host.net` روی ۲۰ گره در ۲۰ کشور، ۲۰ از ۲۰ پاسخ `200` (Caddy، گواهی GTS تا ۲۰۲۶-۱۲-۰۹، IP ابرک آروان `95.38.160.168`). خطای «قطع» از سندباکس بود: آن محیط به هیچ IP ایرانی دسترسی ندارد (کنترل: `digikala.com`، `varzesh3.com`، `aparat.com` هم timeout). اما دو مشکل واقعی پیدا شد:
+
+- **عقب‌ماندگی دامنه:** با تطبیق هش چانک‌ها در بازتولید بیلد، دامنه روی **V335.32** (`aba4ff2c3ab8` / `99dd19e60003`) بود و Pages روی **V335.38** (`8259d0da2ea5` / `b30ca1ed032c`)؛ چون `site.yml` فقط Cloudflare Pages را منتشر می‌کند و کپی آروان دستی است.
+- **نبود صفحهٔ بازگشت در ریشه:** `/pay-return.html` روی دامنه پاسخ `index.html` (۸۸۰۵ بایت) می‌داد و `site.yml` نسخهٔ ریشه را در `site_out/` کپی نمی‌کرد؛ با `PAY_CALLBACK_BASE` فعلی، بازگشت زیبال به صفحهٔ فرود می‌رسید.
+
+**فایل‌های این بسته:** `scripts/sync_arvan_site.py` (سه حالت `--check` / `--mirror` / `--apply`؛ بدون هیچ سکرت؛ تشخیص خودکار ریشهٔ وب از Caddyfile و مسیرهای رایج؛ کپی `/pay-return.html` از `pwa/`؛ rsync با `--delete` و بررسی خودکار پس از ارسال)، `scripts/check_site_sync.py` (نگهبان آفلاین، صدا زده در `preflight.py`)، `docs/ci/site_arvan_sync_step.yml` (قطعهٔ آمادهٔ workflow برای حالت بدون scope=`workflow`)، `relay/Caddyfile.site.example` (۴۰۴ واقعی برای دارایی ناموجود + کش)، `app/src/test/java/ir/exam/app/V335_39_SiteDomainSyncTest.kt` (۵ تست)، `docs/fa/ARVAN_SITE_SYNC_FA.md` (راهنمای گام‌به‌گام).
+
+**تغییر در `site.yml`:** ۱) `cp site/pay-return.html site_out/` ۲) گام `Sync domain onlineexam.ir (Arvan)` با شرط `vars.ARVAN_SYNC == 'on' && github.ref_name == 'main'` و `continue-on-error: true`؛ سکرت‌ها `ARVAN_SSH_KEY` / `ARVAN_HOST` / `ARVAN_WEBROOT`. اگر سکرت نباشد گام `::warning::` می‌دهد و CI نمی‌شکند.
+
+**ایمنی تازهٔ نصاب (`docs/tools/installer_template.py`):** `save_dirty_tree()` اگر درخت کاری تغییر commit‌نشده داشته باشد آن را در شاخهٔ `wip-auto-…` ذخیره می‌کند و نصب را ادامه می‌دهد (درس نصب اول: `git checkout -B main origin/main` می‌شکست و هیچ کاری انجام نمی‌شد)؛ `push_checked()` هم حالت «توکن بدون scope=workflow» را مدیریت می‌کند. این دو به قالب دائمی منتقل شدند تا همهٔ نسخه‌های بعدی داشته باشند.
+
+**بدون SQL جدید. مقصد: هر دو شاخهٔ `main` و `staging` (انتخاب کاربر).** اگر توکن گیت scope=`workflow` نداشته باشد، نصاب تغییر workflow را کنار می‌گذارد، فایل `site_v335_39_workflow.yml.pending` را کنار خودش می‌نویسد و بقیهٔ نسخه را push می‌کند؛ در این حالت `check_site_sync.py` به‌جای ✅ هشدار ⚠ («آماده ولی جای‌گذاری‌نشده») می‌دهد و همهٔ تست‌ها سبز می‌مانند، چون پین‌ها روی `docs/ci/site_arvan_sync_step.yml` هستند نه روی `site.yml`.
+
+---
+
 ## V335.38 / 1.03.19 — کارنامهٔ آزمون مستقل — ۲۰۲۶-۱۰-۲۷
 
 کاربر «کارنامهٔ یک آزمون» در اپ و سایت و انتشار staging سپس main را انتخاب کرد. اعلام کرد V335.37 روی staging نصب شده ولی main هنوز ارتقا نیافته است. بسته باید از همان stagingِ بررسی‌شدهٔ V335.37 ادامه دهد؛ هیچ تغییر پل/اطلس/ظاهرِ پوشهٔ اصلی وارد انتشار نشود. فقط اصلاحات مربوط به گزارش، شماره نسخه، خروجی ساخته‌شده و مستندات اضافه می‌شوند.

@@ -1,0 +1,41 @@
+# V335.39 — قطعهٔ مرجع برای `.github/workflows/site.yml`
+#
+# چرا این فایل جداست؟ توکن گیتِ معمولی مجوز `workflow` ندارد و هر push که
+# `.github/workflows/` را تغییر دهد رد می‌شود. این فایل همان قطعه را نگه می‌دارد
+# تا (۱) در چنین حالتی نسخه پنهان نماند، (۲) نگهبان‌ها بتوانند بدون تغییر
+# workflow هم مقدار درست را بسنجند. اگر site.yml این دو بخش را دارد، این فایل
+# فقط مستند است؛ اگر ندارد، محتوایش را در GitHub → Actions → site.yml جای‌گذاری کنید.
+
+# ——— بخش ۱: در گام «Build index.html with anon key»، بعد از خط robots/sitemap/favicon ———
+snippet_build: |
+  cp site/pay-return.html site_out/  # V335.39 — صفحهٔ بازگشت درگاه در ریشهٔ دامنه
+
+# ——— بخش ۲: آخرین گام job (بعد از «Deploy to Cloudflare Pages (retry 2)») ———
+snippet_step: |
+  # V335.39 — SYNC_ARVAN: هم‌گام‌سازی دامنهٔ onlineexam.ir روی ابرک آروان (Caddy)
+  - name: Sync domain onlineexam.ir (Arvan)
+    id: sync_arvan
+    if: vars.ARVAN_SYNC == 'on' && github.ref_name == 'main'
+    continue-on-error: true
+    env:
+      ARVAN_SSH_KEY: ${{ secrets.ARVAN_SSH_KEY }}
+      ARVAN_HOST: ${{ secrets.ARVAN_HOST }}
+      ARVAN_WEBROOT: ${{ secrets.ARVAN_WEBROOT }}
+    run: |
+      if [ -z "$ARVAN_HOST" ] || [ -z "$ARVAN_SSH_KEY" ]; then
+        echo "::warning::ARVAN_SYNC=on ولی ARVAN_HOST/ARVAN_SSH_KEY تنظیم نشده — هم‌گام‌سازی انجام نشد."
+        exit 0
+      fi
+      mkdir -p ~/.ssh && chmod 700 ~/.ssh
+      printf '%s\n' "$ARVAN_SSH_KEY" > ~/.ssh/arvan && chmod 600 ~/.ssh/arvan
+      ssh-keyscan -H "${ARVAN_HOST#*@}" >> ~/.ssh/known_hosts 2>/dev/null || true
+      python3 scripts/sync_arvan_site.py --apply --from-dir site_out \
+        --target "$ARVAN_HOST" --webroot "${ARVAN_WEBROOT:-auto}" \
+        --ssh-key ~/.ssh/arvan --yes --no-reload
+
+# ——— فعال‌سازی ———
+# Settings → Secrets and variables → Actions:
+#   Variable : ARVAN_SYNC = on
+#   Secrets  : ARVAN_HOST = root@95.38.160.168
+#              ARVAN_WEBROOT = /var/www/onlineexam  (یا auto)
+#              ARVAN_SSH_KEY = محتوای کلید خصوصی ed25519

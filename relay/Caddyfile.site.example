@@ -1,0 +1,70 @@
+# V335.39 — نمونهٔ Caddy برای دامنهٔ onlineexam.ir روی ابرک آروان
+#
+# این فایل «نمونه» است: بخش‌های مربوط به دامنه را با Caddyfile فعلی خودتان
+# مقایسه و ادغام کنید. تغییر اصلی نسبت به قبل:
+#   • فایل‌های استاتیک ناموجود دیگر «index.html با کد ۲۰۰» برنمی‌گردانند (۴۰۴ واقعی)
+#   • fallback به index فقط برای مسیرهای بدون پسوند (مسیرهای SPA) می‌ماند
+#   • کش دائمی برای دارایی‌های hash‌دار و no-cache برای index/sw
+#
+# پس از ویرایش:  caddy validate --config /etc/caddy/Caddyfile && systemctl reload caddy
+
+onlineexam.ir, www.onlineexam.ir {
+	root * /var/www/onlineexam
+	encode zstd gzip
+
+	# ——— صفحهٔ بازگشت درگاه: در ریشه و در pwa/ — هر دو باید موجود باشند ———
+	@payReturn path /pay-return.html /pwa/pay-return.html
+	header @payReturn Cache-Control "no-store"
+
+	# ——— دارایی‌های hash‌دار: کش دائمی ———
+	@immutable path /c*.js /s*.css /p*.js /engines.*.js /panels.*.js /fonts/*
+	header @immutable Cache-Control "public, max-age=31536000, immutable"
+
+	# ——— index و سرویس‌ورکر: همیشه تازه ———
+	@fresh path / /index.html /pwa/sw.js /status.html
+	header @fresh Cache-Control "no-store, must-revalidate"
+
+	# Alt-Svc را پاک می‌کنیم تا QUIC/HTTP3 در اپراتورهای ایران گیر نکند (تجربهٔ V182.4/V248)
+	header Alt-Svc "clear"
+	header X-Content-Type-Options "nosniff"
+	header X-Frame-Options "SAMEORIGIN"
+	header Referrer-Policy "strict-origin-when-cross-origin"
+	header Strict-Transport-Security "max-age=31536000; includeSubDomains"
+
+	# ——— ۴۰۴ واقعی برای دارایی‌های ناموجود (پیش‌تر index با کد ۲۰۰ برمی‌گشت) ———
+	@assets path *.js *.css *.png *.svg *.ico *.webmanifest *.woff2 *.woff *.ttf *.xml *.txt
+	handle @assets {
+		file_server {
+			pass_thru
+		}
+		@notFound not file {path}
+		handle @notFound {
+			respond "Not Found" 404
+		}
+	}
+
+	# ——— همهٔ صفحات HTML واقعی ———
+	@html path / *.html
+	handle @html {
+		file_server
+		@missing not file {path}
+		handle @missing {
+			respond "Not Found" 404
+		}
+	}
+
+	# ——— بقیهٔ مسیرها (SPA): فایل اگر بود، وگرنه index ———
+	handle {
+		try_files {path} /index.html
+		file_server
+	}
+}
+
+# پل‌های ایرانی (بدون تغییر — فقط برای یادآوری)
+pay.onlineexam.ir {
+	reverse_proxy 127.0.0.1:8788
+}
+
+sb3.onlineexam.ir {
+	reverse_proxy 127.0.0.1:8787
+}
