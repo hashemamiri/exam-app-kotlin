@@ -33,7 +33,14 @@ import time
 import urllib.error
 import urllib.request
 
-DEFAULT_SOURCE = "https://onlineexam-1q1.pages.dev"
+DEFAULT_SOURCE = "auto"
+# V335.41 — منابع نامزد به ترتیب اولویت. در ایران pages.dev گاهی فقط IPv6 می‌دهد و
+# WSL مسیر IPv6 ندارد ⇒ «Network is unreachable». اول IPv4 تحمیل می‌شود و اگر باز
+# هم نشد، شاخهٔ آزمایشی همان پروژه با هشدار صریح آزموده می‌شود.
+SOURCE_CANDIDATES = [
+    "https://onlineexam-1q1.pages.dev",
+    "https://staging.onlineexam-1q1.pages.dev",
+]
 DEFAULT_HOST = "root@95.38.160.168"
 LIVE_URL = "https://onlineexam.ir/"
 UA = "Mozilla/5.0 (compatible; onlineexam-site-sync/1.0; +https://onlineexam.ir)"
@@ -62,6 +69,13 @@ CANDIDATE_WEBROOTS = ["/var/www/onlineexam", "/var/www/onlineexam.ir", "/var/www
 
 
 # ---------- کمکی‌ها ----------
+
+def prefer_ipv4():
+    """V335.41 — resolve با IPv4 اول. علت خطای کاربر: Errno 101 روی AAAA."""
+    import socket
+    _orig = socket.getaddrinfo
+    socket.getaddrinfo = lambda host, port, family=0, *a, **k: _orig(host, port, socket.AF_INET, *a, **k)
+
 
 def log(msg=""):
     print(msg, flush=True)
@@ -205,13 +219,74 @@ def mirror(source, outdir, allow_missing=False):
 
 # ---------- ۲) check ----------
 
+def resolve_source(source):
+    """V335.41 — اگر منبع اصلی نرسید، نامزدهای بعدی با هشدار صریح امتحان می‌شوند."""
+    if source not in (DEFAULT_SOURCE, SOURCE_CANDIDATES[0]):
+        st, body, _ = fetch(source.rstrip("/") + "/")
+        return source, (body if st == 200 and body else None)
+    for cand in SOURCE_CANDIDATES:
+        st, body, _ = fetch(cand.rstrip("/") + "/")
+        if st == 200 and body:
+            if cand != SOURCE_CANDIDATES[0]:
+                log(f"⚠️  {SOURCE_CANDIDATES[0]} در دسترس نبود (احتمالاً نبود مسیر IPv6).")
+                log(f"   مقایسه با {cand} انجام می‌شود؛ اگر شاخهٔ آزمایشی عقب‌تر باشد محافظه‌کارانه است.")
+            return cand, body
+    return source, None
+
+
+def local_fingerprint():
+    """V335.41 — اثر انگشت نسخهٔ همین مخزن، بدون شبکه.
+
+    چانک‌های `c*.js` و `s*.css` تنها از محتوای `site/index.html` ساخته می‌شوند و به
+    کلید anon وابسته نیستند (کلید در اسکریپت جداگانه تزریق می‌شود)؛ پس می‌توان
+    اثر انگشت نسخهٔ منتشرشده را بدون دسترسی به pages.dev از خود مخزن به‌دست آورد.
+    """
+    root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    idx = os.path.join(root, "site", "index.html")
+    if not os.path.isfile(idx):
+        return None
+    html = open(idx, encoding="utf-8", errors="ignore").read()
+    styles = list(re.finditer(r"<style>([\s\S]*?)</style>", html))
+    scripts = list(re.finditer(r"<script>([\s\S]*?)</script>", html))
+    if not styles or not scripts:
+        return None
+    css = max(styles, key=lambda m: len(m.group(1))).group(1)
+    js = max(scripts, key=lambda m: len(m.group(1))).group(1)
+    ch, jh = sha(css.encode("utf-8"))[:12], sha(js.encode("utf-8"))[:12]
+    # همان شکل خروجی build_hashes تا مقایسه معنا داشته باشد (js/css)
+    return {"js": [f"c0.{jh}.js"], "css": [f"s0.{ch}.css"], "panels": [], "fingerprint": f"{jh}/{ch}"}
+
+
 def check(source=DEFAULT_SOURCE, live=LIVE_URL, quiet=False):
     """دامنهٔ زنده را با نسخهٔ منتشرشده مقایسه می‌کند."""
-    st1, idx_pub, _ = fetch(source.rstrip("/") + "/")
+    source, idx_pub = resolve_source(source)
+    st1 = 200 if idx_pub else 0
     st2, idx_live, _ = fetch(live)
-    if st1 != 200 or st2 != 200:
-        log(f"❌ دسترسی ناموفق — published HTTP {st1} · live HTTP {st2}")
+    if st2 != 200:
+        log(f"❌ دسترسی به دامنهٔ زنده ناموفق — live HTTP {st2} · published HTTP {st1}")
         return 3
+    if not idx_pub:
+        liv = build_hashes(idx_live.decode("utf-8", "replace"))
+        loc = local_fingerprint()
+        st3, body3, _ = fetch(live.rstrip("/") + "/pay-return.html")
+        pay_ok = st3 == 200 and sha(body3) != sha(idx_live)
+        if not quiet:
+            log(f"   دامنهٔ زنده      : {liv['fingerprint']}  js={len(liv['js'])} css={len(liv['css'])}")
+            log(f"   /pay-return.html : {'موجود ✅' if pay_ok else 'نیست ❌ (پاسخ صفحهٔ فرود)'}")
+            log("⚠️  نسخهٔ منتشرشده (pages.dev) از این شبکه در دسترس نیست — احتمالاً مسیر IPv6.")
+        if not loc:
+            log("❌ نه صفحات در دسترس است و نه site/index.html محلی؛ مقایسه ممکن نیست.")
+            return 3
+        if not quiet:
+            log(f"   مقایسه با مخزن  : {loc['fingerprint']}  js={len(loc['js'])} css={len(loc['css'])}")
+        same = liv["fingerprint"] == loc["fingerprint"]
+        if not quiet:
+            if same:
+                log("✅ دامنه با نسخهٔ همین مخزن هم‌تراز است (بررسی بدون شبکه).")
+            else:
+                log("❌ دامنه با نسخهٔ مخزن فرق دارد — هم‌گام‌سازی لازم است:")
+                log("   python3 scripts/build_site_out.py && python3 scripts/sync_arvan_site.py --apply --from-dir site_out --ssh-key ~/.ssh/arvan")
+        return 0 if (same and pay_ok) else 2
     pub = build_hashes(idx_pub.decode("utf-8", "replace"))
     liv = build_hashes(idx_live.decode("utf-8", "replace"))
     same = pub["fingerprint"] == liv["fingerprint"]
@@ -325,6 +400,7 @@ def main():
     p.add_argument("--source", default=DEFAULT_SOURCE, help=f"نشانی سایت منتشرشده (پیش‌فرض {DEFAULT_SOURCE})")
     p.add_argument("--out", default="site_mirror", help="پوشهٔ آینه (پیش‌فرض site_mirror)")
     p.add_argument("--from-dir", default=None, help="به‌جای آینه، این پوشهٔ آماده (مثل site_out) را بفرست")
+    p.add_argument("--build-local", action="store_true", help="site_out را از همین مخزن بساز و بفرست (بدون pages.dev)")
     p.add_argument("--target", default=DEFAULT_HOST, help=f"مقصد SSH (پیش‌فرض {DEFAULT_HOST})")
     p.add_argument("--webroot", default="auto", help="ریشهٔ وب روی سرور یا auto")
     p.add_argument("--ssh-key", default=os.environ.get("ARVAN_SSH_KEY_FILE"), help="مسیر کلید SSH")
@@ -336,14 +412,29 @@ def main():
     p.add_argument("--quiet", "-q", action="store_true")
     a = p.parse_args()
 
+    prefer_ipv4()  # V335.41 — پیش از هر درخواست شبکه
+    if a.source == "auto":
+        a.source = SOURCE_CANDIDATES[0]
     if a.apply:
         src_dir = a.from_dir
         if not src_dir:
-            if not os.path.isfile(os.path.join(a.out, "index.html")):
+            if a.build_local:
+                log("🏗  ساخت site_out محلی (بدون نیاز به pages.dev)…")
+                r = subprocess.run([sys.executable, os.path.join("scripts", "build_site_out.py")])
+                if r.returncode != 0:
+                    log("❌ ساخت محلی ناموفق بود.")
+                    return r.returncode
+                src_dir = "site_out"
+            elif not os.path.isfile(os.path.join(a.out, "index.html")):
                 log("ℹ️  آینه موجود نیست؛ ابتدا ساخته می‌شود…")
                 if not mirror(a.source, a.out, a.allow_missing):
-                    return 2
-            src_dir = a.out
+                    log("ℹ️  منبع منتشرشده در دسترس نبود؛ ساخت محلی site_out امتحان می‌شود…")
+                    r = subprocess.run([sys.executable, os.path.join("scripts", "build_site_out.py")])
+                    if r.returncode != 0:
+                        return 2
+                    src_dir = "site_out"
+            if not src_dir:
+                src_dir = a.out
         return apply(src_dir, a.target, a.webroot, a.ssh_key, a.port, a.dry_run, a.yes, not a.no_reload)
 
     if a.mirror:
