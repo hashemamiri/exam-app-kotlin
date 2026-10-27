@@ -226,6 +226,7 @@ fun GradingScreen(
                 items(visibleSubmissions, key = { it.id }) { submission ->
                     SubmissionCard(
                         exam.questions,
+                        exam.negativeMarking,
                         submission,
                         state.edits[submission.id],
                         state.feedbackBank.map { it.text },
@@ -262,6 +263,7 @@ fun GradingScreen(
 @Composable
 private fun SubmissionCard(
     questions: List<GradingQuestion>,
+    negativeMarking: Double,
     submission: GradingSubmission,
     edit: GradingEdit?,
     feedbackPhrases: List<String>,
@@ -275,7 +277,9 @@ private fun SubmissionCard(
         Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Text(submission.studentName.ifBlank { "دانش‌آموز" }, style = MaterialTheme.typography.titleMedium)
             Text("تلاش ${submission.attemptNo} · ${if (submission.graded) "تصحیح‌شده" else "در انتظار"}")
+            Text("نمرهٔ کل: ${ir.exam.app.domain.grading.GradingScorePolicy.total(edit.grades)} (حداقل صفر)")
             questions.forEachIndexed { index, question ->
+                val minimumScore = ir.exam.app.domain.grading.GradingScorePolicy.minimum(question.type, question.score, negativeMarking, question.assessmentParts.isNotEmpty())
                 Card(Modifier.fillMaxWidth()) {
                     Column(Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
                         if (question.sectionTitle.isNotBlank()) Text(question.sectionTitle, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
@@ -355,8 +359,8 @@ private fun SubmissionCard(
                             value = scoreInputs[scoreKey] ?: edit.grades.getOrElse(index) { 0.0 }.toString(),
                             onValueChange = { viewModel.setScore(submission.id, index, it) },
                             isError = scoreKey in scoreErrors,
-                            supportingText = if (scoreKey in scoreErrors) ({ Text("نمره باید بین صفر و ${question.score} باشد.") }) else null,
-                            label = { Text("نمره از ${question.score}") }
+                            supportingText = if (scoreKey in scoreErrors) ({ Text("نمره باید بین ${minimumScore} و ${question.score} باشد.") }) else null,
+                            label = { Text("نمره از ${minimumScore} تا ${question.score}") }
                         )
                     }
                 }
@@ -455,12 +459,12 @@ private fun QuestionCentricContent(state: GradingUiState, viewModel: GradingView
                                 onValueChange = { viewModel.setScore(submission.id, index, it) },
                                 isError = scoreKey in state.scoreErrors,
                                 singleLine = true,
-                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text),
                                 label = { Text("از ${PersianDigits.convert(question.score.toString())}") },
                                 modifier = Modifier.width(112.dp)
                             )
                         }
-                        if (scoreKey in state.scoreErrors) Text("نمره باید بین صفر و ${PersianDigits.convert(question.score.toString())} باشد.", color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+                        if (scoreKey in state.scoreErrors) Text("نمره باید بین ${PersianDigits.convert(exam.minimumScore(index).toString())} و ${PersianDigits.convert(question.score.toString())} باشد.", color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
                         Text("پاسخ: ${submission.responses.getOrNull(index).displayText()}", style = MaterialTheme.typography.bodyMedium)
                         AnswerImagesRow(submission.answerImagesFor(question.id, index))
                     }

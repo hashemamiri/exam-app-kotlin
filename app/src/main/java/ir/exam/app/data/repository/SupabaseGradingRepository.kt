@@ -61,7 +61,7 @@ class SupabaseGradingRepository {
         }.decodeList<ExamKeyDto>().firstOrNull()?.answers ?: JsonArray(emptyList())
         // V212 — رمزگشایی JSON سؤال‌ها خارج از نخ اصلی
         val questions = withContext(Dispatchers.Default) { ExamQuestionCodec.decode(exam.questions, key).map(QuestionDraft::toGradingQuestion) }
-        GradingExam(exam.id, exam.title, exam.subject, exam.totalScore, questions)
+        GradingExam(exam.id, exam.title, exam.subject, exam.totalScore, questions, exam.negativeMarking)
     }
 
     suspend fun getAnswers(examId: String): Result<List<GradingSubmission>> = runCatching {

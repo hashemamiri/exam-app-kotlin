@@ -1,5 +1,6 @@
 package ir.exam.app.ui.grading
 
+import ir.exam.app.domain.grading.GradingScorePolicy
 import ir.exam.app.core.cache.ExamListCache
 import ir.exam.app.core.cache.SessionCache
 import ir.exam.app.core.network.UserFacingError
@@ -217,16 +218,18 @@ class GradingViewModel(
     }
 
     fun setScore(answerId: String, questionIndex: Int, raw: String) {
-        val max = state.value.selectedExam?.questions?.getOrNull(questionIndex)?.score ?: return
+        val exam = state.value.selectedExam ?: return
+        val max = exam.questions.getOrNull(questionIndex)?.score ?: return
+        val min = exam.minimumScore(questionIndex)
         val normalized = ir.exam.app.core.calendar.PersianDigits.latin(raw).trim()
         val value = normalized.toDoubleOrNull()
         val key = scoreKey(answerId, questionIndex)
         _state.update { old ->
             val inputs = old.scoreInputs + (key to raw)
-            val invalid = value == null || value < 0.0 || value > max
+            val invalid = !GradingScorePolicy.isValid(value, min, max)
             if (invalid) return@update old.copy(scoreInputs = inputs, scoreErrors = old.scoreErrors + key)
             val edit = old.edits[answerId] ?: return@update old.copy(scoreInputs = inputs)
-            val grades = edit.grades.mapIndexed { index, current -> if (index == questionIndex) value else current }
+            val grades = edit.grades.mapIndexed { index, current -> if (index == questionIndex) requireNotNull(value) else current }
             old.copy(
                 edits = old.edits + (answerId to edit.copy(grades = grades)),
                 scoreInputs = inputs,
@@ -248,7 +251,7 @@ class GradingViewModel(
             val edit = old.edits[answerId] ?: return@update old.copy(partScoreInputs = inputs)
             val scores = edit.partGrades + ("$questionIndex:$partIndex" to (value ?: 0.0))
             val total = q.assessmentParts.indices.sumOf { pi -> scores["$questionIndex:$pi"] ?: 0.0 }
-            val invalid = value == null || value < 0.0 || value > part.score || total > q.score + 1e-9
+            val invalid = !GradingScorePolicy.isValid(value, 0.0, part.score) || !total.isFinite() || total > q.score + 1e-9
             if (invalid) return@update old.copy(partScoreInputs = inputs, partScoreErrors = old.partScoreErrors + errorKey)
             val grades = edit.grades.mapIndexed { index, current -> if (index == questionIndex) total else current }
             old.copy(edits = old.edits + (answerId to edit.copy(grades = grades, partGrades = scores)), partScoreInputs = inputs, partScoreErrors = old.partScoreErrors - errorKey, scoreInputs = old.scoreInputs + (scoreKey(answerId, questionIndex) to total.toString()))
@@ -279,6 +282,12 @@ class GradingViewModel(
     fun save(answerId: String) = action("نمره و بازخورد ذخیره شد.") {
         require(state.value.scoreErrors.none { it.startsWith("$answerId:") } && state.value.partScoreErrors.none { it.startsWith("$answerId:") }) { "یک یا چند نمره نامعتبر است." }
         val edit = state.value.edits[answerId] ?: error("داده نمره پیدا نشد.")
+        val exam = state.value.selectedExam ?: error("آزمون انتخاب نشده است.")
+        val submission = state.value.submissions.firstOrNull { it.id == answerId } ?: error("پاسخ پیدا نشد.")
+        require(edit.grades.size == exam.questions.size) { "تعداد نمره‌ها نامعتبر است." }
+        edit.grades.forEachIndexed { index, value ->
+            require(GradingScorePolicy.isValid(value, exam.minimumScore(index), exam.questions[index].score) && (submission.isShown(index) || value == 0.0)) { "نمره سؤال ${index + 1} خارج از بازه مجاز است." }
+        }
         repository.saveGrade(answerId, edit.grades, edit.feedback, edit.partGrades, edit.partFeedback).getOrThrow()
         reloadSelected()
     }
@@ -290,12 +299,13 @@ class GradingViewModel(
         require(selectedQuestion.assessmentParts.isEmpty()) { "سؤال چندبخشی باید برای هر دانش‌آموز جداگانه تصحیح شود تا نمرهٔ هر زیربخش حفظ شود." }
         val max = selectedQuestion.score
         require(state.value.scoreErrors.none { it.endsWith(":$index") }) { "یک یا چند نمره این سؤال نامعتبر است؛ هیچ نمره‌ای ذخیره نشد." }
-        val scores = state.value.submissions.associate { submission ->
+        val scores = state.value.submissions.filter { it.isShown(index) }.associate { submission ->
             val score = state.value.edits[submission.id]?.grades?.getOrNull(index)
                 ?: error("نمره ${submission.studentName} موجود نیست.")
-            require(score in 0.0..max) { "نمره ${submission.studentName} خارج از بازه است." }
+            require(GradingScorePolicy.isValid(score, exam.minimumScore(index), max)) { "نمره ${submission.studentName} خارج از بازه است." }
             submission.id to score
         }
+        require(scores.isNotEmpty()) { "این سؤال برای هیچ پاسخی نمایش داده نشده است." }
         repository.bulkSaveQuestion(exam.id, index, scores).getOrThrow()
         reloadSelected()
     }

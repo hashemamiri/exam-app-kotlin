@@ -54,7 +54,7 @@ class V255_PickCountTest {
         assertTrue("pick_count: Math.max(0, Math.min(9999, parseInt(state.pickCount, 10) || 0))," in b)
         assertTrue("st.pickCount = exam.pick_count ? String(exam.pick_count) : '';" in b)
         val a = source("site/src/admin.js")
-        assertTrue("if (shownQ && shownQ.indexOf(i) < 0) {" in a && "' از ' + fa(S.fmtScore(maxScore)); }" in a)
+        assertTrue("if (shownQ && shownQ.indexOf(i) < 0) {" in a && "fa(S.fmtScore(maxScore))" in a && "Math.max(0,s)" in a)
         assertTrue("function answerMax(a, examTotal)" in source("site/src/extras.js"))
         assertTrue("function mergeAnswerMax(grades, answers)" in source("site/src/app.js"))
     }

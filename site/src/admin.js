@@ -151,7 +151,23 @@
     }
   }
   /* پیشنهاد نمرهٔ خودکار (فقط پیشنهاد؛ نمرهٔ نهایی را معلم ذخیره می‌کند — تأیید گروهی با approve_auto_grades سرور) */
-  function autoScore(q, r) {
+  /* V335.37 — one bounded policy for suggestions and every save path. */
+  function scoreFloor(q, negativeMarking) {
+    if (q.assessmentParts && q.assessmentParts.length) return 0;
+    return ['multiple','truefalse'].indexOf(q.__type) >= 0 ? -Math.max(0,num(negativeMarking))*Math.max(0,num(q.score)) : 0;
+  }
+  function validateScore(raw, q, negativeMarking) {
+    var text = String(en(String(raw == null ? '' : raw))).trim().replace(/−/g,'-');
+    var v = text === '' ? NaN : Number(text), lo = scoreFloor(q,negativeMarking);
+    if (!isFinite(v) || v < lo - 1e-8 || v > num(q.score)) throw new Error('نمرهٔ سؤال خارج از بازهٔ مجاز است ('+lo+' تا '+q.score+').');
+    return v;
+  }
+  function autoScore(q, r, negativeMarking) {
+    var g = autoScoreBase(q,r), lo = scoreFloor(q,negativeMarking);
+    if (g === 0 && lo < 0 && r != null && String(r).trim() !== '') return lo;
+    return g;
+  }
+  function autoScoreBase(q, r) {
     var k = q.__key || {}, s = num(q.score);
     if (q.__type === 'essay' && ((Array.isArray(k.constructionTargets) && k.constructionTargets.length) || (Array.isArray(k.constructionConstraints) && k.constructionConstraints.length))) {
       if (r == null || r === '') return 0;
@@ -161,7 +177,7 @@
     if (r == null || r === '') return q.__type === 'essay' ? null : 0;
     switch (q.__type) {
       case 'multiple': var ci = k.correctOption != null ? k.correctOption : q.correctIndex; return ci != null ? (Number(r) === Number(ci) ? s : 0) : null;
-      case 'truefalse': return (r === true || r === 'true') === (k.correctAnswer === true || k.correctAnswer === 'true') ? s : 0;
+      case 'truefalse': if (!Object.prototype.hasOwnProperty.call(k,'correctAnswer')) return null; return (r === true || r === 'true') === (k.correctAnswer === true || k.correctAnswer === 'true') ? s : 0;
       case 'fill': var acc = (k.accept || []).map(function (x) { return k.caseSensitive ? String(x).trim() : String(x).trim().toLowerCase(); }); var v = k.caseSensitive ? String(r).trim() : String(r).trim().toLowerCase(); return acc.length ? (acc.indexOf(v) >= 0 ? s : 0) : null;
       case 'numeric': var a = parseFloat(k.answer), t = parseFloat(k.tolerance) || 0, x = parseFloat(en(String(r))); return isFinite(a) ? (isFinite(x) && Math.abs(x - a) <= t ? s : 0) : null;
       case 'matching': var m = k.matchAnswer || {}, ks = Object.keys(m); if (!ks.length || typeof r !== 'object') return null; var ok = 0; ks.forEach(function (l) { if (Number(r[l]) === Number(m[l])) ok++; }); return Math.round(s * ok / ks.length * 100) / 100;
@@ -192,10 +208,10 @@
       var maxScore = shownQ && isFinite(Number(a.meta.max_score)) && Number(a.meta.max_score) > 0 ? Number(a.meta.max_score) : Number(ctx.exam.total_score);
       if (shownQ) detail.appendChild(el('div', {class: 'muted', style: 'font-size:12px;margin-bottom:6px', text: 'پیک تصادفی: این دانش‌آموز ' + fa(shownQ.length) + ' سؤال از ' + fa(questions.length) + ' سؤال را دیده است؛ فقط همان‌ها نمایش داده می‌شوند.'}));
       questions.forEach(function (q, i) {
-        var r = responses[i], auto = autoScore(q, r), cur = grades[i] != null ? grades[i] : (auto != null ? auto : '');
+        var r = responses[i], auto = autoScore(q, r, ctx.exam.neg_marking), cur = grades[i] != null ? grades[i] : (auto != null ? auto : '');
         if (shownQ && shownQ.indexOf(i) < 0) { var hid = el('input', {type: 'hidden', value: 0}); hid.value = '0'; inputs.push(hid); return; }
         var structuredParts = q.assessmentParts && q.assessmentParts.length; var structuredProof = q.__type==='essay' && q.mode==='proof' && structuredParts;
-        var inp = el('input', {type: structuredParts?'hidden':'number', step: '0.25', min: 0, max: q.score, value: cur, style: 'width:90px;border:1px solid var(--line);border-radius:8px;padding:6px;direction:ltr'});
+        var inp = el('input', {type: structuredParts?'hidden':'number', step: 'any', min: scoreFloor(q,ctx.exam.neg_marking), max: q.score, value: cur, style: 'width:90px;border:1px solid var(--line);border-radius:8px;padding:6px;direction:ltr'});
         inputs.push(inp);
         if(structuredParts){inp.value=q.assessmentParts.reduce(function(total,part,pi){var pv=(a.part_grades||{})[i+':'+pi];return total+(pv==null?0:num(pv));},0);}
         var rt = responseText(q, r), ct = correctText(q), qi = imgs[q.id] || imgs[String(i)] || [];
@@ -208,7 +224,7 @@
           q.sectionTitle ? el('div', {class:'chip brand', text:q.sectionTitle}) : null,
           richEl('div', 'g-qtext', q.text),
           q.rubric ? el('div', {class:'card', style:'padding:8px;margin:6px 0;background:var(--soft)'}, [el('b',{text:'راهنمای نمره‌دهی دبیر: '}),el('span',{text:q.rubric})]) : null,
-          structuredParts ? (function(){var pw=el('div',{class:'card',style:'padding:8px;margin:6px 0;background:var(--soft)'});if(q.proofAssumptions)pw.appendChild(el('div',{text:'فرض‌ها: '+q.proofAssumptions}));if(q.proofGoal)pw.appendChild(el('div',{text:'خواسته: '+q.proofGoal}));var raw={};if(structuredProof){try{raw=JSON.parse(typeof r==='string'?r:String(r||'{}')).parts||{};}catch(_){}}else{String(r||'').split('\n').forEach(function(line,idx){if(q.assessmentParts[idx])raw[q.assessmentParts[idx].id]={answer:line};});}q.assessmentParts.forEach(function(part,pi){var key=i+':'+pi, existing=(a.part_grades||{})[key], existingFb=(a.part_feedback||{})[key]||'',entry=raw[part.id]||{};var card=el('div',{class:'card',style:'padding:7px;margin:5px 0'});card.appendChild(el('b',{text:(part.label||fa(pi+1))+': '+(part.prompt||'')}));if(part.rubric)card.appendChild(el('div',{class:'muted',text:'معیار: '+part.rubric}));card.appendChild(el('div',{text:(structuredProof?'نتیجه: ':'پاسخ: ')+(entry.answer||'—')}));if(part.requiresReason)card.appendChild(el('div',{text:'دلیل: '+(entry.reason||'—')}));var si=el('input',{type:'number',step:'0.25',min:0,max:part.score,value:existing==null?'':existing,style:'width:100px'});stepScoreInputs[key]=si;si.addEventListener('input',function(){var total=0;q.assessmentParts.forEach(function(_,j){total+=num(stepScoreInputs[i+':'+j]&&stepScoreInputs[i+':'+j].value);});inp.value=total;sum();});card.appendChild(el('label',{class:'muted',text:'نمره از '+S.fmtScore(part.score)}));card.appendChild(si);var fi=el('textarea',{rows:2,placeholder:'بازخورد همین گام'});fi.value=existingFb;stepFeedbackInputs[key]=fi;card.appendChild(fi);pw.appendChild(card);});return pw;})() : null,
+          structuredParts ? (function(){var pw=el('div',{class:'card',style:'padding:8px;margin:6px 0;background:var(--soft)'});if(q.proofAssumptions)pw.appendChild(el('div',{text:'فرض‌ها: '+q.proofAssumptions}));if(q.proofGoal)pw.appendChild(el('div',{text:'خواسته: '+q.proofGoal}));var raw={};if(structuredProof){try{raw=JSON.parse(typeof r==='string'?r:String(r||'{}')).parts||{};}catch(_){}}else{String(r||'').split('\n').forEach(function(line,idx){if(q.assessmentParts[idx])raw[q.assessmentParts[idx].id]={answer:line};});}q.assessmentParts.forEach(function(part,pi){var key=i+':'+pi, existing=(a.part_grades||{})[key], existingFb=(a.part_feedback||{})[key]||'',entry=raw[part.id]||{};var card=el('div',{class:'card',style:'padding:7px;margin:5px 0'});card.appendChild(el('b',{text:(part.label||fa(pi+1))+': '+(part.prompt||'')}));if(part.rubric)card.appendChild(el('div',{class:'muted',text:'معیار: '+part.rubric}));card.appendChild(el('div',{text:(structuredProof?'نتیجه: ':'پاسخ: ')+(entry.answer||'—')}));if(part.requiresReason)card.appendChild(el('div',{text:'دلیل: '+(entry.reason||'—')}));var si=el('input',{type:'number',step:'0.25',min:0,max:part.score,value:existing==null?0:existing,style:'width:100px'});stepScoreInputs[key]=si;si.addEventListener('input',function(){var total=0;q.assessmentParts.forEach(function(_,j){total+=num(stepScoreInputs[i+':'+j]&&stepScoreInputs[i+':'+j].value);});inp.value=total;sum();});card.appendChild(el('label',{class:'muted',text:'نمره از '+S.fmtScore(part.score)}));card.appendChild(si);var fi=el('textarea',{rows:2,placeholder:'بازخورد همین گام'});fi.value=existingFb;stepFeedbackInputs[key]=fi;card.appendChild(fi);pw.appendChild(card);});return pw;})() : null,
           geoEval ? el('div',{class:'card',style:'padding:8px;margin:6px 0;background:var(--soft)'},[el('b',{text:q.constructionPrompt||'ارزیابی هندسی نقاط و شرط‌ها'}),el('div',{class:'muted',text:geoEval.summary}),el('div',{style:'margin-top:4px;font-weight:700',text:'نمرهٔ پیشنهادی هندسی: '+fa(S.fmtScore(geoEval.score))+' از '+fa(S.fmtScore(q.score))})]) : null,
           el('div', {class: 'g-resp'}, [el('span', {class: 'muted', text: 'پاسخ دانش‌آموز: '}), rt != null ? richEl('span', auto == null ? '' : (auto >= num(q.score) ? 'ok-t' : (auto > 0 ? 'warn-t' : 'err-t')), rt) : el('i', {class: 'muted', text: 'بدون پاسخ'})]),
           ct ? el('div', {class: 'g-resp muted', style: 'font-size:13px'}, [el('span', {text: 'پاسخ درست: '}), richEl('span', '', ct)]) : null,
@@ -232,14 +248,14 @@
       var fbBank = el('div', {class: 'row', style: 'flex-wrap:wrap;gap:6px;margin:6px 0'});
       fbList().then(function (list) { (list || []).slice(0, 12).forEach(function (p) { fbBank.appendChild(el('button', {class: 'chip', style: 'cursor:pointer;white-space:normal;text-align:right;height:auto;line-height:1.5', text: p.text, title: p.text, onclick: function () { fb.value = (fb.value ? fb.value + ' ' : '') + p.text; }})); }); }).catch(function () {});
       var total = el('b');
-      function sum() { var s = 0; inputs.forEach(function (x) { s += num(x.value); }); total.textContent = 'جمع: ' + fa(S.fmtScore(s)) + ' از ' + fa(S.fmtScore(maxScore)); }
+      function sum() { var s = 0; inputs.forEach(function (x) { s += num(x.value); }); total.textContent = 'جمع: ' + fa(S.fmtScore(Math.max(0,s))) + ' از ' + fa(S.fmtScore(maxScore)) + (s < 0 ? ' (جمع خام: '+fa(S.fmtScore(s))+')' : ''); }
       inputs.forEach(function (x) { x.addEventListener('input', sum); }); sum();
       detail.appendChild(el('div', {class: 'field', style: 'margin-top:12px'}, [el('label', {text: 'بازخورد'}), fb, stampRow, fbBank]));
       detail.appendChild(el('div', {class: 'row'}, [total, el('span', {class: 'grow'}), el('button', {class: 'btn', text: '💾 ذخیرهٔ نمره', onclick: async function () {
-        var partGrades=Object.assign({},a.part_grades||{}),partFeedback=Object.assign({},a.part_feedback||{});
-        Object.keys(stepScoreInputs).forEach(function(key){var si=stepScoreInputs[key],v=num(si.value),ix=Number(key.split(':')[0]),pi=Number(key.split(':')[1]),p=questions[ix].assessmentParts[pi];if(v<0||v>num(p.score))throw new Error('نمرهٔ گام '+fa(pi+1)+' خارج از بازه است.');partGrades[key]=v;partFeedback[key]=(stepFeedbackInputs[key].value||'').slice(0,1000);});
-        var g = inputs.map(function (x, i) { var v = num(x.value); if (v < 0 || v > num(questions[i].score)) throw new Error('نمرهٔ سؤال ' + fa(i + 1) + ' خارج از بازه است.'); if(questions[i].assessmentParts&&questions[i].assessmentParts.length){var total=0;questions[i].assessmentParts.forEach(function(_,pi){total+=num(partGrades[i+':'+pi]);});if(total>num(questions[i].score))throw new Error('جمع نمره‌های گام‌های سؤال '+fa(i+1)+' از بارم کل بیشتر است.');v=total;}return v; });
-        try { var rpc=Object.keys(stepScoreInputs).length?'native_save_grade_parts_v1':'native_save_grade';var args={p_answer:a.id,p_grades:g,p_feedback:fb.value.trim()};if(rpc==='native_save_grade_parts_v1'){args.p_part_grades=partGrades;args.p_part_feedback=partFeedback;}chk(await S.rpcObj(rpc,args)); toast('نمره ذخیره شد.', 'ok'); var idx = answers.indexOf(a); a.graded = true; a.grades = g; a.part_grades=partGrades;a.part_feedback=partFeedback;a.total_grade = g.reduce(function (s, v) { return s + v; }, 0); a.feedback = fb.value.trim(); if (idx < answers.length - 1) { sel = answers[idx + 1]; } drawList(); drawDetail(); } catch (e) { if (!(e && e.requested)) toast(errMsg(e), 'err'); }
+        try { var partGrades=Object.assign({},a.part_grades||{}),partFeedback=Object.assign({},a.part_feedback||{});
+        Object.keys(stepScoreInputs).forEach(function(key){var si=stepScoreInputs[key],v=Number(String(en(si.value)).trim()||'NaN'),ix=Number(key.split(':')[0]),pi=Number(key.split(':')[1]),p=questions[ix].assessmentParts[pi];if(!isFinite(v)||v<0||v>num(p.score))throw new Error('نمرهٔ گام '+fa(pi+1)+' خارج از بازه است.');partGrades[key]=v;partFeedback[key]=(stepFeedbackInputs[key].value||'').slice(0,1000);});
+        var g = inputs.map(function (x, i) { var v = validateScore(x.value, questions[i], ctx.exam.neg_marking); if(questions[i].assessmentParts&&questions[i].assessmentParts.length){var total=0;questions[i].assessmentParts.forEach(function(_,pi){total+=num(partGrades[i+':'+pi]);});if(total>num(questions[i].score))throw new Error('جمع نمره‌های گام‌های سؤال '+fa(i+1)+' از بارم کل بیشتر است.');v=total;}return v; });
+        var rpc=Object.keys(stepScoreInputs).length?'native_save_grade_parts_v1':'native_save_grade';var args={p_answer:a.id,p_grades:g,p_feedback:fb.value.trim()};if(rpc==='native_save_grade_parts_v1'){args.p_part_grades=partGrades;args.p_part_feedback=partFeedback;}chk(await S.rpcObj(rpc,args)); toast('نمره ذخیره شد.', 'ok'); var idx = answers.indexOf(a); a.graded = true; a.grades = g; a.part_grades=partGrades;a.part_feedback=partFeedback;a.total_grade = Math.max(0,g.reduce(function (s, v) { return s + v; }, 0)); a.feedback = fb.value.trim(); if (idx < answers.length - 1) { sel = answers[idx + 1]; } drawList(); drawDetail(); } catch (e) { if (!(e && e.requested)) toast(errMsg(e), 'err'); }
       }})]));
     }
     body.appendChild(el('div', {class: 'g-wrap'}, [list, detail]));
@@ -255,12 +271,12 @@
     body.appendChild(el('div', {class: 'row', style: 'margin-bottom:10px'}, [selQ, el('span', {class: 'grow'}), el('button', {class: 'btn soft sm', text: '🏁 نهایی‌سازی نمره‌های گروهی', onclick: async function () { if (!(await S.confirmDlg('نهایی‌سازی', 'نمره‌های ذخیره‌شدهٔ سؤال‌به‌سؤال برای همهٔ پاسخ‌ها جمع و تأیید می‌شود. ادامه؟', 'نهایی‌سازی'))) return; try { chk(await S.rpcObj('native_finalize_bulk_grades_v1', {p_exam: ctx.examId})); toast('نمره‌ها نهایی شدند.', 'ok'); ctx.refresh(); } catch (e) { if (!(e && e.requested)) toast(errMsg(e), 'err'); } }})]));
     body.appendChild(holder);
     function draw() {
-      holder.innerHTML = ''; var q = questions[qi]; var inputs = {};
+      holder.innerHTML = ''; var q = questions[qi]; var inputs = {}; if(q.assessmentParts && q.assessmentParts.length) { holder.appendChild(el('div',{class:'alert',text:'این سؤال چندبخشی است؛ نمره و بازخورد زیربخش‌ها را در تب تصحیح فردی ذخیره کنید.'})); return; }
       holder.appendChild(el('div', {class: 'card', style: 'margin-bottom:10px'}, [q.sectionTitle ? el('b',{text:q.sectionTitle}) : null, richEl('div', 'g-qtext', q.text), q.rubric ? el('div',{class:'muted',text:'راهنمای دبیر: '+q.rubric}) : null, correctText(q) ? el('div', {class: 'muted', style: 'font-size:13px'}, [el('span', {text: 'پاسخ درست: '}), richEl('span', '', correctText(q))]) : null]));
       var tbl = el('table', {class: 'tbl'}, [el('thead', {}, [el('tr', {}, ['دانش‌آموز', 'پاسخ', 'تصویر', 'نمره (از ' + fa(S.fmtScore(q.score)) + ')'].map(function (h) { return el('th', {text: h}); }))]),
-        el('tbody', {}, answers.map(function (a) { var r = (a.responses || [])[qi], auto = autoScore(q, r), cur = (a.grades || [])[qi]; var inp = el('input', {type: 'number', step: '0.25', min: 0, max: q.score, value: cur != null ? cur : (auto != null ? auto : ''), style: 'width:80px;border:1px solid var(--line);border-radius:8px;padding:5px;direction:ltr'}); inputs[a.id] = inp; if (a.meta && typeof a.meta === 'object' && Array.isArray(a.meta.shown_q) && a.meta.shown_q.length && a.meta.shown_q.indexOf(qi) < 0) { inp.value = '0'; inp.disabled = true; inp.title = 'این سؤال برای این دانش‌آموز نمایش داده نشده است (پیک تصادفی)'; } /* V255 */ var im = (a.response_images || {})[q.id] || (a.response_images || {})[String(qi)] || [];
+        el('tbody', {}, answers.map(function (a) { var r = (a.responses || [])[qi], auto = autoScore(q, r, ctx.exam.neg_marking), cur = (a.grades || [])[qi]; var inp = el('input', {type: 'number', step: 'any', min: scoreFloor(q,ctx.exam.neg_marking), max: q.score, value: cur != null ? cur : (auto != null ? auto : ''), style: 'width:80px;border:1px solid var(--line);border-radius:8px;padding:5px;direction:ltr'}); inputs[a.id] = inp; if (a.meta && typeof a.meta === 'object' && Array.isArray(a.meta.shown_q) && a.meta.shown_q.length && a.meta.shown_q.indexOf(qi) < 0) { inp.value = '0'; inp.disabled = true; inp.title = 'این سؤال برای این دانش‌آموز نمایش داده نشده است (پیک تصادفی)'; } /* V255 */ var im = (a.response_images || {})[q.id] || (a.response_images || {})[String(qi)] || [];
           return el('tr', {}, [el('td', {text: a.student_name || '—'}), el('td', {}, [richEl('span', '', responseText(q, r) || '—')]), el('td', {}, im.map(function (u) { return el('img', {src: u, style: 'width:48px;height:40px;object-fit:cover;border-radius:6px;cursor:zoom-in;margin-inline-end:4px', onclick: function () { lightbox(u); }}); })), el('td', {}, [inp])]); }))]);
-      holder.appendChild(el('div', {class: 'card'}, [tbl, el('div', {class: 'row', style: 'margin-top:10px'}, [el('span', {class: 'grow'}), el('button', {class: 'btn', text: '💾 ذخیرهٔ نمره‌های این سؤال', onclick: async function () { var items = []; Object.keys(inputs).forEach(function (id) { var v = inputs[id].value; if (v !== '') items.push({answer_id: id, score: num(v)}); }); if (!items.length) return toast('حداقل یک نمره وارد کنید.', 'err'); try { chk(await S.rpcObj('native_bulk_save_question_grades_v1', {p_exam: ctx.examId, p_question_index: qi, p_items: items})); toast('ذخیره شد.', 'ok'); } catch (e) { if (!(e && e.requested)) toast(errMsg(e), 'err'); } }})])]));
+      holder.appendChild(el('div', {class: 'card'}, [tbl, el('div', {class: 'row', style: 'margin-top:10px'}, [el('span', {class: 'grow'}), el('button', {class: 'btn', text: '💾 ذخیرهٔ نمره‌های این سؤال', onclick: async function () { try { var items = []; Object.keys(inputs).forEach(function (id) { var v = inputs[id].value; if (v !== '' && !inputs[id].disabled) items.push({answer_id: id, score: validateScore(v,q,ctx.exam.neg_marking)}); }); if (!items.length) return toast('حداقل یک نمره وارد کنید.', 'err'); chk(await S.rpcObj('native_bulk_save_question_grades_v1', {p_exam: ctx.examId, p_question_index: qi, p_items: items})); toast('ذخیره شد.', 'ok'); } catch (e) { if (!(e && e.requested)) toast(errMsg(e), 'err'); } }})])]));
     }
     draw();
   }
@@ -389,7 +405,7 @@
     } catch (e) { S.showErr(body, e); }
   }
   function stat(v, l) { return el('div', {class: 'stat'}, [el('div', {class: 'v', text: v}), el('div', {class: 'l', text: l})]); }
-  function bar(p) { p = Math.max(0, Math.min(100, p)); return el('div', {class: 'g-bar', title: fa(Math.round(p)) + '٪'}, [el('div', {style: 'width:' + p + '%;background:' + (p >= 70 ? 'var(--ok)' : p >= 40 ? 'var(--warn)' : 'var(--danger)')}), el('span', {text: fa(Math.round(p)) + '٪'})]); }
+  function bar(p) { var actual = p; p = Math.max(0, Math.min(100, p)); return el('div', {class: 'g-bar', title: fa(Math.round(actual)) + '٪'}, [el('div', {style: 'width:' + p + '%;background:' + (p >= 70 ? 'var(--ok)' : p >= 40 ? 'var(--warn)' : 'var(--danger)')}), el('span', {text: fa(Math.round(actual)) + '٪'})]); }
   function lightbox(u) { var bg = el('div', {class: 'modal-bg', onclick: function () { bg.remove(); }}, [el('img', {src: u, style: 'max-width:92vw;max-height:90vh;border-radius:12px;background:#fff'})]); document.body.appendChild(bg); }
 
   /* ================================================================ کارنامهٔ دانش‌آموز — جزئیات پاسخ */
@@ -891,5 +907,5 @@
     bg.appendChild(m); document.body.appendChild(bg);
   }
 
-  window.SiteAdmin = {gradingPage: gradingPage, questionAnalysis: function (body, examId) { return tabAnalysis(body, {examId: examId}); }, answerDetail: answerDetail, topUpCard: topUpCard, tariffDlg: tariffDlg, managerTeachersPage: managerTeachersPage, managerSchoolPage: managerSchoolPage, managerClassesPage: managerClassesPage, managerStudentsPage: managerStudentsPage, managerBackup: managerBackup, calendarPage: calendarPage, J: J, autoScore: autoScore, correctText: correctText};
+  window.SiteAdmin = {gradingPage: gradingPage, questionAnalysis: function (body, examId) { return tabAnalysis(body, {examId: examId}); }, answerDetail: answerDetail, topUpCard: topUpCard, tariffDlg: tariffDlg, managerTeachersPage: managerTeachersPage, managerSchoolPage: managerSchoolPage, managerClassesPage: managerClassesPage, managerStudentsPage: managerStudentsPage, managerBackup: managerBackup, calendarPage: calendarPage, J: J, autoScore: autoScore, scoreFloor: scoreFloor, validateScore: validateScore, correctText: correctText};
 })();

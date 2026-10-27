@@ -57,8 +57,14 @@ data class GradingExam(
     val title: String,
     val subject: String?,
     val totalScore: Double,
-    val questions: List<GradingQuestion>
-)
+    val questions: List<GradingQuestion>,
+    val negativeMarking: Double = 0.0
+) {
+    fun minimumScore(index: Int): Double {
+        val q = questions.getOrNull(index) ?: return 0.0
+        return ir.exam.app.domain.grading.GradingScorePolicy.minimum(q.type, q.score, negativeMarking, q.assessmentParts.isNotEmpty())
+    }
+}
 
 data class GradingSubmission(
     val id: String,

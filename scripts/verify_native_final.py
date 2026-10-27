@@ -289,6 +289,19 @@ mobile_css = (ROOT / "site/src/site.css").read_text()
 require("@keyframes m-native-card-in" in mobile_css, "native mobile card animation missing")
 require("max-height:100vh;max-height:100dvh;overflow-y:auto" in mobile_css, "exam sheet viewport guard missing")
 
+# V335.37 — keep the native, site and SQL negative-marking policy connected.
+for relative in (
+    "app/src/main/java/ir/exam/app/domain/grading/GradingScorePolicy.kt",
+    "scripts/tests/negative_grading_v335_37.mjs",
+    "scripts/tests/negative_grading_site_v335_37.mjs",
+    "supabase/migrations/20261027_native_negative_grading_v335_37.sql",
+):
+    require((ROOT / relative).is_file(), "negative grading regression/policy missing: " + relative)
+negative_sql = read(ROOT / "supabase/migrations/20261027_native_negative_grading_v335_37.sql")
+require("native_auto_grade_with_penalty_v335_37" in negative_sql, "shared negative grading helper missing")
+require("total_grade=greatest(v_total,0)" in negative_sql, "final total zero floor missing")
+require(negative_sql == read(ROOT / "sql/manual/SQL_NEGATIVE_GRADING_V335_37.sql"), "manual SQL and migration differ")
+
 if errors:
     print("Print renderer verification: FAILED")
     for error in errors:
