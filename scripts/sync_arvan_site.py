@@ -47,6 +47,17 @@ SEEDS = [
 EXTS = (".js", ".css", ".png", ".svg", ".ico", ".webmanifest", ".woff2", ".woff", ".ttf", ".json", ".html", ".txt", ".xml")
 # مسیرهای ریشه‌ای که هرگز نباید در آینه باشند (پاسخ‌های API/فانکشن)
 SKIP_PREFIX = ("/functions/", "/rest/", "/auth/", "/storage/", "/realtime/", "/_next/", "/api/")
+# Cloudflare Pages هنگام سرو، یک تگ آنالیتیکس به HTMLها تزریق می‌کند؛ در آینه و در
+# کپی دامنه نباید بماند (منبع حقیقت، site_out محلی است و تمیز).
+CF_BEACON_RE = re.compile(rb"<!-- Cloudflare Pages Analytics -->.*?<!-- Cloudflare Pages Analytics -->", re.S)
+
+
+def strip_cf_beacon(path, body):
+    if not path.endswith(".html"):
+        return body
+    return CF_BEACON_RE.sub(b"", body)
+
+
 CANDIDATE_WEBROOTS = ["/var/www/onlineexam", "/var/www/onlineexam.ir", "/var/www/html", "/srv/onlineexam", "/srv/www/onlineexam"]
 
 
@@ -116,7 +127,7 @@ def mirror(source, outdir, allow_missing=False):
         log(f"❌ دریافت index ناموفق: HTTP {status}")
         return None
     index_hash = sha(index)
-    files = {"/index.html": index}
+    files = {"/index.html": strip_cf_beacon("/index.html", index)}  # تگ آنالیتیکس Pages نباید به دامنه برود
     seeds = list(SEEDS)
     # موتورها/پنل‌های قدیمی هم روی سرور بمانند تا کش کاربران قدیمی نشکند
     import glob
@@ -143,7 +154,7 @@ def mirror(source, outdir, allow_missing=False):
                 # Pages برای مسیر ناموجود، index را با کد ۲۰۰ برمی‌گرداند
                 fallbacks.append(path)
                 continue
-            files[path] = body
+            files[path] = strip_cf_beacon(path, body)
             if path.endswith((".html", ".js", ".css", ".webmanifest", ".json")):
                 nxt.extend(sorted(discover_refs(body.decode("utf-8", "replace"))))
         queue = [p for p in nxt if p not in seen]

@@ -29,6 +29,7 @@ step('data_api_grants', ['python3', 'scripts/check_supabase_data_api_grants.py',
 step('kotlin_braces', ['python3', 'scripts/check_kotlin_braces.py'])  # V325 — آکولاد نامتوازن فقط در CI دیده می‌شد
 step('kotlin_escapes', ['python3', 'scripts/check_kotlin_escapes.py', 'app/src'])  # V335.32 — دنبالهٔ گریز نامجاز مثل \\{ فقط در CI دیده می‌شد
 step('site_sync', ['python3', 'scripts/check_site_sync.py'])  # V335.39 — نگهبان هم‌گام‌سازی دامنهٔ onlineexam.ir با نسخهٔ منتشرشده
+step('version_bump', ['python3', 'scripts/check_version_bump.py'])  # V335.40 — بدون بالا رفتن نسخه، job اندروید «قبلاً منتشر شده» می‌دهد
 before = hashlib.sha1(open('site/index.html', 'rb').read()).hexdigest()
 step('build_site', ['python3', 'site/build_site.py'])
 after = hashlib.sha1(open('site/index.html', 'rb').read()).hexdigest()
