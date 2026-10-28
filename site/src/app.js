@@ -1524,19 +1524,18 @@
     school: '<path d="M6 42V20l18-12 18 12v22z" fill="#F6B73C"/><path d="M6 42V20l18-12 18 12v22z" fill="none" stroke="#B4571B" stroke-width="1.5"/><rect x="19" y="28" width="10" height="14" rx="1" fill="#5B3A1E"/><rect x="10" y="24" width="6" height="7" rx="1" fill="#7CC0EE"/><rect x="32" y="24" width="6" height="7" rx="1" fill="#7CC0EE"/><path d="M24 8V2" stroke="#1F3B57" stroke-width="2"/><path d="M24 2h7l-2 2.5 2 2.5h-7z" fill="#E8554E"/><path d="M14 14l10-5 10 5-10 5z" fill="#1F3B57"/><path d="M18 16v4c0 1.5 2.7 3 6 3s6-1.5 6-3v-4" fill="none" stroke="#1F3B57" stroke-width="1.8"/>'
   };
   /* V335.51 — فوتر ثابت پایین صفحهٔ ورود: تعرفه، پرسش‌های متداول، حریم خصوصی، شرایط استفاده، وضعیت سرویس، تماس */
-  function landingFoot() {
+  /* V335.65 — فوتر صفحهٔ اول حذف شد: شش پیوند + نماد اینماد در یک نوار مستقل (بدون عنصر <footer>)
+     پایین صفحهٔ ورود دسکتاپ می‌نشینند. برچسب هر دکمه فقط عنوان خودش است و فهرست مشترک گوشی دست‌نخورده می‌ماند. */
+  function landingLinks() {
     var links = (window.LP_FOOT_LINKS || []).map(function (l) {
-      /* V335.64 — هر پیوند فوتر یک دکمهٔ قرصی مستقل است و فقط عنوان خودش را نشان می‌دهد.
-         کوتاه‌سازی «پرسش‌های متداول تعرفه» فقط در فوتر دسکتاپ انجام می‌شود تا فهرست مشترک گوشی دست‌نخورده بماند. */
       var label = l[1] === '#faq' ? 'پرسش‌های متداول' : l[0];
-      if (l[1] === '#products') return el('button', {type: 'button', class: 'lp-foot-link lp-foot-btn', text: l[0], onclick: function () { openLandingCatalogModal(null, null); }});
-      if (l[1] === '#faq') return el('button', {type: 'button', class: 'lp-foot-link lp-foot-btn', text: label, onclick: openFaqFromFoot});
-      return el('a', {class: 'lp-foot-link lp-foot-btn', href: l[1], target: l[1].indexOf('mailto:') === 0 ? null : '_blank', rel: 'noopener', text: l[0]});
+      if (l[1] === '#products') return el('button', {type: 'button', class: 'lp-links-btn', text: l[0], onclick: function () { openLandingCatalogModal(null, null); }});
+      if (l[1] === '#faq') return el('button', {type: 'button', class: 'lp-links-btn', text: label, onclick: openFaqFromFoot});
+      return el('a', {class: 'lp-links-btn', href: l[1], target: l[1].indexOf('mailto:') === 0 ? null : '_blank', rel: 'noopener', text: l[0]});
     });
-    return el('footer', {class: 'lp-foot', 'aria-label': 'پیوندهای سایت'}, [
-      el('nav', {class: 'lp-foot-links'}, links),
-      /* V335.64 — جای نماد اینماد کنار دکمه‌های فوتر (هم‌سطر)؛ جملهٔ «آزمون آنلاین — …» حذف شد */
-      el('div', {class: 'lp-foot-enamad'})
+    return el('div', {class: 'lp-links', role: 'group', 'aria-label': 'پیوندهای سایت'}, [
+      el('nav', {class: 'lp-links-row'}, links),
+      el('div', {class: 'lp-links-enamad'})
     ]);
   }
   function renderLanding(mode) {
@@ -1573,12 +1572,12 @@
     var page = el('div', {class: 'lp lp-sky'}, [
       el('div', {class: 'glow g1'}), el('div', {class: 'glow g2'}), el('div', {class: 'cloud c1'}), el('div', {class: 'cloud c2'}), el('div', {class: 'cloud c3'}), el('div', {class: 'cloud c4'}),
       left, right,
-      landingFoot()
+      landingLinks()
     ]);
     if (keyWarn) page.appendChild(keyWarn);
     /* V335.64 — نماد اینماد از ستون معرفی به فوتر منتقل می‌شود تا هم‌سطر با دکمه‌های فوتر بنشیند
        (جابه‌جایی در زمان اجراست تا مارک‌آپ اولیه و تست‌های پین‌شدهٔ سایت دست‌نخورده بمانند). */
-    var footHost = page.querySelector('.lp-foot-enamad');
+    var footHost = page.querySelector('.lp-links-enamad');
     var footBadge = page.querySelector('.lp-badges .enamad');
     if (footHost && footBadge) footHost.appendChild(footBadge);
     root.appendChild(page);
