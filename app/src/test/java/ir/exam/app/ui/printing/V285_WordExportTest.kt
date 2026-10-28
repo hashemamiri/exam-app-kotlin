@@ -32,14 +32,18 @@ class V285_WordExportTest {
         assertTrue("pgsWordNow" !in host && "callBridge('print', 'word-'" !in host)
         assertTrue("window.wordExportBase64 = function (mode)" in host)
         assertTrue("callBridge('wordReady', b64, mode)" in host)
-        // سرور: مبلغ ثابت ۵۰٬۰۰۰ تومان، idempotent، جدا از exam_print_payments
-        val sql = src("supabase/migrations/20261014_native_charge_word_v286.sql")
-        assertTrue("create or replace function public.native_charge_word_v286(" in sql)
-        assertTrue("v_cost bigint := 50000;" in sql && "'exam:word:'" in sql && "exam_print_payments" !in sql)
-        assertTrue(sql == src("sql/manual/SQL_NATIVE_CHARGE_WORD_V286.sql"))
+        // سرور: ۲۰٬۰۰۰ تومان به‌ازای نسخهٔ یکتا؛ entitlement نامحدוד להורדה.
+        val sql = src("supabase/migrations/20261028_native_charge_word_v287_revision_entitlement.sql")
+        assertTrue("create or replace function public.native_charge_word_v287(" in sql)
+        assertTrue("v_cost bigint := 20000;" in sql && "revision_hash" in sql && "already_paid" in sql)
+        assertTrue(sql == src("sql/manual/SQL_NATIVE_CHARGE_WORD_V287_REVISION_ENTITLEMENT.sql"))
         val repo = src("app/src/main/java/ir/exam/app/domain/repository/BillingRepository.kt")
-        assertTrue("const val WORD_EXPORT_COST_TOMAN: Long = 50_000" in repo)
-        assertTrue("rpc(\"native_charge_word_v286\"" in src("app/src/main/java/ir/exam/app/data/repository/SupabaseBillingRepository.kt"))
+        assertTrue("const val WORD_EXPORT_COST_TOMAN: Long = 20_000" in repo)
+        val billing = src("app/src/main/java/ir/exam/app/data/repository/SupabaseBillingRepository.kt")
+        assertTrue("rpc(\"native_charge_word_v287\"" in billing && "put(\"p_revision\", revision)" in billing)
+        val entitlement = src("supabase/migrations/20261028_native_charge_word_v287_revision_entitlement.sql")
+        assertTrue("primary key (user_id, exam_id, revision_hash)" in entitlement && "already_paid" in entitlement)
+        assertTrue(entitlement == src("sql/manual/SQL_NATIVE_CHARGE_WORD_V287_REVISION_ENTITLEMENT.sql"))
     }
 
     @Test
@@ -61,7 +65,7 @@ class V285_WordExportTest {
         assertTrue("printableExam(exam.id, includeAnswerKey = false)" in dash)
         // تعرفه‌ها
         val wallet = src("app/src/main/java/ir/exam/app/ui/billing/WalletScreen.kt")
-        assertTrue("\"فایل Word آزمون: هر فایل\" to ir.exam.app.domain.repository.WORD_EXPORT_COST_TOMAN" in wallet)
+        assertTrue("\"فایل Word آزمون: هر نسخه (دانلود نامحدود)\" to ir.exam.app.domain.repository.WORD_EXPORT_COST_TOMAN" in wallet)
         assertTrue("startsWith(\"exam:word:\") -> \"فایل Word آزمون\"" in wallet)
     }
 
@@ -69,12 +73,12 @@ class V285_WordExportTest {
     fun `V286 - site cards get a Word icon with the same build-charge-download order`() {
         val app = src("site/src/app.js")
         assertTrue("isWord" !in app && "doWord" !in app)
-        assertTrue("chargeWord: function (examRef, title) { return rpcObj('native_charge_word_v286'" in app)
-        assertTrue("var WORD_COST = 50000;" in app)
-        assertTrue(app.indexOf("b64 = await buildWordDocx(payload)") < app.indexOf("r = await api.chargeWord(opts.examRef || 'local', title)") && app.indexOf("r = await api.chargeWord(") < app.indexOf("window.SiteExtras.download(name, new Blob([u8]"))
+        assertTrue("chargeWord: function (examRef, title, revision) { return rpcObj('native_charge_word_v287'" in app)
+        assertTrue("var WORD_COST = 20000;" in app)
+        assertTrue(app.indexOf("b64 = await buildWordDocx(payload)") < app.indexOf("r = await api.chargeWord(opts.examRef || 'local', title, revision)") && app.indexOf("r = await api.chargeWord(") < app.indexOf("window.SiteExtras.download(name, new Blob([u8]"))
         assertTrue("w.wordExportBase64('student')" in app)
         assertTrue("html: WORD_ICON_HTML + '<span>Word</span>', onclick: function () { wordOnlineExam(x); }" in app)
-        assertTrue("['فایل Word آزمون: هر فایل', '۵۰٬۰۰۰']" in src("site/src/admin.js"))
+        assertTrue("['فایل Word آزمون: هر نسخه (دانلود نامحدود)', '۲۰٬۰۰۰']" in src("site/src/admin.js"))
         val mob = src("site/src/mobile.js")
         assertTrue("act('word', 'Word', function () { S.wordOnlineExam(x); })" in mob)
         assertTrue("act('word', 'فایل Word (هزینهٔ جداگانه)'" in mob)
@@ -101,7 +105,7 @@ class V285_WordExportTest {
         assertTrue("WordExportFlow(wordRequest) { wordRequest = null }" in pc)
         assertTrue("Icon(ir.exam.app.ui.app.Design69Icons.Word, contentDescription = \"فایل Word\"" in pc) // V291
         assertTrue("(جدا از چاپ)" !in src("site/src/admin.js").substringAfter("var rows = [").substringBefore("]];"))
-        assertTrue("\"فایل Word آزمون: هر فایل\" to" in src("app/src/main/java/ir/exam/app/ui/billing/WalletScreen.kt"))
+        assertTrue("\"فایل Word آزمون: هر نسخه (دانلود نامحدود)\" to" in src("app/src/main/java/ir/exam/app/ui/billing/WalletScreen.kt"))
     }
 
     @Test

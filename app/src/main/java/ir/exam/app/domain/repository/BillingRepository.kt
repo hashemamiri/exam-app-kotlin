@@ -20,11 +20,11 @@ interface BillingRepository {
     suspend fun quotePrint(examId: String, questionCount: Int, content: String = ""): Result<PrintQuoteResult>
 
     /** V286 — هزینهٔ خروجی Word: مبلغ ثابت [WORD_EXPORT_COST_TOMAN] برای هر فایل، جدا از چاپ (native_charge_word_v286). */
-    suspend fun chargeWord(examRef: String, operationId: String, title: String): Result<PrintChargeResult>
+    suspend fun chargeWord(examRef: String, operationId: String, title: String, revision: String): Result<PrintChargeResult>
 }
 
 /** V286 — تعرفهٔ هر فایل Word (تومان)؛ همان عدد ثابت تابع سرور. */
-const val WORD_EXPORT_COST_TOMAN: Long = 50_000
+const val WORD_EXPORT_COST_TOMAN: Long = 20_000
 
 data class PrintChargeResult(val costToman: Long, val balanceToman: Long?, val alreadyPaid: Boolean = false)
 data class PrintQuoteResult(val paid: Boolean, val dueToman: Long, val questions: Int)

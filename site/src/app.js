@@ -584,7 +584,7 @@
     var raw;
     try { raw = await rpc('native_login_gate_v283', {p_identifier: identifier, p_password: password}); }
     catch (e) { return null; } /* تابع نیست / شبکه → مسیر قبلی */
-    if (raw && raw.ok === true) return true;
+    if (raw && raw.ok === true) return raw.email || true;
     var err = raw && raw.error ? String(raw.error) : '';
     if (err) throw new Error(err);
     return null;
@@ -616,7 +616,9 @@
       var LS_UL = 'examsite.ulogin.v1', ul = {}; try { ul = JSON.parse(localStorage.getItem(LS_UL) || '{}') || {}; } catch (e) {}
       /* V283 — دروازهٔ قفل ورود: ۵ رمز اشتباه در ۱۵ دقیقه → حساب ۱۵ دقیقه بسته؛ اگر تابع روی سرور نبود مسیر قبلی */
       var gated = await loginGate(clean, password);
-      if (gated === true) {
+      if (typeof gated === 'string' && gated.indexOf('@') > 0) {
+        email = gated;
+      } else if (gated === true) {
         email = clean.indexOf('@') >= 0 ? clean : passwordLoginEmail(clean);
       }
       else if (clean.indexOf('@') < 0 && USERNAME_RE.test(clean)) {
@@ -708,7 +710,7 @@
     duplicateExam: function (id) { return rpcObj('native_duplicate_exam_v2', {p_exam: id, p_operation: uuid()}); },
     duplicateExamToClass: function (id, classId) { return rpcObj('native_duplicate_exam_to_class_v1', {p_exam: id, p_class: classId, p_operation: uuid()}); }, /* V264 */
     /* V202.1 — v2: پرداخت چاپ آزمون آنلاین/محلی روی سرور ثبت می‌شود؛ همان محتوا در اپ/سایت دسکتاپ/سایت گوشی دوباره کسر نمی‌شود */
-    chargeWord: function (examRef, title) { return rpcObj('native_charge_word_v286', {p_exam: examRef, p_operation: uuid(), p_title: title || ''}); }, /* V286 — ۵۰٬۰۰۰ تومان هر فایل، جدا از چاپ */
+    chargeWord: function (examRef, title, revision) { return rpcObj('native_charge_word_v287', {p_exam: examRef, p_operation: uuid(), p_title: title || '', p_revision: revision || ''}); }, /* نسخهٔ پرداخت‌شده: دانلود نامحدود */
     chargePrint: function (examId, count, mode, content) { return rpcObj('native_charge_print_v2', {p_exam: examId, p_operation: uuid(), p_questions: count, p_mode: mode, p_content: content || ''}); },
     printChargeQuote: function (examId, count, content) { return rpcObj('native_charge_print_quote_v2', {p_exam: examId, p_questions: count, p_content: content || ''}); },
     /* V199 — پرداخت چاپ آزمون چاپی: برآورد / کسر / وضعیت کارت‌ها (سربرگ = اثر انگشت فیلدهای f_*) */
@@ -2302,24 +2304,30 @@
   }
   /* V286 — «فایل Word» از روی کارت آزمون (آنلاین/چاپی)، هزینهٔ ثابت WORD_COST برای هر فایل و کاملاً جدا از چاپ:
      تأیید → ساخت فایل (رایگان؛ اگر شکست بخورد چیزی کسر نمی‌شود) → کسر (native_charge_word_v286) → دانلود */
-  var WORD_COST = 50000;
+  var WORD_COST = 20000;
+  async function wordRevisionHash(value) {
+    if (!window.crypto || !window.crypto.subtle || !window.TextEncoder) throw new Error('ساخت اثرانگشت نسخهٔ آزمون ممکن نیست؛ اتصال امن را بررسی کنید.');
+    var digest = await window.crypto.subtle.digest('SHA-256', new TextEncoder().encode(value));
+    return Array.from(new Uint8Array(digest)).map(function (b) { return b.toString(16).padStart(2, '0'); }).join('');
+  }
   async function wordExam(opts) {
     opts = opts || {};
     var title = opts.title || 'آزمون';
     if (!user) { toast('ابتدا وارد شوید.', 'err'); return; }
-    if (!(await confirmDlg('فایل Word — ' + esc(title), 'هزینهٔ هر فایل Word: ' + fa(WORD_COST) + ' تومان (جدا از هزینهٔ چاپ)<br>فایل نسخهٔ دانشجو ساخته و پس از کسر از کیف پول دانلود می‌شود.<br><b>مبلغ قابل کسر از کیف پول: ' + money(WORD_COST) + '</b>', 'پرداخت و دریافت فایل'))) return;
+    if (!(await confirmDlg('فایل Word — ' + esc(title), 'هزینهٔ نخستین دریافت هر نسخهٔ آزمون: ' + fa(WORD_COST) + ' تومان.<br>پس از پرداخت، دانلود همین نسخه نامحدود و رایگان است؛ با هر تغییری در آزمون، پرداخت نسخهٔ جدید لازم می‌شود. اگر این نسخه قبلاً پرداخت شده باشد، مبلغی کسر نمی‌شود.<br><b>حداکثر مبلغ قابل کسر: ' + money(WORD_COST) + '</b>', 'پرداخت و دریافت فایل'))) return;
     toast('در حال ساخت فایل Word…');
     var payload;
     try { payload = await opts.payload(); } catch (e) { toast(errMsg(e), 'err'); return; }
     var b64;
     try { b64 = await buildWordDocx(payload); } catch (e) { toast(errMsg(e) || 'ساخت فایل Word ناموفق بود؛ چیزی کسر نشد.', 'err'); return; }
-    var r;
-    try { r = await api.chargeWord(opts.examRef || 'local', title); } catch (e) { toast(errMsg(e), 'err'); return; }
+    var r, revision;
+    try { revision = await wordRevisionHash(JSON.stringify(payload)); r = await api.chargeWord(opts.examRef || 'local', title, revision); } catch (e) { toast(errMsg(e), 'err'); return; }
     if (r && r.error) { var m = String(r.error); if (r.balance != null && r.required != null) m += '؛ موجودی ' + money(r.balance) + ' و مبلغ لازم ' + money(r.required) + ' است.'; toast(m, 'err'); return; }
     var bin = atob(b64), u8 = new Uint8Array(bin.length); for (var i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
     var name = String(title).replace(/[\\/:*?"<>|]/g, ' ').trim() + '.docx';
     window.SiteExtras.download(name, new Blob([u8], {type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'}));
-    await costDoneDlg(r.cost || WORD_COST, r.balance);
+    if (r.already_paid) toast('این نسخه قبلاً پرداخت شده بود؛ دانلود نامحدود رایگان.', 'ok');
+    else await costDoneDlg(r.cost || WORD_COST, r.balance);
   }
   /* آزمون آنلاین: همان دادهٔ چاپ */
   function wordOnlineExam(x) {

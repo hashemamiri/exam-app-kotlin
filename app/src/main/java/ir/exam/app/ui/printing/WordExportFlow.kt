@@ -1,5 +1,6 @@
 package ir.exam.app.ui.printing
 
+import android.graphics.Bitmap
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.material3.AlertDialog
@@ -18,6 +19,8 @@ import ir.exam.app.data.repository.SupabaseBillingRepository
 import ir.exam.app.domain.model.OfficialExamPrintable
 import ir.exam.app.domain.repository.WORD_EXPORT_COST_TOMAN
 import kotlinx.coroutines.launch
+import java.io.ByteArrayOutputStream
+import java.security.MessageDigest
 
 /**
  * V286 — درخواست خروجی Word از روی کارت آزمون (آنلاین یا چاپی).
@@ -31,7 +34,7 @@ class WordExportRequest(
 )
 
 /**
- * V286 — جریان کامل «فایل Word» با هزینهٔ جداگانه (۵۰٬۰۰۰ تومان برای هر فایل، مستقل از چاپ):
+ * V286 — جریان کامل «فایل Word» با هزینهٔ جداگانه (۲۰٬۰۰۰ تومان برای هر نسخهٔ آزمون، مستقل از چاپ):
  * ۱) تأیید هزینه → ۲) ساخت فایل با موتور چاپ (بدون پیش‌نمایش؛ نسخهٔ دانشجو) → ۳) کسر از کیف پول
  * (native_charge_word_v286؛ اگر ساخت فایل شکست بخورد چیزی کسر نمی‌شود) → ۴) انتخاب محل ذخیره (SAF).
  * فقط در صورت موفقیت کسر، پنجرهٔ ذخیره باز می‌شود.
@@ -64,8 +67,8 @@ fun WordExportFlow(request: WordExportRequest?, onDone: () -> Unit) {
             text = {
                 Text(
                     "«${request.title.ifBlank { "آزمون" }}»\n" +
-                        "هزینهٔ هر فایل Word: ${formatToman(WORD_EXPORT_COST_TOMAN)} تومان (جدا از هزینهٔ چاپ).\n" +
-                        "مبلغ پس از ساخت فایل از کیف پول کسر می‌شود و سپس محل ذخیره را انتخاب می‌کنید."
+                        "هزینهٔ نخستین دریافت هر نسخهٔ آزمون: ${formatToman(WORD_EXPORT_COST_TOMAN)} تومان.\n" +
+                        "پس از پرداخت، همین نسخه نامحدود و رایگان دانلود می‌شود؛ هر تغییر در آزمون نسخهٔ تازه‌ای است و هزینهٔ دوباره دارد. اگر این نسخه قبلاً پرداخت شده باشد، مبلغی کسر نمی‌شود."
                 )
             },
             confirmButton = {
@@ -95,10 +98,10 @@ fun WordExportFlow(request: WordExportRequest?, onDone: () -> Unit) {
                 else {
                     step = "charge"
                     scope.launch {
-                        SupabaseBillingRepository().chargeWord(request.examRef, java.util.UUID.randomUUID().toString(), request.title)
+                        SupabaseBillingRepository().chargeWord(request.examRef, java.util.UUID.randomUUID().toString(), request.title, wordExportRevision(printable ?: error("آزمون در دسترس نیست")))
                             .onSuccess { r ->
                                 pending = bytes
-                                message = "${formatToman(r.costToman)} تومان کسر شد" +
+                                message = if (r.alreadyPaid) "این نسخه قبلاً پرداخت شده است؛ دانلود نامحدود رایگان." else "${formatToman(r.costToman)} تومان کسر شد" +
                                     (r.balanceToman?.let { "؛ موجودی: ${formatToman(it)} تومان" } ?: "") + "."
                                 step = "save"
                                 runCatching { launcher.launch(fileName) }
@@ -117,4 +120,16 @@ fun WordExportFlow(request: WordExportRequest?, onDone: () -> Unit) {
             confirmButton = { TextButton(onClick = onDone) { Text("باشه") } }
         )
     }
+}
+
+/** اثر انگشت پایدار محتوای نسخه؛ Bitmap را از toString حذف می‌کنیم و هش پیکسل‌های هر تصویر را جدا می‌آوریم. */
+private fun wordExportRevision(exam: OfficialExamPrintable): String {
+    val noBitmaps = exam.copy(questions = exam.questions.map { it.copy(images = emptyList()) })
+    val imageHashes = exam.questions.flatMap { it.images }.map { bitmap ->
+        val out = ByteArrayOutputStream()
+        check(bitmap.compress(Bitmap.CompressFormat.PNG, 100, out)) { "خواندن تصویر آزمون ناموفق بود" }
+        MessageDigest.getInstance("SHA-256").digest(out.toByteArray()).joinToString("") { "%02x".format(it) }
+    }
+    val canonical = noBitmaps.toString() + "\nimage-pixels:" + imageHashes.joinToString(",")
+    return MessageDigest.getInstance("SHA-256").digest(canonical.toByteArray(Charsets.UTF_8)).joinToString("") { "%02x".format(it) }
 }

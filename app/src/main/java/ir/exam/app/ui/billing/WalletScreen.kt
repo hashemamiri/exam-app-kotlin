@@ -181,7 +181,7 @@ fun WalletScreen(refreshKey: Int = 0) {
                     )
                     // V247.1 — پیشنهاد ۱٬۰۰۰٬۰۰۰ هم اضافه شد؛ FlowRow تا در گوشی باریک به سطر بعد برود
                     FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        listOf(100_000L, 250_000L, 500_000L, 1_000_000L).forEach { amount ->
+                        listOf(100_000L, 200_000L, 500_000L, 1_000_000L).forEach { amount ->
                             FilterChip(
                                 selected = state.topUpAmount.toLongOrNull() == amount,
                                 onClick = { viewModel.selectPreset(amount) },
@@ -298,7 +298,7 @@ private fun TariffDialog(onDismiss: () -> Unit) {
         "صوت سؤال تا ۳ مگابایت" to 6_000L,
         "چاپ: هر سؤال" to 1_000L,
         "چاپ: هر تصویر" to 1_000L,
-        "فایل Word آزمون: هر فایل" to ir.exam.app.domain.repository.WORD_EXPORT_COST_TOMAN,
+        "فایل Word آزمون: هر نسخه (دانلود نامحدود)" to ir.exam.app.domain.repository.WORD_EXPORT_COST_TOMAN,
         "بازیابی پشتیبان: هر سؤال" to 1_000L
     )
     AlertDialog(

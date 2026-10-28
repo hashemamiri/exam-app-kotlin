@@ -164,10 +164,8 @@ class SupabaseAuthRepository(context: Context) : AuthRepository {
         // اگر نبود، همان مسیر دانش‌آموز (username@student.exam.local).
         val clean = identifier.trim().lowercase()
         // V283 — دروازهٔ قفل ورود: ۵ رمز اشتباه در ۱۵ دقیقه → حساب ۱۵ دقیقه بسته. اگر تابع روی سرور نبود، مسیر قبلی.
-        val gated = loginGate(clean, password)
-        val loginEmail = if (gated == true) {
-            if ('@' in clean) clean else staffEmailByUsername(clean) ?: AuthIdentifier.passwordLoginEmail(clean)
-        } else if ('@' !in clean && AuthIdentifier.validUsername(clean)) {
+        val gatedEmail = loginGate(clean, password)
+        val loginEmail = gatedEmail ?: if ('@' !in clean && AuthIdentifier.validUsername(clean)) {
             AuthIdentifier.passwordLoginEmail(clean)
         } else {
             AuthIdentifier.passwordLoginEmail(identifier)
@@ -175,19 +173,6 @@ class SupabaseAuthRepository(context: Context) : AuthRepository {
         signInQueued(loginEmail, password)
         persistUser(currentProfile())
     }.getOrThrow()
-
-    /** V335.55 — بازیابی ایمیل واقعی کارکن از پروفایل برای ورود با نام کاربری (بدون @) */
-    private suspend fun staffEmailByUsername(username: String): String? {
-        return runCatching {
-            val response = SupabaseProvider.client.postgrest
-                .from("profiles")
-                .select("email")
-                .eq("username", username)
-                .single()
-                .execute()
-            response.data?.get("email")?.toString()
-        }.getOrNull()
-    }
 
     /**
      * V268 — صف ورود: سطل Supabase Auth حداکثر ۳۰ ورود آنی به ازای هر IP دارد و با نرخ تنظیم‌شده پر می‌شود.
@@ -223,7 +208,7 @@ class SupabaseAuthRepository(context: Context) : AuthRepository {
      * V283 — `native_login_gate_v283(identifier, password)`: رمز را سمت سرور با همان bcrypt می‌سنجد و شکست‌ها را می‌شمارد.
      * خروجی: ایمیل ورود (ok) / خطای فارسی (رمز اشتباه، قفل ۱۵ دقیقه) / null وقتی تابع هنوز روی سرور نیست.
      */
-    private suspend fun loginGate(identifier: String, password: String): Boolean? {
+    private suspend fun loginGate(identifier: String, password: String): String? {
         val raw = runCatching {
             SupabaseProvider.client.postgrest.rpc(
                 "native_login_gate_v283",
@@ -235,12 +220,13 @@ class SupabaseAuthRepository(context: Context) : AuthRepository {
             if (UserFacingError.isRateLimited(msg)) return null
             return null // خطای شبکه و … → مسیر قبلی خودش پیام می‌دهد
         }
-        val okContent = raw["ok"]?.jsonPrimitive?.contentOrNull
-        return when (okContent) {
-            is Boolean -> okContent
-            is String -> okContent.equals("true", ignoreCase = true)
-            else -> null
+        val ok = raw["ok"]?.jsonPrimitive?.booleanOrNull
+            ?: raw["ok"]?.jsonPrimitive?.contentOrNull?.equals("true", ignoreCase = true)
+        if (ok == true) return raw["email"]?.jsonPrimitive?.contentOrNull?.trim()?.lowercase()
+        if (raw["locked"]?.jsonPrimitive?.booleanOrNull == true) {
+            error("تلاش‌های ورود بیش از حد است؛ بعداً دوباره تلاش کنید.")
         }
+        return null
     }
 
     private suspend fun staffLoginEmail(username: String): Boolean? {
@@ -256,12 +242,8 @@ class SupabaseAuthRepository(context: Context) : AuthRepository {
             }
             error("بررسی نام کاربری ناموفق بود: ${msg.take(160)}")
         }
-        val okContent = raw["ok"]?.jsonPrimitive?.contentOrNull
-        return when (okContent) {
-            is Boolean -> okContent
-            is String -> okContent.equals("true", ignoreCase = true)
-            else -> null
-        }
+        return raw["ok"]?.jsonPrimitive?.booleanOrNull
+            ?: raw["ok"]?.jsonPrimitive?.contentOrNull?.equals("true", ignoreCase = true)
     }
 
     override suspend fun sendLoginOtp(email: String): Result<Unit> = sendOtp(

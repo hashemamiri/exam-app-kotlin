@@ -101,11 +101,12 @@ class SupabaseBillingRepository : BillingRepository {
         )
     }
 
-    override suspend fun chargeWord(examRef: String, operationId: String, title: String): Result<PrintChargeResult> = runCatching {
-        val raw: JsonObject = SupabaseProvider.client.postgrest.rpc("native_charge_word_v286", buildJsonObject {
+    override suspend fun chargeWord(examRef: String, operationId: String, title: String, revision: String): Result<PrintChargeResult> = runCatching {
+        val raw: JsonObject = SupabaseProvider.client.postgrest.rpc("native_charge_word_v287", buildJsonObject {
             put("p_exam", examRef)
             put("p_operation", operationId)
             put("p_title", title)
+            put("p_revision", revision)
         }).decodeAs()
         raw["error"]?.jsonPrimitive?.contentOrNull?.takeIf(String::isNotBlank)?.let { message ->
             val required = raw["required"]?.jsonPrimitive?.longOrNull
@@ -114,7 +115,8 @@ class SupabaseBillingRepository : BillingRepository {
         }
         PrintChargeResult(
             costToman = raw["cost"]?.jsonPrimitive?.longOrNull ?: 0,
-            balanceToman = raw["balance"]?.jsonPrimitive?.longOrNull
+            balanceToman = raw["balance"]?.jsonPrimitive?.longOrNull,
+            alreadyPaid = raw["already_paid"]?.jsonPrimitive?.booleanOrNull ?: false
         )
     }
 
