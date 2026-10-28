@@ -33,7 +33,7 @@ class V60_0StaffLoginGoogleTest {
 
     @Test
     fun `staff usernames resolve to their real auth email before password login`() {
-        assertTrue("staffLoginEmail(clean) ?: AuthIdentifier.passwordLoginEmail(clean)" in authRepo)
+        assertTrue("loginGate(clean, password)" in authRepo)
         assertTrue("native_staff_login_email_v1" in authRepo)
         // سرور: فقط نقش کادر؛ پیام خنثی برای نام ناموجود
         assertTrue("p.role in ('teacher', 'manager')" in migration)
