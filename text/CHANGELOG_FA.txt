@@ -1,3 +1,7 @@
+V335.53 (اپ 1.03.33) — اصلاح خطای ساخت CI و migrations امنیتی ورود
+- خطای ساخت CI در SupabaseAuthRepository.kt (toBooleanOrNull) با equivalentsCompatible اصلاح شد.
+- migration SQL برای native_staff_login_email_v1: حذف ایمیل از پاسخ، REVOKE از نقش anon.
+- migration SQL برای native_login_gate_v283: حذف remaining و email از پاسخ، افزودن سقف روزانه ۳۰ شکست.
 V335.52 (اپ 1.03.32) — تعرفهٔ فایل ورد و متن بازبینی محصولات/تعرفه
 - هزینه فایل Word آزمون از ۵۰٬۰۰۰ تومان به ۲۰٬۰۰۰ تومان کاهش یافت.
 - فایل Word با یک بار پرداخت قابل دانلود نامحدود است؛ با کوچکترین تغییر در هر بخشی از آزمون، مجدداً هزینه کسر می‌شود.
