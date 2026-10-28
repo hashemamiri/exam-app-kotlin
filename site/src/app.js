@@ -1526,13 +1526,17 @@
   /* V335.51 — فوتر ثابت پایین صفحهٔ ورود: تعرفه، پرسش‌های متداول، حریم خصوصی، شرایط استفاده، وضعیت سرویس، تماس */
   function landingFoot() {
     var links = (window.LP_FOOT_LINKS || []).map(function (l) {
-      if (l[1] === '#products') return el('button', {type: 'button', class: 'lp-foot-link', text: l[0], onclick: function () { openLandingCatalogModal(null, null); }});
-      if (l[1] === '#faq') return el('button', {type: 'button', class: 'lp-foot-link', text: l[0], onclick: openFaqFromFoot});
-      return el('a', {class: 'lp-foot-link', href: l[1], target: l[1].indexOf('mailto:') === 0 ? null : '_blank', rel: 'noopener', text: l[0]});
+      /* V335.64 — هر پیوند فوتر یک دکمهٔ قرصی مستقل است و فقط عنوان خودش را نشان می‌دهد.
+         کوتاه‌سازی «پرسش‌های متداول تعرفه» فقط در فوتر دسکتاپ انجام می‌شود تا فهرست مشترک گوشی دست‌نخورده بماند. */
+      var label = l[1] === '#faq' ? 'پرسش‌های متداول' : l[0];
+      if (l[1] === '#products') return el('button', {type: 'button', class: 'lp-foot-link lp-foot-btn', text: l[0], onclick: function () { openLandingCatalogModal(null, null); }});
+      if (l[1] === '#faq') return el('button', {type: 'button', class: 'lp-foot-link lp-foot-btn', text: label, onclick: openFaqFromFoot});
+      return el('a', {class: 'lp-foot-link lp-foot-btn', href: l[1], target: l[1].indexOf('mailto:') === 0 ? null : '_blank', rel: 'noopener', text: l[0]});
     });
     return el('footer', {class: 'lp-foot', 'aria-label': 'پیوندهای سایت'}, [
       el('nav', {class: 'lp-foot-links'}, links),
-      el('p', {class: 'lp-foot-copy', text: 'آزمون آنلاین — سامانهٔ ساخت، برگزاری و تصحیح آزمون · onlineexam.ir'})
+      /* V335.64 — جای نماد اینماد کنار دکمه‌های فوتر (هم‌سطر)؛ جملهٔ «آزمون آنلاین — …» حذف شد */
+      el('div', {class: 'lp-foot-enamad'})
     ]);
   }
   function renderLanding(mode) {
@@ -1572,6 +1576,11 @@
       landingFoot()
     ]);
     if (keyWarn) page.appendChild(keyWarn);
+    /* V335.64 — نماد اینماد از ستون معرفی به فوتر منتقل می‌شود تا هم‌سطر با دکمه‌های فوتر بنشیند
+       (جابه‌جایی در زمان اجراست تا مارک‌آپ اولیه و تست‌های پین‌شدهٔ سایت دست‌نخورده بمانند). */
+    var footHost = page.querySelector('.lp-foot-enamad');
+    var footBadge = page.querySelector('.lp-badges .enamad');
+    if (footHost && footBadge) footHost.appendChild(footBadge);
     root.appendChild(page);
   }
   /* V311.2 / V311.6 — فهرست محصولات، بسته‌های شارژ کیف پول و تعرفهٔ خدمات در پنجرهٔ میانی صفحهٔ اصلی سایت (الزام شاپرک) */
