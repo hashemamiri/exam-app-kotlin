@@ -1,5 +1,14 @@
 # هندآف جامع مهاجرت سامانه آزمون از WebView به Native Kotlin
 
+## V335.63.1 / 1.03.43 — رفع تست ناموفق CI در بخش ورود گوگل سایت — ۲۰۲۶-۱۰-۲۹
+
+- شکست CI: `V335_62_SiteGoogleDotsTest > site google button shows four animated dots instead of waiting text FAILED` (خط ۲۱).
+- علت: `assertFalse("در حال انتقال به گوگل…" in extras)` کل فایل `site/src/extras.js` را می‌گشت و همان عبارت در توضیح کد هم بود؛ رفتار دکمه درست بود ولی تست شکست.
+- اصلاح: تست اکنون نبودِ `google-auth-spinner` را می‌سنجد؛ وجود `google-auth-dots`، چهار نقطه، `originalHtml`، `disabled` و `aria-busy` مثل قبل بررسی می‌شود.
+- نسخه 1.03.43 بالا رفت تا گام «بررسی نسخه» سبز شود؛ چون فایل تست تغییر کرده workflow اپ اجرا می‌شود و APK می‌سازد (رفتار اپ تغییر نکرده است).
+
+---
+
 ## V335.63 — صفحهٔ اول سایت بدون اسکرول + فوتر هم‌سطر با اینماد — ۲۰۲۶-۱۰-۲۹ (فقط سایت)
 
 - دسکتاپ (`site/src/app.js`): جملهٔ `lp-foot-copy` («آزمون آنلاین — سامانهٔ ساخت، برگزاری و تصحیح آزمون · onlineexam.ir») حذف شد.

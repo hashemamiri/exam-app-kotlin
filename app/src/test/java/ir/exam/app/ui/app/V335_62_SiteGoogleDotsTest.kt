@@ -18,7 +18,9 @@ class V335_62_SiteGoogleDotsTest {
         val extras = src("site/src/extras.js")
         assertTrue("google-auth-dots" in extras)
         assertTrue("<i></i><i></i><i></i><i></i>" in extras)
-        assertFalse(("در حال انتقال به " + "گوگل…") in extras) // متن انتظار حذف شده
+        // V335.63.1 — نسخهٔ قدیمی دکمه (اسپینر + متن انتظار) دیگر در کد نیست؛
+        // به‌جای جست‌وجوی عبارت، خودِ مارک‌آپ قدیمی سنجیده می‌شود تا توضیحات هم تست را نشکنند.
+        assertFalse("google-auth-spinner" in extras)
         // بازگردانی دکمه پس از ۱۲ ثانیه و غیرفعال‌سازی در طول انتظار حفظ شده است.
         assertTrue("button.innerHTML = originalHtml" in extras)
         assertTrue("button.disabled = true" in extras)
