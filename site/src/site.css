@@ -2258,5 +2258,13 @@ body.site-locked .app{filter:blur(3px);pointer-events:none;user-select:none}
 }
 
 /* V335.59 — بازخورد فوری هنگام انتقال به پنجرهٔ انتخاب حساب گوگل */
-.google-auth-spinner{display:inline-block;font-size:20px;line-height:1;vertical-align:-2px;animation:google-auth-spin .8s linear infinite}
-@keyframes google-auth-spin{to{transform:rotate(360deg)}}
+/* V335.62 — انیمیشن چهارنقطه‌ای گوگل داخل دکمهٔ ورود/ثبت‌نام (به‌جای متن «در حال انتقال به گوگل…») */
+.google-auth-dots{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:18px;vertical-align:-3px}
+.google-auth-dots i{display:block;width:8px;height:8px;border-radius:50%;animation:google-auth-dot-wave 1.2s ease-in-out infinite}
+.google-auth-dots i:nth-child(1){background:#4285F4;animation-delay:0s}
+.google-auth-dots i:nth-child(2){background:#EA4335;animation-delay:.15s}
+.google-auth-dots i:nth-child(3){background:#FBBC05;animation-delay:.3s}
+.google-auth-dots i:nth-child(4){background:#34A853;animation-delay:.45s}
+button[aria-busy="true"] .google-auth-dots, .ice-google[aria-busy="true"] .google-auth-dots{cursor:progress}
+@keyframes google-auth-dot-wave{0%,60%,100%{transform:translateY(0) scale(.8);opacity:.55}30%{transform:translateY(-5px) scale(1);opacity:1}}
+@media (prefers-reduced-motion: reduce){.google-auth-dots i{animation:none;opacity:1;transform:none}}

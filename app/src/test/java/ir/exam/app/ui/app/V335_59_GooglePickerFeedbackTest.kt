@@ -24,10 +24,10 @@ class V335_59_GooglePickerFeedbackTest {
     fun `website announces OAuth redirect before navigating and restores on timeout`() {
         val extras = src("site/src/extras.js")
         assertTrue("در حال انتقال به انتخاب حساب گوگل" in extras)
-        assertTrue("در حال انتقال به گوگل…" in extras)
+        assertTrue("google-auth-dots" in extras) // V335.62 — انیمیشن چهارنقطه‌ای جای متن انتظار
         assertTrue("requestAnimationFrame(function () { location.href = targetUrl; })" in extras)
         assertTrue("button.innerHTML = originalHtml" in extras)
         val css = src("site/src/site.css")
-        assertTrue(".google-auth-spinner" in css && "@keyframes google-auth-spin" in css)
+        assertTrue(".google-auth-dots" in css && "@keyframes google-auth-dot-wave" in css)
     }
 }

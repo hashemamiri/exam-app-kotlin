@@ -443,14 +443,21 @@
       if (/^file:/.test(redirect)) { toast('ورود با گوگل فقط وقتی سایت روی یک آدرس اینترنتی (https) باشد کار می‌کند، نه از روی فایل محلی.', 'err'); return; }
       /* V236 — همیشه صفحهٔ انتخاب حساب گوگل نشان داده شود (نه ورود خودکار با حساب قبلی) */
       var targetUrl = S.config.url + '/auth/v1/authorize?provider=google&prompt=select_account&redirect_to=' + encodeURIComponent(redirect);
-      var button = this, originalHtml = button.innerHTML;
-      button.disabled = true; button.setAttribute('aria-busy', 'true');
+      var button = this;
+      var originalHtml = button.innerHTML;
+      button.disabled = true;
+      button.setAttribute('aria-busy', 'true');
       button.setAttribute('aria-label', 'در حال انتقال به انتخاب حساب گوگل');
-      button.innerHTML = '<span class="google-auth-spinner" aria-hidden="true">◌</span> در حال انتقال به گوگل…';
+      /* V335.62 — به‌جای متن «در حال انتقال به گوگل…»، همان انیمیشن چهارنقطه‌ای گوگل داخل خود دکمه
+         (موبایل و دسکتاپ) نمایش داده می‌شود؛ دکمه غیرفعال و aria-busy می‌ماند. */
+      button.innerHTML = '<span class=\"google-auth-dots\" aria-hidden=\"true\"><i></i><i></i><i></i><i></i></span>';
+      /* یک فریم فرصت رندر بده تا بازخورد قبل از شروع OAuth دیده شود. */
       requestAnimationFrame(function () { location.href = targetUrl; });
       setTimeout(function () {
         if (!button.isConnected || button.getAttribute('aria-busy') !== 'true') return;
-        button.disabled = false; button.removeAttribute('aria-busy'); button.removeAttribute('aria-label');
+        button.disabled = false;
+        button.removeAttribute('aria-busy');
+        button.removeAttribute('aria-label');
         button.innerHTML = originalHtml;
       }, 12000);
     }});

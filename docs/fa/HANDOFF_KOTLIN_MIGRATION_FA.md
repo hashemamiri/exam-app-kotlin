@@ -1,5 +1,14 @@
 # هندآف جامع مهاجرت سامانه آزمون از WebView به Native Kotlin
 
+## V335.62 / 1.03.42 — انیمیشن نقطه‌های گوگل در دکمهٔ سایت — ۲۰۲۶-۱۰-۲۹
+
+- `SiteExtras.googleButton` (مشترک دسکتاپ `app.js` و موبایل `mobile.js`) هنگام کلیک، محتوای دکمه را به `<span class="google-auth-dots"><i></i>×4</span>` تغییر می‌دهد؛ متن «در حال انتقال به گوگل…» حذف شد.
+- CSS: `.google-auth-dots` با رنگ‌های #4285F4/#EA4335/#FBBC05/#34A853 و `@keyframes google-auth-dot-wave`؛ در `prefers-reduced-motion` انیمیشن خاموش می‌شود.
+- رفتار قبلی حفظ شده: `disabled` + `aria-busy`، حفظ `originalHtml` و بازگردانی پس از ۱۲ ثانیه.
+- تست نگهبان: `V335_62_SiteGoogleDotsTest.kt` و به‌روزرسانی `V335_59_GooglePickerFeedbackTest.kt`. بدون SQL جدید.
+
+---
+
 ## V335.61 / 1.03.41 — ورود گوگل، حذف خط شرایط، دسته‌بندی تخته — ۲۰۲۶-۱۰-۲۹
 
 - ورود گوگل (اپ): متن «در حال باز کردن فهرست حساب‌های گوگل…» حذف شد؛ تا پاسخ گوگل، دیالوگ تمام‌صفحه با انیمیشن چهارنقطه‌ای گوگل (بدون متن) در مرکز صفحه نمایش داده می‌شود و پس از ۱۲ ثانیه گزینهٔ «لغو» می‌آید. جریان: تلاش اول با همهٔ حساب‌های گوشی (`setFilterByAuthorizedAccounts(false)` + `setAutoSelectEnabled(false)`) و تلاش دوم با حساب‌های مجاز؛ خطاها با `googleSignInErrorMessage` به پیام دقیق فارسی تبدیل می‌شوند.
