@@ -2248,3 +2248,8 @@ body.site-locked .app{filter:blur(3px);pointer-events:none;user-select:none}
   .m-mode .m-profile,.m-mode .m-tile,.m-mode .m-rowcard,.m-mode .m-exam{animation:none!important}
   .m-mode .m-content{animation:none!important}
 }
+
+
+/* V335.59 — بازخورد فوری هنگام انتقال به پنجرهٔ انتخاب حساب گوگل */
+.google-auth-spinner{display:inline-block;font-size:20px;line-height:1;vertical-align:-2px;animation:google-auth-spin .8s linear infinite}
+@keyframes google-auth-spin{to{transform:rotate(360deg)}}

@@ -19,6 +19,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.MailOutline
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -672,8 +673,11 @@ private fun GoogleAuthButton(
     }
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+    var openingGooglePicker by remember(role, registering) { mutableStateOf(false) }
     OutlinedButton(
         onClick = {
+            if (openingGooglePicker || state.isLoading) return@OutlinedButton
+            openingGooglePicker = true
             scope.launch {
                 try {
                     val rawNonce = java.util.UUID.randomUUID().toString()
@@ -704,10 +708,12 @@ private fun GoogleAuthButton(
                     } else {
                         viewModel.reportGoogleError(UserFacingError.of(error, "ورود گوگل ناموفق بود."))
                     }
+                } finally {
+                    openingGooglePicker = false
                 }
             }
         },
-        enabled = !state.isLoading,
+        enabled = !state.isLoading && !openingGooglePicker,
         modifier = Modifier.fillMaxWidth().height(52.dp),
         shape = RoundedCornerShape(14.dp),
         colors = ButtonDefaults.outlinedButtonColors(
@@ -726,7 +732,13 @@ private fun GoogleAuthButton(
             modifier = Modifier.size(20.dp)
         )
         Spacer(Modifier.width(8.dp))
-        label()
+        if (openingGooglePicker || state.isLoading) {
+            CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp, color = IceInk)
+            Spacer(Modifier.width(8.dp))
+            Text(if (openingGooglePicker) "در حال باز کردن فهرست حساب‌های گوگل…" else "در حال ورود با گوگل…")
+        } else {
+            label()
+        }
     }
 }
 
