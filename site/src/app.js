@@ -1529,13 +1529,14 @@
   function landingLinks() {
     var links = (window.LP_FOOT_LINKS || []).map(function (l) {
       var label = l[1] === '#faq' ? 'پرسش‌های متداول' : l[0];
-      if (l[1] === '#products') return el('button', {type: 'button', class: 'lp-links-btn', text: l[0], onclick: function () { openLandingCatalogModal(null, null); }});
-      if (l[1] === '#faq') return el('button', {type: 'button', class: 'lp-links-btn', text: label, onclick: openFaqFromFoot});
+      if (l[1] === '#products') return el('button', {type: 'button', class: 'lp-links-btn', text: l[0], onclick: function () { openProductsModal(null); }});
+      if (l[1] === '#faq') return el('button', {type: 'button', class: 'lp-links-btn', text: label, onclick: openFaqModal});
       return el('a', {class: 'lp-links-btn', href: l[1], target: l[1].indexOf('mailto:') === 0 ? null : '_blank', rel: 'noopener', text: l[0]});
     });
     return el('div', {class: 'lp-links', role: 'group', 'aria-label': 'پیوندهای سایت'}, [
-      el('nav', {class: 'lp-links-row'}, links),
-      el('div', {class: 'lp-links-enamad'})
+      /* V335.66 — نماد اینماد اول می‌آید تا در چیدمان راست‌به‌چپ سمت راستِ صفحه بنشیند */
+      el('div', {class: 'lp-links-enamad'}),
+      el('nav', {class: 'lp-links-row'}, links)
     ]);
   }
   function renderLanding(mode) {
@@ -1564,7 +1565,7 @@
     var card = el('div', {class: 'card neo'});
     drawAuthInto(card, mode || 'login');
     var right = el('div', {class: 'lp-r'}, [card]);
-    var priceBtn = el('button', {type: 'button', class: 'btn light sm lp-price-jump', text: '💳 محصولات و تعرفه‌ها', onclick: function () { openLandingCatalogModal(function (p) { selectLandingProduct(p, card, mode); }); }});
+    var priceBtn = el('button', {type: 'button', class: 'btn light sm lp-price-jump', text: '💳 محصولات و تعرفه‌ها', onclick: function () { openProductsModal(function (p) { selectLandingProduct(p, card, mode); }); }});
     var tilesCol = el('div', {class: 'lp-tiles-col'});
     left.replaceChild(tilesCol, tilesEl);
     tilesCol.appendChild(priceBtn);
@@ -1638,7 +1639,22 @@
       }))
     ]);
   }
-  function openFaqFromFoot() { openLandingCatalogModal(null, 'lp-faq'); }
+  function openFaqFromFoot() { openFaqModal(); }
+  /* V335.66 — پنجرهٔ «محصولات و تعرفه‌ها»: فقط بسته‌های شارژ و تعرفهٔ خدمات (بدون پرسش‌های متداول) */
+  function openProductsModal(onSelectPkg) {
+    openLandingCatalogModal(onSelectPkg, null, false);
+  }
+  /* V335.66 — پنجرهٔ «پرسش‌های متداول»: فقط پرسش و پاسخ‌ها (بدون محصولات و تعرفه) */
+  function openFaqModal() {
+    var bg = el('div', {class: 'modal-bg lp-cat-bg', onclick: function (e) { if (e.target === bg) bg.remove(); }});
+    var sec = faqSection();
+    var head = sec.querySelector('.lp-faq-head');
+    if (head) head.insertBefore(el('button', {type: 'button', class: 'x tariff-x lp-cat-x', text: '✕', 'aria-label': 'بستن', onclick: function () { bg.remove(); }}), head.firstChild);
+    var inner = el('section', {class: 'lp-catalog lp-faq-only', 'aria-label': 'پرسش‌های متداول'}, [sec]);
+    bg.appendChild(el('div', {class: 'modal lp-cat-modal lp-faq-modal'}, [inner]));
+    document.body.appendChild(bg);
+  }
+
   function selectLandingProduct(p, card, mode) {
     try { sessionStorage.setItem('lp-selected-pkg', String(p.amount)); sessionStorage.setItem('lp-selected-pkg-title', p.title + ' (' + p.price + ')'); } catch (e) {}
     if (card) {
@@ -1647,7 +1663,7 @@
     }
     toast('بستهٔ «' + p.title + '» انتخاب شد؛ برای پرداخت وارد حساب خود شوید.', 'ok');
   }
-  function buildLandingCatalog(card, mode, onPick) {
+  function buildLandingCatalog(card, mode, onPick, withFaq) {
     var prods = el('div', {class: 'lp-prod-grid'}, window.LP_PRODUCTS.map(function (p) {
       return el('div', {class: 'lp-prod-card neo'}, [
         el('div', {class: 'lp-prod-head'}, [
@@ -1675,16 +1691,16 @@
       ]),
       prods,
       tariffs,
-      faqSection()
+      withFaq === false ? null : faqSection()
     ]);
   }
-  function openLandingCatalogModal(onSelectPkg, focusId) {
+  function openLandingCatalogModal(onSelectPkg, focusId, withFaq) {
     var bg = el('div', {class: 'modal-bg lp-cat-bg', onclick: function (e) { if (e.target === bg) bg.remove(); }});
     var cat = buildLandingCatalog(null, null, function (p) {
       try { sessionStorage.setItem('lp-selected-pkg', String(p.amount)); sessionStorage.setItem('lp-selected-pkg-title', p.title + ' (' + p.price + ')'); } catch (e) {}
       bg.remove();
       if (onSelectPkg) onSelectPkg(p);
-    });
+    }, withFaq);
     var head = cat.querySelector('.lp-cat-head');
     if (head) head.insertBefore(el('button', {type: 'button', class: 'x tariff-x lp-cat-x', text: '✕', 'aria-label': 'بستن', onclick: function () { bg.remove(); }}), head.firstChild);
     var m = el('div', {class: 'modal lp-cat-modal'}, [cat]);
