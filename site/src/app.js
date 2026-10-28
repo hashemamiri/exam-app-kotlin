@@ -1736,7 +1736,7 @@
       m.appendChild(el('p', {class: 's', text: isLogin ? 'معلم، مدیر و دانش‌آموز' : 'برای معلم و مدیر / معاون'}));
       var selPkg = null; try { selPkg = sessionStorage.getItem('lp-selected-pkg-title'); } catch (e) {}
       if (selPkg) m.appendChild(el('div', {class: 'alert info lp-order-banner', text: '🛒 بستهٔ انتخابی: ' + selPkg + ' — برای اتصال به درگاه شاپرک وارد حساب معلم/مدیر شوید یا ثبت‌نام کنید.'}));
-      if (!isLogin) m.appendChild(el('p', {class: 's', style: 'font-size:11px'}, [el('span', {text: 'با ثبت‌نام، '}), el('a', {href: '/terms.html', target: '_blank', rel: 'noopener', text: 'شرایط استفاده'}), el('span', {text: ' و '}), el('a', {href: '/privacy.html', target: '_blank', rel: 'noopener', text: 'حریم خصوصی'}), el('span', {text: ' را می‌پذیرید.'})])); /* V282 */
+      /* V335.61 — خط «با ثبت‌نام، شرایط استفاده و حریم خصوصی…» از صفحهٔ ثبت‌نام حذف شد. */
       if (!KEY_READY) m.appendChild(el('div', {class: 'alert warn', text: 'کلید SUPABASE_ANON_KEY در فایل وارد نشده؛ ورود ممکن نیست.'}));
       var tabs = el('div', {class: 'tabs neo-in', role: 'tablist'}, [
         el('button', {type: 'button', role: 'tab', 'aria-selected': String(isLogin), class: isLogin ? 'on' : '', text: 'ورود', onclick: function () { state.mode = 'login'; state.step = 'form'; state.otpMode = false; draw(); }}),

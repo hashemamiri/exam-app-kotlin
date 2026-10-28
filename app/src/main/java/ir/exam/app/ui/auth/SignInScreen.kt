@@ -1,6 +1,8 @@
 package ir.exam.app.ui.auth
 
 import ir.exam.app.core.network.UserFacingError
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -19,13 +21,19 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.MailOutline
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -34,6 +42,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -41,6 +50,8 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import ir.exam.app.ui.common.PasswordVisibilityButton
 import ir.exam.app.ui.common.passwordTransformation
@@ -371,7 +382,6 @@ private fun RegisterPane(state: AuthUiState, viewModel: AuthViewModel) {
 private fun TeacherRegistrationPane(state: AuthUiState, viewModel: AuthViewModel) {
     StaggeredItem(2) {
         Text("ثبت‌نام معلم", fontSize = 21.sp, fontWeight = FontWeight.Bold, color = IceInk)
-        LegalConsentLine() // V282
     }
     StaggeredItem(3) {
         Text(
@@ -447,7 +457,6 @@ private fun TeacherSetupPane(state: AuthUiState, viewModel: AuthViewModel) {
 private fun ManagerRegistrationPane(state: AuthUiState, viewModel: AuthViewModel) {
     StaggeredItem(2) {
         Text("ثبت‌نام مدیر/معاون", fontSize = 21.sp, fontWeight = FontWeight.Bold, color = IceInk)
-        LegalConsentLine() // V282
     }
     StaggeredItem(3) {
         Text(
@@ -674,42 +683,48 @@ private fun GoogleAuthButton(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     var openingGooglePicker by remember(role, registering) { mutableStateOf(false) }
+    var googleJob by remember { mutableStateOf<Job?>(null) }
     OutlinedButton(
         onClick = {
             if (openingGooglePicker || state.isLoading) return@OutlinedButton
             openingGooglePicker = true
-            scope.launch {
+            googleJob = scope.launch {
+                val rawNonce = java.util.UUID.randomUUID().toString()
+                val hashedNonce = java.security.MessageDigest.getInstance("SHA-256")
+                    .digest(rawNonce.toByteArray())
+                    .joinToString("") { "%02x".format(it) }
                 try {
-                    val rawNonce = java.util.UUID.randomUUID().toString()
-                    val digest = java.security.MessageDigest.getInstance("SHA-256")
-                        .digest(rawNonce.toByteArray())
-                    val hashedNonce = digest.joinToString("") { "%02x".format(it) }
-                    val googleIdOption =
-                        com.google.android.libraries.identity.googleid.GetGoogleIdOption.Builder()
-                            .setFilterByAuthorizedAccounts(false)
-                            .setServerClientId(ir.exam.app.BuildConfig.GOOGLE_WEB_CLIENT_ID)
-                            .setNonce(hashedNonce)
-                            .build()
-                    val request = androidx.credentials.GetCredentialRequest.Builder()
-                        .addCredentialOption(googleIdOption)
-                        .build()
                     val credentialManager = androidx.credentials.CredentialManager.create(context)
-                    val result = credentialManager.getCredential(request = request, context = context)
+                    fun request(authorizedOnly: Boolean) = androidx.credentials.GetCredentialRequest.Builder()
+                        .addCredentialOption(
+                            com.google.android.libraries.identity.googleid.GetGoogleIdOption.Builder()
+                                .setFilterByAuthorizedAccounts(authorizedOnly)
+                                .setServerClientId(ir.exam.app.BuildConfig.GOOGLE_WEB_CLIENT_ID)
+                                .setNonce(hashedNonce)
+                                .build()
+                        )
+                        .build()
+                    // V335.61 — اول همهٔ حساب‌های گوگل گوشی، بعد حساب‌های مجاز؛ اگر پنجرهٔ گوگل بار اول
+                    // باز نشود (NoCredentialException)، تلاش دوم انجام می‌شود و در غیر این صورت
+                    // پیام دقیق همان خطا به کاربر نشان داده می‌شود.
+                    val result = runCatching { credentialManager.getCredential(request = request(false), context = context) }
+                        .getOrElse { first ->
+                            if (first is androidx.credentials.exceptions.GetCredentialCancellationException) throw first
+                            credentialManager.getCredential(request = request(true), context = context)
+                        }
                     val googleCredential =
                         com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
                             .createFrom(result.credential.data)
                     viewModel.signInWithGoogleIdToken(googleCredential.idToken, rawNonce, role, registering)
+                } catch (cancel: kotlinx.coroutines.CancellationException) {
+                    // لغو با بستن پنجرهٔ انتظار؛ یا بستن پنجرهٔ گوگل توسط کاربر (خطا نیست).
                 } catch (cancel: androidx.credentials.exceptions.GetCredentialCancellationException) {
                     // بستن پنجره توسط کاربر خطا نیست.
                 } catch (error: Throwable) {
-                    // V298.2 — نسخهٔ آزمایشی بستهٔ دیگری است (ir.exam.app.beta)؛ تا در Google Cloud ثبت نشود، گوگل اعتبارنامه نمی‌دهد
-                    if (ir.exam.app.BuildConfig.IS_BETA) {
-                        viewModel.reportGoogleError("ورود با گوگل در نسخهٔ آزمایشی فعال نیست (بستهٔ آزمایشی در گوگل ثبت نشده)؛ با نام کاربری و رمز وارد شوید.")
-                    } else {
-                        viewModel.reportGoogleError(UserFacingError.of(error, "ورود گوگل ناموفق بود."))
-                    }
+                    viewModel.reportGoogleError(googleSignInErrorMessage(error))
                 } finally {
                     openingGooglePicker = false
+                    googleJob = null
                 }
             }
         },
@@ -732,23 +747,94 @@ private fun GoogleAuthButton(
             modifier = Modifier.size(20.dp)
         )
         Spacer(Modifier.width(8.dp))
-        if (openingGooglePicker || state.isLoading) {
-            CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp, color = IceInk)
-            Spacer(Modifier.width(8.dp))
-            Text(if (openingGooglePicker) "در حال باز کردن فهرست حساب‌های گوگل…" else "در حال ورود با گوگل…")
-        } else {
-            label()
+        // V335.61 — هیچ متن انتظاری روی دکمه نمی‌آید؛ تا بازشدن انتخاب‌گر گوگل، انیمیشن وسط صفحه نمایش داده می‌شود.
+        label()
+    }
+    if (openingGooglePicker) {
+        GooglePickerWaitingDialog(onCancel = {
+            googleJob?.cancel()
+            googleJob = null
+            openingGooglePicker = false
+        })
+    }
+}
+
+/**
+ * V335.61 — پنجرهٔ انتظارِ بازشدن انتخاب‌گر حساب گوگل: پس‌زمینهٔ تیرهٔ ملایم و انیمیشن چهارنقطه‌ای گوگل
+ * در مرکز صفحه، بدون متن. اگر پس از ۱۲ ثانیه پنجرهٔ گوگل باز نشد، امکان لغو/تلاش دوباره داده می‌شود.
+ */
+@Composable
+private fun GooglePickerWaitingDialog(onCancel: () -> Unit) {
+    var longWait by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) {
+        delay(12_000)
+        longWait = true
+    }
+    androidx.compose.ui.window.Dialog(
+        onDismissRequest = {},
+        properties = androidx.compose.ui.window.DialogProperties(
+            usePlatformDefaultWidth = false,
+            dismissOnBackPress = false,
+            dismissOnClickOutside = false
+        )
+    ) {
+        Box(Modifier.fillMaxSize().background(Color(0x5C0F172A)), contentAlignment = Alignment.Center) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                GoogleDotsAnimation()
+                if (longWait) {
+                    Text("پنجرهٔ گوگل باز نشد؟ دوباره تلاش کنید.", fontSize = 12.sp, color = Color.White)
+                    TextButton(onClick = onCancel) { Text("لغو", color = Color.White) }
+                }
+            }
         }
     }
 }
 
-
-/** V282 — یادآوری پذیرش شرایط استفاده و حریم خصوصی زیر عنوان ثبت‌نام (متن کامل در «درباره»). */
+/** V335.61 — انیمیشن چهارنقطه‌ای گوگل (آبی، قرمز، زرد، سبز) با موج پیاپی. */
 @Composable
-private fun LegalConsentLine() {
-    Text(
-        "با ثبت‌نام، «شرایط استفاده» و «حریم خصوصی» سامانه را می‌پذیرید (متن کامل در بخش درباره و onlineexam.ir/terms.html).",
-        fontSize = 11.sp,
-        color = IceTextSecondary
+private fun GoogleDotsAnimation() {
+    val googleColors = listOf(Color(0xFF4285F4), Color(0xFFEA4335), Color(0xFFFBBC05), Color(0xFF34A853))
+    val transition = rememberInfiniteTransition(label = "google-wait")
+    val phase by transition.animateFloat(
+        initialValue = 0f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(animation = tween(1400, easing = LinearEasing), repeatMode = RepeatMode.Restart),
+        label = "google-phase"
     )
+    Canvas(Modifier.size(72.dp)) {
+        val radius = size.minDimension * 0.13f
+        val gap = size.minDimension * 0.30f
+        googleColors.forEachIndexed { index, dotColor ->
+            val p = (phase + index * 0.25f) % 1f
+            val bump = if (p < 0.5f) p * 2f else (1f - p) * 2f
+            drawCircle(
+                color = dotColor.copy(alpha = 0.45f + 0.55f * bump),
+                radius = radius * (0.65f + 0.35f * bump),
+                center = Offset(size.width / 2f + (index - 1.5f) * gap, size.height / 2f)
+            )
+        }
+    }
+}
+
+/** V335.61 — پیام فارسی متناسب با نوع خطای Credential Manager (بدون وابستگی به کلاس‌های اختصاصی نسخه‌ها). */
+private fun googleSignInErrorMessage(error: Throwable): String {
+    if (ir.exam.app.BuildConfig.IS_BETA) {
+        return "ورود با گوگل در نسخهٔ آزمایشی فعال نیست (بستهٔ آزمایشی در گوگل ثبت نشده)؛ با نام کاربری و رمز وارد شوید."
+    }
+    val kind = error::class.java.simpleName
+    val detail = error.message?.takeIf { it.isNotBlank() } ?: "بدون جزئیات"
+    return when {
+        kind.contains("NoCredential") ->
+            "هیچ حساب گوگلی برای ورود پیدا نشد. یک حساب Google در تنظیمات گوشی اضافه کنید و دوباره تلاش کنید."
+        kind.contains("ProviderConfiguration") || kind.contains("Configuration") ->
+            "سرویس Google Play این گوشی آماده یا به‌روز نیست؛ Google Play Services را به‌روزرسانی کنید یا با نام کاربری و رمز وارد شوید."
+        kind.contains("Unsupported") ->
+            "این گوشی از روش جدید ورود گوگل پشتیبانی نمی‌کند؛ با نام کاربری و رمز وارد شوید."
+        kind.contains("Interrupted") ->
+            "درخواست ورود گوگل نیمه‌کاره ماند؛ دوباره تلاش کنید."
+        kind.contains("Unknown") ->
+            "گوگل پنجرهٔ انتخاب حساب را باز نکرد. جزئیات: $detail"
+        else ->
+            "ورود گوگل ناموفق بود ($kind): $detail"
+    }
 }

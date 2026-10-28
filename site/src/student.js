@@ -2902,6 +2902,38 @@
     bg.__onBack = requestClose;
 
     /* ستون راست: انتخاب، قلم‌ها، اشکال هندسی، سبک خط و رنگ */
+    /* V335.61 — دسته‌بندی ابزارهای تخته: هر بخش با کلیک روی عنوانش باز/بسته می‌شود تا ستون کوتاه بماند
+       و دکمهٔ «افزودن تصویر تخته به سؤال» همیشه پایین ستون (چسبیده) دیده شود. */
+    function wbCollapsible(secEl, open) {
+      var lbl = secEl.querySelector('.wb-sec-lbl');
+      if (!lbl) return secEl;
+      var body = el('div', {class: 'wb-sec-body'});
+      Array.prototype.slice.call(secEl.childNodes).forEach(function (n) {
+        if (n !== lbl) body.appendChild(n);
+      });
+      var head = el('button', {
+        type: 'button',
+        class: 'wb-sec-lbl wb-sec-head',
+        text: (lbl.textContent || '') + ' ',
+        'aria-expanded': String(!!open)
+      });
+      head.addEventListener('click', function () {
+        var expand = body.hasAttribute('hidden');
+        if (expand) body.removeAttribute('hidden'); else body.setAttribute('hidden', '');
+        head.setAttribute('aria-expanded', String(expand));
+      });
+      secEl.appendChild(head);
+      if (!open) body.setAttribute('hidden', '');
+      secEl.appendChild(body);
+      return secEl;
+    }
+    function wbGroup(side, opens) {
+      Array.prototype.slice.call(side.children).forEach(function (child, i) {
+        if (child.classList && child.classList.contains('wb-sec')) wbCollapsible(child, !!(opens && opens[i]));
+      });
+      return side;
+    }
+
     var rightSide = el('aside', {class: 'wb-side wb-right', 'aria-label': 'ابزارهای ترسیم تخته'}, [
       el('div', {class: 'wb-title'}, [el('span', {text: boardTitle})]),
       el('div', {class: 'wb-sec'}, [
@@ -3155,6 +3187,9 @@
       doneBtn
     ]);
 
+    /* V335.61 — دسته‌بندی: در ستون راست دو دستهٔ پرکاربرد باز و بقیه بسته؛ در ستون چپ «صفحه‌ها و خروجی» باز. */
+    wbGroup(rightSide, {1: true, 2: true});
+    wbGroup(leftSide, {1: true, 5: true});
     var area = el('div', {class: 'wb-area'}, [stage]);
     bg.appendChild(rightSide); bg.appendChild(area); bg.appendChild(leftSide);
     document.body.appendChild(bg); document.body.style.overflow = 'hidden';

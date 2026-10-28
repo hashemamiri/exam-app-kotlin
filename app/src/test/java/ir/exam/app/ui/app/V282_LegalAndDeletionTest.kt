@@ -2,6 +2,7 @@ package ir.exam.app.ui.app
 
 import java.io.File
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -22,8 +23,11 @@ class V282_LegalAndDeletionTest {
         assertTrue("legal_fa.write_pages(SITE)" in src("site/build_site.py"))
         assertTrue("cp site/terms.html site/privacy.html site_out/" in src(".github/workflows/site.yml"))
         assertTrue("private fun LegalCard()" in src("app/src/main/java/ir/exam/app/ui/update/AboutScreen.kt"))
-        assertTrue("private fun LegalConsentLine()" in src("app/src/main/java/ir/exam/app/ui/auth/SignInScreen.kt"))
-        assertTrue("href: '/terms.html'" in src("site/src/mobile.js") && "href: '/privacy.html'" in src("site/src/app.js"))
+        // V335.61 — خط «با ثبت‌نام، شرایط استفاده و حریم خصوصی…» از صفحهٔ ثبت‌نام (اپ و سایت) حذف شد؛
+        // متن کامل همچنان در «درباره» (LegalCard) و صفحات terms/privacy موجود است.
+        assertFalse("LegalConsentLine" in src("app/src/main/java/ir/exam/app/ui/auth/SignInScreen.kt"))
+        assertFalse("را می‌پذیرید" in src("site/src/mobile.js"))
+        assertFalse("را می‌پذیرید" in src("site/src/app.js"))
     }
 
     @Test

@@ -1,21 +1,23 @@
 package ir.exam.app.ui.app
 
 import java.io.File
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-/** V335.59 — بازخورد فوری تا بازشدن انتخاب‌گر حساب گوگل. */
+/** V335.59/V335.61 — بازخورد فوری تا بازشدن انتخاب‌گر حساب گوگل (بدون متن، با انیمیشن). */
 class V335_59_GooglePickerFeedbackTest {
     private fun root(): File = listOf(File("."), File("..")).first { File(it, "site/src/extras.js").isFile }
     private fun src(path: String) = File(root(), path).readText()
 
     @Test
-    fun `native picker shows progress and an explicit opening message`() {
+    fun `native picker shows the google animation instead of a waiting sentence`() {
         val screen = src("app/src/main/java/ir/exam/app/ui/auth/SignInScreen.kt")
         assertTrue("var openingGooglePicker by remember(role, registering)" in screen)
-        assertTrue("در حال باز کردن فهرست حساب‌های گوگل…" in screen)
+        assertTrue("GooglePickerWaitingDialog(onCancel" in screen)
+        assertTrue("private fun GoogleDotsAnimation()" in screen)
+        assertFalse("در حال باز کردن فهرست حساب‌های گوگل" in screen)
         assertTrue("enabled = !state.isLoading && !openingGooglePicker" in screen)
-        assertTrue("در حال ورود با گوگل…" in screen)
     }
 
     @Test

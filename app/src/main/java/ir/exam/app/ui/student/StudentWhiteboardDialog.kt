@@ -455,6 +455,9 @@ internal fun unionBoardBox(items: List<BoardStroke>, density: Float): BoardBox? 
     return box
 }
 
+/** V335.61 — عنوان دسته‌های نوار ابزار تخته (هم‌ترتیب با toolGroup). */
+private val BOARD_TOOL_GROUPS = listOf("قلم و انتخاب", "اشکال", "درج…", "ابزار هندسی", "رنگ و ضخامت")
+
 private val BOARD_PALETTE = listOf(
     Color(0xFF1F2937), Color(0xFFD32F2F), Color(0xFF1976D2), Color(0xFF2E7D32),
     Color(0xFFF57C00), Color(0xFF7B1FA2), Color(0xFF00838F), Color(0xFF6D4C41), Color(0xFFFFFFFF)
@@ -462,7 +465,7 @@ private val BOARD_PALETTE = listOf(
 private val BOARD_WIDTHS = listOf(1.5f to "مویی", 3f to "نازک", 5f to "معمولی", 8f to "متوسط", 12f to "ضخیم", 18f to "خیلی‌ضخیم")
 private const val PICKED_PHOTO_MAX_DIM = 1600
 
-private const val MAX_PAGES = 6
+const val MAX_PAGES = 6
 
 /** V335.18 — سقف تاریخچهٔ برگشت/جلو (۴۰ مرحله، هم‌راستا با سایت). */
 private const val UNDO_LIMIT = 40
@@ -527,7 +530,8 @@ fun StudentWhiteboardDialog(
     var confirmDone by remember { mutableStateOf(false) }
     var helpOpen by remember { mutableStateOf(false) } // V137.6 — راهنمای آیکون‌ها
     var confirmClearAll by remember { mutableStateOf(false) }
-    var insertMenu by remember { mutableStateOf(false) }
+    // V335.61 — دستهٔ ابزار انتخاب‌شده (۰ قلم و انتخاب، ۱ اشکال، ۲ درج، ۳ ابزار هندسی، ۴ رنگ و ضخامت)
+    var toolGroup by remember { mutableIntStateOf(0) }
     // V137.2 — ابزار هندسی فعال (خط‌کش/گونیا/نقاله/پرگار).
     var instrument by remember { mutableStateOf(InstrumentState()) }
     var restored by remember { mutableStateOf(false) }
@@ -763,78 +767,99 @@ fun StudentWhiteboardDialog(
                         .verticalScroll(rememberScrollState()),
                     verticalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
-                // ابزارها — V137.5: آیکون به‌جای متن (نام ابزار در contentDescription/کنار ابزار انتخاب‌شده)
-                Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
-                    BoardTool.values().filter { it.pickable }.forEach { t ->
-                        BoardIconChip(selected = tool == t, icon = t.icon, label = t.label, onClick = { tool = t; if (t != BoardTool.SELECT) selectedIds.clear() })
-                    }
-                    BoardIconChip(selected = insertMenu, icon = Icons.Outlined.AddBox, label = "درج…", onClick = { insertMenu = !insertMenu })
-                    // V264 — تشخیص شکل: خط/دایره/مثلث/مستطیلِ دست‌آزاد با قلم، پس از رها کردن انگشت به شکل منظم تبدیل می‌شود
-                    BoardIconChip(selected = autoShape, icon = Icons.Outlined.AutoFixHigh, label = "تشخیص شکل", onClick = { autoShape = !autoShape; if (autoShape) tool = BoardTool.PEN })
-                    Text(if (autoShape && tool == BoardTool.PEN) "قلم + تشخیص شکل" else tool.label, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
-                }
-                // V137.2 — ابزارهای هندسی (V137.5: آیکون)
-                Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
-                    BoardInstrument.values().forEach { k ->
-                        BoardIconChip(
-                            selected = instrument.kind == k,
-                            icon = k.icon,
-                            label = k.label,
-                            onClick = {
-                                instrument = if (k == BoardInstrument.NONE) InstrumentState() else defaultInstrument(k, boardSize, density)
-                                if (k != BoardInstrument.NONE && tool != BoardTool.PEN && tool != BoardTool.LINE) tool = BoardTool.PEN
-                            }
-                        )
-                    }
-                    if (instrument.kind != BoardInstrument.NONE) {
-                        Text(
-                            when (instrument.kind) {
-                                BoardInstrument.COMPASS -> "پرگار: بکشید تا کمان رسم شود؛ آبی = شعاع؛ خاکستری = جابه‌جایی"
-                                BoardInstrument.PROTRACTOR -> "نقاله: قلم نزدیک کمان/خط پایه می‌چسبد؛ خاکستری = جابه‌جایی"
-                                else -> k_hint(instrument.kind)
-                            },
-                            style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+                // V335.61 — دسته‌بندی ابزارها: پنج دستهٔ کوتاه به‌جای دو ردیف بلندِ اسکرول‌شونده.
+                Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+                    BOARD_TOOL_GROUPS.forEachIndexed { index, title ->
+                        FilterChip(selected = toolGroup == index, onClick = { toolGroup = index }, label = { Text(title) })
                     }
                 }
-                if (insertMenu) {
+                if (toolGroup == 0) {
+                    // قلم، هایلایتر، پاک‌کن، انتخاب و متن
+                    Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
+                        listOf(BoardTool.SELECT, BoardTool.PEN, BoardTool.HIGHLIGHT, BoardTool.ERASER, BoardTool.OBJ_ERASER, BoardTool.TEXT).forEach { t ->
+                            BoardIconChip(selected = tool == t, icon = t.icon, label = t.label, onClick = { tool = t; if (t != BoardTool.SELECT) selectedIds.clear() })
+                        }
+                        BoardIconChip(selected = autoShape, icon = Icons.Outlined.AutoFixHigh, label = "تشخیص شکل", onClick = { autoShape = !autoShape; if (autoShape) tool = BoardTool.PEN })
+                        Text(if (autoShape && tool == BoardTool.PEN) "قلم + تشخیص شکل" else tool.label, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
+                    }
+                }
+                if (toolGroup == 1) {
+                    // اشکال هندسی و محور
+                    Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
+                        listOf(BoardTool.LINE, BoardTool.ARROW, BoardTool.ARROW2, BoardTool.RECT, BoardTool.CIRCLE, BoardTool.TRIANGLE, BoardTool.RTRIANGLE, BoardTool.DIAMOND, BoardTool.AXES).forEach { t ->
+                            BoardIconChip(selected = tool == t, icon = t.icon, label = t.label, onClick = { tool = t; selectedIds.clear() })
+                        }
+                        BoardIconChip(selected = autoShape, icon = Icons.Outlined.AutoFixHigh, label = "تشخیص شکل", onClick = { autoShape = !autoShape; if (autoShape) tool = BoardTool.PEN })
+                        Text(tool.label, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
+                    }
+                }
+                if (toolGroup == 2) {
+                    // درج محتوا روی تخته
                     Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        FilterChip(selected = false, onClick = { insertMenu = false; formulaOpen = true }, label = { Text("فرمول") })
-                        FilterChip(selected = false, onClick = { insertMenu = false; imagePicker.launch("image/*") }, label = { Text("تصویر از گالری") })
+                        FilterChip(selected = false, onClick = { formulaOpen = true }, label = { Text("فرمول") })
+                        FilterChip(selected = false, onClick = { imagePicker.launch("image/*") }, label = { Text("تصویر از گالری") })
                         listOf("graph" to "نمودار تابع", "axis" to "محور", "figure" to "شکل هندسی", "table" to "جدول", "physics" to "فیزیک", "chemistry" to "شیمی", "periodic" to "جدول تناوبی").forEach { (id, label) ->
-                            FilterChip(selected = false, onClick = { insertMenu = false; figureTool = id }, label = { Text(label) })
+                            FilterChip(selected = false, onClick = { figureTool = id }, label = { Text(label) })
                         }
                         questionImages.forEachIndexed { i, url ->
-                            FilterChip(selected = false, onClick = { insertMenu = false; insertImage("img:$url") }, label = { Text("تصویر سؤال ${i + 1}") })
+                            FilterChip(selected = false, onClick = { insertImage("img:$url") }, label = { Text("تصویر سؤال ${i + 1}") })
                         }
                     }
                 }
-                // رنگ‌ها + ضخامت (روی همهٔ موارد انتخاب‌شده هم اعمال می‌شود)
-                Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
-                    BOARD_PALETTE.forEach { c ->
-                        Box(
-                            Modifier
-                                .size(if (c == color) 30.dp else 24.dp)
-                                .clip(CircleShape)
-                                .background(c)
-                                .border(if (c == color) 2.dp else 1.dp, Color(0xFF9CA3AF), CircleShape)
-                                .clickable {
-                                    color = c
-                                    if (tool == BoardTool.ERASER || tool == BoardTool.OBJ_ERASER) tool = BoardTool.PEN
-                                    if (selectedIds.isNotEmpty()) applyToSelection { it.copy(color = c) }
+                if (toolGroup == 3) {
+                    // ابزارهای هندسی (خط‌کش، گونیا، نقاله، پرگار)
+                    Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
+                        BoardInstrument.values().forEach { k ->
+                            BoardIconChip(
+                                selected = instrument.kind == k,
+                                icon = k.icon,
+                                label = k.label,
+                                onClick = {
+                                    instrument = if (k == BoardInstrument.NONE) InstrumentState() else defaultInstrument(k, boardSize, density)
+                                    if (k != BoardInstrument.NONE && tool != BoardTool.PEN && tool != BoardTool.LINE) tool = BoardTool.PEN
                                 }
-                        )
+                            )
+                        }
+                        if (instrument.kind != BoardInstrument.NONE) {
+                            Text(
+                                when (instrument.kind) {
+                                    BoardInstrument.COMPASS -> "پرگار: بکشید تا کمان رسم شود؛ آبی = شعاع؛ خاکستری = جابه‌جایی"
+                                    BoardInstrument.PROTRACTOR -> "نقاله: قلم نزدیک کمان/خط پایه می‌چسبد؛ خاکستری = جابه‌جایی"
+                                    else -> k_hint(instrument.kind)
+                                },
+                                style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
                     }
-                    Spacer(Modifier.width(8.dp))
-                    BOARD_WIDTHS.forEach { (w, label) ->
-                        FilterChip(
-                            selected = width == w,
-                            onClick = {
-                                width = w
-                                if (selectedIds.isNotEmpty()) applyToSelection { if (it.tool == BoardTool.IMAGE) it else it.copy(width = w) }
-                            },
-                            label = { Text(label) }
-                        )
+                }
+                if (toolGroup == 4) {
+                    // رنگ و ضخامت (روی همهٔ موارد انتخاب‌شده هم اعمال می‌شود)
+                    Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+                        BOARD_PALETTE.forEach { c ->
+                            Box(
+                                Modifier
+                                    .size(if (c == color) 30.dp else 24.dp)
+                                    .clip(CircleShape)
+                                    .background(c)
+                                    .border(if (c == color) 2.dp else 1.dp, Color(0xFF9CA3AF), CircleShape)
+                                    .clickable {
+                                        color = c
+                                        if (tool == BoardTool.ERASER || tool == BoardTool.OBJ_ERASER) tool = BoardTool.PEN
+                                        if (selectedIds.isNotEmpty()) applyToSelection { it.copy(color = c) }
+                                    }
+                            )
+                        }
+                        Spacer(Modifier.width(8.dp))
+                        BOARD_WIDTHS.forEach { (w, label) ->
+                            FilterChip(
+                                selected = width == w,
+                                onClick = {
+                                    width = w
+                                    if (selectedIds.isNotEmpty()) applyToSelection { if (it.tool == BoardTool.IMAGE) it else it.copy(width = w) }
+                                },
+                                label = { Text(label) }
+                            )
+                        }
                     }
                 }
                 // V335.18 — بخش اختصاصی «انتخاب و ویرایش موارد درج‌شده»
