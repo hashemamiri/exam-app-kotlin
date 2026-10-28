@@ -104,7 +104,7 @@ class V335_5_UserEnhancementsTest {
         )
         val vm = read("app/src/main/java/ir/exam/app/ui/builder/ExamBuilderViewModel.kt")
         assertTrue("تابع افزودن به همان سؤال", "fun appendOcrTextToQuestion(questionId: String, raw: String): Boolean" in vm)
-        assertTrue("ادغام با متن فعلی", "cur.text.trimEnd() + "\\n" + clean" in vm)
+        assertTrue("ادغام با متن فعلی", """cur.text.trimEnd() + "\n" + clean""" in vm)
         assertTrue("بدون ساخت سؤال تازه", "st.questions + " !in vm.substring(vm.indexOf("fun appendOcrTextToQuestion"), vm.indexOf("fun addFromBank")))
         val board = read("app/src/main/java/ir/exam/app/ui/student/StudentWhiteboardDialog.kt")
         assertTrue("شکست خاموش درج تصویر رفع شد", "این تصویر روی تخته درج نشد" in board)

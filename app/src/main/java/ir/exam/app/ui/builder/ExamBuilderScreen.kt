@@ -2380,6 +2380,8 @@ private fun OcrQuestionReviewDialog(
     onConfirm: (String) -> Unit
 ) {
     var textDraft by remember(rawText) { mutableStateOf(rawText) }
+    // V335.49 — خلاصهٔ خط‌ها برای نمایش در کادر راهنما (بدون قالب تودرتو).
+    val ocrLineSummary = "📋 " + PersianDigits.convert((textDraft.count { ch -> ch == '\n' } + 1).toString()) + " خط متن برای افزودن به همین سؤال"
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -2414,7 +2416,7 @@ private fun OcrQuestionReviewDialog(
                 ) {
                     Text(
                         // V335.49 — شمارش «سؤال شناسایی‌شده» حذف شد؛ همهٔ متن در همین سؤال می‌نشیند.
-                        text = "📋 ${PersianDigits.convert(textDraft.count { it == '\n' } + 1)} خط متن برای افزودن به همین سؤال",
+                        text = ocrLineSummary,
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onPrimaryContainer,
                         modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
