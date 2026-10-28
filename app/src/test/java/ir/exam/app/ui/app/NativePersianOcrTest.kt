@@ -59,7 +59,8 @@ class NativePersianOcrTest {
         assertTrue("onOpenOcr: (() -> Unit)? = null" in editor)
         assertTrue("Icons.Outlined.DocumentScanner" in editor)
         assertTrue("ExamImageOcr.recognize(context, bound)" in builder)
-        assertTrue("OcrQuestionParser.parse" in builder)
+        // V335.49 — متن OCR فقط در متن همان سؤال می‌نشیند (تفکیک به سؤال‌های تازه حذف شد)
+        assertTrue("appendOcrTextToQuestion" in builder)
         // OCR از استودیو برداشته شده است
         assertTrue("🔎 استخراج متن (OCR فارسی)" !in studio)
     }

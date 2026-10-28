@@ -1,9 +1,6 @@
 package ir.exam.app
 
-import ir.exam.app.ui.builder.OcrQuestionParser
-import ir.exam.app.ui.builder.QuestionType
 import java.io.File
-import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -92,53 +89,28 @@ class V335_5_UserEnhancementsTest {
         val builderScreen = read("app/src/main/java/ir/exam/app/ui/builder/ExamBuilderScreen.kt")
         assertTrue("اجرای OCR روی تصویر", "ExamImageOcr.recognize(context, bound)" in builderScreen)
         assertTrue("پنجرهٔ بررسی و ویرایش OCR", "OcrQuestionReviewDialog" in builderScreen)
-        assertTrue("افزودن سؤالات OCR به آزمون", "viewModel.addOcrQuestions(parsed, question.id)" in builderScreen)
+        // V335.49 — متن OCR فقط در متن همان سؤال می‌نشیند (سؤال تازه ساخته نمی‌شود).
+        assertTrue("افزودن متن OCR به همان سؤال", "viewModel.appendOcrTextToQuestion(question.id, editedText)" in builderScreen)
+        assertFalse("تفکیک OCR به سؤال‌های تازه حذف شده است", "addOcrQuestions" in builderScreen)
     }
 
     @Test
-    fun feature6_ocrQuestionParserParsesMultipleChoiceAndEssayTests() {
-        val rawInput = """
-            ۱- کدام گزینه پایتخت ایران است؟
-            الف) اصفهان
-            ب) شیراز
-            ج) تهران
-            د) تبریز
-
-            ۲. کدام رابطه درست است؟
-            ۱) ۲ + ۲ = ۴
-            ۲) ۱ + ۱ = ۳
-            ۳) ۳ + ۳ = ۷
-            ۴) ۵ + ۵ = ۱۱
-
-            سؤال ۳: قانون اول نیوتون را توضیح دهید.
-        """.trimIndent()
-
-        val parsed = OcrQuestionParser.parse(rawInput)
-        assertEquals("باید ۳ سؤال تفکیک شود", 3, parsed.size)
-
-        // سؤال اول: چهارگزینه‌ای با الف، ب، ج، د
-        val q1 = parsed[0]
-        assertEquals(QuestionType.MULTIPLE_CHOICE, q1.type)
-        assertTrue("صورت سؤال ۱", q1.text.contains("کدام گزینه پایتخت ایران است؟"))
-        assertEquals(4, q1.options.size)
-        assertEquals("اصفهان", q1.options[0])
-        assertEquals("شیراز", q1.options[1])
-        assertEquals("تهران", q1.options[2])
-        assertEquals("تبریز", q1.options[3])
-
-        // سؤال دوم: چهارگزینه‌ای با ۱، ۲، ۳، ۴
-        val q2 = parsed[1]
-        assertEquals(QuestionType.MULTIPLE_CHOICE, q2.type)
-        assertTrue("صورت سؤال ۲", q2.text.contains("کدام رابطه درست است؟"))
-        assertEquals(4, q2.options.size)
-        assertEquals("۲ + ۲ = ۴", q2.options[0])
-        assertEquals("۱ + ۱ = ۳", q2.options[1])
-        assertEquals("۳ + ۳ = ۷", q2.options[2])
-        assertEquals("۵ + ۵ = ۱۱", q2.options[3])
-
-        // سؤال سوم: تشریحی بدون گزینه
-        val q3 = parsed[2]
-        assertEquals(QuestionType.ESSAY, q3.type)
-        assertTrue("صورت سؤال ۳", q3.text.contains("قانون اول نیوتون"))
+    fun feature6_ocrTextLandsInTheSameQuestionOnly() {
+        /* V335.49 — «هر چه اسکن می‌شود فقط در متن همان سؤال»: تفکیک‌کنندهٔ چندسؤالی حذف شد و
+           افزودن متن به همان سؤال در ViewModel انجام می‌شود. */
+        assertFalse(
+            "فایل تفکیک‌کنندهٔ OCR حذف شده است",
+            java.io.File(root(), "app/src/main/java/ir/exam/app/ui/builder/OcrQuestionParser.kt").exists()
+        )
+        val vm = read("app/src/main/java/ir/exam/app/ui/builder/ExamBuilderViewModel.kt")
+        assertTrue("تابع افزودن به همان سؤال", "fun appendOcrTextToQuestion(questionId: String, raw: String): Boolean" in vm)
+        assertTrue("ادغام با متن فعلی", "cur.text.trimEnd() + "\\n" + clean" in vm)
+        assertTrue("بدون ساخت سؤال تازه", "st.questions + " !in vm.substring(vm.indexOf("fun appendOcrTextToQuestion"), vm.indexOf("fun addFromBank")))
+        val board = read("app/src/main/java/ir/exam/app/ui/student/StudentWhiteboardDialog.kt")
+        assertTrue("شکست خاموش درج تصویر رفع شد", "این تصویر روی تخته درج نشد" in board)
+        assertTrue("پاک‌کن ابزار هندسی را جابه‌جا نمی‌کند", "tool.usesInstrument" in board)
+        assertTrue("فقط ابزارهای خطی به لبه می‌چسبند", "tool.snapsToInstrument" in board)
+        assertTrue("بوم در صفحهٔ کوتاه جمع نمی‌شود", "heightIn(min = 180.dp)" in board)
+        assertTrue("نوارهای کنترل اسکرول‌پذیر شدند", "LocalConfiguration.current.screenHeightDp * 0.50f" in board)
     }
 }

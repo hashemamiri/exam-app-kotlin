@@ -2288,15 +2288,15 @@ private fun QuestionEditor(
             rawText = ocrRawText!!,
             onDismiss = { ocrRawText = null },
             onConfirm = { editedText ->
-                val parsed = OcrQuestionParser.parse(editedText)
-                if (parsed.isNotEmpty()) {
-                    viewModel.addOcrQuestions(parsed, question.id)
-                    android.widget.Toast.makeText(
-                        context,
-                        "${PersianDigits.convert(parsed.size.toString())} سؤال به آزمون افزوده شد.",
-                        android.widget.Toast.LENGTH_SHORT
-                    ).show()
-                }
+                /* V335.49 — درخواست صریح: «هر آنچه اسکن می‌شود فقط در متن همان سؤال بنشیند».
+                   پیش از این متن به چند سؤال تفکیک و به آزمون اضافه می‌شد؛ حالا کل متنِ دیده‌شده
+                   در بازبینی، به متن همین سؤال افزوده می‌شود و هیچ سؤال تازه‌ای ساخته نمی‌شود. */
+                val added = viewModel.appendOcrTextToQuestion(question.id, editedText)
+                android.widget.Toast.makeText(
+                    context,
+                    if (added) "متن اسکن‌شده به همین سؤال افزوده شد." else "متنی برای افزودن نبود.",
+                    android.widget.Toast.LENGTH_SHORT
+                ).show()
                 ocrRawText = null
             }
         )
@@ -2380,12 +2380,11 @@ private fun OcrQuestionReviewDialog(
     onConfirm: (String) -> Unit
 ) {
     var textDraft by remember(rawText) { mutableStateOf(rawText) }
-    val parsedQuestions = remember(textDraft) { OcrQuestionParser.parse(textDraft) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
         title = {
-            Text("استخراج تست‌ها و سؤالات با OCR")
+            Text("استخراج متن تصویر با OCR (در همین سؤال)")
         },
         text = {
             Column(
@@ -2396,7 +2395,7 @@ private fun OcrQuestionReviewDialog(
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 Text(
-                    "متن استخراج‌شده را بررسی و ویرایش کنید؛ تست‌ها و گزینه‌های داخل آن تفکیک شده و با تأیید به آزمون اضافه می‌شوند:",
+                    "متن استخراج‌شده را بررسی و ویرایش کنید؛ با تأیید، همین متن به «متن سؤال» همین کارت افزوده می‌شود (سؤال تازه‌ای ساخته نمی‌شود):",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -2406,7 +2405,7 @@ private fun OcrQuestionReviewDialog(
                     modifier = Modifier
                         .fillMaxWidth()
                         .heightIn(min = 160.dp, max = 280.dp),
-                    label = { Text("متن سؤالات و گزینه‌ها") }
+                    label = { Text("متن اسکن‌شده (به متن همان سؤال افزوده می‌شود)") }
                 )
                 Surface(
                     color = MaterialTheme.colorScheme.primaryContainer,
@@ -2414,8 +2413,8 @@ private fun OcrQuestionReviewDialog(
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Text(
-                        text = "📋 ${PersianDigits.convert(parsedQuestions.size.toString())} سؤال شناسایی شد" +
-                                if (parsedQuestions.any { it.type == QuestionType.MULTIPLE_CHOICE }) " (تستی)" else "",
+                        // V335.49 — شمارش «سؤال شناسایی‌شده» حذف شد؛ همهٔ متن در همین سؤال می‌نشیند.
+                        text = "📋 ${PersianDigits.convert(textDraft.count { it == '\n' } + 1)} خط متن برای افزودن به همین سؤال",
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onPrimaryContainer,
                         modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
@@ -2426,9 +2425,9 @@ private fun OcrQuestionReviewDialog(
         confirmButton = {
             Button(
                 onClick = { onConfirm(textDraft) },
-                enabled = textDraft.isNotBlank() && parsedQuestions.isNotEmpty()
+                enabled = textDraft.isNotBlank()
             ) {
-                Text("تأیید و افزودن سؤالات")
+                Text("تأیید و افزودن به همین سؤال")
             }
         },
         dismissButton = {

@@ -811,18 +811,27 @@ class ExamBuilderViewModel(
     }
 
     /** V335.4 — سؤالات استخراج‌شده از OCR به آزمون اضافه می‌شوند. اگر سؤال جاری کاملاً خالی باشد، با اولین سؤال جایگزین می‌شود. */
-    fun addOcrQuestions(drafts: List<QuestionDraft>, currentQuestionId: String? = null) {
-        if (drafts.isEmpty()) return
+    /**
+     * V335.49 — متن خروجی OCR فقط در متن همان سؤال می‌نشیند.
+     * پیش از این، متن به چند سؤال تفکیک و به آزمون افزوده می‌شد و کاربر سؤال‌های ناخواسته می‌گرفت.
+     * اکنون متن پاک‌سازی‌شده به انتهای متن همان سؤال اضافه می‌شود (بدون ساخت سؤال تازه).
+     * @return true اگر متنی افزوده شد.
+     */
+    fun appendOcrTextToQuestion(questionId: String, raw: String): Boolean {
+        val clean = raw.replace("\r\n", "\n").replace('\r', '\n')
+            .lines().joinToString("\n") { it.trimEnd() }
+            .trim()
+        if (clean.isBlank()) return false
+        var changed = false
         _state.update { st ->
-            val cur = st.questions.firstOrNull { it.id == currentQuestionId }
-            if (cur != null && cur.text.isBlank() && cur.images.isEmpty() && cur.options.all(String::isBlank)) {
-                val first = drafts.first().copy(id = cur.id).ensureEditorIds()
-                val rest = drafts.drop(1).map { it.copy(id = UUID.randomUUID().toString()).ensureEditorIds() }
-                st.copy(questions = st.questions.map { if (it.id == cur.id) first else it } + rest)
-            } else {
-                st.copy(questions = st.questions + drafts.map { it.copy(id = UUID.randomUUID().toString()).ensureEditorIds() })
-            }
+            val idx = st.questions.indexOfFirst { it.id == questionId }
+            if (idx < 0) return@update st
+            val cur = st.questions[idx]
+            val merged = if (cur.text.isBlank()) clean else cur.text.trimEnd() + "\n" + clean
+            changed = true
+            st.copy(questions = st.questions.toMutableList().also { it[idx] = cur.copy(text = merged) })
         }
+        return changed
     }
 
     fun addFromBank(id: Long) {

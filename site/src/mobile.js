@@ -253,44 +253,92 @@
 
   /* V153 — دستهٔ کارت‌ها مثل اپ: ۳ کارت روی هم (۹۰٪ عرض × ۱۹۰dp، گوشهٔ ۲۹dp)، کشیدن افقی ≥۵۲px کارت را رد می‌کند، نقطه‌ها، پنل توضیح؛ ضربهٔ دوباره روی داک = کارت بعدی */
   var deckIndex = {};
+  /* V335.49 — چرخ‌وفلک کارت‌ها (Ferris Wheel) هم‌اندازهٔ اپ (TeacherManagementCardsScreen):
+     هر کارت روی یک مدار بیضوی می‌چرخد اما همیشه سرپا می‌ماند؛ کارت جلویی بزرگ و شفاف است و
+     عقب‌رکاب‌ها کوچک‌تر و کم‌رنگ‌تر. همان ثابت‌های اپ: مدار ۱۱۲×۴۴dp، مقیاس ۰٫۷۸+۰٫۲۲cos،
+     شفافیت ۰٫۳۵+۰٫۶۵cos، کشش ۱۹۰dp برای هر کارت و فنر (damping ۰٫۹۲ / stiffness ۱۸۰). */
   function cardsDeck(c, key, cards) {
     c.innerHTML = '';
-    if (ui.cycle) { deckIndex[key] = ((deckIndex[key] || 0) + 1) % cards.length; ui.cycle = false; }
-    var idx = deckIndex[key] || 0;
-    var stage = el('div', {class: 'm-deck-stage'});
-    var dots = el('div', {class: 'm-deck-dots'});
+    var n = cards.length || 1;
+    if (ui.cycle) { deckIndex[key] = ((deckIndex[key] || 0) + 1) % n; ui.cycle = false; }
+    var stage = el('div', {class: 'm-wheel-stage', tabindex: '0', role: 'group', 'aria-label': 'چرخ‌وفلک کارت‌ها'});
+    var dots = el('div', {class: 'm-wheel-dots'});
     var info = el('div', {class: 'm-deck-info neo pressed'}, [el('b'), el('span')]);
-    function draw(dir) {
-      stage.innerHTML = ''; dots.innerHTML = '';
-      for (var rel = 2; rel >= 0; rel--) (function (rel) {
-        var k = cards[(idx + rel) % cards.length];
-        var card = el('button', {class: 'm-deck-card r' + rel + (dir && rel === 0 ? ' enter' : ''), style: 'background:' + k[3], onclick: function () { if (rel === 0) k[4](); }}, [
-          el('div', {class: 'm-deck-top'}, [el('span', {class: 'm-deck-ic', html: I[k[2]]}), el('small', {text: 'آزمون آنلاین'})]),
-          el('b', {text: k[0]})
-        ]);
-        if (rel === 0) swipe(card);
-        stage.appendChild(card);
-      })(rel);
-      cards.forEach(function (_, i) { dots.appendChild(el('i', {class: i === idx ? 'on' : ''})); });
-      info.querySelector('b').textContent = cards[idx][0]; info.querySelector('span').textContent = cards[idx][1];
+    var els = [], p = 0, target = 0, vel = 0, drag = false, lastX = 0, lastT = 0, moved = 0;
+    var DRAG_PX = 190, RX = 112, RY = 44;
+    var reduce = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+    function wrap(d) { d = ((d % n) + n) % n; return d > n / 2 ? d - n : d; }
+    function activeIndex() { return ((Math.round(p) % n) + n) % n; }
+    function goTo(i) {
+      var cur = ((Math.round(target) % n) + n) % n;
+      var d = ((i - cur) % n + n) % n; if (d > n / 2) d -= n;
+      target = Math.round(target) + d;
     }
-    function swipe(card) {
-      var sx = 0, sy = 0, dx = 0, dy = 0, on = false;
-      card.addEventListener('pointerdown', function (e) { sx = e.clientX; sy = e.clientY; dx = dy = 0; on = true; card.setPointerCapture(e.pointerId); card.style.transition = 'none'; });
-      card.addEventListener('pointermove', function (e) { if (!on) return; dx = e.clientX - sx; dy = e.clientY - sy; card.style.transform = 'translate(' + dx + 'px,' + dy + 'px) rotate(' + (dx / 42 + dy / 75) + 'deg)'; });
-      function end() {
-        if (!on) return; on = false; card.style.transition = '';
-        if (Math.abs(dx) >= Math.abs(dy) && Math.abs(dx) > 52) {
-          card.classList.add('fly'); card.style.transform = 'translate(' + (dx < 0 ? -520 : 520) + 'px,' + (dy * 1.2 - 36) + 'px) rotate(' + (dx < 0 ? 14 : -14) + 'deg) scale(.92)';
-          idx = (idx + 1) % cards.length; deckIndex[key] = idx;
-          setTimeout(function () { draw(true); }, 260);
-        } else card.style.transform = '';
+    cards.forEach(function (k, i) {
+      var card = el('button', {class: 'm-wheel-card', type: 'button', 'aria-label': k[0], style: 'background:' + k[3]},
+        [el('div', {class: 'm-deck-top'}, [el('span', {class: 'm-deck-ic', html: I[k[2]]}), el('small', {text: 'آزمون آنلاین'})]), el('b', {text: k[0]})]);
+      card.addEventListener('click', function () { if (moved < 7 && i === activeIndex()) { moved = 0; k[4](); } });
+      stage.appendChild(card); els.push(card);
+      var dot = el('i', {title: k[0]});
+      dot.addEventListener('click', function () { goTo(i); });
+      dots.appendChild(dot);
+    });
+    function paint() {
+      for (var i = 0; i < n; i++) {
+        var w = wrap(i - p), a = w * 2 * Math.PI / n, cs = Math.cos(a), e = els[i];
+        e.style.transform = 'translate(' + (-Math.sin(a) * RX).toFixed(2) + 'px,' + ((cs - 1) * RY).toFixed(2) + 'px) scale(' + (0.78 + 0.22 * cs).toFixed(3) + ')';
+        e.style.opacity = (0.35 + 0.65 * ((cs + 1) / 2)).toFixed(3);
+        e.style.zIndex = String(Math.round(100 + cs * 100));
       }
-      card.addEventListener('pointerup', end); card.addEventListener('pointercancel', end);
-      card.addEventListener('click', function (e) { if (Math.abs(dx) > 6 || Math.abs(dy) > 6) { e.stopImmediatePropagation(); e.preventDefault(); } }, true);
+      var act = activeIndex();
+      [].forEach.call(dots.children, function (d, i) { d.className = i === act ? 'on' : ''; });
+      info.querySelector('b').textContent = cards[act][0];
+      info.querySelector('span').textContent = cards[act][1];
+      deckIndex[key] = act;
     }
-    draw(false);
-    c.appendChild(el('div', {class: 'm-deck'}, [stage, dots, info]));
+    /* کشیدن/لمس/کلید مثل اپ؛ در RTL کشیدن به چپ = کارت بعدی */
+    stage.addEventListener('pointerdown', function (e) {
+      drag = true; moved = 0; vel = 0; lastX = e.clientX; lastT = performance.now();
+      try { stage.setPointerCapture(e.pointerId); } catch (err) {}
+    });
+    stage.addEventListener('pointermove', function (e) {
+      if (!drag) return;
+      var dx = e.clientX - lastX, now = performance.now(), dt = now - lastT;
+      lastX = e.clientX; lastT = now; moved += Math.abs(dx);
+      var dp = -dx / DRAG_PX;
+      p += dp; target = Math.round(p);
+      if (dt > 0) vel = Math.max(-6, Math.min(6, 0.7 * vel + 0.3 * (dp / (dt / 1000))));
+      if (reduce) { p = target; vel = 0; paint(); }
+    });
+    function endDrag() {
+      if (!drag) return; drag = false;
+      if (moved < 7) return;
+      // پرتاب حداکثر چند کارت (سرعتِ لحظه‌ای بالا نباید p را به بی‌نهایت ببرد)
+      target = Math.round(p + Math.max(-2, Math.min(2, vel * 0.14)));
+      if (reduce) { p = target; vel = 0; paint(); }
+    }
+    stage.addEventListener('pointerup', endDrag);
+    stage.addEventListener('pointercancel', function () { if (!drag) return; drag = false; target = Math.round(p); });
+    stage.addEventListener('keydown', function (e) {
+      if (e.key === 'ArrowLeft' || e.key === 'ArrowDown') { target += 1; e.preventDefault(); }
+      else if (e.key === 'ArrowRight' || e.key === 'ArrowUp') { target -= 1; e.preventDefault(); }
+      else if (e.key === 'Enter' && !drag) { cards[activeIndex()][4](); e.preventDefault(); }
+      if (reduce) { p = target; vel = 0; paint(); }
+    });
+    p = target = deckIndex[key] || 0;
+    c.appendChild(el('div', {class: 'm-wheel'}, [stage, dots, info]));
+    if (reduce) paint(); else { var prev = performance.now(); (function frame(now) {
+      if (!stage.isConnected) return;
+      var dt = Math.min(0.05, (now - prev) / 1000); prev = now;
+      if (!drag) {
+        var K = 180, C = 2 * 0.92 * Math.sqrt(K);
+        vel += (-K * (p - target) - C * vel) * dt;
+        p += vel * dt;
+        if (Math.abs(p - target) < 0.0005 && Math.abs(vel) < 0.006) { p = target; vel = 0; }
+      }
+      paint();
+      requestAnimationFrame(frame);
+    })(prev); }
   }
   /* ---------- کارت‌ها (TeacherManagementCardsScreen) ---------- */
   /* V167 — فهرست کارت‌ها مشترک با صفحهٔ «کارت‌ها»ی دسکتاپ (app.js → pageCards) */

@@ -25,6 +25,8 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -204,6 +206,25 @@ internal enum class BoardTool(val label: String, val pickable: Boolean = true) {
     LINE("خط"), ARROW("پیکان"), ARROW2("پیکان دوسر"), RECT("مستطیل"), CIRCLE("دایره"), TRIANGLE("مثلث"),
     RTRIANGLE("مثلث قائم"), DIAMOND("لوزی"), AXES("محور سریع"), TEXT("متن"),
     IMAGE("تصویر", pickable = false);
+
+    /**
+     * V335.49 — تعامل با ابزارهای هندسی (خط‌کش/گونیا/نقاله/پرگار) فقط با ابزارهای کشیدنی معنا دارد.
+     * پیش از این پاک‌کن و متن هم «ابزار فعال» شمرده می‌شدند؛ نتیجه این بود که با پاک‌کن، کشیدن
+     * نزدیک دستگیرهٔ خاکستری به‌جای پاک‌کردن، خط‌کش را جابه‌جا می‌کرد و مسیر پاک‌کردن هم به لبهٔ
+     * خط‌کش «می‌چسبید» (نقطه‌های پاک‌کن روی لبه بازنویسی می‌شد).
+     */
+    val usesInstrument: Boolean
+        get() = when (this) {
+            PEN, LINE, ARROW, ARROW2, HIGHLIGHT, RECT, CIRCLE, TRIANGLE, RTRIANGLE, DIAMOND, AXES -> true
+            else -> false
+        }
+
+    /** V335.49 — فقط ابزارهای ضربه‌ای/خطی به لبه و کمان ابزار هندسی می‌چسبند؛ شکل‌های کادری نه. */
+    val snapsToInstrument: Boolean
+        get() = when (this) {
+            PEN, LINE, ARROW, ARROW2, HIGHLIGHT -> true
+            else -> false
+        }
 
     /** V137.5 — آیکون ابزار (نوار ابزار آیکونی). */
     val icon: androidx.compose.ui.graphics.vector.ImageVector
@@ -623,7 +644,11 @@ fun StudentWhiteboardDialog(
     fun insertImage(ref: String) {
         scope.launch {
             ensureBitmap(ref)
-            val bmp = bitmaps[ref] ?: return@launch
+            val bmp = bitmaps[ref] ?: run {
+                // V335.49 — پیش‌تر اگر تصویر/فرمول/شکل آماده نمی‌شد، دکمه بی‌صدا هیچ کاری نمی‌کرد.
+                Toast.makeText(context, "این تصویر روی تخته درج نشد (فایل پشتیبانی نمی‌شود یا حذف شده است).", Toast.LENGTH_LONG).show()
+                return@launch
+            }
             val maxW = boardSize.width * 0.6f
             val maxH = boardSize.height * 0.6f
             val scale = min(1f, min(maxW / bmp.width, maxH / bmp.height))
@@ -721,6 +746,17 @@ fun StudentWhiteboardDialog(
                     IconButton(onClick = { redoLast() }, enabled = redoStack.isNotEmpty()) { Icon(Icons.AutoMirrored.Outlined.Redo, contentDescription = "جلو") }
                     IconButton(onClick = onDismiss) { Icon(Icons.Outlined.Close, contentDescription = "بستن", tint = MaterialTheme.colorScheme.error) }
                 }
+                /* V335.49 — «بعضی ابزارها کار نمی‌کنند» در صفحه‌های کوتاه (گوشی افقی/کوچک):
+                   نوارهای کنترل تمام ارتفاع را می‌گرفتند و بوم با weight(1f) به صفر می‌رسید، پس هیچ
+                   ابزاری قابل استفاده نبود. حالا نوارها در حداکثر ۵۰٪ ارتفاع، اسکرول‌پذیرند و بوم
+                   همیشه دست‌کم نصف صفحه را دارد. */
+                Column(
+                    Modifier
+                        .fillMaxWidth()
+                        .heightIn(max = (LocalConfiguration.current.screenHeightDp * 0.50f).dp)
+                        .verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
                 // ابزارها — V137.5: آیکون به‌جای متن (نام ابزار در contentDescription/کنار ابزار انتخاب‌شده)
                 Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
                     BoardTool.values().filter { it.pickable }.forEach { t ->
@@ -882,11 +918,13 @@ fun StudentWhiteboardDialog(
                     TextButton(onClick = { savePage = page; pngSaver.launch("whiteboard-p${page + 1}.png") }, enabled = pageItems().isNotEmpty() && boardSize.width > 0) { Text("⬇ PNG") }
                     TextButton(onClick = { confirmClearAll = true }, enabled = pageItems().isNotEmpty()) { Text("پاک‌کردن صفحه") }
                 }
+                }
                 // بوم
                 Box(
                     Modifier
                         .fillMaxWidth()
                         .weight(1f)
+                        .heightIn(min = 180.dp) // V335.49 — بوم در گوشی افقی/کوچک صفر نشود
                         .clip(MaterialTheme.shapes.medium)
                         .background(Color.White)
                         .onSizeChanged { boardSize = it }
@@ -939,7 +977,8 @@ fun StudentWhiteboardDialog(
                                     dragStart = p; snapshotDone = false; mode = null; handle = null
                                     startBox = null; startItems = emptyList()
                                     val inst = instrument
-                                    val instActive = inst.kind != BoardInstrument.NONE && tool != BoardTool.SELECT && tool != BoardTool.OBJ_ERASER
+                                    // V335.49 — پاک‌کن/متن/انتخاب ابزار هندسی را جابه‌جا نمی‌کنند و مسیرشان نمی‌چسبد.
+                                    val instActive = inst.kind != BoardInstrument.NONE && tool.usesInstrument
                                     // V137.5 — جابه‌جایی فقط از دستگیرهٔ خاکستریِ مخصوص (grip)؛ روی بدنه می‌شود کشید/نوشت.
                                     instMode = when {
                                         !instActive -> null
@@ -975,7 +1014,7 @@ fun StudentWhiteboardDialog(
                                                 takeSnapshot(); strokes.removeAll { it.id == hit.id }; selectedIds.remove(hit.id); bump()
                                             }
                                             else -> {
-                                                snapLock = if (instActive) snapTargetOf(inst, p, density) else null
+                                                snapLock = if (instActive && tool.snapsToInstrument) snapTargetOf(inst, p, density) else null
                                                 val sp = snapLock?.let { snapApply(inst, it, p, density) } ?: p
                                                 draft = BoardStroke(
                                                     newId(), tool, listOf(sp, sp), color, width,
