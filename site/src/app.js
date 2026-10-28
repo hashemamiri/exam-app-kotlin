@@ -1530,9 +1530,11 @@
       if (l[1] === '#faq') return el('button', {type: 'button', class: 'lp-foot-link', text: l[0], onclick: openFaqFromFoot});
       return el('a', {class: 'lp-foot-link', href: l[1], target: l[1].indexOf('mailto:') === 0 ? null : '_blank', rel: 'noopener', text: l[0]});
     });
+    /* V335.63 — پیوندهای فوتر و نماد اینماد در یک سطر؛ جملهٔ معرفی پایین صفحه حذف شد
+       تا صفحهٔ اول بدون اسکرول دیده شود. */
     return el('footer', {class: 'lp-foot', 'aria-label': 'پیوندهای سایت'}, [
       el('nav', {class: 'lp-foot-links'}, links),
-      el('p', {class: 'lp-foot-copy', text: 'آزمون آنلاین — سامانهٔ ساخت، برگزاری و تصحیح آزمون · onlineexam.ir'})
+      el('span', {class: 'lp-foot-enamad'})
     ]);
   }
   function renderLanding(mode) {
@@ -1572,6 +1574,11 @@
       landingFoot()
     ]);
     if (keyWarn) page.appendChild(keyWarn);
+    /* V335.63 — آیکن اینماد از ستون معرفی به فوتر منتقل می‌شود تا هم‌سطر با پیوندها باشد
+       (خودِ گره جابه‌جا می‌شود؛ خط پین‌شدهٔ تست‌های V292/V299 دست‌نخورده می‌ماند). */
+    var footBadgeHost = page.querySelector('.lp-foot-enamad');
+    var enamadNode = page.querySelector('.lp-badges .enamad');
+    if (footBadgeHost && enamadNode) footBadgeHost.appendChild(enamadNode);
     root.appendChild(page);
   }
   /* V311.2 / V311.6 — فهرست محصولات، بسته‌های شارژ کیف پول و تعرفهٔ خدمات در پنجرهٔ میانی صفحهٔ اصلی سایت (الزام شاپرک) */

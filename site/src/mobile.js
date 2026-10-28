@@ -867,7 +867,11 @@
         if (l[1] === '#faq') return el('button', {type: 'button', class: 'ice-foot-link', text: l[0], onclick: function () { if (S.openLandingCatalog) S.openLandingCatalog(null, 'lp-faq'); }});
         return el('a', {class: 'ice-foot-link', href: l[1], target: l[1].indexOf('mailto:') === 0 ? null : '_blank', rel: 'noopener', text: l[0]});
       });
-      return el('div', {class: 'ice-foot'}, [el('div', {class: 'ice-foot-links'}, links)]);
+      /* V335.63 — اینماد هم‌سطر با پیوندها (مثل دسکتاپ) تا ارتفاع صفحهٔ اول کمتر شود. */
+      return el('div', {class: 'ice-foot'}, [
+        el('div', {class: 'ice-foot-links'}, links),
+        el('span', {class: 'ice-foot-enamad'})
+      ]);
     }
     function landing() {
       var apkBtn = btn('دریافت برنامه', function () {});
@@ -877,7 +881,7 @@
         apkBtn.textContent = 'دریافت برنامه (اندروید · نسخهٔ ' + S.fa(v.name) + ')'; apkBtn.disabled = false;
         apkBtn.onclick = function () { var a = el('a', {href: v.url, download: 'exam-app-' + v.name + '.apk'}); document.body.appendChild(a); a.click(); a.remove(); toast('دانلود برنامه آغاز شد.', 'ok'); };
       }).catch(function () { apkBtn.textContent = 'دریافت برنامه ممکن نشد'; });
-      return el('div', {class: 'ice-landing'}, [
+      var landingEl = el('div', {class: 'ice-landing'}, [
         stag(0, el('div', {class: 'ice-hero'}, [el('img', {src: '/pwa/v3/mark-256.png', alt: '', width: '60', height: '60'})])), /* V260.5 — لوگوی جدید «آزمون» مثل دسکتاپ و اپ */
         stag(1, el('div', {class: 'ice-title', text: 'آزمون آنلاین'})),
         stag(2, el('div', {class: 'ice-sub', text: 'به سامانهٔ آزمون و ارزشیابی خوش آمدید'})),
@@ -891,6 +895,11 @@
         stag(7, el('p', {class: 'ice-note', text: 'حساب دانش‌آموز را معلم می‌سازد؛ نام کاربری و رمز را از معلم خود دریافت کنید.'})),
         stag(8, foot()) /* V335.51 */
       ]);
+      /* V335.63 — آیکن اینماد از بلوک جدا به فوتر (هم‌سطر با پیوندها) منتقل می‌شود. */
+      var footHost = landingEl.querySelector('.ice-foot-enamad');
+      var footBadge = landingEl.querySelector('.ice-badges .enamad');
+      if (footHost && footBadge) footHost.appendChild(footBadge);
+      return landingEl;
     }
     function openMobileCatalog() {
       if (S.openLandingCatalog) {
