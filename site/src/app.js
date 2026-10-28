@@ -1520,6 +1520,18 @@
     board: '<rect x="5" y="7" width="38" height="26" rx="2" fill="#fff" stroke="#9AA8BC" stroke-width="2"/><rect x="5" y="7" width="38" height="4" fill="#56687F"/><path d="M11 24c4-8 7 2 11-4s6 2 9 0 4 0 6 0" stroke="#E8554E" stroke-width="2.4" fill="none" stroke-linecap="round"/><path d="M12 29h12" stroke="#2B8FD6" stroke-width="2.4" stroke-linecap="round"/><path d="M24 33v9M18 42l6-9 6 9" stroke="#56687F" stroke-width="2.4" fill="none" stroke-linecap="round"/><rect x="30" y="38" width="12" height="4" rx="2" fill="#19B37A" transform="rotate(-30 36 40)"/>',
     school: '<path d="M6 42V20l18-12 18 12v22z" fill="#F6B73C"/><path d="M6 42V20l18-12 18 12v22z" fill="none" stroke="#B4571B" stroke-width="1.5"/><rect x="19" y="28" width="10" height="14" rx="1" fill="#5B3A1E"/><rect x="10" y="24" width="6" height="7" rx="1" fill="#7CC0EE"/><rect x="32" y="24" width="6" height="7" rx="1" fill="#7CC0EE"/><path d="M24 8V2" stroke="#1F3B57" stroke-width="2"/><path d="M24 2h7l-2 2.5 2 2.5h-7z" fill="#E8554E"/><path d="M14 14l10-5 10 5-10 5z" fill="#1F3B57"/><path d="M18 16v4c0 1.5 2.7 3 6 3s6-1.5 6-3v-4" fill="none" stroke="#1F3B57" stroke-width="1.8"/>'
   };
+  /* V335.51 — فوتر ثابت پایین صفحهٔ ورود: تعرفه، پرسش‌های متداول، حریم خصوصی، شرایط استفاده، وضعیت سرویس، تماس */
+  function landingFoot() {
+    var links = (window.LP_FOOT_LINKS || []).map(function (l) {
+      if (l[1] === '#products') return el('button', {type: 'button', class: 'lp-foot-link', text: l[0], onclick: function () { openLandingCatalogModal(null, null); }});
+      if (l[1] === '#faq') return el('button', {type: 'button', class: 'lp-foot-link', text: l[0], onclick: openFaqFromFoot});
+      return el('a', {class: 'lp-foot-link', href: l[1], target: l[1].indexOf('mailto:') === 0 ? null : '_blank', rel: 'noopener', text: l[0]});
+    });
+    return el('footer', {class: 'lp-foot', 'aria-label': 'پیوندهای سایت'}, [
+      el('nav', {class: 'lp-foot-links'}, links),
+      el('p', {class: 'lp-foot-copy', text: 'آزمون آنلاین — سامانهٔ ساخت، برگزاری و تصحیح آزمون · onlineexam.ir'})
+    ]);
+  }
   function renderLanding(mode) {
     document.body.classList.add('lp-body');
     var keyWarn = KEY_READY ? null : el('div', {class: 'warn-key', html: '⚠️ کلید اتصال (<code class="k">SUPABASE_ANON_KEY</code>) هنوز در بالای فایل <code class="k">index.html</code> وارد نشده است؛ تا آن زمان ورود و ثبت‌نام کار نمی‌کند.'});
@@ -1553,7 +1565,8 @@
     tilesCol.appendChild(tilesEl);
     var page = el('div', {class: 'lp lp-sky'}, [
       el('div', {class: 'glow g1'}), el('div', {class: 'glow g2'}), el('div', {class: 'cloud c1'}), el('div', {class: 'cloud c2'}), el('div', {class: 'cloud c3'}), el('div', {class: 'cloud c4'}),
-      left, right
+      left, right,
+      landingFoot()
     ]);
     if (keyWarn) page.appendChild(keyWarn);
     root.appendChild(page);
@@ -1576,6 +1589,45 @@
     ['بازیابی نسخهٔ پشتیبان (هر سؤال)', '۱٬۰۰۰ تومان'],
     ['بازیابی نسخهٔ پشتیبان (هر عکس)', '۱٬۰۰۰ تومان']
   ];
+  /* V335.51 — پرسش‌های متداول تعرفه: هر پاسخ فقط از رفتار واقعی سرور/سایت گرفته شده
+     (سقف صوت ۳MB در native_question_media_cost_v135، صورت‌حساب در native_save_exam_v1،
+     تعرفهٔ چاپ در native_charge_print_quote_v2). یک منبع مشترک برای دسکتاپ و گوشی. */
+  window.LP_FAQ = [
+    {q: 'هزینهٔ ساخت آزمون چگونه حساب می‌شود؟', a: 'هر سؤال تازه یا تغییرکرده ۱٬۰۰۰ تومان، هر تصویر (در متن سؤال، گزینه‌ها یا جورکردنی) ۱٬۰۰۰ تومان و صوت بر اساس حجم: تا ۱ مگابایت ۲٬۰۰۰، تا ۲ مگابایت ۴٬۰۰۰ و تا ۳ مگابایت ۶٬۰۰۰ تومان.'},
+    {q: 'هزینه کِی از کیف پول کسر می‌شود؟', a: 'هنگام ذخیرهٔ آزمون و هنگام چاپ برگهٔ A4. پیش از کسر، پنجرهٔ تأیید همین مبلغ را خط‌به‌خط و همراه با موجودی کیف پول و باقی‌مانده نشان می‌دهد؛ تا شما «تأیید» نزنید چیزی کسر نمی‌شود.'},
+    {q: 'اگر آزمون را ویرایش کنم دوباره هزینه می‌دهم؟', a: 'فقط سؤال‌هایی که تازه اضافه شده‌اند یا متن/گزینه/کلید پاسخشان تغییر کرده است دوباره حساب می‌شوند. سؤال‌های دست‌نخورده هزینهٔ دوباره ندارند.'},
+    {q: 'فایل Word و بازیابی پشتیبان چه هزینه‌ای دارد؟', a: 'دریافت فایل Word آزمون برای هر فایل ۵۰٬۰۰۰ تومان است. بازیابی نسخهٔ پشتیبان برای هر سؤال ۱٬۰۰۰ و برای هر تصویر ۱٬۰۰۰ تومان.'},
+    {q: 'حجم فایل صوتی حداکثر چقدر می‌تواند باشد؟', a: 'تا ۳ مگابایت. فایل بزرگ‌تر هنگام ذخیره پذیرفته نمی‌شود، بنابراین بهتر است آن را فشرده کنید.'},
+    {q: 'بستهٔ سازمانی و مدرسه شامل چه چیزی است؟', a: '۱٬۰۰۰٬۰۰۰ تومان اعتبار که مدیر مدرسه می‌تواند آن را به کیف پول معلمان مدرسه منتقل کند؛ هر سؤال یا تصویر هم مثل تعرفه ۱٬۰۰۰ تومان از همین اعتبار کسر می‌شود. تعیین تعداد معلمان و مدت اعتبار در توافق با پشتیبانی (info@onlineexam.ir) انجام می‌شود.'},
+    {q: 'چه چیزهایی رایگان است؟', a: 'ساخت حساب، ساخت کلاس، تعریف دانش‌آموز، برگزاری آزمون آنلاین و کارنامهٔ دانش‌آموز رایگان است؛ هزینه فقط به ازای مصرف واقعی (سؤال، تصویر، صوت، چاپ و فایل Word) کسر می‌شود.'}
+  ];
+  /* V335.51 — پیوندهای همیشگی پایین صفحهٔ ورود (دسکتاپ و گوشی): حریم خصوصی و شرایط استفاده
+     پیش‌تر فقط داخل مودال ثبت‌نام بودند و از صفحهٔ اول پیدا نمی‌شدند. */
+  window.LP_FOOT_LINKS = [
+    ['محصولات و تعرفه‌ها', '#products'],
+    ['پرسش‌های متداول تعرفه', '#faq'],
+    ['حریم خصوصی', '/privacy.html'],
+    ['شرایط استفاده', '/terms.html'],
+    ['وضعیت سرویس', '/status.html'],
+    ['تماس با ما', 'mailto:info@onlineexam.ir']
+  ];
+  /* بخش «پرسش‌های متداول» داخل پنجرهٔ محصولات/تعرفه (کلاس‌ها مشترک دسکتاپ و موبایل) */
+  function faqSection() {
+    var list = (window.LP_FAQ || []);
+    return el('div', {class: 'lp-faq neo', id: 'lp-faq'}, [
+      el('div', {class: 'lp-faq-head'}, [
+        el('h3', {text: '❓ پرسش‌های متداول تعرفه و صورت‌حساب'}),
+        el('span', {class: 'muted', style: 'font-size:12.5px', text: 'هر پاسخ بر اساس همان قاعده‌ای است که سرور هنگام کسر هزینه اعمال می‌کند.'})
+      ]),
+      el('div', {class: 'lp-faq-list'}, list.map(function (f) {
+        return el('details', {class: 'lp-faq-item'}, [
+          el('summary', {}, [el('span', {text: f.q})]),
+          el('p', {text: f.a})
+        ]);
+      }))
+    ]);
+  }
+  function openFaqFromFoot() { openLandingCatalogModal(null, 'lp-faq'); }
   function selectLandingProduct(p, card, mode) {
     try { sessionStorage.setItem('lp-selected-pkg', String(p.amount)); sessionStorage.setItem('lp-selected-pkg-title', p.title + ' (' + p.price + ')'); } catch (e) {}
     if (card) {
@@ -1611,10 +1663,11 @@
         el('p', {text: 'کلیهٔ بسته‌ها و خدمات پس از پرداخت آنلاین از طریق درگاه بانکی شاپرک، به‌صورت آنی در کیف پول حساب کاربری (وب و اندروید) فعال می‌شوند.'})
       ]),
       prods,
-      tariffs
+      tariffs,
+      faqSection()
     ]);
   }
-  function openLandingCatalogModal(onSelectPkg) {
+  function openLandingCatalogModal(onSelectPkg, focusId) {
     var bg = el('div', {class: 'modal-bg lp-cat-bg', onclick: function (e) { if (e.target === bg) bg.remove(); }});
     var cat = buildLandingCatalog(null, null, function (p) {
       try { sessionStorage.setItem('lp-selected-pkg', String(p.amount)); sessionStorage.setItem('lp-selected-pkg-title', p.title + ' (' + p.price + ')'); } catch (e) {}
@@ -1626,6 +1679,12 @@
     var m = el('div', {class: 'modal lp-cat-modal'}, [cat]);
     bg.appendChild(m);
     document.body.appendChild(bg);
+    /* V335.51 — فوتر «پرسش‌های متداول» مستقیم روی همان بخش می‌نشیند (نه بالای صفحه) */
+    if (focusId) setTimeout(function () {
+      var t = m.querySelector('#' + focusId) || m.querySelector('.lp-faq');
+      if (t) { try { t.scrollIntoView({block: 'start', behavior: 'auto'}); } catch (e) {} }
+      m.scrollTop = t && t.offsetTop ? Math.max(0, t.offsetTop - 12) : m.scrollTop;
+    }, 40);
   }
   var APP_MARK_SVG = '<svg viewBox="0 0 108 108" width="100%" height="100%" aria-hidden="true"><rect x="0" y="0" width="108" height="108" rx="22" fill="#fff"/><image href="/pwa/v3/mark-256.png" x="10" y="10" width="88" height="88"/></svg>'; /* V253 — لوگوی جدید «آزمون» (همان آیکون اپ اندروید) */
   /* V292.1 — نماد اعتماد الکترونیکی (اینماد): کد رسمی، فقط نمایش؛ کلیک = صفحهٔ تأیید در trustseal.enamad.ir */

@@ -278,6 +278,87 @@
     });
     return {publicQuestions: pub, answerKey: keys};
   }
+  /* ================================================================ V335.51 — پیش‌نمایش دقیق صورت‌حساب ذخیرهٔ آزمون
+     قاعدهٔ سرور (native_save_exam_v1 + native_question_media_cost_v135):
+       • هر سؤال «تازه یا تغییرکرده» ۱٬۰۰۰ تومان؛ تغییر = تفاوت اثرانگشت (کل آبجکت سؤال + کلید پاسخ بدون i)
+       • تصویر هر سؤال مشمول ۱٬۰۰۰ تومان (متن سؤال + گزینه‌ها + جورکردنی)
+       • صوت هر سؤال مشمول: تا ۱MB ۲٬۰۰۰ / تا ۲MB ۴٬۰۰۰ / تا ۳MB ۶٬۰۰۰ تومان
+     همین محاسبه این‌جا محلی انجام می‌شود تا پنجرهٔ تأیید، مبلغ و موجودی را قبل از کسر نشان دهد. */
+  function canonJson(v) {
+    if (v === null || typeof v !== 'object') return JSON.stringify(v === undefined ? null : v);
+    if (Array.isArray(v)) return '[' + v.map(canonJson).join(',') + ']';
+    return '{' + Object.keys(v).sort().map(function (k) { return JSON.stringify(k) + ':' + canonJson(v[k]); }).join(',') + '}';
+  }
+  function fp32(str) {
+    var h = 0x811c9dc5;
+    for (var i = 0; i < str.length; i++) { h ^= str.charCodeAt(i); h = (h + ((h << 1) + (h << 4) + (h << 7) + (h << 8) + (h << 24))) >>> 0; }
+    return h.toString(36);
+  }
+  /* کلید سؤال = شناسه، یا «@شماره» برای سؤال بی‌شناسه (مثل native_question_fingerprints) */
+  function questionKeys(questions) {
+    return (questions || []).map(function (q, i) { return String((q && q.id) || '').trim() || ('@' + (i + 1)); });
+  }
+  function fingerprintMap(questions, keys) {
+    var out = {}, ks = questionKeys(questions);
+    (questions || []).forEach(function (q, i) {
+      var key = {}; Object.keys(keys && keys[i] ? keys[i] : {}).forEach(function (k) { if (k !== 'i') key[k] = keys[i][k]; });
+      out[ks[i]] = fp32(canonJson(Object.assign({}, q, key)));
+    });
+    return out;
+  }
+  function countMedia(arr) {
+    if (!Array.isArray(arr)) return 0;
+    return arr.filter(function (x) { return String(x == null ? '' : x).trim() !== ''; }).length;
+  }
+  function mediaCostOf(q) {
+    var imgs = countMedia(q.images) + countMedia(q.optionImages) + countMedia(q.leftImages) + countMedia(q.rightImages);
+    var audioCost = 0, bytes = Number(q.audioBytes) || 0;
+    if (q.audio) audioCost = bytes <= 1048576 ? 2000 : bytes <= 2097152 ? 4000 : 6000;
+    return {images: imgs, imageCost: imgs * 1000, audioCost: audioCost, bytes: q.audio ? bytes : 0};
+  }
+  /* برآورد صورت‌حساب: exact=false یعنی آزمون از سرور/پیش‌نویس قدیمی آمده و مبنای «قبلاً پرداخت‌شده» نداریم → سقف حساب می‌شود */
+  function saveCostPreview(st) {
+    var enc = encodeQuestions(st.questions || []);
+    var now = fingerprintMap(enc.publicQuestions, enc.answerKey);
+    var base = (st.baseFp && typeof st.baseFp === 'object') ? st.baseFp : null;
+    var isNew = !st.examId;
+    var exact = isNew || !!base;
+    var billKeys = {}, questions = 0, images = 0, audioCount = 0, audioCost = 0;
+    Object.keys(now).forEach(function (k) {
+      var changed = isNew || !base || !(k in base) || base[k] !== now[k];
+      if (changed) { billKeys[k] = true; questions++; }
+    });
+    var ks = questionKeys(enc.publicQuestions);
+    enc.publicQuestions.forEach(function (q, i) {
+      if (!billKeys[ks[i]]) return;
+      var m = mediaCostOf(q);
+      images += m.images; if (m.audioCost) { audioCost += m.audioCost; audioCount++; }
+    });
+    return {questions: questions, images: images, audioCount: audioCount, audioCost: audioCost,
+      questionCost: questions * 1000, imageCost: images * 1000,
+      total: questions * 1000 + images * 1000 + audioCost, count: ks.length, exact: exact};
+  }
+  /* متن پنجرهٔ تأیید: ریز هزینه + مبلغ + موجودی + باقی‌مانده (V335.51) */
+  function saveCostText(st, pv, balance) {
+    var lines = ['آزمون «' + esc(st.title || '') + '» با ' + fa((st.questions || []).length) + ' سؤال ذخیره می‌شود.'];
+    if (pv.total > 0) {
+      lines.push('سؤال جدید/تغییرکرده: ' + fa(pv.questions) + ' × ' + fa('1,000') + ' = ' + S.money(pv.questionCost));
+      if (pv.images > 0) lines.push('تصویر: ' + fa(pv.images) + ' × ' + fa('1,000') + ' = ' + S.money(pv.imageCost));
+      if (pv.audioCount > 0) lines.push('صوت: ' + fa(pv.audioCount) + ' فایل = ' + S.money(pv.audioCost));
+      lines.push('<b>مبلغ قابل کسر: ' + S.money(pv.total) + '</b>');
+    } else {
+      lines.push('این ذخیره هزینه‌ای ندارد؛ سؤال‌های این آزمون قبلاً پرداخت شده‌اند.');
+    }
+    if (balance != null) {
+      lines.push('موجودی کیف پول: ' + S.money(balance));
+      if (pv.total > 0) {
+        if (balance >= pv.total) lines.push('باقی‌مانده پس از ذخیره: <b>' + S.money(balance - pv.total) + '</b>');
+        else lines.push('<b class="danger">موجودی کافی نیست؛ ' + S.money(pv.total - balance) + ' کم است.</b>');
+      }
+    }
+    if (!pv.exact) lines.push('<small>این آزمون از پیش‌نویس بازیابی شده؛ مبلغ بالا سقف حساب است و اگر سؤال‌ها قبلاً پرداخت شده باشند کمتر می‌شود.</small>');
+    return lines.join('<br>');
+  }
   function toServerExam(state) {
     var enc = encodeQuestions(state.questions);
     return {id: state.examId || uuid(), title: state.title, subject: state.subject, duration: Number(state.duration) || 0, total_score: state.questions.reduce(function (s, q) { return s + (Number(q.score) || 0); }, 0), questions: enc.publicQuestions, __answers: enc.answerKey};
@@ -458,6 +539,8 @@
     var keys = {}; (Array.isArray(exam.__answers) ? exam.__answers : []).forEach(function (k, i) { if (k && typeof k === 'object') keys[k.i != null ? k.i : i] = k; });
     st.examId = exam.id; st.code = exam.code; st.title = exam.title || ''; st.subject = exam.subject || ''; st.duration = exam.duration != null ? String(exam.duration) : ''; st.opensAt = isoToLocal(exam.opens_at); st.closesAt = isoToLocal(exam.closes_at);
     st.questions = (Array.isArray(exam.questions) ? exam.questions : []).map(function (q, i) { return decodeQuestion(q, keys[i]); });
+    /* V335.51 — مبنای «قبلاً پرداخت‌شده» برای نمایش ریز هزینهٔ ذخیرهٔ بعدی */
+    st.baseFp = fingerprintMap(Array.isArray(exam.questions) ? exam.questions : [], Array.isArray(exam.__answers) ? exam.__answers : []);
     st.shuffleQuestions = !!exam.shuffle_q; st.shuffleOptions = !!exam.shuffle_opt; st.primaryMode = !!(exam.options && exam.options.primary); /* V301 */ st.levelThresholds = (exam.options && Array.isArray(exam.options.levels)) ? exam.options.levels.join(',') : ''; /* V305 */ st.negativeMarking = exam.neg_marking ? String(exam.neg_marking) : ''; st.teacherMessage = exam.teacher_message || '';
     st.attemptsAllowed = Math.max(1, Math.min(5, Number(exam.attempts_allowed) || 1)); st.attemptOnTimeout = !!exam.attempt_on_timeout; st.gradePolicy = exam.grade_policy || 'last'; st.attemptCooldown = exam.attempt_cooldown ? String(exam.attempt_cooldown) : ''; st.pickCount = exam.pick_count ? String(exam.pick_count) : ''; st.pickRules = (exam.pick_rules && typeof exam.pick_rules === 'object') ? Object.assign({}, exam.pick_rules) : {}; st.sectionDurations = (exam.options && exam.options.sectionDurations && typeof exam.options.sectionDurations === 'object') ? Object.assign({}, exam.options.sectionDurations) : {}; /* V272 */ /* V255 */
     await loadOptions(st);
@@ -1536,11 +1619,16 @@
           teacher_message: state.teacherMessage.trim() || null, attempts_allowed: Math.max(1, Math.min(5, state.attemptsAllowed)), attempt_on_timeout: !!state.attemptOnTimeout, grade_policy: state.gradePolicy, attempt_cooldown: Math.max(0, Math.min(1440, parseInt(state.attemptCooldown, 10) || 0)), pick_count: Math.max(0, Math.min(9999, parseInt(state.pickCount, 10) || 0)), pick_rules: pickRulesClean(state), /* V272 */
           questions: enc.publicQuestions, answer_key: enc.answerKey, audience: state.audienceMode, classes: state.audienceClasses.slice().sort(), students: state.audienceStudents.slice().sort(), schools: state.audienceSchools.slice().sort()};
         var n = state.questions.length;
-        if (!(await S.confirmDlg('ذخیرهٔ آزمون', 'آزمون «' + esc(state.title) + '» با ' + fa(n) + ' سؤال ذخیره می‌شود. هزینهٔ سؤال‌های جدید (' + fa('1,000') + ' تومان/سؤال) و رسانه‌ها از کیف پول کسر می‌شود.', 'ذخیره'))) return;
+        /* V335.51 — پیش از کسر: ریز هزینه + مبلغ نهایی + موجودی کیف پول (خواستهٔ گزارش بازبینی) */
+        var pv = saveCostPreview(state), bal = null;
+        try { var w = await S.api.wallet(); if (w && w.balance != null) bal = Number(w.balance) || 0; } catch (e) {}
+        if (!(await S.confirmDlg('ذخیرهٔ آزمون', saveCostText(state, pv, bal), 'ذخیره'))) return;
         var wasNew = !state.examId; /* V275 */
         var raw = await S.rpc('native_save_exam_v2', {p_payload: payload});
         if (raw && raw.error) { var m = String(raw.error); if (raw.balance != null && raw.required != null) m += '؛ موجودی ' + fa(raw.balance) + ' تومان و مبلغ لازم ' + fa(raw.required) + ' تومان است.'; throw new Error(m); }
-        state.examId = examId; state.code = (raw && raw.code) || code; state.dirty = false; saveDraft();
+        state.examId = examId; state.code = (raw && raw.code) || code; state.dirty = false;
+        state.baseFp = fingerprintMap(enc.publicQuestions, enc.answerKey); /* V335.51 — هزینهٔ دوباره فقط برای تغییرهای بعدی */
+        saveDraft();
         /* V221 — فایل‌هایی که در نسخهٔ ذخیره‌شدهٔ قبلی بودند و اکنون نیستند، از فضای ابری پاک می‌شوند */
         try { var nowUrls = S.mediaUrlsIn ? S.mediaUrlsIn(state.questions) : []; var gone = (state.persistedMedia || []).filter(function (u) { return nowUrls.indexOf(u) < 0; }); state.persistedMedia = nowUrls; if (gone.length && S.deleteMedia) S.deleteMedia(gone); } catch (eM) {}
         msg.appendChild(el('div', {class: 'alert ok', html: '✅ ذخیره شد. کد آزمون: <b class="code">' + esc(state.code) + '</b>' + (raw && raw.cost ? ' · هزینه: ' + S.money(raw.cost) : '') + (raw && raw.balance != null ? ' · موجودی: ' + S.money(raw.balance) : '')}));
@@ -1765,5 +1853,5 @@
   function sel(label, val, opts, on) { var s = el('select'); opts.forEach(function (o) { var op = el('option', {value: o[0], text: o[1]}); if (o[0] === val) op.selected = true; s.appendChild(op); }); s.addEventListener('change', function () { on(s.value); }); return el('div', {class: 'field'}, [el('label', {text: label}), s]); }
   function chk(label, val, on) { var c = el('input', {type: 'checkbox'}); c.checked = !!val; c.addEventListener('change', function () { on(c.checked); }); return el('label', {class: 'row', style: 'gap:6px;font-size:14px'}, [c, label]); }
 
-  window.SiteBuilder = {shortcut: function (kind) { var f = SC[kind]; if (typeof f === 'function') { try { f(); return true; } catch (e) { return false; } } return false; }, page: page, printExamsSection: printExamsSection, printExamsList: printExamsList, printExamGet: printExamGet, printExamSave: printExamSave, printExamDelete: printExamDelete, draftsFromCombined: draftsFromCombined, migrateLocalPrintExams: migrateLocalPrintExams, encodeQuestions: encodeQuestions, decodeQuestion: decodeQuestion, newQuestion: newQuestion, toServerExam: toServerExam};
+  window.SiteBuilder = {shortcut: function (kind) { var f = SC[kind]; if (typeof f === 'function') { try { f(); return true; } catch (e) { return false; } } return false; }, page: page, printExamsSection: printExamsSection, printExamsList: printExamsList, printExamGet: printExamGet, printExamSave: printExamSave, printExamDelete: printExamDelete, draftsFromCombined: draftsFromCombined, migrateLocalPrintExams: migrateLocalPrintExams, encodeQuestions: encodeQuestions, decodeQuestion: decodeQuestion, newQuestion: newQuestion, toServerExam: toServerExam, saveCostPreview: saveCostPreview, saveCostText: saveCostText, fingerprintMap: fingerprintMap, mediaCostOf: mediaCostOf}; /* V335.51 — هوک تست */
 })();

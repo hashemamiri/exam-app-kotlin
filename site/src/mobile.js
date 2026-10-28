@@ -860,6 +860,15 @@
     function google(role, label) { if (!window.SiteExtras) return null; var g = window.SiteExtras.googleButton(role); g.className = 'ice-btn outline ice-google'; g.style.marginTop = ''; var t = g.childNodes[g.childNodes.length - 1]; if (t && t.nodeType === 3) t.textContent = ' ' + label; return g; }
     function otpBoxes(onChange) { var n = 6, hidden = el('input', {type: 'tel', inputmode: 'numeric', autocomplete: 'one-time-code', maxlength: 8, class: 'ice-otp-hidden'}); var row = el('div', {class: 'ice-otp', onclick: function () { hidden.focus(); }}); function draw() { var v = hidden.value.replace(/\D/g, '').slice(0, 8); hidden.value = v; var count = Math.max(6, Math.min(8, v.length + (v.length >= 6 ? 1 : 0))); row.innerHTML = ''; for (var i = 0; i < count; i++) row.appendChild(el('span', {class: 'ice-otp-b' + (i === v.length ? ' focus' : '') + (v[i] ? ' filled' : ''), text: v[i] ? fa(v[i]) : ''})); onChange(v); } hidden.addEventListener('input', draw); draw(); var w = el('div', {}, [hidden, row]); w.value = function () { return hidden.value; }; w.focus = function () { hidden.focus(); }; return w; }
 
+    /* V335.51 — فوتر صفحهٔ اول گوشی: همان پیوندهای دسکتاپ (حریم خصوصی/شرایط/وضعیت/تعرفه/تماس) */
+    function foot() {
+      var links = (window.LP_FOOT_LINKS || []).map(function (l) {
+        if (l[1] === '#products') return el('button', {type: 'button', class: 'ice-foot-link', text: l[0], onclick: function () { if (S.openLandingCatalog) S.openLandingCatalog(null, null); }});
+        if (l[1] === '#faq') return el('button', {type: 'button', class: 'ice-foot-link', text: l[0], onclick: function () { if (S.openLandingCatalog) S.openLandingCatalog(null, 'lp-faq'); }});
+        return el('a', {class: 'ice-foot-link', href: l[1], target: l[1].indexOf('mailto:') === 0 ? null : '_blank', rel: 'noopener', text: l[0]});
+      });
+      return el('div', {class: 'ice-foot'}, [el('div', {class: 'ice-foot-links'}, links)]);
+    }
     function landing() {
       var apkBtn = btn('دریافت برنامه', function () {});
       apkBtn.disabled = true;
@@ -879,7 +888,8 @@
         stag(5, el('div', {class: 'ice-tiles'}, LANDING_TILES.map(function (t) { return el('div', {class: 'ice-tile'}, [(window.LP_FLAT_ICONS && window.LP_FLAT_ICONS[t[2]]) ? el('i', {class: 'ico48', 'aria-hidden': 'true', html: '<svg viewBox="0 0 48 48">' + window.LP_FLAT_ICONS[t[2]] + '</svg>'}) : el('i', {'aria-hidden': 'true', text: t[0]}), el('span', {text: t[1]})]); }))),
         /* V311.8: دکمهٔ 'ساخت حساب جدید (معلم / مدیر)' زیر ۸ بلوک حذف شد؛ در loginPane موجود است */
         stag(7, el('div', {class: 'ice-badges'}, [S.enamadBadge()])), /* V292.1 — اینماد */
-        stag(7, el('p', {class: 'ice-note', text: 'حساب دانش‌آموز را معلم می‌سازد؛ نام کاربری و رمز را از معلم خود دریافت کنید.'}))
+        stag(7, el('p', {class: 'ice-note', text: 'حساب دانش‌آموز را معلم می‌سازد؛ نام کاربری و رمز را از معلم خود دریافت کنید.'})),
+        stag(8, foot()) /* V335.51 */
       ]);
     }
     function openMobileCatalog() {
@@ -921,6 +931,13 @@
           el('div', {class: 'ice-cat-sub', text: 'تعرفهٔ تک‌خدمت‌ها (کسر از کیف پول)'}),
           el('div', {class: 'ice-tariff-list'}, tariffs.map(function (r) {
             return el('div', {class: 'ice-tariff-row'}, [el('span', {text: r[0]}), el('b', {text: r[1]})]);
+          }))
+        ]),
+        /* V335.51 — پرسش‌های متداول تعرفه؛ همان دادهٔ دسکتاپ (window.LP_FAQ) */
+        el('div', {class: 'ice-faq', id: 'lp-faq'}, [
+          el('div', {class: 'ice-cat-sub', text: '❓ پرسش‌های متداول تعرفه و صورت‌حساب'}),
+          el('div', {class: 'ice-faq-list'}, (window.LP_FAQ || []).map(function (f) {
+            return el('details', {class: 'ice-faq-item'}, [el('summary', {}, [el('span', {text: f.q})]), el('p', {text: f.a})]);
           }))
         ])
       ]);

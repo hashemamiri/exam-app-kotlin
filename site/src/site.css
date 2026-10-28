@@ -2111,6 +2111,44 @@ table.rp-single td.num,table.rp-single th.num{text-align:center;white-space:nowr
 .m-dark .lp-prod-card,.m-dark .lp-tariff-box{background:rgba(255,255,255,.08);border-color:rgba(255,255,255,.18)}
 .m-dark .lp-tariff-item{background:rgba(255,255,255,.06)}
 .m-dark .lp-prod-badge{background:rgba(140,200,240,.18);color:#8CC8F0}
+/* V335.51 — فوتر صفحهٔ ورود (دسکتاپ) و پرسش‌های متداول تعرفه */
+.lp-foot{grid-column:1 / -1;position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;gap:10px;padding:14px 18px calc(18px + env(safe-area-inset-bottom));margin-top:6px}
+.lp-foot-links{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:8px 16px;max-width:900px}
+.lp-foot-link{background:none;border:0;padding:2px 2px;font:inherit;font-size:12.5px;font-weight:700;color:#2B5EB8;cursor:pointer;text-decoration:none;white-space:nowrap;border-bottom:1px solid transparent}
+.lp-foot-link:hover{border-bottom-color:#2B5EB8}
+.lp-foot-copy{margin:0;font-size:11.5px;color:#4A6A86;text-align:center;line-height:19px}
+.m-dark .lp-foot-link{color:#8CC8F0}
+.m-dark .lp-foot-link:hover{border-bottom-color:#8CC8F0}
+.m-dark .lp-foot-copy{color:#A9C4DA}
+.lp-faq{background:rgba(255,255,255,.82);border:1px solid rgba(255,255,255,.95);border-radius:18px;padding:14px 16px;box-shadow:0 8px 22px rgba(60,120,170,.1);min-width:0}
+.lp-faq-head{display:flex;flex-direction:column;align-items:center;text-align:center;gap:6px;margin-bottom:10px}
+.lp-faq-head h3{margin:0;font-size:15px;font-weight:800;color:#1F3B57}
+.lp-faq-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.lp-faq-item{background:var(--card);border:1px solid rgba(43,143,214,.18);border-radius:12px;padding:0 12px;box-shadow:0 2px 8px rgba(60,120,170,.06);min-width:0}
+.lp-faq-item summary{list-style:none;cursor:pointer;padding:10px 0;font-size:12.5px;font-weight:800;color:#1F3B57;display:flex;align-items:center;gap:8px;min-width:0}
+.lp-faq-item summary::-webkit-details-marker{display:none}
+.lp-faq-item summary::before{content:'＋';flex:0 0 auto;color:#2B8FD6;font-size:14px;line-height:1}
+.lp-faq-item[open] summary::before{content:'−'}
+.lp-faq-item p{margin:0 0 10px;font-size:12.5px;line-height:21px;color:#2E4D6B}
+.m-dark .lp-faq{background:rgba(255,255,255,.08);border-color:rgba(255,255,255,.18)}
+.m-dark .lp-faq-head h3,.m-dark .lp-faq-item summary{color:#E6F1FA}
+.m-dark .lp-faq-item{background:rgba(255,255,255,.06)}
+.m-dark .lp-faq-item p{color:#C9DCEC}
+@media (max-width:420px){.lp-foot{padding:12px 12px calc(16px + env(safe-area-inset-bottom))}.lp-foot-links{gap:6px 12px}.lp-foot-link{font-size:12px}.lp-foot-copy{font-size:11px}}
+/* گوشی: فوتر و پرسش‌های متداول پوستهٔ یخی */
+.ice-foot{width:100%;max-width:420px;margin:18px auto 0;padding-top:12px;border-top:1px solid rgba(43,143,214,.18)}
+.ice-foot-links{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:8px 14px}
+.ice-foot-link{background:none;border:0;padding:2px;font:inherit;font-size:12px;font-weight:700;color:var(--acc,#2B5EB8);text-decoration:none;cursor:pointer;white-space:nowrap;border-bottom:1px solid transparent}
+.ice-foot-link:hover{border-bottom-color:var(--acc,#2B5EB8)}
+@media (max-width:420px){.ice-foot-links{gap:6px 10px}.ice-foot-link{font-size:11.5px}}
+.ice-faq{background:rgba(255,255,255,.72);border:1px solid rgba(43,143,214,.16);border-radius:16px;padding:12px;min-width:0}
+.ice-faq-list{display:flex;flex-direction:column;gap:8px}
+.ice-faq-item{background:#FFFFFF;border:1px solid rgba(43,143,214,.16);border-radius:12px;padding:0 12px;min-width:0}
+.ice-faq-item summary{list-style:none;cursor:pointer;padding:11px 0;font-size:12.5px;font-weight:800;color:#1F3B57;display:flex;align-items:flex-start;gap:8px;line-height:20px}
+.ice-faq-item summary::-webkit-details-marker{display:none}
+.ice-faq-item summary::before{content:'＋';flex:0 0 auto;color:#2B8FD6;font-size:14px;line-height:20px}
+.ice-faq-item[open] summary::before{content:'−'}
+.ice-faq-item p{margin:0 0 11px;font-size:12px;line-height:21px;color:#2E4D6B}
 .m-dark .lp-prod-price{color:#4FD9B8}
 .ice{overflow-x:hidden;overflow-y:visible;align-items:flex-start;padding:24px 18px calc(48px + env(safe-area-inset-bottom));overscroll-behavior:auto;touch-action:pan-y}
 .ice-bg{position:fixed;inset:0;pointer-events:none}
