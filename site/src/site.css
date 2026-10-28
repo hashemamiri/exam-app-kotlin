@@ -2358,3 +2358,46 @@ button[aria-busy="true"] .google-auth-dots, .ice-google[aria-busy="true"] .googl
   .lp.lp-sky .lp-r{padding-top:12px;padding-bottom:4px}
   .lp.lp-sky .lp-links-enamad .enamad img{height:32px}
 }
+
+/* ================================================================================
+   V335.67 — چیدمان مطابق تصویر مرجع: بلوک‌های عرض‌کامل و درشت‌تر، نوار پیوندها زیر بلوک‌ها،
+   محتوا عمودی وسط‌چین. دامنه: فقط دسکتاپ (≥۸۶۱px) و پوستهٔ `.lp.lp-sky`.
+   ================================================================================ */
+@media (min-width:861px){
+  .lp.lp-sky{grid-template-rows:auto auto;align-content:center;row-gap:14px;padding:10px 0}
+  .lp.lp-sky .lp-l.lp3{padding:0 2.2vw;gap:2.2vw;align-items:flex-start;flex-wrap:nowrap}
+  .lp.lp-sky .lp-r{padding:0 1.4vw;align-items:flex-start}
+  .lp.lp-sky .lp-l.lp3 .lp-intro{flex:1 1 50%;max-width:none;min-width:0}
+  .lp.lp-sky .lp-tiles-col{flex:1 1 50%;width:100%;gap:10px}
+  .lp.lp-sky .tiles.tiles8{grid-template-columns:repeat(2,minmax(0,1fr));width:100%;gap:10px;margin:0}
+  .lp.lp-sky .tiles.tiles8 .tile{padding:14px 8px 12px;font-size:13.5px;border-radius:20px}
+  .lp.lp-sky .tile i{width:46px;height:46px;border-radius:13px;margin-bottom:8px}
+  .lp.lp-sky .tile i svg{width:38px;height:38px}
+  .lp.lp-sky .lp-price-jump{height:40px;font-size:14px;border-radius:14px}
+  .lp.lp-sky h1{font-size:clamp(26px,2.5vw,38px);margin:12px 0 10px}
+  .lp.lp-sky .lp-intro>p{font-size:15px;line-height:1.85}
+  .lp.lp-sky .lp-l.lp3 .lp-intro .lp-list{margin-top:12px;gap:7px}
+  .lp.lp-sky .lp-l.lp3 .lp-intro .lp-list li{font-size:13.5px;line-height:1.8}
+  .lp.lp-sky .lp-links{padding:2px 56px calc(2px + env(safe-area-inset-bottom)) 56px;gap:8px 12px}
+  .lp.lp-sky .lp-links-btn{height:34px;font-size:13px;padding:0 16px}
+  .lp.lp-sky .lp-links-enamad .enamad img{height:40px}
+}
+@media (min-width:861px) and (max-height:820px){
+  .lp.lp-sky{row-gap:10px;padding:6px 0}
+  .lp.lp-sky .tiles.tiles8 .tile{padding:11px 6px 10px;font-size:12.5px}
+  .lp.lp-sky .tile i{width:40px;height:40px;margin-bottom:6px}
+  .lp.lp-sky .tile i svg{width:33px;height:33px}
+  .lp.lp-sky .lp-price-jump{height:36px;font-size:13px}
+  .lp.lp-sky .lp-links-btn{height:32px;font-size:12.5px;padding:0 14px}
+  .lp.lp-sky .lp-links-enamad .enamad img{height:36px}
+  .lp.lp-sky .card{padding:18px 22px}
+}
+@media (min-width:861px) and (max-width:1180px){
+  .lp.lp-sky{grid-template-columns:minmax(0,1fr) 390px}
+  .lp.lp-sky .lp-l.lp3{padding:0 1.4vw;gap:1.4vw}
+  .lp.lp-sky .lp-intro>p{display:none}
+  .lp.lp-sky .tiles.tiles8 .tile{padding:9px 5px 8px;font-size:12px}
+  .lp.lp-sky .tile i{width:34px;height:34px;margin-bottom:5px}
+  .lp.lp-sky .tile i svg{width:28px;height:28px}
+  .lp.lp-sky .lp-links-btn{height:30px;font-size:11.5px;padding:0 10px}
+}
