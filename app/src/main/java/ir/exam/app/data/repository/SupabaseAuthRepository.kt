@@ -166,7 +166,7 @@ class SupabaseAuthRepository(context: Context) : AuthRepository {
         // V283 — دروازهٔ قفل ورود: ۵ رمز اشتباه در ۱۵ دقیقه → حساب ۱۵ دقیقه بسته. اگر تابع روی سرور نبود، مسیر قبلی.
         val gated = loginGate(clean, password)
         val loginEmail = if (gated == true) {
-            if ('@' in clean) clean else AuthIdentifier.passwordLoginEmail(clean)
+            if ('@' in clean) clean else staffEmailByUsername(clean) ?: AuthIdentifier.passwordLoginEmail(clean)
         } else if ('@' !in clean && AuthIdentifier.validUsername(clean)) {
             AuthIdentifier.passwordLoginEmail(clean)
         } else {
@@ -175,6 +175,19 @@ class SupabaseAuthRepository(context: Context) : AuthRepository {
         signInQueued(loginEmail, password)
         persistUser(currentProfile())
     }.getOrThrow()
+
+    /** V335.55 — بازیابی ایمیل واقعی کارکن از پروفایل برای ورود با نام کاربری (بدون @) */
+    private suspend fun staffEmailByUsername(username: String): String? {
+        return runCatching {
+            val response = SupabaseProvider.client.postgrest
+                .from("profiles")
+                .select("email")
+                .eq("username", username)
+                .single()
+                .execute()
+            response.data?.get("email")?.toString()
+        }.getOrNull()
+    }
 
     /**
      * V268 — صف ورود: سطل Supabase Auth حداکثر ۳۰ ورود آنی به ازای هر IP دارد و با نرخ تنظیم‌شده پر می‌شود.

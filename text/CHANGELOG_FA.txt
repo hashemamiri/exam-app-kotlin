@@ -1,7 +1,7 @@
-V335.55 (اپ 1.03.35) — رفع لاگین نام کاربری + تعرفهٔ سایت
-- اصلاح پارس کردن پاسخ Boolean در loginGate و staffLoginEmail (لاگین با نام کاربری و رمز)
-- تعرفهٔ فایل ورد ۲۰٬۰۰۰ تومان، دانلود نامحدود، کسر دوباره در هر Edit
-- تست StaffLoginGoogleTest به ساختار جدید loginGate اصلاح شد.
+V335.56 (اپ 1.03.36) — رفع لاگین نام کاربری + جستجوی ایمیل واقعی از پروفایل
+- جستجوی ایمیل واقعی کارکن از جدول profiles برای ورود با نام کاربری (بدون @).
+- اصلاح پارس کردن پاسخ Boolean در loginGate و staffLoginEmail.
+- تعرفهٔ فایل ورد ۲۰٬۰۰۰ تومان، دانلود نامحدود، کسر دوباره در هر Edit.
 V335.53 (اپ 1.03.33) — اصلاح خطای ساخت CI و migrations امنیتی ورود
 - خطای ساخت CI در SupabaseAuthRepository.kt (toBooleanOrNull) با equivalentsCompatible اصلاح شد.
 - migration SQL برای native_staff_login_email_v1: حذف ایمیل از پاسخ، REVOKE از نقش anon.
