@@ -222,7 +222,12 @@ class SupabaseAuthRepository(context: Context) : AuthRepository {
             if (UserFacingError.isRateLimited(msg)) return null
             return null // خطای شبکه و … → مسیر قبلی خودش پیام می‌دهد
         }
-        return raw["ok"]?.jsonPrimitive?.contentOrNull?.equals("true", ignoreCase = true)
+        val okContent = raw["ok"]?.jsonPrimitive?.contentOrNull
+        return when (okContent) {
+            is Boolean -> okContent
+            is String -> okContent.equals("true", ignoreCase = true)
+            else -> null
+        }
     }
 
     private suspend fun staffLoginEmail(username: String): Boolean? {
@@ -238,7 +243,12 @@ class SupabaseAuthRepository(context: Context) : AuthRepository {
             }
             error("بررسی نام کاربری ناموفق بود: ${msg.take(160)}")
         }
-        return raw["ok"]?.jsonPrimitive?.contentOrNull?.equals("true", ignoreCase = true)
+        val okContent = raw["ok"]?.jsonPrimitive?.contentOrNull
+        return when (okContent) {
+            is Boolean -> okContent
+            is String -> okContent.equals("true", ignoreCase = true)
+            else -> null
+        }
     }
 
     override suspend fun sendLoginOtp(email: String): Result<Unit> = sendOtp(

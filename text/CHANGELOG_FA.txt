@@ -1,6 +1,6 @@
-V335.54 (اپ 1.03.34) — بازنشانی نسخه و بسته نهایی V335.53
-- نسخه اپ بروز به 1.03.34 و بسته نهایی ساخته شد.
-- بسته و دستور نهایی مطابق قالب §۱۱ (هندآف): apply_v335_54.py با verify روی main و staging.
+V335.55 (اپ 1.03.35) — رفع لاگین نام کاربری + تعرفهٔ سایت
+- اصلاح پارس کردن پاسخ Boolean در loginGate و staffLoginEmail (لاگین با نام کاربری و رمز)
+- تعرفهٔ فایل ورد ۲۰٬۰۰۰ تومان، دانلود نامحدود، کسر دوباره در هر Edit
 - تست StaffLoginGoogleTest به ساختار جدید loginGate اصلاح شد.
 V335.53 (اپ 1.03.33) — اصلاح خطای ساخت CI و migrations امنیتی ورود
 - خطای ساخت CI در SupabaseAuthRepository.kt (toBooleanOrNull) با equivalentsCompatible اصلاح شد.
