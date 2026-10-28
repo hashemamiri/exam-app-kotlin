@@ -313,8 +313,10 @@ internal data class InstrumentState(
 }
 
 /**
- * یک عنصر روی تخته. برای IMAGE، `ref` منبع است: `tex:<فرمول>`، `fig:<json شکل>`، `img:<نشانی تصویر سؤال>`
- * و points = [بالا‑راست، پایین‑چپ] قاب تصویر.
+ * یک عنصر روی تخته. برای IMAGE، `ref` منبع است: `tex:<فرمول>`، `fig:<json شکل>`، `img:<نشانی تصویر سؤال>`،
+ * `pic:<نشانی عکس گالری>` (V335.60) و points = [بالا‑راست، پایین‑چپ] قاب تصویر.
+ * V335.60 — عکس‌های گالری با پیشوند `pic:` جدا می‌شوند تا در حالت معلم، هر عکس (طبق تعرفهٔ موجود) یک تصویر
+ * مستقل سؤال شود و هزینه‌اش هنگام ذخیرهٔ آزمون کسر شود.
  */
 internal data class BoardStroke(
     val id: Long,
@@ -458,6 +460,8 @@ private val BOARD_PALETTE = listOf(
     Color(0xFFF57C00), Color(0xFF7B1FA2), Color(0xFF00838F), Color(0xFF6D4C41), Color(0xFFFFFFFF)
 )
 private val BOARD_WIDTHS = listOf(1.5f to "مویی", 3f to "نازک", 5f to "معمولی", 8f to "متوسط", 12f to "ضخیم", 18f to "خیلی‌ضخیم")
+private const val PICKED_PHOTO_MAX_DIM = 1600
+
 private const val MAX_PAGES = 6
 
 /** V335.18 — سقف تاریخچهٔ برگشت/جلو (۴۰ مرحله، هم‌راستا با سایت). */
@@ -486,7 +490,9 @@ fun StudentWhiteboardDialog(
     remainingSeconds: Long = UNLIMITED_TIME,
     questionImages: List<String> = emptyList(),
     /** V137.5 — حالت معلم (سازندهٔ آزمون): دکمهٔ پایانی «افزودن تصویر تخته به سؤال» است، نه «ثبت به‌عنوان پاسخ». */
-    teacherMode: Boolean = false
+    teacherMode: Boolean = false,
+    /** V335.60 — جای خالی تصاویر سؤال تا سقف ۱۰؛ عکس‌های گالری بیش از این تعداد افزوده نمی‌شوند. */
+    imageSlotsLeft: Int = 10
 ) {
     val context = LocalContext.current
     val density = androidx.compose.ui.platform.LocalDensity.current.density
@@ -630,8 +636,8 @@ fun StudentWhiteboardDialog(
                 when {
                     ref.startsWith("tex:") -> texBitmap(ref.removePrefix("tex:"), density)
                     ref.startsWith("fig:") -> FigureSpec.parse(ref.removePrefix("fig:"))?.let { figureBitmap(context, it) }
-                    ref.startsWith("img:") -> {
-                        val res = imageLoader.execute(ImageRequest.Builder(context).data(ref.removePrefix("img:")).allowHardware(false).build())
+                    ref.startsWith("img:") || ref.startsWith("pic:") -> {
+                        val res = imageLoader.execute(ImageRequest.Builder(context).data(ref.substringAfter(':')).allowHardware(false).build())
                         (res as? SuccessResult)?.drawable?.toBitmap()
                     }
                     else -> null
@@ -663,7 +669,7 @@ fun StudentWhiteboardDialog(
     val imagePicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri: android.net.Uri? ->
         if (uri != null) {
             runCatching { context.contentResolver.takePersistableUriPermission(uri, android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION) }
-            insertImage("img:$uri")
+            insertImage("pic:$uri")
         }
     }
 
@@ -1267,6 +1273,8 @@ fun StudentWhiteboardDialog(
     }
     if (confirmDone) {
         val filled = (0 until pageCount).count { p -> strokes.any { it.page == p } }
+        // V335.60 — هر عکس گالریِ درج‌شده، در حالت معلم یک تصویر مستقل سؤال می‌شود (تعرفهٔ موجود: هر تصویر ۱٬۰۰۰ تومان).
+        val pickedRefs = if (!teacherMode) emptyList() else strokes.map { it.ref }.filter { it.startsWith("pic:") }.distinct()
         AlertDialog(
             onDismissRequest = { confirmDone = false },
             title = { Text(if (teacherMode) "افزودن تصویر تخته به سؤال؟" else "ثبت پاسخ تخته؟") },
@@ -1279,15 +1287,24 @@ fun StudentWhiteboardDialog(
                         else -> "تصویر تخته به‌عنوان پاسخ این سؤال ثبت می‌شود. پیش‌نویس تخته برای ویرایش دوباره می‌ماند."
                     }
                 )
+                if (pickedRefs.isNotEmpty()) {
+                    Text(
+                        "همچنین ${pickedRefs.size} عکس گالری به‌صورت تصویر جداگانه به سؤال افزوده می‌شود؛ " +
+                            "هزینهٔ تصویرها (هر تصویر ۱٬۰۰۰ تومان) طبق تعرفهٔ موجود هنگام ذخیرهٔ آزمون از کیف پول کسر می‌شود.",
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
             },
             confirmButton = {
                 Button(onClick = {
                     confirmDone = false
                     val uris = runCatching {
-                        (0 until pageCount).filter { p -> strokes.any { it.page == p } }.mapNotNull { p ->
+                        val pages = (0 until pageCount).filter { p -> strokes.any { it.page == p } }.mapNotNull { p ->
                             val uri = exportBoard(context.filesDir, questionId, p, boardSize, strokes.filter { it.page == p }, background, density, bitmaps)
                             uri.ifBlank { null }
                         }
+                        // V335.60 — عکس‌های گالری هم به‌عنوان تصویر سؤال افزوده می‌شوند (سقف ۱۰ تصویر در addImages).
+                        pages + exportPickedPhotos(context, questionId, pickedRefs, maxSlots = (imageSlotsLeft - pages.size).coerceAtLeast(0))
                     }.getOrDefault(emptyList())
                     if (uris.isNotEmpty()) onDone(uris)
                 }) { Text(if (teacherMode) "افزودن" else "ثبت") }
@@ -1957,6 +1974,34 @@ private fun exportBoardPng(
     flat.recycle()
     out.toByteArray()
 }.getOrNull()
+
+/**
+ * V335.60 — هر عکس گالریِ درج‌شده در تخته را به یک فایل JPEG کوچک‌شده (حداکثر ۱۶۰۰ پیکسل) تبدیل می‌کند تا
+ * به‌عنوان تصویر مستقل سؤال ذخیره شود؛ همان چیزی که تعرفهٔ تصویر (۱٬۰۰۰ تومان) هنگام ذخیرهٔ آزمون کسر می‌کند.
+ */
+private fun exportPickedPhotos(context: android.content.Context, questionId: String, refs: List<String>, maxSlots: Int): List<String> {
+    if (refs.isEmpty() || maxSlots <= 0) return emptyList()
+    val dir = File(File(context.filesDir, "whiteboard").apply { mkdirs() }, "")
+    return refs.take(maxSlots).mapNotNull { ref ->
+        runCatching {
+            val uri = android.net.Uri.parse(ref.substringAfter(':'))
+            val raw = context.contentResolver.openInputStream(uri)?.use { it.readBytes() } ?: return@runCatching null
+            val bounds = android.graphics.BitmapFactory.Options().apply { inJustDecodeBounds = true }
+            android.graphics.BitmapFactory.decodeByteArray(raw, 0, raw.size, bounds)
+            var sample = 1
+            while (bounds.outWidth / sample > PICKED_PHOTO_MAX_DIM || bounds.outHeight / sample > PICKED_PHOTO_MAX_DIM) sample *= 2
+            val opts = android.graphics.BitmapFactory.Options().apply { inSampleSize = sample }
+            val bmp = android.graphics.BitmapFactory.decodeByteArray(raw, 0, raw.size, opts) ?: return@runCatching null
+            val scale = minOf(1f, PICKED_PHOTO_MAX_DIM.toFloat() / maxOf(bmp.width, bmp.height))
+            val scaled = if (scale < 1f) Bitmap.createScaledBitmap(bmp, (bmp.width * scale).toInt().coerceAtLeast(1), (bmp.height * scale).toInt().coerceAtLeast(1), true) else bmp
+            val out = File(dir, "wb-src-${questionId.take(8)}-${System.currentTimeMillis()}-${ref.hashCode()}.jpg")
+            FileOutputStream(out).use { scaled.compress(Bitmap.CompressFormat.JPEG, 85, it) }
+            if (scaled !== bmp) bmp.recycle()
+            scaled.recycle()
+            out.toURI().toString()
+        }.getOrNull()
+    }
+}
 
 /**
  * رندر یک صفحه روی Bitmap کدرِ سفید و ذخیره به PNG در filesDir/whiteboard؛ خروجی `file:`.

@@ -1010,10 +1010,15 @@
         /* V206 — تختهٔ سفید معلم (مثل اپ: Icons.Outlined.Draw در QuestionMediaEditor → StudentWhiteboardDialog با teacherMode)؛ صفحه‌ها به تصاویر سؤال اضافه می‌شوند */
         el('button', {class: 'tool-btn is-board', title: 'تختهٔ سفید: کشیدن شکل برای سؤال', 'aria-label': 'تختهٔ سفید', html: toolSvg('board'), onclick: function () {
           if (!window.SiteStudent || !window.SiteStudent.openWhiteboard) return toast('تخته در دسترس نیست.', 'err');
-          window.SiteStudent.openWhiteboard(q, function (pages) {
+          window.SiteStudent.openWhiteboard(q, function (pages, photos) {
             pages.forEach(function (u) { q.images.push({uri: u, xMm: 20, yMm: 30, widthMm: 55}); });
-            mark(); drawEditor(); toast(fa(pages.length) + ' تصویر تخته به سؤال افزوده شد.', 'ok');
-          }, {title: 'تختهٔ سفید — سؤال ' + fa(i + 1), doneLabel: 'افزودن تصویر تخته به سؤال', prev: []});
+            /* V335.60 — عکس‌های داخل تخته، طبق تعرفهٔ موجود هر کدام یک تصویر سؤال (۱٬۰۰۰ تومان هنگام ذخیره). */
+            var extra = (photos || []).filter(function (u) { return !!u && q.images.length < 10; });
+            extra = extra.slice(0, Math.max(0, 10 - q.images.length));
+            extra.forEach(function (u) { q.images.push({uri: u, xMm: 20, yMm: 30, widthMm: 55}); });
+            mark(); drawEditor();
+            toast(fa(pages.length) + ' تصویر تخته' + (extra.length ? ' و ' + fa(extra.length) + ' عکس گالری' : '') + ' به سؤال افزوده شد.', 'ok');
+          }, {title: 'تختهٔ سفید — سؤال ' + fa(i + 1), doneLabel: 'افزودن تصویر تخته به سؤال', prev: [], billSources: true});
         }}),
         el('button', {class: 'tool-btn is-mic', title: 'گفتار به متن', 'aria-label': 'گفتار به متن', html: toolSvg('mic'), onclick: function () { dictate(ta, q); }}),
         /* V334.3 — مثل اپ اندروید (V135): صوت سؤال فقط در آزمون آنلاین نمایش داده می‌شود (کاغذ صدا ندارد) */

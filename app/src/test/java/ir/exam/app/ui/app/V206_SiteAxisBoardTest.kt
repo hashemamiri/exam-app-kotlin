@@ -26,7 +26,7 @@ class V206_SiteAxisBoardTest {
         val b = source("site/src/builder.js")
         assertTrue("class: 'tool-btn is-axis', title: 'محور'" in b && "insertFigure('axis', ta, q)" in b)
         assertTrue("axis: w.GraphFig" in b && "api.open(null, null, kind === 'math' ? 'math' : kind === 'axis' ? 'axis' : sciDom);" in b)
-        assertTrue("class: 'tool-btn is-board'" in b && "window.SiteStudent.openWhiteboard(q, function (pages) {" in b)
+        assertTrue("class: 'tool-btn is-board'" in b && "window.SiteStudent.openWhiteboard(q, function (pages, photos) {" in b && "billSources: true" in b)
         val s = source("site/src/student.js")
         assertTrue("function openWhiteboard(q, onDone, opts)" in s && "openWhiteboard: openWhiteboard," in s)
         assertTrue("var prev = opts ? (opts.prev || []) :" in s)

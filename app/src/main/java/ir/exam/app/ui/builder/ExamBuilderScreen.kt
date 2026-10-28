@@ -2200,7 +2200,9 @@ private fun QuestionEditor(
             questionNumber = index + 1,
             questionImages = question.images.map { it.uri },
             // V137.5 — دکمهٔ پایانی در پنل معلم: «افزودن تصویر تخته به سؤال»
-            teacherMode = true
+            teacherMode = true,
+            // V335.60 — عکس‌های گالریِ تخته تا سقف ۱۰ تصویرِ سؤال افزوده می‌شوند (هزینهٔ تصویر هنگام ذخیره کسر می‌شود).
+            imageSlotsLeft = (10 - question.images.size).coerceAtLeast(0)
         )
     }
     if (audioEditorOpen) {

@@ -1430,6 +1430,8 @@
     var undoStack = [], redoStack = [], drawing = false, last = null, startPt = null, endPt = null;
     var autoShape = false, penPts = [], rulerSnapEdge = null;
     var selDrag = null;
+    /* V335.60 — عکس‌های گالری/چسبانده‌شده روی تخته؛ در حالت معلم هر کدام یک تصویر مستقل سؤال می‌شود (۱٬۰۰۰ تومان). */
+    var capturedPhotos = [];
 
     var canvas = el('canvas', {width: W, height: H, class: 'wb-canvas'});
     var ctx = canvas.getContext('2d');
@@ -2592,6 +2594,7 @@
     })();
 
     function insertImageUrl(url) {
+      if (typeof url === 'string' && /^data:image\//i.test(url) && capturedPhotos.indexOf(url) < 0) capturedPhotos.push(url);
       var im = new Image();
       imgCache[url] = im;
       im.onload = function () {
@@ -2819,7 +2822,7 @@
     var imgBtn = el('button', {
       type: 'button',
       class: 'wb-tool wb-act wb-dk-only',
-      title: 'درج تصویر روی تخته (یا چسباندن با Ctrl+V)',
+      title: (opts && opts.billSources) ? 'درج تصویر روی تخته (یا چسباندن با Ctrl+V) — هر عکس ۱٬۰۰۰ تومان هنگام ذخیرهٔ آزمون' : 'درج تصویر روی تخته (یا چسباندن با Ctrl+V)',
       'aria-label': 'درج تصویر',
       onclick: async function () {
         var f = await pickFile();
@@ -3104,8 +3107,10 @@
       onclick: function () {
         savePage();
         var out = pages.filter(function (p) { return p.data; }).map(function (p) { return p.data; });
+        /* V335.60 — در حالت معلم، عکس‌های گالری هم جداگانه برگردانده می‌شوند تا به تصاویر سؤال افزوده شوند. */
+        var photos = (opts && opts.billSources) ? capturedPhotos.slice() : [];
         close();
-        if (out.length) onDone(out);
+        if (out.length || photos.length) onDone(out, photos);
       }
     });
     var closeBtn = el('button', {
