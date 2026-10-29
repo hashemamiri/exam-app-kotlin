@@ -1526,8 +1526,31 @@
   /* V335.51 — فوتر ثابت پایین صفحهٔ ورود: تعرفه، پرسش‌های متداول، حریم خصوصی، شرایط استفاده، وضعیت سرویس، تماس */
   /* V335.65 — فوتر صفحهٔ اول حذف شد: شش پیوند + نماد اینماد در یک نوار مستقل (بدون عنصر <footer>)
      پایین صفحهٔ ورود دسکتاپ می‌نشینند. برچسب هر دکمه فقط عنوان خودش است و فهرست مشترک گوشی دست‌نخورده می‌ماند. */
+  /* V335.68 — کفِ نوار پیوندها دقیقاً هم‌راستای کف کارت ورود می‌شود (اندازه‌گیری واقعی، نه عدد ثابت)
+     و با تغییر اندازهٔ پنجره دوباره تنظیم می‌شود. */
+  function alignLandingLinks(page) {
+    var cardEl = page.querySelector('.lp-r .card');
+    var barEl = page.querySelector('.lp-links');
+    if (!cardEl || !barEl) return;
+    var run = function () {
+      if (!barEl.isConnected || !cardEl.isConnected) return;
+      barEl.style.transform = 'none';
+      var delta = Math.round(barEl.getBoundingClientRect().bottom - cardEl.getBoundingClientRect().bottom);
+      if (delta > 0) barEl.style.transform = 'translateY(-' + delta + 'px)';
+    };
+    if (window.requestAnimationFrame) requestAnimationFrame(run); else run();
+    if (!window.__lpLinksAlign) {
+      window.__lpLinksAlign = function () {
+        var p = document.querySelector('.lp.lp-sky');
+        if (p) alignLandingLinks(p);
+      };
+      window.addEventListener('resize', window.__lpLinksAlign);
+      window.addEventListener('orientationchange', window.__lpLinksAlign);
+    }
+  }
   function landingLinks() {
-    var links = (window.LP_FOOT_LINKS || []).map(function (l) {
+    /* V335.68 — دکمهٔ «محصولات و تعرفه‌ها» از این نوار حذف شد؛ همان کار را دکمهٔ بالای ۸ بلوک انجام می‌دهد. */
+    var links = (window.LP_FOOT_LINKS || []).filter(function (l) { return l[1] !== '#products'; }).map(function (l) {
       var label = l[1] === '#faq' ? 'پرسش‌های متداول' : l[0];
       if (l[1] === '#products') return el('button', {type: 'button', class: 'lp-links-btn', text: l[0], onclick: function () { openProductsModal(null); }});
       if (l[1] === '#faq') return el('button', {type: 'button', class: 'lp-links-btn', text: label, onclick: openFaqModal});
@@ -1582,6 +1605,7 @@
     var footBadge = page.querySelector('.lp-badges .enamad');
     if (footHost && footBadge) footHost.appendChild(footBadge);
     root.appendChild(page);
+    alignLandingLinks(page);
   }
   /* V311.2 / V311.6 — فهرست محصولات، بسته‌های شارژ کیف پول و تعرفهٔ خدمات در پنجرهٔ میانی صفحهٔ اصلی سایت (الزام شاپرک) */
   window.LP_PRODUCTS = [
