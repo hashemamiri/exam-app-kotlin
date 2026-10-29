@@ -430,8 +430,7 @@
     var nq = run.exam.questions[run.index]; if (nq) run.qVisits[nq.id] = (run.qVisits[nq.id] || 0) + 1;
   }
   function saveDraft() { if (run && !run.practice) draftSet(run.exam.id, {answers: run.answers, images: run.images, sectionDeadlines: run.sectionDeadlines, expiredSections: run.expiredSections}); }
-  function stopAll() {
-    guardsOff(); clearInterval(run.timer); clearInterval(run.monitorTimer); document.removeEventListener('visibilitychange', onVis); window.removeEventListener('blur', onBlur);
+  function stopAll() { guardsOff(); clearInterval(run.timer); clearInterval(run.monitorTimer); document.removeEventListener('visibilitychange', onVis); window.removeEventListener('blur', onBlur);
     /* V335.78 — بازگرداندن پوستهٔ عادی سایت: کلاس حالت آزمون برداشته و زنگوله برمی‌گردد */
     document.body.classList.remove('st-in-exam-mode');
     var bellBack = document.getElementById('nc-bell'); if (bellBack) bellBack.style.display = '';
