@@ -1526,27 +1526,73 @@
   /* V335.51 — فوتر ثابت پایین صفحهٔ ورود: تعرفه، پرسش‌های متداول، حریم خصوصی، شرایط استفاده، وضعیت سرویس، تماس */
   /* V335.65 — فوتر صفحهٔ اول حذف شد: شش پیوند + نماد اینماد در یک نوار مستقل (بدون عنصر <footer>)
      پایین صفحهٔ ورود دسکتاپ می‌نشینند. برچسب هر دکمه فقط عنوان خودش است و فهرست مشترک گوشی دست‌نخورده می‌ماند. */
-  /* V335.68 — کفِ نوار پیوندها دقیقاً هم‌راستای کف کارت ورود می‌شود (اندازه‌گیری واقعی، نه عدد ثابت)
-     و با تغییر اندازهٔ پنجره دوباره تنظیم می‌شود. */
+  /* V335.68 — کفِ نوار پیوندها هم‌راستای کف کارت ورود می‌شود (اندازه‌گیری واقعی).
+     V335.69 — اما نه به قیمت افتادن روی ۸ بلوک: بالا رفتن نوار به «کفِ محتوای واقعیِ هم‌ستون» محدود می‌شود؛
+     بنابراین در حالت «فراموشی رمز» و «ورود با کد ایمیل» که کارت کوتاه‌تر است، نوار هرگز روی بلوک‌ها نمی‌افتد.
+     چون ارتفاع کارت با تغییر حالت ورود/ثبت‌نام/فراموشی رمز عوض می‌شود، با ResizeObserver و MutationObserver
+     دوباره محاسبه می‌شود؛ همچنین نماد اینماد در زمان اجرا کنار دکمه‌ها (با ۱۴px فاصله) و داخل کادر دید جا می‌گیرد. */
+  function placeLandingEnamad(barEl) {
+    /* جای افقی را فلکس تعیین می‌کند (آیتم با ارتفاع صفر)؛ این‌جا فقط نماد را داخل کادر دید نگه می‌داریم */
+    var en = barEl.querySelector('.lp-links-enamad');
+    var inner = en ? en.querySelector('.enamad') : null;
+    if (!en || !inner) return;
+    var box = en.getBoundingClientRect();
+    var h = inner.getBoundingClientRect().height;
+    if (!h || !box.width) return;
+    var vh = window.innerHeight, half = h / 2;
+    var center = box.top;
+    if (center + half > vh - 8) center = vh - 8 - half;
+    if (center - half < 8) center = 8 + half;
+    var shift = Math.round(center - box.top);
+    inner.style.transform = shift ? 'translateY(calc(-50% + ' + shift + 'px))' : 'translateY(-50%)';
+  }
   function alignLandingLinks(page) {
+    if (!page) page = document.querySelector('.lp.lp-sky');
+    if (!page) return;
     var cardEl = page.querySelector('.lp-r .card');
     var barEl = page.querySelector('.lp-links');
     if (!cardEl || !barEl) return;
-    var run = function () {
-      if (!barEl.isConnected || !cardEl.isConnected) return;
-      barEl.style.transform = 'none';
-      var delta = Math.round(barEl.getBoundingClientRect().bottom - cardEl.getBoundingClientRect().bottom);
-      if (delta > 0) barEl.style.transform = 'translateY(-' + delta + 'px)';
-    };
-    if (window.requestAnimationFrame) requestAnimationFrame(run); else run();
-    if (!window.__lpLinksAlign) {
-      window.__lpLinksAlign = function () {
-        var p = document.querySelector('.lp.lp-sky');
-        if (p) alignLandingLinks(p);
-      };
-      window.addEventListener('resize', window.__lpLinksAlign);
-      window.addEventListener('orientationchange', window.__lpLinksAlign);
+    if (!barEl.isConnected || !cardEl.isConnected) return;
+    barEl.style.transform = 'none';
+    var bar = barEl.getBoundingClientRect();
+    var card = cardEl.getBoundingClientRect();
+    var rowEl = page.querySelector('.lp-links-row');
+    var rowBox = rowEl ? rowEl.getBoundingClientRect() : bar;
+    /* فقط محتوای واقعیِ بالای «ردیف دکمه‌ها» سقف می‌گذارد (نه جعبهٔ کشیدهٔ ستون؛ کارت ورود هم ملاکِ هم‌راستایی است نه مانع) */
+    var cols = page.querySelectorAll('.lp-tiles-col, .lp-intro');
+    var colBottom = 0;
+    for (var i = 0; i < cols.length; i++) {
+      var b = cols[i].getBoundingClientRect();
+      if (b.bottom > bar.top || b.right <= rowBox.left || b.left >= rowBox.right) continue;
+      if (b.bottom > colBottom) colBottom = b.bottom;
     }
+    var delta = Math.round(bar.bottom - card.bottom);
+    var maxUp = Math.round(bar.top - (colBottom + 10));
+    if (maxUp < 0) maxUp = 0;
+    if (delta > maxUp) delta = maxUp;
+    if (delta > 0) barEl.style.transform = 'translateY(-' + delta + 'px)';
+    placeLandingEnamad(barEl);
+  }
+  function watchLandingLinks(page) {
+    if (!page || page.__lpWatch) return;
+    page.__lpWatch = true;
+    var kick = function () {
+      if (window.__lpRaf) return;
+      window.__lpRaf = requestAnimationFrame(function () { window.__lpRaf = 0; alignLandingLinks(page); });
+    };
+    if (window.ResizeObserver) {
+      var ro = new ResizeObserver(kick);
+      ['.lp-tiles-col', '.lp-intro', '.lp-r .card'].forEach(function (sel) {
+        var n = page.querySelector(sel);
+        if (n) ro.observe(n);
+      });
+    }
+    if (window.MutationObserver) {
+      var hostEl = page.querySelector('.lp-r');
+      if (hostEl) new MutationObserver(kick).observe(hostEl, {childList: true, subtree: true});
+    }
+    window.addEventListener('resize', kick);
+    window.addEventListener('orientationchange', kick);
   }
   function landingLinks() {
     /* V335.68 — دکمهٔ «محصولات و تعرفه‌ها» از این نوار حذف شد؛ همان کار را دکمهٔ بالای ۸ بلوک انجام می‌دهد. */
@@ -1606,6 +1652,7 @@
     if (footHost && footBadge) footHost.appendChild(footBadge);
     root.appendChild(page);
     alignLandingLinks(page);
+    watchLandingLinks(page);
   }
   /* V311.2 / V311.6 — فهرست محصولات، بسته‌های شارژ کیف پول و تعرفهٔ خدمات در پنجرهٔ میانی صفحهٔ اصلی سایت (الزام شاپرک) */
   window.LP_PRODUCTS = [

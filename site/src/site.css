@@ -2403,19 +2403,27 @@ button[aria-busy="true"] .google-auth-dots, .ice-google[aria-busy="true"] .googl
 }
 
 /* ================================================================================
-   V335.68 — نوار پیوندها هم‌راستا با کف کارت ورود + اینماد استاندارد با فاصله از گوشه
+   V335.68 / V335.69 — نوار پیوندها هم‌راستا با کف کارت ورود + اینماد دوبرابر چسبیده به دکمه‌ها
    دامنه: فقط دسکتاپ (≥۸۶۱px) و پوستهٔ `.lp.lp-sky`؛ گوشی و `ice-*` دست‌نخورده.
+   چیدمان افقی نماد را خودِ فلکس انجام می‌دهد (آیتم با ارتفاع صفر)، پس نه روی دکمه‌ها می‌افتد
+   و نه روی کادر ورود؛ JS فقط جای عمودی را داخل کادر دید نگه می‌دارد.
    ================================================================================ */
 @media (min-width:861px){
-  /* فضای سمت راست نوار برای نماد اینماد تا دکمه‌ها رویش نیفتند */
-  .lp.lp-sky .lp-links{position:relative;gap:8px 10px;padding:2px 62px 2px 12px;justify-content:center;will-change:transform}
-  .lp.lp-sky .lp-links-row{justify-content:center}
-  /* اینماد: اندازهٔ استاندارد و کمی فاصله از گوشهٔ راست */
-  .lp.lp-sky .lp-links-enamad{position:absolute;right:14px;top:50%;transform:translateY(-50%);margin:0;flex:none}
-  .lp.lp-sky .lp-links-enamad .enamad{padding:0;background:transparent;box-shadow:none;border:0}
-  .lp.lp-sky .lp-links-enamad .enamad img{height:60px;width:60px;object-fit:contain}
-  .lp.lp-sky .lp-links-enamad .enamad.enamad-txt{height:60px;padding:0 8px;font-size:10px;display:flex;align-items:center}
+  .lp.lp-sky .lp-links{grid-column:1;position:relative;z-index:2;gap:8px 10px;padding:2px 12px;justify-content:center;align-items:center;flex-wrap:nowrap}
+  .lp.lp-sky .lp-links-row{justify-content:center;flex-wrap:wrap}
+  /* آیتم با ارتفاع صفر: ارتفاع نوار را بزرگ نمی‌کند، ولی عرض و جای افقی‌اش واقعی است */
+  .lp.lp-sky .lp-links-enamad{position:relative;display:block;flex:none;width:120px;height:0;margin:0 4px 0 0}
+  .lp.lp-sky .lp-links-enamad .enamad{position:absolute;left:0;top:50%;transform:translateY(-50%);width:120px;height:120px;display:flex;align-items:center;justify-content:center;padding:0;background:transparent;box-shadow:none;border:0;border-radius:0}
+  .lp.lp-sky .lp-links-enamad .enamad img{width:120px;height:120px;object-fit:contain}
+  .lp.lp-sky .lp-links-enamad .enamad.enamad-txt{font-size:12px;line-height:1.5;text-align:center}
 }
-@media (min-width:861px) and (max-height:800px){
-  .lp.lp-sky .lp-links-enamad .enamad img{height:54px;width:54px}
+@media (min-width:861px) and (max-height:740px){
+  .lp.lp-sky .lp-links-enamad{width:108px}
+  .lp.lp-sky .lp-links-enamad .enamad{width:108px;height:108px}
+  .lp.lp-sky .lp-links-enamad .enamad img{width:108px;height:108px}
+}
+@media (min-width:861px) and (max-width:1200px){
+  .lp.lp-sky .lp-links-enamad{width:96px}
+  .lp.lp-sky .lp-links-enamad .enamad{width:96px;height:96px}
+  .lp.lp-sky .lp-links-enamad .enamad img{width:96px;height:96px}
 }
