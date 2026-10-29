@@ -2427,3 +2427,33 @@ button[aria-busy="true"] .google-auth-dots, .ice-google[aria-busy="true"] .googl
   .lp.lp-sky .lp-links-enamad .enamad{width:96px;height:96px}
   .lp.lp-sky .lp-links-enamad .enamad img{width:96px;height:96px}
 }
+
+/* ============================================================
+   V335.78 — نوار پاسخ‌گویی سایت گوشی، هم‌سان با اپ (StudentExamScreen)
+   یک نوار باریک چسبان: خروج | زمان‌سنج | ارسال + یک ردیف اسکرول‌شوندهٔ
+   شمارهٔ سؤال‌ها با دکمه‌های قبلی/بعدی. کارت بزرگ سربرگ دیگر استفاده نمی‌شود.
+   ============================================================ */
+body.st-in-exam-mode .nc-bell{display:none!important}
+.st-bar{display:flex;align-items:center;gap:8px;position:sticky;top:64px;z-index:20;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:8px 10px;margin-bottom:8px;box-shadow:0 6px 18px rgba(20,40,60,.08)}
+.st-bar .st-bar-meta{display:flex;flex-direction:column;min-width:0;gap:2px;max-width:46%}
+.st-bar .st-bar-meta b{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.st-bar .st-bar-meta .muted{font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.st-bar .st-bar-exit{padding:6px 10px}
+.st-bar .st-bar-send{white-space:nowrap}
+.st-navbar{display:flex;align-items:center;gap:6px;margin:0 0 10px}
+.st-nav{display:flex;flex-wrap:nowrap;gap:6px;overflow-x:auto;scroll-behavior:smooth;scrollbar-width:none;-webkit-overflow-scrolling:touch;flex:1;margin:0;padding:2px 0}
+.st-nav::-webkit-scrollbar{display:none}
+.st-navarrow{flex:0 0 auto;width:36px;height:36px;border-radius:50%;border:1px solid var(--line);background:var(--card);color:inherit;font-size:16px;line-height:1;display:grid;place-items:center;cursor:pointer}
+.st-navarrow:active{transform:scale(.94)}
+.st-exam.primary .st-bar .btn.sm{display:none}
+@media (max-width:860px){
+  .st-bar{top:0;border-radius:0 0 14px 14px;margin:-2px 0 8px;padding:calc(6px + env(safe-area-inset-top)) 8px 6px}
+  .st-bar .st-bar-meta{display:none}
+  .st-bar .st-timer{font-size:16px;padding:5px 10px}
+  .st-navbar{position:sticky;top:calc(50px + env(safe-area-inset-top));z-index:19;background:var(--bg,#f4f7fb);padding:4px 0;margin:0 0 8px}
+  .st-nav{gap:5px}
+  .st-dot{width:36px;height:36px;flex:0 0 auto}
+  .st-exam .st-body{padding:12px}
+  .st-exam{--st-bar-h:50px}
+}
+@media (min-width:861px){ .st-navarrow{display:none} }

@@ -430,30 +430,49 @@
     var nq = run.exam.questions[run.index]; if (nq) run.qVisits[nq.id] = (run.qVisits[nq.id] || 0) + 1;
   }
   function saveDraft() { if (run && !run.practice) draftSet(run.exam.id, {answers: run.answers, images: run.images, sectionDeadlines: run.sectionDeadlines, expiredSections: run.expiredSections}); }
-  function stopAll() { guardsOff(); clearInterval(run.timer); clearInterval(run.monitorTimer); document.removeEventListener('visibilitychange', onVis); window.removeEventListener('blur', onBlur); }
+  function stopAll() {
+    guardsOff(); clearInterval(run.timer); clearInterval(run.monitorTimer); document.removeEventListener('visibilitychange', onVis); window.removeEventListener('blur', onBlur);
+    /* V335.78 — بازگرداندن پوستهٔ عادی سایت: کلاس حالت آزمون برداشته و زنگوله برمی‌گردد */
+    document.body.classList.remove('st-in-exam-mode');
+    var bellBack = document.getElementById('nc-bell'); if (bellBack) bellBack.style.display = '';
+    try { if (window.SitePush && window.SitePush.notifications) window.SitePush.notifications.refresh(); } catch (e) {}
+  }
 
   function examUI(c) {
     var ex = run.exam;
     var wrap = el('div', {class: 'st-exam' + (ex.primary ? ' primary' : '')}); /* V301 — کلاس primary: متن درشت و گزینه‌های بزرگ */
     wrap.appendChild(netBanner()); /* V231 — نوار قطع اینترنت */
     var timerEl = el('span', {class: 'st-timer'});
-    var head = el('div', {class: 'card st-head'}, [
-      el('div', {}, [el('b', {text: ex.title}), el('div', {class: 'muted', style: 'font-size:12px', text: [ex.subject, 'کد ' + ex.code, run.practice ? 'حالت آزمایشی معلم' : (ex.attemptNumber ? 'تلاش ' + fa(ex.attemptNumber) + ' از ' + fa(ex.attemptsAllowed) : '')].filter(Boolean).join(' · ')})]),
-      el('span', {class: 'grow'}), timerEl,
-      run.practice ? el('button', {class: 'btn light sm', text: '✕ خروج', onclick: async function () { if (await S.confirmDlg('خروج از آزمون آزمایشی', 'از آزمون آزمایشی خارج می‌شوید؟', 'خروج', true)) { run.finished = true; stopAll(); run = null; if (window.SiteMobile && window.SiteMobile.active()) window.SiteMobile.paint(); else page(c); } }}) : null,
-      el('button', {class: 'btn sm', text: '✅ ارسال پاسخ‌ها', onclick: function () { review(c); }})
+    var timerEl = el('span', {class: 'st-timer'});
+    /* V335.78 — نوار جمع‌وجور پاسخ‌گویی، هم‌سان با اپ: خروج | زمان | ارسال (بدون کارت بزرگ سربرگ) */
+    document.body.classList.add('st-in-exam-mode');
+    var bellNow = document.getElementById('nc-bell'); if (bellNow) bellNow.style.display = 'none';
+    var metaText = [ex.subject, 'کد ' + ex.code, run.practice ? 'حالت آزمایشی معلم' : (ex.attemptNumber ? 'تلاش ' + fa(run.attemptNumber) + ' از ' + fa(run.attemptsAllowed) : '')].filter(Boolean).join(' · ');
+    var exitBtn = run.practice ? el('button', {class: 'btn light sm st-bar-exit', 'aria-label': 'خروج از آزمون آزمایشی', title: 'خروج از آزمون آزمایشی', text: '✕ خروج', onclick: async function () { if (await S.confirmDlg('خروج از آزمون آزمایشی', 'از آزمون آزمایشی خارج می‌شوید؟', 'خروج', true)) { run.finished = true; stopAll(); run = null; if (window.SiteMobile && window.SiteMobile.active()) window.SiteMobile.paint(); else page(c); } }}) : null;
+    var head = el('div', {class: 'st-bar'}, [
+      el('div', {class: 'st-bar-meta'}, [el('b', {text: ex.title}), el('span', {class: 'muted', text: metaText})]),
+      el('span', {class: 'grow'}),
+      exitBtn, timerEl,
+      el('button', {class: 'btn sm st-bar-send', title: 'مرور و ارسال پاسخ‌ها', text: '✅ ارسال', onclick: function () { review(c); }})
     ]);
     wrap.appendChild(head);
     if (ex.teacherMessage) wrap.appendChild(el('div', {class: 'alert info', text: '💬 ' + ex.teacherMessage}));
     var nav = el('div', {class: 'st-nav'});
+    /* V335.78 — مثل اپ: یک ردیف افقی اسکرول‌شونده با دکمه‌های قبلی/بعدی در دو سر */
+    var navPrev = el('button', {type: 'button', class: 'st-navarrow', 'aria-label': 'سؤال قبلی', text: '→', onclick: function () { if (run.index > 0) { goTo(run.index - 1); drawAll(); } }});
+    var navNext = el('button', {type: 'button', class: 'st-navarrow', 'aria-label': 'سؤال بعدی', text: '←', onclick: function () { if (run.index < ex.questions.length - 1) { goTo(run.index + 1); drawAll(); } }});
+    var navBar = el('div', {class: 'st-navbar'}, [navPrev, nav, navNext]);
     var body = el('div', {class: 'card st-body'});
     var foot = el('div', {class: 'row', style: 'margin-top:12px'});
-    if (ex.primary) nav.style.display = 'none'; /* V301 — ابتدایی: نوار شماره‌ها پنهان؛ فقط قبلی/بعدی بزرگ */
-    wrap.appendChild(nav); wrap.appendChild(body); wrap.appendChild(foot);
+    if (ex.primary) navBar.style.display = 'none'; /* V301 — ابتدایی: نوار شماره‌ها پنهان؛ فقط قبلی/بعدی بزرگ */
+    wrap.appendChild(navBar); wrap.appendChild(body); wrap.appendChild(foot);
     function answered(q) { var a = run.answers[q.id]; return (a != null && a !== '' && !(typeof a === 'object' && !Object.keys(a).length)) || (run.images[q.id] || []).length > 0; }
     function drawNav() {
       nav.innerHTML = '';
       ex.questions.forEach(function (q, i) { nav.appendChild(el('button', {class: 'st-dot' + (i === run.index ? ' on' : '') + (answered(q) ? ' done' : ''), text: fa(i + 1), onclick: function () { goTo(i); drawAll(); }})); });
+      /* V335.78 — شمارهٔ سؤال جاری همیشه در دید می‌ماند (like LazyRow اپ) */
+      var curDot = nav.children[run.index];
+      if (curDot) { try { curDot.scrollIntoView({block: 'nearest', inline: 'center'}); } catch (e) { try { nav.scrollLeft = curDot.offsetLeft - nav.clientWidth / 2; } catch (e2) {} } }
     }
     function drawFoot() {
       foot.innerHTML = '';
