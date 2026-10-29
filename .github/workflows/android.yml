@@ -433,40 +433,128 @@ jobs:
           echo "Supabase release activation status: $PUBLISH_STATUS"
           echo "Automatic app update publication: SUCCESS"
 
-          # Keep current APK plus four newest previous APKs. Non-APK objects are untouched.
-          LIST_STATUS="$(curl -sS \
-            --connect-timeout 20 --max-time 120 --retry 3 --retry-all-errors \
-            -o /tmp/app-update-list.json -w '%{http_code}' \
-            -X POST "$SUPABASE_URL/storage/v1/object/list/app-updates" \
-            "${RELEASE_AUTH_HEADERS[@]}" \
-            -H "Content-Type: application/json" \
-            --data '{"prefix":"","limit":1000,"offset":0,"sortBy":{"column":"created_at","order":"desc"}}')"
-          test "$LIST_STATUS" = "200"
-          export APK_FILE
+          # V335.73 — فقط «یک» نسخه روی Storage می‌ماند: همان نسخه‌ای که همین حالا منتشر شد.
+          # ترتیب ایمن: آپلود کامل (بالاتر) ← بررسی URL عمومی (بالاتر) ← فعال‌سازی در app_version (بالاتر)
+          # ← و تنها پس از این سه، حذف نسخه‌های قبلی.
+          # APK_RETENTION_GRACE_MINUTES: پنجرهٔ ارفاق تا دانلودهای در جریان، کامل شوند (پیش‌فرض ۱۰ دقیقه).
+          export SUPABASE_URL SUPABASE_RELEASE_KEY APK_FILE
+          export APK_RETENTION_GRACE_MINUTES="${APK_RETENTION_GRACE_MINUTES:-10}"
           python3 - <<'PY'
-          import json, os, re
-          from pathlib import Path
-          rows = json.loads(Path('/tmp/app-update-list.json').read_text())
-          if not isinstance(rows, list): raise SystemExit('storage list was not an array')
-          names = [str(x.get('name','')) for x in rows]
-          names = [x for x in names if re.fullmatch(r'[A-Za-z0-9._-]+[.]apk', x)]
-          keep = {os.environ['APK_FILE']}
-          for name in names:
-              if len(keep) >= 5: break
-              keep.add(name)
-          delete = [x for x in names if x not in keep]
-          Path('/tmp/app-update-delete.txt').write_text('\n'.join(delete))
-          print(f'APK retention candidates: {len(delete)}')
+          import datetime, json, os, time, urllib.request
+
+          base = os.environ["SUPABASE_URL"].rstrip("/")
+          key = os.environ["SUPABASE_RELEASE_KEY"]
+          active = os.environ["APK_FILE"].strip()
+          grace = max(0.0, float(os.environ.get("APK_RETENTION_GRACE_MINUTES", "10"))) * 60
+
+          headers = {"apikey": key, "Content-Type": "application/json"}
+          if not key.startswith("sb_secret_"):
+              headers["Authorization"] = "Bearer " + key
+
+          def api(method, path, body=None):
+              data = json.dumps(body).encode() if body is not None else None
+              req = urllib.request.Request(base + path, data=data, method=method, headers=headers)
+              with urllib.request.urlopen(req, timeout=180) as response:
+                  raw = response.read()
+                  return json.loads(raw) if raw else None
+
+          def listing(prefix):
+              rows, offset = [], 0
+              while True:
+                  page = api("POST", "/storage/v1/object/list/app-updates", {
+                      "prefix": prefix, "limit": 1000, "offset": offset,
+                      "sortBy": {"column": "created_at", "order": "desc"}}) or []
+                  if not isinstance(page, list):
+                      raise SystemExit("storage list was not an array")
+                  rows.extend(page)
+                  if len(page) < 1000:
+                      return rows
+                  offset += 1000
+
+          now = time.time()
+
+          def stamp(row):
+              """created_at را به epoch تبدیل می‌کند؛ قالب‌های رایج Storage و ISO هر دو پوشش داده می‌شوند."""
+              raw = str(row.get("created_at") or row.get("updated_at") or "").strip()
+              if not raw:
+                  return 0.0
+              try:
+                  return datetime.datetime.fromisoformat(raw.replace("Z", "+00:00")).timestamp()
+              except ValueError:
+                  pass
+              try:
+                  return datetime.datetime.strptime(
+                      raw[:19].replace(" ", "T"), "%Y-%m-%dT%H:%M:%S").timestamp()
+              except ValueError:
+                  return 0.0
+
+          def size_of(row):
+              meta = row.get("metadata") or {}
+              try:
+                  return int(meta.get("size") or 0)
+              except (TypeError, ValueError):
+                  return 0
+
+          def plan(rows, prefix, keeper):
+              """(مسیرهای حذف, بایت‌های آزادشده) — keeper: تابعی که می‌گوید یک نام باید بماند."""
+              paths, freed = [], 0
+              for row in rows:
+                  name = str(row.get("name") or "")
+                  if not name.lower().endswith(".apk"):
+                      continue
+                  path = f"{prefix}/{name}" if prefix else name
+                  if keeper(name, row):
+                      print(f"APK keep: {path}")
+                      continue
+                  if now - stamp(row) < grace:
+                      print(f"APK defer (still inside grace window): {path}")
+                      continue
+                  paths.append(path)
+                  freed += size_of(row)
+              return paths, freed
+
+          def delete(paths):
+              done = 0
+              for start in range(0, len(paths), 100):
+                  batch = paths[start:start + 100]
+                  api("DELETE", "/storage/v1/object/app-updates", {"prefixes": batch})
+                  done += len(batch)
+                  print(f"APK deleted: {done}/{len(paths)}")
+              return done
+
+          # ۱) سطح اول: تنها نسخهٔ فعال می‌ماند
+          #    پیش از هر حذفی، وجود نسخهٔ فعال در باکت تأیید می‌شود تا هرگز بدون «نسخهٔ سالم» نمانیم.
+          root_rows = listing("")
+          if active not in [str(r.get("name") or "") for r in root_rows]:
+              raise SystemExit(f"active APK is missing from storage; retention aborted ({active})")
+          top_paths, top_freed = plan(root_rows, "", lambda name, row: name == active)
+          print(f"APK retention candidates (root): {len(top_paths)}")
+          deleted = delete(top_paths)
+
+          # ۲) پوشهٔ beta: پیوند ثابت + تازه‌ترین نسخهٔ آزمایشی می‌مانند
+          beta_rows = [r for r in listing("beta") if str(r.get("name") or "").lower().endswith(".apk")]
+          beta_rows.sort(key=stamp, reverse=True)
+          beta_versioned = [r["name"] for r in beta_rows if str(r["name"]) != "exam-app-beta.apk"]
+          beta_keep = {"exam-app-beta.apk"} | set(beta_versioned[:1])
+          beta_paths, beta_freed = plan(
+              beta_rows, "beta", lambda name, row: name in beta_keep)
+          print(f"APK retention candidates (beta): {len(beta_paths)}")
+          deleted += delete(beta_paths)
+
+          freed = top_freed + beta_freed
+          print(f"APK retention deleted: {deleted}")
+          print(f"APK retention freed: {freed / 1048576:.1f} MB")
+          print(f"APK retention active file kept: {active}")
+
+          # ۳) بازبینی قطعی: نسخهٔ فعال باید بعد از حذف‌ها همچنان دانلودشدنی باشد
+          check = urllib.request.Request(
+              f"{base}/storage/v1/object/public/app-updates/{active}", method="HEAD")
+          with urllib.request.urlopen(check, timeout=60) as response:
+              print(f"APK active public check after retention: {response.status}")
+              if response.status != 200:
+                  raise SystemExit("active APK is not downloadable after retention")
           PY
-          RETENTION_DELETED=0
-          while IFS= read -r OLD_APK; do
-            test -n "$OLD_APK" || continue
-            DELETE_STATUS="$(curl -sS -o /tmp/app-update-delete-response.json -w '%{http_code}' \
-              -X DELETE "$SUPABASE_URL/storage/v1/object/app-updates/$OLD_APK" \
-              "${RELEASE_AUTH_HEADERS[@]}")"
-            case "$DELETE_STATUS" in 200|204) RETENTION_DELETED=$((RETENTION_DELETED + 1));; *) exit 1;; esac
-          done < /tmp/app-update-delete.txt
-          echo "APK retention deleted: $RETENTION_DELETED"
+          echo "APK retention policy: single active version"
       - name: پاک‌سازی قطعی فایل‌های امضا
         if: always()
         run: |
