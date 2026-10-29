@@ -170,20 +170,66 @@
      فهرست کارت‌ها (و رشته‌های پین‌شدهٔ تست‌های اپ) دست‌نخورده می‌ماند؛ هنگام ساخت شبکهٔ منو،
      کاشی‌ای که برچسبش «سایت» است با کاشی «دریافت برنامه» عوض می‌شود که آخرین APK را از
      جدول عمومی `app_version` می‌گیرد و مستقیم دانلود می‌کند (همان منبعی که «درباره» استفاده می‌کند). */
+  /* V335.72 — زنجیرهٔ جایگزین برای دانلود: دیتابیس → گیت‌هاب → صفحهٔ انتشار.
+     (CI فقط ۵ APK آخر را در باکت نگه می‌دارد؛ ردیف قدیمی `app_version` لینک مرده می‌دهد.) */
+  var APK_RELEASES_PAGE = 'https://github.com/hashemamiri/exam-app-kotlin/releases';
+  var APK_GH_API = 'https://api.github.com/repos/hashemamiri/exam-app-kotlin/releases/latest';
+  function apkUrlAlive(url) {
+    if (!url) return Promise.resolve(false);
+    return fetch(url, {method: 'HEAD', cache: 'no-store', mode: 'cors'})
+      .then(function (r) { return !!r && r.ok; })
+      .catch(function () { return false; });
+  }
+  function githubApk() {
+    return fetch(APK_GH_API, {headers: {Accept: 'application/vnd.github+json'}, cache: 'no-store'})
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (j) {
+        var list = (j && j.assets) || [];
+        for (var i = 0; i < list.length; i++) {
+          if (/\.apk$/i.test(String(list[i].name || ''))) return {name: String(j.tag_name || j.name || '').replace(/^v/, ''), url: list[i].browser_download_url};
+        }
+        return null;
+      })
+      .catch(function () { return null; });
+  }
+  function startApkDownload(v) {
+    ui.menuOpen = false;
+    var a = el('a', {href: v.url, download: 'exam-app-' + (v.name || 'latest') + '.apk'});
+    document.body.appendChild(a); a.click(); a.remove();
+    toast('دانلود برنامه آغاز شد' + (v.name ? ' (نسخهٔ ' + fa(v.name) + ')' : '') + '.', 'ok');
+    paint();
+  }
+  function openReleases(message) {
+    ui.menuOpen = false;
+    toast(message, 'info');
+    paint();
+    try { window.open(APK_RELEASES_PAGE, '_blank', 'noopener'); } catch (e) {}
+  }
   function downloadApk(btn) {
     if (btn && btn.disabled) return;
     if (btn) btn.disabled = true;
+    var done = function () { if (btn) btn.disabled = false; };
     api.latestApk().then(function (v) {
-      if (btn) btn.disabled = false;
-      if (!v) { toast('نسخهٔ اندروید در دسترس نیست.', 'info'); return; }
-      ui.menuOpen = false;
-      var a = el('a', {href: v.url, download: 'exam-app-' + v.name + '.apk'});
-      document.body.appendChild(a); a.click(); a.remove();
-      toast('دانلود برنامه آغاز شد (نسخهٔ ' + fa(v.name) + ').', 'ok');
-      paint();
+      if (!v || !v.url) {
+        done();
+        return githubApk().then(function (g) {
+          if (g && g.url) return startApkDownload(g);
+          openReleases('نسخهٔ اندروید در دسترس نیست؛ صفحهٔ انتشار باز شد.');
+        });
+      }
+      return apkUrlAlive(v.url).then(function (alive) {
+        if (alive) { done(); return startApkDownload(v); }
+        /* لینک دیتابیس مرده است: کش را پاک کن و سراغ گیت‌هاب برو */
+        try { localStorage.removeItem('examsite.apk.v1'); } catch (e) {}
+        return githubApk().then(function (g) {
+          done();
+          if (g && g.url) return startApkDownload(g);
+          openReleases('فایل نسخهٔ ' + (v.name || '') + ' روی سرور نیست؛ صفحهٔ انتشار باز شد.');
+        });
+      });
     }).catch(function () {
-      if (btn) btn.disabled = false;
-      toast('دریافت برنامه ممکن نشد؛ اتصال اینترنت را بررسی کنید.', 'info');
+      done();
+      openReleases('دریافت برنامه ممکن نشد؛ صفحهٔ انتشار باز شد.');
     });
   }
   function appDownloadTile() {
