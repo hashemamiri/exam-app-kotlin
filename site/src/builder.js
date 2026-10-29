@@ -399,7 +399,7 @@
   async function printExamGet(id) { var r = await S.rpcObj('native_print_exam_get_v163', {p_id: id}); if (!r || r.error) throw new Error(r && r.error ? String(r.error) : 'آزمون چاپی پیدا نشد.'); return r; }
   /* تصاویر data: باید قبل از ذخیرهٔ سرور آپلود شوند (مثل مسیر آنلاین) */
   async function uploadPrintImages(questions, printId) {
-    var dataBlob = async function (u) { return await (await fetch(u)).blob(); };
+    var dataBlob = function (u) { return S.dataUrlBlob ? S.dataUrlBlob(u) : (async function () { return await (await fetch(u)).blob(); })(); };
     for (var i = 0; i < questions.length; i++) {
       var q = questions[i];
       for (var k = 0; k < (q.images || []).length; k++) if (/^data:/.test(q.images[k].uri)) q.images[k].uri = await uploadImage(await dataBlob(q.images[k].uri), 'questions', printId);
@@ -1607,7 +1607,7 @@
         var examId = state.examId || uuid();
         /* V145 — هیچ رسانهٔ data: نباید در آزمون آنلاین ذخیره شود (برنامهٔ اندروید فقط آدرس https را باز می‌کند):
            تصاویر سؤال/گزینه/جورکردنی و صوت (اگر از حالت چاپی آمده) همه آپلود می‌شوند */
-        var dataBlob = async function (u) { return await (await fetch(u)).blob(); };
+        var dataBlob = function (u) { return S.dataUrlBlob ? S.dataUrlBlob(u) : (async function () { return await (await fetch(u)).blob(); })(); };
         for (var i = 0; i < state.questions.length; i++) {
           var q = state.questions[i];
           for (var k = 0; k < q.images.length; k++) if (/^data:/.test(q.images[k].uri)) q.images[k].uri = await uploadImage(await dataBlob(q.images[k].uri), 'questions', examId);

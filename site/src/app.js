@@ -2866,6 +2866,23 @@
     }
     return done;
   }
+  /* V335.75 — تبدیل data: به Blob بدون fetch؛ CSP سایت (connect-src) اجازهٔ fetch روی data: را نمی‌دهد
+     و ذخیرهٔ آزمونِ دارای تصویر با خطای شبکه شکست می‌خورد. بدون fetch، مستقل از CSP کار می‌کند. */
+  function dataUrlBlob(u) {
+    return new Promise(function (resolve, reject) {
+      try {
+        var s = String(u || ''), comma = s.indexOf(',');
+        if (!/^data:/i.test(s) || comma < 0) { reject(new Error('نشانی data معتبر نیست')); return; }
+        var meta = s.slice(5, comma), body = s.slice(comma + 1), mime = (meta.split(';')[0] || 'application/octet-stream');
+        if (/;base64/i.test(meta)) {
+          var bin = atob(body), arr = new Uint8Array(bin.length);
+          for (var i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+          resolve(new Blob([arr], {type: mime})); return;
+        }
+        resolve(new Blob([decodeURIComponent(body)], {type: mime}));
+      } catch (e) { reject(e); }
+    });
+  }
   async function uploadMedia(blob, kind, folder, examId, ext, contentType) {
     if (!r2Disabled) {
       try {
@@ -2955,7 +2972,7 @@
     if (e.key === '?') { e.preventDefault(); kbdDispatch('help'); }
   });
 
-  window.ExamSite = {mediaCacheSize: mediaCacheSize, clearMediaCache: clearMediaCache, kbdHelp: kbdHelp, emojiSvg: function (k) { return emojiSvg(k, false) || ''; }, headerFingerprint: headerFingerprint, printHeaderFp: printHeaderFp, ensurePrintPaid: ensurePrintPaid, jalaliPicker: jalaliPicker, jalaliDisplay: jalaliDisplay, openFormulaEditor: openFormulaEditor, openHeaderSettings: openHeaderSettings, headerSettingsForm: headerSettingsForm, readPrintHeader: readPrintHeader, faReason: faReason, uploadMedia: uploadMedia, openPrintPreview: openPrintPreview, buildPrintPayload: buildPrintPayload, api: api, demoPrint: demoPrint, openLandingCatalog: openLandingCatalogModal,
+  window.ExamSite = {mediaCacheSize: mediaCacheSize, dataUrlBlob: dataUrlBlob, clearMediaCache: clearMediaCache, kbdHelp: kbdHelp, emojiSvg: function (k) { return emojiSvg(k, false) || ''; }, headerFingerprint: headerFingerprint, printHeaderFp: printHeaderFp, ensurePrintPaid: ensurePrintPaid, jalaliPicker: jalaliPicker, jalaliDisplay: jalaliDisplay, openFormulaEditor: openFormulaEditor, openHeaderSettings: openHeaderSettings, headerSettingsForm: headerSettingsForm, readPrintHeader: readPrintHeader, faReason: faReason, uploadMedia: uploadMedia, openPrintPreview: openPrintPreview, buildPrintPayload: buildPrintPayload, api: api, demoPrint: demoPrint, openLandingCatalog: openLandingCatalogModal,
     enamadBadge: enamadBadge, el: el, esc: esc, fa: fa, en: en, gradeLabel: gradeLabel, toast: toast, confirmDlg: confirmDlg, infoDlg: infoDlg, costDoneDlg: costDoneDlg, promptDlg: promptDlg, mediaBlobUrl: mediaBlobUrl, isOwnStorageUrl: isOwnStorageUrl, deleteMedia: deleteMedia, mediaUrlsIn: mediaUrlsIn, isOwnedMediaUrl: isOwnedMediaUrl, rpc: rpc, rpcObj: rpcObj, select: select, http: http, uuid: uuid, fmtScore: fmtScore, fmtDate: fmtDate, money: money, errMsg: errMsg,
     localState: localState, setLocalState: setLocalState, loading: loading, showErr: showErr, emptyBox: emptyBox, qType: qType, engineHtml: engineHtml, loadEngines: loadEngines, loadPanels: loadPanels, prefetchPanels: prefetchPanels, scheduleLandingPrefetch: scheduleLandingPrefetch,
     user: function () { return user; }, session: function () { return session; }, config: {url: SUPABASE_URL, anon: ANON},
