@@ -91,6 +91,7 @@
     classes: '<svg viewBox="0 0 24 24"><path d="M3 10l9-5 9 5-9 5-9-5z"/><path d="M7 12v5c0 1.5 2.5 3 5 3s5-1.5 5-3v-5"/></svg>',
     account: '<svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-7 8-7s8 3 8 7"/></svg>',
     site: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3.5 3 14.5 0 18M12 3c-3 3.5-3 14.5 0 18"/></svg>',
+    download: '<svg viewBox="0 0 24 24"><path d="M12 3v11M7.5 10.5L12 15l4.5-4.5M4 20h16"/></svg>', /* V335.71 — آیکن کارت دریافت برنامه */
     settings: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>',
     logout: '<svg viewBox="0 0 24 24"><path d="M10 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h4M15 8l4 4-4 4M19 12H9"/></svg>',
     reports: '<svg viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>',
@@ -165,6 +166,46 @@
     return el('div', {class: 'm-sheet-bg m-qa-bg', onclick: function (e) { if (e.target === e.currentTarget) close(); }}, [stage]);
   }
 
+  /* ---------- V335.71 — «کارت دریافت برنامه» به‌جای «کارت سایت» در منوی همبرگری ----------
+     فهرست کارت‌ها (و رشته‌های پین‌شدهٔ تست‌های اپ) دست‌نخورده می‌ماند؛ هنگام ساخت شبکهٔ منو،
+     کاشی‌ای که برچسبش «سایت» است با کاشی «دریافت برنامه» عوض می‌شود که آخرین APK را از
+     جدول عمومی `app_version` می‌گیرد و مستقیم دانلود می‌کند (همان منبعی که «درباره» استفاده می‌کند). */
+  function downloadApk(btn) {
+    if (btn && btn.disabled) return;
+    if (btn) btn.disabled = true;
+    api.latestApk().then(function (v) {
+      if (btn) btn.disabled = false;
+      if (!v) { toast('نسخهٔ اندروید در دسترس نیست.', 'info'); return; }
+      ui.menuOpen = false;
+      var a = el('a', {href: v.url, download: 'exam-app-' + v.name + '.apk'});
+      document.body.appendChild(a); a.click(); a.remove();
+      toast('دانلود برنامه آغاز شد (نسخهٔ ' + fa(v.name) + ').', 'ok');
+      paint();
+    }).catch(function () {
+      if (btn) btn.disabled = false;
+      toast('دریافت برنامه ممکن نشد؛ اتصال اینترنت را بررسی کنید.', 'info');
+    });
+  }
+  function appDownloadTile() {
+    return el('button', {class: 'm-tile neo', onclick: function (e) { downloadApk(e && e.currentTarget); }},
+      [ic('download', 'm-tile-ic'), el('b', {text: 'دریافت برنامه'}), el('span', {text: 'نسخهٔ اندروید (APK)'})]);
+  }
+  function swapSiteTile(grid) {
+    if (!grid) return;
+    var tiles = grid.querySelectorAll('.m-tile');
+    for (var i = 0; i < tiles.length; i++) {
+      var label = tiles[i].querySelector('b');
+      if (label && (label.textContent || '').trim() === 'سایت') { grid.replaceChild(appDownloadTile(), tiles[i]); return; }
+    }
+  }
+  function menuGrid(cards, sel) {
+    var g = el('div', {class: 'm-grid'}, cards.map(function (c, i) {
+      return el('button', {class: 'm-tile neo' + (sel === c[2] ? ' sel' : '') + (c[4] ? ' danger' : ''), style: 'animation-delay:' + (i * 55) + 'ms', onclick: c[3]}, [ic(c[2], 'm-tile-ic'), el('b', {text: c[0]}), el('span', {text: c[1]})]);
+    }));
+    swapSiteTile(g);
+    return g;
+  }
+
   /* ---------- منوی کاشی‌ای (Design69MainMenuScreen) — همان ۸ کارت معلم به همان ترتیب ---------- */
   function menuScreen() {
     var u = S.user();
@@ -185,9 +226,7 @@
         el('div', {class: 'm-profile-t'}, [el('div', {class: 'k', text: 'پروفایل معلم'}), el('div', {class: 'n', text: u.name || 'حساب کاربری من'}), el('div', {class: 'e', text: u.email || 'حساب معلم'})]),
         ic('chevron', 'm-chev')
       ]),
-      el('div', {class: 'm-grid'}, cards.map(function (c, i) {
-        return el('button', {class: 'm-tile neo' + (sel === c[2] ? ' sel' : '') + (c[4] ? ' danger' : ''), style: 'animation-delay:' + (i * 55) + 'ms', onclick: c[3]}, [ic(c[2], 'm-tile-ic'), el('b', {text: c[0]}), el('span', {text: c[1]})]);
-      }))
+      menuGrid(cards, sel)
     ]);
   }
 
@@ -379,9 +418,7 @@
         el('div', {class: 'm-profile-t'}, [el('div', {class: 'k', text: 'پروفایل دانش‌آموز'}), el('div', {class: 'n', text: u.name || 'حساب کاربری من'}), el('div', {class: 'e', text: 'حساب دانش‌آموز'})]),
         ic('chevron', 'm-chev')
       ]),
-      el('div', {class: 'm-grid'}, cards.map(function (c, i) {
-        return el('button', {class: 'm-tile neo' + (sel === c[2] ? ' sel' : '') + (c[4] ? ' danger' : ''), style: 'animation-delay:' + (i * 55) + 'ms', onclick: c[3]}, [ic(c[2], 'm-tile-ic'), el('b', {text: c[0]}), el('span', {text: c[1]})]);
-      }))
+      menuGrid(cards, sel)
     ]);
   }
   async function studentHome(c) {
@@ -429,9 +466,7 @@
       ]),
       /* کارت ویژه، وسط‌چین با عرض ۵۲٪ (featuredCard) */
       el('div', {class: 'm-featured'}, [el('button', {class: 'm-tile neo' + (sel === 'dashboard' ? ' sel' : ''), onclick: function () { go('dashboard'); }}, [ic('cards', 'm-tile-ic'), el('b', {text: 'داشبورد'}), el('span', {text: 'اطلاعات مدرسه و آمار'})])]),
-      el('div', {class: 'm-grid'}, cards.map(function (c, i) {
-        return el('button', {class: 'm-tile neo' + (sel === c[2] ? ' sel' : '') + (c[4] ? ' danger' : ''), style: 'animation-delay:' + (i * 55) + 'ms', onclick: c[3]}, [ic(c[2], 'm-tile-ic'), el('b', {text: c[0]}), el('span', {text: c[1]})]);
-      }))
+      menuGrid(cards, sel)
     ]);
   }
   function managerCards(c) {
