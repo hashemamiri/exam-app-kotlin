@@ -2022,9 +2022,29 @@
     m.appendChild(el('h2', {text: 'تکمیل ثبت‌نام ' + (user.pendingRole === 'manager' ? 'مدیر / معاون' : 'معلم')}));
     var msg = el('div'); m.appendChild(msg);
     drawCompletion(m, user.pendingRole || 'teacher', user.name, msg, function (t) { msg.innerHTML = ''; if (t) msg.appendChild(el('div', {class: 'alert error', text: t})); });
-    m.appendChild(el('button', {class: 'btn light', style: 'width:100%;margin-top:10px', text: 'خروج', onclick: doLogout}));
+    /* V335.83 — دو مسیر: «انصراف» حساب نیمه‌کارهٔ ساخته‌شده با گوگل را پاک می‌کند؛ «خروج» فقط خارج می‌شود. */
+    m.appendChild(el('div', {class: 'muted', style: 'font-size:12.5px;margin-top:14px;line-height:1.9', text: 'اگر منصرف شده‌اید، با دکمهٔ «انصراف» حساب نیمه‌کاره‌ای که با گوگل ساخته شد پاک می‌شود و هیچ رکوردی در فهرست کاربران نمی‌ماند.'}));
+    m.appendChild(el('button', {class: 'btn danger', style: 'width:100%;margin-top:8px', text: 'انصراف و پاک‌کردن حساب نیمه‌کاره', onclick: abandonSignup}));
+    m.appendChild(el('button', {class: 'btn light', style: 'width:100%;margin-top:8px', text: 'خروج بدون حذف حساب', onclick: doLogout}));
   }
   async function doLogout() { await authApi.signOut(); user = null; view.panel = 'dashboard'; view.arg = undefined; try { sessionStorage.removeItem(SS_VIEW); } catch (e) {} render(); }
+
+  /* V335.83 — انصراف از ثبت‌نام: سرور فقط حسابی را پاک می‌کند که «خالی و کمتر از ۴۸ ساعت» باشد
+     (`native_cancel_unfinished_signup_v1`). حساب دارای آزمون/داده هرگز از این مسیر پاک نمی‌شود. */
+  async function abandonSignup() {
+    var ok = await confirmDlg('انصراف از ثبت‌نام', 'حساب نیمه‌کاره‌ای که با گوگل ساخته شد (بدون آزمون و بدون داده) پاک می‌شود و می‌توانید هر زمان دوباره ثبت‌نام کنید. ادامه می‌دهید؟', 'بله، پاک شود', true);
+    if (!ok) return;
+    var deleted = false, why = '';
+    try {
+      var r = await S.rpcObj('native_cancel_unfinished_signup_v1', {});
+      deleted = !!(r && r.ok);
+      why = (r && r.reason) || '';
+    } catch (e) { console.warn('cancel-signup', e); }
+    await doLogout();
+    if (deleted) toast('حساب نیمه‌کاره پاک شد؛ هر زمان خواستید دوباره ثبت‌نام کنید.', 'ok');
+    else if (why === 'not-unfinished' || why === 'too-old') toast('این حساب داده دارد؛ پاک نشد. از «حساب ← حذف حساب» استفاده کنید.', 'err');
+    else toast('از حساب خارج شدید؛ حساب نیمه‌کاره به‌طور خودکار پاک می‌شود.', 'ok');
+  }
 
   /* ---------------- پنل ---------------- */
   var MENUS = {

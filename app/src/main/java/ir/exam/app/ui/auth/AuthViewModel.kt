@@ -277,6 +277,20 @@ class AuthViewModel(private val repository: AuthRepository) : ViewModel() {
         acceptAuthenticatedUser(user)
     }
 
+
+    /**
+     * V335.83 — «انصراف و خروج» در صفحه‌های تکمیل ثبت‌نام: پیش از خروج، حساب نیمه‌کاره‌ای که
+     * با گوگل ساخته شده پاک می‌شود تا در فهرست کاربران سوپابیس باقی نماند.
+     * (خودِ `cancelVerifiedFlow` دست‌نخورده است؛ آن مسیر خودکار است و نباید حساب پاک کند.)
+     */
+    fun abandonSignup() = viewModelScope.launch {
+        _state.update { it.copy(isLoading = true, error = null) }
+        runCatching { repository.cancelUnfinishedSignup() }
+        runCatching { repository.signOut() }
+        SessionCache.clear()
+        _state.value = AuthUiState(isRestoringSession = false)
+    }
+
     fun cancelVerifiedFlow() = viewModelScope.launch {
         _state.update { it.copy(isLoading = true, error = null) }
         repository.signOut()

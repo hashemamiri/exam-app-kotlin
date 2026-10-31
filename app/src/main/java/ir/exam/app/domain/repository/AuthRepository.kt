@@ -40,4 +40,10 @@ interface AuthRepository {
     suspend fun changePassword(newPassword: String): Result<AppUser>
     suspend fun refreshCurrentUser(): Result<AppUser>
     suspend fun signOut(): Result<Unit>
+
+    /**
+     * V335.83 — حذف حساب نیمه‌کارهٔ ثبت‌نام گوگل.
+     * پیش‌فرض «انجام نشد» است تا پیاده‌سازی‌های دیگر (و فیک‌های تست) بدون تغییر کامپایل شوند.
+     */
+    suspend fun cancelUnfinishedSignup(): Boolean = false
 }

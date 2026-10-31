@@ -438,6 +438,20 @@ class SupabaseAuthRepository(context: Context) : AuthRepository {
         persistUser(currentProfile())
     }
 
+
+    /**
+     * V335.83 — حذف حساب نیمه‌کارهٔ ثبت‌نام گوگل.
+     * سرور فقط حسابی را پاک می‌کند که خالی و کمتر از ۴۸ ساعت باشد
+     * (`native_cancel_unfinished_signup_v1`). اگر تابع هنوز روی پروژه اجرا نشده باشد،
+     * بی‌صدا false برمی‌گردد و مسیر «فقط خروج» انجام می‌شود.
+     */
+    override suspend fun cancelUnfinishedSignup(): Boolean = runCatching {
+        val res = SupabaseProvider.client.postgrest
+            .rpc("native_cancel_unfinished_signup_v1")
+            .decodeAs<JsonObject>()
+        res["ok"]?.jsonPrimitive?.booleanOrNull == true
+    }.getOrDefault(false)
+
     override suspend fun signOut(): Result<Unit> {
         // V335.80 — خروجِ واقعیِ کاربر: تنها حالتی که نشست اجازهٔ پاک‌شدن دارد.
         SessionKeeper.userInitiatedLogout = true

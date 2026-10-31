@@ -449,7 +449,7 @@ private fun TeacherSetupPane(state: AuthUiState, viewModel: AuthViewModel) {
         )
     }
     StaggeredItem(7) {
-        LinkTextButton("انصراف و خروج", onClick = viewModel::cancelVerifiedFlow, enabled = !state.isLoading, gray = true)
+        LinkTextButton("انصراف و پاک‌کردن حساب نیمه‌کاره", onClick = viewModel::abandonSignup, enabled = !state.isLoading, gray = true)
     }
 }
 
@@ -523,7 +523,7 @@ private fun ManagerSetupPane(state: AuthUiState, viewModel: AuthViewModel) {
         )
     }
     StaggeredItem(8) {
-        LinkTextButton("انصراف و خروج", onClick = viewModel::cancelVerifiedFlow, enabled = !state.isLoading, gray = true)
+        LinkTextButton("انصراف و پاک‌کردن حساب نیمه‌کاره", onClick = viewModel::abandonSignup, enabled = !state.isLoading, gray = true)
     }
 }
 
@@ -580,7 +580,7 @@ private fun RecoveryPasswordPane(state: AuthUiState, viewModel: AuthViewModel) {
         )
     }
     StaggeredItem(5) {
-        LinkTextButton("انصراف و خروج", onClick = viewModel::cancelVerifiedFlow, enabled = !state.isLoading, gray = true)
+        LinkTextButton("انصراف و پاک‌کردن حساب نیمه‌کاره", onClick = viewModel::abandonSignup, enabled = !state.isLoading, gray = true)
     }
 }
 
