@@ -2456,3 +2456,30 @@ body.st-in-exam-mode .nc-bell{display:none!important}
   .st-navarrow:active{transform:scale(.94)}
   .st-exam .st-body{padding:12px}
 }
+
+/* ============================================================
+   V335.82 — جورکردنی در پاسخ‌گویی: تیک انتخاب + گزینه‌های زیر سؤال در گوشی
+   دسکتاپ: چیپ حرفی + «✓» روی انتخاب + تیک در ستون مرجع (رفتار قبلی حفظ می‌شود)
+   گوشی:   ستون مرجع و چیپ‌ها پنهان؛ هر سؤال فهرست عمودی تمام‌عرض گزینه‌ها می‌گیرد
+   ============================================================ */
+.st-chips .st-mchip.on{border-color:var(--brand);font-weight:800}
+.st-mchip-tick{margin-inline-start:4px;color:var(--ok);font-weight:900}
+.st-mr{display:flex;align-items:center;gap:8px;border-radius:8px;padding:2px 4px}
+.st-mr.used{background:var(--ok-soft)}
+.st-mr-tick{margin-inline-start:auto;color:var(--ok);font-weight:900}
+.st-match-opts{display:none}
+@media (max-width:860px) and (pointer:coarse){
+  .st-match-right{display:none}
+  .st-exam .st-chips{display:none}
+  .st-exam .st-ml{flex-wrap:wrap}
+  .st-exam .st-ml .grow{flex:1 1 100%}
+  .st-exam .st-match-opts{display:flex;flex-direction:column;gap:8px;width:100%;margin-top:8px}
+  .st-opt-m{display:flex;flex-wrap:wrap;align-items:center;gap:8px;width:100%;text-align:right;border:1px solid var(--line);border-radius:14px;background:var(--card);padding:10px 12px;font-size:15px;line-height:1.9;color:inherit;font-family:inherit}
+  .st-opt-m.on{border-color:var(--brand);border-width:2px;background:var(--brand-soft)}
+  .st-opt-l{flex:0 0 auto;min-width:34px;height:34px;border-radius:50%;background:var(--brand-soft);color:#173d9c;display:inline-flex;align-items:center;justify-content:center;font-weight:700}
+  .st-opt-m.on .st-opt-l{background:var(--brand);color:#fff}
+  .st-opt-txt{flex:1 1 auto;min-width:0;overflow-wrap:anywhere}
+  .st-opt-txt img{max-width:100%;height:auto}
+  .st-opt-img{flex:1 1 100%;width:100%;max-width:100%;height:auto;object-fit:contain;border:1px solid var(--line);border-radius:8px;background:var(--card);margin-top:4px}
+  .st-opt-tick{flex:0 0 auto;margin-inline-start:auto;color:var(--ok);font-size:20px;font-weight:900;line-height:1}
+}

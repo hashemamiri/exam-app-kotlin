@@ -1100,10 +1100,46 @@
         var cur = (a && typeof a === 'object') ? a : {};
         /* V259.5 — موارد ستون راست با حرف (الف، ب…) تا با شمارهٔ موارد ستون چپ اشتباه نشود (مثل اپ) */
         var ABm = ['الف', 'ب', 'ج', 'د', 'ه', 'و', 'ز', 'ح', 'ط', 'ی'];
-        box.appendChild(el('div', {class: 'st-match-right'}, q.rightItems.map(function (r, di) { var d = el('div', {class: 'st-mr'}, [el('b', {text: (ABm[di] || fa(di + 1)) + ') '}), el('span', {html: esc(r)}), q.rightImages[di] ? el('img', {src: q.rightImages[di], class: 'thumb'}) : null]); richHtml(r).then(function (h) { d.querySelector('span').innerHTML = h; }); return d; })));
+        /* V335.82 — تیک انتخاب + گزینه‌های زیر سؤال در گوشی */
+        function mLbl(di) { return ABm[di] || fa(di + 1); }
+        function mOrig(di) { return q.rightOriginalIndices[di] != null ? q.rightOriginalIndices[di] : di; }
+        var usedOrig = {};
+        Object.keys(cur).forEach(function (k) { var v = cur[k]; if (v != null && v !== '') usedOrig[v] = true; });
+        function mPick(li, oi) { cur = Object.assign({}, cur); cur[li] = oi; set(cur); box.replaceWith(answerArea(q)); }
+        /* ستون مرجع (فقط دسکتاپ): هر گزینه‌ای که جور شده، تیک و پس‌زمینهٔ سبک می‌گیرد */
+        box.appendChild(el('div', {class: 'st-match-right'}, q.rightItems.map(function (r, di) {
+          var oi = mOrig(di), isUsed = !!usedOrig[oi];
+          var d = el('div', {class: 'st-mr' + (isUsed ? ' used' : '')}, [
+            el('b', {text: mLbl(di) + ') '}),
+            el('span', {html: esc(r)}),
+            q.rightImages[di] ? el('img', {src: q.rightImages[di], class: 'thumb'}) : null,
+            el('span', {class: 'st-mr-tick', text: isUsed ? '✓' : '', 'aria-hidden': 'true'})
+          ]);
+          richHtml(r).then(function (h) { d.querySelector('span').innerHTML = h; });
+          return d;
+        })));
         q.leftItems.forEach(function (l, li) {
+          var chosen = (cur[li] == null) ? null : cur[li];
           var row = el('div', {class: 'st-ml'}, [el('span', {class: 'grow', html: '<b>' + fa(li + 1) + '.</b> ' + esc(l)}), q.leftImages[li] ? el('img', {src: q.leftImages[li], class: 'thumb'}) : null,
-            el('div', {class: 'st-chips'}, q.rightItems.map(function (_, di) { var oi = q.rightOriginalIndices[di] != null ? q.rightOriginalIndices[di] : di; return el('button', {class: 'chip' + (cur[li] === oi ? ' brand' : ''), text: ABm[di] || fa(di + 1), onclick: function () { cur = Object.assign({}, cur); cur[li] = oi; set(cur); box.replaceWith(answerArea(q)); }}); }))]);
+            /* دسکتاپ: چیپ حرفی؛ گزینهٔ انتخاب‌شده تیک می‌خورد */
+            el('div', {class: 'st-chips'}, q.rightItems.map(function (_, di) {
+              var oi = mOrig(di), on = chosen === oi;
+              var b = el('button', {type: 'button', class: 'chip st-mchip' + (on ? ' brand on' : ''), 'aria-pressed': on ? 'true' : 'false', title: String(q.rightItems[di] || '').replace(/<[^>]*>/g, '').slice(0, 90), text: ABm[di] || fa(di + 1), onclick: function () { mPick(li, oi); }});
+              if (on) b.appendChild(el('span', {class: 'st-mchip-tick', text: '✓', 'aria-hidden': 'true'}));
+              return b;
+            })),
+            /* گوشی: گزینه‌ها زیر همان سؤال، تمام‌عرض و با تصویر بزرگ (جدول تناوبی و مانند آن) */
+            el('div', {class: 'st-match-opts'}, q.rightItems.map(function (r, di) {
+              var oi = mOrig(di), on = chosen === oi;
+              var txt = el('span', {class: 'st-opt-txt', html: esc(r)});
+              richHtml(r).then(function (h) { txt.innerHTML = h; });
+              return el('button', {type: 'button', class: 'st-opt-m' + (on ? ' on' : ''), 'aria-pressed': on ? 'true' : 'false', onclick: function () { mPick(li, oi); }}, [
+                el('span', {class: 'st-opt-l' + (on ? ' on' : ''), text: mLbl(di)}),
+                txt,
+                q.rightImages[di] ? el('img', {src: q.rightImages[di], class: 'st-opt-img', alt: ''}) : null,
+                el('span', {class: 'st-opt-tick', text: on ? '✓' : '', 'aria-hidden': 'true'})
+              ]);
+            }))]);
           richHtml(l).then(function (h) { var g = row.querySelector('.grow'); g.innerHTML = '<b>' + fa(li + 1) + '.</b> ' + h; fitMath(g); });
           box.appendChild(row);
         });
