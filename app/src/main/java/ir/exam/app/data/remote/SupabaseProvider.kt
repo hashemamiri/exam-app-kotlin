@@ -44,8 +44,16 @@ object SupabaseProvider {
     }
 
     /** V335.20 — دور انداختن کلاینت فعلی تا با مسیر تازهٔ شبکه دوباره ساخته شود. */
+    /** V335.80 — شمارندهٔ نسل کلاینت؛ برای هم‌گام‌سازی بازیابی نشست با تعویض مسیر. */
+    @Volatile
+    var generation: Int = 0
+        private set
+
     fun reset() {
-        synchronized(buildLock) { cachedClient = null }
+        synchronized(buildLock) {
+            cachedClient = null
+            generation += 1
+        }
     }
 
     private fun buildClient(): SupabaseClient {

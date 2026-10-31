@@ -5,6 +5,7 @@ import android.util.Log
 import io.github.jan.supabase.auth.SessionManager
 import io.github.jan.supabase.auth.user.UserSession
 import ir.exam.app.core.security.SecureSessionStorage
+import ir.exam.app.core.security.SessionKeeper
 import kotlinx.serialization.json.Json
 
 /**
@@ -35,11 +36,14 @@ class EncryptedSessionManager(context: Context) : SessionManager {
     }
 
     override suspend fun saveSession(session: UserSession) {
+        // V335.80 — تا وقتی نشست هست، تعویض کلاینت شبکه نباید آن را از بین ببرد.
+        SessionKeeper.sessionPresent = true
         storage.write(json.encodeToString(UserSession.serializer(), session))
     }
 
     override suspend fun loadSession(): UserSession? {
         val text = storage.readWithRetry() ?: return null
+        SessionKeeper.sessionPresent = true
         runCatching { json.decodeFromString(UserSession.serializer(), text) }
             .onSuccess { return it }
             .onFailure { error ->
@@ -54,8 +58,20 @@ class EncryptedSessionManager(context: Context) : SessionManager {
             .getOrNull()
     }
 
+    /**
+     * V335.80 — حذف نشست فقط با درخواست کاربر.
+     * پلاگین Auth وقتی تازه‌سازی شکست بخورد هم این تابع را صدا می‌زند؛ پاک‌کردن در آن حالت
+     * یعنی «خروج ناخواسته». پس بدون پرچم خروج کاربر، داده دست‌نخورده می‌ماند و فقط ثبت می‌شود.
+     */
     override suspend fun deleteSession() {
-        storage.clear()
+        if (SessionKeeper.userInitiatedLogout) {
+            storage.clear()
+            SessionKeeper.sessionPresent = false
+            return
+        }
+        SessionKeeper.lastAutoInvalidation = System.currentTimeMillis()
+        SessionKeeper.sessionPresent = true
+        Log.w(TAG, "درخواست حذف نشست از سوی کتابخانه (نه کاربر) — داده دست‌نخورده ماند")
     }
 
     private companion object {

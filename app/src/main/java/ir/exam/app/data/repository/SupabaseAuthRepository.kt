@@ -8,6 +8,7 @@ import io.github.jan.supabase.auth.providers.builtin.Email
 import io.github.jan.supabase.auth.providers.builtin.OTP
 import io.github.jan.supabase.postgrest.postgrest
 import ir.exam.app.core.network.UserFacingError
+import ir.exam.app.core.security.SessionKeeper
 import ir.exam.app.data.dto.NativeProfileDto
 import ir.exam.app.data.local.AuthUserCache
 import ir.exam.app.data.remote.SupabaseProvider
@@ -45,15 +46,24 @@ class SupabaseAuthRepository(context: Context) : AuthRepository {
      * در نبود اینترنت، نمای cached پروفایل فقط وقتی استفاده می‌شود که id آن با نشست Supabase برابر باشد.
      */
     override suspend fun restoreSession(): Result<AppUser?> = runCatching {
-        auth.awaitInitialization()
-        val sessionUser = auth.currentUserOrNull()
-        if (sessionUser == null) {
+        /* V335.80 — «نشستی نیست» و «کلاینت همین لحظه عوض شد» یکی نبودند: اگر مسیر شبکه در
+           حال راه‌اندازی تغییر کند، خواندن از نمونهٔ قدیمی null می‌داد و کاربر بی‌دلیل بیرون
+           می‌افتاد. حالا تا سه بار با نسل کلاینت هم‌گام می‌شویم. */
+        var sessionUserId: String? = null
+        for (attempt in 0 until 3) {
+            val generation = SupabaseProvider.generation
+            auth.awaitInitialization()
+            sessionUserId = auth.currentUserOrNull()?.id
+            if (sessionUserId != null || SupabaseProvider.generation == generation) break
+            delay(300)
+        }
+        if (sessionUserId == null) {
             userCache.clear()
             _currentUser.value = null
             return@runCatching null
         }
 
-        val cachedUser = userCache.read(sessionUser.id)
+        val cachedUser = userCache.read(sessionUserId)
         // V212 — شروع سریع: اگر پروفایل همین کاربر از قبل روی دستگاه هست، بلافاصله با آن وارد می‌شویم و
         // تازه‌سازی نشست/پروفایل در پس‌زمینه انجام می‌شود (نتیجه از طریق currentUser به UI می‌رسد).
         // قبلاً حتی با پروفایل ذخیره‌شده تا ۵ ثانیه منتظر سرور می‌ماندیم.
@@ -429,7 +439,11 @@ class SupabaseAuthRepository(context: Context) : AuthRepository {
     }
 
     override suspend fun signOut(): Result<Unit> {
-        val result = runCatching { auth.signOut(SignOutScope.LOCAL) }
+        // V335.80 — خروجِ واقعیِ کاربر: تنها حالتی که نشست اجازهٔ پاک‌شدن دارد.
+        SessionKeeper.userInitiatedLogout = true
+        val result = try { runCatching { auth.signOut(SignOutScope.LOCAL) } }
+        finally { SessionKeeper.userInitiatedLogout = false }
+        SessionKeeper.sessionPresent = false
         userCache.clear()
         _currentUser.value = null
         return result

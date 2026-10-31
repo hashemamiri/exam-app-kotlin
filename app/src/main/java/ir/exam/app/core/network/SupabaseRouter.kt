@@ -246,7 +246,15 @@ object SupabaseRouter {
         val p = prefs ?: return
         val old = p.getString(KEY_BASE, null)
         p.edit().putString(KEY_BASE, base).putLong(KEY_AT, System.currentTimeMillis()).apply()
-        if (old != base) resetClient()
+        if (old == base) return
+        /* V335.80 — اگر نشستی روی دستگاه هست، وسط کار کلاینت را عوض نکن.
+           دو نمونهٔ هم‌زمان (قدیم و تازه) با یک refresh token یک‌بارمصرف تازه‌سازی می‌کردند و
+           پلاگین Auth نشست را «باطل» می‌دید ⇒ خروج ناخواسته. مسیر تازه در اجرای بعدی اعمال می‌شود. */
+        if (ir.exam.app.core.security.SessionKeeper.sessionPresent) {
+            android.util.Log.i("SessionDiag", "مسیر تازه ذخیره شد؛ تعویض کلاینت به اجرای بعد موکول شد")
+            return
+        }
+        resetClient()
     }
 
     /** انتخاب دستی از صفحهٔ تست اتصال؛ `null` = بازگشت به انتخاب خودکار. */

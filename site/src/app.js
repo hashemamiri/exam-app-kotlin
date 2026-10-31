@@ -351,7 +351,18 @@
     } catch (e) {}
   }
   function loadSession() { try { session = JSON.parse(localStorage.getItem(LS_SESSION) || 'null'); } catch (e) { session = null; } }
-  function saveSession(s, why) { session = s; try { if (s) localStorage.setItem(LS_SESSION, JSON.stringify(s)); else { localStorage.removeItem(LS_SESSION); localStorage.removeItem(LS_PROFILE); Object.keys(localStorage).filter(function (k) { return k.indexOf(LS_DASH) === 0; }).forEach(function (k) { localStorage.removeItem(k); }); } } catch (e) {} if (!s) sessionDiag('clear', why || ''); }
+  /* V335.80 — «خروج فقط به درخواست کاربر»: فقط خروج دستی/حذف حساب نشست را پاک می‌کند.
+     دلایل دیگر (توکن کهنه، خطای شبکه، پاسخ ۴۰۰ سرور) نشست را دست‌نخورده نگه می‌دارند تا
+     با یک بار تلاش دوباره یا رفرش صفحه، همان نشست دوباره کار کند. */
+  function saveSession(s, why) {
+    var clearOk = (!why || why === 'user-logout' || why === 'account-deleted');
+    if (!s && !clearOk) { sessionDiag('keep-' + why, ''); return; }
+    if (s && !s.expires_at && s.expires_in) s.expires_at = Math.floor(Date.now() / 1000) + (Number(s.expires_in) || 3600);
+    session = s;
+    try { if (s) localStorage.setItem(LS_SESSION, JSON.stringify(s)); else { localStorage.removeItem(LS_SESSION); localStorage.removeItem(LS_PROFILE); Object.keys(localStorage).filter(function (k) { return k.indexOf(LS_DASH) === 0; }).forEach(function (k) { localStorage.removeItem(k); }); } }
+    catch (e) { sessionDiag('storage-error', ''); } /* حافظهٔ مرورگر در دسترس نیست (حالت ناشناس/محدود) */
+    if (!s) sessionDiag('clear', why || '');
+  }
   /* V335.47 — یک مرورگر با چند تب = چند نسخهٔ در حافظه از یک نشست. توکن تازه‌سازی یک‌بارمصرف است؛
      اگر تبی تازه کند و تبِ دیگر با توکن قدیمی تازه کند، سرور ۴۰۰ می‌دهد و همه بیرون می‌افتادند.
      حالا تغییر نشست در هر تب به بقیه منتقل می‌شود. */
@@ -469,6 +480,7 @@
   /* V266 — هر مرورگر پنجرهٔ تازه‌سازی مخصوص خودش را دارد (۲ تا ۱۲ دقیقه قبل از انقضا) تا در یک کلاس/مدرسه
      همهٔ دانش‌آموزان هم‌زمان توکن تازه نکنند (سقف ۱۵۰ تازه‌سازی در ۵ دقیقه به ازای هر IP). */
   var REFRESH_LEAD_MS = (2 + Math.random() * 10) * 60 * 1000;
+  var TAB_ID = Math.random().toString(36).slice(2) + Date.now().toString(36); /* V335.80 — قفل بین‌تبی */
   var refreshRetryAt = 0;
   var NET_REFRESH_BACKOFF_MS = 45000;
   /* V335.47 — «توکن کهنه» با «نشست باطل» یکی نبود و همین کاربر را بیرون می‌انداخت:
@@ -491,6 +503,17 @@
     if (refreshing) return refreshing;
     refreshing = (async function () {
       var tried = session && session.refresh_token;
+      /* V335.80 — refresh_token یک‌بارمصرف است؛ اگر تبِ دیگری همین حالا تازه می‌کند،
+         صبر می‌کنیم و نشستِ تازه‌شده را از حافظه برمی‌داریم تا توکن نسوزد (۴۰۰ = خروج ناخواسته). */
+      try {
+        var lockKey = 'examsite.refresh.lock.v1', held = null;
+        try { held = JSON.parse(localStorage.getItem(lockKey) || 'null'); } catch (eL) { held = null; }
+        if (held && held.tab !== TAB_ID && Date.now() - Number(held.at || 0) < 15000) {
+          await sleep(1200 + Math.random() * 1800);
+          if (adoptSessionFromStorage(tried)) { refreshRetryAt = 0; return 'adopted'; }
+        }
+        localStorage.setItem(lockKey, JSON.stringify({tab: TAB_ID, at: Date.now()}));
+      } catch (e2) {}
       try {
         var res = null;
         for (var attempt = 0; attempt < 2 && !res; attempt++) {
@@ -2805,6 +2828,9 @@
 
   /* ================================================================ راه‌اندازی */
   async function boot() {
+    /* V335.80 — نشست در هر «مبدأ» جدا ذخیره می‌شود؛ ورود روی www.onlineexam.ir با onlineexam.ir
+       به‌اشتراک گذاشته نمی‌شد و کاربر «لاگین نمی‌ماند» می‌دید. حالا همه به یک مبدأ می‌روند. */
+    if (location.hostname === 'www.onlineexam.ir') { location.replace('https://onlineexam.ir' + location.pathname + location.search + location.hash); return; }
     loadSession();
     try { pwaInit(); } catch (e) { console.warn('pwa', e); }
     if (window.SiteExtras && KEY_READY) { try { await window.SiteExtras.handleOAuthReturn(); } catch (e) { console.warn(e); } }
