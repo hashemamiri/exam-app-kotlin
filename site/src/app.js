@@ -490,14 +490,40 @@
   /* V266 — هر مرورگر پنجرهٔ تازه‌سازی مخصوص خودش را دارد (۲ تا ۱۲ دقیقه قبل از انقضا) تا در یک کلاس/مدرسه
      همهٔ دانش‌آموزان هم‌زمان توکن تازه نکنند (سقف ۱۵۰ تازه‌سازی در ۵ دقیقه به ازای هر IP). */
   var REFRESH_LEAD_MS = (2 + Math.random() * 10) * 60 * 1000;
-  var TAB_ID = Math.random().toString(36).slice(2) + Date.now().toString(36); /* V335.80 — قفل بین‌تبی */
   var refreshRetryAt = 0;
   var NET_REFRESH_BACKOFF_MS = 45000;
-  /* V335.47 — «توکن کهنه» با «نشست باطل» یکی نبود و همین کاربر را بیرون می‌انداخت:
-     با اینترنت ضعیف، تازه‌سازی ۸ ثانیه‌ای تایم‌اوت می‌شد، درخواست با توکن منقضی می‌رفت، ۴۰۱ می‌گرفت
-     و بوت نشست را پاک می‌کرد. حالا: تایم‌اوت ۱۵ ثانیه + یک تلاش دوباره، خطای شبکه نشست را نگه می‌دارد،
-     و اگر سرور «توکن نامعتبر» گفت اول می‌بینیم تبِ دیگری نشست را تازه نکرده باشد. */
+  /* V335.85 — دروازهٔ ضدطوفان: پس از پاسخ ۴۰۰ سرور، تا این مدت هیچ تازه‌سازی تازه‌ای فرستاده نمی‌شود. */
+  var REFRESH_DEAD_MS = 60000;
+  var refreshDeadAt = 0;
+  /* V335.85 — تلاشی که خطای شبکه داد ولی ممکن است سرور اجرا کرده باشد (پاسخ در راه گم شد). */
+  var refreshUncertain = false;
+  var REFRESH_LOCK = 'examsite.refresh.lock.v1';
+  var TAB_ID = Math.random().toString(36).slice(2) + Date.now().toString(36);
+  var bannerShown = false;
+
+  function refreshLockOwner() {
+    try {
+      var o = JSON.parse(localStorage.getItem(REFRESH_LOCK) || 'null');
+      return o && Number(o.until) > Date.now() ? o : null;
+    } catch (e) { return null; }
+  }
+  function refreshLockTake() {
+    try {
+      var cur = refreshLockOwner();
+      if (cur && cur.id !== TAB_ID) return false;
+      localStorage.setItem(REFRESH_LOCK, JSON.stringify({id: TAB_ID, until: Date.now() + 8000}));
+      var after = refreshLockOwner();
+      return !after || after.id === TAB_ID;
+    } catch (e) { return true; }
+  }
+  function refreshLockDrop() {
+    try {
+      var o = JSON.parse(localStorage.getItem(REFRESH_LOCK) || 'null');
+      if (!o || o.id === TAB_ID) localStorage.removeItem(REFRESH_LOCK);
+    } catch (e) {}
+  }
   function readStoredSession() { try { return JSON.parse(localStorage.getItem(LS_SESSION) || 'null'); } catch (e) { return null; } }
+  /* V335.47 — تبِ دیگری ممکن است نشست را تازه کرده باشد؛ آن را بردار تا با توکن سوخته درخواست ندهیم. */
   function adoptSessionFromStorage(triedRefreshToken) {
     var stored = readStoredSession();
     if (stored && stored.refresh_token && stored.refresh_token !== triedRefreshToken) {
@@ -506,45 +532,71 @@
     }
     return false;
   }
+  /* V335.85 — نوار پایین صفحه به‌جای خروج اجباری؛ پاک‌سازی نشست فقط با کلیک کاربر. */
+  function showSessionBanner() {
+    if (bannerShown || document.getElementById('sess-banner')) return;
+    bannerShown = true;
+    var b = el('div', {id: 'sess-banner', class: 'alert warn row', style: 'position:fixed;inset-inline:12px;bottom:12px;z-index:9999;align-items:center;gap:10px;box-shadow:0 10px 30px rgba(0,0,0,.18)'}, [
+      el('span', {class: 'grow', text: 'نشست این دستگاه تازه نشد؛ برای ادامه یک‌بار دیگر وارد شوید. (با این کار از حساب خارج می‌شوید.)'}),
+      el('button', {class: 'btn sm', text: 'ورود دوباره', onclick: function () { closeBanner(); saveSession(null, 'user-logout'); try { location.reload(); } catch (e) {} }}),
+      el('button', {class: 'x', text: '✕', 'aria-label': 'بستن', onclick: closeBanner})
+    ]);
+    function closeBanner() { bannerShown = false; try { b.remove(); } catch (e) {} }
+    try { document.body.appendChild(b); } catch (e) {}
+  }
   function refreshSession(force) {
     var exp = Number(session && session.expires_at || 0) * 1000;
     if (!force && exp && exp - Date.now() > REFRESH_LEAD_MS) return Promise.resolve('fresh');
+    /* V335.85 — طوفان‌شکن: بعد از ۴۰۰، دیگر پشت سر هم تلاش نکن. */
+    if (refreshDeadAt && Date.now() < refreshDeadAt) return Promise.resolve('dead');
     if (!force && Date.now() < refreshRetryAt && exp - Date.now() > 60 * 1000) return Promise.resolve('backoff');
     if (refreshing) return refreshing;
     refreshing = (async function () {
       var tried = session && session.refresh_token;
-      /* V335.80 — refresh_token یک‌بارمصرف است؛ اگر تبِ دیگری همین حالا تازه می‌کند،
-         صبر می‌کنیم و نشستِ تازه‌شده را از حافظه برمی‌داریم تا توکن نسوزد (۴۰۰ = خروج ناخواسته). */
       try {
-        var lockKey = 'examsite.refresh.lock.v1', held = null;
-        try { held = JSON.parse(localStorage.getItem(lockKey) || 'null'); } catch (eL) { held = null; }
-        if (held && held.tab !== TAB_ID && Date.now() - Number(held.at || 0) < 15000) {
-          await sleep(1200 + Math.random() * 1800);
-          if (adoptSessionFromStorage(tried)) { refreshRetryAt = 0; return 'adopted'; }
+        /* تبِ دیگر همین حالا نشست را عوض کرده؟ قبل از هر درخواستی بردار. */
+        if (adoptSessionFromStorage(tried)) return 'adopted';
+        /* قفل بین‌تبی: اگر تب دیگری وسط تازه‌سازی است، تا ۳ ثانیه منتظرش بمان. */
+        if (!refreshLockTake()) {
+          for (var w = 0; w < 6; w++) {
+            await sleep(500);
+            if (adoptSessionFromStorage(tried)) return 'adopted';
+            if (!refreshLockOwner()) break;
+          }
+          sessionDiag('refresh-lock-busy', '');
+          refreshLockTake();
         }
-        localStorage.setItem(lockKey, JSON.stringify({tab: TAB_ID, at: Date.now()}));
-      } catch (e2) {}
-      try {
         var res = null;
         for (var attempt = 0; attempt < 2 && !res; attempt++) {
           try {
             res = await fetchWithTimeout(SUPABASE_URL + '/auth/v1/token?grant_type=refresh_token', {method: 'POST', headers: {'apikey': ANON, 'Content-Type': 'application/json'}, body: JSON.stringify({refresh_token: tried})}, 15000);
           } catch (netErr) {
+            /* V335.85 — درخواست ممکن است به سرور رسیده باشد؛ پس ۴۰۰ بعدی «توکن سوخته» است، نه «نشست باطل». */
+            refreshUncertain = true;
             if (attempt === 0) await sleep(900 + Math.random() * 1200);
-            else { refreshRetryAt = Date.now() + NET_REFRESH_BACKOFF_MS; sessionDiag('refresh-network', ''); return 'network'; }
+            else {
+              refreshRetryAt = Date.now() + NET_REFRESH_BACKOFF_MS;
+              sessionDiag('refresh-network', '');
+              return 'network';
+            }
           }
         }
         var data = null; try { data = await res.json(); } catch (e) { data = null; }
-        if (res.ok && data && data.access_token) { saveSession(data); refreshRetryAt = 0; sessionDiag('refresh-ok', ''); return 'ok'; }
+        if (res.ok && data && data.access_token) { refreshUncertain = false; refreshDeadAt = 0; saveSession(data); refreshRetryAt = 0; sessionDiag('refresh-ok', ''); return 'ok'; }
         if (res.status === 400 || res.status === 401 || res.status === 403) {
           if (adoptSessionFromStorage(tried)) return 'adopted';
-          saveSession(null, 'refresh-invalid-' + res.status);
+          /* V335.85 — نشست پاک نمی‌شود؛ فقط تازه‌سازی متوقف می‌شود و به کاربر گفته می‌شود. */
+          refreshDeadAt = Date.now() + REFRESH_DEAD_MS;
+          if (refreshUncertain) { refreshUncertain = false; saveSession(session, 'keep-refresh-lost-response'); sessionDiag('refresh-lost-response', String(res.status)); return 'uncertain'; }
+          saveSession(session, 'keep-refresh-invalid-' + res.status);
+          sessionDiag('refresh-invalid-' + res.status, 'kept');
+          showSessionBanner();
           return 'invalid';
         }
         refreshRetryAt = Date.now() + 20000 + Math.random() * 40000; /* ۴۲۹/۵xx: ۲۰ تا ۶۰ ثانیهٔ بعد دوباره */
         sessionDiag('refresh-' + res.status, '');
         return 'server';
-      } finally { refreshing = null; }
+      } finally { refreshLockDrop(); refreshing = null; }
     })();
     return refreshing;
   }
