@@ -422,15 +422,25 @@
     }
     if (opts.headers) Object.keys(opts.headers).forEach(function (k) { headers[k] = opts.headers[k]; });
     var res, _t0 = performance.now(), text, method = opts.method || 'GET';
-    var canRetryNet = method === 'GET' || /\/auth\/v1\/token|native_my_registration_state|native_staff_login_email|native_login_gate/.test(path);
+    /* V335.84 — خواندن‌ها تکرارپذیرند و در شبکهٔ کند/ریلای ایران فقط با یک تلاش شکست می‌خوردند.
+       فهرست سفید فقط «فقط-خواندنی»ها را می‌گیرد؛ هر RPC نوشتن (save/delete/complete/…) بدون تکرار می‌ماند. */
+    var READ_ONLY_RPC = /^\/rest\/v1\/rpc\/(native_my_|native_wallet_snapshot|native_teacher_manager_requests|native_teacher_dashboard|native_class_|class_roster|native_school_|native_teachers_|native_students_|native_reports?_|native_list_|native_get_|native_calendar_|native_levels|native_my_deletion_state|native_my_answers|my_students|my_grades|my_answers)/;
+    var canRetryNet = method === 'GET' || READ_ONLY_RPC.test(path) || /\/auth\/v1\/token|native_my_registration_state|native_staff_login_email|native_login_gate/.test(path);
+    var readTimeout = canRetryNet ? 15000 : 12000;
     /* V266 — تحمل بار: فقط برای ۴۲۹ (محدودیت نرخ) و ۵۰۳ (سرور شلوغ؛ درخواست اجرا نشده) تا سه بار با تأخیر تصادفی تلاش مجدد می‌کنیم؛
        بقیهٔ خطاها (از جمله ۵۰۴ که ممکن است اجرا شده باشد) بدون تکرار برمی‌گردند. */
     for (var attempt = 0; ; attempt++) {
       try {
-        res = await fetchWithTimeout(SUPABASE_URL + path, {method: method, headers: headers, body: opts.body !== undefined ? JSON.stringify(opts.body) : undefined}, opts.timeout || 12000);
+        res = await fetchWithTimeout(SUPABASE_URL + path, {method: method, headers: headers, body: opts.body !== undefined ? JSON.stringify(opts.body) : undefined}, opts.timeout || readTimeout);
       } catch (e) {
-        if (canRetryNet && attempt === 0) { await sleep(600); continue; }
-        perfLog(path, performance.now() - _t0, 'ERR'); throw new Error('اتصال به سرور برقرار نشد. اینترنت را بررسی کنید.');
+        /* V335.84 — تا سه تلاش با تأخیر فزاینده برای خواندن‌ها (قطعی گذرای شبکه/آبورتِ مهلت). */
+        if (canRetryNet && attempt < 2) { await sleep(700 + attempt * 1100 + Math.random() * 400); continue; }
+        perfLog(path, performance.now() - _t0, 'ERR');
+        var timedOut = !!(e && (e.name === 'AbortError' || /abort|timeout/i.test(String(e.message || ''))));
+        sessionDiag(timedOut ? 'net-timeout' : 'net-down', path.replace('/rest/v1/rpc/', 'rpc:'));
+        throw new Error(timedOut
+          ? 'سرور دیر پاسخ داد (اتصال کند است). چند لحظه بعد دوباره تلاش کنید.'
+          : 'اتصال به سرور برقرار نشد. اینترنت را بررسی کنید.');
       }
       text = await res.text();
       if ((res.status !== 429 && res.status !== 503) || attempt >= RETRY_DELAYS.length) break;
@@ -453,7 +463,7 @@
           return http(path, retryOpts);
         }
         sessionDiag('401-unresolved', outcome || '');
-        if (session) { var netErr = new Error('اتصال به سرور برقرار نشد. اینترنت را بررسی کنید.'); netErr.status = 0; throw netErr; }
+        if (session) { var netErr = new Error('ورود شما در حال تازه‌سازی است؛ یک‌بار دیگر تلاش کنید.'); netErr.status = 0; throw netErr; }
       }
       var err = new Error(translateAuthError(m)); err.status = res.status; err.data = data; throw err;
     }
@@ -2343,6 +2353,20 @@
         if (cachedDash && !c.__dashFresh) { paintTeacherDash(c, cachedDash, [], true); }
         var r = await Promise.all([soft(api.exams(), 'آزمون‌ها'), soft(api.classes(), 'کلاس‌ها'), soft(api.students(), 'دانش‌آموزان'), soft(api.wallet(), 'کیف پول'),
           rpcObj('native_teacher_manager_requests_v41', {}).then(function (x) { return x && !x.error ? x : null; }).catch(function () { return null; })]);
+        /* V335.84 — پیش از نمایش هشدار «بارگذاری نشد»، یک دور تلاش دوم خودکار (۹۰۰ms بعد). */
+        if (failed.length && failed.length < 4) {
+          var RETRY_LABELS = ['آزمون‌ها', 'کلاس‌ها', 'دانش‌آموزان', 'کیف پول'];
+          var RETRY_CALLS = [function () { return api.exams(); }, function () { return api.classes(); },
+            function () { return api.students(); }, function () { return api.wallet(); }];
+          var retryIdx = failed.map(function (f) { return RETRY_LABELS.indexOf(f.label); })
+            .filter(function (i) { return i >= 0; });
+          if (retryIdx.length) {
+            failed = [];
+            await sleep(900);
+            var r2 = await Promise.all(retryIdx.map(function (i) { return soft(RETRY_CALLS[i](), RETRY_LABELS[i]); }));
+            retryIdx.forEach(function (i, k) { if (r2[k] !== null && r2[k] !== undefined) r[i] = r2[k]; });
+          }
+        }
         if (failed.length === 4) { if (cachedDash) { c.insertBefore(dashRetryAlert(failed, c), c.firstChild); return; } throw failed[0].e; }
         /* فقط آنچه داشبورد نشان می‌دهد کش می‌شود: فهرست سبک آزمون‌ها، شمار کلاس/دانش‌آموز (نه فهرست‌ها)، موجودی، درخواست‌ها */
         if (!failed.length) cacheSet(dashKey, user.id, [r[0], Array.isArray(r[1]) ? {__n: r[1].length} : r[1], Array.isArray(r[2]) ? {__n: r[2].length} : r[2], r[3] ? {balance: r[3].balance, currency: r[3].currency, transactions: []} : null, r[4]]);
