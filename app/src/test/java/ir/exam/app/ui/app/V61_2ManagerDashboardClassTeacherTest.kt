@@ -57,7 +57,8 @@ class V61_2ManagerDashboardClassTeacherTest {
         assertTrue("native_manager_save_teacher_class_v40c" in classesVm)
         assertTrue("fun loadSchoolTeachers()" in classesVm)
         assertTrue("native_manager_teachers_v37" in classesVm)
-        // بدون انتخاب معلم ذخیره غیرفعال است
-        assertTrue("enabled = name.isNotBlank() && (teachers.isEmpty() || teacherId != null)" in school)
+        // V336 — مدیر می‌تواند کلاس را بدون معلم بسازد و بعداً معلم اختصاص دهد؛
+        // بنابراین ذخیره فقط به نام کلاس وابسته است، نه انتخاب معلم.
+        assertTrue("enabled = name.isNotBlank()" in school)
     }
 }
