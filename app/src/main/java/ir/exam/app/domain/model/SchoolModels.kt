@@ -12,7 +12,9 @@ data class SchoolClass(
     val total: Int = 0,
     val createdAt: String? = null,
     // V62.6 — اشتراک کلاس معلم با مدیر (پیش‌فرض پنهان؛ قابل تغییر).
-    val sharedWithManager: Boolean = false
+    val sharedWithManager: Boolean = false,
+    val teacherId: String = "",
+    val teacherName: String = ""
 )
 
 data class StudentProfile(

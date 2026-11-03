@@ -38,6 +38,10 @@ internal data class ManagerTeacherClass(
 internal data class ManagerStudentItem(val id: String, val fullName: String, val username: String)
 // V62.6 — مدرسهٔ قابل انتخاب برای مقصد کد دعوت.
 internal data class ManagerSchoolOption(val id: String, val name: String)
+internal data class ManagerSchoolClassItem(
+    val id: String, val name: String, val grade: String, val field: String, val total: Int,
+    val teacherId: String = "", val teacherName: String = ""
+)
 internal data class ManagerTeacherClasses(val teacherName: String, val items: List<ManagerTeacherClass>)
 internal data class ManagerClassRoster(val className: String, val items: List<ManagerStudentItem>)
 // V261 — کارنامهٔ کلاس (native_manager_class_report_v1) و درخواست‌های خود مدیر (native_manager_my_requests_v1)
@@ -217,10 +221,69 @@ internal class SupabaseManagerRepository {
         SupabaseProvider.client.postgrest.rpc("native_manager_set_class_student_v40c",buildJsonObject{put("p_class",classId);put("p_student",studentId);put("p_add",add)}).decodeAs<JsonObject>().checked();Unit
     }
 
-    suspend fun setTeacherActive(id: String, active: Boolean): Result<Unit> = runCatching {
+    suspend fun setTeacherActive(id: String, active: Boolean, schoolId: String? = null): Result<Unit> = runCatching {
+        if (schoolId.isNullOrBlank()) {
+            SupabaseProvider.client.postgrest.rpc(
+                "native_manager_set_teacher_active_v40b",
+                buildJsonObject { put("p_teacher", id); put("p_active", active) }
+            ).decodeAs<JsonObject>().checked()
+        } else {
+            SupabaseProvider.client.postgrest.rpc(
+                "native_manager_set_teacher_active_v336",
+                buildJsonObject { put("p_teacher", id); put("p_school", schoolId); put("p_active", active) }
+            ).decodeAs<JsonObject>().checked()
+        }
+        Unit
+    }
+
+    suspend fun schoolTeachers(schoolId: String): Result<List<SchoolTeacherItem>> = runCatching {
+        val raw = SupabaseProvider.client.postgrest.rpc(
+            "native_manager_school_teachers_v336", buildJsonObject { put("p_school", schoolId) }
+        ).decodeAs<JsonObject>().checked()
+        (raw["items"] as? JsonArray).orEmpty().mapNotNull { element ->
+            val item = element as? JsonObject ?: return@mapNotNull null
+            SchoolTeacherItem(
+                id = item.text("id"), fullName = item.text("full_name"), username = item.text("username"),
+                email = item.text("email"), employeeCode = item.text("employee_code"), phone = item.text("phone"),
+                active = item.text("status") == "active",
+                walletBalanceToman = item["wallet_balance"]?.jsonPrimitive?.longOrNull ?: 0
+            )
+        }
+    }
+
+    suspend fun schoolClasses(schoolId: String): Result<List<ManagerSchoolClassItem>> = runCatching {
+        val raw = SupabaseProvider.client.postgrest.rpc(
+            "native_manager_school_classes_v336", buildJsonObject { put("p_school", schoolId) }
+        ).decodeAs<JsonObject>().checked()
+        (raw["items"] as? JsonArray).orEmpty().mapNotNull { element ->
+            val item = element as? JsonObject ?: return@mapNotNull null
+            ManagerSchoolClassItem(
+                id = item.text("id"), name = item.text("name"), grade = item.text("grade"),
+                field = item.text("field_of_study"), total = item["total"]?.jsonPrimitive?.intOrNull ?: 0,
+                teacherId = item.text("teacher_id"), teacherName = item.text("teacher_name")
+            )
+        }
+    }
+
+    suspend fun assignClassTeacher(classId: String, teacherId: String?): Result<Unit> = runCatching {
         SupabaseProvider.client.postgrest.rpc(
-            "native_manager_set_teacher_active_v40b",
-            buildJsonObject { put("p_teacher", id); put("p_active", active) }
+            "native_manager_assign_class_teacher_v336",
+            buildJsonObject {
+                put("p_class", classId)
+                put("p_teacher", teacherId?.let { kotlinx.serialization.json.JsonPrimitive(it) } ?: kotlinx.serialization.json.JsonNull)
+            }
+        ).decodeAs<JsonObject>().checked(); Unit
+    }
+
+    suspend fun copyClassToSchool(classId: String, targetSchoolId: String, teacherId: String? = null, newName: String? = null): Result<Unit> = runCatching {
+        SupabaseProvider.client.postgrest.rpc(
+            "native_manager_copy_class_to_school_v336",
+            buildJsonObject {
+                put("p_class", classId)
+                put("p_target_school", targetSchoolId)
+                put("p_teacher", teacherId?.let { kotlinx.serialization.json.JsonPrimitive(it) } ?: kotlinx.serialization.json.JsonNull)
+                put("p_name", newName?.let { kotlinx.serialization.json.JsonPrimitive(it) } ?: kotlinx.serialization.json.JsonNull)
+            }
         ).decodeAs<JsonObject>().checked(); Unit
     }
 

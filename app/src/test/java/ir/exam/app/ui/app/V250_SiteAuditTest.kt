@@ -27,7 +27,8 @@ class V250_SiteAuditTest {
         // V335.47 — پیش از خروج، ممکن است تب دیگری نشست را تازه کرده باشد.
         assertTrue("if (res.status === 400 || res.status === 401 || res.status === 403) {" in a)
         assertTrue("if (adoptSessionFromStorage(tried)) return 'adopted';" in a)
-        assertTrue("saveSession(null, 'refresh-invalid-' + res.status);" in a)
+        assertTrue("saveSession(session, 'keep-refresh-invalid-' + res.status);" in a)
+        assertTrue("sessionDiag('refresh-invalid-' + res.status, 'kept');" in a)
         assertFalse("} catch (e) { saveSession(null); }" in a)
         assertTrue("window.addEventListener('unhandledrejection'" in a)
     }

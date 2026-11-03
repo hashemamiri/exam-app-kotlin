@@ -132,6 +132,10 @@ fun SchoolManagementScreen(
     var schoolsFromDock by remember { mutableStateOf(false) }
     var classEditor by remember { mutableStateOf<SchoolClass?>(null) }
     var creatingClass by remember { mutableStateOf(false) }
+    // V336 — مدیریت کلاس‌های هر مدرسه به‌صورت جداگانه (ساخت/کپی/اختصاص معلم).
+    var schoolClassCreateOpen by remember { mutableStateOf(false) }
+    var schoolClassCopySource by remember { mutableStateOf<SchoolClass?>(null) }
+    var schoolClassAssignTarget by remember { mutableStateOf<SchoolClass?>(null) }
     // V61.1 — پنجرهٔ ساخت مدرسهٔ جدید (فقط مدیر).
     var creatingSchool by remember { mutableStateOf(false) }
     // V262 — ویرایش/حذف مدرسه (فقط مدیر)
@@ -336,12 +340,18 @@ fun SchoolManagementScreen(
                     school = state.selectedSchool!!,
                     classes = state.schoolClasses,
                     onBack = viewModel::closeSchool,
-                    onOpen = viewModel::selectClass
+                    onOpen = viewModel::selectClass,
+                    managerMode = managerTeacherPicker,
+                    teachers = state.schoolTeachers,
+                    schools = state.schools,
+                    onCreateClass = { schoolClassCreateOpen = true },
+                    onCopyClass = { schoolClassCopySource = it },
+                    onAssignTeacher = { schoolClassAssignTarget = it }
                 )
                 state.schoolsOpen -> SchoolsContent(
                     schools = state.schools,
                     onBack = viewModel::closeSchools,
-                    onOpen = viewModel::selectSchool,
+                    onOpen = { viewModel.selectSchool(it, managerMode = managerTeacherPicker) },
                     // V61.1 — فقط مدیر: ساخت مدرسهٔ جدید (مدیر چند مدرسه دارد).
                     onCreateSchool = if (managerTeacherPicker) {
                         { creatingSchool = true }
@@ -499,6 +509,82 @@ fun SchoolManagementScreen(
             dismissButton = {
                 TextButton(onClick = { joiningSchool = false }, enabled = !joinLoading) { Text("انصراف") }
             }
+        )
+    }
+
+    if (schoolClassCreateOpen && state.selectedSchool != null) {
+        val targetSchool = state.selectedSchool!!
+        ClassEditorDialog(
+            item = null,
+            teachers = state.schoolTeachers,
+            schools = listOf(targetSchool),
+            onDismiss = { schoolClassCreateOpen = false },
+            onSave = { name, grade, field, teacherId, _, _ ->
+                viewModel.saveClass(null, name, grade, field, teacherId, false, targetSchool.id)
+                schoolClassCreateOpen = false
+                viewModel.selectSchool(targetSchool, managerMode = true)
+            }
+        )
+    }
+
+    schoolClassAssignTarget?.let { target ->
+        var pickedTeacher by remember(target.id) { mutableStateOf<String?>(target.teacherId.takeIf(String::isNotBlank)) }
+        AlertDialog(
+            onDismissRequest = { schoolClassAssignTarget = null },
+            title = { Text("اختصاص معلم به ${target.name}") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("فقط معلم‌های عضو فعال همین مدرسه قابل انتخاب‌اند. «بدون معلم» کلاس را برای اختصاص بعدی نگه می‌دارد.")
+                    FilterChip(selected = pickedTeacher == null, onClick = { pickedTeacher = null }, label = { Text("بدون معلم") })
+                    LazyColumn(Modifier.heightIn(max = 320.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        items(state.schoolTeachers, key = SchoolTeacherPick::id) { teacher ->
+                            FilterChip(
+                                selected = pickedTeacher == teacher.id,
+                                onClick = { pickedTeacher = teacher.id },
+                                label = { Text(teacher.name.ifBlank { "معلم" }) }
+                            )
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                Button(onClick = {
+                    viewModel.assignSchoolClassTeacher(target.id, pickedTeacher)
+                    schoolClassAssignTarget = null
+                }) { Text("ذخیره") }
+            },
+            dismissButton = { TextButton(onClick = { schoolClassAssignTarget = null }) { Text("انصراف") } }
+        )
+    }
+
+    schoolClassCopySource?.let { source ->
+        val sourceSchoolId = state.selectedSchool?.id
+        var targetSchoolId by remember(source.id) { mutableStateOf(state.schools.firstOrNull { it.id != sourceSchoolId }?.id) }
+        var copyName by remember(source.id) { mutableStateOf(source.name) }
+        AlertDialog(
+            onDismissRequest = { schoolClassCopySource = null },
+            title = { Text("کپی کلاس به مدرسهٔ دیگر") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("کلاس «${source.name}» با دانش‌آموزانش در مدرسهٔ مقصد ساخته می‌شود. آزمون‌ها و پاسخ‌ها کپی نمی‌شوند و تغییرات بعدی دو کلاس مستقل است.")
+                    OutlinedTextField(copyName, { copyName = it.take(120) }, label = { Text("نام کلاس در مقصد") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                    LazyColumn(Modifier.heightIn(max = 260.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        items(state.schools.filter { it.id != sourceSchoolId }, key = TeacherSchoolItem::id) { sch ->
+                            FilterChip(selected = targetSchoolId == sch.id, onClick = { targetSchoolId = sch.id }, label = { Text(sch.name.ifBlank { "مدرسه" }) })
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                Button(
+                    enabled = targetSchoolId != null && copyName.isNotBlank(),
+                    onClick = {
+                        viewModel.copySchoolClass(source.id, targetSchoolId!!, null, copyName.trim())
+                        schoolClassCopySource = null
+                    }
+                ) { Text("کپی کن") }
+            },
+            dismissButton = { TextButton(onClick = { schoolClassCopySource = null }) { Text("انصراف") } }
         )
     }
 
@@ -918,7 +1004,13 @@ private fun SchoolClassesContent(
     school: TeacherSchoolItem,
     classes: List<SchoolClass>,
     onBack: () -> Unit,
-    onOpen: (SchoolClass) -> Unit
+    onOpen: (SchoolClass) -> Unit,
+    managerMode: Boolean = false,
+    teachers: List<SchoolTeacherPick> = emptyList(),
+    schools: List<TeacherSchoolItem> = emptyList(),
+    onCreateClass: () -> Unit = {},
+    onCopyClass: (SchoolClass) -> Unit = {},
+    onAssignTeacher: (SchoolClass) -> Unit = {}
 ) {
     Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Row(
@@ -928,6 +1020,12 @@ private fun SchoolClassesContent(
         ) {
             Text("کلاس‌های ${school.name}", style = MaterialTheme.typography.titleMedium)
             TextButton(onClick = onBack) { Text("بازگشت به مدارس") }
+        }
+        if (managerMode) {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Button(onClick = onCreateClass, modifier = Modifier.weight(1f)) { Text("کلاس جدید در این مدرسه") }
+            }
+            Text("کلاس می‌تواند بدون معلم ساخته شود؛ بعداً از «اختصاص معلم» معلم عضو همین مدرسه را انتخاب کنید. «کپی به مدرسهٔ دیگر» فقط کلاس و دانش‌آموزان را منتقل می‌کند.")
         }
         if (classes.isEmpty()) {
             Text("در این مدرسه کلاسی ندارید.")
@@ -948,6 +1046,20 @@ private fun SchoolClassesContent(
                                 )
                             }
                             Text("اعضا: ${item.total} نفر · پسر: ${item.boys} · دختر: ${item.girls}")
+                            if (managerMode) {
+                                Text(
+                                    if (item.teacherName.isNotBlank()) "معلم: ${item.teacherName}" else "معلم: هنوز اختصاص داده نشده",
+                                    style = MaterialTheme.typography.bodySmall
+                                )
+                                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    OutlinedButton(onClick = { onAssignTeacher(item) }, modifier = Modifier.weight(1f)) { Text("اختصاص معلم") }
+                                    OutlinedButton(
+                                        onClick = { onCopyClass(item) },
+                                        enabled = schools.any { it.id != school.id },
+                                        modifier = Modifier.weight(1f)
+                                    ) { Text("کپی به مدرسهٔ دیگر") }
+                                }
+                            }
                         }
                     }
                 }
@@ -1634,7 +1746,7 @@ private fun ClassEditorDialog(
                             Text("معلم", style = MaterialTheme.typography.labelSmall)
                             Text(
                                 teachers.firstOrNull { it.id == teacherId }?.name
-                                    ?: "انتخاب معلم کلاس",
+                                    ?: "بدون معلم (اختصاص بعدی)",
                                 textAlign = TextAlign.Center
                             )
                         }
@@ -1667,7 +1779,7 @@ private fun ClassEditorDialog(
         confirmButton = {
             Button(
                 onClick = { onSave(name, grade, field, teacherId, shareWithManager, schoolId) },
-                enabled = name.isNotBlank() && (teachers.isEmpty() || teacherId != null)
+                enabled = name.isNotBlank()
             ) { Text("ذخیره") }
         },
         dismissButton = { TextButton(onClick = onDismiss) { Text("انصراف") } }
@@ -1679,6 +1791,11 @@ private fun ClassEditorDialog(
             text = {
                 LazyColumn(Modifier.heightIn(max = 420.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     if (teachers.isEmpty()) item { Text("معلمی در مدرسه نیست.") }
+                    item {
+                        Card(Modifier.fillMaxWidth().clickable { teacherId = null; teacherPickerOpen = false }) {
+                            Text("بدون معلم (اختصاص بعدی)", modifier = Modifier.fillMaxWidth().padding(12.dp), textAlign = TextAlign.Center)
+                        }
+                    }
                     items(teachers, key = SchoolTeacherPick::id) { teacher ->
                         Card(
                             Modifier.fillMaxWidth().clickable {

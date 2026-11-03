@@ -1,5 +1,17 @@
 # هندآف جامع مهاجرت سامانه آزمون از WebView به Native Kotlin
 
+## V336.0 — مدیریت چندمدرسه‌ای کلاس‌ها و معلم‌ها (اپ 1.03.49 + سایت) — ۲۰۲۶-۱۱-۰۳
+
+- **درخواست کاربر:** مدیر بتواند برای هر مدرسه جداگانه کلاس اضافه کند؛ معلم با کد دعوت به یک یا چند مدرسه اضافه شود؛ کلاس مدرسهٔ ۱ با دانش‌آموزان به مدرسهٔ ۲ اضافه شود. انتخاب کاربر: کپی مستقل کلاس+دانش‌آموز (بدون آزمون/پاسخ)، دعوت با کد، ساخت کلاس با معلم یا بدون معلم، مقصد بسته `staging`.
+- **SQL:** `supabase/migrations/20261103_native_multi_school_classes_v336.sql` (+ کپی دستی `sql/manual/SQL_NATIVE_MULTI_SCHOOL_CLASSES_V336.sql`). `classes.teacher_id` nullable شد تا کلاس بدون معلم ممکن باشد. RPCهای تازه: `native_manager_school_teachers_v336`، `native_manager_set_teacher_active_v336`، `native_manager_save_school_class_v336`، `native_manager_school_classes_v336`، `native_manager_assign_class_teacher_v336`، `native_manager_copy_class_to_school_v336`. `native_manager_set_class_student_v40c` برای کلاس بدون معلم بازنویسی شد (فقط اگر معلم دارد `teacher_student_links` می‌سازد). همهٔ RPCها عضویت مدیر در مدرسهٔ مبدأ/مقصد را چک می‌کنند؛ کپی فقط `class_members` و `school_students` را منتقل می‌کند.
+- **اپ:** `SchoolManagementScreen` نمای کلاس‌های هر مدرسه برای مدیر دکمه‌های «کلاس جدید در این مدرسه»، «اختصاص معلم» و «کپی به مدرسهٔ دیگر» دارد. `ClassesViewModel.selectSchool(item, managerMode=true)` از RPC کلاس‌های مدرسه استفاده می‌کند و معلم‌های همان مدرسه را بار می‌گیرد. `ClassEditorDialog` گزینهٔ «بدون معلم (اختصاص بعدی)» دارد. `ManagerFoundationScreens` فیلتر مدرسه برای لیست معلم‌ها دارد و فعال/غیرفعال‌سازی را با `p_school` انجام می‌دهد. `SupabaseManagerRepository` متدهای `schoolTeachers/schoolClasses/assignClassTeacher/copyClassToSchool` و `setTeacherActive(..., schoolId)` گرفت.
+- **سایت:** `site/src/admin.js` صفحهٔ `managerSchoolClassesPage` (از ردیف هر مدرسه: «کلاس‌های مدرسه») با ساخت/اختصاص/کپی/حذف؛ `managerTeachersPage` فیلتر مدرسه و RPCهای v336؛ `allSchoolClasses` کلاس‌ها را مستقیم از مدارس می‌خواند تا کلاس بدون معلم دیده شود؛ `newClassDlg` گزینهٔ بدون معلم دارد.
+- **تست:** `V336_MultiSchoolClassesTest` (۵ تست منبع/قرارداد). پین قدیمی `V250_SiteAuditTest` با رفتار فعلی نشست (`keep-refresh-invalid`) هماهنگ شد. `V41InviteTeacherCardPolishTest` بدون تغییر سبز است چون خط پین‌شده حفظ شد.
+- **اعتبارسنجی محلی:** `node --check site/src/admin.js`، `check_test_pins` (0 missing)، preflight و build سایت در ادامهٔ همین بسته اجرا می‌شوند. کامپایل Gradle/CI باید پس از push روی `staging` بررسی شود.
+- **مقصد:** فقط `staging` (انتخاب صریح کاربر در همین نوبت). SQL باید دستی اجرا شود؛ بدون آن RPCهای v336 کار نمی‌کنند.
+
+---
+
 ## V335.69 — نوار پیوندها بدون افتادن روی ۸ بلوک + اینماد دوبرابر کنار دکمه‌ها — ۲۰۲۶-۱۰-۲۹ (فقط سایت، فقط دسکتاپ)
 
 - `site/src/app.js`: `filter` روی `LP_FOOT_LINKS` دکمهٔ `#products` را از نوار پایین حذف می‌کند؛ تابع `alignLandingLinks()` اضافه شد که کفِ `.lp-links` را با کفِ `.lp-r .card` هم‌راستا می‌کند، ولی بالا رفتن را به «کفِ محتوای بالای ردیف دکمه‌ها» (۸ بلوک و متن معرفی) محدود می‌کند؛ `placeLandingEnamad()` نماد را کنار دکمه‌ها می‌نشاند؛ `watchLandingLinks()` با `ResizeObserver` + `MutationObserver` هنگام تغییر حالت ورود/ثبت‌نام/فراموشی رمز و تغییر اندازهٔ پنجره دوباره محاسبه می‌کند.

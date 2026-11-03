@@ -91,6 +91,8 @@ fun ManagerTeachersScreen(
     // V62.6 — انتخاب مدرسهٔ مقصد کد دعوت (مدیر چندمدرسه‌ای).
     var inviteSchools by remember { mutableStateOf<List<ir.exam.app.data.repository.ManagerSchoolOption>>(emptyList()) }
     var inviteSchoolId by remember { mutableStateOf<String?>(null) }
+    // V336 — فیلتر مدرسه برای لیست معلم‌ها؛ فعال/غیرفعال و حذف فقط روی عضویت همان مدرسه اثر می‌گذارد.
+    var schoolFilterId by remember { mutableStateOf<String?>(null) }
     var transferTarget by remember { mutableStateOf<ir.exam.app.data.repository.SchoolTeacherItem?>(null) }
     var transferAmount by remember { mutableStateOf("") }
     var removeTarget by remember { mutableStateOf<ir.exam.app.data.repository.SchoolTeacherItem?>(null) }
@@ -102,7 +104,8 @@ fun ManagerTeachersScreen(
     fun reloadTeachers() {
         scope.launch {
             loading = true
-            repository.teachers().onSuccess { teachers = it; error = null }
+            val result = schoolFilterId?.let { repository.schoolTeachers(it) } ?: repository.teachers()
+            result.onSuccess { teachers = it; error = null }
                 .onFailure { error = safeManagerError(it) }
             loading = false
         }
@@ -118,6 +121,15 @@ fun ManagerTeachersScreen(
     LaunchedEffect(inviteModeRequested, newTeacherRequested, teacherListRequested) {
         inviteMode = inviteModeRequested
         if (inviteModeRequested) reloadInvites() else reloadTeachers()
+        if (!inviteModeRequested && inviteSchools.isEmpty()) {
+            repository.managerSchools().onSuccess { list ->
+                inviteSchools = list
+                if (schoolFilterId == null) {
+                    schoolFilterId = list.firstOrNull()?.id
+                    reloadTeachers()
+                }
+            }.onFailure {}
+        }
     }
 
     Column(
@@ -191,6 +203,20 @@ fun ManagerTeachersScreen(
         } else {
             error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
             message?.let { Text(it, color = MaterialTheme.colorScheme.primary) }
+            if (inviteSchools.size > 1) {
+                androidx.compose.foundation.layout.FlowRow(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally)
+                ) {
+                    inviteSchools.forEach { school ->
+                        androidx.compose.material3.FilterChip(
+                            selected = schoolFilterId == school.id,
+                            onClick = { schoolFilterId = school.id; reloadTeachers() },
+                            label = { Text(school.name.ifBlank { "مدرسه" }) }
+                        )
+                    }
+                }
+            }
             if (loading) CircularProgressIndicator(Modifier.align(Alignment.CenterHorizontally))
             teachers.forEach { teacher ->
                 Card(
@@ -213,7 +239,7 @@ fun ManagerTeachersScreen(
                             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
                                 androidx.compose.material3.IconButton(onClick = {
                                     scope.launch {
-                                        repository.setTeacherActive(teacher.id, !teacher.active)
+                                        repository.setTeacherActive(teacher.id, !teacher.active, schoolFilterId)
                                             .onSuccess { reloadTeachers() }
                                             .onFailure { error = safeManagerError(it) }
                                     }
@@ -329,7 +355,7 @@ fun ManagerTeachersScreen(
         )
     }
     removeTarget?.let { teacher ->
-        var removeSchoolId by remember(teacher.id) { mutableStateOf<String?>(null) }
+        var removeSchoolId by remember(teacher.id) { mutableStateOf<String?>(schoolFilterId) }
         LaunchedEffect(teacher.id) {
             if (inviteSchools.isEmpty()) {
                 repository.managerSchools().onSuccess { inviteSchools = it }.onFailure {}
