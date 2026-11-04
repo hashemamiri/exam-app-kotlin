@@ -76,6 +76,8 @@ fun Design69MainMenuScreen(
     cards: List<Design69MenuCard>,
     onProfile: () -> Unit,
     featuredCard: Design69MenuCard? = null,
+    // V337 — کارت ویژهٔ دوم (مدارس) کنار کارت اول؛ اگر فقط یکی باشد همان وسط‌چین قبلی.
+    featuredCard2: Design69MenuCard? = null,
     /** V321 — تغییر سریع حالت تیره/روشن از کارت پروفایل (بدون رفتن به تنظیمات). */
     onToggleTheme: (() -> Unit)? = null,
     /** V321 — حالت تیره الان فعال است؟ (برای آیکن ماه/خورشید) */
@@ -167,20 +169,44 @@ fun Design69MainMenuScreen(
             }
             }
 
-            featuredCard?.let { card ->
+            // V337 — یک یا دو کارت ویژه زیر پروفایل؛ دو کارت هم‌عرض کنار هم.
+            val featuredCards = listOfNotNull(featuredCard, featuredCard2)
+            if (featuredCards.isNotEmpty()) {
                 Spacer(Modifier.height(15.dp))
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
-                    NeumorphicMenuTile(
-                        title = card.title,
-                        subtitle = card.subtitle,
-                        icon = card.icon,
-                        selected = card.selected,
-                        danger = card.danger,
-                        onClick = card.onClick,
-                        modifier = Modifier
-                            .fillMaxWidth(.52f)
-                            .height(Design69MenuContract.CARD_HEIGHT_DP.dp)
-                    )
+                if (featuredCards.size == 1) {
+                    val card = featuredCards.first()
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
+                        NeumorphicMenuTile(
+                            title = card.title,
+                            subtitle = card.subtitle,
+                            icon = card.icon,
+                            selected = card.selected,
+                            danger = card.danger,
+                            onClick = card.onClick,
+                            modifier = Modifier
+                                .fillMaxWidth(.52f)
+                                .height(Design69MenuContract.CARD_HEIGHT_DP.dp)
+                        )
+                    }
+                } else {
+                    Row(
+                        Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        featuredCards.forEach { card ->
+                            NeumorphicMenuTile(
+                                title = card.title,
+                                subtitle = card.subtitle,
+                                icon = card.icon,
+                                selected = card.selected,
+                                danger = card.danger,
+                                onClick = card.onClick,
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .height(Design69MenuContract.CARD_HEIGHT_DP.dp)
+                            )
+                        }
+                    }
                 }
             }
             Spacer(Modifier.height(18.dp))

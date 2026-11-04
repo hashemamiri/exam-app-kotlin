@@ -646,6 +646,9 @@ img,video,canvas,iframe{max-width:100%}
 /* ---- V150: مدیر/معاون در پوستهٔ موبایل ---- */
 .m-featured{display:flex;justify-content:center;margin-top:15px}
 .m-featured .m-tile{width:52%}
+/* V337 — دو کارت ویژهٔ مدیر کنار هم */
+.m-featured.m-featured-two{gap:10px}
+.m-featured.m-featured-two .m-tile{width:48%}
 
 /* ---- V151: صفحه‌های داخلی موبایل به سبک اپ — جدول → کارت ---- */
 .m-mode .m-content .tbl-wrap{overflow:visible}

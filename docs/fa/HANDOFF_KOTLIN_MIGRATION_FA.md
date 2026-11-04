@@ -21491,3 +21491,31 @@ check_test_pins بهبودیافته (assertTrue/assertFalse/contains/!contains/
 - **کارنامهٔ دانش‌آموز در اپ و وب (`StudentResultsScreen.kt`، `SupabaseGradingRepository.kt`، `site/src/admin.js`)**: بازگشت `part_grades` در `native_my_answer_detail_parts_v1`، نمایش نمرهٔ هر گام در کنار بازخورد دبیر برای سؤال‌های چندبخشی و اثباتی، و رفع باگ کلید بازخورد در حالت `shown_q` (`keyIndex + ':' + pi`).
 - **تصحیح دبیر در اپ و وب (`GradingScreen.kt`، `GradingViewModel.kt`، `site/src/admin.js`)**: پاک‌شدن واقعی نمرهٔ گام با خالی‌کردن فیلد، دکمهٔ اعمال نمرهٔ پیشنهادی هندسی در اپ، هماهنگی دکمه‌های `کامل` / `۰` با زیربخش‌ها در وب، و پشتیبانی `approve_auto_grades` و `exam_autograde_info` از ترسیم‌های خودکار.
 - **سازندهٔ دسکتاپ وب و تجربهٔ آزمون دانش‌آموز**: تازه‌سازی زندهٔ `sectionDurationsBox` و قواعد بخش/مبحث هنگام تایپ عنوان بخش یا مبحث، به‌روزرسانی زندهٔ کادر «ارجاع به نتیجهٔ گام قبل»، عنوان «متن / صورت مشترک» در متوسطه، و حذف تختهٔ آزاد اضافی زیر بوم مختصاتی وقتی `allowAnswerGraph` خاموش است.
+
+---
+
+## گزارش نسخهٔ V337 (اپ `1.03.51` + سایت — بدون SQL جدید)
+
+### ۱) خواستهٔ کاربر
+- کارت «مدارس» کنار «داشبورد» در منوی همبرگری مدیر/معاون.
+- لمس مدرسه → کلاس‌های همان مدرسه → ساخت کلاس، اختصاص معلم، افزودن/حذف دانش‌آموز کلاس.
+- آینهٔ همین مسیر در سایت.
+- رفع دکمهٔ «مشاهده کارنامه مدرسه» در داشبورد مدیر که کارنامه نشان نمی‌داد.
+
+### ۲) تغییرات اپ
+- `ExamApp.kt`: کارت ویژهٔ دوم `featuredSchoolsCard` و مسیر `openManagerSchools()`؛ `key(managerCardsSection)` دور `ManagerStatsScreen` تا با کلیک کارنامه، composition بخش کارنامه تازه شود.
+- `Design69MainMenuScreen.kt` و `TabletDesktopShell.kt`: پشتیبانی `featuredCard2`؛ دو کارت ویژه هم‌عرض در منو و دو ردیف در ریل تبلت.
+- `SchoolManagementScreen.kt`: در مسیر مدیر، بازکردن کلاس به‌جای roster معلم، صفحهٔ مستقل `ManagerSchoolClassRosterScreen` را باز می‌کند.
+- `ManagerSchoolClassRosterScreen.kt` (جدید): فقط RPCهای مدیر (`class_roster_v40c`، `school_students_v40c`، `set_class_student_v40c`)؛ افزودن موجود با جست‌وجو، حذف فقط عضویت کلاس با تأیید.
+
+### ۳) تغییرات سایت
+- `mobile.js`: دو کارت ویژهٔ داشبورد/مدارس؛ کارت مدارس به `go('school')` می‌رود.
+- `app.js`: ورودی «مدارس» در `MENUS.managerMenu`.
+- `admin.js`: ردیف مدرسه قابل لمس است و به کلاس‌های همان مدرسه می‌رود؛ `schoolName` به roster پاس می‌شود و دکمهٔ بازگشت roster به کلاس‌های همان مدرسه برمی‌گردد.
+- `site.css`: `.m-featured-two` برای دو کارت ویژه.
+
+### ۴) تست و انتشار
+- تست جدید: `V337_ManagerSchoolsMenuTest.kt` (۴ تست source-contract).
+- پین قدیمی `V171_SiteDesktopRoleMenusTest.kt` با منوی تازهٔ مدیر هماهنگ شد.
+- `check_test_pins.py`: 0 missing؛ `preflight.py`: PASS.
+- SQL جدید لازم نیست؛ همهٔ RPCها از V336/V40C موجود هستند.

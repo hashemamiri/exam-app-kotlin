@@ -539,6 +539,8 @@
     arg = arg || {};
     if (arg.classId) return managerRoster(c, arg);
     if (arg.teacherId) return managerTeacherClasses(c, arg);
+    /* V337 — بازگشت از roster به کلاس‌های همان مدرسه */
+    if (arg.schoolId && arg.openClasses) return managerSchoolClassesPage(c, {id: arg.schoolId, name: arg.schoolName || 'مدرسه'});
     S.loading(c);
     try {
       var r = await Promise.all([S.rpcObj('native_manager_school_summary_v36', {}).catch(function () { return {}; }), S.rpcObj('native_manager_teachers_v37', {}), S.rpcObj('native_manager_school_students_v40c', {}).catch(function () { return {items: []}; })]);
@@ -550,10 +552,12 @@
       var head = schools.length === 1 ? '🏫 ' + schools[0].name : schools.length > 1 ? '🏫 مدرسه‌های من (' + fa(schools.length) + ')' : '🏫 ' + (s.school_name || 'مدرسه');
       c.appendChild(el('div', {class: 'card'}, [el('div', {class: 'row'}, [el('h3', {class: 'grow', text: head}), el('button', {class: 'btn light sm', text: '🗄 پشتیبان مدرسه', onclick: managerBackup}), el('button', {class: 'btn sm', text: '➕ مدرسهٔ جدید', onclick: function () { createSchoolDlg(function () { managerSchoolPage(c, arg); }); }})]),
         schools.length ? el('div', {style: 'margin-top:8px;display:flex;flex-direction:column;gap:6px'}, schools.map(function (x) {
-          return el('div', {class: 'row', style: 'gap:8px;align-items:center'}, [el('b', {text: x.name}), el('span', {class: 'muted', text: [x.province, x.city].filter(Boolean).join('، ') || '—'}), el('span', {class: 'muted', text: fa(x.classes || 0) + ' کلاس'}), el('span', {class: 'grow'}),
-            el('button', {class: 'btn light sm', text: 'کلاس‌های مدرسه', onclick: function () { managerSchoolClassesPage(c, x); }}),
-            el('button', {class: 'icon-btn', title: 'ویرایش مدرسه', 'aria-label': 'ویرایش مدرسه', html: '✎', onclick: function () { editSchoolDlg(x, function () { managerSchoolPage(c, arg); }); }}),
-            el('button', {class: 'icon-btn danger', title: 'حذف مدرسه', 'aria-label': 'حذف مدرسه', html: '🗑', onclick: async function () {
+          /* V337 — لمس ردیف مدرسه = ورود به کلاس‌های همان مدرسه (مثل اپ) */
+          return el('div', {class: 'row', style: 'gap:8px;align-items:center;cursor:pointer', title: 'ورود به کلاس‌های مدرسه', onclick: function (ev) { if (ev && ev.target && ev.target.closest && ev.target.closest('button')) return; managerSchoolClassesPage(c, x); }}, [el('b', {text: x.name}), el('span', {class: 'muted', text: [x.province, x.city].filter(Boolean).join('، ') || '—'}), el('span', {class: 'muted', text: fa(x.classes || 0) + ' کلاس'}), el('span', {class: 'grow'}),
+            el('button', {class: 'btn light sm', text: 'کلاس‌های مدرسه', onclick: function (ev) { ev.stopPropagation(); managerSchoolClassesPage(c, x); }}),
+            el('button', {class: 'icon-btn', title: 'ویرایش مدرسه', 'aria-label': 'ویرایش مدرسه', html: '✎', onclick: function (ev) { ev.stopPropagation(); editSchoolDlg(x, function () { managerSchoolPage(c, arg); }); }}),
+            el('button', {class: 'icon-btn danger', title: 'حذف مدرسه', 'aria-label': 'حذف مدرسه', html: '🗑', onclick: async function (ev) {
+              ev.stopPropagation();
               if (!(await S.confirmDlg('حذف مدرسه', 'مدرسهٔ «' + x.name + '» حذف می‌شود. فقط مدرسهٔ بدون کلاس، آزمون و دانش‌آموز قابل حذف است و آخرین مدرسه حذف نمی‌شود.', 'حذف', true))) return;
               try { chk(await S.rpcObj('native_manager_delete_school_v1', {p_school: x.id})); toast('مدرسه حذف شد.', 'ok'); managerSchoolPage(c, arg); } catch (e) { toast(errMsg(e), 'err'); }
             }})]);
@@ -615,7 +619,11 @@
       var roster = chk(r[0]), all = chk(r[1]).items || [], inClass = roster.items || [], ids = {}; inClass.forEach(function (x) { ids[x.id] = true; });
       c.innerHTML = '';
       var refresh = function () { managerRoster(c, arg); };
-      c.appendChild(el('div', {class: 'row', style: 'margin-bottom:12px'}, [el('button', {class: 'btn light sm', text: '→ کلاس‌ها', onclick: function () { S.go('school', {teacherId: arg.teacherId, teacherName: arg.teacherName}); }}), el('h2', {class: 'grow', style: 'margin:0;font-size:18px', text: 'دانش‌آموزان کلاس ' + (roster.class_name || arg.className || '')}),
+      /* V337 — اگر از کلاس‌های یک مدرسه آمده‌ایم، بازگشت به همان مدرسه است نه فهرست معلم‌ها */
+      var backBtn = arg.schoolId
+        ? el('button', {class: 'btn light sm', text: '→ کلاس‌های مدرسه', onclick: function () { S.go('school', {schoolId: arg.schoolId, schoolName: arg.schoolName, openClasses: true}); }})
+        : el('button', {class: 'btn light sm', text: '→ کلاس‌ها', onclick: function () { S.go('school', {teacherId: arg.teacherId, teacherName: arg.teacherName}); }});
+      c.appendChild(el('div', {class: 'row', style: 'margin-bottom:12px'}, [backBtn, el('h2', {class: 'grow', style: 'margin:0;font-size:18px', text: 'دانش‌آموزان کلاس ' + (roster.class_name || arg.className || '')}),
         /* V203 — مثل اپ (ManagerTeacherClassScreen «افزودن جدید»): ساخت حساب دانش‌آموز داخل همین کلاس */
         /* V224 — «افزودن گروهی» حذف شد؛ پنجرهٔ «دانش‌آموز جدید» چندکارتی است */
         window.SiteSchool ? el('button', {class: 'btn sm', text: '➕ دانش‌آموز جدید', onclick: function () { window.SiteSchool.studentForm(null, [{id: arg.classId, name: roster.class_name || arg.className || 'این کلاس'}], arg.classId, refresh); }}) : null]));
@@ -830,7 +838,7 @@
             el('td', {text: k.field_of_study || '—'}),
             el('td', {text: fa(k.total || 0)}),
             el('td', {}, [el('div', {class: 'acts'}, [
-              el('button', {class: 'icon-btn', title: 'دانش‌آموزان', html: '👥', onclick: function () { S.go('school', {classId: k.id, className: k.name, schoolId: school.id}); }}),
+              el('button', {class: 'icon-btn', title: 'دانش‌آموزان', html: '👥', onclick: function () { S.go('school', {classId: k.id, className: k.name, schoolId: school.id, schoolName: school.name}); }}),
               el('button', {class: 'icon-btn', title: 'اختصاص معلم', html: '🧑‍🏫', onclick: function () { assignTeacherDlg(k, teachers, refresh); }}),
               el('button', {class: 'icon-btn', title: 'کپی به مدرسهٔ دیگر', html: '⧉', onclick: function () { copyClassDlg(k, school, schools, refresh); }}),
               el('button', {class: 'icon-btn danger', title: 'حذف', html: '🗑', onclick: async function () {

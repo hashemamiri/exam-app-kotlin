@@ -106,6 +106,7 @@ import ir.exam.app.domain.model.SchoolClass
 import ir.exam.app.domain.model.StudentCredential
 import ir.exam.app.domain.model.StudentProfile
 import ir.exam.app.domain.model.UpdateStudentRequest
+import ir.exam.app.ui.manager.ManagerSchoolClassRosterScreen
 import kotlin.random.Random
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -136,6 +137,8 @@ fun SchoolManagementScreen(
     var schoolClassCreateOpen by remember { mutableStateOf(false) }
     var schoolClassCopySource by remember { mutableStateOf<SchoolClass?>(null) }
     var schoolClassAssignTarget by remember { mutableStateOf<SchoolClass?>(null) }
+    // V337 — کلاس باز شده از مسیر مدارس مدیر؛ roster فقط با RPCهای مدیر.
+    var managerRosterClass by remember { mutableStateOf<SchoolClass?>(null) }
     // V61.1 — پنجرهٔ ساخت مدرسهٔ جدید (فقط مدیر).
     var creatingSchool by remember { mutableStateOf(false) }
     // V262 — ویرایش/حذف مدرسه (فقط مدیر)
@@ -206,6 +209,7 @@ fun SchoolManagementScreen(
             SchoolLaunchAction.SHOW_CLASSES -> {
                 showStudents = false
                 schoolsFromDock = false
+                managerRosterClass = null
                 viewModel.closeClass()
                 viewModel.closeSchools()
                 onLaunchActionConsumed()
@@ -247,12 +251,23 @@ fun SchoolManagementScreen(
             SchoolLaunchAction.SHOW_SCHOOLS -> {
                 showStudents = false
                 schoolsFromDock = true
+                managerRosterClass = null
                 viewModel.closeClass()
                 viewModel.openSchools()
                 onLaunchActionConsumed()
             }
             null -> Unit
         }
+    }
+
+    // V337 — مدیر از «مدارس» وارد کلاس شده است: صفحهٔ مستقل roster مدیر.
+    if (managerTeacherPicker && managerRosterClass != null) {
+        ManagerSchoolClassRosterScreen(
+            schoolClass = managerRosterClass!!,
+            schoolName = state.selectedSchool?.name.orEmpty(),
+            onBack = { managerRosterClass = null }
+        )
+        return
     }
 
     PullToRefreshBox(
@@ -340,7 +355,10 @@ fun SchoolManagementScreen(
                     school = state.selectedSchool!!,
                     classes = state.schoolClasses,
                     onBack = viewModel::closeSchool,
-                    onOpen = viewModel::selectClass,
+                    onOpen = {
+                        if (managerTeacherPicker) managerRosterClass = it
+                        else viewModel.selectClass(it)
+                    },
                     managerMode = managerTeacherPicker,
                     teachers = state.schoolTeachers,
                     schools = state.schools,

@@ -496,22 +496,27 @@
   function managerMenu() {
     var u = S.user();
     var cards = [
-      ['کلاس‌ها', 'فهرست و مدیریت', 'classes', function () { go('school'); }],
+      ['کلاس‌ها', 'فهرست و مدیریت', 'classes', function () { go('classes'); }],
       ['دانش‌آموزان', 'فهرست و مدیریت', 'students', function () { go('school', {students: true}); }],
       ['حساب', 'مشخصات و امنیت حساب', 'account', function () { go('profile'); }],
       ['سایت', 'onlineexam.ir', 'site', function () { ui.menuOpen = false; toast('شما هم‌اکنون در سایت هستید.', 'ok'); paint(); }],
       ['تنظیمات', 'ظاهر، داده و درباره', 'settings', function () { go('tools'); }],
       ['خروج', 'خروج امن و تعویض حساب', 'logout', async function () { if (await S.confirmDlg('خروج از حساب', 'از حساب خارج می‌شوید؟', 'خروج', true)) { ui.menuOpen = false; S.logout(); } }, true]
     ];
-    var sel = {school: 'classes', profile: 'account', tools: 'settings', dashboard: 'dashboard'}[view.panel];
+    /* V337 — «مدارس» کارت ویژهٔ دوم کنار داشبورد؛ کلاس‌ها/دانش‌آموزان مثل قبل. */
+    var sel = {classes: 'classes', students: 'students', profile: 'account', tools: 'settings', dashboard: 'dashboard'}[view.panel];
+    if (view.panel === 'school') sel = (view.arg && view.arg.students) ? 'students' : 'schools';
     return el('div', {class: 'm-menu'}, [
       el('button', {class: 'm-profile neo', onclick: function () { go('profile'); }}, [
         el('div', {class: 'm-avatar'}, [(localAvatar(u.id) || u.avatarUrl) ? el('img', {src: localAvatar(u.id) || u.avatarUrl, alt: ''}) : el('span', {text: (u.name || '?').trim().charAt(0)})]),
         el('div', {class: 'm-profile-t'}, [el('div', {class: 'k', text: 'پروفایل مدیر/معاون'}), el('div', {class: 'n', text: u.name || 'حساب کاربری من'}), el('div', {class: 'e', text: u.email || 'حساب مدیر/معاون'})]),
         ic('chevron', 'm-chev')
       ]),
-      /* کارت ویژه، وسط‌چین با عرض ۵۲٪ (featuredCard) */
-      el('div', {class: 'm-featured'}, [el('button', {class: 'm-tile neo' + (sel === 'dashboard' ? ' sel' : ''), onclick: function () { go('dashboard'); }}, [ic('cards', 'm-tile-ic'), el('b', {text: 'داشبورد'}), el('span', {text: 'اطلاعات مدرسه و آمار'})])]),
+      /* V337 — دو کارت ویژه کنار هم: داشبورد + مدارس (featuredCard / featuredCard2) */
+      el('div', {class: 'm-featured m-featured-two'}, [
+        el('button', {class: 'm-tile neo' + (sel === 'dashboard' ? ' sel' : ''), onclick: function () { go('dashboard'); }}, [ic('cards', 'm-tile-ic'), el('b', {text: 'داشبورد'}), el('span', {text: 'اطلاعات مدرسه و آمار'})]),
+        el('button', {class: 'm-tile neo' + (sel === 'schools' ? ' sel' : ''), onclick: function () { go('school'); }}, [ic('school', 'm-tile-ic'), el('b', {text: 'مدارس'}), el('span', {text: 'فهرست مدارس و کلاس‌ها'})])
+      ]),
       menuGrid(cards, sel)
     ]);
   }

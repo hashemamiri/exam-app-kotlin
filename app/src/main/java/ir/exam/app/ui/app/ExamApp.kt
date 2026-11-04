@@ -50,6 +50,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
@@ -258,6 +259,14 @@ private fun AuthenticatedExamApp(
         closeTransientNavigation()
         managerCardsSection = "status"
         page = MainPage.CARDS
+    }
+
+    // V337 — کارت «مدارس» کنار داشبورد: فهرست مدارس مدیر (نه کلاس‌های یک معلم).
+    fun openManagerSchools() {
+        closeTransientNavigation()
+        schoolStudentsSelected = false
+        schoolLaunchAction = SchoolLaunchAction.SHOW_SCHOOLS
+        page = MainPage.SCHOOL
     }
 
     fun createStudent() {
@@ -480,6 +489,7 @@ private fun AuthenticatedExamApp(
         onWallet = ::openWallet,
         onCards = ::openCards,
         onManagerDashboard = ::openManagerDashboard,
+        onManagerSchools = ::openManagerSchools,
         onProfile = {
             closeTransientNavigation()
             profileDestination = ProfileSettingsDestination.PROFILE
@@ -656,7 +666,8 @@ private fun AuthenticatedExamApp(
                             onReport = { managerCardsSection = "report" },
                             onStatus = { managerCardsSection = "status" }
                         )
-                        else -> ManagerStatsScreen(
+                        // V337 — با تعویض داشبورد/کارنامه، هویت composition تازه شود تا پنل کارنامه حتماً جایگزین شود.
+                        else -> key(managerCardsSection) { ManagerStatsScreen(
                         // V62.6 — کارنامه و وضعیت هر کدام منوی اختصاصی خود را
                         // دارند؛ پنل سریع داشبورد فقط در حالت وضعیت است.
                         section = managerCardsSection ?: "status",
@@ -675,7 +686,7 @@ private fun AuthenticatedExamApp(
                         // V62.6 — منوی اختصاصی کارنامه: میان‌برهای گزارش.
                         onOpenStatus = { managerCardsSection = "status" },
                         onOpenReport = { managerCardsSection = "report" }
-                        )
+                        ) }
                     }
                 } else if (user.role == UserRole.TEACHER) {
                     TeacherManagementCardsScreen(
@@ -1064,6 +1075,7 @@ private fun AuthenticatedShell(
     onWallet: () -> Unit,
     onCards: () -> Unit,
     onManagerDashboard: () -> Unit = {},
+    onManagerSchools: () -> Unit = {},
     onProfile: () -> Unit,
     onHeader: () -> Unit,
     onAccount: () -> Unit,
@@ -1143,7 +1155,7 @@ private fun AuthenticatedShell(
         listOf(
             Design69MenuCard(
                 "کلاس‌ها", "فهرست و مدیریت", Design69Icons.Classes,
-                page == MainPage.SCHOOL && !schoolStudentsSelected,
+                page == MainPage.SCHOOL && !schoolStudentsSelected && !schoolsViewOpen,
                 onClick = { select(onClasses) }
             ),
             Design69MenuCard(
@@ -1215,6 +1227,14 @@ private fun AuthenticatedShell(
                     page == MainPage.CARDS,
                     // V61.9 — کارت منو مستقیم داشبورد (وضعیت) را باز می‌کند.
                     onClick = { select(onManagerDashboard) }
+                )
+            } else null
+            // V337 — کارت ویژهٔ دوم «مدارس» کنار «داشبورد» در منوی همبرگری و ریل تبلت.
+            val featuredSchoolsCard = if (user.role == UserRole.MANAGER) {
+                Design69MenuCard(
+                    "مدارس", "فهرست مدارس و کلاس‌ها", Design69Icons.SchoolAdd,
+                    page == MainPage.SCHOOL && schoolsViewOpen,
+                    onClick = { select(onManagerSchools) }
                 )
             } else null
             Box(Modifier.fillMaxSize().background(colors.background)) {
@@ -1311,6 +1331,7 @@ private fun AuthenticatedShell(
                             quickAddOpen = quickAddOpen,
                             menuCards = menuCards,
                             featuredCard = featuredMenuCard,
+                            featuredCard2 = featuredSchoolsCard,
                             primaryLabel = if (user.role == UserRole.MANAGER) "معلم‌ها" else "آزمون‌ها",
                             primaryIcon = if (user.role == UserRole.MANAGER) Design69Icons.Students else Design69Icons.Exams,
                             onProfile = onProfile,
@@ -1351,6 +1372,7 @@ private fun AuthenticatedShell(
                                         onProfile = onProfile,
                                         // V61.0 — کارت وسط‌چین «داشبورد» زیر پروفایل مدیر/معاون.
                                         featuredCard = featuredMenuCard,
+                                        featuredCard2 = featuredSchoolsCard,
                                         // V321 — یک لمس: تیره/روشن
                                         onToggleTheme = toggleTheme,
                                         darkTheme = darkActive

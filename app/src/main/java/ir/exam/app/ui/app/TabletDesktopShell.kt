@@ -59,6 +59,7 @@ fun TabletSideRail(
     quickAddOpen: Boolean,
     menuCards: List<Design69MenuCard>,
     featuredCard: Design69MenuCard?,
+    featuredCard2: Design69MenuCard? = null,
     primaryLabel: String,
     primaryIcon: ImageVector,
     onProfile: () -> Unit,
@@ -147,6 +148,7 @@ fun TabletSideRail(
             RailRow("کارت‌ها", Design69Icons.Cards, selected = dockActive == TeacherDockSection.CARDS, onClick = onCards)
             RailRow("کیف پول", Design69Icons.Wallet, selected = dockActive == TeacherDockSection.WALLET, onClick = onWallet)
             featuredCard?.let { RailRow(it.title, it.icon, selected = it.selected, onClick = it.onClick) }
+            featuredCard2?.let { RailRow(it.title, it.icon, selected = it.selected, onClick = it.onClick) }
 
             HorizontalDivider(Modifier.padding(vertical = 6.dp), color = colors.darkShadow.copy(alpha = .35f))
 
