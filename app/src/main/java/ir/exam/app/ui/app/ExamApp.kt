@@ -683,6 +683,7 @@ private fun AuthenticatedExamApp(
                             page = MainPage.SCHOOL
                         },
                         onQuickWallet = { page = MainPage.WALLET },
+                        onQuickSchools = { openManagerSchools() },
                         // V62.6 — منوی اختصاصی کارنامه: میان‌برهای گزارش.
                         onOpenStatus = { managerCardsSection = "status" },
                         onOpenReport = { managerCardsSection = "report" }

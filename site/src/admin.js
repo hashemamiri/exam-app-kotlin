@@ -519,10 +519,10 @@
     var classes = d.classes || [], months = d.months || [], top = d.top_exams || [];
     var head = el('div', {class: 'row', style: 'margin-bottom:8px'}, [el('h3', {class: 'grow', text: '📊 مقایسهٔ کلاس‌ها'}), el('button', {class: 'btn light sm no-print', text: '🖨 ذخیرهٔ PDF', onclick: function () { S.printSection('مقایسهٔ کلاس‌ها', box); }})]);
     box.appendChild(head);
-    if (!classes.length) { box.appendChild(S.emptyBox('📊', 'هنوز کلاسی با پاسخ تصحیح‌شده وجود ندارد.')); return box; }
+    if (!classes.length) { box.appendChild(S.emptyBox('📊', 'هنوز کلاسی در مدارس شما ثبت نشده است.')); return box; }
     function pctCell(v) { if (v == null) return el('td', {text: '—'}); var n = Number(v); return el('td', {}, [el('div', {class: 'cmp-bar'}, [el('span', {class: n >= 70 ? 'g' : n >= 50 ? 'y' : 'r', style: 'width:' + Math.max(2, Math.min(100, n)) + '%'}), el('b', {text: fa(n.toFixed(1)) + '٪'})])]); }
-    box.appendChild(el('table', {class: 'tbl cmp-tbl'}, [el('thead', {}, [el('tr', {}, ['کلاس', 'معلم', 'دانش‌آموز', 'آزمون', 'پاسخ', 'میانگین درصد', 'پراکندگی', 'زیر ۵۰٪'].map(function (h) { return el('th', {text: h}); }))]),
-      el('tbody', {}, classes.map(function (k) { return el('tr', {}, [el('td', {text: k.name + (k.grade ? ' · ' + k.grade : '')}), el('td', {text: k.teacher || '—'}), el('td', {text: fa(k.students || 0)}), el('td', {text: fa(k.exams || 0)}), el('td', {text: fa(k.graded || 0) + ' / ' + fa(k.answers || 0)}), pctCell(k.average_percent), el('td', {text: k.spread_percent == null ? '—' : '±' + fa(k.spread_percent)}), el('td', {text: fa(k.below_half || 0)})]); }))]));
+    box.appendChild(el('table', {class: 'tbl cmp-tbl'}, [el('thead', {}, [el('tr', {}, ['کلاس', 'مدرسه', 'معلم', 'دانش‌آموز', 'آزمون', 'پاسخ', 'میانگین درصد', 'پراکندگی', 'زیر ۵۰٪'].map(function (h) { return el('th', {text: h}); }))]),
+      el('tbody', {}, classes.map(function (k) { return el('tr', {}, [el('td', {text: k.name + (k.grade ? ' · ' + S.gradeLabel(k.grade) : '') + (k.field ? ' · ' + k.field : '')}), el('td', {text: k.school || '—'}), el('td', {text: k.teacher || 'بدون معلم'}), el('td', {text: fa(k.students || 0)}), el('td', {text: fa(k.exams || 0)}), el('td', {text: fa(k.graded || 0) + ' / ' + fa(k.answers || 0)}), pctCell(k.average_percent), el('td', {text: k.spread_percent == null ? '—' : '±' + fa(k.spread_percent) + '٪'}), el('td', {text: fa(k.below_half || 0)})]); }))]));
     if (months.length) {
       var mx = Math.max.apply(null, months.map(function (m) { return Number(m.answers) || 0; }).concat([1]));
       box.appendChild(el('div', {class: 'muted', style: 'font-size:12px;margin:14px 0 6px', text: 'روند ۶ ماه اخیر (ستون: تعداد پاسخ تصحیح‌شده، عدد بالا: میانگین درصد)'}));
@@ -534,6 +534,100 @@
         el('tbody', {}, top.map(function (t) { return el('tr', {}, [el('td', {text: t.title || ''}), el('td', {text: t.teacher || '—'}), el('td', {text: fa(t.answers || 0)}), pctCell(t.average_percent)]); }))]));
     }
     return box;
+  }
+  /* V337.1 — داشبورد مدیر: نمای کلی / کارنامه، هم‌چیدمان با اپ و بدون جدول‌های شلخته */
+  async function managerDashboardPage(c, arg) {
+    arg = arg || {};
+    var report = !!arg.report;
+    S.loading(c);
+    var summary = null, stats = null, summaryErr = null, statsErr = null;
+    var tasks = [S.api.managerSummary().then(chk).catch(function (e) { summaryErr = e; return null; })];
+    if (report) tasks.push(S.api.managerClassStats().then(chk).catch(function (e) { statsErr = e; return null; }));
+    var rr = await Promise.all(tasks);
+    summary = rr[0]; stats = rr[1] || null;
+    c.innerHTML = '';
+    var refresh = function () { managerDashboardPage(c, arg); };
+    var wrap = el('div', {class: 'mgr-dash'});
+    c.appendChild(wrap);
+    wrap.appendChild(el('div', {class: 'card mgr-dash-head'}, [
+      el('h2', {style: 'margin:0;font-size:20px', text: report ? 'کارنامه مدرسه' : 'داشبورد مدیر'}),
+      el('div', {class: 'muted', text: report ? 'پاسخ‌ها، میانگین‌ها و فعالیت معلم‌ها در همهٔ مدارس فعال شما' : 'نمای کلی مدارس تحت مدیریت شما'})
+    ]));
+    wrap.appendChild(el('div', {class: 'tabs mgr-dash-tabs'}, [
+      el('button', {class: report ? '' : 'on', text: 'نمای کلی', onclick: function () { S.go('dashboard', {}); }}),
+      el('button', {class: report ? 'on' : '', text: 'کارنامه مدرسه', onclick: function () { S.go('dashboard', {report: true}); }})
+    ]));
+    if (!summary) {
+      wrap.appendChild(el('div', {class: 'alert error', text: errMsg(summaryErr || new Error('دریافت اطلاعات مدرسه ناموفق بود.'))}));
+      wrap.appendChild(el('button', {class: 'btn light', text: 'تلاش دوباره', onclick: refresh}));
+      return;
+    }
+    var multi = String(summary.school_name || '').indexOf('، ') >= 0;
+    var location = [summary.province, summary.city].filter(Boolean).join('، ');
+    wrap.appendChild(el('div', {class: 'card mgr-dash-context'}, [
+      el('div', {class: 'muted', style: 'font-size:12px', text: 'مدرسه‌های تحت مدیریت'}),
+      el('h3', {style: 'margin:4px 0', text: summary.school_name || 'مدرسه'}),
+      (!multi && location) ? el('div', {class: 'muted', text: location}) : null,
+      el('div', {class: 'muted', style: 'font-size:12px;margin-top:6px', text: 'آمار این صفحه مجموع همهٔ مدارس فعال شماست.'})
+    ].filter(Boolean)));
+    function kpi(v, l, panel) {
+      var kids = [el('div', {class: 'v num', text: v}), el('div', {class: 'l', text: l})];
+      if (!panel) return el('div', {class: 'card stat'}, kids);
+      return el('button', {class: 'card stat stat-link', type: 'button', 'aria-label': l, onclick: function () { S.go(panel); }}, kids);
+    }
+    function pct(v) { if (v == null) return '—'; var n = Number(v); return fa(n % 1 === 0 ? String(n) : n.toFixed(1)) + '٪'; }
+    if (!report) {
+      wrap.appendChild(el('div', {class: 'grid4 mgr-dash-grid'}, [
+        kpi(fa(summary.teachers || 0), 'معلم', 'teachers'),
+        kpi(fa(summary.students || 0), 'دانش‌آموز', 'students'),
+        kpi(fa(summary.classes || 0), 'کلاس', 'classes'),
+        kpi(fa(summary.exams || 0), 'آزمون', null)
+      ]));
+      wrap.appendChild(el('div', {class: 'card mgr-dash-section'}, [
+        el('h3', {text: 'دسترسی سریع'}),
+        el('div', {class: 'mgr-actions'}, [
+          el('button', {class: 'btn light', text: '🏫 مدارس', onclick: function () { S.go('school'); }}),
+          el('button', {class: 'btn light', text: '👩‍🏫 معلم‌ها', onclick: function () { S.go('teachers'); }}),
+          el('button', {class: 'btn light', text: '🏫 کلاس‌ها', onclick: function () { S.go('classes'); }}),
+          el('button', {class: 'btn light', text: '🎓 دانش‌آموزان', onclick: function () { S.go('students'); }}),
+          el('button', {class: 'btn light', text: '👛 کیف پول', onclick: function () { S.go('wallet'); }})
+        ])
+      ]));
+      wrap.appendChild(el('div', {class: 'card mgr-dash-section'}, [
+        el('h3', {text: 'کارنامه مدرسه'}),
+        el('p', {class: 'muted', text: 'پاسخ‌های ثبت‌شده، میانگین نمره، اعتبار توزیع‌شده و فعالیت معلم‌ها را یک‌جا ببینید.'}),
+        el('button', {class: 'btn', text: 'مشاهده کارنامه مدرسه', onclick: function () { S.go('dashboard', {report: true}); }})
+      ]));
+      return;
+    }
+    wrap.appendChild(el('div', {class: 'grid3 mgr-dash-grid'}, [
+      kpi(fa(summary.answers || 0), 'پاسخ‌ها', null),
+      kpi(pct(summary.average_percent), 'میانگین نمره', null),
+      kpi(S.money(summary.distributed_toman || 0), 'اعتبار توزیع‌شده', null)
+    ]));
+    wrap.appendChild(el('div', {class: 'muted mgr-dash-note', text: 'میانگین نمره از پاسخ‌های ثبت‌شده محاسبه می‌شود؛ مقایسهٔ کلاس‌ها فقط پاسخ‌های تصحیح‌شده را نشان می‌دهد.'}));
+    var acts = summary.teacher_activity || [];
+    var actCard = el('div', {class: 'card mgr-dash-section'}, [el('h3', {text: 'فعالیت معلم‌ها'})]);
+    if (!acts.length) actCard.appendChild(S.emptyBox('👩‍🏫', 'هنوز فعالیت معلمی در مدارس شما ثبت نشده است.'));
+    else actCard.appendChild(el('table', {class: 'tbl'}, [
+      el('thead', {}, [el('tr', {}, ['معلم', 'آزمون', 'کلاس', 'دانش‌آموز', 'کیف پول'].map(function (h) { return el('th', {text: h}); }))]),
+      el('tbody', {}, acts.map(function (a) { return el('tr', {}, [
+        el('td', {text: a.name || 'معلم'}),
+        el('td', {text: fa(a.exams || 0)}),
+        el('td', {text: fa(a.classes || 0)}),
+        el('td', {text: fa(a.students || 0)}),
+        el('td', {text: S.money(a.wallet_balance || 0)})
+      ]); }))
+    ]));
+    wrap.appendChild(actCard);
+    var cmpCard = el('div', {class: 'card mgr-dash-section'});
+    if (statsErr) {
+      cmpCard.appendChild(el('div', {class: 'alert warn', text: 'مقایسهٔ کلاس‌ها دریافت نشد: ' + errMsg(statsErr)}));
+      cmpCard.appendChild(el('button', {class: 'btn light sm', text: 'تلاش دوباره', onclick: refresh}));
+    } else if (stats) {
+      cmpCard.appendChild(classCompare(stats));
+    }
+    wrap.appendChild(cmpCard);
   }
   async function managerSchoolPage(c, arg) {
     arg = arg || {};
@@ -1041,5 +1135,5 @@
     bg.appendChild(m); document.body.appendChild(bg);
   }
 
-  window.SiteAdmin = {gradingPage: gradingPage, questionAnalysis: function (body, examId) { return tabAnalysis(body, {examId: examId}); }, answerDetail: answerDetail, topUpCard: topUpCard, tariffDlg: tariffDlg, managerTeachersPage: managerTeachersPage, managerSchoolPage: managerSchoolPage, managerClassesPage: managerClassesPage, managerStudentsPage: managerStudentsPage, managerBackup: managerBackup, calendarPage: calendarPage, J: J, autoScore: autoScore, scoreFloor: scoreFloor, validateScore: validateScore, correctText: correctText};
+  window.SiteAdmin = {managerDashboardPage: managerDashboardPage, gradingPage: gradingPage, questionAnalysis: function (body, examId) { return tabAnalysis(body, {examId: examId}); }, answerDetail: answerDetail, topUpCard: topUpCard, tariffDlg: tariffDlg, managerTeachersPage: managerTeachersPage, managerSchoolPage: managerSchoolPage, managerClassesPage: managerClassesPage, managerStudentsPage: managerStudentsPage, managerBackup: managerBackup, calendarPage: calendarPage, J: J, autoScore: autoScore, scoreFloor: scoreFloor, validateScore: validateScore, correctText: correctText};
 })();

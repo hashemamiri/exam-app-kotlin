@@ -1,6 +1,7 @@
 package ir.exam.app.ui.manager
 
 import ir.exam.app.core.cache.SessionCache
+import ir.exam.app.core.calendar.PersianDigits
 import ir.exam.app.core.network.UserFacingError
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -8,6 +9,8 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -21,20 +24,27 @@ import androidx.compose.material.icons.outlined.ToggleOff
 import androidx.compose.material.icons.outlined.ToggleOn
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import io.github.jan.supabase.postgrest.postgrest
 import ir.exam.app.data.remote.SupabaseProvider
+import ir.exam.app.ui.app.Design69Icons
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.intOrNull
@@ -495,102 +505,278 @@ fun ManagerStatsScreen(
     onQuickStudents: (() -> Unit)? = null,
     onQuickWallet: (() -> Unit)? = null,
     onOpenStatus: (() -> Unit)? = null,
-    onOpenReport: (() -> Unit)? = null
+    onOpenReport: (() -> Unit)? = null,
+    // V337.1 — میان‌بر مدارس از خود داشبورد، کنار بقیهٔ بخش‌های پرکاربرد.
+    onQuickSchools: (() -> Unit)? = null
 ) {
-    val state = rememberManagerSummary()
+    var summaryRefreshKey by remember { mutableIntStateOf(0) }
+    val state = rememberManagerSummary(summaryRefreshKey)
     val reportMode = section == "report"
     Column(
         Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+        verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        // V61.0 — داشبورد مدیر/معاون: اطلاعات مدرسه، آمار و پنل سریع.
-        // V62.6 — عنوان و منوی هر بخش جدا شد.
-        Text(if (reportMode) "کارنامه مدرسه" else "داشبورد", style = MaterialTheme.typography.headlineSmall)
+        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Text(if (reportMode) "کارنامه مدرسه" else "داشبورد", style = MaterialTheme.typography.headlineSmall)
+            Text(
+                if (reportMode) "پاسخ‌ها، میانگین‌ها و فعالیت معلم‌ها در همهٔ مدارس فعال شما"
+                else "نمای کلی مدارس تحت مدیریت شما",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+        if (state.refreshing) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                CircularProgressIndicator(Modifier.size(18.dp))
+                Text("به‌روزرسانی اطلاعات…", style = MaterialTheme.typography.bodySmall)
+            }
+        }
+        state.notice?.let { notice ->
+            Card(Modifier.fillMaxWidth()) {
+                Row(Modifier.fillMaxWidth().padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Text(notice, Modifier.weight(1f), style = MaterialTheme.typography.bodySmall)
+                    TextButton(onClick = { summaryRefreshKey += 1 }) { Text("تلاش دوباره") }
+                }
+            }
+        }
         when {
-            state.loading -> CircularProgressIndicator(Modifier.align(Alignment.CenterHorizontally))
-            state.error != null -> Text(state.error, color = MaterialTheme.colorScheme.error)
+            state.loading -> Column(
+                Modifier.fillMaxWidth().padding(vertical = 24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                CircularProgressIndicator()
+                Text("در حال دریافت اطلاعات مدرسه…", style = MaterialTheme.typography.bodySmall)
+            }
+            state.error != null -> Card(Modifier.fillMaxWidth()) {
+                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text(state.error.orEmpty(), color = MaterialTheme.colorScheme.error)
+                    TextButton(onClick = { summaryRefreshKey += 1 }) { Text("تلاش دوباره") }
+                }
+            }
             else -> {
                 val summary = checkNotNull(state.summary)
                 if (!reportMode) {
-                Card(Modifier.fillMaxWidth()) {
-                    Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        Text(summary.schoolName.ifBlank { "مدرسه" }, style = MaterialTheme.typography.titleMedium)
-                        Text(
-                            listOf(summary.province, summary.city)
-                                .filter(String::isNotBlank)
-                                .joinToString(" · ")
-                                .ifBlank { "—" }
-                        )
-                    }
-                }
-                // پنل سریع: میان‌بر بخش‌های پرکاربرد (منوی اختصاصی داشبورد).
-                if (onQuickTeachers != null || onQuickClasses != null || onQuickStudents != null || onQuickWallet != null) {
-                    Text("پنل سریع", style = MaterialTheme.typography.titleMedium)
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        onQuickTeachers?.let { QuickPanelCard("معلم‌ها", it, Modifier.weight(1f)) }
-                        onQuickClasses?.let { QuickPanelCard("کلاس‌ها", it, Modifier.weight(1f)) }
-                    }
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        onQuickStudents?.let { QuickPanelCard("دانش‌آموزان", it, Modifier.weight(1f)) }
-                        onQuickWallet?.let { QuickPanelCard("کیف پول", it, Modifier.weight(1f)) }
-                    }
-                }
-                listOf(
-                    "معلم" to summary.teachers,
-                    "دانش‌آموز" to summary.students,
-                    "کلاس" to summary.classes,
-                    "آزمون" to summary.exams
-                ).chunked(2).forEach { row ->
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        row.forEach { (label, value) ->
-                            Card(Modifier.weight(1f)) {
-                                Column(Modifier.padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                                    Text(value.toString(), style = MaterialTheme.typography.headlineMedium)
-                                    Text(label)
-                                }
-                            }
-                        }
-                    }
-                }
-                // میان‌بر به کارنامه از داشبورد.
-                onOpenReport?.let { QuickPanelCard("مشاهده کارنامه مدرسه", it, Modifier.fillMaxWidth()) }
+                    ManagerDashboardOverview(
+                        summary = summary,
+                        onQuickSchools = onQuickSchools,
+                        onQuickTeachers = onQuickTeachers,
+                        onQuickClasses = onQuickClasses,
+                        onQuickStudents = onQuickStudents,
+                        onQuickWallet = onQuickWallet,
+                        onOpenReport = onOpenReport
+                    )
                 } else {
-                // V62.6 — منوی اختصاصی کارنامه: میان‌برهای مرتبط با گزارش.
-                Text("پنل کارنامه", style = MaterialTheme.typography.titleMedium)
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    onOpenStatus?.let { QuickPanelCard("داشبورد", it, Modifier.weight(1f)) }
-                    onQuickTeachers?.let { QuickPanelCard("معلم‌ها", it, Modifier.weight(1f)) }
+                    ManagerReportSection(
+                        summary = summary,
+                        onOpenStatus = onOpenStatus,
+                        onQuickTeachers = onQuickTeachers
+                    )
                 }
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Card(Modifier.weight(1f)) { Column(Modifier.padding(14.dp)) { Text("پاسخ‌ها"); Text(summary.answers.toString(), style = MaterialTheme.typography.titleLarge) } }
-                    Card(Modifier.weight(1f)) { Column(Modifier.padding(14.dp)) { Text("میانگین نمره"); Text("${summary.averagePercent}٪", style = MaterialTheme.typography.titleLarge) } }
-                }
-                Text("مجموع اعتبار توزیع‌شده: ${"%,d".format(java.util.Locale.US, summary.distributedToman)} تومان")
-                Text("فعالیت معلم‌ها", style = MaterialTheme.typography.titleMedium)
-                summary.teacherActivity.forEach { item ->
-                    Card(Modifier.fillMaxWidth()) {
-                        Column(Modifier.padding(12.dp)) {
-                            Text(item.name, style = MaterialTheme.typography.titleSmall)
-                            Text("آزمون ${item.exams} · کلاس ${item.classes} · دانش‌آموز ${item.students}")
-                            Text("کیف پول ${"%,d".format(java.util.Locale.US, item.walletBalance)} تومان")
-                        }
-                    }
-                }
-                }
-                // V263 — مقایسهٔ کلاس‌ها (آینهٔ سایت V230): در هر دو بخش داشبورد و کارنامه
-                ManagerClassComparison()
+                // V263/V337.1 — مقایسهٔ کلاس‌ها در داشبورد جمع‌شده و در کارنامه باز است.
+                ManagerClassComparison(expandedByDefault = reportMode)
             }
         }
     }
 }
 
+@Composable
+private fun ManagerDashboardOverview(
+    summary: ManagerSummary,
+    onQuickSchools: (() -> Unit)?,
+    onQuickTeachers: (() -> Unit)?,
+    onQuickClasses: (() -> Unit)?,
+    onQuickStudents: (() -> Unit)?,
+    onQuickWallet: (() -> Unit)?,
+    onOpenReport: (() -> Unit)?
+) {
+    ManagerSchoolContextCard(summary)
+    Text("آمار کلی", style = MaterialTheme.typography.titleMedium)
+    val metrics = listOf(
+        Triple("معلم", faManagerNumber(summary.teachers), Design69Icons.Students),
+        Triple("دانش‌آموز", faManagerNumber(summary.students), Design69Icons.Students),
+        Triple("کلاس", faManagerNumber(summary.classes), Design69Icons.Classes),
+        Triple("آزمون", faManagerNumber(summary.exams), Design69Icons.Exams)
+    )
+    metrics.chunked(2).forEach { row ->
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            row.forEach { (label, value, icon) ->
+                ManagerMetricCard(label = label, value = value, icon = icon, modifier = Modifier.weight(1f))
+            }
+            if (row.size == 1) Spacer(Modifier.weight(1f))
+        }
+    }
+    val actions = listOfNotNull(
+        onQuickSchools?.let { ManagerQuickAction("مدارس", "فهرست مدارس و کلاس‌ها", Design69Icons.SchoolAdd, it) },
+        onQuickTeachers?.let { ManagerQuickAction("معلم‌ها", "دعوت و مدیریت معلم‌ها", Design69Icons.Students, it) },
+        onQuickClasses?.let { ManagerQuickAction("کلاس‌ها", "ساخت کلاس و اعضا", Design69Icons.Classes, it) },
+        onQuickStudents?.let { ManagerQuickAction("دانش‌آموزان", "فهرست و عضویت کلاس‌ها", Design69Icons.Students, it) },
+        onQuickWallet?.let { ManagerQuickAction("کیف پول", "اعتبار و انتقال به معلم‌ها", Design69Icons.Wallet, it) }
+    )
+    if (actions.isNotEmpty()) {
+        Text("پنل سریع", style = MaterialTheme.typography.titleMedium)
+        actions.chunked(2).forEach { row ->
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                row.forEach { action ->
+                    ManagerQuickActionCard(
+                        title = action.title,
+                        subtitle = action.subtitle,
+                        icon = action.icon,
+                        onClick = action.onClick,
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+                if (row.size == 1) Spacer(Modifier.weight(1f))
+            }
+        }
+    }
+    onOpenReport?.let { QuickPanelCard("مشاهده کارنامه مدرسه", it, Modifier.fillMaxWidth()) }
+}
+
+@Composable
+private fun ManagerReportSection(
+    summary: ManagerSummary,
+    onOpenStatus: (() -> Unit)?,
+    onQuickTeachers: (() -> Unit)?
+) {
+    Text("پنل کارنامه", style = MaterialTheme.typography.titleMedium)
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        onOpenStatus?.let { QuickPanelCard("داشبورد", it, Modifier.weight(1f)) }
+        onQuickTeachers?.let { QuickPanelCard("معلم‌ها", it, Modifier.weight(1f)) }
+    }
+    Text("شاخص‌های پاسخ‌دهی", style = MaterialTheme.typography.titleMedium)
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        ManagerMetricCard("پاسخ‌ها", faManagerNumber(summary.answers), modifier = Modifier.weight(1f))
+        ManagerMetricCard("میانگین نمره", faManagerPercent(summary.averagePercent), modifier = Modifier.weight(1f))
+    }
+    Card(Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Text("مجموع اعتبار توزیع‌شده", style = MaterialTheme.typography.labelMedium)
+            Text("${faManagerToman(summary.distributedToman)} تومان", style = MaterialTheme.typography.titleMedium)
+            Text(
+                "میانگین نمره از پاسخ‌های ثبت‌شده محاسبه می‌شود؛ مقایسهٔ کلاس‌ها فقط پاسخ‌های تصحیح‌شده را نشان می‌دهد.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+    Text("فعالیت معلم‌ها", style = MaterialTheme.typography.titleMedium)
+    if (summary.teacherActivity.isEmpty()) {
+        Text("هنوز فعالیت معلمی در مدارس شما ثبت نشده است.", style = MaterialTheme.typography.bodySmall)
+    }
+    summary.teacherActivity.forEach { item ->
+        Card(Modifier.fillMaxWidth()) {
+            Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text(item.name.ifBlank { "معلم" }, style = MaterialTheme.typography.titleSmall)
+                Text(
+                    "آزمون ${faManagerNumber(item.exams)} · کلاس ${faManagerNumber(item.classes)} · دانش‌آموز ${faManagerNumber(item.students)}",
+                    style = MaterialTheme.typography.bodySmall
+                )
+                Text("کیف پول ${faManagerToman(item.walletBalance)} تومان", style = MaterialTheme.typography.bodySmall)
+            }
+        }
+    }
+}
+
+@Composable
+private fun ManagerSchoolContextCard(summary: ManagerSummary) {
+    val multiSchool = summary.schoolName.contains("، ")
+    Card(Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Text("مدرسه‌های تحت مدیریت", style = MaterialTheme.typography.labelMedium)
+            Text(summary.schoolName.ifBlank { "مدرسه" }, style = MaterialTheme.typography.titleMedium)
+            if (!multiSchool) {
+                val location = listOf(summary.province, summary.city).filter(String::isNotBlank).joinToString(" · ")
+                if (location.isNotBlank()) Text(location, style = MaterialTheme.typography.bodySmall)
+            }
+            Text(
+                "آمار این صفحه مجموع همهٔ مدارس فعال شماست.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+}
+
+private data class ManagerQuickAction(
+    val title: String,
+    val subtitle: String,
+    val icon: ImageVector,
+    val onClick: () -> Unit
+)
+
+@Composable
+private fun ManagerQuickActionCard(
+    title: String,
+    subtitle: String,
+    icon: ImageVector,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Card(modifier.clickable(onClick = onClick)) {
+        Row(
+            Modifier.fillMaxWidth().heightIn(min = 84.dp).padding(14.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Text(title, style = MaterialTheme.typography.titleSmall)
+                Text(
+                    subtitle,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun ManagerMetricCard(
+    label: String,
+    value: String,
+    modifier: Modifier = Modifier,
+    icon: ImageVector? = null
+) {
+    Card(modifier) {
+        Column(
+            Modifier.fillMaxWidth().heightIn(min = 104.dp).padding(16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            icon?.let { Icon(it, contentDescription = null, tint = MaterialTheme.colorScheme.primary) }
+            Text(value, style = MaterialTheme.typography.headlineMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(label, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+    }
+}
+
+private fun faManagerNumber(value: Any?): String = PersianDigits.convert(value)
+
+private fun faManagerToman(value: Long): String =
+    PersianDigits.convert("%,d".format(java.util.Locale.US, value))
+
+private fun faManagerPercent(value: Double?): String {
+    if (value == null) return "—"
+    val text = if (value % 1.0 == 0.0) value.toInt().toString() else String.format(java.util.Locale.US, "%.1f", value)
+    return PersianDigits.convert(text).replace('.', '٫') + "٪"
+}
+
 /** V263 — مقایسهٔ کلاس‌های مدرسه: میانگین، پراکندگی، زیر ۵۰٪، روند ماهانه و آزمون‌های برتر (RPC native_manager_class_stats_v1). */
 @Composable
-private fun ManagerClassComparison() {
-    var loading by remember { mutableStateOf(true) }
+private fun ManagerClassComparison(expandedByDefault: Boolean = true) {
+    var expanded by rememberSaveable(expandedByDefault) { mutableStateOf(expandedByDefault) }
+    var loading by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
     var stats by remember { mutableStateOf<ManagerClassStats?>(null) }
-    LaunchedEffect(Unit) {
+    var refreshKey by remember { mutableIntStateOf(0) }
+    LaunchedEffect(expanded, refreshKey) {
+        if (!expanded) return@LaunchedEffect
+        loading = true
+        error = null
         runCatching {
             val raw = SupabaseProvider.client.postgrest.rpc("native_manager_class_stats_v1").decodeAs<JsonObject>()
             raw["error"]?.jsonPrimitive?.contentOrNull?.takeIf(String::isNotBlank)?.let(::error)
@@ -600,7 +786,7 @@ private fun ManagerClassComparison() {
             fun JsonObject.dbl(k: String) = this[k]?.jsonPrimitive?.doubleOrNull ?: 0.0
             ManagerClassStats(
                 classes = arr("classes").map {
-                    ManagerClassRow(it.str("name"), it.str("grade"), it.str("field"), it.str("teacher"), it.int("students"), it.int("exams"),
+                    ManagerClassRow(it.str("name"), it.str("grade"), it.str("field"), it.str("school"), it.str("teacher"), it.int("students"), it.int("exams"),
                         it.int("answers"), it.int("graded"), it.dbl("average_percent"), it.dbl("spread_percent"), it.int("below_half"))
                 },
                 months = arr("months").map { ManagerMonthRow(it.str("month"), it.int("answers"), it.dbl("average_percent")) },
@@ -609,35 +795,74 @@ private fun ManagerClassComparison() {
         }.onSuccess { stats = it; loading = false }
             .onFailure { error = safeManagerError(it); loading = false }
     }
-    Text("مقایسهٔ کلاس‌ها", style = MaterialTheme.typography.titleMedium)
-    when {
-        loading -> CircularProgressIndicator()
-        error != null -> Text(error.orEmpty(), color = MaterialTheme.colorScheme.error)
-        else -> {
-            val data = checkNotNull(stats)
-            if (data.classes.isEmpty()) Text("هنوز کلاسی با آزمون در این مدرسه ثبت نشده است.")
-            data.classes.forEach { row ->
-                Card(Modifier.fillMaxWidth()) {
-                    Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        Text(listOf(row.name, row.grade, row.field).filter { it.isNotBlank() }.joinToString(" · "), style = MaterialTheme.typography.titleSmall)
-                        if (row.teacher.isNotBlank()) Text("معلم: ${row.teacher}", style = MaterialTheme.typography.bodySmall)
-                        Text("دانش‌آموز ${row.students} · آزمون ${row.exams} · پاسخ ${row.answers} (تصحیح‌شده ${row.graded})")
-                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            StatChip("میانگین", "${row.averagePercent}٪", Modifier.weight(1f))
-                            StatChip("پراکندگی", "${row.spreadPercent}٪", Modifier.weight(1f))
-                            StatChip("زیر ۵۰٪", row.belowHalf.toString(), Modifier.weight(1f))
+    Card(Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text("مقایسهٔ کلاس‌ها", style = MaterialTheme.typography.titleMedium)
+                    Text(
+                        "میانگین کلاس‌ها، روند ماهانه و آزمون‌های پرتکرار",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                TextButton(onClick = { expanded = !expanded }) { Text(if (expanded) "بستن" else "نمایش") }
+            }
+            if (!expanded) {
+                Text("برای دیدن جزئیات کلاس‌ها، این بخش را باز کنید.", style = MaterialTheme.typography.bodySmall)
+            } else when {
+                loading -> Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    CircularProgressIndicator(Modifier.size(18.dp))
+                    Text("در حال دریافت مقایسهٔ کلاس‌ها…", style = MaterialTheme.typography.bodySmall)
+                }
+                error != null -> Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(error.orEmpty(), color = MaterialTheme.colorScheme.error)
+                    TextButton(onClick = { refreshKey += 1 }) { Text("تلاش دوباره") }
+                }
+                else -> {
+                    val data = checkNotNull(stats)
+                    if (data.classes.isEmpty()) {
+                        Text("هنوز کلاسی در مدارس شما ثبت نشده است.", style = MaterialTheme.typography.bodySmall)
+                    }
+                    data.classes.forEach { row ->
+                        Card(Modifier.fillMaxWidth()) {
+                            Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                Text(
+                                    listOf(row.name, row.grade, row.field).filter { it.isNotBlank() }.joinToString(" · "),
+                                    style = MaterialTheme.typography.titleSmall
+                                )
+                                if (row.school.isNotBlank()) Text("مدرسه: ${row.school}", style = MaterialTheme.typography.bodySmall)
+                                if (row.teacher.isNotBlank()) Text("معلم: ${row.teacher}", style = MaterialTheme.typography.bodySmall)
+                                Text(
+                                    "دانش‌آموز ${faManagerNumber(row.students)} · آزمون ${faManagerNumber(row.exams)} · پاسخ ${faManagerNumber(row.answers)} (تصحیح‌شده ${faManagerNumber(row.graded)})",
+                                    style = MaterialTheme.typography.bodySmall
+                                )
+                                if (row.answers == 0) {
+                                    Text("هنوز پاسخی برای این کلاس ثبت نشده است.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                }
+                                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    StatChip("میانگین", faManagerPercent(row.averagePercent), Modifier.weight(1f))
+                                    StatChip("پراکندگی", "±${faManagerPercent(row.spreadPercent)}", Modifier.weight(1f))
+                                    StatChip("زیر ۵۰٪", faManagerNumber(row.belowHalf), Modifier.weight(1f))
+                                }
+                            }
                         }
                     }
-                }
-            }
-            if (data.months.isNotEmpty()) {
-                Text("روند ماهانه", style = MaterialTheme.typography.titleSmall)
-                data.months.forEach { m -> Text("${m.month}: ${m.answers} پاسخ · میانگین ${m.averagePercent}٪") }
-            }
-            if (data.topExams.isNotEmpty()) {
-                Text("آزمون‌های برتر", style = MaterialTheme.typography.titleSmall)
-                data.topExams.forEach { e ->
-                    Text("${e.title}${if (e.teacher.isNotBlank()) " (${e.teacher})" else ""}: ${e.answers} پاسخ · میانگین ${e.averagePercent}٪")
+                    Text("روند ماهانه", style = MaterialTheme.typography.titleSmall)
+                    if (data.months.isEmpty()) {
+                        Text("هنوز پاسخ تصحیح‌شده‌ای برای روند ماهانه ثبت نشده است.", style = MaterialTheme.typography.bodySmall)
+                    } else data.months.forEach { m ->
+                        Text("${m.month}: ${faManagerNumber(m.answers)} پاسخ · میانگین ${faManagerPercent(m.averagePercent)}", style = MaterialTheme.typography.bodySmall)
+                    }
+                    Text("آزمون‌های برتر", style = MaterialTheme.typography.titleSmall)
+                    if (data.topExams.isEmpty()) {
+                        Text("هنوز آزمونی با پاسخ ثبت نشده است.", style = MaterialTheme.typography.bodySmall)
+                    } else data.topExams.forEach { e ->
+                        Text(
+                            "${e.title}${if (e.teacher.isNotBlank()) " (${e.teacher})" else ""}: ${faManagerNumber(e.answers)} پاسخ · میانگین ${faManagerPercent(e.averagePercent)}",
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                    }
                 }
             }
         }
@@ -655,7 +880,7 @@ private fun StatChip(label: String, value: String, modifier: Modifier = Modifier
 }
 
 internal data class ManagerClassRow(
-    val name: String, val grade: String, val field: String, val teacher: String,
+    val name: String, val grade: String, val field: String, val school: String, val teacher: String,
     val students: Int, val exams: Int, val answers: Int, val graded: Int,
     val averagePercent: Double, val spreadPercent: Double, val belowHalf: Int
 )
@@ -676,16 +901,20 @@ private fun QuickPanelCard(title: String, onClick: () -> Unit, modifier: Modifie
 
 private data class ManagerSummaryState(
     val loading: Boolean = true,
+    val refreshing: Boolean = false,
     val summary: ManagerSummary? = null,
-    val error: String? = null
+    val error: String? = null,
+    val notice: String? = null
 )
 
 @Composable
-private fun rememberManagerSummary(): ManagerSummaryState {
+private fun rememberManagerSummary(refreshKey: Int = 0): ManagerSummaryState {
     // V214 — خلاصهٔ قبلی (حافظهٔ موقت) فوراً نشان داده می‌شود؛ نسخهٔ تازه جایگزین می‌شود.
     val cachedSummary = remember { SessionCache.get<ManagerSummary>(MANAGER_SUMMARY_CACHE) }
     var state by remember { mutableStateOf(ManagerSummaryState(loading = cachedSummary == null, summary = cachedSummary)) }
-    LaunchedEffect(Unit) {
+    LaunchedEffect(refreshKey) {
+        state = if (state.summary != null) state.copy(refreshing = true, error = null, notice = null)
+        else state.copy(loading = true, error = null, notice = null)
         runCatching {
             val raw = SupabaseProvider.client.postgrest.rpc("native_manager_school_summary_v36")
                 .decodeAs<JsonObject>()
@@ -713,7 +942,13 @@ private fun rememberManagerSummary(): ManagerSummaryState {
                 }
             )
         }.onSuccess { SessionCache.put(MANAGER_SUMMARY_CACHE, it); state = ManagerSummaryState(loading = false, summary = it) }
-            .onFailure { state = if (cachedSummary == null) ManagerSummaryState(loading = false, error = safeManagerError(it)) else state.copy(loading = false) }
+            .onFailure {
+                state = if (state.summary != null) {
+                    state.copy(loading = false, refreshing = false, notice = "به‌روزرسانی ناموفق بود؛ آخرین اطلاعات دریافت‌شده نمایش داده می‌شود.")
+                } else {
+                    ManagerSummaryState(loading = false, error = safeManagerError(it))
+                }
+            }
     }
     return state
 }

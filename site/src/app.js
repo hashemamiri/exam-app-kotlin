@@ -2433,17 +2433,9 @@
         c.appendChild(el('div', {class: 'alert info', style: 'margin-top:16px', html: 'برای شرکت در آزمون، کد معلم را در بخش <b>شرکت در آزمون</b> وارد کنید.'}));
         c.appendChild(el('div', {class: 'row', style: 'margin-top:12px'}, [el('button', {class: 'btn', text: '🔑 شرکت در آزمون', onclick: function () { view.panel = 'join'; view.arg = null; render(); }}), (window.SiteStudent && window.SiteStudent.hasActive()) ? el('span', {class: 'chip warn', text: 'آزمون نیمه‌تمام دارید'}) : null]));
       } else {
-        var s = await api.managerSummary();
-        c.innerHTML = '';
-        c.appendChild(el('div', {class: 'card'}, [el('h3', {text: '🏫 ' + (s.school_name || 'مدرسه')}), el('div', {class: 'muted', text: [s.province, s.city].filter(Boolean).join('، ')})]));
-        c.appendChild(el('div', {class: 'grid4', style: 'margin-top:16px'}, [statCard(fa(s.teachers || 0), 'معلم', {panel: 'teachers'}), statCard(fa(s.students || 0), 'دانش‌آموز', {panel: 'students'}), statCard(fa(s.classes || 0), 'کلاس', {panel: 'classes'}), statCard(fa(s.exams || 0), 'آزمون', {panel: 'teachers'})]));
-        c.appendChild(el('div', {class: 'grid3', style: 'margin-top:16px'}, [statCard(fa(s.answers || 0), 'پاسخ ثبت‌شده'), statCard(fa(Math.round(Number(s.average_percent) || 0)) + '٪', 'میانگین مدرسه'), statCard(money(s.distributed_toman || 0), 'اعتبار توزیع‌شده')]));
-        var acts = s.teacher_activity || [];
-        if (acts.length) {
-          var t = el('table', {class: 'tbl'}, [el('thead', {}, [el('tr', {}, ['معلم', 'آزمون', 'کلاس', 'دانش‌آموز', 'کیف پول'].map(function (h) { return el('th', {text: h}); }))]),
-            el('tbody', {}, acts.map(function (a) { return el('tr', {}, [el('td', {text: a.name || ''}), el('td', {text: fa(a.exams || 0)}), el('td', {text: fa(a.classes || 0)}), el('td', {text: fa(a.students || 0)}), el('td', {text: money(a.wallet_balance || 0)})]); }))]);
-          c.appendChild(el('div', {class: 'card', style: 'margin-top:16px'}, [el('h3', {text: '📈 فعالیت معلم‌ها'}), t]));
-        }
+        /* V337.1 — داشبورد مدیر: نمای کلی و کارنامه در دو تب، با چیدمان مشترک اپ */
+        if (window.SiteAdmin && window.SiteAdmin.managerDashboardPage) return window.SiteAdmin.managerDashboardPage(c, view.arg);
+        showErr(c, new Error('پنل مدیر در دسترس نیست.'));
       }
     } catch (e) { showErr(c, e); }
   }

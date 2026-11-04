@@ -2486,3 +2486,16 @@ body.st-in-exam-mode .nc-bell{display:none!important}
   .st-opt-img{flex:1 1 100%;width:100%;max-width:100%;height:auto;object-fit:contain;border:1px solid var(--line);border-radius:8px;background:var(--card);margin-top:4px}
   .st-opt-tick{flex:0 0 auto;margin-inline-start:auto;color:var(--ok);font-size:20px;font-weight:900;line-height:1}
 }
+
+/* ---- V337.1: داشبورد مدیر — نمای کلی و کارنامهٔ هم‌چیدمان با اپ ---- */
+.mgr-dash{display:flex;flex-direction:column;gap:14px}
+.mgr-dash-head{display:flex;flex-direction:column;gap:6px}
+.mgr-dash-tabs{margin:0}
+.mgr-dash-context{display:flex;flex-direction:column;gap:2px}
+.mgr-dash-grid{margin:0}
+.mgr-dash-section{display:flex;flex-direction:column;gap:10px}
+.mgr-dash-note{font-size:12px;line-height:1.8}
+.mgr-actions{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+.mgr-actions .btn{justify-content:center;min-height:44px}
+.mgr-dash .stat .v{font-size:24px;white-space:normal;overflow-wrap:anywhere}
+@media (max-width:700px) and (pointer:coarse){.mgr-dash .grid4,.mgr-dash .grid3{grid-template-columns:1fr 1fr}.mgr-actions{grid-template-columns:1fr 1fr}}
