@@ -769,7 +769,7 @@ private fun faManagerPercent(value: Double?): String {
 @Composable
 private fun ManagerClassComparison(expandedByDefault: Boolean = true) {
     var expanded by rememberSaveable(expandedByDefault) { mutableStateOf(expandedByDefault) }
-    var loading by remember { mutableStateOf(false) }
+    var loading by remember { mutableStateOf(expanded) }
     var error by remember { mutableStateOf<String?>(null) }
     var stats by remember { mutableStateOf<ManagerClassStats?>(null) }
     var refreshKey by remember { mutableIntStateOf(0) }
@@ -779,7 +779,7 @@ private fun ManagerClassComparison(expandedByDefault: Boolean = true) {
         error = null
         runCatching {
             val raw = SupabaseProvider.client.postgrest.rpc("native_manager_class_stats_v1").decodeAs<JsonObject>()
-            raw["error"]?.jsonPrimitive?.contentOrNull?.takeIf(String::isNotBlank)?.let(::error)
+            raw["error"]?.jsonPrimitive?.contentOrNull?.takeIf(String::isNotBlank)?.let { message -> throw IllegalStateException(message) }
             fun arr(key: String) = (raw[key] as? kotlinx.serialization.json.JsonArray).orEmpty().mapNotNull { it as? JsonObject }
             fun JsonObject.str(k: String) = this[k]?.jsonPrimitive?.contentOrNull.orEmpty()
             fun JsonObject.int(k: String) = this[k]?.jsonPrimitive?.intOrNull ?: 0
@@ -811,7 +811,7 @@ private fun ManagerClassComparison(expandedByDefault: Boolean = true) {
             if (!expanded) {
                 Text("برای دیدن جزئیات کلاس‌ها، این بخش را باز کنید.", style = MaterialTheme.typography.bodySmall)
             } else when {
-                loading -> Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                loading || (stats == null && error == null) -> Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     CircularProgressIndicator(Modifier.size(18.dp))
                     Text("در حال دریافت مقایسهٔ کلاس‌ها…", style = MaterialTheme.typography.bodySmall)
                 }
@@ -819,8 +819,7 @@ private fun ManagerClassComparison(expandedByDefault: Boolean = true) {
                     Text(error.orEmpty(), color = MaterialTheme.colorScheme.error)
                     TextButton(onClick = { refreshKey += 1 }) { Text("تلاش دوباره") }
                 }
-                else -> {
-                    val data = checkNotNull(stats)
+                else -> stats?.let { data ->
                     if (data.classes.isEmpty()) {
                         Text("هنوز کلاسی در مدارس شما ثبت نشده است.", style = MaterialTheme.typography.bodySmall)
                     }

@@ -21554,3 +21554,19 @@ Kotlin آن را به‌صورت interpolation تفسیر کرد و چون `faMa
 - دلار به‌صورت `\$` گریز شد تا پین همان متن منبع را بسنجد.
 - `check_test_pins.py --strict` و `preflight.py` سبز شدند.
 - رفتار اپ/سایت/SQL نسبت به V337.1 تغییری ندارد.
+
+---
+
+## گزارش نسخهٔ V337.3 (اپ `1.03.54` — رفع کرش کارنامه)
+
+### ریشهٔ کرش
+در `ManagerClassComparison` وقتی بخش به‌صورت پیش‌فرض باز بود (`expandedByDefault = true` در کارنامه)،
+اولین ترکیب‌بندی با `stats == null` و `loading == false` وارد شاخهٔ `else` می‌شد و `checkNotNull(stats)` برنامه را می‌بست.
+این اتفاق با زدن «مشاهده کارنامه مدرسه» یا باز کردن دستی مقایسهٔ کلاس‌ها رخ می‌داد.
+
+### اصلاح
+- `loading` با مقدار اولیهٔ `expanded` ساخته می‌شود.
+- شاخهٔ بارگذاری وقتی `stats == null && error == null` نیز فعال است.
+- به‌جای `checkNotNull(stats)` از `stats?.let { data -> ... }` استفاده شد.
+- خطای RPC با `throw IllegalStateException(message)` وارد `runCatching` می‌شود تا حالت خطا/تلاش دوباره کار کند.
+- تست نگهبان `V337_3_ManagerReportCrashTest` اضافه شد.
