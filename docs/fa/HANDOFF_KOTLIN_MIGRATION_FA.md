@@ -21541,3 +21541,16 @@ check_test_pins بهبودیافته (assertTrue/assertFalse/contains/!contains/
 - پین‌های قدیمی V38/V61_2/V62_6/V168/V263/V337 حفظ شدند.
 - SQL جدید ندارد؛ RPCهای موجود استفاده می‌شوند.
 - اسموک مرورگر با دادهٔ ساختگی: `managerDashboardPage` در هر دو حالت نمای کلی و کارنامه بدون خطا رندر شد و بخش‌های دسترسی سریع، کارنامه، فعالیت معلم‌ها و مقایسهٔ کلاس‌ها دیده شدند.
+
+---
+
+## گزارش نسخهٔ V337.2 (اپ `1.03.53` — فقط رفع تست)
+
+### ریشهٔ خطای CI
+در `V337_1_ManagerDashboardLayoutTest.kt` پینِ `StatChip("پراکندگی", "±${faManagerPercent(row.spreadPercent)}", ...)` داخل رشتهٔ تست بدون گریز نوشته شده بود.
+Kotlin آن را به‌صورت interpolation تفسیر کرد و چون `faManagerPercent` و `row` در فایل تست وجود ندارند، `compileDebugUnitTestKotlin` شکست.
+
+### اصلاح
+- دلار به‌صورت `\$` گریز شد تا پین همان متن منبع را بسنجد.
+- `check_test_pins.py --strict` و `preflight.py` سبز شدند.
+- رفتار اپ/سایت/SQL نسبت به V337.1 تغییری ندارد.

@@ -42,7 +42,7 @@ class V337_1_ManagerDashboardLayoutTest {
         assertTrue("به‌روزرسانی ناموفق بود؛ آخرین اطلاعات دریافت‌شده نمایش داده می‌شود." in manager)
         assertTrue("تلاش دوباره" in manager)
         assertTrue("it.str(\"school\")" in manager)
-        assertTrue("StatChip(\"پراکندگی\", \"±${faManagerPercent(row.spreadPercent)}\", Modifier.weight(1f))" in manager)
+        assertTrue("StatChip(\"پراکندگی\", \"±\${faManagerPercent(row.spreadPercent)}\", Modifier.weight(1f))" in manager)
     }
 
     @Test
