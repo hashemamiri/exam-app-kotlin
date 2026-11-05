@@ -1679,6 +1679,20 @@
     window.addEventListener('resize', kick);
     window.addEventListener('orientationchange', kick);
   }
+  /* V337.4 — دانلود آخرین APK از همان منبع عمومی app_version (بدون نیاز به نشست/گیت‌هاب). */
+  function downloadAndroidApk(btn) {
+    if (btn && btn.disabled) return;
+    var label = btn ? btn.textContent : '';
+    if (btn) { btn.disabled = true; btn.setAttribute('aria-busy', 'true'); btn.textContent = 'در حال دریافت…'; }
+    var done = function () { if (btn) { btn.disabled = false; btn.removeAttribute('aria-busy'); btn.textContent = label; } };
+    api.latestApk().then(function (v) {
+      if (!v || !v.url) { done(); toast('نسخهٔ اندروید در دسترس نیست.', 'err'); return; }
+      var a = el('a', {href: v.url, download: 'exam-app-' + (v.name || 'latest') + '.apk'});
+      document.body.appendChild(a); a.click(); a.remove();
+      done();
+      toast('دانلود برنامه آغاز شد' + (v.name ? ' (نسخهٔ ' + fa(v.name) + ')' : '') + '.', 'ok');
+    }).catch(function () { done(); toast('دریافت برنامه ممکن نشد؛ دوباره تلاش کنید.', 'err'); });
+  }
   function landingLinks() {
     /* V335.68 — دکمهٔ «محصولات و تعرفه‌ها» از این نوار حذف شد؛ همان کار را دکمهٔ بالای ۸ بلوک انجام می‌دهد. */
     var links = (window.LP_FOOT_LINKS || []).filter(function (l) { return l[1] !== '#products'; }).map(function (l) {
@@ -1687,6 +1701,8 @@
       if (l[1] === '#faq') return el('button', {type: 'button', class: 'lp-links-btn', text: label, onclick: openFaqModal});
       return el('a', {class: 'lp-links-btn', href: l[1], target: l[1].indexOf('mailto:') === 0 ? null : '_blank', rel: 'noopener', text: l[0]});
     });
+    /* V337.4 — کنار «تماس با ما» در نوار پیوندهای دسکتاپ */
+    links.push(el('button', {type: 'button', class: 'lp-links-btn lp-apk-btn', text: 'دانلود برنامه اندروید', title: 'دریافت آخرین نسخهٔ اندروید', onclick: function (e) { downloadAndroidApk(e.currentTarget); }}));
     return el('div', {class: 'lp-links', role: 'group', 'aria-label': 'پیوندهای سایت'}, [
       /* V335.66 — نماد اینماد اول می‌آید تا در چیدمان راست‌به‌چپ سمت راستِ صفحه بنشیند */
       el('div', {class: 'lp-links-enamad'}),
