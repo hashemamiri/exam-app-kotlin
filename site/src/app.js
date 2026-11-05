@@ -1682,9 +1682,10 @@
   /* V337.4 — دانلود آخرین APK از همان منبع عمومی app_version (بدون نیاز به نشست/گیت‌هاب). */
   function downloadAndroidApk(btn) {
     if (btn && btn.disabled) return;
-    var label = btn ? btn.textContent : '';
-    if (btn) { btn.disabled = true; btn.setAttribute('aria-busy', 'true'); btn.textContent = 'در حال دریافت…'; }
-    var done = function () { if (btn) { btn.disabled = false; btn.removeAttribute('aria-busy'); btn.textContent = label; } };
+    var html = btn ? btn.innerHTML : '';
+    var isCard = !!(btn && btn.classList && btn.classList.contains('dk-mcard'));
+    if (btn) { btn.disabled = true; btn.setAttribute('aria-busy', 'true'); if (!isCard) btn.textContent = 'در حال دریافت…'; }
+    var done = function () { if (btn) { btn.disabled = false; btn.removeAttribute('aria-busy'); if (!isCard) btn.innerHTML = html; } };
     api.latestApk().then(function (v) {
       if (!v || !v.url) { done(); toast('نسخهٔ اندروید در دسترس نیست.', 'err'); return; }
       var a = el('a', {href: v.url, download: 'exam-app-' + (v.name || 'latest') + '.apk'});
@@ -1889,7 +1890,7 @@
   /* V292.1 — نماد اعتماد الکترونیکی (اینماد): کد رسمی، فقط نمایش؛ کلیک = صفحهٔ تأیید در trustseal.enamad.ir */
   var ENAMAD_ID = '7284073', ENAMAD_CODE = 'jMyKBK6rprs9sP21KAmyzz1gB7ZuPySb';
   function enamadBadge() {
-    var a = el('a', {class: 'enamad', href: 'https://trustseal.enamad.ir/?id=' + ENAMAD_ID + '&Code=' + ENAMAD_CODE, target: '_blank'});
+    var a = el('a', {class: 'enamad', href: 'https://trustseal.enamad.ir/?id=' + ENAMAD_ID + '&Code=' + ENAMAD_CODE, target: '_blank', rel: 'noopener'});
     a.setAttribute('referrerpolicy', 'origin');
     var img = document.createElement('img');
     img.setAttribute('referrerpolicy', 'origin');
@@ -2212,7 +2213,8 @@
     print: '<path d="M7 9V4.5A1.5 1.5 0 0 1 8.5 3h7A1.5 1.5 0 0 1 17 4.5V9"/><rect x="3" y="9" width="18" height="8.5" rx="2.2"/><path d="M7 14.5h10V21H7z"/><path d="M9.5 17.3h5M9.5 19.2h3.5"/><circle cx="17.2" cy="12.2" r="0.9" fill="currentColor" stroke="none"/>',
     logout: '<path d="M10 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h4M15 8l4 4-4 4M19 12H9"/>',
     back: '<path d="M15 6l-6 6 6 6"/>',
-    brand: '<rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 4h6v3H9zM8.5 13l2.5 2.5 4.5-4.5"/>'
+    brand: '<rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 4h6v3H9zM8.5 13l2.5 2.5 4.5-4.5"/>',
+    apk: '<path d="M12 3v11M7.5 10.5L12 15l4.5-4.5M4 20h16"/>'
   };
   var DK_SUBS = {dashboard: 'خلاصهٔ وضعیت و آمار', exams: 'فهرست و مدیریت', builder: 'ساخت آزمون آنلاین / چاپی', classes: 'فهرست و اعضا', students: 'فهرست و وضعیت', bank: 'سؤال‌های ذخیره‌شده',
     reports: 'کارنامه و لیست نمرات', grading: 'تشریحی و نظارت', calendar: 'رویدادها و پیام‌ها', wallet: 'موجودی و شارژ', tools: 'فرمول، جدول، تناوبی', cards: 'آمار، کارنامه، بانک، تصحیح، درخواست‌ها', profile: 'مشخصات و امنیت حساب',
@@ -2341,8 +2343,12 @@
       return el('button', {class: 'dk-mcard' + (danger ? ' danger' : '') + (view.arg === key ? ' selected' : ''), onclick: on}, [el('span', {class: 'dk-mhead'}, [dkIcon(key, 'dk-mini'), el('strong', {text: label})]), quick(key), el('small', {text: subLabel})]);
     }
     var pq = quick('profile'); if (pq) profileCard.insertBefore(pq, profileCard.lastChild);
+    /* V337.5 — کارت «دانلود برنامه اندروید» در منوی هر سه پنل دسکتاپ (معلم/مدیر/دانش‌آموز) */
+    var apkCard = mcard('apk', 'دانلود برنامه اندروید', 'دریافت آخرین نسخهٔ اپ اندروید', false, function (e) { downloadAndroidApk(e && e.currentTarget); });
     c.appendChild(el('div', {class: 'dk-grid'}, [profileCard].concat(menu.map(function (it) { return mcard(it[0], it[2], it[3] || DK_SUBS[it[0]] || '', false, function () { if (it[0] === 'account') { view.panel = 'account'; view.arg = {tab: 'account'}; render(); } else if (it[0] === 'site') { toast('شما هم‌اکنون در سایت هستید.', 'ok'); } else if (it[4]) { view.panel = it[4]; view.arg = it[5] || null; render(); } else dkGo(it[0]); }); }))
-      .concat([mcard('logout', 'خروج', 'خروج امن و تعویض حساب', true, async function () { if (await confirmDlg('خروج از حساب', 'از حساب خارج می‌شوید؟', 'خروج', true)) doLogout(); })])));
+      .concat([apkCard, mcard('logout', 'خروج', 'خروج امن و تعویض حساب', true, async function () { if (await confirmDlg('خروج از حساب', 'از حساب خارج می‌شوید؟', 'خروج', true)) doLogout(); })])));
+    /* V337.5 — اینماد رسمی در منوی دسکتاپ (همان کد رسمی trustseal.enamad.ir) */
+    c.appendChild(el('div', {class: 'dk-enamad'}, [enamadBadge()]));
   }
   /* V148 — رندر محتوای پنل جاری در هر ظرفی (پنل دسکتاپ یا پوستهٔ موبایل) */
   function renderPage(c) {
