@@ -90,6 +90,21 @@ def build_print_engine():
     return "".join(parts)
 
 
+def build_reportcard_engine():
+    """V339 — موتور قالب‌های کارنامه: همان فایل اپ (assets/reportcard) با قلم سایت."""
+    base = os.path.join(ASSETS, "reportcard")
+    html = read(os.path.join(base, "reportcard.html"))
+    css = read(os.path.join(base, "reportcard.css"))
+    css = css.replace('url("/fonts/vazirmatn_regular.ttf") format(\'truetype\')', 'url("/fonts/Vazirmatn-400.woff2") format(\'woff2\')')
+    css = css.replace('url("/fonts/vazirmatn_bold.ttf") format(\'truetype\')', 'url("/fonts/Vazirmatn-700.woff2") format(\'woff2\')')
+    js = read(os.path.join(base, "reportcard.js"))
+    html = html.replace('<link rel="stylesheet" href="reportcard.css">', "<style>%s</style>" % min_css(css))
+    html = html.replace('<script src="reportcard.js"></script>', "<script>%s</script>" % min_js(js))
+    if 'reportcard.css' in html or 'reportcard.js' in html:
+        sys.exit("reportcard.html: جای‌گذاری موتور کارنامه انجام نشد")
+    return html
+
+
 def build_formula_engine():
     html = read(os.path.join(ASSETS, "formula_editor", "formula.html"))
     bridge = '<script>try { window.ExamEditorNative = window.parent.__formulaBridge || null; } catch (e) {}</script>'
@@ -112,7 +127,7 @@ def main():
     # پنل دانش‌آموز، تصحیح/مدیریت، مدرسه/بانک سؤال و اعلان وب) در فایل کش‌شدهٔ panels.<hash>.js قرار می‌گیرند
     # و در حین لاگین و پس از لاگین بارگذاری می‌شوند.
     # V325 — lock.js هم در بار اول می‌آید تا قفل میز کار پیش از باز شدن پنل‌ها فعال باشد
-    site_js = read(os.path.join(SITE, "src", "app.js")) + "\n" + read(os.path.join(SITE, "src", "extras.js")) + "\n" + read(os.path.join(SITE, "src", "lock.js")) + "\n" + read(os.path.join(SITE, "src", "sync.js")) + "\n" + read(os.path.join(SITE, "src", "mobile.js"))
+    site_js = read(os.path.join(SITE, "src", "app.js")) + "\n" + read(os.path.join(SITE, "src", "reportcard.js")) + "\n" + read(os.path.join(SITE, "src", "extras.js")) + "\n" + read(os.path.join(SITE, "src", "lock.js")) + "\n" + read(os.path.join(SITE, "src", "sync.js")) + "\n" + read(os.path.join(SITE, "src", "mobile.js"))
     panels_raw = (
         "window.__HEADER_SCHEMA = %s;\n" % read(os.path.join(ASSETS, "print", "header_settings_schema.json")).strip()
         + read(os.path.join(SITE, "src", "builder.js")) + "\n"
@@ -128,7 +143,7 @@ def main():
     # V162 — سرعت: دو موتور سنگین (چاپ + فرمول ≈ ۵ مگابایت) دیگر داخل index.html نیستند؛
     # در فایل جداگانهٔ engines.<hash>.js می‌روند که فقط هنگام نیاز (چاپ/فرمول/سازنده) بارگذاری و
     # به‌خاطر hash در نام، برای همیشه کش می‌شود. صفحهٔ اصلی ≈ ۱ مگابایت.
-    engines = "window.__ENGINES = {print: %s, formula: %s};" % (js_string(build_print_engine()), js_string(build_formula_engine()))
+    engines = "window.__ENGINES = {print: %s, formula: %s, reportcard: %s};" % (js_string(build_print_engine()), js_string(build_formula_engine()), js_string(build_reportcard_engine()))
     engines_b = engines.encode("utf-8")
     engines_hash = hashlib.sha256(engines_b).hexdigest()[:12]
     engines_name = "engines.%s.js" % engines_hash

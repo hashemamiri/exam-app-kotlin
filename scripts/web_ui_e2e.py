@@ -1013,6 +1013,116 @@ def run_suite(site_dir_arg: str | None, out_dir: Path) -> int:
                 t0,
             )
 
+            # --------------------------------------------------------
+            # ۹ب) V339 — انتخاب قالب کارنامه: ۱۰ قالب → پیش‌نمایش A4 → چاپ
+            # --------------------------------------------------------
+            t0 = time.monotonic()
+            page.evaluate("() => window.ExamSite.go('grades')")
+            page.get_by_role("button", name="ذخیرهٔ کارنامه به‌صورت PDF").first.click()
+            rc_frame = page.frame_locator("iframe[title='report-card-templates']")
+            rc_frame.locator(".rc-card").first.wait_for(timeout=60000)
+            card_count = rc_frame.locator(".rc-card").count()
+            assert card_count == 10, f"باید ۱۰ قالب کارنامه پیشنهاد شود، یافت شد: {card_count}"
+            record_step(
+                page,
+                "09b_report_card_templates.png",
+                "انتخاب قالب کارنامه — هر ۱۰ قالب برای کارنامهٔ دانش‌آموز",
+                "تأیید نمایش انتخابگر ۱۰ قالب (عمومی و فرم رسمی) پیش از چاپ کارنامه",
+                "1366×900",
+                t0,
+            )
+
+            t0 = time.monotonic()
+            rc_frame.locator(".rc-card").first.click()
+            rc_frame.locator(".page").first.wait_for(timeout=30000)
+            rc_metrics = page.evaluate(
+                """() => {
+                    const f = document.querySelector("iframe[title='report-card-templates']");
+                    const d = f.contentDocument;
+                    const pages = [...d.querySelectorAll('.page')];
+                    return {count: pages.length, max: Math.max(...pages.map(p => Math.ceil(p.getBoundingClientRect().height))),
+                            text: pages.map(p => p.innerText).join(' ')};
+                }"""
+            )
+            assert rc_metrics["count"] >= 1, "پیش‌نمایش کارنامه باید دست‌کم یک برگهٔ A4 داشته باشد"
+            assert rc_metrics["max"] <= 1123, f"برگهٔ کارنامه از A4 بیرون زده است: {rc_metrics['max']}"
+            # دادهٔ واقعی باید بنشیند: نمرهٔ ۱۰ از ۱۰ این دانش‌آموز = ۱۰۰٪ (نه «غایب»/صفر)
+            assert "۱۰۰" in rc_metrics["text"], "درصد نمرهٔ دانش‌آموز در قالب کارنامه ننشسته است"
+            assert "غایب" not in rc_metrics["text"], "نمرهٔ تصحیح‌شده به‌اشتباه «غایب» رندر شده است"
+            # پیش‌نمایش تمام‌صفحه است و متن صفحهٔ میزبان زیر آن پنهان می‌شود؛
+            # به‌جای بررسی چیدمان میزبان، خودِ برگهٔ داخل iframe سنجیده می‌شود.
+            rc_print_btn = rc_frame.get_by_role("button", name=re.compile("چاپ"))
+            assert rc_print_btn.count() == 1, "دکمهٔ چاپ/PDF باید در نوار پیش‌نمایش باشد"
+            page.screenshot(path=str(out_dir / "09c_report_card_preview.png"), full_page=False, animations="disabled")
+            steps.append({
+                "title": "پیش‌نمایش A4 کارنامه با قالب انتخاب‌شده — آمادهٔ چاپ",
+                "detail": "تأیید رندر قالب روی برگهٔ A4 بدون سرریز (%d برگه، بیشترین ارتفاع %dpx) و نمایش دکمهٔ چاپ/PDF" % (rc_metrics["count"], rc_metrics["max"]),
+                "viewport": "1366×900",
+                "duration_ms": int((time.monotonic() - t0) * 1000),
+                "passed": True,
+                "screenshot": "09c_report_card_preview.png",
+            })
+            print("  [PASS] 09c_report_card_preview.png — پیش‌نمایش A4 کارنامه (%dms)" % steps[-1]["duration_ms"], flush=True)
+            page.evaluate("() => window.ExamReportCard.close()")
+
+            # --------------------------------------------------------
+            # ۹د) V339 — کارنامهٔ کلاس: فرم رسمی ۱۰۱ + مرحلهٔ تناظر آزمون‌ها
+            # --------------------------------------------------------
+            t0 = time.monotonic()
+            page.evaluate(
+                """() => {
+                    const cols = [], rows = [], roles = {};
+                    const subjects = ['ریاضی', 'فیزیک', 'شیمی', 'فارسی'];
+                    subjects.forEach((s, i) => {
+                        cols.push({key: 'a' + i, title: s + ' — مستمر', subject: s, max: 20});
+                        cols.push({key: 'b' + i, title: s + ' — پایانی', subject: s, max: 20});
+                        roles['a' + i] = 'mostamar'; roles['b' + i] = 'payani';
+                    });
+                    for (let i = 0; i < 18; i++) {
+                        const vals = {};
+                        cols.forEach((c, j) => { vals[c.key] = 10 + ((i * 7 + j * 3) % 11); });
+                        rows.push({name: 'دانش‌آموز ' + (i + 1), vals: vals});
+                    }
+                    window.ExamReportCard.open({
+                        scope: 'class', className: 'دهم ۱۰۱', grade: 'دهم',
+                        school: {name: 'دبیرستان نمونهٔ دولتی شهید بهشتی', province: 'تهران', district: '۳'},
+                        year: 'سال تحصیلی ۱۴۰۵–۱۴۰۶', date: '۱۴۰۵/۰۸/۱۴',
+                        cols: cols, rows: rows, roles: roles, structure: 'combined'
+                    });
+                }"""
+            )
+            rc_frame.locator(".rc-card").first.wait_for(timeout=30000)
+            rc_frame.locator(".rc-card").nth(5).click()
+            rc_frame.locator(".rc-map select").first.wait_for(timeout=15000)
+            role_count = rc_frame.locator(".rc-map select").count()
+            assert role_count == 8, f"مرحلهٔ تناظر باید برای هر ۸ آزمون یک انتخابگر داشته باشد، یافت شد: {role_count}"
+            rc_frame.get_by_role("button", name="پیش‌نمایش").click()
+            rc_frame.locator(".page").first.wait_for(timeout=30000)
+            cls_metrics = page.evaluate(
+                """() => {
+                    const d = document.querySelector("iframe[title='report-card-templates']").contentDocument;
+                    const pages = [...d.querySelectorAll('.page')];
+                    return {count: pages.length, max: Math.max(...pages.map(p => Math.ceil(p.getBoundingClientRect().height))),
+                            text: pages.map(p => p.innerText).join(' '),
+                            matrix: d.querySelectorAll('.agg-table.matrix').length,
+                            subjects: d.querySelectorAll('.agg-table').length};
+                }"""
+            )
+            assert cls_metrics["max"] <= 1123, f"برگهٔ کارنامهٔ کلاس از A4 بیرون زده است: {cls_metrics['max']}"
+            assert cls_metrics["matrix"] >= 1, "ماتریس نمرات کلاس باید رندر شود"
+            assert "نمرهٔ نوبت" in cls_metrics["text"], "ستون نمرهٔ نوبت فرم ۱۰۱ باید در کارنامهٔ کلاس باشد"
+            page.screenshot(path=str(out_dir / "09d_report_card_class_form.png"), full_page=False, animations="disabled")
+            steps.append({
+                "title": "کارنامهٔ کلاس با فرم رسمی ۱۰۱ — تناظر آزمون‌ها و ماتریس نمرات",
+                "detail": "تأیید مرحلهٔ انتخاب نقش هر آزمون (مستمر/پایانی)، محاسبهٔ نمرهٔ نوبت و رندر %d برگهٔ A4 بدون سرریز" % cls_metrics["count"],
+                "viewport": "1366×900",
+                "duration_ms": int((time.monotonic() - t0) * 1000),
+                "passed": True,
+                "screenshot": "09d_report_card_class_form.png",
+            })
+            print("  [PASS] 09d_report_card_class_form.png — کارنامهٔ کلاس/فرم ۱۰۱ (%dms)" % steps[-1]["duration_ms"], flush=True)
+            page.evaluate("() => window.ExamReportCard.close()")
+
             desktop_ctx.close()
             browser.close()
 

@@ -122,6 +122,13 @@ fun ReportsScreen(
             onConfirm = { ids -> viewModel.setExams(ids); picker = null }
         )
     }
+    // V339 — انتخاب قالب کارنامه → پیش‌نمایش → چاپ (موتور مشترک سایت و اپ)
+    var cardPayload by remember { mutableStateOf<kotlinx.serialization.json.JsonObject?>(null) }
+    var cardTitle by remember { mutableStateOf("") }
+    var cardBusy by remember { mutableStateOf(false) }
+    cardPayload?.let { payload ->
+        ReportCardPrintDialog(payload = payload, title = cardTitle, onDismiss = { cardPayload = null })
+    }
     val selectedExams = remember(state.exams, state.selectedExamIds) { state.exams.filter { it.id in state.selectedExamIds } }
     // V321 — کارنامهٔ تحلیلی: یک‌بار به ازای هر تغییرِ انتخاب حساب می‌شود (نه در هر بازآراییِ فهرست)
     val classAnalytics = remember(state.rows, selectedExams) { buildAnalytics(state.rows, selectedExams) }
@@ -131,9 +138,17 @@ fun ReportsScreen(
             exams = selectedExams,
             onDismiss = { reportCardRow = null },
             onPrint = {
-                scope.launch {
-                    runCatching { ReportPrintHelper.print(context, "کارنامهٔ ${row.studentName}", selectedExams, listOf(row)) }
-                        .onFailure(viewModel::reportError)
+                if (!cardBusy) {
+                    cardBusy = true
+                    scope.launch {
+                        runCatching {
+                            ReportCardLauncher.forStudent(
+                                context, row.studentName, state.selectedClass?.name.orEmpty(), selectedExams, state.rows
+                            )
+                        }.onSuccess { cardTitle = "کارنامهٔ ${row.studentName}"; cardPayload = it }
+                            .onFailure(viewModel::reportError)
+                        cardBusy = false
+                    }
                 }
             }
         )
@@ -203,12 +218,17 @@ fun ReportsScreen(
                             onClick = { xlsxLauncher.launch("grade-list-${state.selectedClass?.name.orEmpty()}.xlsx") }
                         ) { Text("خروجی Excel") }
                         OutlinedButton(
-                            enabled = state.rows.isNotEmpty(),
+                            enabled = state.rows.isNotEmpty() && !cardBusy,
                             onClick = {
+                                cardBusy = true
                                 scope.launch {
                                     runCatching {
-                                        ReportPrintHelper.print(context, "لیست نمرات ${state.selectedClass?.name.orEmpty()}", selectedExams, state.rows)
-                                    }.onFailure(viewModel::reportError)
+                                        ReportCardLauncher.forClass(
+                                            context, state.selectedClass?.name.orEmpty(), selectedExams, state.rows
+                                        )
+                                    }.onSuccess { cardTitle = "کارنامهٔ کلاس ${state.selectedClass?.name.orEmpty()}"; cardPayload = it }
+                                        .onFailure(viewModel::reportError)
+                                    cardBusy = false
                                 }
                             }
                         ) { Text("چاپ / PDF") }

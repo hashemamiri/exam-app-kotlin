@@ -28,6 +28,8 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.platform.LocalContext
@@ -81,6 +83,13 @@ fun StudentResultsScreen(viewModel: StudentResultsViewModel = remember { Student
             }
         }
     }
+    // V339 — «PDF» ابتدا ۱۰ قالب کارنامه را پیشنهاد می‌دهد، بعد پیش‌نمایش A4 و چاپ.
+    // اگر موتور قالب‌ها باز نشد، همان خروجی PDF سادهٔ قبلی (ReportCardPdf) گرفته می‌شود.
+    var cardPayload by remember { mutableStateOf<JsonObject?>(null) }
+    var cardBusy by remember { mutableStateOf(false) }
+    cardPayload?.let { payload ->
+        ReportCardPrintDialog(payload = payload, title = "کارنامهٔ من", onDismiss = { cardPayload = null })
+    }
     LaunchedEffect(Unit) { viewModel.load() }
 
     LazyColumn(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -94,7 +103,15 @@ fun StudentResultsScreen(viewModel: StudentResultsViewModel = remember { Student
                     Text("میانگین کل: %.1f%%".format(avg))
                     Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                         Button(onClick = { exporter.launch("my-grades.xlsx") }) { Text("Excel واقعی") }
-                        OutlinedButton(onClick = { pdfExporter.launch("my-grades.pdf") }) { Text("PDF") }
+                        OutlinedButton(enabled = !cardBusy, onClick = {
+                            cardBusy = true
+                            ioScope.launch {
+                                runCatching { ReportCardLauncher.forGrades(context, "", state.grades) }
+                                    .onSuccess { cardPayload = it }
+                                    .onFailure { pdfExporter.launch("my-grades.pdf") }
+                                cardBusy = false
+                            }
+                        }) { Text("PDF") }
                     }
                 }
             }

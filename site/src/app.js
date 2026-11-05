@@ -901,7 +901,7 @@
   function engineHtml(kind) {
     return loadEngines().then(function (E) {
       var src = E[kind] || '';
-      if (!src) toast('موتور ' + (kind === 'print' ? 'چاپ' : 'فرمول') + ' در این فایل تعبیه نشده است.', 'err');
+      if (!src) toast('موتور ' + (kind === 'print' ? 'چاپ' : kind === 'reportcard' ? 'قالب کارنامه' : 'فرمول') + ' در این فایل تعبیه نشده است.', 'err');
       /* V287 — تنظیم «اعداد فارسی» سایت به هر دو موتور می‌رسد (فرمول: صفحه‌کلید؛ چاپ/پیش‌نمایش: شکل‌ها و فرمول‌ها) */
       if (src) { var fa = persianDigitsOn(); src = src.replace(/<head([^>]*)>/i, function (m) { return m + '<script>window.__mfPersianDigits=' + fa + ';window.__figPersianDigits=' + fa + ';<\/script>'; }); }
       return src;
@@ -2919,7 +2919,7 @@
       c.innerHTML = '';
       /* V264 — «ذخیرهٔ PDF» کارنامهٔ دانش‌آموز (printSection؛ گزینهٔ «ذخیره به‌صورت PDF» مرورگر) کنار Excel */
       var card = el('div', {class: 'card'}, [el('div', {class: 'row'}, [el('h3', {class: 'grow', text: '📊 نمرات'}), window.SiteExtras && grades.length ? window.SiteExtras.gradesExcelButton(grades) : null,
-        grades.length ? el('button', {class: 'btn light sm no-print', text: '🖨 ذخیرهٔ PDF', 'aria-label': 'ذخیرهٔ کارنامه به‌صورت PDF', onclick: function () { printSection('کارنامهٔ ' + ((user || {}).name || 'دانش‌آموز'), card); }}) : null])]);
+        grades.length ? el('button', {class: 'btn light sm no-print', text: '🖨 ذخیرهٔ PDF', 'aria-label': 'ذخیرهٔ کارنامه به‌صورت PDF', onclick: function () { var P = window.ExamReportCard; if (P) P.withFallback(P.fromStudentGrades(grades), 'کارنامهٔ ' + ((user || {}).name || 'دانش‌آموز'), card); else printSection('کارنامهٔ ' + ((user || {}).name || 'دانش‌آموز'), card); }}) : null])]);
       if (!grades.length) card.appendChild(emptyBox('📊', 'هنوز نمره‌ای ثبت نشده است.'));
       else {
         /* V314.0 — کارنامهٔ توصیفی به تفکیک درس (۴ سطحی استاندارد ابتدایی + ستاره) */

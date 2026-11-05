@@ -743,7 +743,7 @@
   function classReport(d) {
     var box = el('div');
     var exams = d.exams || [], students = d.students || [];
-    box.appendChild(el('div', {class: 'row', style: 'margin-bottom:8px'}, [el('h3', {class: 'grow', text: '📊 کارنامهٔ کلاس ' + (d.class_name || '')}), el('button', {class: 'btn light sm no-print', text: '🖨 ذخیرهٔ PDF', onclick: function () { S.printSection('کارنامهٔ کلاس ' + (d.class_name || ''), box); }})]));
+    box.appendChild(el('div', {class: 'row', style: 'margin-bottom:8px'}, [el('h3', {class: 'grow', text: '📊 کارنامهٔ کلاس ' + (d.class_name || '')}), el('button', {class: 'btn light sm no-print', text: '🖨 ذخیرهٔ PDF', onclick: function () { var T = 'کارنامهٔ کلاس ' + (d.class_name || ''); var P = window.ExamReportCard; if (P) P.withFallback(P.fromManagerClass(d), T, box); else S.printSection(T, box); }})]));
     if (!exams.length) { box.appendChild(S.emptyBox('📊', 'هنوز آزمونی برای این کلاس برگزار یا تصحیح نشده است.')); return box; }
     function pct(g, m) { return m > 0 ? Number(g) * 100 / m : null; }
     function cell(x) {
