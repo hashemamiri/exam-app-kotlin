@@ -65,6 +65,14 @@
       structure: p.structure || 'combined',
       attendance: p.attendance || null,
       behavior: p.behavior || null,
+      /* V340 — برچسب‌های قابل جایگزینی: برای دفترچهٔ مدرسه، ردیف‌ها «کلاس» هستند نه «دانش‌آموز».
+         پیش‌فرض‌ها دقیقاً همان متن قبلی‌اند، پس کارنامهٔ کلاس/دانش‌آموز تغییر نمی‌کند. */
+      rowLabel: p.rowLabel || 'دانش‌آموز',
+      nameLabel: p.nameLabel || 'نام دانش‌آموز',
+      countLabel: p.countLabel || 'تعداد دانش‌آموز',
+      bestLabel: p.bestLabel || 'برترین دانش‌آموز',
+      groupLabel: p.groupLabel || 'کلاس',
+      avgLabel: p.avgLabel || 'میانگین کلاس',
       cols: [], rows: []
     };
     m.school.name = m.school.name || 'مدرسه';
@@ -211,7 +219,7 @@
       return '<div><span>' + esc(it[0]) + '</span><b' + (it[2] ? ' class="ok"' : '') + '>' + esc(it[1]) + '</b></div>';
     }).join('') + '</div>';
   }
-  function scopeLabel(m) { return m.scope === 'class' ? ('کلاس ' + m.className) : 'کل کلاس'; }
+  function scopeLabel(m) { return m.scope === 'class' ? (m.groupLabel + ' ' + m.className) : ('کل ' + m.groupLabel); }
 
   /* ------------------------------------------------------------ جدول‌های تجمیعی */
   function cellOf(m, v) {
@@ -274,11 +282,11 @@
       ['میانگین سطح', fa(round(mean(all), 2))],
       ['نمرهٔ خیلی خوب', fa(all.filter(function (v) { return Math.round(v) === 4; }).length)],
       ['نمرهٔ نیاز به تلاش', fa(all.filter(function (v) { return Math.round(v) === 1; }).length)],
-      ['تعداد دانش‌آموز', fa(rows.length)]
+      [m.countLabel, fa(rows.length)]
     ] : [
       ['میانگین کل', fa(round(mean(all), 1))],
       ['نرخ قبولی درس‌ها', fa(all.length ? round(all.filter(function (v) { return v >= m.passMark; }).length / all.length * 100) : 0) + '٪'],
-      ['برترین دانش‌آموز', best ? best.name : '—'],
+      [m.bestLabel, best ? best.name : '—'],
       ['تعداد ' + (m.unit || 'درس'), fa(cols.length)]
     ]);
   }
@@ -308,20 +316,20 @@
         return { name: r.name, vals: vals, pcts: pcts, stats: r.stats };
       });
     }
-    if (m._cont) return (cfg.official ? ofGov(m, cfg.title + ' — کلاس', cfg.form, '', cfg.stage) : head(m, cfg.title + ' — کلاس', scopeLabel(m), cfg.accent)) +
-      '<div class="agg-h">ماتریس نمرات</div>' + tblMatrix(m, rows, cols, 'دانش‌آموز', true) + footer(m);
-    var body = aggStats(m, rows, cols, cfg.accent) + aggBlock(m, rows, cols, 'دانش‌آموز');
+    if (m._cont) return (cfg.official ? ofGov(m, cfg.title + ' — ' + m.groupLabel, cfg.form, '', cfg.stage) : head(m, cfg.title + ' — ' + m.groupLabel, scopeLabel(m), cfg.accent)) +
+      '<div class="agg-h">ماتریس نمرات</div>' + tblMatrix(m, rows, cols, m.rowLabel, true) + footer(m);
+    var body = aggStats(m, rows, cols, cfg.accent) + aggBlock(m, rows, cols, m.rowLabel);
     var note = '<div class="agg-note" style="border-color:' + cfg.accent + '"><b>یادداشت:</b> این کارنامهٔ تجمیعی کلاس است؛ ' +
       'میانگین‌ها از نمرهٔ واقعی همین آزمون‌ها محاسبه شده و «نرخ قبولی» سهم نمره‌های بالای حدنصاب است.</div>';
     if (cfg.official) {
-      return ofGov(m, cfg.title + ' — کلاس', cfg.form, '<br><small>' + esc(scopeLabel(m)) + '</small>', cfg.stage) +
-        ofId([['مدرسه', m.school.name], ['پایه', m.grade], ['کلاس', m.className], ['تعداد دانش‌آموز', fa(m.rows.length)],
+      return ofGov(m, cfg.title + ' — ' + m.groupLabel, cfg.form, '<br><small>' + esc(scopeLabel(m)) + '</small>', cfg.stage) +
+        ofId([['مدرسه', m.school.name], ['پایه', m.grade], [m.groupLabel, m.className], [m.countLabel, fa(m.rows.length)],
               ['تعداد آزمون', fa(m.cols.length)], ['سال تحصیلی', m.year], ['تاریخ صدور', m.date], ['ساختار جدول', structName(m.structure)]]) +
         body + ofNote(cfg.note || 'میانگین‌ها از نمرات واقعی همان بازه محاسبه شده است.') +
         ofSign(['معاون آموزشی', 'مدیر مدرسه', 'کارشناس سنجش']) + footer(m);
     }
-    return head(m, cfg.title + ' — کلاس', scopeLabel(m) + ' · ' + m.year, cfg.accent) +
-      infoGrid([['پایه', m.grade], ['کلاس', m.className], ['تعداد دانش‌آموز', fa(m.rows.length)], ['سال تحصیلی', m.year]]) +
+    return head(m, cfg.title + ' — ' + m.groupLabel, scopeLabel(m) + ' · ' + m.year, cfg.accent) +
+      infoGrid([['پایه', m.grade], [m.groupLabel, m.className], [m.countLabel, fa(m.rows.length)], ['سال تحصیلی', m.year]]) +
       body + note + footer(m);
   }
   function structName(s) { return s === 'matrix' ? 'ماتریس نمرات' : s === 'subjects' ? 'تحلیل درس‌ها' : 'ترکیبی'; }
@@ -348,7 +356,7 @@
       '<div>' + esc(m.school.name) + '<br>' + esc(m.year) + '</div></div>' +
       infoGrid([['نام و نام خانوادگی', m.student.name], ['پایه و کلاس', (m.grade ? m.grade + ' — ' : '') + m.className],
                 ['تعداد آزمون', fa(m.cols.length)], ['تاریخ صدور', m.date],
-                ['دبیر', m.teacher], ['سال تحصیلی', m.year], ['میانگین کلاس', isNum(m.classInfo.average) ? fa(round(m.classInfo.average, 1)) + '٪' : '—'],
+                ['دبیر', m.teacher], ['سال تحصیلی', m.year], [m.avgLabel, isNum(m.classInfo.average) ? fa(round(m.classInfo.average, 1)) + '٪' : '—'],
                 ['کد پیگیری', fa(m.code)]]) +
       '<table class="grid"><thead><tr><th style="width:8%">ردیف</th><th>عنوان آزمون / مبحث</th><th style="width:12%">بارم</th>' +
       '<th style="width:14%">نمره</th><th style="width:12%">درصد</th><th style="width:18%">وضعیت</th></tr></thead>' +
@@ -379,12 +387,12 @@
     });
     var avg = isClass ? m.stats.avg : m.me.avgPercent;
     var strip = '<div class="stat-strip">' +
-      '<div class="stat hi"><span>' + (isClass ? 'میانگین کلاس' : 'درصد کل') + '</span><b>' + fa(round(avg, 1)) + '٪</b><small>عملکرد کلی</small></div>' +
+      '<div class="stat hi"><span>' + (isClass ? m.avgLabel : 'درصد کل') + '</span><b>' + fa(round(avg, 1)) + '٪</b><small>عملکرد کلی</small></div>' +
       '<div class="stat"><span>بیشترین</span><b>' + fa(isClass ? m.stats.max : round(Math.max.apply(null, nums(m.cols.map(function (c) { return m.me.pcts[c.key]; })).concat([0])), 1)) + '٪</b><small>بهترین عملکرد</small></div>' +
       '<div class="stat"><span>' + (isClass ? 'نرخ قبولی' : 'رتبه در کلاس') + '</span><b>' +
         (isClass ? fa(m.stats.pass) + '٪' : (m.me.rank ? fa(m.me.rank) : '—')) + '</b><small>' +
-        (isClass ? 'نمره‌های بالای حدنصاب' : 'از ' + fa(m.classInfo.count || m.rows.length) + ' دانش‌آموز') + '</small></div>' +
-      '<div class="stat"><span>' + (isClass ? 'تعداد دانش‌آموز' : 'میانگین کلاس') + '</span><b>' +
+        (isClass ? 'نمره‌های بالای حدنصاب' : 'از ' + fa(m.classInfo.count || m.rows.length) + ' ' + m.rowLabel) + '</small></div>' +
+      '<div class="stat"><span>' + (isClass ? m.countLabel : m.avgLabel) + '</span><b>' +
         (isClass ? fa(m.rows.length) : (isNum(m.classInfo.average) ? fa(round(m.classInfo.average, 1)) + '٪' : '—')) + '</b><small>' +
         (isClass ? 'در این کارنامه' : 'برای مقایسه') + '</small></div></div>';
     var qrows = m.cols.map(function (c, i) {
@@ -392,9 +400,9 @@
       return '<tr><td>' + fa(i + 1) + '</td><td class="r">' + esc(c.title) + '</td><td>' + esc(c.subject) + '</td>' +
         '<td>' + fa(c.max) + '</td><td class="b">' + (isNum(v) ? fa(round(v, 2)) : '—') + '</td></tr>';
     }).join('');
-    return head(m, 'کارنامهٔ آزمون' + (isClass ? ' — کلاس' : ''), (isClass ? scopeLabel(m) : m.student.name) + ' · ' + m.date, '#4338ca') +
-      infoGrid(isClass ? [['کلاس', m.className], ['پایه', m.grade], ['تعداد آزمون', fa(m.cols.length)], ['تعداد دانش‌آموز', fa(m.rows.length)]]
-                       : [['دانش‌آموز', m.student.name], ['کلاس', m.className], ['دبیر', m.teacher], ['کد پیگیری', fa(m.code)]]) +
+    return head(m, 'کارنامهٔ آزمون' + (isClass ? ' — ' + m.groupLabel : ''), (isClass ? scopeLabel(m) : m.student.name) + ' · ' + m.date, '#4338ca') +
+      infoGrid(isClass ? [[m.groupLabel, m.className], ['پایه', m.grade], ['تعداد آزمون', fa(m.cols.length)], [m.countLabel, fa(m.rows.length)]]
+                       : [['دانش‌آموز', m.student.name], [m.groupLabel, m.className], ['دبیر', m.teacher], ['کد پیگیری', fa(m.code)]]) +
       strip +
       '<div class="t2-card"><div class="t2-h">' + (isClass ? 'میانگین کلاس به تفکیک آزمون' : 'عملکرد به تفکیک آزمون') + '</div>' + bars(m, items) + '</div>' +
       (isClass ? '' : '<div class="t2-card"><div class="t2-h">ریز نمرات</div><table class="mini">' +
@@ -445,9 +453,9 @@
     });
     var ok = nums(allVals), first = ok[0], last = ok[ok.length - 1];
     var growth = ok.length > 1 ? round(last - first, 1) : 0;
-    return head(m, 'کارنامهٔ روند پیشرفت' + (isClass ? ' — کلاس' : ''), (isClass ? scopeLabel(m) : m.student.name) + ' · ' + m.year, '#0d9488') +
-      infoGrid(isClass ? [['کلاس', m.className], ['پایه', m.grade], ['تعداد آزمون', fa(m.cols.length)], ['تعداد دانش‌آموز', fa(m.rows.length)]]
-                       : [['دانش‌آموز', m.student.name], ['کلاس', m.className], ['دبیر', m.teacher], ['تعداد آزمون', fa(m.cols.length)]]) +
+    return head(m, 'کارنامهٔ روند پیشرفت' + (isClass ? ' — ' + m.groupLabel : ''), (isClass ? scopeLabel(m) : m.student.name) + ' · ' + m.year, '#0d9488') +
+      infoGrid(isClass ? [[m.groupLabel, m.className], ['پایه', m.grade], ['تعداد آزمون', fa(m.cols.length)], [m.countLabel, fa(m.rows.length)]]
+                       : [['دانش‌آموز', m.student.name], [m.groupLabel, m.className], ['دبیر', m.teacher], ['تعداد آزمون', fa(m.cols.length)]]) +
       '<div class="stat-strip t3-stats">' +
       '<div class="stat hi"><span>میانگین کل</span><b>' + fa(round(mean(ok), 1)) + '٪</b><small>همهٔ آزمون‌ها</small></div>' +
       '<div class="stat"><span>بهترین آزمون</span><b>' + (ok.length ? fa(round(Math.max.apply(null, ok), 1)) + '٪' : '—') + '</b><small>بیشترین درصد</small></div>' +
@@ -466,7 +474,7 @@
   /* برای قالب‌هایی که خودشان نمودار دارند: فقط یک جدول، بر پایهٔ ساختار انتخابی */
   function classTableOnly(m) {
     if (m.structure === 'subjects') return '<div class="agg-h">تحلیل ' + esc(m.unit || 'درس') + 'ها</div>' + tblSubjects(m, m.rows, m.cols, true);
-    return '<div class="agg-h">ماتریس نمرات</div>' + tblMatrix(m, m.rows, m.cols, 'دانش‌آموز', true);
+    return '<div class="agg-h">ماتریس نمرات</div>' + tblMatrix(m, m.rows, m.cols, m.rowLabel, true);
   }
 
   /* ============================================================ قالب ۴ — کارنامهٔ کلاس / رتبه */
@@ -505,19 +513,19 @@
     var vals = nums(m.rows.map(function (r) { return r.avgPercent; }));
     var avg = mean(vals), passCount = vals.filter(function (v) { return v >= m.levels[2]; }).length;
     var best = ranked[0], worst = ranked[ranked.length - 1];
-    if (m._cont) return head(m, 'کارنامهٔ کلاس — ادامه', scopeLabel(m), '#1d4ed8') +
-      '<table class="grid t4-grid"><thead><tr><th style="width:11%">رتبه</th><th>نام دانش‌آموز</th><th style="width:12%">میانگین (۲۰)</th>' +
+    if (m._cont) return head(m, 'کارنامهٔ ' + m.groupLabel + ' — ادامه', scopeLabel(m), '#1d4ed8') +
+      '<table class="grid t4-grid"><thead><tr><th style="width:11%">رتبه</th><th>' + m.nameLabel + '</th><th style="width:12%">میانگین (۲۰)</th>' +
       '<th style="width:11%">درصد</th><th style="width:17%">وضعیت</th><th style="width:14%">توضیح</th></tr></thead><tbody>' + rows + '</tbody></table>' + footer(m);
-    return head(m, isClass ? 'کارنامهٔ کلاس' : 'کارنامهٔ رتبه و توزیع', scopeLabel(m) + ' · ' + m.date, '#1d4ed8') +
-      infoGrid([['کلاس', m.className], ['دبیر', m.teacher], ['تعداد دانش‌آموز', fa(m.rows.length)], ['تعداد آزمون', fa(m.cols.length)]]) +
+    return head(m, isClass ? 'کارنامهٔ ' + m.groupLabel : 'کارنامهٔ رتبه و توزیع', scopeLabel(m) + ' · ' + m.date, '#1d4ed8') +
+      infoGrid([[m.groupLabel, m.className], ['دبیر', m.teacher], [m.countLabel, fa(m.rows.length)], ['تعداد آزمون', fa(m.cols.length)]]) +
       '<div class="stat-strip t4-stats">' +
       '<div class="stat hi"><span>میانگین کلاس</span><b>' + fa(round(avg, 1)) + '٪</b><small>' + fa(round(avg / 100 * 20, 1)) + ' از ۲۰</small></div>' +
       '<div class="stat"><span>بیشترین</span><b>' + (best ? fa(round(best.avgPercent, 1)) + '٪' : '—') + '</b><small>' + esc(best ? best.name : '') + '</small></div>' +
       '<div class="stat"><span>کمترین</span><b>' + (worst ? fa(round(worst.avgPercent, 1)) + '٪' : '—') + '</b><small>' + esc(worst ? worst.name : '') + '</small></div>' +
       '<div class="stat"><span>نرخ قبولی</span><b>' + fa(vals.length ? round(passCount / vals.length * 100) : 0) + '٪</b><small>' + fa(passCount) + ' از ' + fa(vals.length) + '</small></div></div>' +
-      '<table class="grid t4-grid"><thead><tr><th style="width:11%">رتبه</th><th>نام دانش‌آموز</th><th style="width:12%">میانگین (۲۰)</th>' +
+      '<table class="grid t4-grid"><thead><tr><th style="width:11%">رتبه</th><th>' + m.nameLabel + '</th><th style="width:12%">میانگین (۲۰)</th>' +
       '<th style="width:11%">درصد</th><th style="width:17%">وضعیت</th><th style="width:14%">توضیح</th></tr></thead><tbody>' + rows + '</tbody></table>' +
-      '<div class="t4-card"><div class="t4-h">توزیع نمرات کلاس' + (isClass ? '' : ' — جایگاه شما با رنگ نارنجی') + '</div>' +
+      '<div class="t4-card"><div class="t4-h">توزیع نمرات ' + m.groupLabel + (isClass ? '' : ' — جایگاه شما با رنگ نارنجی') + '</div>' +
       histogram(m, vals, isClass ? null : m.me.avgPercent) + '</div>' + footer(m);
   }
 
@@ -591,7 +599,7 @@
     return '<div class="of-frame">' + ofGov(m, cfg.title, cfg.form, cfg.extra || '', cfg.stage) +
       ofId([['نام و نام خانوادگی', m.student.name], ['نام پدر', m.student.father],
             ['شمارهٔ دانش‌آموزی', fa(m.student.no)], ['کد ملی', fa(m.student.nationalId)],
-            ['پایه', m.grade], ['رشته', m.field], ['کلاس', m.className], ['سال تحصیلی', m.year]]) +
+            ['پایه', m.grade], ['رشته', m.field], [m.groupLabel, m.className], ['سال تحصیلی', m.year]]) +
       '<table class="of-table"><thead><tr><th style="width:7%">ردیف</th><th>نام درس</th><th style="width:14%">' + cfg.colA + '</th>' +
       '<th style="width:15%">' + cfg.colB + '</th><th style="width:14%">' + cfg.colC + '</th><th style="width:16%">وضعیت</th></tr></thead>' +
       '<tbody>' + rows + '</tbody></table>' + ofSum(sums) + ofNote(cfg.note) +
@@ -628,7 +636,7 @@
       ofGov(m, 'کارنامهٔ رسمی توصیفی', 104, '<br><small>دورهٔ ابتدایی — ارزشیابی سالانه</small>', 'ابتدایی') +
       ofId([['نام و نام خانوادگی', m.student.name], ['نام پدر', m.student.father],
             ['شمارهٔ دانش‌آموزی', fa(m.student.no)], ['کد ملی', fa(m.student.nationalId)],
-            ['پایه', m.grade], ['کلاس', m.className], ['آموزگار', m.teacher], ['سال تحصیلی', m.year]]) +
+            ['پایه', m.grade], [m.groupLabel, m.className], ['آموزگار', m.teacher], ['سال تحصیلی', m.year]]) +
       '<table class="of-table"><thead><tr><th style="width:7%">ردیف</th><th>درس</th><th style="width:20%">سطح نوبت اول</th>' +
       '<th style="width:20%">سطح نوبت دوم</th><th style="width:17%">روند</th></tr></thead><tbody>' + rows + '</tbody></table>' + two +
       ofNote('سطوح چهارگانه بر پایهٔ آستانه‌های ' + fa(m.levels[0]) + '٪، ' + fa(m.levels[1]) + '٪ و ' + fa(m.levels[2]) + '٪ تعیین شده‌اند: خیلی خوب / خوب / قابل قبول / نیاز به تلاش بیشتر. تصمیم ارتقا با شورای مدرسه است.') +
@@ -673,7 +681,7 @@
       (hasStatsCol(m) ? '<tfoot><tr><td colspan="2" class="b">جمع</td><td class="b">' + fa(tq) + '</td><td class="b">' + fa(tc) + '</td><td class="b">' + fa(tw) + '</td><td class="b">' + fa(tq - tc - tw) + '</td><td colspan="' + (hasTarazCol(m) ? 3 : 2) + '"></td></tr></tfoot>' : '') +
       '</table>' +
       ofSum([['میانگین درصد', fa(avgPct) + '٪'], ['رتبه در کلاس', m.me.rank ? fa(m.me.rank) + ' از ' + fa(m.classInfo.count || m.rows.length) : '—'],
-             ['میانگین کلاس', isNum(m.classInfo.average) ? fa(round(m.classInfo.average, 1)) + '٪' : '—'],
+             [m.avgLabel, isNum(m.classInfo.average) ? fa(round(m.classInfo.average, 1)) + '٪' : '—'],
              ['تعداد درس', fa(m.cols.length)]]) +
       ofNote(hasStatsCol(m) ? 'نمرهٔ خام با احتساب یک‌سوم نمرهٔ منفی برای پاسخ نادرست محاسبه شده است (درست − نادرست ÷ ۳).'
                             : 'برای این آزمون ریز پاسخ‌ها (درست/نادرست/نزده) در دسترس نبود؛ فقط درصد و نمرهٔ ثبت‌شده نمایش داده شد.') +
@@ -836,7 +844,108 @@
     if (cur.length) chunks.push(cur);
     return chunks.map(function (gs) { return gs.reduce(function (a, g) { return a.concat(g); }, []); });
   }
+  /* ============================================================ V340 — دفترچهٔ کارنامهٔ مدرسه
+     ورودی: {scope:'school', school, year, date, classes:[{name,teacher,students,exams,answers,graded,
+     average_percent,spread_percent,below_half,grade,field}], months, topExams, reports:[payload کارنامهٔ هر کلاس]}
+     خروجی: صفحهٔ نمای کلی مدرسه + خلاصهٔ کلاس‌ها با همان قالب + کارنامهٔ کامل هر کلاس. */
+  function schoolSummaryPayload(p) {
+    var classes = p.classes || [];
+    return {
+      scope: 'class', school: p.school, year: p.year, date: p.date,
+      className: (p.school && p.school.name) || '', grade: '', teacher: '',
+      structure: p.structure || 'combined', levels: p.levels,
+      rowLabel: 'کلاس', nameLabel: 'نام کلاس', countLabel: 'تعداد کلاس',
+      bestLabel: 'برترین کلاس', groupLabel: 'مدرسه', avgLabel: 'میانگین مدرسه', unit: 'شاخص',
+      cols: [{ key: 'avg', title: 'میانگین درصد', subject: 'میانگین کل', max: 100 }],
+      rows: classes.map(function (k) {
+        return { name: k.name + (k.teacher ? ' — ' + k.teacher : ''), vals: { avg: isNum(k.average_percent) ? k.average_percent : null } };
+      })
+    };
+  }
+  /* یک ستون برای هر عنوان آزمون مشترک بین کلاس‌ها؛ نقش انتخابی معلم/مدیر با عنوان اعمال می‌شود */
+  function schoolCols(p) {
+    var seen = {}, out = [];
+    (p.reports || []).forEach(function (r) {
+      (r.cols || []).forEach(function (c) {
+        var t = c.title || '';
+        if (!seen[t]) { seen[t] = 1; out.push({ key: t, title: t, subject: c.subject || t, max: c.max || 20 }); }
+      });
+    });
+    return out;
+  }
+  function schoolClassPayload(p, r) {
+    var q = {}, titleRoles = p.roles || {};
+    var copy = {
+      scope: 'class', school: p.school, year: p.year, date: p.date,
+      className: r.className || '', grade: r.grade || '', field: r.field || '', teacher: r.teacher || '',
+      structure: p.structure || r.structure || 'combined', levels: p.levels,
+      cols: r.cols || [], rows: r.rows || [], classInfo: r.classInfo || {}, roles: q
+    };
+    (r.cols || []).forEach(function (c) {
+      var role = titleRoles[c.title] || (r.roles || {})[c.key];
+      if (role) q[c.key] = role;
+    });
+    return copy;
+  }
+  function schoolOverview(p) {
+    var m = normalize({ scope: 'class', school: p.school, year: p.year, date: p.date, className: (p.school || {}).name || '', groupLabel: 'مدرسه' });
+    var classes = p.classes || [];
+    var tot = { students: 0, exams: 0, answers: 0, graded: 0 };
+    classes.forEach(function (k) {
+      tot.students += Number(k.students) || 0; tot.exams += Number(k.exams) || 0;
+      tot.answers += Number(k.answers) || 0; tot.graded += Number(k.graded) || 0;
+    });
+    var rows = classes.map(function (k, i) {
+      return '<tr><td>' + fa(i + 1) + '</td><td class="r nm">' + esc(k.name || '—') + '</td>' +
+        '<td class="r">' + esc(k.teacher || 'بدون معلم') + '</td><td>' + fa(k.students || 0) + '</td>' +
+        '<td>' + fa(k.exams || 0) + '</td><td>' + fa(k.graded || 0) + ' / ' + fa(k.answers || 0) + '</td>' +
+        '<td class="b">' + (isNum(k.average_percent) ? fa(round(k.average_percent, 1)) + '٪' : '—') + '</td>' +
+        '<td>' + (isNum(k.spread_percent) ? '±' + fa(k.spread_percent) + '٪' : '—') + '</td>' +
+        '<td>' + fa(k.below_half || 0) + '</td></tr>';
+    }).join('');
+    var tbl = '<table class="grid"><thead><tr><th style="width:5%">ردیف</th><th>کلاس</th><th>معلم</th>' +
+      '<th>دانش‌آموز</th><th>آزمون</th><th>تصحیح / پاسخ</th><th>میانگین</th><th>پراکندگی</th><th>زیر ۵۰٪</th>' +
+      '</tr></thead><tbody>' + rows + '</tbody></table>';
+    var strip = statStrip(m, '#0f766e', [
+      ['تعداد کلاس', fa(classes.length)], ['تعداد دانش‌آموز', fa(tot.students)],
+      ['تعداد آزمون', fa(tot.exams)], ['پاسخ تصحیح‌شده', fa(tot.graded) + ' / ' + fa(tot.answers)]
+    ]);
+    var months = p.months || [];
+    var trend = '';
+    if (months.length) {
+      trend = '<div class="agg-h">روند ۶ ماه اخیر</div><table class="mini"><thead><tr>' +
+        months.map(function (x) { return '<th>' + esc(String(x.month || '')) + '</th>'; }).join('') +
+        '</tr></thead><tbody><tr>' +
+        months.map(function (x) { return '<td>' + (isNum(x.average_percent) ? fa(x.average_percent) + '٪' : '—') + '<br><small>' + fa(x.answers || 0) + ' پاسخ</small></td>'; }).join('') +
+        '</tr></tbody></table>';
+    }
+    var top = p.topExams || [];
+    var topTbl = '';
+    if (top.length) {
+      topTbl = '<div class="agg-h">آزمون‌های با بیشترین شرکت‌کننده</div><table class="mini"><thead><tr>' +
+        '<th>آزمون</th><th>معلم</th><th>پاسخ</th><th>میانگین</th></tr></thead><tbody>' +
+        top.map(function (t) {
+          return '<tr><td class="r">' + esc(t.title || '') + '</td><td>' + esc(t.teacher || '—') + '</td>' +
+            '<td>' + fa(t.answers || 0) + '</td><td>' + (isNum(t.average_percent) ? fa(t.average_percent) + '٪' : '—') + '</td></tr>';
+        }).join('') + '</tbody></table>';
+    }
+    return section(m, CFG[0], head(m, 'کارنامهٔ مدرسه — نمای کلی', esc((p.school || {}).name || '') + ' · ' + esc(p.year || ''), '#0f766e') +
+      infoGrid([['مدرسه', (p.school || {}).name || ''], ['تعداد کلاس', fa(classes.length)], ['سال تحصیلی', p.year], ['تاریخ صدور', p.date]]) +
+      strip + '<div class="agg-h">جدول کلاس‌ها</div>' + tbl + trend + topTbl +
+      signatures(['معاون آموزشی', 'مدیر مدرسه', 'کارشناس سنجش']) + footer(m));
+  }
+  function renderSchool(id, p, limitOverride) {
+    var pages = [schoolOverview(p)];
+    var summary = schoolSummaryPayload(p);
+    if (summary.rows.length) pages = pages.concat(render(id, summary, limitOverride));
+    (p.reports || []).forEach(function (r) {
+      pages = pages.concat(render(id, schoolClassPayload(p, r), limitOverride));
+    });
+    return pages;
+  }
+
   function render(id, payload, limitOverride) {
+    if (payload && payload.scope === 'school') return renderSchool(id, payload, limitOverride);
     var cfg = CFG[Math.max(1, Math.min(10, id | 0)) - 1];
     var m = applyCfg(normalize(payload), cfg);
     if (m.scope === 'class') m.rows = m.rows.slice().sort(function (a, b) { return (b.avgPercent || 0) - (a.avgPercent || 0); });
@@ -887,7 +996,7 @@
   }
   function showPicker() {
     state.step = 'pick';
-    var scope = state.payload.scope === 'class' ? 'کلاس' : 'دانش‌آموز';
+    var scope = state.payload.scope === 'school' ? 'مدرسه (دفترچه)' : state.payload.scope === 'class' ? 'کلاس' : 'دانش‌آموز';
     var cards = CFG.map(function (c) {
       return '<button type="button" class="rc-card" data-id="' + c.id + '"><div class="rc-thumb">' + thumb(c) +
         '<span class="rc-num">' + fa(c.id) + '</span></div><div class="rc-name">' + esc(c.name) + '</div>' +
@@ -919,15 +1028,18 @@
     state.id = id;
     state.limit = 0;
     var cfg = CFG[id - 1];
-    if (cfg.roles && state.payload.cols && state.payload.cols.length) { showMapping(cfg); return; }
+    var hasCols = state.payload.scope === 'school' ? schoolCols(state.payload).length : (state.payload.cols && state.payload.cols.length);
+    if (cfg.roles && hasCols) { showMapping(cfg); return; }
     showPreview();
   }
   function showMapping(cfg) {
     state.step = 'map';
-    var roles = state.payload.roles || guessRoles(state.payload.cols);
+    /* V340 — در دفترچهٔ مدرسه، ستون‌ها عنوان‌های مشترک بین کلاس‌ها هستند */
+    var mapCols = state.payload.scope === 'school' ? schoolCols(state.payload) : state.payload.cols;
+    var roles = state.payload.roles || guessRoles(mapCols);
     state.payload.roles = roles;
     var opts = cfg.roles.map(function (r) { return '<option value="' + r + '">' + ROLE_NAMES[r] + '</option>'; }).join('');
-    var rows = state.payload.cols.map(function (c) {
+    var rows = mapCols.map(function (c) {
       return '<tr><td>' + esc(c.title) + '</td><td>' + esc(c.subject || '—') + '</td>' +
         '<td><select data-key="' + esc(c.key) + '"><option value="">— استفاده نشود —</option>' + opts + '</select></td></tr>';
     }).join('');
@@ -958,22 +1070,43 @@
     var structInner = '' + [['matrix', 'ماتریس نمرات'], ['subjects', 'تحلیل درس‌ها'], ['combined', 'ترکیبی']].map(function (s) {
       return '<button type="button" data-s="' + s[0] + '" class="' + ((state.payload.structure || 'combined') === s[0] ? 'on' : '') + '">' + s[1] + '</button>';
     }).join('');
-    var struct = state.payload.scope === 'class' && !isApp() ? '<div class="rc-struct">ساختار جدول: ' + structInner + '</div>' : '';
+    var struct = (state.payload.scope === 'class' || state.payload.scope === 'school') && !isApp() ? '<div class="rc-struct">ساختار جدول: ' + structInner + '</div>' : '';
     var root = document.getElementById('rc-root');
     /* جاگذاری خودکار روی A4: اگر برگه‌ای سرریز کرد، تعداد ردیف/ستون هر برگه کم و دوباره رندر می‌شود */
-    var tries = 0;
-    (function paint() {
+    var tries = 0, prevMax = Infinity, bestLimit = state.limit, bestMax = Infinity;
+    function draw() {
       pages = render(state.id, state.payload, state.limit);
       var sheet = '<div class="wrap">' + pages.join('') + '</div>';
       root.innerHTML = struct + (isApp() ? '<div class="rc-sizer"><div class="rc-scale">' + sheet + '</div></div>' : sheet);
       var max = 0;
       /* offsetHeight ارتفاع چیدمان است و با transform زوم تغییر نمی‌کند */
       Array.prototype.forEach.call(root.querySelectorAll('.page'), function (p) { max = Math.max(max, p.offsetHeight); });
-      if (max > 1124 && tries < 8) {
-        tries++;
-        state.limit = Math.max(2, Math.floor((state.limit || lastLimit) * 0.78));
-        paint();
+      return max;
+    }
+    /* V340 — بعضی برگه‌ها (مثلاً تحلیل درس‌ها) با کم‌شدن ردیف کوتاه‌تر نمی‌شوند؛
+       در آن حالت تکه‌کردن فقط تعداد صفحه را زیاد می‌کند. پس بهترین حالت قبلی
+       برمی‌گردد و به‌جای آن، فاصله‌های همان برگه فشرده می‌شود. */
+    function tighten() {
+      var sheets = root.querySelectorAll('.page');
+      Array.prototype.forEach.call(sheets, function (p) { p.classList.add('tight'); });
+      var max = 0;
+      Array.prototype.forEach.call(sheets, function (p) { max = Math.max(max, p.offsetHeight); });
+      if (max > 1124) Array.prototype.forEach.call(sheets, function (p) { p.classList.add('tighter'); });
+    }
+    (function paint() {
+      var max = draw();
+      if (max < bestMax) { bestMax = max; bestLimit = state.limit; }
+      if (max <= 1124) return;
+      var cur = state.limit || lastLimit;
+      var next = Math.max(2, Math.floor(cur * 0.78));
+      if (tries >= 8 || max >= prevMax || next >= cur) {
+        state.limit = bestLimit;
+        draw();
+        tighten();
+        return;
       }
+      prevMax = max; tries++; state.limit = next;
+      paint();
     })();
     var barTitle = (isApp() ? '' : 'پیش‌نمایش — ') + cfg.name + ' · ' + fa(pages.length) + ' صفحه';
     setBar(barTitle, [
@@ -983,7 +1116,7 @@
     ]);
     if (isApp()) {
       var slot = document.getElementById('rc-struct-slot');
-      if (slot) slot.innerHTML = state.payload.scope === 'class' ? '<span class="rc-lbl">ساختار:</span>' + structInner : '';
+      if (slot) slot.innerHTML = (state.payload.scope === 'class' || state.payload.scope === 'school') ? '<span class="rc-lbl">ساختار:</span>' + structInner : '';
       barPad();
       fitStage(true);
       root.scrollTop = 0; root.scrollLeft = 0;

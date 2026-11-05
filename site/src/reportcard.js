@@ -25,9 +25,13 @@
       stage: h.stage || ''
     };
   }
-  function today() { try { return S.jalaliDisplay(new Date().toISOString()); } catch (e) { return ''; } }
+  /* V340 — jalaliDisplay شیء Date می‌خواهد (نه رشتهٔ ISO) و خروجی‌اش رقم فارسی است؛
+     پیش از این تاریخ صدور و سال تحصیلی کارنامهٔ سایت خالی می‌ماند. */
+  function today() { try { return S.jalaliDisplay(new Date(), false); } catch (e) { return ''; } }
   function yearText() {
-    var d = today(), y = parseInt(String(d).slice(0, 4), 10);
+    var d = today();
+    try { if (S.en) d = S.en(d); } catch (e) {}
+    var y = parseInt(String(d).slice(0, 4), 10);
     if (!isFinite(y)) return '';
     var month = parseInt(String(d).slice(5, 7), 10);
     if (isFinite(month) && month < 7) y -= 1;
@@ -116,6 +120,37 @@
     return base('class', { className: d.class_name || '', cols: cols, rows: rows, classInfo: { count: rows.length } });
   }
 
+  /* V340 — کارنامهٔ انفرادی یک دانش‌آموز از دادهٔ کارنامهٔ کلاس مدیر */
+  function fromManagerStudent(d, name) {
+    var p = fromManagerClass(d);
+    p.scope = 'student';
+    p.student = { name: name || '' };
+    p.teacher = '';
+    p.rows = p.rows.filter(function (r) { return r.name === name; });
+    if (!p.rows.length) p.rows = [{ name: name || '', vals: {} }];
+    return p;
+  }
+  /* V340 — دفترچهٔ مدرسه: خلاصهٔ کلاس‌ها + کارنامهٔ کامل هر کلاس.
+     reports آرایه‌ای از خروجی fromManagerClass برای هر کلاس است. */
+  function fromManagerSchool(stats, reports) {
+    var p = base('school', {});
+    p.classes = (stats && stats.classes || []).map(function (k) {
+      return {
+        id: k.id, name: k.name || '', grade: k.grade || '', field: k.field || '',
+        school: k.school || '', teacher: k.teacher || '',
+        students: k.students || 0, exams: k.exams || 0, answers: k.answers || 0, graded: k.graded || 0,
+        average_percent: k.average_percent == null ? null : Number(k.average_percent),
+        spread_percent: k.spread_percent == null ? null : Number(k.spread_percent),
+        below_half: k.below_half || 0
+      };
+    });
+    p.months = (stats && stats.months || []).slice();
+    p.topExams = (stats && stats.top_exams || []).slice();
+    p.reports = reports || [];
+    if (p.classes.length && p.classes[0].school) p.school.name = p.classes[0].school;
+    return p;
+  }
+
   /* ---- پنجرهٔ انتخاب قالب → پیش‌نمایش → چاپ ---- */
   function close() {
     if (!ctx) return;
@@ -173,7 +208,11 @@
   }
   /* اگر موتور در دسترس نبود، همان چاپ سادهٔ قبلی کار کند تا کاربر بی‌خروجی نماند */
   function withFallback(payload, title, node) {
-    if (!payload || !payload.cols || !payload.cols.length || !payload.rows || !payload.rows.length) {
+    /* V340 — دفترچهٔ مدرسه ستون/سطر ندارد؛ دادهٔ آن کلاس‌ها و کارنامهٔ کلاس‌هاست */
+    var hasData = payload && (payload.scope === 'school'
+      ? ((payload.classes && payload.classes.length) || (payload.reports && payload.reports.length))
+      : (payload.cols && payload.cols.length && payload.rows && payload.rows.length));
+    if (!hasData) {
       if (S.printSection && node) { S.printSection(title, node); return; }
       S.toast('برای این کارنامه داده‌ای پیدا نشد.', 'err');
       return;
@@ -182,7 +221,7 @@
   }
   window.ExamReportCard = {
     open: open, close: close, withFallback: withFallback,
-    fromStudentGrades: fromStudentGrades, fromTeacher: fromTeacher, fromManagerClass: fromManagerClass
+    fromStudentGrades: fromStudentGrades, fromTeacher: fromTeacher, fromManagerClass: fromManagerClass, fromManagerStudent: fromManagerStudent, fromManagerSchool: fromManagerSchool
   };
   S.reportCard = open;
   S.reportCardPayload = { student: fromStudentGrades, teacher: fromTeacher, manager: fromManagerClass };

@@ -209,10 +209,11 @@ fun ManagerManagementCardsScreen(
     cycleKey: Int,
     onSchools: () -> Unit,
     onReport: () -> Unit,
-    onStatus: () -> Unit
+    onStatus: () -> Unit,
+    onReportCards: () -> Unit
 ) {
     val neo = neumorphic69Colors
-    val cards = remember(onSchools, onReport, onStatus, neo.accent, neo.accent2) {
+    val cards = remember(onSchools, onReport, onStatus, onReportCards, neo.accent, neo.accent2) {
         listOf(
             ManagementCardSpec(
                 "مدارس",
@@ -227,6 +228,14 @@ fun ManagerManagementCardsScreen(
                 Design69Icons.Reports,
                 listOf(Color(0xFF2878DB), Color(0xFF24B8C8)),
                 onReport
+            ),
+            // V340 — کارنامهٔ کلاس/دانش‌آموز/مدرسه با ۱۰ قالب، مثل معلم
+            ManagementCardSpec(
+                "کارنامه (PDF)",
+                "کارنامهٔ کلاس، یک دانش‌آموز یا دفترچهٔ کل مدرسه؛ ۱۰ قالب، پیش‌نمایش و چاپ.",
+                Design69Icons.ReportCard,
+                listOf(Color(0xFF7A5AF8), Color(0xFFB07BFF)),
+                onReportCards
             ),
             ManagementCardSpec(
                 "وضعیت",

@@ -4,6 +4,8 @@ import ir.exam.app.core.calendar.JalaliCalendar
 import ir.exam.app.core.calendar.JalaliDate
 import ir.exam.app.core.calendar.PersianDigits
 import ir.exam.app.data.dto.ExamDashboardDto
+import ir.exam.app.data.repository.ManagerClassReport
+import ir.exam.app.data.repository.ManagerClassStats
 import ir.exam.app.domain.model.ClassGradeRow
 import ir.exam.app.domain.model.OfficialPrintHeader
 import kotlinx.serialization.json.JsonObject
@@ -169,5 +171,118 @@ object ReportCardPayload {
     internal fun maxOfExam(exam: ExamDashboardDto, rows: List<ClassGradeRow>): Double {
         val fromRows = rows.mapNotNull { it.maxScores[exam.id] }.filter { it > 0 }.maxOrNull()
         return fromRows ?: if (exam.totalScore > 0) exam.totalScore else 20.0
+    }
+
+    /* ================= V340 — کارنامهٔ مدیر (کلاس / دانش‌آموز / دفترچهٔ مدرسه) ================= */
+
+    /** ستون‌ها و سطرهای کارنامه از دادهٔ مدیر؛ فقط نمرهٔ تصحیح‌شده شمرده می‌شود. */
+    private fun managerColsRows(report: ManagerClassReport): MutableMap<String, kotlinx.serialization.json.JsonElement> {
+        val fields = mutableMapOf<String, kotlinx.serialization.json.JsonElement>()
+        fields["cols"] = buildJsonArray {
+            report.exams.forEach { exam ->
+                val peak = report.students.mapNotNull { it.grades[exam.id]?.max }.filter { it > 0 }.maxOrNull()
+                add(buildJsonObject {
+                    put("key", exam.id)
+                    put("title", exam.title.ifBlank { "آزمون" })
+                    put("subject", exam.title.ifBlank { "آزمون" })
+                    put("max", peak ?: if (exam.totalScore > 0) exam.totalScore else 20.0)
+                })
+            }
+        }
+        val rows = buildJsonArray {
+            report.students.forEach { st ->
+                add(buildJsonObject {
+                    put("name", st.fullName.ifBlank { st.username })
+                    putJsonObject("vals") {
+                        report.exams.forEach { exam ->
+                            val g = st.grades[exam.id]
+                            put(exam.id, if (g != null && g.graded) g.grade else null)
+                        }
+                    }
+                })
+            }
+        }
+        val percents = report.students.mapNotNull { st ->
+            val ps = report.exams.mapNotNull { exam ->
+                val g = st.grades[exam.id] ?: return@mapNotNull null
+                if (g.graded && g.max > 0) g.grade * 100.0 / g.max else null
+            }
+            if (ps.isEmpty()) null else ps.average()
+        }
+        fields["classInfo"] = buildJsonObject {
+            put("count", report.students.size)
+            if (percents.isNotEmpty()) put("average", percents.average())
+        }
+        fields["rows"] = rows
+        return fields
+    }
+
+    /** کارنامهٔ کل کلاس برای مدیر. */
+    fun forManagerClass(
+        report: ManagerClassReport,
+        header: OfficialPrintHeader? = null,
+        teacher: String = "",
+        schoolName: String = "",
+        today: JalaliDate = JalaliCalendar.today()
+    ): JsonObject {
+        val fields = base("class", report.className, header, teacher, schoolName, today)
+        fields.putAll(managerColsRows(report))
+        return obj(fields)
+    }
+
+    /** کارنامهٔ یک دانش‌آموز از دادهٔ کلاس مدیر؛ رتبه از کل کلاس حساب می‌شود. */
+    fun forManagerStudent(
+        report: ManagerClassReport,
+        studentName: String,
+        header: OfficialPrintHeader? = null,
+        schoolName: String = "",
+        today: JalaliDate = JalaliCalendar.today()
+    ): JsonObject {
+        val fields = base("student", report.className, header, "", schoolName, today)
+        fields.putAll(managerColsRows(report))
+        fields["student"] = buildJsonObject { put("name", studentName) }
+        return obj(fields)
+    }
+
+    /** دفترچهٔ مدرسه: نمای کلی + خلاصهٔ مقایسه + کارنامهٔ کامل هر کلاس. */
+    fun forManagerSchool(
+        stats: ManagerClassStats,
+        reports: List<JsonObject>,
+        header: OfficialPrintHeader? = null,
+        today: JalaliDate = JalaliCalendar.today()
+    ): JsonObject {
+        val schoolName = stats.classes.firstOrNull { it.school.isNotBlank() }?.school.orEmpty()
+        val fields = base("school", "", header, "", schoolName, today)
+        fields["classes"] = buildJsonArray {
+            stats.classes.forEach { k ->
+                add(buildJsonObject {
+                    put("id", k.id)
+                    put("name", k.name)
+                    put("grade", k.grade)
+                    put("field", k.field)
+                    put("school", k.school)
+                    put("teacher", k.teacher)
+                    put("students", k.students)
+                    put("exams", k.exams)
+                    put("answers", k.answers)
+                    put("graded", k.graded)
+                    put("average_percent", k.averagePercent)
+                    put("spread_percent", k.spreadPercent)
+                    put("below_half", k.belowHalf)
+                })
+            }
+        }
+        fields["months"] = buildJsonArray {
+            stats.months.forEach { m ->
+                add(buildJsonObject { put("month", m.month); put("answers", m.answers); put("average_percent", m.averagePercent) })
+            }
+        }
+        fields["topExams"] = buildJsonArray {
+            stats.topExams.forEach { e ->
+                add(buildJsonObject { put("title", e.title); put("teacher", e.teacher); put("answers", e.answers); put("average_percent", e.averagePercent) })
+            }
+        }
+        fields["reports"] = buildJsonArray { reports.forEach { add(it) } }
+        return obj(fields)
     }
 }

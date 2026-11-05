@@ -356,7 +356,7 @@ private fun AuthenticatedExamApp(
         when (user.role) {
             UserRole.STUDENT -> if (page in teacherOnly) page = MainPage.HOME
             UserRole.TEACHER -> if (page == MainPage.STUDENT_RESULTS) page = MainPage.HOME
-            UserRole.MANAGER -> if (page !in setOf(MainPage.HOME, MainPage.SCHOOL, MainPage.WALLET, MainPage.CARDS, MainPage.SETTINGS)) {
+            UserRole.MANAGER -> if (page !in setOf(MainPage.HOME, MainPage.SCHOOL, MainPage.WALLET, MainPage.CARDS, MainPage.REPORTS, MainPage.SETTINGS)) {
                 page = MainPage.HOME
             }
         }
@@ -455,7 +455,7 @@ private fun AuthenticatedExamApp(
         managerClassHeader = managerClassHeader,
         // V280 — توضیح کوتاه جلوی هدر تصحیح/مانده/پاسخ (یک ردیف، با فاصله)
         gradingHint = if (page == MainPage.GRADING) (if (gradingPendingOnly) "پاسخ‌های در انتظار تصحیح" else if (gradingGradedOnly) "وضعیت پاسخ‌دهی آزمون‌ها" else "وضعیت تصحیح آزمون‌ها") else null,
-        gradingHeader = if (page == MainPage.REPORTS) (if (reportsSection == "grades") "کارنامه و لیست نمرات" else "آمار") else if (page == MainPage.GRADING) (if (gradingPendingOnly) "مانده" else if (gradingGradedOnly) "پاسخ" else "تصحیح") else null,
+        gradingHeader = if (page == MainPage.REPORTS) (if (user.role == UserRole.MANAGER) "کارنامه" else if (reportsSection == "grades") "کارنامه و لیست نمرات" else "آمار") else if (page == MainPage.GRADING) (if (gradingPendingOnly) "مانده" else if (gradingGradedOnly) "پاسخ" else "تصحیح") else null,
         menuOpen = menuOpen,
         quickAddOpen = quickAddOpen,
         studentExamActive = studentExamActive,
@@ -645,7 +645,12 @@ private fun AuthenticatedExamApp(
                         initialMode = gradingInitialMode
                     )
                 }
-                MainPage.REPORTS -> if (user.role == UserRole.TEACHER) ReportsScreen(section = reportsSection)
+                MainPage.REPORTS -> when (user.role) {
+                    UserRole.TEACHER -> ReportsScreen(section = reportsSection)
+                    // V340 — بخش کارنامهٔ مدیر: کلاس / دانش‌آموز / دفترچهٔ مدرسه
+                    UserRole.MANAGER -> ir.exam.app.ui.manager.ManagerReportsScreen()
+                    else -> Unit
+                }
                 MainPage.STUDENT_RESULTS -> if (user.role == UserRole.STUDENT) StudentResultsScreen()
                 MainPage.WALLET -> when (user.role) {
                     UserRole.TEACHER -> WalletScreen(refreshKey = walletRefreshKey)
@@ -664,7 +669,8 @@ private fun AuthenticatedExamApp(
                                 page = MainPage.SCHOOL
                             },
                             onReport = { managerCardsSection = "report" },
-                            onStatus = { managerCardsSection = "status" }
+                            onStatus = { managerCardsSection = "status" },
+                            onReportCards = { page = MainPage.REPORTS }
                         )
                         // V337 — با تعویض داشبورد/کارنامه، هویت composition تازه شود تا پنل کارنامه حتماً جایگزین شود.
                         else -> key(managerCardsSection) { ManagerStatsScreen(

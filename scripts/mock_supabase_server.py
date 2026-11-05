@@ -375,6 +375,71 @@ class MockSupabaseState:
                 "shared_with_manager": True,
             }
 
+    # ------------------------------------------------------------------ V340
+    # دادهٔ کارنامهٔ مدیر برای تست مرورگر: سه کلاس، هر کدام شش دانش‌آموز و
+    # هشت آزمون (مستمر/پایانی چهار درس) تا هر سه ساختار جدول داده داشته باشند.
+    def manager_report_classes(self) -> list[dict[str, Any]]:
+        base_id = "44444444-4444-4444-8444-444444444444"
+        out = []
+        for i in range(3):
+            cid = base_id if i == 0 else "4444444%d-4444-4444-8444-444444444444" % (i + 4)
+            out.append({"id": cid, "name": "دهم ریاضی %s" % "".join(chr(0x6F0 + int(d)) for d in str(i + 1)), "grade": "دهم",
+                        "field": "ریاضی فیزیک", "school": "دبیرستان نمونه آزمایشی",
+                        "teacher": "معلم آزمایشی %s" % "".join(chr(0x6F0 + int(d)) for d in str(i + 1)), "index": i})
+        return out
+
+    def manager_report_exams(self, k_index: int) -> list[dict[str, Any]]:
+        subjects = ["ریاضی", "فیزیک", "شیمی", "ادبیات"]
+        exams = []
+        for si, sub in enumerate(subjects):
+            for kind, max_score in (("مستمر", 20.0), ("پایانی", 20.0)):
+                eid = "e%d%d%d" % (k_index + 1, si + 1, 1 if kind == "مستمر" else 2)
+                exams.append({"id": eid, "title": "%s — %s" % (sub, kind), "subject": sub, "total_score": max_score})
+        return exams
+
+    def manager_report_students(self, k_index: int) -> list[dict[str, Any]]:
+        names = ["سارا محمدی", "علی رضایی", "مریم کریمی", "حسین موسوی", "زهرا احمدی", "رضا نوری"]
+        exams = self.manager_report_exams(k_index)
+        students = []
+        for si, name in enumerate(names):
+            grades = {}
+            for ei, ex in enumerate(exams):
+                # نمرهٔ قطعی و تکرارپذیر؛ یکی از خانه‌ها تصحیح‌نشده می‌ماند
+                score = 11.0 + ((si * 3 + ei * 2 + k_index) % 9)
+                graded = not (si == 1 and ei == 0)
+                grades[ex["id"]] = {"grade": score if graded else 0.0, "max": ex["total_score"], "graded": graded}
+            students.append({"id": "s%d%d" % (k_index + 1, si + 1), "full_name": name,
+                             "username": "student%d%d" % (k_index + 1, si + 1), "grades": grades})
+        return students
+
+    def manager_class_report(self, class_id: str) -> dict[str, Any]:
+        classes = self.manager_report_classes()
+        k = next((c for c in classes if c["id"] == class_id), classes[0])
+        return {"ok": True, "class_name": k["name"],
+                "exams": self.manager_report_exams(k["index"]),
+                "students": self.manager_report_students(k["index"])}
+
+    def manager_class_stats(self) -> dict[str, Any]:
+        classes = []
+        for k in self.manager_report_classes():
+            i = k["index"]
+            students = self.manager_report_students(i)
+            exams = self.manager_report_exams(i)
+            pcts = [g["grade"] * 100.0 / g["max"] for st in students for g in st["grades"].values() if g["graded"]]
+            avg = round(sum(pcts) / len(pcts), 1)
+            var = sum((p - avg) ** 2 for p in pcts) / len(pcts)
+            classes.append({"id": k["id"], "name": k["name"], "grade": k["grade"], "field": k["field"],
+                            "school": k["school"], "teacher": k["teacher"], "students": len(students),
+                            "exams": len(exams), "answers": len(pcts) + 1, "graded": len(pcts),
+                            "average_percent": avg, "spread_percent": round(var ** 0.5, 1),
+                            "below_half": sum(1 for p in pcts if p < 50)})
+        classes.sort(key=lambda c: -c["average_percent"])
+        months = [{"month": "1405-0%d" % (m + 1), "answers": 40 + m * 7,
+                   "average_percent": round(58.0 + m * 1.7, 1)} for m in range(6)]
+        top = [{"title": ex["title"], "teacher": "معلم آزمایشی ۱", "answers": 18 - i,
+                "average_percent": round(60.0 + i * 1.3, 1)} for i, ex in enumerate(self.manager_report_exams(0))]
+        return {"ok": True, "classes": classes, "months": months, "top_exams": top}
+
     def find_user_by_identifier(self, ident: str) -> dict[str, Any]:
         norm = ident.strip().lower()
         for u in self.users_by_id.values():
@@ -1539,6 +1604,14 @@ def make_handler(state: MockSupabaseState):
             }
             if fn in list_like_rpcs:
                 self._send_json(200, [])
+                return
+
+            if fn == "native_manager_class_stats_v1":
+                self._send_json(200, state.manager_class_stats())
+                return
+
+            if fn == "native_manager_class_report_v1":
+                self._send_json(200, state.manager_class_report(str(params.get("p_class") or "")))
                 return
 
             if fn == "cal_unseen_v59":

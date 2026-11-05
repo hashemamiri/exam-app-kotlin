@@ -49,6 +49,19 @@ internal data class ManagerReportExam(val id: String, val title: String, val tot
 internal data class ManagerReportGrade(val grade: Double, val max: Double, val graded: Boolean)
 internal data class ManagerReportStudent(val id: String, val fullName: String, val username: String, val grades: Map<String, ManagerReportGrade>)
 internal data class ManagerClassReport(val className: String, val exams: List<ManagerReportExam>, val students: List<ManagerReportStudent>)
+// V340 — آمار کلاس‌های مدرسه برای «کارنامه»: هم فهرست کلاس‌ها، هم خلاصهٔ دفترچهٔ مدرسه (V230)
+internal data class ManagerClassStat(
+    val id: String, val name: String, val grade: String, val field: String, val school: String, val teacher: String,
+    val students: Int, val exams: Int, val answers: Int, val graded: Int,
+    val averagePercent: Double?, val spreadPercent: Double?, val belowHalf: Int
+)
+internal data class ManagerMonthStat(val month: String, val answers: Int, val averagePercent: Double?)
+internal data class ManagerTopExam(val title: String, val teacher: String, val answers: Int, val averagePercent: Double?)
+internal data class ManagerClassStats(
+    val classes: List<ManagerClassStat>,
+    val months: List<ManagerMonthStat>,
+    val topExams: List<ManagerTopExam>
+)
 internal data class ManagerMyRequest(val id: String, val targetType: String, val targetName: String, val action: String, val status: String, val teacherName: String, val changeSummary: String, val createdAt: String, val targetId: String = "", val kind: String = "")
 /** V261 — نتیجهٔ تغییر کلاس معلم: اجرا شد یا به‌صورت درخواست برای معلم ثبت شد (خطا نیست). */
 internal data class ManagerChangeResult(val requested: Boolean, val message: String)
@@ -191,6 +204,34 @@ internal class SupabaseManagerRepository {
             ManagerReportStudent(i.text("id"), i.text("full_name"), i.text("username"), grades)
         }
         ManagerClassReport(raw.text("class_name"), exams, students)
+    }
+
+    /** V340 — آمار کلاس‌ها (native_manager_class_stats_v1): فهرست کلاس‌ها + روند ماهانه + آزمون‌های پرتکرار. */
+    suspend fun classStats(): Result<ManagerClassStats> = runCatching {
+        val raw = SupabaseProvider.client.postgrest.rpc("native_manager_class_stats_v1").decodeAs<JsonObject>().checked()
+        val classes = (raw["classes"] as? JsonArray).orEmpty().mapNotNull { e ->
+            val i = e as? JsonObject ?: return@mapNotNull null
+            ManagerClassStat(
+                id = i.text("id"), name = i.text("name"), grade = i.text("grade"), field = i.text("field"),
+                school = i.text("school"), teacher = i.text("teacher"),
+                students = i["students"]?.jsonPrimitive?.intOrNull ?: 0,
+                exams = i["exams"]?.jsonPrimitive?.intOrNull ?: 0,
+                answers = i["answers"]?.jsonPrimitive?.intOrNull ?: 0,
+                graded = i["graded"]?.jsonPrimitive?.intOrNull ?: 0,
+                averagePercent = i["average_percent"]?.jsonPrimitive?.doubleOrNull,
+                spreadPercent = i["spread_percent"]?.jsonPrimitive?.doubleOrNull,
+                belowHalf = i["below_half"]?.jsonPrimitive?.intOrNull ?: 0
+            )
+        }
+        val months = (raw["months"] as? JsonArray).orEmpty().mapNotNull { e ->
+            val i = e as? JsonObject ?: return@mapNotNull null
+            ManagerMonthStat(i.text("month"), i["answers"]?.jsonPrimitive?.intOrNull ?: 0, i["average_percent"]?.jsonPrimitive?.doubleOrNull)
+        }
+        val top = (raw["top_exams"] as? JsonArray).orEmpty().mapNotNull { e ->
+            val i = e as? JsonObject ?: return@mapNotNull null
+            ManagerTopExam(i.text("title"), i.text("teacher"), i["answers"]?.jsonPrimitive?.intOrNull ?: 0, i["average_percent"]?.jsonPrimitive?.doubleOrNull)
+        }
+        ManagerClassStats(classes, months, top)
     }
 
     /** V261 — درخواست‌های خود مدیر (در انتظار / انجام شد / رد شد). */

@@ -884,7 +884,12 @@ def run_suite(site_dir_arg: str | None, out_dir: Path) -> int:
             save_grade_btn.click()
             page.wait_for_function("() => document.body.innerText.includes('۱۰')", timeout=5000)
 
+            # V340 — رفع مسابقهٔ زمانی: کلیک ذخیره و نشستِ نمره در سرور هم‌زمان نیستند
+            deadline = time.monotonic() + 10
             updated_ans = next(iter(mock_state.answers.values()))
+            while time.monotonic() < deadline and not updated_ans.get("graded"):
+                time.sleep(0.1)
+                updated_ans = next(iter(mock_state.answers.values()))
             assert updated_ans["graded"] is True
             assert updated_ans["total_grade"] == 10.0, f"نمرهٔ کل باید ۱۰ باشد اما {updated_ans['total_grade']} بود"
             page.evaluate("window.scrollTo(0, 0)")
@@ -1268,6 +1273,111 @@ def run_suite(site_dir_arg: str | None, out_dir: Path) -> int:
             print("  [PASS] 09f_report_card_app_zoom.png — زوم فقط روی برگه، هدر ثابت", flush=True)
             rc_page.evaluate("() => window.ExamReportCard.close()")
             rc_app_ctx.close()
+
+            # --------------------------------------------------------
+            # ۹ج) V340 — کارنامهٔ مدیر: دفترچهٔ مدرسه با ۱۰ قالب
+            # --------------------------------------------------------
+            mgr_ctx = browser.new_context(viewport={"width": 1366, "height": 900})
+            mgr_page = mgr_ctx.new_page()
+            mgr_page.on("pageerror", lambda err: page_errors.append(str(err)))
+            mgr_page.goto(web_url + "/", wait_until="domcontentloaded")
+            mgr_page.locator("input[type='text']").first.fill("uitest_manager")
+            mgr_page.locator("input[type='password']").first.fill("ManagerPass123!")
+            mgr_page.locator("input[type='password']").first.press("Enter")
+            mgr_page.wait_for_function("() => !document.querySelector('input[type=password]')", timeout=60000)
+
+            mgr_page.evaluate("() => window.ExamSite.go('dashboard', {report: true})")
+
+            t0 = time.monotonic()
+            booklet_btn = mgr_page.get_by_role("button", name=re.compile("کارنامهٔ مدرسه \\(PDF\\)")).first
+            booklet_btn.wait_for(timeout=60000)
+            booklet_btn.click()
+            mgr_frame = mgr_page.frame_locator("iframe[title='report-card-templates']")
+            mgr_frame.locator(".rc-card").first.wait_for(timeout=90000)
+            mgr_cards = mgr_frame.locator(".rc-card").count()
+            assert mgr_cards == 10, f"دفترچهٔ مدرسه هم باید هر ۱۰ قالب را پیشنهاد دهد، یافت شد: {mgr_cards}"
+            record_step(
+                mgr_page,
+                "09g_manager_school_booklet.png",
+                "کارنامهٔ مدیر — دفترچهٔ مدرسه با هر ۱۰ قالب",
+                "تأیید دکمهٔ «کارنامهٔ مدرسه (PDF)» در پنل مدیر و نمایش انتخابگر ۱۰ قالب برای سطح مدرسه",
+                "1366×900",
+                t0,
+            )
+
+            t0 = time.monotonic()
+            mgr_frame.locator(".rc-card").first.click()
+            mgr_frame.locator(".page").first.wait_for(timeout=90000)
+            booklet = mgr_page.evaluate(
+                """() => {
+                    const d = document.querySelector("iframe[title='report-card-templates']").contentDocument;
+                    const pages = [...d.querySelectorAll('.page')];
+                    return {count: pages.length,
+                            max: Math.max(...pages.map(p => Math.ceil(p.getBoundingClientRect().height))),
+                            text: pages.map(p => p.innerText).join(' ')};
+                }"""
+            )
+            assert booklet["count"] >= 5, f"دفترچه باید نمای کلی + خلاصه + کارنامهٔ هر کلاس باشد: {booklet['count']}"
+            assert booklet["max"] <= 1123, f"برگهٔ دفترچه از A4 بیرون زده است: {booklet['max']}"
+            assert "کارنامهٔ مدرسه" in booklet["text"], "سربرگ دفترچهٔ مدرسه رندر نشده است"
+            assert "تعداد کلاس" in booklet["text"], "خلاصهٔ مقایسهٔ کلاس‌ها در دفترچه نیست"
+            assert "سال تحصیلی" in booklet["text"], "سال تحصیلی در سربرگ دفترچه ننشسته است"
+            assert "تاریخ صدور" in booklet["text"], "تاریخ صدور در سربرگ دفترچه ننشسته است"
+            assert "دهم ریاضی ۲" in booklet["text"], "کارنامهٔ کامل کلاس دوم در دفترچه نیست"
+            assert "سارا محمدی" in booklet["text"], "نمرهٔ دانش‌آموزان در کارنامهٔ کلاس‌های دفترچه ننشسته است"
+            mgr_print = mgr_frame.get_by_role("button", name=re.compile("چاپ"))
+            assert mgr_print.count() == 1, "دکمهٔ چاپ/PDF باید در نوار پیش‌نمایش دفترچه باشد"
+            mgr_page.screenshot(path=str(out_dir / "09h_manager_booklet_preview.png"), full_page=False, animations="disabled")
+            steps.append({
+                "title": "پیش‌نمایش دفترچهٔ مدرسه — نمای کلی، خلاصه و کارنامهٔ کامل هر کلاس",
+                "detail": "تأیید رندر دفترچه روی A4 بدون سرریز (%d برگه، بیشترین ارتفاع %dpx) با کارنامهٔ تک‌تک کلاس‌ها" % (booklet["count"], booklet["max"]),
+                "viewport": "1366×900",
+                "duration_ms": int((time.monotonic() - t0) * 1000),
+                "passed": True,
+                "screenshot": "09h_manager_booklet_preview.png",
+            })
+            print("  [PASS] 09h_manager_booklet_preview.png — دفترچهٔ مدرسه (%dms)" % steps[-1]["duration_ms"], flush=True)
+            mgr_page.evaluate("() => window.ExamReportCard.close()")
+
+            # --------------------------------------------------------
+            # ۹ط) V340 — کارنامهٔ انفرادی دانش‌آموز از پنل مدیر
+            # --------------------------------------------------------
+            t0 = time.monotonic()
+            one = mgr_page.evaluate(
+                """async () => {
+                    const d = await window.ExamSite.rpcObj('native_manager_class_report_v1',
+                        {p_class: '44444444-4444-4444-8444-444444444444'});
+                    const P = window.ExamReportCard;
+                    P.open(P.fromManagerStudent(d, 'سارا محمدی'));
+                    return true;
+                }"""
+            )
+            assert one, "ساخت دادهٔ کارنامهٔ انفرادی مدیر ناموفق بود"
+            mgr_frame.locator(".rc-card").first.wait_for(timeout=60000)
+            assert mgr_frame.locator(".rc-card").count() == 10, "کارنامهٔ انفرادی مدیر هم باید ۱۰ قالب داشته باشد"
+            mgr_frame.locator(".rc-card").nth(3).click()
+            mgr_frame.locator(".page").first.wait_for(timeout=60000)
+            single = mgr_page.evaluate(
+                """() => {
+                    const d = document.querySelector("iframe[title='report-card-templates']").contentDocument;
+                    const pages = [...d.querySelectorAll('.page')];
+                    return {count: pages.length,
+                            max: Math.max(...pages.map(p => Math.ceil(p.getBoundingClientRect().height))),
+                            text: pages.map(p => p.innerText).join(' ')};
+                }"""
+            )
+            assert "سارا محمدی" in single["text"], "نام دانش‌آموز در کارنامهٔ انفرادی مدیر ننشسته است"
+            assert single["max"] <= 1123, f"کارنامهٔ انفرادی مدیر از A4 بیرون زده است: {single['max']}"
+            record_step(
+                mgr_page,
+                "09i_manager_student_card.png",
+                "کارنامهٔ انفرادی دانش‌آموز از پنل مدیر — همان قابلیت معلم",
+                "تأیید ساخت کارنامهٔ یک دانش‌آموز با دادهٔ کلاس مدیر، ۱۰ قالب و پیش‌نمایش A4 بدون سرریز",
+                "1366×900",
+                t0,
+            )
+            mgr_page.evaluate("() => window.ExamReportCard.close()")
+            mgr_ctx.close()
 
             desktop_ctx.close()
             browser.close()

@@ -513,11 +513,32 @@
       el('div', {class: 'row'}, [el('button', {class: 'btn', text: 'انتقال', onclick: async function () { var a = num(en(amt.value)); msg.innerHTML = ''; if (!(a > 0 && a % 1000 === 0)) return msg.appendChild(el('div', {class: 'alert error', text: 'مبلغ انتقال باید مثبت و مضرب ۱٬۰۰۰ تومان باشد.'})); try { var raw = chk(await S.rpcObj('native_manager_transfer_wallet_v38', {p_teacher: t.id, p_amount_toman: a, p_operation: uuid()})); /* V202 — پیام کسر وسط صفحه، فقط با «تأیید» بسته می‌شود */ bg.remove(); await S.costDoneDlg(raw.amount || a, raw.manager_balance, 'به ' + esc(t.full_name || 'معلم') + ' منتقل شد · موجودی معلم: ' + S.money(raw.teacher_balance || 0)); refresh(); } catch (e) { msg.appendChild(el('div', {class: 'alert error', text: errMsg(e)})); } }}), el('button', {class: 'btn light', text: 'بستن', onclick: function () { bg.remove(); }})])]);
     bg.appendChild(m); document.body.appendChild(bg);
   }
+  /* V340 — دفترچهٔ کارنامهٔ مدرسه: آمار کلاس‌ها + کارنامهٔ کامل هر کلاس، بعد انتخاب قالب */
+  async function managerBooklet(node, title) {
+    var P = window.ExamReportCard;
+    if (!P) { S.printSection(title || 'کارنامهٔ مدرسه', node); return; }
+    toast('در حال آماده‌سازی دفترچهٔ مدرسه…', 'info');
+    try {
+      var stats = chk(await S.api.managerClassStats());
+      var classes = (stats.classes || []).slice(0, 40), reports = [];
+      for (var i = 0; i < classes.length; i++) {
+        try {
+          var d = chk(await S.rpcObj('native_manager_class_report_v1', {p_class: classes[i].id}));
+          var pl = P.fromManagerClass(d);
+          if (!pl.cols.length || !pl.rows.length) continue;
+          pl.teacher = classes[i].teacher || '';
+          pl.grade = classes[i].grade || '';
+          reports.push(pl);
+        } catch (e2) { /* کلاس بدون آزمونِ تصحیح‌شده از دفترچه بیرون می‌ماند */ }
+      }
+      P.withFallback(P.fromManagerSchool(stats, reports), title || 'کارنامهٔ مدرسه', node);
+    } catch (e) { toast(errMsg(e), 'err'); }
+  }
   /* V230 — جدول مقایسهٔ کلاس‌ها + روند ۶ ماه + پرتکرارترین آزمون‌ها؛ دکمهٔ «ذخیرهٔ PDF» */
   function classCompare(d) {
     var box = el('div');
     var classes = d.classes || [], months = d.months || [], top = d.top_exams || [];
-    var head = el('div', {class: 'row', style: 'margin-bottom:8px'}, [el('h3', {class: 'grow', text: '📊 مقایسهٔ کلاس‌ها'}), el('button', {class: 'btn light sm no-print', text: '🖨 ذخیرهٔ PDF', onclick: function () { S.printSection('مقایسهٔ کلاس‌ها', box); }})]);
+    var head = el('div', {class: 'row', style: 'margin-bottom:8px'}, [el('h3', {class: 'grow', text: '📊 مقایسهٔ کلاس‌ها'}), el('button', {class: 'btn light sm no-print', text: '🖨 کارنامهٔ مدرسه (PDF)', onclick: function () { managerBooklet(box, 'کارنامهٔ مدرسه'); }})]);
     box.appendChild(head);
     if (!classes.length) { box.appendChild(S.emptyBox('📊', 'هنوز کلاسی در مدارس شما ثبت نشده است.')); return box; }
     function pctCell(v) { if (v == null) return el('td', {text: '—'}); var n = Number(v); return el('td', {}, [el('div', {class: 'cmp-bar'}, [el('span', {class: n >= 70 ? 'g' : n >= 50 ? 'y' : 'r', style: 'width:' + Math.max(2, Math.min(100, n)) + '%'}), el('b', {text: fa(n.toFixed(1)) + '٪'})])]); }
@@ -752,7 +773,7 @@
       var p = pct(x.grade, Number(x.max) || 0);
       return el('td', {}, [el('b', {text: fa(S.fmtScore(Number(x.grade) || 0)) + ' / ' + fa(S.fmtScore(Number(x.max) || 0))}), p == null ? null : el('div', {class: 'muted', style: 'font-size:11px', text: fa(p.toFixed(0)) + '٪'})]);
     }
-    var head = ['دانش‌آموز'].concat(exams.map(function (e) { return e.title || ''; })).concat(['میانگین']);
+    var head = ['دانش‌آموز'].concat(exams.map(function (e) { return e.title || ''; })).concat(['میانگین', 'کارنامه']);
     var examSum = exams.map(function () { return {s: 0, n: 0}; });
     var rows = students.map(function (st) {
       var g = st.grades || {}, ps = [];
@@ -760,9 +781,14 @@
       exams.forEach(function (e, i) { var x = g[e.id]; tds.push(cell(x)); if (x && x.graded) { var p = pct(x.grade, Number(x.max) || 0); if (p != null) { ps.push(p); examSum[i].s += p; examSum[i].n++; } } });
       var avg = ps.length ? ps.reduce(function (a, b) { return a + b; }, 0) / ps.length : null;
       tds.push(el('td', {}, [avg == null ? el('span', {class: 'muted', text: '—'}) : el('b', {class: avg >= 70 ? 'ok-text' : avg >= 50 ? '' : 'danger-text', text: fa(avg.toFixed(1)) + '٪'})]));
+      /* V340 — کارنامهٔ انفرادی همان دانش‌آموز، مثل معلم */
+      tds.push(el('td', {class: 'no-print'}, [el('button', {class: 'icon-btn', title: 'کارنامهٔ ' + (st.full_name || 'دانش‌آموز'), html: '🖨', onclick: function () {
+        var T = 'کارنامهٔ ' + (st.full_name || 'دانش‌آموز'); var P = window.ExamReportCard;
+        if (P) P.withFallback(P.fromManagerStudent(d, st.full_name || st.username || ''), T, box); else S.printSection(T, box);
+      }})]));
       return el('tr', {}, tds);
     });
-    var foot = [el('td', {text: 'میانگین کلاس'})].concat(examSum.map(function (x) { return el('td', {text: x.n ? fa((x.s / x.n).toFixed(1)) + '٪' : '—'}); })).concat([el('td', {text: ''})]);
+    var foot = [el('td', {text: 'میانگین کلاس'})].concat(examSum.map(function (x) { return el('td', {text: x.n ? fa((x.s / x.n).toFixed(1)) + '٪' : '—'}); })).concat([el('td', {text: ''}), el('td', {class: 'no-print', text: ''})]);
     box.appendChild(el('div', {style: 'overflow:auto'}, [el('table', {class: 'tbl cmp-tbl'}, [el('thead', {}, [el('tr', {}, head.map(function (h) { return el('th', {text: h}); }))]), el('tbody', {}, rows), el('tfoot', {}, [el('tr', {}, foot)])])]));
     box.appendChild(el('p', {class: 'muted', style: 'font-size:12px;margin-top:8px', text: 'نمره‌ها پس از تأیید معلم نمایش داده می‌شوند؛ «غایب» یعنی دانش‌آموز در آن آزمون شرکت نکرده است.'}));
     return box;

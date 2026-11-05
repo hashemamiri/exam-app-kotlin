@@ -263,3 +263,22 @@ body.rc-app .rc-map select{min-width:0;width:100%}
   body.rc-app .rc-scale{position:static!important;transform:none!important;width:auto!important}
   body.rc-app .wrap{padding:0!important;gap:0!important;align-items:center!important}
 }
+
+/* ---- V340 — فشرده‌سازی تایپوگرافی وقتی برگه با تکه‌کردن کوتاه نمی‌شود (A4 دست‌نخورده) ---- */
+.page.tight{padding:12mm 12mm}
+.page.tight .agg-h{margin:8px 0 5px}
+.page.tight .stat{padding:7px 9px}
+.page.tight .stat b{font-size:20px}
+.page.tight .grid td,.page.tight .grid th{padding:4px 4px}
+.page.tight .mini td,.page.tight .mini th{padding:3.5px 4px}
+.page.tight .rep-head{padding-bottom:8px;margin-bottom:9px}
+.page.tight .info-grid{margin-bottom:9px}
+.page.tight .stat-strip{margin-bottom:9px;gap:7px}
+.page.tighter{padding:10mm 11mm}
+.page.tighter .agg-h{margin:6px 0 4px}
+.page.tighter .stat{padding:5px 8px}
+.page.tighter .stat b{font-size:18px}
+.page.tighter .grid td,.page.tighter .grid th{padding:3px 3px}
+.page.tighter .mini td,.page.tighter .mini th{padding:2.5px 3px}
+.page.tighter .bar-row{margin-bottom:4px}
+.page.tighter .t2-card,.page.tighter .t3-card{padding:7px 10px;margin-bottom:7px}
