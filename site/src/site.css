@@ -2495,3 +2495,11 @@ body.st-in-exam-mode .nc-bell{display:none!important}
 .mgr-actions .btn{justify-content:center;min-height:44px}
 .mgr-dash .stat .v{font-size:24px;white-space:normal;overflow-wrap:anywhere}
 @media (max-width:700px) and (pointer:coarse){.mgr-dash .grid4,.mgr-dash .grid3{grid-template-columns:1fr 1fr}.mgr-actions{grid-template-columns:1fr 1fr}}
+
+/* V337.7 — پنجرهٔ کانال‌های رسمی: کوچک، وسط صفحه، فقط آیکن‌های رسمی (بدون نوشته) */
+.modal-bg.social-bg{padding:16px;align-items:center}
+.modal.social-modal{width:100%;max-width:330px;padding:44px 14px 16px;border-radius:18px}
+.social-grid{display:flex;flex-wrap:wrap;justify-content:center;gap:12px}
+.social-link{flex:0 0 64px;width:64px;height:64px;display:flex;align-items:center;justify-content:center;border-radius:16px;background:var(--card,#fff);border:1px solid var(--line,#e3e7ef);box-shadow:0 2px 8px rgba(15,20,40,.06);transition:transform .15s,box-shadow .15s,border-color .15s}
+.social-link:hover,.social-link:focus-visible{transform:translateY(-2px);box-shadow:0 6px 16px rgba(15,20,40,.14);border-color:rgba(43,143,214,.45);outline:none}
+.social-link img{width:40px;height:40px;object-fit:contain;display:block;pointer-events:none}

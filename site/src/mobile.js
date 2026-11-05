@@ -971,6 +971,8 @@
         stag(3, apkBtn),
         stag(4, outline(S.user() ? 'ورود به سامانه' : 'ورود / ثبت‌نام', function () { if (S.user()) { enter(); S.render(); } else goA('login', {tab: 1}); })),
         stag(5, btn('💳 محصولات و تعرفه‌ها', function () { openMobileCatalog(); }, 'outline ice-price-jump')),
+        /* V337.7 — زیر «محصولات و تعرفه‌ها»: پنجرهٔ کانال‌های رسمی (فقط آیکن) */
+        stag(6, btn('ما را دنبال کنید', function () { if (S.openSocial) S.openSocial(); }, 'outline')),
         stag(5, el('div', {class: 'ice-tiles'}, LANDING_TILES.map(function (t) { return el('div', {class: 'ice-tile'}, [(window.LP_FLAT_ICONS && window.LP_FLAT_ICONS[t[2]]) ? el('i', {class: 'ico48', 'aria-hidden': 'true', html: '<svg viewBox="0 0 48 48">' + window.LP_FLAT_ICONS[t[2]] + '</svg>'}) : el('i', {'aria-hidden': 'true', text: t[0]}), el('span', {text: t[1]})]); }))),
         /* V311.8: دکمهٔ 'ساخت حساب جدید (معلم / مدیر)' زیر ۸ بلوک حذف شد؛ در loginPane موجود است */
         stag(7, el('div', {class: 'ice-badges'}, [S.enamadBadge()])), /* V292.1 — اینماد */
@@ -990,6 +992,8 @@
     function mobileShowcase() {
       return el('div', {class: 'ice-showcase'}, [
         btn('💳 محصولات و تعرفه‌ها', function () { openMobileCatalog(); }, 'outline ice-price-jump'),
+        /* V337.7 — زیر «محصولات و تعرفه‌ها» در صفحهٔ ورود/ثبت‌نام */
+        btn('ما را دنبال کنید', function () { if (S.openSocial) S.openSocial(); }, 'outline'),
         el('div', {class: 'ice-tiles'}, LANDING_TILES.map(function (t) { return el('div', {class: 'ice-tile'}, [(window.LP_FLAT_ICONS && window.LP_FLAT_ICONS[t[2]]) ? el('i', {class: 'ico48', 'aria-hidden': 'true', html: '<svg viewBox="0 0 48 48">' + window.LP_FLAT_ICONS[t[2]] + '</svg>'}) : el('i', {'aria-hidden': 'true', text: t[0]}), el('span', {text: t[1]})]); })),
         el('div', {class: 'ice-badges'}, [S.enamadBadge()])
       ]);
