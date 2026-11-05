@@ -25,6 +25,8 @@ alter table public.wallet_payment_orders
     add constraint wallet_payment_orders_provider_check
     check (provider in ('zarinpal', 'idpay', 'sandbox', 'zibal'));
 
+-- V341 — نقش manager هم مجاز است (V38 این را اضافه کرده بود و نسخهٔ اولیهٔ V335.32
+--        ناخواسته حذفش کرد؛ اگر این فایل دوباره اجرا شود دیگر پس‌رفت رخ نمی‌دهد).
 -- ۲) همان تابع قبلی، فقط با مجاز شدن zibal.
 create or replace function public.native_create_wallet_payment_order(
     p_user uuid,
@@ -42,8 +44,8 @@ declare
     v_operation uuid;
 begin
     if p_user is null or not exists (
-        select 1 from public.profiles where id = p_user and role = 'teacher'
-    ) then return jsonb_build_object('error', 'حساب معلم معتبر نیست'); end if;
+        select 1 from public.profiles where id = p_user and role in ('teacher', 'manager')
+    ) then return jsonb_build_object('error', 'حساب کادر مدرسه معتبر نیست'); end if;
     if p_amount_toman < 100000 or p_amount_toman > 10000000 or p_amount_toman % 10000 <> 0 then
         return jsonb_build_object('error', 'مبلغ شارژ نامعتبر است');
     end if;

@@ -154,10 +154,32 @@ def main():
     if TARGET == "main":
         push_checked("HEAD:refs/heads/main")
         time.sleep(2)
-        r_st = push_checked("HEAD:refs/heads/staging", check=False)  # آزمایشی هم همگام می‌شود
-        if r_st != 0:
-            time.sleep(3)
-            push_checked("HEAD:refs/heads/staging", check=False)
+        # V341 — اگر staging کارِ تأییدنشده دارد (جلوتر از main است)، fast-forward رد می‌شود.
+        # در آن حالت main را داخل staging ادغام می‌کنیم تا هر دو شاخه اصلاح را داشته باشند
+        # و مسیر promote برای نسخهٔ آزمایشیِ در انتظار بسته نشود.
+        main_sha = subprocess.run(["git", "rev-parse", "HEAD"], capture_output=True, text=True).stdout.strip()
+        anc = subprocess.run(["git", "merge-base", "--is-ancestor", "origin/staging", main_sha], capture_output=True)
+        if anc.returncode != 0:
+            print("\nشاخهٔ آزمایشی جلوتر از اصلی است؛ اصلاح روی آن هم ادغام می‌شود…")
+            run(["git", "fetch", "origin"])
+            run(["git", "checkout", "-B", "staging", "origin/staging"])
+            run(["git", "reset", "--hard", "origin/staging"])
+            mg = subprocess.run(["git"] + git_ident() + ["merge", "--no-edit", "-m",
+                                "Merge main into staging: " + VERSION, main_sha],
+                                capture_output=True, text=True)
+            if mg.returncode != 0:
+                print(mg.stdout + mg.stderr)
+                run(["git", "merge", "--abort"], check=False)
+                print("⚠ ادغام خودکار ممکن نشد. اصلاح روی main نشست؛ برای staging دستی ادغام کنید:")
+                print("   git checkout staging && git merge main")
+            else:
+                push_checked("HEAD:refs/heads/staging")
+                print("✅ اصلاح روی هر دو شاخه (main و staging) نشست.")
+        else:
+            r_st = push_checked("HEAD:refs/heads/staging", check=False)  # آزمایشی هم همگام می‌شود
+            if r_st != 0:
+                time.sleep(3)
+                push_checked("HEAD:refs/heads/staging", check=False)
         print("\n✅ " + VERSION + " نصب و روی نسخهٔ اصلی (و آزمایشی) اعمال شد. GitHub Actions اپ اصلی/سایت onlineexam.ir را به‌روز می‌کند.")
     else:
         push_checked("HEAD:refs/heads/staging")
