@@ -65,6 +65,8 @@ internal fun createReportCardWebView(
     settings.builtInZoomControls = false
     settings.displayZoomControls = false
     settings.setSupportZoom(false)
+    // V339.2 — بزرگ‌نمایی سیستمی اندروید نباید هدر را درشت کند؛ زوم فقط داخل موتور و روی برگه است.
+    settings.textZoom = 100
     settings.useWideViewPort = true
     settings.loadWithOverviewMode = false
     addJavascriptInterface(ReportCardBridge(this, title, onDismiss), "ReportCardBridge")
@@ -107,7 +109,7 @@ internal fun createReportCardWebView(
             if (url != REPORT_CARD_URL) return
             // جداکننده‌های خط JS (U+2028/2029) نباید داخل نام دانش‌آموز رشتهٔ تزریق را بشکنند
             val json = payload.toString().replace("\u2028", "\\u2028").replace("\u2029", "\\u2029")
-            view.evaluateJavascript("(function(){try{window.ReportCard.open($json);return 'ok'}catch(e){return 'err:'+e}})()", null)
+            view.evaluateJavascript("(function(){try{window.ReportCard.open($json,{skin:'app'});return 'ok'}catch(e){return 'err:'+e}})()", null)
         }
     }
     loadUrl(REPORT_CARD_URL)

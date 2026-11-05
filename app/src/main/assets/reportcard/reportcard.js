@@ -866,7 +866,7 @@
   }
 
   /* ============================================================ رابط کاربری: انتخابگر → تناظر → پیش‌نمایش */
-  var host = null, state = { payload: null, id: 0, step: 'pick' };
+  var host = null, state = { payload: null, id: 0, step: 'pick', skin: 'web', zoom: 0 };
   function bridge() {
     try { if (window.ReportCardBridge) return window.ReportCardBridge; } catch (e) {}
     try { if (window.parent && window.parent.__reportCardBridge) return window.parent.__reportCardBridge; } catch (e) {}
@@ -955,36 +955,111 @@
       setBar('پیش‌نمایش', [{ label: 'قالب‌ها', kind: 'ghost', act: showPicker }, { label: 'بستن', kind: 'ghost', act: closeHost }]);
       return;
     }
-    var struct = state.payload.scope === 'class'
-      ? '<div class="rc-struct">ساختار جدول: ' + [['matrix', 'ماتریس نمرات'], ['subjects', 'تحلیل درس‌ها'], ['combined', 'ترکیبی']].map(function (s) {
-          return '<button type="button" data-s="' + s[0] + '" class="' + ((state.payload.structure || 'combined') === s[0] ? 'on' : '') + '">' + s[1] + '</button>';
-        }).join('') + '</div>' : '';
+    var structInner = '' + [['matrix', 'ماتریس نمرات'], ['subjects', 'تحلیل درس‌ها'], ['combined', 'ترکیبی']].map(function (s) {
+      return '<button type="button" data-s="' + s[0] + '" class="' + ((state.payload.structure || 'combined') === s[0] ? 'on' : '') + '">' + s[1] + '</button>';
+    }).join('');
+    var struct = state.payload.scope === 'class' && !isApp() ? '<div class="rc-struct">ساختار جدول: ' + structInner + '</div>' : '';
     var root = document.getElementById('rc-root');
     /* جاگذاری خودکار روی A4: اگر برگه‌ای سرریز کرد، تعداد ردیف/ستون هر برگه کم و دوباره رندر می‌شود */
     var tries = 0;
     (function paint() {
       pages = render(state.id, state.payload, state.limit);
-      root.innerHTML = struct + '<div class="wrap">' + pages.join('') + '</div>';
+      var sheet = '<div class="wrap">' + pages.join('') + '</div>';
+      root.innerHTML = struct + (isApp() ? '<div class="rc-sizer"><div class="rc-scale">' + sheet + '</div></div>' : sheet);
       var max = 0;
-      Array.prototype.forEach.call(root.querySelectorAll('.page'), function (p) { max = Math.max(max, p.getBoundingClientRect().height); });
+      /* offsetHeight ارتفاع چیدمان است و با transform زوم تغییر نمی‌کند */
+      Array.prototype.forEach.call(root.querySelectorAll('.page'), function (p) { max = Math.max(max, p.offsetHeight); });
       if (max > 1124 && tries < 8) {
         tries++;
         state.limit = Math.max(2, Math.floor((state.limit || lastLimit) * 0.78));
         paint();
       }
     })();
-    Array.prototype.forEach.call(document.querySelectorAll('.rc-struct button'), function (b) {
-      b.addEventListener('click', function () { state.payload.structure = b.getAttribute('data-s'); state.limit = 0; showPreview(); });
-    });
-    setBar('پیش‌نمایش — ' + cfg.name + ' · ' + fa(pages.length) + ' صفحه', [
+    var barTitle = (isApp() ? '' : 'پیش‌نمایش — ') + cfg.name + ' · ' + fa(pages.length) + ' صفحه';
+    setBar(barTitle, [
       { label: 'تغییر قالب', kind: 'ghost', act: showPicker },
-      { label: '🖨 چاپ / PDF', kind: '', act: doPrint },
+      { label: isApp() ? '🖨 چاپ' : '🖨 چاپ / PDF', kind: '', act: doPrint },
       { label: 'بستن', kind: 'ghost', act: closeHost }
     ]);
+    if (isApp()) {
+      var slot = document.getElementById('rc-struct-slot');
+      if (slot) slot.innerHTML = state.payload.scope === 'class' ? '<span class="rc-lbl">ساختار:</span>' + structInner : '';
+      barPad();
+      fitStage(true);
+      root.scrollTop = 0; root.scrollLeft = 0;
+    }
+    wireStruct();
     window.scrollTo(0, 0);
+  }
+  /* ---- V339.2 — پوستهٔ اپ: هدر ثابت سه‌ردیفه، برگه هم‌عرض صفحه، زوم فقط روی برگه ---- */
+  var PAGE_W = 794; /* ۲۱ میلی‌متر روی ۹۶dpi */
+  function isApp() { return state.skin === 'app'; }
+  function barPad() {
+    var bar = document.getElementById('rc-bar');
+    if (!bar) return;
+    document.documentElement.style.setProperty('--rc-bar-h', (bar.offsetHeight || 0) + 'px');
+  }
+  /* برگه داخل یک sizer به اندازهٔ واقعیِ زوم‌شده می‌نشیند تا اسکرول افقی/عمودی فقط
+     داخل ناحیهٔ برگه بماند؛ هدر بیرون این ناحیه است و هرگز جابه‌جا یا بزرگ نمی‌شود. */
+  function fitStage(reset) {
+    if (!isApp()) return;
+    var root = document.getElementById('rc-root');
+    var sizer = root.querySelector('.rc-sizer'), scale = root.querySelector('.rc-scale');
+    if (!sizer || !scale) return;
+    var fit = Math.min(1, Math.max(0.1, (root.clientWidth - 16) / PAGE_W));
+    if (reset || !state.zoom) state.zoom = fit;
+    state.zoom = Math.min(3, Math.max(fit, state.zoom));
+    var k = state.zoom;
+    scale.style.transform = 'scale(' + k + ')';
+    sizer.style.width = Math.ceil(PAGE_W * k) + 'px';
+    sizer.style.height = Math.ceil(scale.offsetHeight * k) + 'px';
+  }
+  function initAppSkin() {
+    var root = document.getElementById('rc-root');
+    if (!root || root.__rcPinch) return;
+    root.__rcPinch = true;
+    var d0 = 0, z0 = 1;
+    function dist(t) {
+      var dx = t[0].clientX - t[1].clientX, dy = t[0].clientY - t[1].clientY;
+      return Math.sqrt(dx * dx + dy * dy);
+    }
+    root.addEventListener('touchstart', function (e) {
+      if (e.touches.length !== 2 || state.step !== 'preview') return;
+      d0 = dist(e.touches); z0 = state.zoom || 1;
+    }, { passive: true });
+    root.addEventListener('touchmove', function (e) {
+      if (e.touches.length !== 2 || !d0 || state.step !== 'preview') return;
+      e.preventDefault();
+      state.zoom = z0 * (dist(e.touches) / d0);
+      fitStage(false);
+    }, { passive: false });
+    root.addEventListener('touchend', function (e) { if (e.touches.length < 2) d0 = 0; }, { passive: true });
+    window.addEventListener('resize', function () { barPad(); fitStage(true); });
+  }
+  function wireStruct() {
+    Array.prototype.forEach.call(document.querySelectorAll('.rc-struct button, .rc-bar-struct button'), function (b) {
+      b.addEventListener('click', function () { state.payload.structure = b.getAttribute('data-s'); state.limit = 0; showPreview(); });
+    });
   }
   function setBar(title, actions) {
     var bar = document.getElementById('rc-bar');
+    if (isApp()) {
+      bar.innerHTML = '';
+      var row = document.createElement('div');
+      row.className = 'rc-bar-row';
+      actions.forEach(function (a) {
+        var b = document.createElement('button');
+        b.type = 'button'; b.className = 'rc-btn ' + (a.kind || ''); b.textContent = a.label;
+        b.addEventListener('click', a.act); row.appendChild(b);
+      });
+      var t = document.createElement('div');
+      t.className = 'rc-bar-title'; t.textContent = title;
+      var slot = document.createElement('div');
+      slot.className = 'rc-bar-struct'; slot.id = 'rc-struct-slot';
+      bar.appendChild(row); bar.appendChild(t); bar.appendChild(slot);
+      barPad();
+      return;
+    }
     bar.innerHTML = '<b>' + esc(title) + '</b><span class="grow"></span>';
     actions.forEach(function (a) {
       var b = document.createElement('button');
@@ -1002,8 +1077,13 @@
     if (b && typeof b.close === 'function') { b.close(); return; }
     document.getElementById('rc-root').innerHTML = '<div class="rc-empty">پنجره را ببندید.</div>';
   }
-  function open(payload) {
+  function open(payload, opts) {
     state.payload = payload || {};
+    /* پوستهٔ اپ فقط وقتی فعال می‌شود که میزبان اندروید آن را خواسته باشد؛ سایت مثل قبل می‌ماند */
+    state.skin = (opts && opts.skin === 'app') ? 'app' : 'web';
+    state.zoom = 0;
+    try { document.body.classList.toggle('rc-app', isApp()); } catch (e) {}
+    if (isApp()) initAppSkin();
     if (!state.payload.structure) state.payload.structure = 'combined';
     showPicker();
   }

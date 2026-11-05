@@ -1123,6 +1123,152 @@ def run_suite(site_dir_arg: str | None, out_dir: Path) -> int:
             print("  [PASS] 09d_report_card_class_form.png — کارنامهٔ کلاس/فرم ۱۰۱ (%dms)" % steps[-1]["duration_ms"], flush=True)
             page.evaluate("() => window.ExamReportCard.close()")
 
+            # --------------------------------------------------------
+            # ۹ه) V339.2 — پوستهٔ اپ: هدر ثابت سه‌ردیفه، برگه هم‌عرض گوشی، زوم فقط روی برگه
+            # --------------------------------------------------------
+            t0 = time.monotonic()
+            # صفحهٔ گوشی از ابتدا در اندازهٔ خودش ساخته می‌شود؛ تغییر اندازهٔ صفحهٔ
+            # دسکتاپ در کروم بی‌سر، محتوای iframe را از رنگ‌اندازی می‌اندارد.
+            rc_app_ctx = browser.new_context(
+                viewport={"width": 390, "height": 844},
+                locale="fa-IR",
+                is_mobile=True,
+                has_touch=True,
+                service_workers="block",
+            )
+            rc_page = rc_app_ctx.new_page()
+            rc_page.set_default_timeout(20000)
+            rc_page.on("pageerror", lambda err: page_errors.append(str(err)))
+            rc_page.goto(web_url + "/", wait_until="domcontentloaded")
+            rc_page.wait_for_function("() => window.ExamReportCard && window.ExamSite")
+            rc_page.evaluate(
+                """() => {
+                    const cols = [], rows = [], roles = {};
+                    ['ریاضی', 'فیزیک', 'شیمی', 'فارسی'].forEach((s, i) => {
+                        cols.push({key: 'a' + i, title: s + ' — مستمر', subject: s, max: 20});
+                        cols.push({key: 'b' + i, title: s + ' — پایانی', subject: s, max: 20});
+                        roles['a' + i] = 'mostamar'; roles['b' + i] = 'payani';
+                    });
+                    for (let i = 0; i < 18; i++) {
+                        const vals = {};
+                        cols.forEach((c, j) => { vals[c.key] = 10 + ((i * 7 + j * 3) % 11); });
+                        rows.push({name: 'دانش‌آموز ' + (i + 1), vals: vals});
+                    }
+                    const p = {scope: 'class', className: 'دهم ۱۰۱', grade: 'دهم',
+                        school: {name: 'دبیرستان نمونهٔ دولتی شهید بهشتی', province: 'تهران', district: '۳'},
+                        year: 'سال تحصیلی ۱۴۰۵–۱۴۰۶', date: '۱۴۰۵/۰۸/۱۴',
+                        cols: cols, rows: rows, roles: roles, structure: 'combined'};
+                    window.__rcAppPayload = p;
+                    window.ExamReportCard.open(p);
+                }"""
+            )
+            rc_page_f = rc_page.frame_locator("iframe[title='report-card-templates']")
+            rc_page_f.locator(".rc-card").first.wait_for(timeout=60000)
+            # میزبان اندروید پوستهٔ اپ را درخواست می‌کند؛ سایت خودش این گزینه را نمی‌فرستد.
+            rc_page.evaluate(
+                """() => {
+                    const w = document.querySelector("iframe[title='report-card-templates']").contentWindow;
+                    w.ReportCard.open(window.__rcAppPayload, {skin: 'app'});
+                }"""
+            )
+            rc_page_f.locator(".rc-card").nth(5).click()
+            rc_page_f.locator(".rc-map select").first.wait_for(timeout=15000)
+            rc_page_f.get_by_role("button", name="پیش‌نمایش").click()
+            rc_page_f.locator(".page").first.wait_for(timeout=30000)
+            rc_page.wait_for_timeout(250)
+            rc_app_js = """() => {
+                const f = document.querySelector("iframe[title='report-card-templates']");
+                const d = f.contentDocument, w = f.contentWindow;
+                const bar = d.getElementById('rc-bar'), root = d.getElementById('rc-root');
+                const btns = [...bar.querySelectorAll('.rc-bar-row .rc-btn')];
+                const title = bar.querySelector('.rc-bar-title'), slot = bar.querySelector('.rc-bar-struct');
+                const sizer = root.querySelector('.rc-sizer');
+                const pages = [...root.querySelectorAll('.page')];
+                const r = e => e.getBoundingClientRect();
+                return {vw: w.innerWidth, overflowX: d.documentElement.scrollWidth - w.innerWidth,
+                    pos: w.getComputedStyle(bar).position, barTop: r(bar).top, barH: r(bar).height, barW: r(bar).width,
+                    n: btns.length, tops: btns.map(b => Math.round(r(b).top)),
+                    inside: btns.every(b => r(b).left >= 0 && r(b).right <= w.innerWidth),
+                    titleTop: r(title).top, btnBottom: Math.max(...btns.map(b => r(b).bottom)),
+                    slotTop: r(slot).top, titleBottom: r(title).bottom, slotN: slot.querySelectorAll('button').length,
+                    sizerW: Math.ceil(r(sizer).width), rootW: root.clientWidth,
+                    pageH: Math.max(...pages.map(p => p.offsetHeight)),
+                    pageW: Math.round(r(pages[0]).width), zoom: w.ReportCard.state.zoom, skin: w.ReportCard.state.skin};
+            }"""
+            app_m = rc_page.evaluate(rc_app_js)
+            assert app_m["skin"] == "app", "پوستهٔ اپ فعال نشد"
+            assert app_m["pos"] == "fixed", "هدر پیش‌نمایش اپ باید ثابت باشد"
+            assert app_m["n"] == 3, f"هدر اپ باید سه دکمه داشته باشد، یافت شد: {app_m['n']}"
+            assert len(set(app_m["tops"])) == 1, f"دکمه‌های هدر باید در یک ردیف باشند: {app_m['tops']}"
+            assert app_m["inside"], "دکمه‌ای از هدر بیرون کادر گوشی است"
+            assert app_m["overflowX"] <= 0, f"پیش‌نمایش اپ اسکرول افقی دارد: {app_m['overflowX']}"
+            assert abs(app_m["barW"] - app_m["vw"]) < 1, "هدر هم‌عرض صفحهٔ گوشی نیست"
+            assert app_m["titleTop"] >= app_m["btnBottom"] - 1, "نام نوع کارنامه باید زیر دکمه‌ها باشد"
+            assert app_m["slotN"] == 3, "ساختار جدول باید در هدر اپ باشد"
+            assert app_m["slotTop"] >= app_m["titleBottom"] - 1, "ساختار جدول باید زیر نام کارنامه باشد"
+            assert app_m["sizerW"] <= app_m["rootW"], "برگهٔ کارنامه از عرض گوشی بیرون زده است"
+            assert app_m["pageW"] <= app_m["vw"], "برگهٔ کوچک‌نمایی‌شده از صفحه بیرون زده است"
+            assert app_m["pageH"] <= 1124, f"برگه از A4 بلندتر است: {app_m['pageH']}"
+            rc_page.screenshot(path=str(out_dir / "09e_report_card_app_chrome.png"), full_page=False, animations="disabled")
+            # زوم دو‌انگشتی: فقط برگه بزرگ شود، هدر تکان نخورد
+            rc_page.evaluate(
+                """() => {
+                    const d = document.querySelector("iframe[title='report-card-templates']").contentDocument;
+                    const root = d.getElementById('rc-root');
+                    const fire = (type, pts) => {
+                        const ev = new Event(type, {bubbles: true, cancelable: true});
+                        Object.defineProperty(ev, 'touches', {value: pts.map(p => ({clientX: p[0], clientY: p[1]}))});
+                        root.dispatchEvent(ev);
+                    };
+                    fire('touchstart', [[150, 500], [250, 500]]);
+                    fire('touchmove', [[100, 500], [300, 500]]);
+                    fire('touchend', []);
+                }"""
+            )
+            rc_page.wait_for_timeout(200)
+            app_z = rc_page.evaluate(rc_app_js)
+            assert app_z["zoom"] > app_m["zoom"] + 0.05, "زوم دو‌انگشتی روی برگه کار نکرد"
+            assert app_z["pageW"] > app_m["pageW"], "برگه با زوم دو‌انگشتی بزرگ نشد"
+            assert abs(app_z["barH"] - app_m["barH"]) < 1 and abs(app_z["barTop"] - app_m["barTop"]) < 1, "هدر با زوم بزرگ/جابه‌جا شد"
+            assert app_z["tops"] == app_m["tops"], "ردیف دکمه‌ها با زوم تغییر کرد"
+            assert app_z["overflowX"] <= 0, "بعد از زوم، سند اسکرول افقی گرفت"
+            rc_page.screenshot(path=str(out_dir / "09f_report_card_app_zoom.png"), full_page=False, animations="disabled")
+            # چاپ باید زوم را خنثی کند
+            rc_page.emulate_media(media="print")
+            app_pr = rc_page.evaluate(
+                """() => {
+                    const f = document.querySelector("iframe[title='report-card-templates']");
+                    const d = f.contentDocument, w = f.contentWindow;
+                    return {transform: w.getComputedStyle(d.querySelector('.rc-scale')).transform,
+                        bar: w.getComputedStyle(d.getElementById('rc-bar')).display,
+                        pageW: Math.round(d.querySelector('.page').getBoundingClientRect().width)};
+                }"""
+            )
+            rc_page.emulate_media(media="screen")
+            assert app_pr["transform"] == "none", f"زوم در چاپ خنثی نشد: {app_pr['transform']}"
+            assert app_pr["bar"] == "none", "هدر در چاپ پنهان نشد"
+            assert abs(app_pr["pageW"] - 794) <= 2, f"عرض برگه در چاپ A4 نیست: {app_pr['pageW']}"
+            steps.append({
+                "title": "پوستهٔ اپ کارنامه در گوشی — هدر ثابت سه‌ردیفه و برگه هم‌عرض صفحه",
+                "detail": "سه دکمه در یک ردیف، نام قالب زیر آن و ساختار جدول زیر نام؛ برگه هم‌عرض گوشی (%dpx از %dpx)، زوم دو‌انگشتی فقط روی برگه و چاپ بدون زوم روی A4" % (app_m["sizerW"], app_m["vw"]),
+                "viewport": "390×844",
+                "duration_ms": int((time.monotonic() - t0) * 1000),
+                "passed": True,
+                "screenshot": "09e_report_card_app_chrome.png",
+            })
+            steps.append({
+                "title": "زوم دو‌انگشتی کارنامه در اپ — هدر ثابت و خوانا می‌ماند",
+                "detail": "برگه از %dpx به %dpx بزرگ شد ولی ارتفاع و جای هدر و ردیف دکمه‌ها تکان نخورد؛ سند اسکرول افقی نگرفت" % (app_m["pageW"], app_z["pageW"]),
+                "viewport": "390×844",
+                "duration_ms": int((time.monotonic() - t0) * 1000),
+                "passed": True,
+                "screenshot": "09f_report_card_app_zoom.png",
+            })
+            print("  [PASS] 09e_report_card_app_chrome.png — پوستهٔ اپ کارنامه در گوشی (%dms)" % steps[-1]["duration_ms"], flush=True)
+            print("  [PASS] 09f_report_card_app_zoom.png — زوم فقط روی برگه، هدر ثابت", flush=True)
+            rc_page.evaluate("() => window.ExamReportCard.close()")
+            rc_app_ctx.close()
+
             desktop_ctx.close()
             browser.close()
 

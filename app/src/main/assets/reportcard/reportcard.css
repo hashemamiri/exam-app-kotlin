@@ -234,3 +234,32 @@ body{background:#eef1f6}
 .rc-struct button.on{background:#0f172a;color:#fff;border-color:#0f172a}
 @media (max-width:640px){.rc-grid{grid-template-columns:repeat(auto-fill,minmax(148px,1fr))}.rc-thumb{height:88px}}
 @media print{.rc-bar,.rc-picker,.rc-map,.rc-empty,.rc-hint,.rc-struct{display:none!important}.wrap{padding:0}}
+
+/* ---- V339.2 — پوستهٔ اپ اندروید (فقط با body.rc-app؛ سایت دست‌نخورده) ---- */
+body.rc-app{overflow:hidden}
+body.rc-app .rc-bar{position:fixed;top:0;left:0;right:0;width:100%;display:block;padding:8px 8px 9px;overflow:hidden;flex-wrap:nowrap}
+body.rc-app .rc-bar-row{display:flex;gap:6px;align-items:stretch;flex-wrap:nowrap}
+body.rc-app .rc-bar-row .rc-btn{flex:1 1 0;min-width:0;padding:9px 4px;font-size:12px;line-height:1.4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+body.rc-app .rc-bar-title{margin-top:7px;font-size:12px;font-weight:700;color:#e2e8f0;text-align:center;line-height:1.6;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+body.rc-app .rc-bar-struct{display:flex;gap:5px;align-items:center;margin-top:7px;flex-wrap:nowrap;font-size:10.5px;color:#94a3b8}
+body.rc-app .rc-bar-struct:empty{display:none}
+body.rc-app .rc-bar-struct .rc-lbl{flex:none;white-space:nowrap}
+body.rc-app .rc-bar-struct button{flex:1 1 0;min-width:0;font:inherit;font-size:10.5px;border:1px solid #334155;background:#1e293b;color:#cbd5e1;border-radius:999px;padding:5px 3px;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+body.rc-app .rc-bar-struct button.on{background:#2563eb;color:#fff;border-color:#2563eb}
+body.rc-app #rc-root{position:fixed;top:var(--rc-bar-h,104px);left:0;right:0;bottom:0;overflow:auto;-webkit-overflow-scrolling:touch;touch-action:pan-x pan-y}
+body.rc-app .wrap{padding:0;gap:14px;align-items:flex-start}
+body.rc-app .rc-sizer{position:relative;margin:8px auto;overflow:hidden}
+body.rc-app .rc-scale{position:absolute;top:0;left:0;width:794px;transform-origin:top left}
+body.rc-app .rc-picker,body.rc-app .rc-map{padding:14px 10px;max-width:none}
+body.rc-app .rc-grid{grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+body.rc-app .rc-h1{font-size:15px}
+body.rc-app .rc-map table{font-size:11px}
+body.rc-app .rc-map select{min-width:0;width:100%}
+/* چاپ باید بدون زوم و روی A4 واقعی باشد */
+@media print{
+  body.rc-app{overflow:visible!important}
+  body.rc-app #rc-root{position:static!important;top:auto!important;overflow:visible!important}
+  body.rc-app .rc-sizer{position:static!important;width:auto!important;height:auto!important;margin:0!important;overflow:visible!important}
+  body.rc-app .rc-scale{position:static!important;transform:none!important;width:auto!important}
+  body.rc-app .wrap{padding:0!important;gap:0!important;align-items:center!important}
+}
