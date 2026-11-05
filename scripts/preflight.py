@@ -28,6 +28,7 @@ step('verify_native_final', ['python3', 'scripts/verify_native_final.py'])
 step('data_api_grants', ['python3', 'scripts/check_supabase_data_api_grants.py', '--quiet'])  # V324 — تغییر ۳۰ اکتبر Supabase
 step('kotlin_braces', ['python3', 'scripts/check_kotlin_braces.py'])  # V325 — آکولاد نامتوازن فقط در CI دیده می‌شد
 step('kotlin_escapes', ['python3', 'scripts/check_kotlin_escapes.py', 'app/src'])  # V335.32 — دنبالهٔ گریز نامجاز مثل \\{ فقط در CI دیده می‌شد
+step('kotlin_visibility', ['python3', 'scripts/check_kotlin_visibility.py'])  # V340.1 — عضو public با نوع internal فقط در CI دیده می‌شد
 step('kotlin_quotes', ['python3', 'scripts/check_kotlin_quotes.py', 'app/src'])  # V335.50 — رشتهٔ بسته‌نشده/کوتیشن تودرتو فقط در CI دیده می‌شد
 step('site_sync', ['python3', 'scripts/check_site_sync.py'])  # V335.39 — نگهبان هم‌گام‌سازی دامنهٔ onlineexam.ir با نسخهٔ منتشرشده
 step('version_bump', ['python3', 'scripts/check_version_bump.py'])  # V335.40 — بدون بالا رفتن نسخه، job اندروید «قبلاً منتشر شده» می‌دهد

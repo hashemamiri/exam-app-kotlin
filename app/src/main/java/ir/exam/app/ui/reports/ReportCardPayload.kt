@@ -218,7 +218,7 @@ object ReportCardPayload {
     }
 
     /** کارنامهٔ کل کلاس برای مدیر. */
-    fun forManagerClass(
+    internal fun forManagerClass(
         report: ManagerClassReport,
         header: OfficialPrintHeader? = null,
         teacher: String = "",
@@ -231,7 +231,7 @@ object ReportCardPayload {
     }
 
     /** کارنامهٔ یک دانش‌آموز از دادهٔ کلاس مدیر؛ رتبه از کل کلاس حساب می‌شود. */
-    fun forManagerStudent(
+    internal fun forManagerStudent(
         report: ManagerClassReport,
         studentName: String,
         header: OfficialPrintHeader? = null,
@@ -245,7 +245,7 @@ object ReportCardPayload {
     }
 
     /** دفترچهٔ مدرسه: نمای کلی + خلاصهٔ مقایسه + کارنامهٔ کامل هر کلاس. */
-    fun forManagerSchool(
+    internal fun forManagerSchool(
         stats: ManagerClassStats,
         reports: List<JsonObject>,
         header: OfficialPrintHeader? = null,

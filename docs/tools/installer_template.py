@@ -102,8 +102,23 @@ def main():
     run(["git", "merge", "--abort"], check=False)
     save_dirty_tree()
     run(["git", "fetch", "origin"])
-    run(["git", "checkout", "-B", "main", "origin/main"])
-    run(["git", "reset", "--hard", "origin/main"])
+    # V340.2 — انتخاب پایهٔ نصب.
+    # پیش‌تر نصاب همیشه روی origin/main می‌نشست؛ اگر نسخهٔ آزمایشیِ قبلی هنوز promote
+    # نشده باشد (staging جلوتر از main)، کامیت تازه نوادگانِ staging نبود و push با
+    # «non-fast-forward» رد می‌شد. حالا اگر staging شامل main است، پایه همان staging است.
+    base_ref = "origin/main"
+    if TARGET == "staging":
+        r = subprocess.run(["git", "merge-base", "--is-ancestor", "origin/main", "origin/staging"],
+                           capture_output=True)
+        if r.returncode == 0:
+            base_ref = "origin/staging"
+    local_branch = "staging" if base_ref == "origin/staging" else "main"
+    print("پایهٔ نصب: " + base_ref)
+    run(["git", "checkout", "-B", local_branch, base_ref])
+    run(["git", "reset", "--hard", base_ref])
+    if base_ref == "origin/staging":
+        # شاخهٔ main محلی اگر از نصب ناموفق قبلی کامیت اضافه دارد، به ریموت برگردانده می‌شود
+        run(["git", "branch", "-f", "main", "origin/main"], check=False)
     data = gzip.decompress(base64.b64decode(PAYLOAD))
     with tarfile.open(fileobj=io.BytesIO(data), mode="r") as t:
         names = sorted(m.name for m in t.getmembers() if m.isfile())

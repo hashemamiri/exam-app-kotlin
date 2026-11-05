@@ -220,13 +220,33 @@ class V340_ManagerReportCardsTest {
     @Test
     fun launcherExposesThreeManagerEntries() {
         val l = src(launcher)
-        assertTrue(l.contains("suspend fun forManagerClass("))
-        assertTrue(l.contains("suspend fun forManagerStudent("))
-        assertTrue(l.contains("suspend fun forManagerSchool("))
+        assertTrue(l.contains("internal suspend fun forManagerClass("))
+        assertTrue(l.contains("internal suspend fun forManagerStudent("))
+        assertTrue(l.contains("internal suspend fun forManagerSchool("))
         val p = src(payload)
-        assertTrue(p.contains("fun forManagerClass("))
-        assertTrue(p.contains("fun forManagerStudent("))
-        assertTrue(p.contains("fun forManagerSchool("))
+        assertTrue(p.contains("internal fun forManagerClass("))
+        assertTrue(p.contains("internal fun forManagerStudent("))
+        assertTrue(p.contains("internal fun forManagerSchool("))
+    }
+
+    /**
+     * V340.1 — مدل‌های مدیر `internal` هستند، پس سازنده‌های کارنامه هم باید `internal` باشند.
+     * اگر روزی این‌ها public شوند، کامپایلر کاتلین با
+     * «Function 'public' exposes its 'internal' parameter type» ساخت را می‌شکند
+     * (همان خطای CI نسخهٔ V340). این تست جلوی بازگشت آن را می‌گیرد.
+     */
+    @Test
+    fun managerBuildersAreInternalLikeTheirModels() {
+        val r = src(repo)
+        for (model in listOf("ManagerClassReport", "ManagerClassStats", "ManagerClassStat", "ManagerMonthStat", "ManagerTopExam")) {
+            assertTrue("مدل $model باید internal بماند", r.contains("internal data class $model("))
+        }
+        for (path in listOf(payload, launcher)) {
+            val text = src(path)
+            val leaked = Regex("(?m)^    fun forManager\\w*\\(").containsMatchIn(text) ||
+                Regex("(?m)^    suspend fun forManager\\w*\\(").containsMatchIn(text)
+            assertFalse("سازندهٔ کارنامهٔ مدیر در $path نباید public باشد", leaked)
+        }
     }
 
     @Test

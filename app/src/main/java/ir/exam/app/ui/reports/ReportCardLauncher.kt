@@ -61,7 +61,7 @@ object ReportCardLauncher {
 
     /* ---- V340 — کارنامهٔ مدیر: کلاس، دانش‌آموز، دفترچهٔ مدرسه ---- */
 
-    suspend fun forManagerClass(
+    internal suspend fun forManagerClass(
         context: Context,
         report: ManagerClassReport,
         teacher: String = "",
@@ -71,7 +71,7 @@ object ReportCardLauncher {
         return ReportCardPayload.forManagerClass(report, h, teacher, schoolName.ifBlank { h.school })
     }
 
-    suspend fun forManagerStudent(
+    internal suspend fun forManagerStudent(
         context: Context,
         report: ManagerClassReport,
         studentName: String,
@@ -81,7 +81,7 @@ object ReportCardLauncher {
         return ReportCardPayload.forManagerStudent(report, studentName, h, schoolName.ifBlank { h.school })
     }
 
-    suspend fun forManagerSchool(
+    internal suspend fun forManagerSchool(
         context: Context,
         stats: ManagerClassStats,
         reports: List<JsonObject>
