@@ -8,6 +8,11 @@ V335.32 (افزودن زیبال) همان تابع را از الگوی قدی�
 
 این نگهبان آخرین تعریف تابع در مهاجرت‌ها (بر اساس ترتیب نام فایل) و همهٔ فایل‌های دستی
 کیف پول را می‌سنجد: نقش manager باید مجاز باشد و درگاه zibal از قلم نیفتاده باشد.
+
+V342 — دو سنجهٔ دیگر هم اضافه شد:
+  ۱) پنجرهٔ سفارش باز باید ۹۰ ثانیه باشد و پیامِ خطا شمارش معکوسِ فارسی بدهد.
+  ۲) تابع واریز باید سفارشِ «منقضی‌شده» را هم بپذیرد، وگرنه پرداختِ دیرهنگامِ کاربر
+     در بانک موفق می‌شود ولی کیف پول شارژ نمی‌شود (پول کاربر گم می‌شود).
 """
 import pathlib
 import re
@@ -15,7 +20,11 @@ import sys
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 FN = 'native_create_wallet_payment_order'
+CREDIT = 'native_credit_wallet_payment'
 SIG = re.compile(r'create\s+or\s+replace\s+function\s+public\.' + FN + r'\b', re.I)
+CREDIT_SIG = re.compile(r'create\s+or\s+replace\s+function\s+public\.' + CREDIT + r'\b', re.I)
+FA_DIGITS = ''.join(chr(0x6F0 + d) for d in range(10))
+EXPIRY = re.compile(r"created_at\s*<\s*now\(\)\s*-\s*interval\s*'([^']+)'", re.I)
 
 
 def body_of(text, start):
@@ -41,6 +50,38 @@ def check(path):
             problems.append('درگاه zibal در فهرست درگاه‌ها نیست')
         if 'to service_role' not in text[m.start():m.start() + len(body) + 600]:
             problems.append('grant اجرا فقط برای service_role نیست')
+        problems += window_problems(body)
+    return problems
+
+
+def window_problems(body):
+    """V342 — پنجرهٔ ۹۰ ثانیه و پیام شمارش معکوس."""
+    problems = []
+    m = EXPIRY.search(body)
+    if not m:
+        problems.append('انقضای سفارش باز پیدا نشد (created_at < now() - interval ...)')
+    elif m.group(1).strip().lower() not in ('90 seconds', '90 second', '90 sec'):
+        problems.append('پنجرهٔ سفارش باز باید ۹۰ ثانیه باشد، اکنون: %s' % m.group(1))
+    if 'v_wait' not in body or 'ثانیه صبر کنید' not in body:
+        problems.append('پیام خطا زمانِ باقی‌مانده را نمی‌گوید («... یا N ثانیه صبر کنید»)')
+    if FA_DIGITS not in body:
+        problems.append('شمارش معکوس باید با رقم فارسی ساخته شود (translate به ۰۱۲۵۶۷۸۹)')
+    if "'wait_seconds'" not in body:
+        problems.append('کلید wait_seconds در پاسخ خطا نیست')
+    return problems
+
+
+def credit_problems(text):
+    """V342 — واریز دیرهنگام روی سفارش منقضی‌شده باید مجاز بماند."""
+    problems = []
+    for m in CREDIT_SIG.finditer(text):
+        body = body_of(text, m.start())
+        ok = re.search(r"error_code\s*=\s*'expired_open_order'", body) is not None
+        if not ok:
+            problems.append('تابع واریز سفارشِ expired_open_order را نمی‌پذیرد؛ '
+                            'پرداخت دیرهنگامِ کاربر به کیف پول نمی‌رسد')
+        if 'to service_role' not in text[m.start():m.start() + len(body) + 600]:
+            problems.append('grant اجرای واریز فقط برای service_role نیست')
     return problems
 
 
@@ -64,6 +105,22 @@ def main():
         for pr in check(p):
             fails.append('%s → %s' % (p.name, pr))
         print('فایل دستی بررسی شد: %s' % p.name)
+
+    # V342 — آخرین تعریف تابع واریز
+    credit_definers = [p for p in migrations if CREDIT_SIG.search(p.read_text(encoding='utf-8'))]
+    if not credit_definers:
+        fails.append('هیچ مهاجرتی تابع %s را تعریف نمی‌کند' % CREDIT)
+    else:
+        latest_credit = credit_definers[-1]
+        print('آخرین تعریف واریز در مهاجرت‌ها: %s' % latest_credit.name)
+        for pr in credit_problems(latest_credit.read_text(encoding='utf-8')):
+            fails.append('%s → %s' % (latest_credit.name, pr))
+    for p in manual:
+        text = p.read_text(encoding='utf-8')
+        if not CREDIT_SIG.search(text):
+            continue
+        for pr in credit_problems(text):
+            fails.append('%s → %s' % (p.name, pr))
 
     for f in fails:
         print('  x', f)
