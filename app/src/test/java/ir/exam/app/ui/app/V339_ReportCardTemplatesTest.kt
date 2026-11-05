@@ -185,7 +185,10 @@ class V339_ReportCardTemplatesTest {
         assertTrue("آزمون‌های هم‌درس از هم جدا نشوند", "function chunkCols(m, cfg, limit)" in js)
         assertTrue("جمع کل از همهٔ ستون‌ها، نه تکهٔ جاری", "m._allCols || m.cols" in js)
         assertTrue("معدل از همهٔ درس‌ها", "m._allSubjects || m.subjects" in js)
-        assertTrue("جاگذاری خودکار روی A4", "state.limit = Math.max(2, Math.floor(" in js)
+        // V340 — جاگذاری خودکار بازنویسی شد: حدِ تازه اول محاسبه و بعد اعمال می‌شود تا
+        // اگر تکه‌کردن بی‌اثر بود، بهترین حالت قبلی برگردد و برگه فشرده شود (نه انفجار صفحه).
+        assertTrue("جاگذاری خودکار روی A4", "var next = Math.max(2, Math.floor(cur * 0.78))" in js)
+        assertTrue("حدِ تازه اعمال شود", "state.limit = next" in js)
         assertTrue("شمارهٔ ردیف در صفحهٔ ادامه سراسری است", "m._offset" in js)
     }
 

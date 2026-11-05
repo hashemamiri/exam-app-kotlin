@@ -47,7 +47,13 @@ class V339_2_ReportCardAppChromeTest {
             bar.indexOf("bar.appendChild(row)") < bar.indexOf("bar.appendChild(t)") &&
                 bar.indexOf("bar.appendChild(t)") < bar.indexOf("bar.appendChild(slot)")
         )
-        assertTrue("ساختار جدول فقط برای کارنامهٔ کلاس", "state.payload.scope === 'class' ? '<span class=\"rc-lbl\">" in engine)
+        // V340 — دفترچهٔ مدرسه هم جدول دارد، پس انتخاب ساختار برای «کلاس» و «مدرسه»
+        // نشان داده می‌شود و برای کارنامهٔ انفرادی همچنان پنهان می‌ماند.
+        assertTrue(
+            "ساختار جدول برای کلاس و مدرسه، نه انفرادی",
+            "(state.payload.scope === 'class' || state.payload.scope === 'school') ? '<span class=\"rc-lbl\">" in engine
+        )
+        assertFalse("برای کارنامهٔ انفرادی ساختار نشان داده نشود", "state.payload.scope === 'student' ? '<span class=\"rc-lbl\">" in engine)
         assertTrue("برچسب ساختار یک‌بار نوشته شود", "var structInner = '' + [" in engine)
     }
 
