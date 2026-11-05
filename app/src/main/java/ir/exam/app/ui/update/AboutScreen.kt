@@ -152,6 +152,8 @@ fun AboutScreen(
                 }
             }
         }
+        // V338 — «ما را دنبال کنید»: زیر بخش بروزرسانی و بالای «تماس با ما»؛ پنجرهٔ کوچک فقط با آیکن‌های رسمی.
+        item { FollowUsButton(onError = viewModel::reportInstallError) }
         // V221 — «تماس با ما و نظرات»: ایمیل پشتیبانی (آینه در سایت: mobile.js aboutSection).
         item { ContactCard(onError = viewModel::reportInstallError) }
         // V282 — شرایط استفاده و حریم خصوصی (متن داخل برنامه + نشانی وب)

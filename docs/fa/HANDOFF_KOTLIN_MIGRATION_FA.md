@@ -21570,3 +21570,30 @@ Kotlin آن را به‌صورت interpolation تفسیر کرد و چون `faMa
 - به‌جای `checkNotNull(stats)` از `stats?.let { data -> ... }` استفاده شد.
 - خطای RPC با `throw IllegalStateException(message)` وارد `runCatching` می‌شود تا حالت خطا/تلاش دوباره کار کند.
 - تست نگهبان `V337_3_ManagerReportCrashTest` اضافه شد.
+
+---
+
+## گزارش نسخهٔ V338 (اپ `1.03.55` — دکمه «ما را دنبال کنید» در بخش درباره)
+
+### درخواست کاربر
+«در اپ در بخش درباره، زیر دکمه بررسی بروزرسانی، دکمه ما را دنبال کنید بذار.»
+انتخاب‌های صریح کاربر در همین نوبت: دکمه به‌صورت **بخش جدا زیر کل کادر بروزرسانی و بالای «تماس با ما و نظرات»** باشد، و مقصد بسته **main** باشد.
+
+### تغییر اپ
+- فایل تازه `app/src/main/java/ir/exam/app/ui/update/SocialChannels.kt`: `SocialChannel`، فهرست `SOCIAL_CHANNELS` (هفت کانال)، `openSocialChannel(...)` و کامپوزابل `FollowUsButton(onError)`.
+- `AboutScreen.kt`: فقط یک `item { FollowUsButton(onError = viewModel::reportInstallError) }` بین بخش بروزرسانی و `ContactCard` اضافه شد؛ بقیهٔ صفحه دست‌نخورده است.
+- پنجره با `AlertDialog` ساخته می‌شود و **فقط آیکن رسمی** دارد؛ نام کانال تنها در `contentDescription` (برای TalkBack) می‌آید و هیچ نوشته‌ای کنار آیکن چاپ نمی‌شود.
+- چیدمان با `Row`های چهارتایی (`chunked(4)`) و `Spacer` هم‌وزن برای جای خالی ردیف دوم ساخته شده تا روی گوشی باریک هم اندازهٔ آیکن‌ها یکسان بماند؛ از `FlowRow` آزمایشی استفاده نشده است.
+- بازکردن کانال با `Intent.ACTION_VIEW` روی همان نشانی رسمی؛ `ActivityNotFoundException` و `SecurityException` به پیام فارسی روشن تبدیل می‌شوند (نه کرش).
+
+### آیکن‌ها
+`app/src/main/res/drawable-nodpi/social_{eitaa,bale,rubika,soroush,shad,telegram,aparat}.png` — نشان‌های رسمی همان سرویس‌ها، ۱۴۴×۱۴۴ با پس‌زمینهٔ شفاف، جمعاً حدود ۲۲ کیلوبایت. چون داخل اپ بسته‌بندی شده‌اند، نمایششان به شبکه یا در دسترس بودن دامنه وابسته نیست.
+
+### نشانی‌ها (دقیقاً همان‌هایی که کاربر داد)
+ایتا `https://eitaa.com/onlineexam_ir` · بله `https://ble.ir/onlineexam_ir` · روبیکا `https://rubika.ir/onlineexam_ir` · سروش `https://splus.ir/onlineexam_ir` · شاد `https://shad.ir/onlineexam_ir` · تلگرام `https://t.me/onlineexam_ir` · آپارات `https://www.aparat.com/onlineexam_ir`
+
+### تست و اعتبارسنجی
+- `V338_AboutFollowUsTest` (۶ تست منبع/قرارداد): جای دکمه بین بروزرسانی و تماس با ما، درستی هر هفت نشانی، آیکن‌ only بودن پنجره، تبدیل خطا به پیام، وجود هر هفت drawable و بالا رفتن نسخه.
+- `check_test_pins` بدون پین ناقص؛ `preflight.py` سبز؛ `check_version_bump` نسخهٔ `1.03.55` را نسبت به `1.03.54` تأیید کرد.
+- کامپایل Gradle در این محیط ممکن نیست (KSP در دسترس نیست)؛ کامپایل Kotlin/Compose و اجرای تست‌ها باید در CI اندروید بررسی شود.
+- آینهٔ سایتی همین دکمه پیش‌تر در V337.7 ساخته شد؛ این بسته سایت را تغییر نمی‌دهد و SQL ندارد.
