@@ -81,8 +81,24 @@ class V338_AboutFollowUsTest {
 
     @Test
     fun `app version is bumped for this release`() {
-        assertTrue("نسخه اپ باید برای این انتشار بالا رفته باشد", src("text/APP_VERSION.txt").trim() == "1.03.55")
-        val first = src("text/CHANGELOG_FA.txt").lineSequence().first()
-        assertTrue("خط اول CHANGELOG باید نسخه این انتشار باشد", first.startsWith("V338") && "1.03.55" in first)
+        // V339.1 — پین «دقیقاً ۱.۰۳.۵۵» هر انتشار بعدی را می‌شکست؛ شرط درست «این شماره یا بالاتر» است.
+        val version = src("text/APP_VERSION.txt").trim()
+        assertTrue("قالب شماره نسخه باید a.bb.cc باشد", version.matches(Regex("""\d+\.\d{2}\.\d{2}""")))
+        assertTrue("نسخه اپ نباید از انتشار این قابلیت عقب‌تر باشد", versionAtLeast(version, "1.03.55"))
+        val changelog = src("text/CHANGELOG_FA.txt")
+        assertTrue(
+            "بلوک V338 با شمارهٔ خودش باید در CHANGELOG بماند",
+            changelog.lineSequence().any { it.startsWith("V338") && "1.03.55" in it }
+        )
+    }
+
+    private fun versionAtLeast(current: String, floor: String): Boolean {
+        val a = current.split(".").map { it.toInt() }
+        val b = floor.split(".").map { it.toInt() }
+        for (i in b.indices) {
+            if (a[i] > b[i]) return true
+            if (a[i] < b[i]) return false
+        }
+        return true
     }
 }

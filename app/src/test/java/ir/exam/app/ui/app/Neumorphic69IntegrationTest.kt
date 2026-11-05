@@ -172,7 +172,8 @@ class Neumorphic69IntegrationTest {
         val design = File(root, "app/src/main/java/ir/exam/app/ui/app/Neumorphic69Design.kt").readText()
         val mainSources = File(root, "app/src/main/java").walkTopDown()
             .filter { it.isFile && it.extension == "kt" }
-            .filter { it.name !in setOf("QuestionTextFieldWebView.kt", "FormulaHostDialog.kt", "ExamHtmlPrintDialog.kt") }
+            // V339 — میزبان چاپ کارنامه هم مثل میزبان چاپ آزمون/فرمول یک WebView عامدانه است.
+            .filter { it.name !in setOf("QuestionTextFieldWebView.kt", "FormulaHostDialog.kt", "ExamHtmlPrintDialog.kt", "ReportCardPrintDialog.kt") }
             .joinToString("\n") { it.readText() }
 
         listOf("setShadowLayer", "lightShadow", "darkShadow", "pressed", "NeumorphicTopBar").forEach {
