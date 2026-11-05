@@ -67,22 +67,39 @@ def push_checked(refspec, check=True):
     if r.returncode == 0:
         return 0
     low = out.lower()
-    if ("workflow" in low or "refusing" in low) and os.path.isfile(WF_PATH):
-        pend = os.path.join(os.path.dirname(os.path.abspath(__file__)), "site_" + VERSION.replace(".", "_").lower() + "_workflow.yml.pending")
-        shutil.copyfile(WF_PATH, pend)
+    # V341.1 — هر فایل workflow که در این کامیت عوض شده (نه فقط site.yml)؛ وگرنه
+    # تغییر android.yml باعث می‌شد کل نصب با خطا متوقف شود.
+    wf_changed = [
+        f for f in subprocess.run(["git", "diff", "--name-only", "HEAD~1", "HEAD"],
+                                  text=True, capture_output=True).stdout.split()
+        if f.startswith(".github/workflows/")
+    ]
+    if ("workflow" in low or "refusing" in low) and wf_changed:
+        here = os.path.dirname(os.path.abspath(__file__))
+        pend_list = []
+        for wf in wf_changed:
+            if os.path.isfile(wf):
+                pend = os.path.join(here, VERSION.replace(".", "_").lower() + "_" + os.path.basename(wf) + ".pending")
+                shutil.copyfile(wf, pend)
+                pend_list.append(pend)
         print("\n⚠ توکن گیت اجازهٔ تغییر فایل workflow را ندارد (scope=workflow لازم است).")
-        print("  نسخهٔ تازهٔ site.yml اینجا ذخیره شد: " + pend)
+        for pend in pend_list:
+            print("  نسخهٔ تازه اینجا ذخیره شد: " + pend)
         print("  تغییر workflow از کامیت برداشته می‌شود و بقیهٔ نسخه دوباره push می‌شود…")
-        run(["git", "checkout", "HEAD~1", "--", WF_PATH], check=False)
+        for wf in wf_changed:
+            r_ck = subprocess.run(["git", "checkout", "HEAD~1", "--", wf], capture_output=True, text=True)
+            if r_ck.returncode != 0:
+                subprocess.run(["git", "rm", "-q", "-f", "--cached", wf], capture_output=True, text=True)
         run(["git"] + git_ident() + ["commit", "--amend", "--no-edit"], check=False)
         r2 = subprocess.run(["git", "push", "origin", refspec], text=True, capture_output=True)
         out2 = ((r2.stdout or "") + (r2.stderr or "")).strip()
         if out2:
             print(out2, flush=True)
         if r2.returncode == 0:
-            print("\n📌 بقیهٔ نسخه اعمال شد. برای فعال‌کردن هم‌گام‌سازی خودکار، قطعهٔ")
-            print("   docs/ci/site_arvan_sync_step.yml را در GitHub → Actions → site.yml جای‌گذاری کنید")
-            print("   (یا توکنی با scope=workflow بسازید و همین نصاب را دوباره اجرا کنید).")
+            print("\n📌 بقیهٔ نسخه اعمال شد. فایل(های) workflow ذخیره‌شده را دستی اعمال کنید:")
+            print("   GitHub → آن فایل در .github/workflows → Edit → محتوای .pending را جای‌گذاری کنید")
+            print("   (برای site.yml: قطعهٔ docs/ci/site_arvan_sync_step.yml؛")
+            print("    یا توکنی با scope=workflow بسازید و همین نصاب را دوباره اجرا کنید).")
             return 0
         return r2.returncode
     if check:

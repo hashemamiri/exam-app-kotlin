@@ -17,6 +17,10 @@ on:
       - '!text/*.md'
       - '!relay/**'
       - '!supabase/**'
+      # V341.1 — ابزارهای نگهبان و SQL دستی هم زیرساخت‌اند (مثل site/ و supabase/)؛
+      # تغییر فقطِ آن‌ها نباید APK اجباری بسازد و به قاعدهٔ «هر نسخه یک‌بار» بخورد.
+      - '!scripts/**'
+      - '!sql/**'
       - '!.github/workflows/site.yml'
       - '!.github/workflows/app-ui-test.yml'
       - '!app/src/test/**/V1*_Site*Test.kt'
