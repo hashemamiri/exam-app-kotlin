@@ -9,6 +9,8 @@ import android.os.Build
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import android.content.pm.PackageManager
+import android.graphics.Bitmap
+import android.graphics.Canvas
 import androidx.core.content.ContextCompat
 import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
@@ -45,7 +47,10 @@ class PushMessagingService : FirebaseMessagingService() {
         val id = (message.data["outbox_id"]?.toIntOrNull() ?: (System.currentTimeMillis() % Int.MAX_VALUE).toInt())
         val pending = PendingIntent.getActivity(this, id, intent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
         val notification = NotificationCompat.Builder(this, CHANNEL_ID)
-            .setSmallIcon(R.drawable.ic_launcher_monochrome)
+            // V346 — آیکون کوچکِ درست‌اندازه + رنگ برند + آیکون رنگی برنامه درشت کنار اعلان
+            .setSmallIcon(R.drawable.ic_notification)
+            .setColor(ContextCompat.getColor(this, R.color.notification_accent))
+            .apply { appIconBitmap(this@PushMessagingService)?.let { setLargeIcon(it) } }
             .setContentTitle(title)
             .setContentText(body)
             .setStyle(NotificationCompat.BigTextStyle().bigText(body))
@@ -58,6 +63,23 @@ class PushMessagingService : FirebaseMessagingService() {
             ContextCompat.checkSelfPermission(this, android.Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
         ) return
         try { NotificationManagerCompat.from(this).notify(id, notification) } catch (_: SecurityException) { }
+    }
+
+    /**
+     * V346 — آیکون رنگی برنامه در اندازهٔ استاندارد «آیکون بزرگ» اعلان.
+     * هر نوع drawable (تطبیقی یا PNG) به بیت‌مپ تبدیل می‌شود تا در همهٔ نسخه‌های
+     * اندروید یکسان دیده شود. اگر به هر دلیلی نشد، اعلان بدون آن ساخته می‌شود.
+     */
+    private fun appIconBitmap(context: Context): Bitmap? {
+        return runCatching {
+            val size = context.resources.getDimensionPixelSize(android.R.dimen.notification_large_icon_width)
+            val drawable = if (size > 0) ContextCompat.getDrawable(context, R.mipmap.ic_launcher) else null
+            if (drawable == null) return@runCatching null
+            val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
+            drawable.setBounds(0, 0, size, size)
+            drawable.draw(Canvas(bitmap))
+            bitmap
+        }.getOrNull()
     }
 
     companion object {

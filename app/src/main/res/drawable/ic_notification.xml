@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- V346 — آیکون کوچک اعلان.
+     چرا جدا از ic_launcher_monochrome است؟ آن فایل بوم ۱۰۸ دارد (اندازهٔ آیکون تطبیقی)
+     ولی نقش‌مایه فقط ۴۶ واحد آن را پر می‌کند؛ اندروید کل بوم را در جای ۲۴dp اعلان
+     می‌نشاند، پس علامت دیده‌شدنی حدود ۱۰dp می‌شد و «کوچک» به نظر می‌رسید.
+     این‌جا همان نقش‌مایه در بوم ۵۵٫۴ نشسته تا ~۸۳٪ جای ۲۴dp را پر کند (~۲۰dp).
+     رنگ باید سفید و پس‌زمینه شفاف باشد؛ رنگ برند را setColor اعمال می‌کند. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="55.4"
+    android:viewportHeight="55.4">
+    <group android:translateX="-25.3" android:translateY="-24.3">
+        <path android:fillColor="#FFFFFF" android:pathData="M30,42l30,-8c3,-1 6,1 6,4v28c0,3 -2,5 -5,5H40c-3,0 -5,-2 -5,-5V47c0,-2 2,-4 4,-5zM35,56l8,8 20,-22 -4,-4 -16,18 -4,-4z" />
+        <path android:fillColor="#FFFFFF" android:pathData="M70,46m-3,0a3,3 0,1 1,6 0a3,3 0,1 1,-6 0M70,56m-3,0a3,3 0,1 1,6 0a3,3 0,1 1,-6 0M70,66m-3,0a3,3 0,1 1,6 0a3,3 0,1 1,-6 0" />
+    </group>
+</vector>
