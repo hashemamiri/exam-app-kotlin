@@ -19,9 +19,14 @@ class V167_SiteDesktopCardsTest {
         val a = source("site/src/app.js")
         assertTrue("['wallet', '👛', 'کیف پول'], ['cards', '🃏', 'کارت‌ها']" in a)
         assertFalse("['wallet', '👛', 'کیف پول'], ['tools', '🧮', 'ابزارها'], '-', ['profile', '👤', 'پروفایل']\n    ]," in a)
-        assertTrue("function pageCards(c)" in a && "cards: pageCards" in a && "M.teacherCards().forEach(function (k)" in a && "class: 'dk-gcard', style: 'background:' + k[3], onclick: k[4]" in a)
+        /* V344 — صفحهٔ کارت‌ها نقش‌آگاه شد: معلم همان دک قبلی، مدیر سه کارت اپ. */
+        assertTrue("function pageCards(c)" in a && "cards: pageCards" in a && "list.forEach(function (k)" in a && "class: 'dk-gcard', style: 'background:' + k[3], onclick: k[4]" in a)
+        assertTrue("M.teacherCards ? M.teacherCards() : null" in a)
+        assertTrue("M.managerCardList ? M.managerCardList() : null" in a)
         val m = source("site/src/mobile.js")
         assertTrue("function teacherCards() {" in m && "function cardsScreen(c) { cardsDeck(c, 'teacher', teacherCards()); }" in m && "teacherCards: teacherCards, icons: I," in m)
+        /* V344 — فهرست کارت‌های مدیر هم قابل استفاده در دسکتاپ است. */
+        assertTrue("function managerCardList() {" in m && "managerCardList: managerCardList" in m)
         for (t in listOf("'آمار'", "'کارنامه'", "'بانک سؤال'", "'تصحیح'", "'مانده'", "'پاسخ'", "'درخواست‌ها'", "'شرکت در آزمون'", "'حضور و غیاب'", "'گزارش نظارتی'", "'تحلیل سؤال‌ها'", "'بانک بازخورد'")) assertTrue(t, "[$t, " in m)
         assertTrue("function joinTeacherPracticeById(examId)" in source("site/src/student.js"))
         assertTrue("function renderPracticeResult(c, ex, auto)" in source("site/src/student.js"))

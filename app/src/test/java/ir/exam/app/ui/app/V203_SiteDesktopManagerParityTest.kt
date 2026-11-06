@@ -29,6 +29,8 @@ class V203_SiteDesktopManagerParityTest {
         val app = src("app.js")
         assertTrue("user.role === 'manager' && window.SiteAdmin && window.SiteAdmin.managerClassesPage" in app)
         assertTrue("user.role === 'manager' && window.SiteAdmin && window.SiteAdmin.managerStudentsPage" in app)
-        assertTrue("['classes', '🏫', 'کلاس‌ها'], ['students', '🎓', 'دانش‌آموزان'], ['calendar', '📅', 'تقویم'], ['wallet', '👛', 'کیف پول']]" in app)
+        /* V344 — ریل مدیر: کارت‌ها زیر کیف پول، تقویم فقط در «منو» */
+        assertTrue("['classes', '🏫', 'کلاس‌ها'], ['students', '🎓', 'دانش‌آموزان'], ['wallet', '👛', 'کیف پول'], ['cards', '🃏', 'کارت‌ها']]" in app)
+        assertTrue("['calendar', '📅', 'تقویم', 'رویدادها و پیام‌ها']" in app)
     }
 }

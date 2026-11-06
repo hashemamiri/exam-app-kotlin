@@ -520,12 +520,16 @@
       menuGrid(cards, sel)
     ]);
   }
-  function managerCards(c) {
-    var cards = [
+  /* V344 — فهرست کارت‌های مدیر جدا شد تا دسکتاپ (pageCards) هم همین‌ها را نشان دهد. */
+  function managerCardList() {
+    return [
       ['مدارس', 'لیست مدرسه‌ها، ساخت مدرسه جدید و کلاس‌های هر مدرسه را باز می‌کند.', 'classes', 'linear-gradient(135deg,#6C63F5,#27C4A8)', function () { go('school'); }],
       ['کارنامه', 'آمار پاسخ‌ها، میانگین نمره و فعالیت معلم‌های مدرسه.', 'reports', 'linear-gradient(135deg,#2878DB,#24B8C8)', function () { go('dashboard'); }],
       ['وضعیت', 'داشبورد مدرسه با اطلاعات، آمار کلی و پنل سریع بخش‌ها.', 'cards', 'linear-gradient(135deg,#25BFA4,#45D7BD)', function () { go('dashboard'); }]
     ];
+  }
+  function managerCards(c) {
+    var cards = managerCardList();
     cardsDeck(c, 'manager', cards);
   }
 
@@ -1586,5 +1590,5 @@
   MQ.addEventListener ? MQ.addEventListener('change', rerender) : MQ.addListener(rerender);
   window.SiteMobile = {radialMenu: radialMenu, quickAddItems: quickAddItems, joinSchoolDialog: joinSchoolDialog, createSchoolDialog: createSchoolDialog, /* V227 */ paint: paint, active: active, ui: ui, authActive: authActive, gateActive: gateActive, enter: enter, paintAuth: paintAuth, teacherCards: teacherCards, icons: I,
     /* V170 — همان صفحه‌های اپ برای دسکتاپ: «حساب» = profileScreen با تب حساب، «تنظیمات» = settingsScreen */
-    profileScreen: profileScreen, settingsScreen: settingsScreen, setProfileTab: function (t) { profileTab = t; }, setSettingsTab: function (t) { settingsTab = t; }, appearance: appearance, setAppearance: setAppearance, /* V260.1 */ printOnlineSheet: printOnlineSheet /* V223 */, printExamsSheet: printExamsSheet /* V223.1 */, studentFilterDialog: studentFilterDialog, applyStudentFilter: applyFilter, filterActive: filterActive /* V224 */};
+    profileScreen: profileScreen, settingsScreen: settingsScreen, setProfileTab: function (t) { profileTab = t; }, setSettingsTab: function (t) { settingsTab = t; }, appearance: appearance, setAppearance: setAppearance, /* V260.1 */ printOnlineSheet: printOnlineSheet /* V223 */, printExamsSheet: printExamsSheet /* V223.1 */, studentFilterDialog: studentFilterDialog, applyStudentFilter: applyFilter, filterActive: filterActive /* V224 */, managerCardList: managerCardList /* V344 */};
 })();

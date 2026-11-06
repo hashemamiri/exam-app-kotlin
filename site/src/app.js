@@ -2175,7 +2175,7 @@
     /* V183 — ریل دانش‌آموز بدون «ابزارها» و «پروفایل» (حساب از صفحهٔ منو) */
     student: [['dashboard', '🏠', 'داشبورد'], ['join', '🔑', 'شرکت در آزمون'], ['grades', '📊', 'کارنامه'], ['calendar', '📅', 'تقویم و پیام‌ها']],
     /* V184 — ریل مدیر/معاون بدون «ابزارها» و «پروفایل» */
-    manager: [['dashboard', '🏠', 'داشبورد'], ['teachers', '👩‍🏫', 'معلم‌ها'], ['school', '🏫', 'مدرسه'], ['classes', '🏫', 'کلاس‌ها'], ['students', '🎓', 'دانش‌آموزان'], ['calendar', '📅', 'تقویم'], ['wallet', '👛', 'کیف پول']], /* V203 — هم‌تراز اپ: کلاس‌ها، دانش‌آموزان، تقویم */
+    manager: [['dashboard', '🏠', 'داشبورد'], ['teachers', '👩‍🏫', 'معلم‌ها'], ['school', '🏫', 'مدرسه'], ['classes', '🏫', 'کلاس‌ها'], ['students', '🎓', 'دانش‌آموزان'], ['wallet', '👛', 'کیف پول'], ['cards', '🃏', 'کارت‌ها']], /* V344 — هم‌تراز اپ: تقویم از ریل حذف شد (از «منو» در دسترس است) و «کارت‌ها» زیر «کیف پول» آمد */
     /* V171 — صفحهٔ «منو»ی مدیر و دانش‌آموز = منوی همبرگری اپ (ExamApp.kt:995-1060) */
     managerMenu: [['school', '🏫', 'مدارس', 'فهرست مدارس و کلاس‌ها'], ['classes', '🏫', 'کلاس‌ها', 'فهرست و مدیریت'], ['students', '🎓', 'دانش‌آموزان', 'فهرست و مدیریت'], ['calendar', '📅', 'تقویم', 'رویدادها و پیام‌ها'], ['account', '👤', 'حساب', 'مشخصات و امنیت حساب'], ['site', '🌐', 'سایت', 'onlineexam.ir'], ['settings', '⚙', 'تنظیمات', 'ظاهر، داده و درباره']],
     studentMenu: [['join', '🔑', 'آزمون', 'ورود با کد آزمون'], ['grades', '📊', 'نتایج من', 'پاسخ‌ها و کارنامه'], ['calendar', '📅', 'تقویم', 'رویدادها و پیام‌ها'], ['account', '👤', 'حساب', 'مشخصات و امنیت حساب'], ['settings', '⚙', 'تنظیمات', 'ظاهر، داده و درباره']]
@@ -2816,11 +2816,15 @@
   /* V167 — «کارت‌ها»ی دسکتاپ: همان ۷ کارت گرادیانی گوشی (SiteMobile.teacherCards) به‌صورت شبکه؛ کلیک = همان مقصد */
   function pageCards(c) {
     c.innerHTML = '';
-    var M = window.SiteMobile; if (!M || !M.teacherCards) { c.appendChild(el('div', {class: 'alert error', text: 'پوستهٔ کارت‌ها بارگذاری نشد.'})); return; }
+    /* V344 — مدیر همان سه کارت اپ را می‌بیند (مدارس/کارنامه/وضعیت)، نه کارت‌های معلم. */
+    var mgr = !!(user && user.role === 'manager');
+    var M = window.SiteMobile;
+    var list = mgr ? (M && M.managerCardList ? M.managerCardList() : null) : (M && M.teacherCards ? M.teacherCards() : null);
+    if (!list) { c.appendChild(el('div', {class: 'alert error', text: 'پوستهٔ کارت‌ها بارگذاری نشد.'})); return; }
     var grid = el('div', {class: 'dk-cards'});
-    M.teacherCards().forEach(function (k) {
+    list.forEach(function (k) {
       grid.appendChild(el('button', {class: 'dk-gcard', style: 'background:' + k[3], onclick: k[4]}, [
-        el('div', {class: 'm-deck-top'}, [el('span', {class: 'm-deck-ic', html: M.icons[k[2]] || ''}), el('small', {text: 'آزمون آنلاین'})]),
+        el('div', {class: 'm-deck-top'}, [el('span', {class: 'm-deck-ic', html: M.icons[k[2]] || ''}), el('small', {text: mgr ? 'مدرسه' : 'آزمون آنلاین'})]),
         el('b', {text: k[0]}), el('span', {class: 'dk-gdesc', text: k[1]})
       ]));
     });
