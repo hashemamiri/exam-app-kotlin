@@ -32,5 +32,16 @@ class V203_SiteDesktopManagerParityTest {
         /* V344 — ریل مدیر: کارت‌ها زیر کیف پول، تقویم فقط در «منو» */
         assertTrue("['classes', '🏫', 'کلاس‌ها'], ['students', '🎓', 'دانش‌آموزان'], ['wallet', '👛', 'کیف پول'], ['cards', '🃏', 'کارت‌ها']]" in app)
         assertTrue("['calendar', '📅', 'تقویم', 'رویدادها و پیام‌ها']" in app)
+        /* V344.1 — چهار کارت اپ، و کارنامه/وضعیت دیگر یک مقصد ندارند. */
+        val mob = src("mobile.js")
+        assertTrue("function managerCardList() {" in mob)
+        assertTrue("['کارنامه (PDF)', " in mob)
+        assertTrue("function () { go('dashboard', {report: true}); }" in mob)
+        assertTrue("function () { go('reportcards'); }" in mob)
+        assertTrue("function () { go('dashboard'); }" in mob)
+        val adm = src("admin.js")
+        assertTrue("async function managerReportCardsPage(c, arg)" in adm)
+        assertTrue("managerReportCardsPage: managerReportCardsPage" in adm)
+        assertTrue("reportcards: function (c)" in app)
     }
 }

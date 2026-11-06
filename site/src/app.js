@@ -2293,13 +2293,16 @@
     /* V172 — عنوان صفحه‌های کارت‌ها مثل اپ (ExamApp.kt:381,1220,1226) */
     if (!title) { var a = view.arg || {}; title = {reports: a.section === 'grades' ? 'کارنامه' : 'آمار', grading: a.filter === 'pending' ? 'مانده' : (a.filter === 'graded' ? 'پاسخ' : 'تصحیح'), bank: 'بانک سؤال', requests: 'درخواست‌ها'}[view.panel] || ''; }
     if (!title && view.panel === 'join') title = 'شرکت در آزمون';
+    if (!title && view.panel === 'reportcards') title = 'کارنامه (PDF)'; /* V344.1 */
     /* V165 — ریل عمودی: «منو» + همهٔ بخش‌های نقش؛ نام هر مورد با نگه‌داشتن ماوس باز می‌شود */
     /* V176 — صفحه‌هایی که از «منو» باز می‌شوند (چاپ، تقویم، حساب، تنظیمات، …) در ریل، «منو» را روشن نگه می‌دارند */
     /* V197 — ریل دسکتاپ معلم: «چاپ آزمون» بالای «کیف پول» (فقط ریل؛ منوی پایین گوشی/تبلت بدون تغییر) */
     var railItems = items.slice();
     if (user.role === 'teacher' && !railItems.some(function (it) { return it[0] === 'print'; })) { var wi = railItems.findIndex(function (it) { return it[0] === 'wallet'; }); railItems.splice(wi < 0 ? railItems.length : wi, 0, ['print', '🖨', 'چاپ آزمون']); }
     var railKeys = ['menu'].concat(railItems.map(function (it) { return it[0]; }));
-    var railActive = railKeys.indexOf(view.panel) >= 0 ? view.panel : 'menu';
+    /* V344.1 — کارنامهٔ PDF از کارت‌ها باز می‌شود، پس همان دکمه روشن بماند. */
+    var railPanel = view.panel === 'reportcards' ? 'cards' : view.panel;
+    var railActive = railKeys.indexOf(railPanel) >= 0 ? railPanel : 'menu';
     function railItem(key, label) {
       /* V225 — دکمهٔ «+» ریل بدون متن زیر خود؛ لمس آن منوی بادبزنی ۵ عمل (آزمون/دانش‌آموز/مدرسه/کلاس/آزمون چاپی جدید) را باز می‌کند */
       if (key === 'builder' && user.role === 'teacher') return el('button', {class: 'dk-rail-item dk-rail-plus' + (railActive === key ? ' active' : ''), 'aria-label': 'افزودن', 'aria-haspopup': 'menu', onclick: function (ev) { dkQuickAdd(ev.currentTarget); }}, [dkIcon(key)]);
@@ -2396,7 +2399,7 @@
   /* V148 — رندر محتوای پنل جاری در هر ظرفی (پنل دسکتاپ یا پوستهٔ موبایل) */
   function renderPage(c) {
     var pages = {menu: pageMenu, cards: pageCards, print: pagePrint, account: pageAccount, settings: pageSettings, dashboard: pageDashboard, exams: pageExams, classes: pageClasses, students: pageStudents, wallet: pageWallet, tools: pageTools, profile: pageProfile, grades: pageGrades, teachers: pageTeachers,
-      builder: function (c) { if (window.SiteBuilder) window.SiteBuilder.page(c, view.arg); else soon('سازندهٔ آزمون', 'فاز ۲')(c); }, bank: function (c) { if (window.SiteSchool) window.SiteSchool.bankPage(c); }, reports: function (c) { if (window.SiteExtras) window.SiteExtras.reportsPage(c, view.arg); }, requests: pageRequests, grading: function (c) { if (window.SiteAdmin) window.SiteAdmin.gradingPage(c, view.arg); else soon('تصحیح', 'فاز ۴')(c); }, calendar: function (c) { if (window.SiteAdmin) window.SiteAdmin.calendarPage(c, view.arg); }, join: function (c) { if (window.SiteStudent) window.SiteStudent.page(c, view.arg); else soon('شرکت در آزمون', 'فاز ۳')(c); }, school: function (c) { if (window.SiteAdmin) window.SiteAdmin.managerSchoolPage(c, view.arg); else soon('مدرسه', 'فاز ۴')(c); }};
+      builder: function (c) { if (window.SiteBuilder) window.SiteBuilder.page(c, view.arg); else soon('سازندهٔ آزمون', 'فاز ۲')(c); }, bank: function (c) { if (window.SiteSchool) window.SiteSchool.bankPage(c); }, reports: function (c) { if (window.SiteExtras) window.SiteExtras.reportsPage(c, view.arg); }, requests: pageRequests, grading: function (c) { if (window.SiteAdmin) window.SiteAdmin.gradingPage(c, view.arg); else soon('تصحیح', 'فاز ۴')(c); }, calendar: function (c) { if (window.SiteAdmin) window.SiteAdmin.calendarPage(c, view.arg); }, join: function (c) { if (window.SiteStudent) window.SiteStudent.page(c, view.arg); else soon('شرکت در آزمون', 'فاز ۳')(c); }, school: function (c) { if (window.SiteAdmin) window.SiteAdmin.managerSchoolPage(c, view.arg); else soon('مدرسه', 'فاز ۴')(c); }, reportcards: function (c) { if (window.SiteAdmin && window.SiteAdmin.managerReportCardsPage) window.SiteAdmin.managerReportCardsPage(c, view.arg); else soon('کارنامه (PDF)', 'فاز ۴')(c); } /* V344.1 */};
     (pages[view.panel] || pageDashboard)(c);
   }
   function soon(title, phase) { return function (c) { c.appendChild(el('div', {class: 'soon', html: '<div style="font-size:40px">🚧</div><h3>' + esc(title) + '</h3>این بخش در <b>' + esc(phase) + '</b> سایت فعال می‌شود. فعلاً از برنامهٔ اندروید استفاده کنید.'})); }; }

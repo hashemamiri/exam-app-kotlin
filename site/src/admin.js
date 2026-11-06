@@ -557,6 +557,92 @@
     return box;
   }
   /* V337.1 — داشبورد مدیر: نمای کلی / کارنامه، هم‌چیدمان با اپ و بدون جدول‌های شلخته */
+  /* ================================================================ V344.1 — کارنامه (PDF) مدیر
+     همان ManagerReportsScreen اپ (V340): انتخاب گونه → کلاس → کارنامهٔ کلاس یا یک
+     دانش‌آموز → انتخاب یکی از ۱۰ قالب → پیش‌نمایش → چاپ/PDF. دفترچهٔ مدرسه هم از همین‌جا.
+     هیچ RPC تازه‌ای لازم نیست: native_manager_class_stats_v1 + native_manager_class_report_v1. */
+  async function managerReportCardsPage(c, arg) {
+    arg = arg || {};
+    var kind = arg.kind || null;          /* null | 'class' | 'student' */
+    var classId = arg.classId || null;
+    var box = el('div', {class: 'mgr-rc'});
+    c.innerHTML = '';
+    c.appendChild(box);
+    function reload(a) { managerReportCardsPage(c, a); }
+    function head(title, sub, backArg) {
+      var row = el('div', {class: 'row', style: 'margin-bottom:10px;align-items:center'}, [
+        el('div', {class: 'grow'}, [el('h2', {style: 'margin:0;font-size:20px', text: title}), el('div', {class: 'muted', text: sub})])
+      ]);
+      if (backArg !== undefined) row.appendChild(el('button', {class: 'btn light sm', text: 'بازگشت', onclick: function () { reload(backArg); }}));
+      box.appendChild(row);
+    }
+    var P = window.ExamReportCard;
+    if (!P) { box.appendChild(el('div', {class: 'alert error', text: 'موتور کارنامه بارگذاری نشد.'})); return; }
+
+    /* ---- گام ۱: انتخاب گونه ---- */
+    if (!kind) {
+      head('کارنامه (PDF)', 'کارنامهٔ کلاس، دانش‌آموز و مدرسه با ۱۰ قالب آماده؛ پس از انتخاب قالب، پیش‌نمایش و چاپ/PDF.');
+      var opts = [
+        ['کارنامهٔ کلاس', 'نمرهٔ همهٔ دانش‌آموزان یک کلاس در همهٔ آزمون‌ها، با میانگین و رتبه.', 'reports', 'linear-gradient(135deg,#2878DB,#24B8C8)', function () { reload({kind: 'class'}); }],
+        ['کارنامهٔ دانش‌آموز', 'کارنامهٔ یک دانش‌آموز با رتبه در کلاس و تحلیل درس‌ها.', 'students', 'linear-gradient(135deg,#6C63F5,#27C4A8)', function () { reload({kind: 'student'}); }],
+        ['کارنامهٔ مدرسه (دفترچه)', 'نمای کلی مدرسه + خلاصهٔ مقایسهٔ کلاس‌ها + کارنامهٔ کامل هر کلاس در یک فایل.', 'print', 'linear-gradient(135deg,#7A5AF8,#B07BFF)', function () { managerBooklet(box, 'کارنامهٔ مدرسه'); }]
+      ];
+      var M = window.SiteMobile;
+      box.appendChild(el('div', {class: 'dk-cards'}, opts.map(function (k) {
+        return el('button', {class: 'dk-gcard', style: 'background:' + k[3], onclick: k[4]}, [
+          el('div', {class: 'm-deck-top'}, [el('span', {class: 'm-deck-ic', html: (M && M.icons[k[2]]) || ''}), el('small', {text: 'مدرسه'})]),
+          el('b', {text: k[0]}), el('span', {class: 'dk-gdesc', text: k[1]})
+        ]);
+      })));
+      return;
+    }
+
+    /* ---- گام ۲: فهرست کلاس‌ها ---- */
+    if (!classId) {
+      head(kind === 'class' ? 'کارنامهٔ کلاس' : 'کارنامهٔ دانش‌آموز', 'کلاس را انتخاب کنید.', {});
+      var list = el('div'); box.appendChild(list); S.loading(list);
+      var stats;
+      try { stats = chk(await S.api.managerClassStats()); }
+      catch (e) { list.innerHTML = ''; list.appendChild(el('div', {class: 'alert error', text: errMsg(e)})); list.appendChild(el('button', {class: 'btn light', text: 'تلاش دوباره', onclick: function () { reload(arg); }})); return; }
+      var classes = stats.classes || [];
+      list.innerHTML = '';
+      if (!classes.length) { list.appendChild(S.emptyBox('🏫', 'کلاسی برای این مدرسه ثبت نشده است.')); return; }
+      list.appendChild(el('p', {class: 'muted', text: 'تعداد کلاس‌ها: ' + fa(classes.length)}));
+      classes.forEach(function (k) {
+        var meta = [k.teacher || 'بدون معلم', k.school || '', fa(k.students || 0) + ' دانش‌آموز', fa(k.exams || 0) + ' آزمون'].filter(Boolean).join(' · ');
+        list.appendChild(el('div', {class: 'card', style: 'margin-top:10px'}, [
+          el('b', {text: k.name || 'کلاس'}),
+          el('div', {class: 'muted', style: 'margin:4px 0 8px', text: meta}),
+          el('button', {class: 'btn sm', text: kind === 'class' ? 'ساخت کارنامهٔ کلاس' : 'انتخاب دانش‌آموز', onclick: function () { reload({kind: kind, classId: k.id}); }})
+        ]));
+      });
+      return;
+    }
+
+    /* ---- گام ۳: کارنامهٔ کلاس یا انتخاب دانش‌آموز ---- */
+    head(kind === 'class' ? 'کارنامهٔ کلاس' : 'کارنامهٔ دانش‌آموز', 'در حال دریافت…', {kind: kind});
+    var body = el('div'); box.appendChild(body); S.loading(body);
+    var d;
+    try { d = chk(await S.rpcObj('native_manager_class_report_v1', {p_class: classId})); }
+    catch (e2) { body.innerHTML = ''; body.appendChild(el('div', {class: 'alert error', text: errMsg(e2)})); return; }
+    body.innerHTML = '';
+    if (kind === 'class') {
+      /* جدول و دکمهٔ PDF از همان تابع مشترک V260.8 می‌آید (بدون تکرار کد). */
+      body.appendChild(classReport(d));
+      return;
+    }
+    var students = d.students || [];
+    if (!students.length) { body.appendChild(S.emptyBox('🎓', 'این کلاس دانش‌آموزی ندارد.')); return; }
+    body.appendChild(el('p', {class: 'muted', text: 'دانش‌آموز را انتخاب کنید.'}));
+    students.forEach(function (st) {
+      var name = st.full_name || st.username || '';
+      body.appendChild(el('div', {class: 'card row', style: 'margin-top:8px;align-items:center'}, [
+        el('b', {class: 'grow', text: name}),
+        el('button', {class: 'btn sm', text: 'ساخت کارنامه', onclick: function () { P.withFallback(P.fromManagerStudent(d, name), 'کارنامهٔ ' + name, body); }})
+      ]));
+    });
+  }
+
   async function managerDashboardPage(c, arg) {
     arg = arg || {};
     var report = !!arg.report;
@@ -1161,5 +1247,5 @@
     bg.appendChild(m); document.body.appendChild(bg);
   }
 
-  window.SiteAdmin = {managerDashboardPage: managerDashboardPage, gradingPage: gradingPage, questionAnalysis: function (body, examId) { return tabAnalysis(body, {examId: examId}); }, answerDetail: answerDetail, topUpCard: topUpCard, tariffDlg: tariffDlg, managerTeachersPage: managerTeachersPage, managerSchoolPage: managerSchoolPage, managerClassesPage: managerClassesPage, managerStudentsPage: managerStudentsPage, managerBackup: managerBackup, calendarPage: calendarPage, J: J, autoScore: autoScore, scoreFloor: scoreFloor, validateScore: validateScore, correctText: correctText};
+  window.SiteAdmin = {managerReportCardsPage: managerReportCardsPage /* V344.1 */, managerDashboardPage: managerDashboardPage, gradingPage: gradingPage, questionAnalysis: function (body, examId) { return tabAnalysis(body, {examId: examId}); }, answerDetail: answerDetail, topUpCard: topUpCard, tariffDlg: tariffDlg, managerTeachersPage: managerTeachersPage, managerSchoolPage: managerSchoolPage, managerClassesPage: managerClassesPage, managerStudentsPage: managerStudentsPage, managerBackup: managerBackup, calendarPage: calendarPage, J: J, autoScore: autoScore, scoreFloor: scoreFloor, validateScore: validateScore, correctText: correctText};
 })();

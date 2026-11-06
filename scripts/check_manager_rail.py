@@ -65,7 +65,7 @@ with sync_playwright() as pw:
     page.click('.dk-rail .dk-rail-item[aria-label="کارت‌ها"]')
     page.wait_for_selector('.dk-cards .dk-gcard', timeout=30000)
     titles = page.eval_on_selector_all('.dk-cards .dk-gcard b', 'els => els.map(e => e.textContent)')
-    check('سه کارت مدیر نمایش داده می‌شود', titles == ['مدارس', 'کارنامه', 'وضعیت'], titles)
+    check('چهار کارت مدیر مثل اپ', titles == ['مدارس', 'کارنامه', 'کارنامه (PDF)', 'وضعیت'], titles)
     small = page.eval_on_selector_all('.dk-cards .dk-gcard small', 'els => els.map(e => e.textContent)')
     check('برچسب کارت‌ها «مدرسه» است نه «آزمون آنلاین»', set(small) == {'مدرسه'}, small)
     active = page.eval_on_selector_all('.dk-rail .dk-rail-item.active',
@@ -74,6 +74,79 @@ with sync_playwright() as pw:
     h1 = page.eval_on_selector('.dk-title h1', 'e => e.textContent')
     check('عنوان صفحه «کارت‌ها» است', h1 == 'کارت‌ها', h1)
     page.screenshot(path=str(OUT / 'manager-cards.png'))
+
+    # V344.1 — کارنامه و وضعیت باید دو نمای متفاوت باز کنند
+    def open_card(label):
+        page.click('.dk-rail .dk-rail-item[aria-label="کارت‌ها"]')
+        page.wait_for_selector('.dk-cards .dk-gcard', timeout=30000)
+        page.locator('.dk-cards .dk-gcard', has_text=label).first.click()
+
+    open_card('کارنامه')
+    page.wait_for_function("() => document.querySelector('.mgr-dash-head h2')", timeout=30000)
+    h2 = page.eval_on_selector('.mgr-dash-head h2', 'e => e.textContent')
+    check('کارت «کارنامه» نمای کارنامهٔ مدرسه را باز می‌کند', h2 == 'کارنامه مدرسه', h2)
+    on_tab = page.eval_on_selector_all('.mgr-dash-tabs button.on', 'els => els.map(e => e.textContent)')
+    check('تب «کارنامه مدرسه» روشن است', on_tab == ['کارنامه مدرسه'], on_tab)
+
+    open_card('وضعیت')
+    page.wait_for_function("() => document.querySelector('.mgr-dash-head h2')", timeout=30000)
+    h2b = page.eval_on_selector('.mgr-dash-head h2', 'e => e.textContent')
+    check('کارت «وضعیت» نمای کلی داشبورد را باز می‌کند', h2b == 'داشبورد مدیر', h2b)
+    check('کارنامه و وضعیت دیگر یک صفحه نیستند', h2 != h2b, '%s ≠ %s' % (h2, h2b))
+
+    # V344.1 — کارت کارنامه (PDF)
+    open_card('کارنامه (PDF)')
+    page.wait_for_selector('.mgr-rc .dk-gcard', timeout=30000)
+    kinds = page.eval_on_selector_all('.mgr-rc .dk-gcard b', 'els => els.map(e => e.textContent)')
+    check('سه گونهٔ کارنامه مثل اپ', kinds == ['کارنامهٔ کلاس', 'کارنامهٔ دانش‌آموز', 'کارنامهٔ مدرسه (دفترچه)'], kinds)
+    rc_active = page.eval_on_selector_all('.dk-rail .dk-rail-item.active', 'els => els.map(e => e.getAttribute("aria-label"))')
+    check('در صفحهٔ PDF هم دکمهٔ کارت‌ها روشن می‌ماند', rc_active == ['کارت‌ها'], rc_active)
+    rc_title = page.eval_on_selector('.dk-title h1', 'e => e.textContent')
+    check('عنوان صفحه «کارنامه (PDF)» است', rc_title == 'کارنامه (PDF)', rc_title)
+    page.screenshot(path=str(OUT / 'manager-reportcards.png'))
+
+    page.locator('.mgr-rc .dk-gcard', has_text='کارنامهٔ کلاس').first.click()
+    page.wait_for_selector('.mgr-rc .card button', timeout=30000)
+    n_classes = len(page.query_selector_all('.mgr-rc .card button'))
+    check('فهرست کلاس‌ها می‌آید', n_classes > 0, '%d کلاس' % n_classes)
+    page.locator('.mgr-rc .card button', has_text='ساخت کارنامهٔ کلاس').first.click()
+    page.wait_for_function("() => document.querySelector('.mgr-rc table') || document.querySelector('.mgr-rc .empty')", timeout=40000)
+    has_pdf = page.locator('.mgr-rc button', has_text='ذخیرهٔ PDF').count() > 0
+    check('جدول کارنامهٔ کلاس + دکمهٔ PDF', has_pdf)
+    page.screenshot(path=str(OUT / 'manager-class-report.png'))
+
+    # انتخاب قالب: هر ۱۰ قالب باید دیده شوند
+    page.locator('.mgr-rc button', has_text='ذخیرهٔ PDF').first.click()
+    fr = page.frame_locator("iframe[title='report-card-templates']")
+    fr.locator('.rc-picker .rc-card').first.wait_for(timeout=40000)
+    n_tpl = len(fr.locator('.rc-picker .rc-card').all())
+    check('انتخابگر قالب با ۱۰ قالب باز می‌شود', n_tpl == 10, '%d قالب' % n_tpl)
+    page.screenshot(path=str(OUT / 'manager-template-picker.png'))
+    page.evaluate("() => window.ExamReportCard.close()")
+    page.wait_for_timeout(300)
+
+    # مسیر دانش‌آموز
+    page.click('.dk-rail .dk-rail-item[aria-label="کارت‌ها"]')
+    page.wait_for_selector('.dk-cards .dk-gcard', timeout=30000)
+    open_card('کارنامه (PDF)')
+    page.wait_for_selector('.mgr-rc .dk-gcard', timeout=30000)
+    page.locator('.mgr-rc .dk-gcard', has_text='کارنامهٔ دانش‌آموز').first.click()
+    page.wait_for_selector('.mgr-rc .card button', timeout=30000)
+    page.locator('.mgr-rc .card button', has_text='انتخاب دانش‌آموز').first.click()
+    page.wait_for_selector('.mgr-rc .card button', timeout=40000)
+    n_st = len(page.locator('.mgr-rc .card button', has_text='ساخت کارنامه').all())
+    check('فهرست دانش‌آموزان کلاس می‌آید', n_st > 0, '%d دانش‌آموز' % n_st)
+
+    # دفترچهٔ مدرسه
+    open_card('کارنامه (PDF)')
+    page.wait_for_selector('.mgr-rc .dk-gcard', timeout=30000)
+    page.locator('.mgr-rc .dk-gcard', has_text='دفترچه').first.click()
+    fr2 = page.frame_locator("iframe[title='report-card-templates']")
+    fr2.locator('.rc-picker .rc-card').first.wait_for(timeout=90000)
+    n_tpl2 = len(fr2.locator('.rc-picker .rc-card').all())
+    check('دفترچهٔ مدرسه هم به انتخابگر ۱۰ قالب می‌رسد', n_tpl2 == 10, '%d قالب' % n_tpl2)
+    page.evaluate("() => window.ExamReportCard.close()")
+    page.wait_for_timeout(300)
 
     # تقویم همچنان از منو در دسترس است
     page.click('.dk-rail .dk-rail-item[aria-label="منو"]')

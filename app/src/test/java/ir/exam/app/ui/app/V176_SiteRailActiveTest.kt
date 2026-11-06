@@ -15,7 +15,10 @@ class V176_SiteRailActiveTest {
     @Test
     fun `rail highlights menu for sub pages`() {
         val a = File(root(), "site/src/app.js").readText()
-        assertTrue("var railActive = railKeys.indexOf(view.panel) >= 0 ? view.panel : 'menu';" in a)
+        /* V344.1 — کارنامهٔ PDF زیرمجموعهٔ «کارت‌ها» است، پس همان دکمه روشن می‌ماند؛
+           بقیهٔ صفحه‌های فرعی همچنان «منو» را روشن نگه می‌دارند. */
+        assertTrue("var railPanel = view.panel === 'reportcards' ? 'cards' : view.panel;" in a)
+        assertTrue("var railActive = railKeys.indexOf(railPanel) >= 0 ? railPanel : 'menu';" in a)
         assertTrue("class: 'dk-rail-item' + (railActive === key ? ' active' : '')" in a)
     }
 }

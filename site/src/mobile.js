@@ -520,11 +520,15 @@
       menuGrid(cards, sel)
     ]);
   }
-  /* V344 — فهرست کارت‌های مدیر جدا شد تا دسکتاپ (pageCards) هم همین‌ها را نشان دهد. */
+  /* V344 — فهرست کارت‌های مدیر جدا شد تا دسکتاپ (pageCards) هم همین‌ها را نشان دهد.
+     V344.1 — دقیقاً چهار کارت اپ (ManagerManagementCardsScreen): مدارس، کارنامه،
+     کارنامه (PDF)، وضعیت. «کارنامه» نمای گزارش داشبورد است و «وضعیت» نمای کلی؛
+     پیش‌تر هر دو یک صفحه را باز می‌کردند. */
   function managerCardList() {
     return [
       ['مدارس', 'لیست مدرسه‌ها، ساخت مدرسه جدید و کلاس‌های هر مدرسه را باز می‌کند.', 'classes', 'linear-gradient(135deg,#6C63F5,#27C4A8)', function () { go('school'); }],
-      ['کارنامه', 'آمار پاسخ‌ها، میانگین نمره و فعالیت معلم‌های مدرسه.', 'reports', 'linear-gradient(135deg,#2878DB,#24B8C8)', function () { go('dashboard'); }],
+      ['کارنامه', 'آمار پاسخ‌ها، میانگین نمره و فعالیت معلم‌های مدرسه.', 'reports', 'linear-gradient(135deg,#2878DB,#24B8C8)', function () { go('dashboard', {report: true}); }],
+      ['کارنامه (PDF)', 'کارنامهٔ کلاس، یک دانش‌آموز یا دفترچهٔ کل مدرسه؛ ۱۰ قالب، پیش‌نمایش و چاپ.', 'print', 'linear-gradient(135deg,#7A5AF8,#B07BFF)', function () { go('reportcards'); }],
       ['وضعیت', 'داشبورد مدرسه با اطلاعات، آمار کلی و پنل سریع بخش‌ها.', 'cards', 'linear-gradient(135deg,#25BFA4,#45D7BD)', function () { go('dashboard'); }]
     ];
   }
