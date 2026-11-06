@@ -29,6 +29,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
@@ -1958,7 +1959,7 @@ private fun StudentEditDialog(
             onDispose { }
         }
         BoxWithConstraints(
-            modifier = Modifier.fillMaxSize().imePadding().padding(horizontal = 14.dp, vertical = 10.dp),
+            modifier = Modifier.fillMaxSize().systemBarsPadding().imePadding().padding(horizontal = 14.dp, vertical = 10.dp), // V347 — زیر نوار وضعیت/اعلان نرود (هم‌راستا با V247)
             contentAlignment = Alignment.TopCenter
         ) {
             val availableHeight = maxHeight
@@ -2266,7 +2267,7 @@ private fun BulkStudentDialog(
             onDispose { }
         }
         BoxWithConstraints(
-            modifier = Modifier.fillMaxSize().imePadding().padding(horizontal = 14.dp, vertical = 10.dp),
+            modifier = Modifier.fillMaxSize().systemBarsPadding().imePadding().padding(horizontal = 14.dp, vertical = 10.dp), // V347 — زیر نوار وضعیت/اعلان نرود (هم‌راستا با V247)
             contentAlignment = Alignment.TopCenter
         ) {
             val availableHeight = maxHeight
