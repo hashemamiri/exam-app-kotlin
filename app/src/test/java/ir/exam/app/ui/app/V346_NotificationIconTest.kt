@@ -73,6 +73,30 @@ class V346_NotificationIconTest {
     private fun attr(xml: String, name: String): String =
         Regex("android:$name=\"([^\"]+)\"").find(xml)!!.groupValues[1]
 
+    /**
+     * V346.1 — بلوک را با شمارش آکولاد بیرون می‌کشد.
+     * برش در «اولین }» غلط بود: به آکولادِ آبجکت داخلی (`{ priority: 'high' }`)
+     * می‌خورد و ادامهٔ بلوک (خط message.data) دیده نمی‌شد.
+     */
+    private fun blockAfter(source: String, marker: String): String {
+        val start = source.indexOf(marker)
+        assertTrue("نشانگر در فایل پیدا نشد: $marker", start >= 0)
+        val open = source.indexOf('{', start + marker.length)
+        assertTrue("آکولاد بازکننده پیدا نشد", open >= 0)
+        var depth = 0
+        var i = open
+        while (i < source.length) {
+            val ch = source[i]
+            if (ch == '{') depth++
+            if (ch == '}') {
+                depth--
+                if (depth == 0) return source.substring(open + 1, i)
+            }
+            i++
+        }
+        return source.substring(open + 1)
+    }
+
     @Test
     fun `notification icon is 24dp and its artwork fills the slot`() {
         val icon = src("app/src/main/res/drawable/ic_notification.xml")
@@ -135,7 +159,7 @@ class V346_NotificationIconTest {
         // اگر بلوک notification برگردد، در پس‌زمینه خود FCM اعلان را می‌سازد و
         // آیکون بزرگ و رنگ برندِ این نسخه اعمال نمی‌شود.
         val dispatch = src("supabase/functions/push-dispatch/index.ts")
-        val androidBlock = dispatch.substringAfter("if (platform === 'android') {").substringBefore("}")
+        val androidBlock = blockAfter(dispatch, "if (platform === 'android')")
         assertTrue("اندروید باید data-only بماند", "delete message.notification" in androidBlock)
         assertTrue("متن باید در data بیاید", "title: row.title" in androidBlock && "body: row.body" in androidBlock)
     }
