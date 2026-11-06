@@ -25,6 +25,20 @@ def read(path):
 for t in files:
     src = open(t, encoding='utf-8').read()
     vars_ = {}
+    # V347.1 — متغیرهایی که برشی از یک فایل‌اند (val bulk = school.substringAfter(...)).
+    # پیش‌تر این‌ها «بدون فایل مرجع» شمرده و بی‌صدا رد می‌شدند؛ همین باعث شد دو پینِ
+    # V25/V26 محلی سبز بمانند و در CI بشکنند. حالا برش هم دنبال می‌شود.
+    slices_ = {}
+    ambiguous_ = set()
+    # زنجیره ممکن است روی دو خط باشد:
+    #   val m = app.substringAfter("A")
+    #       .substringBefore("B")
+    for m in re.finditer(r'val (\w+) = (\w+)\.substringAfter\("([^"]*)"\)\s*(?:\.substringBefore\("([^"]*)"\))?', src):
+        spec = (m.group(2), unescape(m.group(3)), unescape(m.group(4)) if m.group(4) else None)
+        name = m.group(1)
+        if name in slices_ and slices_[name] != spec:
+            ambiguous_.add(name)          # نام یکسان در چند تابع با برش متفاوت → قضاوت نمی‌کنیم
+        slices_[name] = spec
     for line in src.splitlines():
         for m in re.finditer(r'val (\w+) = (?:source|src)\("([^"]+)"\)', line): vars_[m.group(1)] = m.group(2)
         # V220.2 — الگوهای دیگر خواندن فایل در تست‌های قدیمی (Neumorphic69IntegrationTest و …)
@@ -34,12 +48,18 @@ for t in files:
         if not (s.startswith('assertTrue(') or s.startswith('assertFalse(')): continue
         neg_all = s.startswith('assertFalse(')
         found_any = False
-        def check(lit, path, must_exist, where):
+        def check(lit, path, must_exist, where, cut=None):
             global bad, checked
             if '$' in lit: return
             if not path: return
             body = read(path)
             if body is None: return
+            if cut:
+                after, before = cut
+                if after in body:
+                    body = body.split(after, 1)[1]
+                    if before and before in body:
+                        body = body.split(before, 1)[0]
             checked += 1
             present = unescape(lit) in body
             if present != must_exist:
@@ -53,13 +73,19 @@ for t in files:
         for m in re.finditer(r'(!?)\(?' + LIT + r' in (?:(?:source|src)\("([^"]+)"\)|(\w+))', s):
             found_any = True
             negated = (m.group(1) == '!') ^ neg_all
-            path = m.group(3) or vars_.get(m.group(4) or '')
+            ref = m.group(4) or ''
+            cut = None
+            path = m.group(3) or vars_.get(ref)
+            if not path and ref in slices_ and ref not in ambiguous_:
+                base_ref, after, before = slices_[ref]
+                path = vars_.get(base_ref)
+                if path: cut = (after, before)
             if not path:
                 unresolved += 1
                 if strict:
                     print('PIN UNRESOLVED (check by hand): %s : %s' % (os.path.basename(t), s[:140]))
                 continue
-            check(m.group(2), path, not negated, s)
+            check(m.group(2), path, not negated, s, cut)
         # x.contains("lit")  /  !x.contains("lit")
         for m in re.finditer(r'(!?)(\w+)\.contains\(' + LIT + r'\)', s):
             found_any = True

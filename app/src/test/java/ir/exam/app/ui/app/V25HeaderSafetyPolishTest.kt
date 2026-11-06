@@ -82,7 +82,7 @@ class V25HeaderSafetyPolishTest {
         val school = source("app/src/main/java/ir/exam/app/ui/classes/SchoolManagementScreen.kt")
         val bulk = school.substringAfter("private fun BulkStudentDialog(").substringBefore("internal fun studentClipboardText")
         assertTrue("BoxWithConstraints" in bulk)
-        assertTrue("Modifier.fillMaxSize().imePadding()" in bulk)
+        assertTrue("Modifier.fillMaxSize().systemBarsPadding().imePadding()" in bulk) // V347 — نوار سیستم هم رعایت شود
         assertTrue("contentAlignment = Alignment.TopCenter" in bulk)
         // V29: پنجره گروهی تک‌کارتی است؛ «+» کارت تازه را جایگزین می‌کند و پنجره بزرگ نمی‌شود.
         assertTrue("heightIn(max = availableHeight)" in bulk)

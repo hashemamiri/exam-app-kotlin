@@ -56,7 +56,7 @@ class V26QuestionMediaReorderTest {
         assertTrue("android:windowSoftInputMode=\"adjustResize\"" in manifest)
         assertTrue("decorFitsSystemWindows = false" in bulk)
         assertTrue("WindowCompat.setDecorFitsSystemWindows(window, false)" in bulk)
-        assertTrue("Modifier.fillMaxSize().imePadding()" in bulk)
+        assertTrue("Modifier.fillMaxSize().systemBarsPadding().imePadding()" in bulk) // V347 — نوار سیستم هم رعایت شود
         assertTrue("contentAlignment = Alignment.TopCenter" in bulk)
         assertTrue("heightIn(max = availableHeight)" in bulk)
         // V29: تک‌کارتی؛ افزودن ردیف پنجره را بزرگ نمی‌کند.
