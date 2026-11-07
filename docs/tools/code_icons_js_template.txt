@@ -1,0 +1,25 @@
+  /* BEGIN GENERATED LANG ICONS — scripts/gen_code_lang_icons.py؛ دستی ویرایش نکنید */
+  var LANG_ICONS = {
+@@ROWS@@
+  };
+
+  /* رنگ جوهر روی زمینهٔ رنگی: روی رنگ روشن، تیره تا خوانا بماند. */
+  function inkOn(hex) {
+    var h = String(hex || '').replace('#', '');
+    if (h.length !== 6) return '#ffffff';
+    var r = parseInt(h.slice(0, 2), 16) / 255;
+    var g = parseInt(h.slice(2, 4), 16) / 255;
+    var b = parseInt(h.slice(4, 6), 16) / 255;
+    return (0.2126 * r + 0.7152 * g + 0.0722 * b) > 0.6 ? '#111111' : '#ffffff';
+  }
+
+  /* نشان SVG زبان در دستگاه ۲۴×۲۴؛ اندازه با CSS تنظیم می‌شود. */
+  function iconSvg(id, fg) {
+    var m = LANG_ICONS[id] || LANG_ICONS.asm;
+    var paint = fg || '#ffffff';
+    var body = m.s
+      ? '<path d="' + m.d + '" fill="none" stroke="' + paint + '" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>'
+      : '<path d="' + m.d + '" fill="' + paint + '"/>';
+    return '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">' + body + '</svg>';
+  }
+  /* END GENERATED LANG ICONS */

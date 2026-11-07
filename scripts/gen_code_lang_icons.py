@@ -115,6 +115,39 @@ def main():
     dst.write_text('\n'.join(L), encoding='utf-8')
     print('CodeLanguageIcons.kt ساخته شد: %d نشان (%.1f کیلوبایت)، %d خطی' % (
         len(out), dst.stat().st_size/1024, sum(1 for _, s in out.values() if s)))
+    write_js(data, ids)
+
+BEGIN = '  /* BEGIN GENERATED LANG ICONS'
+END = '  /* END GENERATED LANG ICONS */'
+TPL = ROOT / 'docs/tools/code_icons_js_template.txt'
+
+
+def write_js(data, ids):
+    """همان منبع، این‌بار برای سایت؛ تا اپ و سایت نشان یکسان داشته باشند.
+    قالب در پروندهٔ جداست تا درگیر فرارِ تودرتوی نقل‌قول نشویم."""
+    rows = ',\n'.join(
+        "    %s: {d: '%s', s: %d}" % (lid, data[lid]['d'], 1 if data[lid]['stroked'] else 0)
+        for lid in ids
+    )
+    block = TPL.read_text(encoding='utf-8').replace('@@ROWS@@', rows).rstrip('\n')
+    p = ROOT / 'site/src/code.js'
+    t = p.read_text(encoding='utf-8')
+    if BEGIN in t and END in t:
+        i, j = t.index(BEGIN), t.index(END) + len(END)
+        t = t[:i] + block + t[j:]
+    else:
+        # نخستین IIFE فایل (بقیهٔ موردها تودرتو هستند)
+        lines = t.split('\n')
+        at = next(i for i, l in enumerate(lines) if l.strip() == '(function () {')
+        lines.insert(at + 1, block)
+        t = '\n'.join(lines)
+    a2 = '    completions: completions, MAX: MAX'
+    assert t.count(a2) == 1
+    if 'icon: iconSvg' not in t:
+        t = t.replace(a2, '    completions: completions, MAX: MAX, icon: iconSvg, inkOn: inkOn')
+    p.write_text(t, encoding='utf-8')
+    print('نشان‌های سایت هم ساخته شد: %d نشان در site/src/code.js' % len(ids))
+
 
 if __name__ == '__main__':
     main()

@@ -106,7 +106,10 @@ class V348_Site_CodeToolTest {
         val css = src("site.css")
         // V349.2 — سفید ثابتِ چاپ مثل قاب شکل به شکل #FFFFFF نوشته می‌شود (قاعدهٔ V218)
         assertTrue("Print must use a light background", css.contains(".cx-block{background:#FFFFFF"))
-        assertTrue("Desktop live preview must show code", css.contains(".b-live.cx-has-code"))
+        // V352 — کد داخل خود متن تراشه است؛ استثنای V348 که پیش‌نمایش را
+        // روی دسکتاپ برمی‌گرداند حذف شد. روی موبایل پیش‌نمایش می‌ماند.
+        assertFalse("Desktop code preview exception is gone", css.contains(".b-live.cx-has-code"))
+        assertTrue("Desktop preview stays hidden", css.contains(".dk .b-editor .b-live{display:none!important}"))
         assertTrue("Mobile toolbar must stay on one row", css.contains(".cx-bar{gap:6px;flex-wrap:nowrap}"))
     }
 

@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
@@ -22,7 +23,11 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Check
+import androidx.compose.material.icons.outlined.Close
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
@@ -40,6 +45,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
@@ -196,11 +202,21 @@ fun CodeEditorDialog(
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Surface(shape = RoundedCornerShape(8.dp), color = Color(lang.colorArgb)) {
-                        Text(lang.short, Modifier.padding(horizontal = 8.dp, vertical = 3.dp), fontSize = 12.sp, color = Color.White)
+                    // V352 — نشان SVG زبان در هدر، هم‌رنگ کاشی انتخاب زبان
+                    val headerTile = Color(lang.colorArgb)
+                    Surface(
+                        shape = RoundedCornerShape(8.dp),
+                        color = headerTile,
+                        modifier = Modifier.size(28.dp)
+                    ) {
+                        Icon(
+                            CodeLanguageIcons.of(lang.id),
+                            contentDescription = lang.english,
+                            tint = if (headerTile.luminance() > 0.6f) Color(0xFF111111) else Color.White,
+                            modifier = Modifier.padding(5.dp).size(18.dp)
+                        )
                     }
                     Text(lang.name, fontSize = 13.sp)
-                    Text("Ln $lineNo, Col $colNo", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     if (!lockLanguage) {
                         TextButton(onClick = { picking = true }) { Text("تغییر زبان", fontSize = 12.sp) }
                     }
@@ -310,9 +326,28 @@ fun CodeEditorDialog(
                     }
                 }
 
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Button(onClick = { onDone(lang.id, field.text) }) { Text(doneLabel) }
-                    OutlinedButton(onClick = onDismiss) { Text("انصراف") }
+                /* V352 — تیک سبز ذخیره، وسط موقعیت نشانگر و شمار نویسه‌ها،
+                   و ضربدر قرمز انصراف؛ هم‌رنگ پنجرهٔ دانش‌آموز. */
+                Row(
+                    Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp, Alignment.CenterHorizontally),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Surface(color = Color(0xFF25A86B), shape = MaterialTheme.shapes.medium) {
+                        IconButton(onClick = { onDone(lang.id, field.text) }) {
+                            Icon(Icons.Outlined.Check, contentDescription = doneLabel, tint = Color.White)
+                        }
+                    }
+                    Text(
+                        "Ln $lineNo, Col $colNo · ${field.text.length}/${CodeText.MAX}",
+                        fontSize = 11.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Surface(color = Color(0xFFE5484D), shape = MaterialTheme.shapes.medium) {
+                        IconButton(onClick = onDismiss) {
+                            Icon(Icons.Outlined.Close, contentDescription = "انصراف", tint = Color.White)
+                        }
+                    }
                 }
             }
             }

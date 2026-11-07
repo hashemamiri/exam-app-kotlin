@@ -614,7 +614,6 @@
     var C = window.SiteCode;
     var hasCode = !!(C && C.hasFence(text));
     /* V348 — بلوک کد هم مثل فرمول/شکل باعث نمایش پیش‌نمایش می‌شود */
-    box.classList.toggle('cx-has-code', hasCode);
     if (!hasCode && !/\$[^$]+\$|%%FIG:/.test(text)) { box.style.display = 'none'; box.innerHTML = ''; return; }
     box.style.display = '';
     previewTimer = setTimeout(async function () {

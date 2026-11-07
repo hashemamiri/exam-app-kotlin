@@ -130,8 +130,9 @@ class V351_CodeWindowTest {
         // خودِ دکمه‌ها می‌مانند (تصمیم کاربر)
         assertTrue("دکمه‌های علائم هستند", s.contains("items(lang.symbols) { sym ->"))
         assertTrue("دکمه‌های آماده هستند", s.contains("items(lang.snippets) { snip ->"))
-        assertTrue("ذخیرهٔ متنی ماند", s.contains("Button(onClick = { onDone(lang.id, field.text) }) { Text(doneLabel) }"))
-        assertTrue("انصراف متنی ماند", s.contains("OutlinedButton(onClick = onDismiss) { Text(\"انصراف\") }"))
+        // V352 — این دو دکمه به تیک سبز و ضربدر قرمز تبدیل شدند
+        assertTrue("ذخیره همان عمل را می‌کند", s.contains("IconButton(onClick = { onDone(lang.id, field.text) })"))
+        assertTrue("انصراف همان عمل را می‌کند", s.contains("IconButton(onClick = onDismiss)"))
     }
 
     // ---------- ۶) رنگ پنجرهٔ دانش‌آموز سایت، مثل اپ ----------

@@ -91,6 +91,15 @@ SYMBOLS = {
 # نکته: `(?<![A-Za-z0-9_.])` باعث می‌شود فراخوانی عضوی مثل `Modifier.padding(`
 # نماد مستقل شمرده نشود؛ فقط نامِ تنها در ابتدای عبارت.
 CALL = re.compile(r'(?<![A-Za-z0-9_.])([A-Z][A-Za-z0-9_]*)\s*\(')
+# V352 — تابع‌های افزایشی که با «نقطه» صدا زده می‌شوند و ایمپورت جدا می‌خواهند.
+# این دسته از قاعدهٔ بالا جستار نمی‌شد (چون پس از نقطه است) و یک‌بار در
+# CodeEditorDialog باعث خطای کامپایل شد: headerTile.luminance() بی‌ایمپورت.
+EXT_CALL = re.compile(r'\.([a-z][A-Za-z0-9_]*)\s*\(')
+EXTENSIONS = {
+    'luminance': 'androidx.compose.ui.graphics.luminance',
+    'copy': None,  # متد عضو است، نه افزونه
+}
+EXTENSIONS = {k: v for k, v in EXTENSIONS.items() if v}
 IMPORT = re.compile(r'^import\s+([A-Za-z0-9_.]+)(?:\s+as\s+([A-Za-z0-9_]+))?\s*$', re.M)
 DECL = re.compile(r'\b(?:class|object|interface|enum class|data class|fun)\s+([A-Za-z0-9_]+)')
 
@@ -143,6 +152,14 @@ def main() -> int:
             full, alias = m.group(1), m.group(2)
             imports[alias or full.rsplit('.', 1)[-1]] = full
         declared = set(DECL.findall(body))
+        for m in EXT_CALL.finditer(body):
+            name = m.group(1)
+            if name not in EXTENSIONS:
+                continue
+            if name in imports or name in declared:
+                continue
+            problems.append('%s: %s() استفاده شده ولی ایمپورت نشده (باید %s باشد)'
+                            % (path.relative_to(ROOT), name, EXTENSIONS[name]))
         for m in CALL.finditer(body):
             name = m.group(1)
             if name not in SYMBOLS:

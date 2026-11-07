@@ -1295,7 +1295,8 @@ button.stat:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
 .b-chip.code-live .cx-bar{font-size:10.5px;padding:4px 8px}
 .dk .b-editor .b-live{display:none!important}
 /* V348 — استثنا: بلوک کد باید در پیش‌نمایش زنده دیده شود */
-.dk .b-editor .b-live.cx-has-code{display:block!important}
+/* V352 — کد داخل خود متن تراشه است؛ پیش‌نمایش تکراری روی دسکتاپ لازم نیست.
+   روی موبایل تراشه‌ها برچسب‌اند، پس پیش‌نمایش همان‌جا می‌ماند. */
 
 /* ===== V190 — دسکتاپ: دکمه‌های کارت آزمون داخل کارت (تقسیم عرض، پیچش در صورت کمبود جا) ===== */
 .dk .exam{overflow:hidden}
@@ -2551,6 +2552,11 @@ body.st-in-exam-mode .nc-bell{display:none!important}
 .cx-tile-badge{display:inline-flex;align-items:center;justify-content:center;min-width:34px;height:26px;padding:0 7px;border-radius:7px;font:700 12px/1 ui-monospace,Menlo,Consolas,monospace;color:#fff;background:var(--cx,#3776AB)}
 .cx-tile-name{font-size:13px;font-weight:700;color:var(--ink,#1d2440)}
 .cx-tile-ext{font:11px/1 ui-monospace,Menlo,Consolas,monospace;color:var(--muted);direction:ltr}
+/* V352 — نشان SVG زبان در کاشی انتخاب و هدر ویرایشگر */
+.cx-tile-badge svg{width:20px;height:20px;display:block}
+.cx-tile-badge{min-width:34px;height:28px;padding:0}
+.cx-badge.cx-badge-icon{min-width:30px;height:24px;padding:0}
+.cx-badge.cx-badge-icon svg{width:17px;height:17px;display:block}
 /* ویرایشگر */
 .cx-editor-bg{padding:12px}
 .cx-editor{max-width:960px;width:100%;display:flex;flex-direction:column;padding:20px}
