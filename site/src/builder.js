@@ -747,6 +747,10 @@
       var r = document.createRange(); r.selectNode(c); var sel = document.getSelection(); sel.removeAllRanges(); sel.addRange(r); caretToRaw();
     }
     rich.addEventListener('click', function (e) {
+      /* V352.3 — تصمیم کاربر: دکمهٔ «کپی» داخل کادر کد فقط کپی کند. پیش‌تر کلیک روی آن
+         «کلیک روی تراشه» شمرده می‌شد: بار اول تراشه را انتخاب می‌کرد و بار دوم پنجرهٔ
+         ویرایش را باز می‌کرد. حالا رویداد به هندلر سراسری code.js می‌رسد و بس. */
+      if (e.target && e.target.closest && e.target.closest('[data-cx-copy]')) return;
       var xb = e.target.closest && e.target.closest('.b-chip-x');
       if (xb) { e.preventDefault(); e.stopPropagation(); deleteTok(xb.closest('[data-tok]')); return; }
       var c = e.target.closest && e.target.closest('[data-tok]');
@@ -755,6 +759,27 @@
       if (c.classList.contains('sel')) { c.classList.remove('sel'); var ox2 = c.querySelector('.b-chip-x'); if (ox2) ox2.remove(); openTokEditor(c); } else selectChip(c);
     });
     rich.addEventListener('dblclick', function (e) { var c = e.target.closest && e.target.closest('[data-tok]'); if (!c) return; e.preventDefault(); c.classList.remove('sel'); openTokEditor(c); });
+    /* V352.3 — تصمیم کاربر: داخل سازنده «قالب اصلی» کپی شود، نه متنِ رندرشده.
+       پیش‌تر انتخاب تراشه، کرومِ کادر را هم می‌گرفت و کلیپ‌بورد می‌شد
+       «Rb / روبی / ۵ خط / کپی / …». اینجا همان ماشین serialize که نما را به متن خام
+       برمی‌گرداند دوباره استفاده می‌شود: تراشه → data-tok خودش (قالب کد، $…$، %%FIG:…%%).
+       اگر انتخاب هیچ تراشه‌ای را نگرفته باشد دست نمی‌زنیم. */
+    rich.addEventListener('copy', function (e) {
+      var sel = document.getSelection();
+      if (!sel || !sel.rangeCount || sel.isCollapsed) return;
+      var r = sel.getRangeAt(0);
+      if (!rich.contains(r.startContainer) || !rich.contains(r.endContainer)) return;
+      var box;
+      try {
+        box = document.createElement('div');
+        box.appendChild(r.cloneContents());
+      } catch (x) { return; }
+      if (!box.querySelector('[data-tok]')) return;
+      var raw = serialize(box);
+      if (!raw || !e.clipboardData) return;
+      e.preventDefault();
+      e.clipboardData.setData('text/plain', raw);
+    });
     /* تغییر برنامه‌ای متن (ابزارها) → بازسازی نما */
     ta.addEventListener('input', function () { if (fromRich) return; var p = ta.selectionStart; render(ta.value); rich.focus(); placeCaret(p == null ? ta.value.length : p); livePreview(live, ta.value); });
     render(ta.value); livePreview(live, ta.value);

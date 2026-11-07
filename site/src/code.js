@@ -407,6 +407,27 @@
     }
   });
 
+  /* V352.3 — کپیِ «انتخاب + Ctrl+C» بیرون از سازنده: فقط خودِ کد، بدون نوار و شمارهٔ سطر.
+     تصمیم کاربر: بیرون از سازنده محتوای تمیز، داخل سازنده قالب اصلی (آن را builder.js می‌نویسد).
+     اگر انتخاب کاملاً داخل یک بلوک کد باشد مداخله می‌کنیم؛ اگر چند بلوک یا متن بیرون را
+     گرفته باشد دست نمی‌زنیم تا کپیِ معمولی کاربر خراب نشود. */
+  document.addEventListener('copy', function (e) {
+    if (e.defaultPrevented) return;                 /* سازنده قبلاً قالب خام را نوشته است */
+    if (e.target && e.target.closest && e.target.closest('.b-rich')) return;
+    var sel = document.getSelection();
+    if (!sel || !sel.rangeCount || sel.isCollapsed) return;
+    var host = sel.getRangeAt(0).commonAncestorContainer;
+    if (host && host.nodeType === 3) host = host.parentNode;
+    if (!host || !host.closest) return;
+    var blk = host.closest('.cx-block');
+    if (!blk || blk.closest('.b-rich')) return;
+    var pre = blk.querySelector('.cx-code');
+    var txt = pre ? pre.textContent : '';
+    if (!txt || !e.clipboardData) return;
+    e.preventDefault();
+    e.clipboardData.setData('text/plain', txt);
+  });
+
   /* ---------------- انتخاب زبان ---------------- */
   function pickLanguage(onPick, opts) {
     opts = opts || {};
