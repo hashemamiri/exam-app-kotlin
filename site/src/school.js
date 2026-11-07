@@ -182,9 +182,10 @@
     function draw() {
       modal.innerHTML = '';
       var r = rows[active];
+      /* V351 — رنگ‌ها دقیقاً مثل اپ: + سبز، ایجاد بنفش، ضربدر قرمز */
       modal.appendChild(el('div', {class: 'row st-new-bar'}, [
-        el('button', {class: 'btn', text: '+', title: 'کارت تازه', disabled: rows.length >= BULK_MAX || busy ? 'disabled' : null, onclick: function () { rows.push(blank()); recompute(); active = rows.length - 1; draw(); }}),
-        el('button', {class: 'btn', text: busy ? 'در حال ایجاد…' : 'ایجاد', disabled: busy ? 'disabled' : null, onclick: submit}),
+        el('button', {class: 'btn st-add', text: '+', title: 'کارت تازه', disabled: rows.length >= BULK_MAX || busy ? 'disabled' : null, onclick: function () { rows.push(blank()); recompute(); active = rows.length - 1; draw(); }}),
+        el('button', {class: 'btn st-create', text: busy ? 'در حال ایجاد…' : 'ایجاد', disabled: busy ? 'disabled' : null, onclick: submit}),
         /* V230 — ورود از اکسل/CSV: ردیف‌های فایل به کارت‌ها تبدیل می‌شوند (حداکثر ۱۰۰) */
         el('button', {class: 'btn light', text: '📥 از اکسل', title: 'ستون‌ها: نام، نام خانوادگی، نام پدر، پایه، رشته، جنسیت، نام کاربری (اختیاری)، رمز (اختیاری)', disabled: busy ? 'disabled' : null, onclick: function () {
           var f = el('input', {type: 'file', accept: '.xlsx,.csv,.txt', style: 'display:none'});
@@ -200,7 +201,7 @@
           });
           document.body.appendChild(f); f.click(); setTimeout(function () { f.remove(); }, 60000);
         }}),
-        el('button', {class: 'btn', text: '×', title: 'بستن', onclick: function () { bg.remove(); }})
+        el('button', {class: 'btn st-close', text: '×', title: 'بستن', onclick: function () { bg.remove(); }})
       ]));
       /* V224.2 — شمارهٔ کارت فعلی رنگ متمایز دارد، با افزودن/انتخاب خودکار به دید می‌آید و چرخ ماوس روی نوار آن را افقی اسکرول می‌کند */
       var strip = el('div', {class: 'st-new-chips'}, rows.map(function (_, i) { return el('button', {class: 'chip st-num' + (i === active ? ' cur' : ''), text: fa(i + 1), onclick: function () { active = i; draw(); }}); }));

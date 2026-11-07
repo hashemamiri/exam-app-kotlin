@@ -40,7 +40,9 @@ class V350_CodeChipWiringTest {
         assertTrue("ویرایش کد", s.contains("onEditCodeToken: (occurrenceIndex: Int, lang: String, code: String, start: Int, end: Int) -> Unit"))
         assertTrue("شاخهٔ رندر کد", s.contains("is RichSegment.Code -> {"))
         assertTrue("کادر کد نمایش داده می‌شود", s.contains("CodeBlockView("))
-        assertTrue("دکمهٔ نوار ابزار", s.contains("NativeCodeToolButton { onInsertCode(insertAtOffset) }"))
+        // V351 — دکمه به ردیف دوم (کنار OCR) رفت؛ اینجا فقط مسیر ابزار می‌ماند
+        assertTrue("مسیر ابزار کد", s.contains("controller.nativeOpenCode = {"))
+        assertTrue("درج در محل مکان‌نما", s.contains("currentInsertCode(currentInsertAt)"))
     }
 
     @Test

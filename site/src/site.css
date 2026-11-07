@@ -1597,6 +1597,12 @@ table.rp-grades td.num .chip{min-width:64px;justify-content:center}
 .modal.st-new{max-width:620px}
 .st-new-bar{justify-content:center;gap:8px;margin-bottom:8px}
 .st-new-bar .btn{min-width:64px}
+/* V351 — همان رنگ‌های پنجرهٔ دانش‌آموز اپ: سبز #25A86B، بنفش #6C63F5، قرمز #E5484D */
+.st-new-bar .btn.st-add{background:#25A86B;border-color:#25A86B;color:#fff;font-size:19px;line-height:1}
+.st-new-bar .btn.st-create{background:#6C63F5;border-color:#6C63F5;color:#fff}
+.st-new-bar .btn.st-close{background:#E5484D;border-color:#E5484D;color:#fff;font-size:19px;line-height:1}
+.st-new-bar .btn.st-add:hover,.st-new-bar .btn.st-create:hover,.st-new-bar .btn.st-close:hover{filter:brightness(.93)}
+.st-new-bar .btn.st-add[disabled],.st-new-bar .btn.st-create[disabled]{opacity:.55;filter:none}
 .st-new-chips{display:flex;gap:6px;overflow-x:auto;padding:2px 0 8px;scrollbar-width:none}
 .st-new-chips::-webkit-scrollbar{display:none}
 .st-new-card{padding:14px}

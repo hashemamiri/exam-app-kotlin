@@ -26,7 +26,6 @@ import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -108,6 +107,7 @@ fun QuestionTextWebSection(
     val currentOpenFormula by rememberUpdatedState(onOpenFormula)
     val currentEditToken by rememberUpdatedState(onEditFigureToken)
     val currentEditCode by rememberUpdatedState(onEditCodeToken)
+    val currentInsertCode by rememberUpdatedState(onInsertCode)
 
     // V67.0 — وضعیت مکان‌نما و انتخاب:
     // focusedTextSegment: آخرین بخش متنی که کاربر در آن تایپ کرده (محل درج).
@@ -139,6 +139,12 @@ fun QuestionTextWebSection(
     val currentFigures by rememberUpdatedState(figures)
 
     DisposableEffect(controller) {
+        // V351 — دکمهٔ کد به ردیف دوم (کنار OCR) رفت؛ این مسیر همان محل
+        // مکان‌نما را نگه می‌دارد تا بلوک در جای درست متن بنشیند.
+        controller.nativeOpenCode = {
+            currentInsertCode(currentInsertAt)
+            true
+        }
         controller.nativeInsert = { specJson ->
             val spec = FigureSpec.parse(specJson)
             if (spec != null) {
@@ -453,20 +459,7 @@ fun QuestionTextWebSection(
             NativeToolButton(QuestionToolIcons.Table, "درج جدول") { onInsertTable(insertAtOffset) }
             NativeToolButton(QuestionToolIcons.Gallery, "گالری شکل‌ها") { onInsertGallery(insertAtOffset) }
             NativeToolButton(QuestionToolIcons.Periodic, "درج جدول تناوبی") { onInsertPeriodic(insertAtOffset) }
-            NativeCodeToolButton { onInsertCode(insertAtOffset) }
         }
-    }
-}
-
-/** V350 — دکمهٔ «</>» درج کد؛ همان نماد سایت. */
-@Composable
-private fun NativeCodeToolButton(onClick: () -> Unit) {
-    IconButton(onClick = onClick, modifier = Modifier.size(36.dp)) {
-        Text(
-            "</>",
-            style = MaterialTheme.typography.labelLarge,
-            color = MaterialTheme.colorScheme.primary
-        )
     }
 }
 

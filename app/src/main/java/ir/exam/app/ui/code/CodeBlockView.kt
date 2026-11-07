@@ -15,13 +15,18 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextDirection
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
@@ -52,7 +57,11 @@ fun codeAnnotated(code: String, lang: CodeLanguage): AnnotatedString {
 @Composable
 fun CodeBlockView(code: String, langId: String?, modifier: Modifier = Modifier) {
     val lang = CodeLanguages.byIdOr(langId)
-    val mono = TextStyle(fontFamily = FontFamily.Monospace, fontSize = 12.sp, lineHeight = 19.sp)
+    // V351 — پیش‌نمایش کد هم چپ‌به‌راست؛ در اپ فارسی پیش‌فرض راست‌به‌چپ بود.
+    val mono = TextStyle(
+        fontFamily = FontFamily.Monospace, fontSize = 12.sp, lineHeight = 19.sp,
+        textDirection = TextDirection.Ltr, textAlign = TextAlign.Left
+    )
     Column(
         modifier.fillMaxWidth()
             .background(Color(0xFF1B2035), RoundedCornerShape(10.dp))
@@ -73,6 +82,7 @@ fun CodeBlockView(code: String, langId: String?, modifier: Modifier = Modifier) 
                 color = Color(0xFF6B7A99)
             )
         }
+        CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
         Row(
             Modifier.fillMaxWidth().heightIn(max = 260.dp).verticalScroll(rememberScrollState())
                 .padding(vertical = 6.dp)
@@ -89,6 +99,7 @@ fun CodeBlockView(code: String, langId: String?, modifier: Modifier = Modifier) 
                 color = Color(0xFFE6E9F5),
                 modifier = Modifier.weight(1f).horizontalScroll(rememberScrollState()).padding(end = 10.dp)
             )
+        }
         }
     }
 }

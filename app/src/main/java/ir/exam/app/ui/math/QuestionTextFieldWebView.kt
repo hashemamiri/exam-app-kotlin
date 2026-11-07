@@ -22,6 +22,8 @@ class QuestionEditorFieldController {
     internal var nativeInsert: ((String) -> Boolean)? = null
     internal var nativeReplace: ((String) -> Boolean)? = null
     internal var nativeOpenFormula: (() -> Boolean)? = null
+    /** V351 — ابزار کد از ردیف دوم نوار (کنار OCR) صدا زده می‌شود. */
+    internal var nativeOpenCode: (() -> Boolean)? = null
     var pendingEditOccurrence: Int? = null
 
     /** V67.1 — آفست مکان‌نمای درخواستی پس از بازگشت متن از پنجرهٔ فرمول. */
@@ -40,6 +42,10 @@ class QuestionEditorFieldController {
     fun openTool(name: String): Boolean {
         if (name == "formula") {
             nativeOpenFormula?.invoke()?.let { return it }
+        }
+        if (name == "code") {
+            nativeOpenCode?.invoke()?.let { return it }
+            return false
         }
         val view = webView ?: return false
         val quoted = JSONObject.quote(name)

@@ -5,11 +5,15 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -24,6 +28,8 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -32,19 +38,26 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.text.input.OffsetMapping
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.input.TransformedText
 import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import androidx.compose.ui.window.DialogWindowProvider
+import androidx.core.view.WindowCompat
 
 /**
  * V349 — محیط کدنویسی اپ: ۳۲ زبان، رنگی‌شدن دستورها، شمارهٔ خط،
@@ -101,7 +114,11 @@ fun CodeEditorDialog(
     }
     var field by remember { mutableStateOf(TextFieldValue(firstText, TextRange(firstText.length))) }
 
-    val mono = TextStyle(fontFamily = FontFamily.Monospace, fontSize = 13.sp, lineHeight = 20.sp, color = EditorInk)
+    // V351 — کد باید چپ‌به‌راست نوشته شود؛ در اپ فارسی سبک پیش‌فرض راست‌به‌چپ بود.
+    val mono = TextStyle(
+        fontFamily = FontFamily.Monospace, fontSize = 13.sp, lineHeight = 20.sp, color = EditorInk,
+        textDirection = TextDirection.Ltr, textAlign = TextAlign.Left
+    )
     val caret = field.selection.start.coerceIn(0, field.text.length)
     val suggestions = remember(field.text, caret, lang.id) {
         if (field.selection.start == field.selection.end) CodeText.suggestions(lang.id, field.text, caret)
@@ -134,14 +151,34 @@ fun CodeEditorDialog(
         return
     }
 
-    Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
-        Surface(
-            modifier = Modifier.fillMaxWidth().padding(12.dp),
-            shape = RoundedCornerShape(18.dp),
-            color = MaterialTheme.colorScheme.surface
+    /* V351 — قاب و جایگاه، همان پنجرهٔ افزودن/ویرایش دانش‌آموز:
+       بالای صفحه، وسط، عرض تا ۶۲۰dp و ارتفاع تا فضای در دسترس؛ زیر نوار
+       وضعیت نمی‌رود و با صفحه‌کلید بالا می‌آید. هدر عنوان حذف شد. */
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)
+    ) {
+        val dialogView = LocalView.current
+        DisposableEffect(dialogView) {
+            val window = (dialogView.parent as? DialogWindowProvider)?.window
+            if (window != null) WindowCompat.setDecorFitsSystemWindows(window, false)
+            onDispose { }
+        }
+        BoxWithConstraints(
+            modifier = Modifier.fillMaxSize().systemBarsPadding().imePadding()
+                .padding(horizontal = 14.dp, vertical = 10.dp),
+            contentAlignment = Alignment.TopCenter
         ) {
-            Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text(title, style = MaterialTheme.typography.titleMedium)
+            val availableHeight = maxHeight
+            Surface(
+                modifier = Modifier.fillMaxWidth().widthIn(max = 620.dp).heightIn(max = availableHeight),
+                shape = MaterialTheme.shapes.large,
+                tonalElevation = 6.dp
+            ) {
+            Column(
+                Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(14.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Surface(shape = RoundedCornerShape(8.dp), color = Color(lang.colorArgb)) {
                         Text(lang.short, Modifier.padding(horizontal = 8.dp, vertical = 3.dp), fontSize = 12.sp, color = Color.White)
@@ -154,8 +191,9 @@ fun CodeEditorDialog(
                 }
 
                 val vScroll = rememberScrollState()
+                CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
                 Row(
-                    Modifier.fillMaxWidth().heightIn(min = 160.dp, max = 300.dp)
+                    Modifier.fillMaxWidth().heightIn(min = 200.dp, max = 340.dp)
                         .background(EditorBg, RoundedCornerShape(10.dp))
                         .border(1.dp, EditorLine, RoundedCornerShape(10.dp))
                         .verticalScroll(vScroll)
@@ -182,6 +220,7 @@ fun CodeEditorDialog(
                         )
                     }
                 }
+                }
 
                 if (suggestions.isNotEmpty()) {
                     LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -193,7 +232,6 @@ fun CodeEditorDialog(
                     }
                 }
 
-                Text("علائم", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 LazyRow(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                     items(lang.symbols) { sym ->
                         OutlinedButton(onClick = { put(sym) }, modifier = Modifier.widthIn(min = 40.dp)) {
@@ -202,22 +240,17 @@ fun CodeEditorDialog(
                     }
                 }
 
-                Text("آمادهٔ ${lang.name}", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     items(lang.snippets) { snip ->
                         OutlinedButton(onClick = { put(snip.code) }) { Text(snip.label, fontSize = 12.sp) }
                     }
                 }
 
-                Text(
-                    "کد اجرا نمی‌شود؛ فقط نوشته و ذخیره می‌شود. تصحیح دستی است.",
-                    fontSize = 11.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Button(onClick = { onDone(lang.id, field.text) }) { Text(doneLabel) }
                     OutlinedButton(onClick = onDismiss) { Text("انصراف") }
                 }
+            }
             }
         }
     }

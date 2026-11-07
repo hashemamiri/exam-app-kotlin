@@ -1690,6 +1690,8 @@ private fun QuestionEditor(
                 // V137.3 — تختهٔ سفید معلم (چاپی و آنلاین): خروجی PNG هر صفحه یک تصویر سؤال می‌شود.
                 onOpenWhiteboard = { whiteboardOpen = true },
                 // V335.4 — ابزار استخراج سؤالات و تست‌ها از تصویر با OCR
+                // V351 — آیکن کد در ردیف دوم کنار OCR؛ از همان مسیر ابزار سؤال.
+                onOpenCode = { questionFieldController.openTool("code") },
                 onOpenOcr = {
                     ocrPickerLauncher.launch(
                         androidx.activity.result.PickVisualMediaRequest(

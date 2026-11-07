@@ -83,7 +83,9 @@ fun QuestionMediaEditor(
     // خروجی به‌عنوان تصویر سؤال اضافه می‌شود. null = نمایش داده نشود.
     onOpenWhiteboard: (() -> Unit)? = null,
     // V335.4 — ابزار استخراج سؤالات و تست‌ها از تصویر با OCR آفلاین (کنار تختهٔ سفید)
-    onOpenOcr: (() -> Unit)? = null
+    onOpenOcr: (() -> Unit)? = null,
+    // V351 — ابزار کد کنار OCR در همین ردیف دوم (درخواست کاربر).
+    onOpenCode: (() -> Unit)? = null
 ) {
     val context = LocalContext.current
     val repository = remember(context) { LocalImageRepository(context) }
@@ -166,6 +168,15 @@ fun QuestionMediaEditor(
         if (onOpenOcr != null) {
             IconButton(onClick = onOpenOcr) {
                 Icon(Icons.Outlined.DocumentScanner, contentDescription = "استخراج تست‌ها و سؤالات با OCR")
+            }
+        }
+        if (onOpenCode != null) {
+            IconButton(onClick = onOpenCode) {
+                Icon(
+                    ir.exam.app.ui.math.QuestionToolIcons.Code,
+                    contentDescription = "درج کد برنامه‌نویسی در متن سؤال",
+                    tint = MaterialTheme.colorScheme.primary
+                )
             }
         }
         if (processing) CircularProgressIndicator(Modifier.size(22.dp), strokeWidth = 2.dp)
