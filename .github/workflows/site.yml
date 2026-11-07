@@ -7,7 +7,7 @@ name: site
 on:
   push:
     branches: [main, staging]
-    paths: ['site/**', 'scripts/web_ui_e2e.py', 'scripts/mock_supabase_server.py', '.github/workflows/site.yml']
+    paths: ['site/**', 'scripts/web_ui_e2e.py', 'scripts/check_layout_health.py', 'scripts/mock_supabase_server.py', '.github/workflows/site.yml']
   workflow_dispatch:
 concurrency:
   group: site-deploy-${{ github.ref_name }}
@@ -114,6 +114,11 @@ jobs:
         run: |
           python3 -m pip install --upgrade pip playwright
           python3 -m playwright install --with-deps chromium
+      # V352.1 — نگهبان سنجهٔ «صفحه خالی نیست»: پیش از آزمون سرتاسری،
+      # خودِ سنجه در پنج حالت ساخته‌شده آزموده می‌شود تا صفحهٔ سالمِ زیر
+      # موتور چاپ «خالی» گزارش نشود و صفحهٔ واقعاً خالی هم رد شود.
+      - name: Guard the layout-health assertion (V352.1)
+        run: python3 scripts/check_layout_health.py
       - name: Run automated browser visual & E2E gate on site_out
         run: |
           python3 scripts/web_ui_e2e.py --site-dir site_out --out-dir web-ui-report

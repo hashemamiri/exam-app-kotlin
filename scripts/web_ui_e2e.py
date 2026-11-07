@@ -182,7 +182,27 @@ def assert_layout_healthy(page: Any, label: str) -> dict[str, Any]:
                 innerWidth: window.innerWidth,
                 innerHeight: window.innerHeight,
                 scrollWidth: docEl.scrollWidth,
-                bodyTextLen: (document.body.innerText || '').trim().length
+                bodyTextLen: (() => {
+                    /* V352.1 — وقتی موتور چاپ/کارنامه باز است، قاعدهٔ V179
+                       پوستهٔ زیرین را visibility:hidden می‌کند و innerText
+                       متن پنهان را نمی‌شمارد. پیش‌تر این سنجه تنها به این
+                       دلیل پاس می‌شد که یک پیام شناور اتفاقاً روی صفحه بود؛
+                       با محو شدن آن، صفحهٔ سالم «خالی» گزارش می‌شد.
+                       حالا در حالت موتور، متن خودِ اورلی و سند iframe
+                       شمرده می‌شود — یعنی همان چیزی که کاربر می‌بیند. */
+                    const body = document.body;
+                    if (!body.classList.contains('engine-open')) {
+                        return (body.innerText || '').trim().length;
+                    }
+                    const ov = document.querySelector('.engine-bg');
+                    let n = ((ov && ov.innerText) || '').trim().length;
+                    const fr = ov && ov.querySelector('iframe');
+                    try {
+                        const d = fr && fr.contentDocument;
+                        if (d && d.body) n += (d.body.innerText || '').trim().length;
+                    } catch (e) { /* اگر هم‌مبدأ نبود، همان متن اورلی بسنده است */ }
+                    return n;
+                })()
             };
         }"""
     )

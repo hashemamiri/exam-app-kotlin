@@ -70,6 +70,20 @@ jobs:
           PY
       - name: بررسی موتور مستقل چاپ و پاک‌سازی مسیرهای بازنشسته
         run: python3 scripts/verify_native_final.py
+      # V352.1 — این نگهبان‌ها تا امروز فقط محلی اجرا می‌شدند. هر کدام
+      # یک دسته خطای واقعی را که یک‌بار CI را شکسته بود می‌بندند و
+      # در چند ثانیه اجرا می‌شوند، پیش از ساخت ده‌دقیقه‌ای Gradle.
+      - name: نگهبان‌های سریع سورس (ایمپورت، when، مسیر تست، پین‌ها)
+        run: |
+          set -e
+          for g in check_kotlin_braces check_kotlin_quotes check_kotlin_escapes \
+                   check_kotlin_imports check_missing_imports check_kotlin_visibility \
+                   check_sealed_when check_test_paths check_test_pins \
+                   check_site_pins check_site_sync; do
+            echo "::group::$g"
+            python3 "scripts/$g.py"
+            echo "::endgroup::"
+          done
       - name: آماده‌سازی Java
         uses: actions/setup-java@v5
         with:
