@@ -20,7 +20,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import ir.exam.app.domain.model.QuestionType
 import ir.exam.app.ui.code.CodeEditorDialog
 import ir.exam.app.ui.code.CodeLanguagePickerDialog
 import ir.exam.app.ui.code.CodeLanguages
