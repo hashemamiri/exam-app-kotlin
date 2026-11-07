@@ -71,6 +71,8 @@
       if (obj.mode === 'draw' && type === 'essay') q.mode = 'draw';
       /* V309 — پاسخ صوتی با سقف مدت معلم */
       if (obj.mode === 'voice' && type === 'essay') { q.mode = 'voice'; q.voiceMaxSeconds = Math.max(10, Math.min(300, Number(obj.voice_max_seconds) || 60)); }
+      /* V348 — پاسخ کدنویسی */
+      if (obj.mode === 'code' && type === 'essay') { q.mode = 'code'; q.codeLang = obj.code_lang ? String(obj.code_lang) : ''; q.codeStarter = obj.code_starter ? String(obj.code_starter) : ''; }
       if (obj.mode === 'dictation' && type === 'fill') { q.mode = 'dictation'; q.dictationText = obj.speak ? String(obj.speak) : ''; }
       if (obj.mode === 'hotspot' && type === 'multiple') { q.mode = 'hotspot'; q.hotspots = (Array.isArray(obj.hotspots) ? obj.hotspots : []).map(function (h) { return {x: Number(h.x) || 0, y: Number(h.y) || 0, w: Number(h.w) || 0, h: Number(h.h) || 0}; }); }
       return q;
@@ -214,7 +216,22 @@
     });
     return mathReady;
   }
+  /* V348 — بلوک کد پیش از موتور فرمول جدا می‌شود: کد با رنگی‌شدن خودش و
+     بقیهٔ متن با همان موتور همیشگی رندر می‌شود. موتور دست‌نخورده می‌ماند. */
   async function richHtml(text) {
+    var C = window.SiteCode;
+    if (C && C.hasFence(text)) {
+      var parts = C.split(text), out = [];
+      for (var i = 0; i < parts.length; i++) {
+        var pc = parts[i];
+        if (pc.code) out.push(C.blockHtml(pc.text, pc.lang));
+        else if (String(pc.text).trim()) out.push(await richHtmlPlain(pc.text));
+      }
+      return out.join('');
+    }
+    return richHtmlPlain(text);
+  }
+  async function richHtmlPlain(text) {
     var w = await ensureMathFrame();
     if (!w) return esc(text).replace(/\n/g, '<br>');
     try { var t = document.createElement('template'); t.innerHTML = w.renderRichText(String(text || ''), null); simplifyFigs(t.content); return t.innerHTML; } catch (e) { return esc(text).replace(/\n/g, '<br>'); }
@@ -1037,6 +1054,36 @@
       return wrap;
     }
 
+    /* V348 — پاسخ کدنویسی: دانش‌آموز در محیط کد می‌نویسد؛ پاسخ به‌صورت بلوک ``` ذخیره می‌شود */
+    function codeAnswerBlock(q, existing, save, redraw) {
+      var C = window.SiteCode;
+      var wrap = el('div', {class: 'cx-answer'});
+      if (!C) { wrap.appendChild(el('p', {class: 'st-hint', text: 'ابزار کد در دسترس نیست؛ صفحه را تازه کنید.'})); return wrap; }
+      var cur = C.parseFence(existing);
+      function openEditor(langId, startCode) {
+        C.open({lang: langId, code: startCode, blank: !startCode && !q.codeStarter, starter: q.codeStarter || '',
+          title: 'پاسخ کدنویسی' + (q.codeLang ? ' — ' + C.lang(q.codeLang).name : ''), doneLabel: 'ذخیره در پاسخ',
+          onDone: function (r) { save(C.fence(r.code, r.lang)); redraw(); }});
+      }
+      if (cur) {
+        wrap.appendChild(el('div', {class: 'row'}, [
+          el('b', {style: 'font-size:13px', text: '</> پاسخ کد شما'}), el('span', {class: 'grow'}),
+          el('button', {class: 'btn soft sm', text: 'ویرایش کد', onclick: function () { openEditor(cur.lang, cur.code); }}),
+          el('button', {class: 'btn light sm', text: 'حذف پاسخ', onclick: async function () { if (await S.confirmDlg('حذف پاسخ', 'کد نوشته‌شده پاک شود؟', 'حذف', true)) { save(''); redraw(); } }})
+        ]));
+        var view = el('div'); view.innerHTML = C.blockHtml(cur.code, cur.lang); wrap.appendChild(view);
+        return wrap;
+      }
+      wrap.appendChild(el('p', {class: 'st-hint', text: q.codeLang
+        ? ('پاسخ را در محیط کدنویسی ' + C.lang(q.codeLang).name + ' بنویسید و ذخیره کنید.')
+        : 'روی دکمهٔ زیر بزنید، زبان را انتخاب کنید و کد خود را بنویسید.'}));
+      if (q.codeStarter) wrap.appendChild(el('p', {class: 'muted', style: 'font-size:12px', text: 'استاد کد آغازین گذاشته است؛ هنگام باز شدن ویرایشگر نمایش داده می‌شود.'}));
+      wrap.appendChild(el('button', {class: 'btn', text: '</> نوشتن کد', onclick: function () {
+        if (q.codeLang) return openEditor(q.codeLang, q.codeStarter || '');
+        C.pickLanguage(function (id) { openEditor(id, q.codeStarter || ''); }, {title: 'زبان پاسخ خود را انتخاب کنید'});
+      }}));
+      return wrap;
+    }
     function answerArea(q) {
       var box = el('div', {class: 'st-answer'});
       var a = run.answers[q.id];
@@ -1160,6 +1207,9 @@
       } else if (ex.primary && q.type === 'essay' && q.mode === 'voice') {
         /* V309 — پاسخ صوتی: ضبط با سقف مدت معلم */
         box.appendChild(voiceAnswerBlock(q, box));
+      } else if (q.type === 'essay' && q.mode === 'code') {
+        /* V348 — پاسخ کدنویسی: کادر متنی نیست */
+        box.appendChild(codeAnswerBlock(q, a, set, function () { box.replaceWith(answerArea(q)); }));
       } else if (q.type === 'essay' && (q.mode === 'draw' || q.mode === 'construct')) {
         /* V306 — ابتدایی: پاسخ با تخته؛ کادر متنی نیست */
         box.appendChild(el('p', {class: 'st-hint', text: 'پاسخ را روی تخته بکشید و ذخیره کنید؛ با دکمهٔ تخته زیر باز کنید.'}));

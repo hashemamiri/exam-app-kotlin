@@ -26,6 +26,7 @@
       img: '<path fill="currentColor" d="M20 5h-3.17L15 3H9L7.17 5H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 14H4V7h4.05l1.83-2h4.24l1.83 2H20v12zM12 8c-2.76 0-5 2.24-5 5s2.24 5 5 5 5-2.24 5-5-2.24-5-5-5zm0 8c-1.65 0-3-1.35-3-3s1.35-3 3-3 3 1.35 3 3-1.35 3-3 3z"/>',
       mic: '<path fill="currentColor" d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm-1-9c0-.55.45-1 1-1s1 .45 1 1v6c0 .55-.45 1-1 1s-1-.45-1-1V5zm6 6c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/>',
       board: '<path fill="currentColor" d="M18.85 10.39l1.06-1.06c.78-.78.78-2.05 0-2.83L18.5 5.09c-.78-.78-2.05-.78-2.83 0l-1.06 1.06 4.24 4.24zm-4.24 1.42L7.41 19H6v-1.41l7.19-7.19 1.42 1.41zm-1.42-4.25L4 16.76V21h4.24l9.19-9.19-4.24-4.25zM19 17.5c0 2.19-2.54 3.5-5 3.5-.55 0-1-.45-1-1s.45-1 1-1c1.54 0 3-.73 3-1.5 0-.47-.48-.87-1.23-1.2l1.48-1.48c1.07.63 1.75 1.47 1.75 2.68zM4.58 13.35C3.61 12.79 3 12.06 3 11c0-1.8 1.89-2.63 3.56-3.36C7.59 7.18 9 6.56 9 6c0-.41-.78-1-2-1-1.26 0-1.8.61-1.83.64-.35.41-.98.46-1.4.12-.41-.34-.49-.95-.15-1.38C3.73 4.24 4.76 3 7 3c2.24 0 4 1.32 4 3 0 1.87-1.93 2.72-3.64 3.47C6.42 9.88 5 10.5 5 11c0 .31.43.6 1.07.86l-1.49 1.49z"/>',
+      code: '<path ' + S_ + ' d="M8.6 8.2 4.4 12l4.2 3.8M15.4 8.2 19.6 12l-4.2 3.8M13.4 5.6l-2.8 12.8"/>',
       audio: '<path fill="currentColor" d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6zm-2 16c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2z"/>'
     }[kind] || '';
     return '<svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">' + body + '</svg>';
@@ -169,7 +170,10 @@
     q.optionStyles = obj.optionStyles || null; q.leftStyles = obj.leftStyles || null; q.rightStyles = obj.rightStyles || null;
     q.spans = obj.spans || []; q.alignSpans = obj.alignSpans || [];
     /* V305 / V314.0 — حالت ابتدایی سؤال: ترتیب درست فقط در کلید (accept[0]) است */
-    q.mode = (obj.mode === 'order' && type === 'fill') || (obj.mode === 'syllable' && type === 'fill') || (obj.mode === 'bucket' && type === 'fill') || (obj.mode === 'hotspot' && type === 'multiple') || (obj.mode === 'draw' && type === 'essay') || (obj.mode === 'voice' && type === 'essay') || (['steps','proof','construct'].indexOf(obj.mode) >= 0 && type === 'essay') || (obj.mode === 'dictation' && type === 'fill') ? obj.mode : '';
+    q.mode = (obj.mode === 'order' && type === 'fill') || (obj.mode === 'syllable' && type === 'fill') || (obj.mode === 'bucket' && type === 'fill') || (obj.mode === 'hotspot' && type === 'multiple') || (obj.mode === 'draw' && type === 'essay') || (obj.mode === 'voice' && type === 'essay') || (obj.mode === 'code' && type === 'essay') || (['steps','proof','construct'].indexOf(obj.mode) >= 0 && type === 'essay') || (obj.mode === 'dictation' && type === 'fill') ? obj.mode : '';
+    /* V348 — پاسخ کدنویسی: زبان و کد آغازین */
+    q.codeLang = obj.code_lang ? String(obj.code_lang) : '';
+    q.codeStarter = obj.code_starter ? String(obj.code_starter) : '';
     q.orderItems = q.mode === 'order' ? ((key.accept && key.accept[0]) ? String(key.accept[0]).split(',').map(function (x) { return x.trim(); }).filter(Boolean) : (obj.items || []).map(String)) : [];
     q.hotspots = q.mode === 'hotspot' ? (Array.isArray(obj.hotspots) ? obj.hotspots.map(function (h) { return {x: Number(h.x) || 0, y: Number(h.y) || 0, w: Number(h.w) || 0, h: Number(h.h) || 0}; }) : []) : [];
     q.correctIndex = key.correctOption != null ? Number(key.correctOption) : (obj.correctIndex != null ? Number(obj.correctIndex) : null);
@@ -232,6 +236,12 @@
       if (isDraw) v.mode = 'draw';
       /* V309 — پاسخ صوتی: حالت و سقف ضبط */
       if (q.type === 'essay' && q.mode === 'voice') { v.mode = 'voice'; v.voice_max_seconds = Math.max(10, Math.min(300, Number(q.voiceMaxSeconds) || 60)); } else delete v.voice_max_seconds;
+      /* V348 — پاسخ کدنویسی: حالت، زبان و کد آغازین (اختیاری) */
+      if (q.type === 'essay' && q.mode === 'code') {
+        v.mode = 'code';
+        if (q.codeLang) v.code_lang = String(q.codeLang); else delete v.code_lang;
+        if (q.codeStarter) v.code_starter = String(q.codeStarter); else delete v.code_starter;
+      } else { delete v.code_lang; delete v.code_starter; }
       if (isDict) { v.mode = 'dictation'; if (!q.audio) v.speak = String(q.expectedText || '').split('|')[0].trim(); else delete v.speak; } else delete v.speak;
       if (isSyl) {
         v.mode = 'syllable';
@@ -250,7 +260,7 @@
           v.items = shuffledPublicOrder(allBi);
         }
       } else delete v.buckets;
-      if (!isOrd && !isHot && !isDraw && !isDict && !isSyl && !isBkt && !(q.type === 'essay' && ['voice','steps','proof','construct'].indexOf(q.mode) >= 0)) delete v.mode;
+      if (!isOrd && !isHot && !isDraw && !isDict && !isSyl && !isBkt && !(q.type === 'essay' && ['voice','steps','proof','construct','code'].indexOf(q.mode) >= 0)) delete v.mode; /* V348 — code */
       if (q.type === 'multiple') { v.options = q.options.slice(); v.optionImages = q.options.map(function (_, i) { return q.optionImages[i] || ''; }); if (q.optionStyles) v.optionStyles = q.optionStyles; }
       if (q.type === 'matching') {
         v.leftItems = q.matchingLeft.slice(); v.rightItems = q.matchingRight.slice();
@@ -599,9 +609,16 @@
   var previewTimer = null;
   function livePreview(box, text) {
     clearTimeout(previewTimer);
-    if (!/\$[^$]+\$|%%FIG:/.test(text)) { box.style.display = 'none'; box.innerHTML = ''; return; }
+    var C = window.SiteCode;
+    var hasCode = !!(C && C.hasFence(text));
+    /* V348 — بلوک کد هم مثل فرمول/شکل باعث نمایش پیش‌نمایش می‌شود */
+    box.classList.toggle('cx-has-code', hasCode);
+    if (!hasCode && !/\$[^$]+\$|%%FIG:/.test(text)) { box.style.display = 'none'; box.innerHTML = ''; return; }
     box.style.display = '';
     previewTimer = setTimeout(async function () {
+      if (hasCode && window.SiteStudent && window.SiteStudent.richHtml) {
+        try { box.innerHTML = await window.SiteStudent.richHtml(String(text)); simplifyFigs(box); return; } catch (e) {}
+      }
       var w = await ensurePreviewFrame(); if (!w) { box.style.display = 'none'; return; }
       try { box.innerHTML = w.renderRichText(String(text), null); simplifyFigs(box); fitMath(w, box); } catch (e) { box.style.display = 'none'; }
     }, 200);
@@ -1020,6 +1037,21 @@
             toast(fa(pages.length) + ' تصویر تخته' + (extra.length ? ' و ' + fa(extra.length) + ' عکس گالری' : '') + ' به سؤال افزوده شد.', 'ok');
           }, {title: 'تختهٔ سفید — سؤال ' + fa(i + 1), doneLabel: 'افزودن تصویر تخته به سؤال', prev: [], billSources: true});
         }}),
+        /* V348 — ابزار کدنویسی: انتخاب زبان، سپس محیط نوشتن کد؛ بلوک کد در متن سؤال درج می‌شود */
+        el('button', {class: 'tool-btn is-code', title: 'کد برنامه‌نویسی (انتخاب زبان)', 'aria-label': 'کد برنامه‌نویسی', html: toolSvg('code'), onclick: function () {
+          if (!window.SiteCode) return toast('ابزار کد در دسترس نیست.', 'err');
+          var at = ta.selectionStart == null ? ta.value.length : ta.selectionStart;
+          window.SiteCode.openWithPicker({title: 'کد در متن سؤال', doneLabel: 'افزودن کد به سؤال', onDone: function (r) {
+            var block = window.SiteCode.fence(r.code, r.lang);
+            var v = ta.value;
+            var pre = v.slice(0, at), post = v.slice(at);
+            var lead = pre && !/\n\n$/.test(pre) ? (/\n$/.test(pre) ? '\n' : '\n\n') : '';
+            var tail = post && !/^\n/.test(post) ? '\n' : '';
+            ta.value = pre + lead + block + tail + post;
+            ta.dispatchEvent(new Event('input'));
+            toast('بلوک کد به سؤال افزوده شد.', 'ok');
+          }});
+        }}),
         el('button', {class: 'tool-btn is-mic', title: 'گفتار به متن', 'aria-label': 'گفتار به متن', html: toolSvg('mic'), onclick: function () { dictate(ta, q); }}),
         /* V334.3 — مثل اپ اندروید (V135): صوت سؤال فقط در آزمون آنلاین نمایش داده می‌شود (کاغذ صدا ندارد) */
         state.mode !== 'print' && window.SiteExtras ? el('button', {class: 'tool-btn' + (q.audio ? ' on' : ''), title: q.audio ? 'صوت سؤال (دارد)' : 'صوت سؤال', 'aria-label': 'صوت سؤال', html: toolSvg('audio'), onclick: function () { window.SiteExtras.audioDlg(q, state.examId || (state.examId = uuid()), false, function () { mark(); drawEditor(); }); }}) : null
@@ -1258,11 +1290,43 @@
       return box;
     }
 
+    /* V348 — پاسخ کدنویسی: در هر آزمونی در دسترس است (نه فقط حالت ابتدایی) */
+    function codeModeSection(q, redraw) {
+      var on = q.mode === 'code';
+      var C = window.SiteCode;
+      var row = el('div', {class: 'row', style: 'gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px'}, [
+        el('b', {text: 'شکل پاسخ:'}),
+        el('button', {type: 'button', class: 'btn sm ' + (on ? 'light' : ''), text: 'متنی', onclick: function () { if (q.mode === 'code') { q.mode = ''; mark(); redraw(); } }}),
+        el('button', {type: 'button', class: 'btn sm ' + (on ? '' : 'light'), text: '</> کدنویسی', onclick: function () { q.mode = 'code'; mark(); redraw(); }})
+      ]);
+      if (!on) return row;
+      var wrap = el('div', {class: 'card', style: 'padding:10px;margin-bottom:8px;background:var(--soft)'});
+      wrap.appendChild(row);
+      if (!C) { wrap.appendChild(el('p', {class: 'muted', text: 'ابزار کد در دسترس نیست.'})); return wrap; }
+      var L = q.codeLang ? C.lang(q.codeLang) : null;
+      wrap.appendChild(el('div', {class: 'row', style: 'gap:8px;align-items:center;flex-wrap:wrap'}, [
+        el('span', {class: 'muted', style: 'font-size:13px', text: 'زبان دانش‌آموز:'}),
+        el('button', {type: 'button', class: 'btn light sm', text: L ? (L.name + ' (ثابت)') : 'آزاد — دانش‌آموز خودش انتخاب می‌کند', onclick: function () {
+          C.pickLanguage(function (id) { q.codeLang = id; mark(); redraw(); }, {title: 'زبان پاسخ را تعیین کنید'});
+        }}),
+        L ? el('button', {type: 'button', class: 'btn light sm', text: 'برداشتن تعیین زبان', onclick: function () { q.codeLang = ''; mark(); redraw(); }}) : null,
+        el('span', {class: 'grow'}),
+        el('button', {type: 'button', class: 'btn soft sm', text: q.codeStarter ? 'ویرایش کد آغازین' : 'کد آغازین (اختیاری)', onclick: function () {
+          C.open({lang: q.codeLang || 'python', code: q.codeStarter || '', blank: !q.codeStarter, title: 'کد آغازین برای دانش‌آموز',
+            doneLabel: 'ذخیرهٔ کد آغازین', onDone: function (r) { q.codeStarter = r.code; if (!q.codeLang) q.codeLang = r.lang; mark(); redraw(); }});
+        }}),
+        q.codeStarter ? el('button', {type: 'button', class: 'btn light sm', text: 'حذف کد آغازین', onclick: function () { q.codeStarter = ''; mark(); redraw(); }}) : null
+      ]));
+      wrap.appendChild(el('p', {class: 'muted', style: 'font-size:12px;margin-top:6px', text: 'دانش‌آموز در محیط کدنویسی پاسخ می‌نویسد و کد در پاسخ او ذخیره می‌شود. کد اجرا نمی‌شود؛ تصحیح مثل سؤال تشریحی دستی است.'}));
+      return wrap;
+    }
+
     function typeSection(q) {      var box = el('div', {class: 'b-type'});
       function redraw() { var n = typeSection(q); box.replaceWith(n); return n; }
       /* V305 — ابتدایی: نوع ویژهٔ سؤال (فقط وقتی حالت ابتدایی آزمون روشن است) */
       if (state.primaryMode && (q.type === 'essay' || q.type === 'fill' || q.type === 'multiple')) box.appendChild(primaryModeChooser(q, redraw));
       if (state.primaryMode && q.type === 'essay' && q.mode === 'voice') box.appendChild(voiceSecondsEditor(q, redraw)); /* V309 */
+      if (q.type === 'essay') box.appendChild(codeModeSection(q, redraw)); /* V348 */
       if (state.primaryMode) box.appendChild(primaryTagEditor(q, redraw)); /* V308 / ۱۴ */
       if (state.primaryMode && q.type === 'fill' && q.mode === 'dictation') box.appendChild(el('p', {class: 'muted', style: 'font-size:13px', text: 'متن املا همان «پاسخ درست» است. اگر صدای معلم نباشد، دستگاه همین متن را می‌خواند و متن در داده‌های عمومی سؤال قرار می‌گیرد.'}));
       if (state.primaryMode && q.type === 'fill' && q.mode === 'syllable') box.appendChild(el('p', {class: 'muted', style: 'font-size:13px', text: 'بخش‌ها یا صداهای کلمه را در «پاسخ‌های قابل‌قبول» با خط تیره (-) جدا کنید؛ مثلاً: ما-در یا د-ر-خ-ت. به تعداد بخش‌ها کادر رنگی به دانش‌آموز نمایش داده می‌شود.'}));

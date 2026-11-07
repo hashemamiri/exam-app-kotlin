@@ -1289,6 +1289,8 @@ button.stat:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
 .b-chip.live .mathx,.b-chip.live .math-inline{display:inline-block;vertical-align:middle}
 .b-chip.live .qmf-fig,.b-chip.live .interactive-figure{display:inline-block;margin:4px 0}
 .dk .b-editor .b-live{display:none!important}
+/* V348 — استثنا: بلوک کد باید در پیش‌نمایش زنده دیده شود */
+.dk .b-editor .b-live.cx-has-code{display:block!important}
 
 /* ===== V190 — دسکتاپ: دکمه‌های کارت آزمون داخل کارت (تقسیم عرض، پیچش در صورت کمبود جا) ===== */
 .dk .exam{overflow:hidden}
@@ -2503,3 +2505,76 @@ body.st-in-exam-mode .nc-bell{display:none!important}
 .social-link{flex:0 0 64px;width:64px;height:64px;display:flex;align-items:center;justify-content:center;border-radius:16px;background:var(--card,#fff);border:1px solid var(--line,#e3e7ef);box-shadow:0 2px 8px rgba(15,20,40,.06);transition:transform .15s,box-shadow .15s,border-color .15s}
 .social-link:hover,.social-link:focus-visible{transform:translateY(-2px);box-shadow:0 6px 16px rgba(15,20,40,.14);border-color:rgba(43,143,214,.45);outline:none}
 .social-link img{width:40px;height:40px;object-fit:contain;display:block;pointer-events:none}
+
+/* ===================================================================
+   V348 — ابزار کدنویسی: بلوک نمایش، انتخاب زبان و ویرایشگر
+   =================================================================== */
+.cx-block{border:1px solid #2b3350;border-radius:12px;overflow:hidden;margin:8px 0;background:#1b2035;direction:ltr;text-align:left;box-shadow:0 2px 10px rgba(20,25,50,.12)}
+.cx-bar{display:flex;align-items:center;gap:8px;padding:7px 10px;background:#232941;border-bottom:1px solid #2f3757;direction:rtl}
+.cx-badge{display:inline-flex;align-items:center;justify-content:center;min-width:30px;height:22px;padding:0 6px;border-radius:6px;font:700 11px/1 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;color:#fff;background:var(--cx,#3776AB);letter-spacing:.3px}
+.cx-name{font-size:12px;font-weight:700;color:#dfe4f5}
+.cx-grow{flex:1}
+.cx-meta{font:11px/1 ui-monospace,Menlo,Consolas,monospace;color:#8b95bd;direction:ltr}
+.cx-copy{border:1px solid #3a4368;background:#2b3350;color:#cfd6ef;border-radius:7px;padding:3px 9px;font-size:11px;cursor:pointer}
+.cx-copy:hover{background:#354066}
+.cx-body{display:flex;align-items:stretch;max-height:460px;overflow:auto}
+.cx-num{margin:0;padding:10px 8px 10px 10px;background:#171c2e;color:#5b668f;font:12px/1.65 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;text-align:right;user-select:none;white-space:pre;border-right:1px solid #262d47;overflow:hidden;flex:0 0 auto}
+.cx-code{margin:0;padding:10px 12px;font:12px/1.65 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;color:#e6e9f5;white-space:pre;overflow:auto;flex:1 1 auto;tab-size:4}
+.cx-code code{font:inherit;color:inherit;background:none;padding:0}
+.cx-kw{color:#c792ea;font-weight:600}
+.cx-st{color:#c3e88d}
+.cx-cm{color:#6b7799;font-style:italic}
+.cx-nu{color:#f78c6c}
+.cx-fn{color:#82aaff}
+.cx-ty{color:#ffcb6b}
+.cx-pn{color:#89ddff}
+.cx-op{color:#89ddff}
+.cx-pp{color:#ff9cac}
+.cx-text{white-space:normal}
+/* انتخاب زبان */
+.cx-modal{max-width:720px}
+.cx-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;margin-top:6px}
+.cx-tile{display:flex;flex-direction:column;align-items:flex-start;gap:5px;padding:12px;border:1px solid var(--line);border-radius:12px;background:var(--card);cursor:pointer;text-align:right;transition:transform .12s,border-color .12s,box-shadow .12s}
+.cx-tile:hover{transform:translateY(-2px);border-color:var(--cx,var(--brand));box-shadow:0 6px 18px rgba(30,50,110,.12)}
+.cx-tile-badge{display:inline-flex;align-items:center;justify-content:center;min-width:34px;height:26px;padding:0 7px;border-radius:7px;font:700 12px/1 ui-monospace,Menlo,Consolas,monospace;color:#fff;background:var(--cx,#3776AB)}
+.cx-tile-name{font-size:13px;font-weight:700;color:var(--ink,#1d2440)}
+.cx-tile-ext{font:11px/1 ui-monospace,Menlo,Consolas,monospace;color:var(--muted);direction:ltr}
+/* ویرایشگر */
+.cx-editor-bg{padding:12px}
+.cx-editor{max-width:960px;width:100%;display:flex;flex-direction:column;padding:20px}
+.cx-editor .cx-bar{border-radius:10px 10px 0 0;border:1px solid #2f3757;border-bottom:0}
+.cx-pane{position:relative;height:min(56vh,460px);background:#1b2035;border:1px solid #2b3350;border-radius:0 0 10px 10px;overflow:hidden;display:flex;direction:ltr;text-align:left}
+.cx-pane .cx-num{position:relative;z-index:2;min-width:44px;overflow:hidden}
+.cx-pane .cx-hl{position:absolute;inset:0;margin:0;padding:10px 12px 10px 56px;overflow:hidden;pointer-events:none;z-index:1;direction:ltr;text-align:left}
+.cx-ta{position:absolute;inset:0;z-index:3;margin:0;padding:10px 12px 10px 56px;border:0;outline:0;resize:none;background:transparent;color:transparent;caret-color:#7ee787;font:12px/1.65 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;white-space:pre;overflow:auto;tab-size:4;direction:ltr;text-align:left}
+.cx-ta::selection{background:rgba(130,170,255,.32)}
+.cx-ta[readonly]{caret-color:transparent}
+.cx-foot{margin-top:12px;gap:8px;align-items:center;flex-wrap:wrap}
+.cx-note{font-size:11px}
+.cx-answer{border:1px solid var(--line);border-radius:12px;padding:10px;background:var(--soft,#f7f9fd);margin-top:6px}
+.cx-answer .row{gap:8px;align-items:center;flex-wrap:wrap}
+@media (max-width:640px){
+  .cx-editor{padding:14px}
+  .cx-pane{height:min(52vh,380px)}
+  .cx-grid{grid-template-columns:repeat(auto-fill,minmax(130px,1fr))}
+  .cx-code,.cx-ta,.cx-pane .cx-hl,.cx-num{font-size:11px}
+  /* V348 — نوار ابزار کد در گوشی نباید دو خطی شود */
+  .cx-bar{gap:6px;flex-wrap:nowrap}
+  .cx-meta{font-size:10px;white-space:nowrap}
+  .cx-name{font-size:11px}
+}
+@media (max-width:400px){
+  .cx-editor .cx-name{display:none}
+}
+/* چاپ: کد باید روی کاغذ خوانا باشد (زمینهٔ روشن، متن تیره) */
+@media print{
+  .cx-block{background:#fff;border:1px solid #999;box-shadow:none;break-inside:avoid}
+  .cx-bar{background:#f0f2f7;border-bottom:1px solid #bbb}
+  .cx-name,.cx-meta{color:#333}
+  .cx-copy{display:none}
+  .cx-num{background:#f7f8fb;color:#888;border-right:1px solid #ccc}
+  .cx-code{color:#111}
+  .cx-kw{color:#6a1b9a}.cx-st{color:#1b5e20}.cx-cm{color:#777}.cx-nu{color:#b71c1c}
+  .cx-fn{color:#0d47a1}.cx-ty{color:#795548}.cx-pn,.cx-op{color:#333}.cx-pp{color:#ad1457}
+  .cx-body{max-height:none;overflow:visible}
+}

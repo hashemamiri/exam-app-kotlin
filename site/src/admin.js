@@ -73,7 +73,7 @@
     var raw = String(text || '');
     var node = el(tag, {class: (cls ? cls + ' ' : '') + 'math-rich', style: style || null, text: raw.replace(/%%FIG:[\s\S]*?%%/g, '[شکل]')});
     var ST = window.SiteStudent;
-    if (ST && ST.richHtml && /[$%]|\\/.test(raw)) { if (ST.mathCss) ST.mathCss(); ST.richHtml(raw).then(function (h) { node.innerHTML = h; node.classList.add('rendered'); if (ST.fitMath) ST.fitMath(node); }).catch(function () {}); }
+    if (ST && ST.richHtml && (/[$%]|\\/.test(raw) || (window.SiteCode && window.SiteCode.hasFence(raw)))) { /* V348 — بلوک کد */ if (ST.mathCss) ST.mathCss(); ST.richHtml(raw).then(function (h) { node.innerHTML = h; node.classList.add('rendered'); if (ST.fitMath) ST.fitMath(node); }).catch(function () {}); }
     return node;
   }
   function correctText(q) {
