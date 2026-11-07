@@ -47,6 +47,7 @@ import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextRange
+import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextAlign
@@ -63,6 +64,8 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.window.DialogWindowProvider
 import androidx.core.view.WindowCompat
+import kotlin.math.ceil
+import kotlin.math.floor
 
 /**
  * V349 — محیط کدنویسی اپ: ۳۲ زبان، رنگی‌شدن دستورها، شمارهٔ خط،
@@ -214,19 +217,36 @@ fun CodeEditorDialog(
                 val visibleLines = CodeText.editorVisibleLines(field.text)
                 val editorHeight = lineHeightDp * visibleLines + 16.dp
                 var viewport by remember { mutableStateOf(IntSize.Zero) }
+                var textLayout by remember { mutableStateOf<TextLayoutResult?>(null) }
 
-                // اسکرول خودکار: سطرِ نشانگر همیشه در دید بماند.
-                LaunchedEffect(caret, lineCount, viewport, editorHeight) {
+                /* V351.2 — اشکال «خط بعدی نصفه دیده می‌شود» دو علت داشت:
+                   ۱) حاشیهٔ ۸dp داخل ناحیهٔ اسکرول بود، پس مبدأ واقعی متن
+                      ۸dp پایین‌تر از محاسبه بود و کم اسکرول می‌شد؛
+                   ۲) ارتفاع سطر از عدد اسمی ۲۰sp گرفته می‌شد، نه از اندازهٔ
+                      واقعیِ چیده‌شده (باد فونت آن را کمی بیشتر می‌کند).
+                   حالا حاشیه بیرونِ اسکرول است و جای نشانگر از خودِ
+                   TextLayoutResult گرفته می‌شود؛ گردش هم به بالا گرد می‌شود
+                   تا هرگز کم اسکرول نشود. */
+                LaunchedEffect(caret, lineCount, viewport, editorHeight, textLayout) {
                     if (viewport == IntSize.Zero) return@LaunchedEffect
                     if (lineCount <= CodeText.EDITOR_MAX_LINES) return@LaunchedEffect
-                    val caretLine = CodeText.editorCaretLine(field.text, caret)
-                    val linePx = with(density) { EditorLineHeight.toPx() }
-                    val top = caretLine * linePx
-                    val bottom = top + linePx
+                    val layout = textLayout
+                    val top: Float
+                    val bottom: Float
+                    if (layout != null && caret <= layout.layoutInput.text.length) {
+                        val box = layout.getCursorRect(caret)
+                        top = box.top
+                        bottom = box.bottom
+                    } else {
+                        val caretLine = CodeText.editorCaretLine(field.text, caret)
+                        val linePx = with(density) { EditorLineHeight.toPx() }
+                        top = caretLine * linePx
+                        bottom = (caretLine + 1) * linePx
+                    }
                     val current = vScroll.value.toFloat()
                     val target = when {
-                        top < current -> top
-                        bottom > current + viewport.height -> bottom - viewport.height
+                        top < current -> floor(top)
+                        bottom > current + viewport.height -> ceil(bottom - viewport.height)
                         else -> current
                     }.coerceIn(0f, vScroll.maxValue.toFloat())
                     if (target.toInt() != vScroll.value) vScroll.animateScrollTo(target.toInt())
@@ -237,9 +257,10 @@ fun CodeEditorDialog(
                     Modifier.fillMaxWidth().height(editorHeight)
                         .background(EditorBg, RoundedCornerShape(10.dp))
                         .border(1.dp, EditorLine, RoundedCornerShape(10.dp))
+                        // حاشیه بیرونِ ناحیهٔ اسکرول تا مبدأ متن جابه‌جا نشود
+                        .padding(vertical = 8.dp)
                         .onSizeChanged { viewport = it }
                         .verticalScroll(vScroll)
-                        .padding(vertical = 8.dp)
                 ) {
                     Text(
                         CodeTokens.lineNumbers(field.text),
@@ -258,6 +279,7 @@ fun CodeEditorDialog(
                             textStyle = mono,
                             cursorBrush = SolidColor(Color(0xFF7EE787)),
                             visualTransformation = CodeVisualTransformation(lang),
+                            onTextLayout = { textLayout = it },
                             modifier = Modifier.widthIn(min = 520.dp).padding(end = 10.dp)
                         )
                     }

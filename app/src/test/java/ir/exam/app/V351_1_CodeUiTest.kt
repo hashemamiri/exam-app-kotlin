@@ -52,22 +52,28 @@ class V351_1_CodeUiTest {
         return total
     }
 
-    /** پهنای نشان زبان: متن ۱۰sp با ۵dp حاشیه در هر طرف. */
+    /** پهنای نشان زبان: متن ۱۰sp با ۵dp حاشیه در هر طرف (طرح V351.1). */
     private fun badgeWidth(lang: CodeLanguage): Double = textWidth(lang.short, 10.0) + 10.0
 
     /** فضای درون دکمه پس از حاشیه و کادر. */
     private fun innerWidth(cellDp: Double, paddingDp: Double): Double = cellDp - 2 * paddingDp - 2.0
 
+    /**
+     * V351.2 — در طرح تازه کاشی بالای متن است، پس تمام عرض دکمه به
+     * نام می‌رسد: «فارسی (English)» با ۱۱sp و وسط‌چین.
+     */
+    private fun labelWidth(lang: CodeLanguage): Double =
+        textWidth(lang.name + " (" + lang.english + ")", 11.0)
+
     @Test
-    fun everyLanguageNameFitsTheNewCell() {
-        // دو ستون روی گوشی ۳۹۰dp ⇒ سلول ۱۵۰dp؛ حاشیهٔ تازه ۱۰dp
-        val cell = 150.0
-        val inner = innerWidth(cell, 10.0)
+    fun everyLanguageLabelFitsTheNewCell() {
+        // گوشی ۳۹۰dp ⇒ پنجره ۳۶۲dp، محتوای ۳۳۴dp، دو ستون ۱۶۳dp، حاشیه ۸dp
+        val inner = innerWidth(163.0, 8.0)
         CodeLanguages.all.forEach { lang ->
-            val need = textWidth(lang.name, 12.0) + badgeWidth(lang) + 6.0
+            val need = labelWidth(lang)
             assertTrue(
-                "نام «${lang.name}» جا نمی‌شود: نیاز ${need} در برابر فضا $inner",
-                need <= inner
+                "برچسب «${lang.name}» در دو سطر جا نشد: نیاز $need در برابر ۲×$inner",
+                need <= inner * 2
             )
         }
     }
@@ -89,27 +95,24 @@ class V351_1_CodeUiTest {
     fun namesCanWrapToTwoLinesInsteadOfBeingCut() {
         val s = src("app/src/main/java/ir/exam/app/ui/code/CodeLanguagePickerDialog.kt")
         // علت اصلی: Text در Row بدون weight پهنای نامحدود می‌گیرد و سرریز می‌کند
-        assertTrue("نام وزن گرفته", s.contains("modifier = Modifier.weight(1f)"))
+        // V351.2 — نام تمام عرض دکمه را می‌گیرد و وسط‌چین است
+        assertTrue("نام تمام عرض را می‌گیرد", s.contains("modifier = Modifier.fillMaxWidth()"))
         assertTrue("تا دو سطر می‌شکند", s.contains("maxLines = 2"))
         assertTrue("در بدترین حالت سه‌نقطه", s.contains("overflow = TextOverflow.Ellipsis"))
         assertTrue("ارتفاع سطر تنگ‌تر", s.contains("lineHeight = 15.sp"))
-        assertTrue("حاشیهٔ دکمه کم شد", s.contains("contentPadding = PaddingValues(horizontal = 10.dp, vertical = 8.dp)"))
+        assertTrue("حاشیهٔ دکمه کم است", s.contains("contentPadding = PaddingValues(horizontal = 8.dp, vertical = 8.dp)"))
         assertTrue("سلول پهن‌تر شد", s.contains("GridCells.Adaptive(minSize = 148.dp)"))
-        assertTrue("پسوند هم سرریز نمی‌کند", s.contains("maxLines = 1"))
+        assertTrue("وسط‌چین", s.contains("textAlign = TextAlign.Center"))
     }
 
     @Test
-    fun evenAtLargeFontScaleNamesWrapRatherThanClip() {
-        // با بزرگ‌نمایی ۱٫۳ فونت، نام‌ها به سطر دوم می‌روند؛ چون weight دارند
-        // عرض از سلول بیرون نمی‌زند. دو سطر جا می‌شود.
-        val inner = innerWidth(150.0, 10.0)
+    fun evenAtLargeFontScaleLabelsWrapRatherThanClip() {
+        val inner = innerWidth(163.0, 8.0)
         val scale = 1.3
         CodeLanguages.all.forEach { lang ->
-            val nameBudget = inner - badgeWidth(lang) * scale - 6.0
-            val oneLine = textWidth(lang.name, 12.0) * scale
             assertTrue(
                 "«${lang.name}» در دو سطر هم جا نشد",
-                oneLine <= nameBudget * 2
+                labelWidth(lang) * scale <= inner * scale * 2
             )
         }
     }
@@ -167,8 +170,8 @@ class V351_1_CodeUiTest {
         assertTrue("اندازهٔ ناحیه دیده می‌شود", s.contains(".onSizeChanged { viewport = it }"))
         assertTrue("تا ۱۱ خط اسکرول لازم نیست", s.contains("if (lineCount <= CodeText.EDITOR_MAX_LINES) return@LaunchedEffect"))
         assertTrue("سطر نشانگر", s.contains("val caretLine = CodeText.editorCaretLine(field.text, caret)"))
-        assertTrue("اگر بالا رفته", s.contains("top < current -> top"))
-        assertTrue("اگر پایین رفته", s.contains("bottom > current + viewport.height -> bottom - viewport.height"))
+        assertTrue("اگر بالا رفته", s.contains("top < current -> floor(top)"))
+        assertTrue("اگر پایین رفته", s.contains("bottom > current + viewport.height -> ceil(bottom - viewport.height)"))
         assertTrue("اسکرول نرم", s.contains("vScroll.animateScrollTo(target.toInt())"))
         assertTrue("از محدوده بیرون نمی‌زند", s.contains("coerceIn(0f, vScroll.maxValue.toFloat())"))
     }

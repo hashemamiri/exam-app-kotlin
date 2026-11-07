@@ -26,7 +26,7 @@ global.navigator = {};
 require(process.argv[2]);
 var C = global.window.SiteCode;
 var out = C.LANGS.map(function (L) {
-  return {id: L.id, name: L.name, short: L.short, color: L.color, ext: L.ext, indent: L.indent,
+  return {id: L.id, name: L.name, en: L.en, short: L.short, color: L.color, ext: L.ext, indent: L.indent,
           line: L.line, block: L.block, kw: L.kw, sample: L.sample,
           symbols: C.symbolsFor(L.id), snippets: C.snippetsFor(L.id).map(function (s) { return [s.label, s.code]; })};
 });
@@ -67,6 +67,7 @@ def main() -> int:
         'data class CodeLanguage(',
         '    val id: String,',
         '    val name: String,',
+        '    val english: String,',
         '    val short: String,',
         '    val colorArgb: Long,',
         '    val ext: String,',
@@ -92,7 +93,7 @@ def main() -> int:
         snips = ', '.join('CodeSnippet(%s, %s)' % (kstr(a), kstr(b)) for a, b in L['snippets'])
         lines += [
             '        CodeLanguage(',
-            '            id = %s, name = %s, short = %s,' % (kstr(L['id']), kstr(L['name']), kstr(L['short'])),
+            '            id = %s, name = %s, english = %s, short = %s,' % (kstr(L['id']), kstr(L['name']), kstr(L['en']), kstr(L['short'])),
             '            colorArgb = %s, ext = %s, indent = %d,' % (color, kstr(L['ext']), L['indent']),
             '            lineComment = %s, blockOpen = %s, blockClose = %s,' % (
                 kstr(L['line'] or ''), kstr(block[0]), kstr(block[1])),
