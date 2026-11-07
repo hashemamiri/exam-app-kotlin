@@ -2568,7 +2568,8 @@ body.st-in-exam-mode .nc-bell{display:none!important}
 }
 /* چاپ: کد باید روی کاغذ خوانا باشد (زمینهٔ روشن، متن تیره) */
 @media print{
-  .cx-block{background:#fff;border:1px solid #999;box-shadow:none;break-inside:avoid}
+  /* V349.2 — کاغذ چاپ سفید است؛ مثل قاب شکل، سفیدِ ثابت به شکل #FFFFFF نوشته می‌شود */
+  .cx-block{background:#FFFFFF;border:1px solid #999;box-shadow:none;break-inside:avoid}
   .cx-bar{background:#f0f2f7;border-bottom:1px solid #bbb}
   .cx-name,.cx-meta{color:#333}
   .cx-copy{display:none}

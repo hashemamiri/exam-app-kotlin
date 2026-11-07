@@ -77,7 +77,9 @@ class V348_Site_CodeToolTest {
         val s = src("student.js")
         assertTrue("Loader must accept code mode", s.contains("obj.mode === 'code'"))
         assertTrue("Missing code answer block", s.contains("function codeAnswerBlock"))
-        assertTrue("Answer must be saved as a fenced block", s.contains("save(C.fence(r.code, r.lang))"))
+        // V349 — پاسخ با متن همراه ترکیب می‌شود، پس ذخیره از مسیر compose می‌گذرد
+        assertTrue("Answer must be saved as a fenced block", s.contains("C.fence(r.code, r.lang)"))
+        assertTrue("Answer must go through compose", s.contains("save(compose(textPart, C.fence(r.code, r.lang)))"))
         assertTrue("Starter code must reach the student editor", s.contains("starter: q.codeStarter"))
         assertTrue("Question renderer must be fence-aware", s.contains("function richHtmlPlain"))
     }
@@ -102,7 +104,8 @@ class V348_Site_CodeToolTest {
     @Test
     fun codePrintsOnWhiteAndFitsPhones() {
         val css = src("site.css")
-        assertTrue("Print must use a light background", css.contains(".cx-block{background:#fff"))
+        // V349.2 — سفید ثابتِ چاپ مثل قاب شکل به شکل #FFFFFF نوشته می‌شود (قاعدهٔ V218)
+        assertTrue("Print must use a light background", css.contains(".cx-block{background:#FFFFFF"))
         assertTrue("Desktop live preview must show code", css.contains(".b-live.cx-has-code"))
         assertTrue("Mobile toolbar must stay on one row", css.contains(".cx-bar{gap:6px;flex-wrap:nowrap}"))
     }

@@ -24,7 +24,7 @@ class V306_DrawDictationTest {
     @Test
     fun `payload codec reads draw and dictation modes from public json only`() {
         val payload = src("data/repository/StudentExamPayloadCodec.kt")
-        assertTrue(payload.contains("obj.text(\"mode\")?.takeIf { it in setOf(\"draw\", \"voice\", \"steps\", \"proof\", \"construct\") }"))
+        assertTrue(payload.contains("obj.text(\"mode\")?.takeIf { it in setOf(\"draw\", \"voice\", \"steps\", \"proof\", \"construct\", \"code\") }"))
         assertTrue(payload.contains("obj.text(\"mode\") == \"dictation\""))
         assertTrue(payload.contains("obj.text(\"speak\")"))
         // «speak» عمومی است؛ کلید پاسخ (accept) همچنان حذف می‌شود
