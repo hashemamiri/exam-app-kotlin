@@ -97,6 +97,13 @@ def main() -> int:
             last_false = head.rfind('assertFalse')
             if last_false > last_true:
                 continue
+            # V350.1 — شکل دوم پین منفی: assertTrue("پیام", !s.contains("…"))
+            # پیش از خودِ عبارت، یک «!» نشسته است؛ یعنی نبودنِ رشته خواسته شده.
+            before = text[max(0, pos - 80):pos]
+            if re.search(r'!\s*$' if recv is None else r'!\s*' + re.escape(recv) + r'\s*\.\s*contains\(\s*$', before):
+                continue
+            if re.search(r'!\s*$', before):
+                continue
             # الگوی «جمع‌کردن تخلف»: اگر رشته پیدا شود، فایل به فهرست بد افزوده می‌شود
             # و بعد فهرست باید خالی باشد ⇒ این هم پین منفی است.
             tail = text[pos:pos + 260]

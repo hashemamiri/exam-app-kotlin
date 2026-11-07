@@ -14,8 +14,19 @@ import org.junit.Test
  */
 class V350_CodeChipWiringTest {
 
+    /**
+     * V350.1 — دایرکتوری کاریِ تست واحد، ریشهٔ مخزن نیست (معمولاً پوشهٔ app است).
+     * مثل V348_Site_CodeToolTest بالا می‌رویم تا settings.gradle.kts پیدا شود؛
+     * مسیر نسبیِ تنها، فایل را پیدا نمی‌کرد و همهٔ این آزمون‌ها را می‌شکست.
+     */
+    private fun root(): File {
+        var d = File(System.getProperty("user.dir") ?: ".")
+        while (!File(d, "settings.gradle.kts").exists() && d.parentFile != null) d = d.parentFile!!
+        return d
+    }
+
     private fun src(path: String): String {
-        val f = File(path)
+        val f = File(root(), path)
         assertTrue("فایل پیدا نشد: $path", f.exists())
         return f.readText()
     }
@@ -174,8 +185,9 @@ class V350_CodeChipWiringTest {
 
     @Test
     fun newGuardsArePresent() {
-        assertTrue(File("scripts/check_missing_imports.py").exists())
-        assertTrue(File("scripts/check_sealed_when.py").exists())
-        assertTrue(File("scripts/check_code_chips.py").exists())
+        assertTrue(File(root(), "scripts/check_missing_imports.py").exists())
+        assertTrue(File(root(), "scripts/check_sealed_when.py").exists())
+        assertTrue(File(root(), "scripts/check_code_chips.py").exists())
+        assertTrue(File(root(), "scripts/check_test_paths.py").exists())
     }
 }

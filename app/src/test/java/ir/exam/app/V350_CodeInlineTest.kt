@@ -27,7 +27,8 @@ class V350_CodeInlineTest {
         assertEquals("python", occ[0].lang)
         assertEquals("print(1)", occ[0].code)
         assertEquals(src.indexOf("```"), occ[0].start)
-        assertEquals(src.indexOf("```", 4) + 3, occ[0].endExclusive)
+        // V350.1 — آخرین بک‌تیک، پایانِ بلوک است (indexOf از ۴ همان آغازین را می‌یافت)
+        assertEquals(src.lastIndexOf("```") + 3, occ[0].endExclusive)
         assertEquals("```python\nprint(1)\n```", src.substring(occ[0].start, occ[0].endExclusive))
     }
 
