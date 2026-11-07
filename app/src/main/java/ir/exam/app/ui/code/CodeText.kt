@@ -11,6 +11,22 @@ package ir.exam.app.ui.code
 object CodeText {
 
     const val MAX = 20000
+
+    /**
+     * V351.1 — کادر کد با تعداد خط‌ها بزرگ می‌شود تا ۱۱ خط؛ از آن پس
+     * ارتفاع ثابت می‌ماند و ناحیهٔ کد اسکرول می‌شود. این دو تابع تنها
+     * مرجع آن تصمیم‌اند تا در تست واحد سنجیده شوند.
+     */
+    const val EDITOR_MIN_LINES = 3
+    const val EDITOR_MAX_LINES = 11
+
+    /** چند سطر باید دیده شود (بین کمینه و ۱۱). */
+    fun editorVisibleLines(text: String): Int =
+        (text.count { it == '\n' } + 1).coerceIn(EDITOR_MIN_LINES, EDITOR_MAX_LINES)
+
+    /** شمارهٔ سطرِ نشانگر، از صفر. برای اسکرول خودکار. */
+    fun editorCaretLine(text: String, caret: Int): Int =
+        text.substring(0, caret.coerceIn(0, text.length)).count { it == '\n' }
     const val CARET = "\$0"
 
     /** سه بک‌تیک داخل کد با این نویسه جایگزین می‌شود تا بلوک نشکند. */

@@ -1,6 +1,7 @@
 package ir.exam.app.ui.code
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -18,14 +19,19 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 
 /**
  * V349 — انتخاب زبان محیط کدنویسی (۳۲ زبان).
- * V351 — کادر جست‌وجو حذف شد (درخواست کاربر): همهٔ زبان‌ها یک‌جا دیده
- * می‌شوند و با یک لمس انتخاب می‌شوند.
+ * V351 — کادر جست‌وجو حذف شد (درخواست کاربر).
+ * V351.1 — نام‌های بلند بریده می‌شدند. دو علت داشت:
+ *   ۱) حاشیهٔ پیش‌فرض دکمه ۲۴dp در هر طرف بود و پهنای سلول را می‌خورد؛
+ *   ۲) Text داخل Row بدون weight پهنای نامحدود می‌گیرد و به‌جای شکستن
+ *      سطر، از لبهٔ دکمه بیرون می‌زند و بریده می‌شود.
+ * حالا حاشیه کم شده، نام weight گرفته و تا دو سطر می‌شکند.
  */
 @Composable
 fun CodeLanguagePickerDialog(
@@ -44,13 +50,17 @@ fun CodeLanguagePickerDialog(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 LazyVerticalGrid(
-                    columns = GridCells.Adaptive(minSize = 132.dp),
+                    columns = GridCells.Adaptive(minSize = 148.dp),
                     modifier = Modifier.fillMaxWidth().heightIn(max = 380.dp),
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     items(shown) { lang ->
-                        OutlinedButton(onClick = { onPick(lang) }, modifier = Modifier.fillMaxWidth()) {
+                        OutlinedButton(
+                            onClick = { onPick(lang) },
+                            contentPadding = PaddingValues(horizontal = 10.dp, vertical = 8.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
                             Column(horizontalAlignment = Alignment.Start) {
                                 Row(
                                     verticalAlignment = Alignment.CenterVertically,
@@ -64,9 +74,22 @@ fun CodeLanguagePickerDialog(
                                             color = Color.White
                                         )
                                     }
-                                    Text(lang.name, fontSize = 12.sp)
+                                    Text(
+                                        lang.name,
+                                        fontSize = 12.sp,
+                                        lineHeight = 15.sp,
+                                        maxLines = 2,
+                                        overflow = TextOverflow.Ellipsis,
+                                        modifier = Modifier.weight(1f)
+                                    )
                                 }
-                                Text("." + lang.ext, fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Text(
+                                    "." + lang.ext,
+                                    fontSize = 10.sp,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
                             }
                         }
                     }

@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
@@ -30,6 +31,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -38,6 +40,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.AnnotatedString
@@ -51,6 +55,7 @@ import androidx.compose.ui.text.input.OffsetMapping
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.input.TransformedText
 import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -70,6 +75,14 @@ private val EditorBg = Color(0xFF1B2035)
 private val EditorLine = Color(0xFF2B3350)
 private val EditorInk = Color(0xFFE6E9F5)
 private val EditorGutter = Color(0xFF5B668F)
+
+/**
+ * V351.1 — تک‌مرجعِ اندازهٔ سطر و بازهٔ رشد کادر کد.
+ * کادر با تعداد خط‌ها بزرگ می‌شود تا ۱۱ خط؛ بعد از آن ارتفاع ثابت
+ * می‌ماند و ناحیهٔ کد خودش اسکرول می‌شود. internal است تا آزمون واحد
+ * همان عددها را بسنجد.
+ */
+internal val EditorLineHeight = 20.sp
 
 private fun tokenColor(kind: CodeTokens.Kind): Color = when (kind) {
     CodeTokens.Kind.KEYWORD -> Color(0xFFC792EA)
@@ -116,7 +129,7 @@ fun CodeEditorDialog(
 
     // V351 — کد باید چپ‌به‌راست نوشته شود؛ در اپ فارسی سبک پیش‌فرض راست‌به‌چپ بود.
     val mono = TextStyle(
-        fontFamily = FontFamily.Monospace, fontSize = 13.sp, lineHeight = 20.sp, color = EditorInk,
+        fontFamily = FontFamily.Monospace, fontSize = 13.sp, lineHeight = EditorLineHeight, color = EditorInk,
         textDirection = TextDirection.Ltr, textAlign = TextAlign.Left
     )
     val caret = field.selection.start.coerceIn(0, field.text.length)
@@ -190,12 +203,41 @@ fun CodeEditorDialog(
                     }
                 }
 
+                /* V351.1 — کادر با شمارهٔ خط‌ها بزرگ می‌شود تا ۱۱ خط؛ از آن
+                   پس ارتفاع ثابت می‌ماند و خودِ ناحیهٔ کد اسکرول می‌شود.
+                   ارتفاع از lineHeight واقعی ساخته می‌شود تا با بزرگ‌نمایی
+                   فونت گوشی هم درست بماند. */
                 val vScroll = rememberScrollState()
+                val density = LocalDensity.current
+                val lineHeightDp = with(density) { EditorLineHeight.toDp() }
+                val lineCount = field.text.count { it == '\n' } + 1
+                val visibleLines = CodeText.editorVisibleLines(field.text)
+                val editorHeight = lineHeightDp * visibleLines + 16.dp
+                var viewport by remember { mutableStateOf(IntSize.Zero) }
+
+                // اسکرول خودکار: سطرِ نشانگر همیشه در دید بماند.
+                LaunchedEffect(caret, lineCount, viewport, editorHeight) {
+                    if (viewport == IntSize.Zero) return@LaunchedEffect
+                    if (lineCount <= CodeText.EDITOR_MAX_LINES) return@LaunchedEffect
+                    val caretLine = CodeText.editorCaretLine(field.text, caret)
+                    val linePx = with(density) { EditorLineHeight.toPx() }
+                    val top = caretLine * linePx
+                    val bottom = top + linePx
+                    val current = vScroll.value.toFloat()
+                    val target = when {
+                        top < current -> top
+                        bottom > current + viewport.height -> bottom - viewport.height
+                        else -> current
+                    }.coerceIn(0f, vScroll.maxValue.toFloat())
+                    if (target.toInt() != vScroll.value) vScroll.animateScrollTo(target.toInt())
+                }
+
                 CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
                 Row(
-                    Modifier.fillMaxWidth().heightIn(min = 200.dp, max = 340.dp)
+                    Modifier.fillMaxWidth().height(editorHeight)
                         .background(EditorBg, RoundedCornerShape(10.dp))
                         .border(1.dp, EditorLine, RoundedCornerShape(10.dp))
+                        .onSizeChanged { viewport = it }
                         .verticalScroll(vScroll)
                         .padding(vertical = 8.dp)
                 ) {
