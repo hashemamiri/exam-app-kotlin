@@ -57,19 +57,173 @@
      sample: 'SELECT name, score\nFROM students\nWHERE score >= 10\nORDER BY score DESC;\n'},
     {id: 'r', name: 'آر', short: 'R', color: '#276DC3', ext: 'r', indent: 2, line: '#', block: null,
      kw: 'function return if else for while repeat break next in TRUE FALSE NULL NA Inf NaN library require source print c list data.frame matrix vector factor length nrow ncol names summary mean median sd',
-     sample: 'greet <- function(name) {\n  paste("سلام", name)\n}\n\nprint(greet("دنیا"))\n'}
+     sample: 'greet <- function(name) {\n  paste("سلام", name)\n}\n\nprint(greet("دنیا"))\n'},
+    {id: 'html', name: 'اچ‌تی‌ام‌ال', short: 'HTM', color: '#E34F26', ext: 'html', indent: 2, line: null, block: ['<!--', '-->'],
+     kw: 'html head body title meta link script style div span p a img ul ol li table thead tbody tr td th form input button label select option textarea h1 h2 h3 h4 h5 h6 header footer nav main section article aside figure figcaption video audio source canvas svg br hr strong em b i u small code pre blockquote class id href src alt type name value placeholder required disabled checked readonly style rel charset lang DOCTYPE',
+     sample: '<!DOCTYPE html>\n<html lang="fa" dir="rtl">\n<head>\n  <meta charset="utf-8">\n  <title>سلام</title>\n</head>\n<body>\n  <h1>سلام دنیا</h1>\n  <p>نخستین صفحهٔ من</p>\n</body>\n</html>\n'},
+    {id: 'css', name: 'سی‌اس‌اس', short: 'CSS', color: '#1572B6', ext: 'css', indent: 2, line: null, block: ['/*', '*/'],
+     kw: 'color background background-color font font-size font-family font-weight margin padding border border-radius width height min-width max-width display flex grid gap align-items justify-content position top right bottom left z-index overflow text-align direction content transform transition animation opacity box-shadow cursor list-style media import keyframes important hover focus active root before after',
+     sample: 'body {\n  direction: rtl;\n  font-family: Tahoma, sans-serif;\n  background: #f6f7fb;\n}\n\n.card {\n  padding: 16px;\n  border-radius: 12px;\n  box-shadow: 0 2px 8px rgba(0,0,0,.1);\n}\n'},
+    {id: 'rust', name: 'راست', short: 'Rs', color: '#CE422B', ext: 'rs', indent: 4, line: '//', block: ['/*', '*/'],
+     kw: 'fn let mut const static struct enum impl trait for while loop if else match return break continue use mod pub crate self super as in ref move where unsafe async await dyn type String Vec Option Some None Result Ok Err i32 i64 u32 u64 f32 f64 bool char str usize println',
+     sample: 'fn greet(name: &str) -> String {\n    format!("سلام {}", name)\n}\n\nfn main() {\n    println!("{}", greet("دنیا"));\n}\n'},
+    {id: 'swift', name: 'سوییفت', short: 'Sw', color: '#FA7343', ext: 'swift', indent: 4, line: '//', block: ['/*', '*/'],
+     kw: 'func let var return if else guard for while repeat switch case default break continue class struct enum protocol extension init deinit self super import public private internal fileprivate static override final throws try catch do async await nil true false Int Double String Bool Array Dictionary Optional some any print',
+     sample: 'func greet(name: String) -> String {\n    return "سلام \\(name)"\n}\n\nprint(greet(name: "دنیا"))\n'},
+    {id: 'ruby', name: 'روبی', short: 'Rb', color: '#CC342D', ext: 'rb', indent: 2, line: '#', block: ['=begin', '=end'],
+     kw: 'def end class module return if elsif else unless while until for in do then case when begin rescue ensure raise yield require require_relative include extend attr_accessor attr_reader attr_writer self super nil true false and or not puts print each map select reduce times loop break next lambda proc',
+     sample: 'def greet(name)\n  "سلام #{name}"\nend\n\nputs greet("دنیا")\n'},
+    {id: 'dart', name: 'دارت', short: 'Dt', color: '#0175C2', ext: 'dart', indent: 2, line: '//', block: ['/*', '*/'],
+     kw: 'void main var final const late static class extends implements with mixin abstract enum typedef return if else for while do switch case break continue try catch finally throw rethrow async await sync yield import export library part show hide new this super null true false int double num String bool List Map Set dynamic Future Stream required print',
+     sample: 'String greet(String name) {\n  return \'سلام $name\';\n}\n\nvoid main() {\n  print(greet(\'دنیا\'));\n}\n'},
+    {id: 'bash', name: 'بش / شل', short: 'Sh', color: '#4EAA25', ext: 'sh', indent: 2, line: '#', block: null,
+     kw: 'if then else elif fi for while until do done case esac in function return break continue local export readonly declare echo printf read exit shift set unset source alias cd ls cp mv rm mkdir rmdir cat grep sed awk find xargs chmod chown tar curl wget git sudo test true false',
+     sample: '#!/usr/bin/env bash\n\ngreet() {\n  echo "سلام $1"\n}\n\nfor name in دنیا علی; do\n  greet "$name"\ndone\n'},
+    {id: 'matlab', name: 'متلب', short: 'Ml', color: '#E16737', ext: 'm', indent: 4, line: '%', block: ['%{', '%}'],
+     kw: 'function end return if elseif else for while do switch case otherwise break continue try catch global persistent nargin nargout zeros ones eye linspace logspace size length numel reshape sum mean median std min max sort find plot figure hold xlabel ylabel title legend grid disp fprintf sprintf input',
+     sample: 'function y = greet(name)\n    % پیام خوش‌آمد\n    y = sprintf(\'سلام %s\', name);\nend\n\nx = linspace(0, 2*pi, 100);\nplot(x, sin(x));\ngrid on;\n'},
+    {id: 'asm', name: 'اسمبلی', short: 'Asm', color: '#6E4C13', ext: 'asm', indent: 4, line: ';', block: null,
+     kw: 'section global extern db dw dd dq resb resw resd equ times mov movzx movsx lea push pop add sub mul imul div idiv inc dec neg cmp test and or xor not shl shr jmp je jne jg jl jge jle call ret leave enter loop nop int syscall eax ebx ecx edx rax rbx rcx rdx rsi rdi rsp rbp esi edi esp ebp',
+     sample: '; برنامهٔ اسمبلی — خروج پیام\nsection .data\n    msg db "سلام دنیا", 10\n    len equ $ - msg\n\nsection .text\n    global _start\n_start:\n    mov rax, 1\n    mov rdi, 1\n    mov rsi, msg\n    mov rdx, len\n    syscall\n    mov rax, 60\n    xor rdi, rdi\n    syscall\n'},
+    {id: 'pascal', name: 'پاسکال / دلفی', short: 'Pas', color: '#E3F171', ext: 'pas', indent: 2, line: '//', block: ['{', '}'],
+     kw: 'program unit uses interface implementation begin end procedure function var const type array record of set file string integer real boolean char byte word longint if then else case while do repeat until for to downto break continue exit with try except finally raise class object private public protected published property constructor destructor inherited nil true false and or not div mod in writeln write readln',
+     sample: 'program Hello;\n\nfunction Greet(const name: string): string;\nbegin\n  Greet := \'سلام \' + name;\nend;\n\nbegin\n  WriteLn(Greet(\'دنیا\'));\nend.\n'},
+    {id: 'vb', name: 'ویژوال بیسیک', short: 'VB', color: '#945DB7', ext: 'vb', indent: 4, line: "'", block: null,
+     kw: 'Module Sub Function End If Then Else ElseIf While For Each Next To Step Do Loop Until Select Case Return Dim As Integer String Boolean Double Date Object New Nothing True False And Or Not Mod Imports Namespace Class Public Private Protected Shared Overrides Inherits Implements Try Catch Finally Throw Console WriteLine ReadLine',
+     sample: 'Imports System\n\nModule Program\n    Function Greet(name As String) As String\n        Return "سلام " & name\n    End Function\n\n    Sub Main()\n        Console.WriteLine(Greet("دنیا"))\n    End Sub\nEnd Module\n'},
+    {id: 'lua', name: 'لوآ', short: 'Lua', color: '#000080', ext: 'lua', indent: 2, line: '--', block: ['--[[', ']]'],
+     kw: 'function local end return if then elseif else for while do repeat until break in and or not nil true false goto print pairs ipairs type tostring tonumber table string math io os require setmetatable getmetatable len insert remove concat sort format',
+     sample: 'local function greet(name)\n  return "سلام " .. name\nend\n\nfor i = 1, 3 do\n  print(greet("دنیا"))\nend\n'},
+    {id: 'scala', name: 'اسکالا', short: 'Sc', color: '#DC322F', ext: 'scala', indent: 2, line: '//', block: ['/*', '*/'],
+     kw: 'object class trait case extends with abstract sealed final implicit lazy val var def return if else match while for do yield try catch finally throw new this super import package override private protected type None Some Option List Seq Map Set Int Double String Boolean Unit Any AnyRef println',
+     sample: 'object Main {\n  def greet(name: String): String =\n    s"سلام $name"\n\n  def main(args: Array[String]): Unit =\n    println(greet("دنیا"))\n}\n'},
+    {id: 'perl', name: 'پرل', short: 'Pl', color: '#39457E', ext: 'pl', indent: 4, line: '#', block: ['=pod', '=cut'],
+     kw: 'my our local sub return if elsif else unless while until for foreach do last next redo given when default use require package print printf say chomp chop push pop shift unshift splice sort reverse grep map join split keys values each defined undef die warn ref bless qw qq strict warnings',
+     sample: 'use strict;\nuse warnings;\n\nsub greet {\n    my ($name) = @_;\n    return "سلام $name";\n}\n\nprint greet("دنیا"), "\\n";\n'},
+    {id: 'julia', name: 'جولیا', short: 'Jl', color: '#9558B2', ext: 'jl', indent: 4, line: '#', block: ['#=', '=#'],
+     kw: 'function end return if elseif else for while break continue begin let local global const struct mutable abstract type module using import export macro quote do try catch finally throw in isa where true false nothing println print string parse sum mean size length zeros ones collect range',
+     sample: 'function greet(name)\n    return "سلام $name"\nend\n\nfor i in 1:3\n    println(greet("دنیا"))\nend\n'},
+    {id: 'fortran', name: 'فرترن', short: 'F90', color: '#734F96', ext: 'f90', indent: 2, line: '!', block: null,
+     kw: 'program end module contains subroutine function implicit none integer real double precision complex logical character parameter dimension allocatable allocate deallocate intent in out inout if then else elseif endif do enddo while select case where forall return call print write read format open close stop cycle exit use only',
+     sample: 'program hello\n  implicit none\n  integer :: i\n\n  do i = 1, 3\n    print *, "سلام دنیا"\n  end do\nend program hello\n'},
+    {id: 'prolog', name: 'پرولوگ', short: 'Pro', color: '#F1471D', ext: 'pro', indent: 2, line: '%', block: ['/*', '*/'],
+     kw: 'assert asserta assertz retract findall bagof setof forall once call not fail true is mod rem atom number integer float atomic length append member reverse sort msort last nth0 select permutation write writeln nl format read consult dynamic discontiguous multifile op',
+     sample: '% رابطهٔ پدر و فرزند\nparent(ali, reza).\nparent(reza, sara).\n\nancestor(X, Y) :- parent(X, Y).\nancestor(X, Y) :- parent(X, Z), ancestor(Z, Y).\n\n% پرسش: ?- ancestor(ali, sara).\n'},
+    {id: 'lisp', name: 'لیسپ / اسکیم', short: 'Lsp', color: '#3FB68B', ext: 'lisp', indent: 2, line: ';', block: ['#|', '|#'],
+     kw: 'defun defvar defparameter let let* lambda if cond when unless case do dolist dotimes loop progn setq setf quote function car cdr cons list append length reverse mapcar reduce apply funcall format print princ princ-to-string null atom listp numberp eq equal not and or',
+     sample: '(defun greet (name)\n  "پیام خوش‌آمد"\n  (format nil "سلام ~a" name))\n\n(dolist (who \'("دنیا" "علی"))\n  (print (greet who)))\n'},
+    {id: 'groovy', name: 'گرووی', short: 'Gv', color: '#4298B8', ext: 'groovy', indent: 4, line: '//', block: ['/*', '*/'],
+     kw: 'def class interface trait extends implements return if else for while do switch case break continue try catch finally throw new this super import package static final abstract private public protected void null true false in as instanceof String Integer List Map println print each collect find findAll with',
+     sample: 'def greet(String name) {\n    "سلام ${name}"\n}\n\n["دنیا", "علی"].each {\n    println greet(it)\n}\n'},
+    {id: 'objc', name: 'آبجکتیو-سی', short: 'ObjC', color: '#438EFF', ext: 'm', indent: 4, line: '//', block: ['/*', '*/'],
+     kw: 'import interface implementation end protocol property synthesize dynamic class struct enum typedef void int float double char BOOL id instancetype NSString NSArray NSDictionary NSMutableArray NSInteger CGFloat self super nil YES NO return if else for while do switch case break continue try catch finally throw alloc init new strong weak copy nonatomic assign retain release autorelease NSLog',
+     sample: '#import <Foundation/Foundation.h>\n\n@interface Greeter : NSObject\n- (NSString *)greet:(NSString *)name;\n@end\n\n@implementation Greeter\n- (NSString *)greet:(NSString *)name {\n    return [NSString stringWithFormat:@"سلام %@", name];\n}\n@end\n'}
   ];
   var BY_ID = {};
   LANGS.forEach(function (L) { BY_ID[L.id] = L; });
   /* نام‌های جایگزین که کاربر ممکن است در بلوک بنویسد */
   var ALIAS = {py: 'python', 'python3': 'python', js: 'javascript', node: 'javascript', ts: 'typescript',
     'c++': 'cpp', cxx: 'cpp', cc: 'cpp', 'c#': 'csharp', cs: 'csharp', dotnet: 'csharp', kt: 'kotlin', kts: 'kotlin',
-    golang: 'go', postgres: 'sql', postgresql: 'sql', mysql: 'sql', sqlite: 'sql', php8: 'php', rlang: 'r'};
+    golang: 'go', postgres: 'sql', postgresql: 'sql', mysql: 'sql', sqlite: 'sql', php8: 'php', rlang: 'r',
+    htm: 'html', html5: 'html', scss: 'css', sass: 'css', rs: 'rust', 'rustlang': 'rust', 'swift5': 'swift',
+    rb: 'ruby', shell: 'bash', sh: 'bash', zsh: 'bash', 'shell script': 'bash', octave: 'matlab',
+    assembly: 'asm', nasm: 'asm', x86: 'asm', pas: 'pascal', delphi: 'pascal', freepascal: 'pascal',
+    'vb.net': 'vb', vbnet: 'vb', basic: 'vb', 'visual basic': 'vb', 'lua5': 'lua', sc: 'scala',
+    pl: 'perl', 'perl5': 'perl', jl: 'julia', f90: 'fortran', f95: 'fortran', 'fortran90': 'fortran',
+    swipl: 'prolog', 'pro': 'prolog', scheme: 'lisp', clisp: 'lisp', 'common lisp': 'lisp', elisp: 'lisp',
+    gvy: 'groovy', 'objective-c': 'objc', objectivec: 'objc', 'obj-c': 'objc', mm: 'objc'};
   function lang(id) {
     var k = String(id || '').trim().toLowerCase();
     return BY_ID[k] || BY_ID[ALIAS[k]] || BY_ID.python;
   }
 
+  /* ---------------- V349: محیط اختصاصی هر زبان ----------------
+     سه چیز محیط را برای هر زبان ویژه می‌کند:
+       ۱) نوار علائم: چیدن دکمه‌ها به ترتیبی که در آن زبان بیشتر لازم می‌شود
+       ۲) دکمه‌های آماده: قطعه‌کدهای پرکاربرد همان زبان
+       ۳) کامل‌کردن خودکار: واژه‌های همان زبان هنگام تایپ
+     هیچ‌کدام کد را اجرا نمی‌کنند؛ فقط درج متن‌اند. */
+
+  /* خانوادهٔ نگارشی زبان‌ها — مبنای چیدمان نوار علائم */
+  var SYM_FAMILY = {
+    c:      ['(', ')', '{', '}', '[', ']', ';', ':', ',', '.', '=', '==', '!=', '+', '-', '*', '/', '%', '<', '>', '!', '&&', '||', '"', "'", '`', '\\', '_', '#', '@', '$', '?'],
+    colon:  [':', '(', ')', '[', ']', '{', '}', '=', '==', '!=', '+', '-', '*', '/', '%', '<', '>', '#', '"', "'", ',', '.', '_', '|', '&', '\\', '**'],
+    query:  ['(', ')', ',', '.', ';', '=', '<>', '!=', '<', '>', '*', '+', '-', "'", '"', '_', '%', '--', '||'],
+    markup: ['<', '>', '</', '/>', '=', '"', "'", '(', ')', '{', '}', ';', ':', ',', '.', '!', '-', '#', '&'],
+    style:  ['{', '}', '(', ')', ':', ';', ',', '.', '#', '%', '-', '_', '"', "'", '>', '*', '/', '@'],
+    shell:  ['(', ')', '{', '}', '[', ']', ';', ':', ',', '.', '=', '==', '+', '-', '*', '/', '%', '<', '>', '!', '&', '|', '"', "'", '\\', '_', '#', '$', '@'],
+    numeric:['(', ')', '[', ']', '{', '}', ';', ':', ',', '.', '=', '==', '+', '-', '*', '/', '%', '<', '>', '!', '&', '|', '"', "'", '\\', '_', '#', '^'],
+    lisp:   ['(', ')', '[', ']', '{', '}', "'", '`', ',', ':', '.', '"', ';', '#', '+', '-', '*', '/', '=', '<', '>', '_', '%'],
+    pascal: ['(', ')', '[', ']', ';', ':', ':=', ',', '.', '=', '<>', '<', '>', '+', '-', '*', '/', "'", '{', '}', '_', '%'],
+    basic:  ['(', ')', ';', ':', ',', '.', '=', '<>', '<', '>', '+', '-', '*', '/', '&', '"', "'", '_', '\\', '%']
+  };
+  var LANG_FAMILY = {
+    python: 'colon', ruby: 'colon',
+    javascript: 'c', typescript: 'c', java: 'c', c: 'c', cpp: 'c', csharp: 'c', php: 'c', go: 'c',
+    kotlin: 'c', rust: 'c', swift: 'c', dart: 'c', scala: 'c', groovy: 'c', objc: 'c',
+    sql: 'query', html: 'markup', css: 'style',
+    bash: 'shell', perl: 'shell',
+    r: 'numeric', matlab: 'numeric', julia: 'numeric', fortran: 'numeric',
+    lisp: 'lisp', prolog: 'lisp', pascal: 'pascal', vb: 'basic', lua: 'colon', asm: 'shell'
+  };
+  function symbolsFor(id) {
+    var L = lang(id);
+    return SYM_FAMILY[LANG_FAMILY[L.id] || 'c'].slice();
+  }
+
+  /* دکمه‌های آمادهٔ هر زبان. نشان $0 جای نشانگر پس از درج است. */
+  var SNIPPETS = {
+    python: [['تابع', 'def $0():\n    pass'], ['حلقه for', 'for i in range($0):\n    '], ['شرط', 'if $0:\n    '], ['کلاس', 'class $0:\n    def __init__(self):\n        pass'], ['چاپ', 'print($0)'], ['try', 'try:\n    $0\nexcept Exception as e:\n    print(e)']],
+    javascript: [['تابع', 'function $0() {\n  \n}'], ['پیکان', 'const $0 = () => {\n  \n};'], ['حلقه', 'for (let i = 0; i < $0; i++) {\n  \n}'], ['شرط', 'if ($0) {\n  \n}'], ['چاپ', 'console.log($0);'], ['کلاس', 'class $0 {\n  constructor() {\n    \n  }\n}']],
+    typescript: [['تابع', 'function $0(): void {\n  \n}'], ['رابط', 'interface $0 {\n  \n}'], ['نوع', 'type $0 = {\n  \n};'], ['حلقه', 'for (let i = 0; i < $0; i++) {\n  \n}'], ['چاپ', 'console.log($0);']],
+    java: [['کلاس', 'public class $0 {\n    \n}'], ['main', 'public static void main(String[] args) {\n    $0\n}'], ['متد', 'public void $0() {\n    \n}'], ['حلقه', 'for (int i = 0; i < $0; i++) {\n    \n}'], ['چاپ', 'System.out.println($0);']],
+    c: [['main', 'int main(void) {\n    $0\n    return 0;\n}'], ['تابع', 'void $0(void) {\n    \n}'], ['حلقه', 'for (int i = 0; i < $0; i++) {\n    \n}'], ['شرط', 'if ($0) {\n    \n}'], ['چاپ', 'printf("$0\\n");'], ['include', '#include <$0>']],
+    cpp: [['main', 'int main() {\n    $0\n    return 0;\n}'], ['کلاس', 'class $0 {\npublic:\n    \n};'], ['حلقه', 'for (int i = 0; i < $0; i++) {\n    \n}'], ['چاپ', 'std::cout << $0 << std::endl;'], ['include', '#include <$0>']],
+    csharp: [['کلاس', 'class $0 {\n    \n}'], ['Main', 'static void Main() {\n    $0\n}'], ['متد', 'public void $0() {\n    \n}'], ['حلقه', 'foreach (var item in $0) {\n    \n}'], ['چاپ', 'Console.WriteLine($0);']],
+    php: [['تابع', 'function $0() {\n    \n}'], ['حلقه', 'foreach ($0 as $item) {\n    \n}'], ['شرط', 'if ($0) {\n    \n}'], ['کلاس', 'class $0 {\n    \n}'], ['چاپ', 'echo $0;']],
+    go: [['main', 'func main() {\n    $0\n}'], ['تابع', 'func $0() {\n    \n}'], ['ساختار', 'type $0 struct {\n    \n}'], ['حلقه', 'for i := 0; i < $0; i++ {\n    \n}'], ['چاپ', 'fmt.Println($0)']],
+    kotlin: [['تابع', 'fun $0() {\n    \n}'], ['main', 'fun main() {\n    $0\n}'], ['کلاس', 'class $0 {\n    \n}'], ['داده', 'data class $0(val id: Int)'], ['حلقه', 'for (i in 0 until $0) {\n    \n}'], ['چاپ', 'println($0)']],
+    sql: [['SELECT', 'SELECT $0\nFROM \nWHERE ;'], ['INSERT', 'INSERT INTO $0 ()\nVALUES ();'], ['UPDATE', 'UPDATE $0\nSET \nWHERE ;'], ['JOIN', 'SELECT $0\nFROM a\nJOIN b ON a.id = b.id;'], ['ساخت جدول', 'CREATE TABLE $0 (\n  id INT PRIMARY KEY\n);'], ['گروه', 'GROUP BY $0\nHAVING ']],
+    r: [['تابع', '$0 <- function(x) {\n  \n}'], ['حلقه', 'for (i in seq_len($0)) {\n  \n}'], ['شرط', 'if ($0) {\n  \n}'], ['چاپ', 'print($0)'], ['نمودار', 'plot($0)']],
+    html: [['صفحه', '<!DOCTYPE html>\n<html lang="fa" dir="rtl">\n<head>\n  <meta charset="utf-8">\n  <title>$0</title>\n</head>\n<body>\n  \n</body>\n</html>'], ['پیوند', '<a href="$0"></a>'], ['تصویر', '<img src="$0" alt="">'], ['فهرست', '<ul>\n  <li>$0</li>\n</ul>'], ['جدول', '<table>\n  <tr>\n    <td>$0</td>\n  </tr>\n</table>'], ['فرم', '<form>\n  <input type="text" name="$0">\n  <button type="submit">ارسال</button>\n</form>']],
+    css: [['قاعده', '.$0 {\n  \n}'], ['فلکس', 'display: flex;\nalign-items: center;\njustify-content: $0;'], ['گرید', 'display: grid;\ngrid-template-columns: $0;'], ['رسانه', '@media (max-width: 640px) {\n  $0\n}'], ['گذار', 'transition: $0 .2s ease;']],
+    rust: [['تابع', 'fn $0() {\n    \n}'], ['main', 'fn main() {\n    $0\n}'], ['ساختار', 'struct $0 {\n    \n}'], ['حلقه', 'for i in 0..$0 {\n    \n}'], ['تطبیق', 'match $0 {\n    _ => {}\n}'], ['چاپ', 'println!("{}", $0);']],
+    swift: [['تابع', 'func $0() {\n    \n}'], ['کلاس', 'class $0 {\n    \n}'], ['ساختار', 'struct $0 {\n    \n}'], ['حلقه', 'for i in 0..<$0 {\n    \n}'], ['شرط', 'if $0 {\n    \n}'], ['چاپ', 'print($0)']],
+    ruby: [['تابع', 'def $0\n  \nend'], ['کلاس', 'class $0\n  def initialize\n    \n  end\nend'], ['حلقه', '$0.times do |i|\n  \nend'], ['each', '$0.each do |item|\n  \nend'], ['شرط', 'if $0\n  \nend'], ['چاپ', 'puts $0']],
+    dart: [['تابع', 'void $0() {\n  \n}'], ['main', 'void main() {\n  $0\n}'], ['کلاس', 'class $0 {\n  \n}'], ['حلقه', 'for (var i = 0; i < $0; i++) {\n  \n}'], ['آینده', 'Future<void> $0() async {\n  \n}'], ['چاپ', 'print($0);']],
+    bash: [['تابع', '$0() {\n  \n}'], ['حلقه', 'for i in $0; do\n  \ndone'], ['شرط', 'if [ $0 ]; then\n  \nfi'], ['while', 'while [ $0 ]; do\n  \ndone'], ['چاپ', 'echo "$0"'], ['متغیر', '$0=""']],
+    matlab: [['تابع', 'function y = $0(x)\n    \nend'], ['حلقه', 'for i = 1:$0\n    \nend'], ['شرط', 'if $0\n    \nend'], ['نمودار', 'plot($0);\ngrid on;'], ['چاپ', 'fprintf(\'$0\\n\');']],
+    asm: [['بخش داده', 'section .data\n    $0 db 0'], ['بخش کد', 'section .text\n    global _start\n_start:\n    $0'], ['تابع', '$0:\n    push rbp\n    mov rbp, rsp\n    pop rbp\n    ret'], ['حلقه', '    mov rcx, $0\nloop_start:\n    dec rcx\n    jnz loop_start'], ['خروج', '    mov rax, 60\n    xor rdi, rdi\n    syscall']],
+    pascal: [['برنامه', 'program $0;\nbegin\n  \nend.'], ['تابع', 'function $0: Integer;\nbegin\n  \nend;'], ['رویه', 'procedure $0;\nbegin\n  \nend;'], ['حلقه', 'for i := 1 to $0 do\nbegin\n  \nend;'], ['شرط', 'if $0 then\nbegin\n  \nend;'], ['چاپ', 'WriteLn($0);']],
+    vb: [['ماژول', 'Module $0\n    Sub Main()\n        \n    End Sub\nEnd Module'], ['تابع', 'Function $0() As String\n    Return ""\nEnd Function'], ['رویه', 'Sub $0()\n    \nEnd Sub'], ['حلقه', 'For i As Integer = 1 To $0\n    \nNext'], ['شرط', 'If $0 Then\n    \nEnd If'], ['چاپ', 'Console.WriteLine($0)']],
+    lua: [['تابع', 'local function $0()\n  \nend'], ['حلقه', 'for i = 1, $0 do\n  \nend'], ['شرط', 'if $0 then\n  \nend'], ['جدول', 'local $0 = {}'], ['چاپ', 'print($0)']],
+    scala: [['شیء', 'object $0 {\n  \n}'], ['تابع', 'def $0(): Unit = {\n  \n}'], ['کلاس', 'case class $0(id: Int)'], ['تطبیق', '$0 match {\n  case _ => \n}'], ['حلقه', 'for (i <- 0 until $0) {\n  \n}'], ['چاپ', 'println($0)']],
+    perl: [['تابع', 'sub $0 {\n    my () = @_;\n    \n}'], ['حلقه', 'foreach my $i ($0) {\n    \n}'], ['شرط', 'if ($0) {\n    \n}'], ['چاپ', 'print "$0\\n";'], ['آرایه', 'my @$0 = ();']],
+    julia: [['تابع', 'function $0()\n    \nend'], ['حلقه', 'for i in 1:$0\n    \nend'], ['شرط', 'if $0\n    \nend'], ['ساختار', 'struct $0\n    \nend'], ['چاپ', 'println($0)']],
+    fortran: [['برنامه', 'program $0\n  implicit none\n  \nend program'], ['تابع', 'function $0(x) result(y)\n  implicit none\n  \nend function'], ['حلقه', 'do i = 1, $0\n    \n  end do'], ['شرط', 'if ($0) then\n    \n  end if'], ['چاپ', 'print *, $0']],
+    prolog: [['واقعیت', '$0(ali, reza).'], ['قاعده', '$0(X, Y) :-\n    parent(X, Y).'], ['پرسش', '?- $0(X).'], ['فهرست', 'member($0, [1, 2, 3]).'], ['چاپ', 'write($0), nl.']],
+    lisp: [['تابع', '(defun $0 (x)\n  )'], ['متغیر', '(defvar *$0* nil)'], ['let', '(let (($0 1))\n  )'], ['شرط', '(if $0\n    t\n    nil)'], ['حلقه', '(dolist (x $0)\n  (print x))'], ['چاپ', '(print $0)']],
+    groovy: [['تابع', 'def $0() {\n    \n}'], ['کلاس', 'class $0 {\n    \n}'], ['each', '$0.each {\n    \n}'], ['حلقه', 'for (i in 0..<$0) {\n    \n}'], ['چاپ', 'println $0']],
+    objc: [['رابط', '@interface $0 : NSObject\n@end'], ['پیاده‌سازی', '@implementation $0\n@end'], ['متد', '- (void)$0 {\n    \n}'], ['حلقه', 'for (int i = 0; i < $0; i++) {\n    \n}'], ['چاپ', 'NSLog(@"$0");']]
+  };
+  function snippetsFor(id) {
+    var L = lang(id);
+    return (SNIPPETS[L.id] || []).map(function (s) { return {label: s[0], code: s[1]}; });
+  }
+
+  /* واژه‌های پیشنهادی کامل‌کردن خودکار: کلیدواژه‌ها + برچسب قطعه‌ها */
+  var COMPLETE_CACHE = {};
+  function completions(id) {
+    var L = lang(id);
+    if (COMPLETE_CACHE[L.id]) return COMPLETE_CACHE[L.id];
+    var seen = {}, out = [];
+    L.kw.split(/\s+/).forEach(function (w) {
+      if (w && w.length > 1 && !seen[w]) { seen[w] = 1; out.push(w); }
+    });
+    out.sort(function (a, b) { return a.length - b.length || a.localeCompare(b); });
+    COMPLETE_CACHE[L.id] = out;
+    return out;
+  }
   /* ---------------- رنگی‌کردن کد ---------------- */
   /* یک گذر روی متن: توضیح، رشته، عدد، کلیدواژه، تابع. خروجی HTML امن است
      چون هر تکه پیش از افزودن esc می‌شود. */
@@ -237,6 +391,72 @@
     if (readOnly) ta.setAttribute('readonly', 'readonly');
     var pane = el('div', {class: 'cx-pane'}, [gutter, pre, ta]);
 
+    /* V349 — نوار علائم، دکمه‌های آمادهٔ زبان، و فهرست کامل‌کردن خودکار */
+    var keysRow = el('div', {class: 'cx-keys'});
+    var snipRow = el('div', {class: 'cx-snips'});
+    var acBox = el('div', {class: 'cx-ac', style: 'display:none'});
+    var acItems = [], acIndex = -1, acOpen = false;
+
+    function insertText(text) {
+      var s = ta.selectionStart, t = ta.selectionEnd, v = ta.value;
+      var at = text.indexOf('$0');
+      var clean = at >= 0 ? text.slice(0, at) + text.slice(at + 2) : text;
+      ta.value = v.slice(0, s) + clean + v.slice(t);
+      ta.selectionStart = ta.selectionEnd = s + (at >= 0 ? at : clean.length);
+      dirty = true; acHide(); paint();
+      try { ta.focus(); } catch (x) {}
+    }
+    function buildRows() {
+      keysRow.innerHTML = ''; snipRow.innerHTML = '';
+      if (readOnly) { keysRow.style.display = 'none'; snipRow.style.display = 'none'; return; }
+      symbolsFor(L.id).forEach(function (sym) {
+        keysRow.appendChild(el('button', {type: 'button', class: 'cx-key', text: sym, title: 'درج ' + sym,
+          onmousedown: function (e) { e.preventDefault(); }, onclick: function () { insertText(sym); }}));
+      });
+      snippetsFor(L.id).forEach(function (sn) {
+        snipRow.appendChild(el('button', {type: 'button', class: 'btn light sm cx-snip', text: sn.label,
+          onmousedown: function (e) { e.preventDefault(); }, onclick: function () { insertText(sn.code); }}));
+      });
+    }
+    function acHide() { acOpen = false; acItems = []; acIndex = -1; acBox.style.display = 'none'; acBox.innerHTML = ''; }
+    function acMark() {
+      Array.prototype.forEach.call(acBox.children, function (c, i) { c.className = 'cx-ac-item' + (i === acIndex ? ' on' : ''); });
+    }
+    function acAccept(i) {
+      if (!acOpen) return;
+      var w = acItems[i == null ? acIndex : i];
+      if (!w) return acHide();
+      var v = ta.value, s = ta.selectionStart;
+      var m = /[A-Za-z_][A-Za-z0-9_]*$/.exec(v.slice(0, s));
+      if (!m) return acHide();
+      /* بزرگی/کوچی حروفِ نوشتهٔ کاربر حفظ می‌شود (مثلاً SELECT در SQL) */
+      var typed = m[0];
+      if (typed === typed.toUpperCase() && typed.length > 1) w = w.toUpperCase();
+      var start = s - typed.length;
+      ta.value = v.slice(0, start) + w + v.slice(s);
+      ta.selectionStart = ta.selectionEnd = start + w.length;
+      dirty = true; acHide(); paint();
+      try { ta.focus(); } catch (x) {}
+    }
+    function acShow() {
+      if (readOnly) return;
+      var v = ta.value, s = ta.selectionStart;
+      if (s !== ta.selectionEnd) return acHide();
+      var m = /[A-Za-z_][A-Za-z0-9_]*$/.exec(v.slice(0, s));
+      if (!m || m[0].length < 2) return acHide();
+      var word = m[0], lower = word.toLowerCase();
+      var list = completions(L.id).filter(function (w) {
+        return w.toLowerCase().indexOf(lower) === 0 && w.toLowerCase() !== lower;
+      }).slice(0, 8);
+      if (!list.length) return acHide();
+      acItems = list; acIndex = 0; acOpen = true; acBox.innerHTML = '';
+      list.forEach(function (w, i) {
+        acBox.appendChild(el('button', {type: 'button', class: 'cx-ac-item' + (i === 0 ? ' on' : ''), text: w,
+          onmousedown: function (e) { e.preventDefault(); }, onclick: function () { acAccept(i); }}));
+      });
+      acBox.style.display = '';
+    }
+
     var badge = el('span', {class: 'cx-badge', text: L.short});
     var nameEl = el('span', {class: 'cx-name', text: L.name});
     var pos = el('span', {class: 'cx-meta', text: ''});
@@ -248,6 +468,7 @@
       badge.textContent = L.short; badge.style.setProperty('--cx', L.color);
       nameEl.textContent = L.name;
       bar.style.setProperty('--cx', L.color);
+      buildRows(); acHide();
       paint();
     }
     function paint() {
@@ -263,12 +484,20 @@
     }
     function sync() { pre.scrollTop = ta.scrollTop; pre.scrollLeft = ta.scrollLeft; gutter.scrollTop = ta.scrollTop; }
 
-    ta.addEventListener('input', function () { dirty = true; paint(); });
+    ta.addEventListener('input', function () { dirty = true; paint(); acShow(); });
     ta.addEventListener('scroll', sync);
-    ta.addEventListener('click', paint);
+    ta.addEventListener('click', function () { paint(); acHide(); });
+    ta.addEventListener('blur', function () { setTimeout(acHide, 120); });
     ta.addEventListener('keyup', function (e) { if (e.key && e.key.indexOf('Arrow') === 0) paint(); });
     ta.addEventListener('keydown', function (e) {
       if (readOnly) return;
+      /* V349 — وقتی فهرست پیشنهاد باز است، کلیدها آن را کنترل می‌کنند */
+      if (acOpen) {
+        if (e.key === 'ArrowDown') { e.preventDefault(); acIndex = (acIndex + 1) % acItems.length; acMark(); return; }
+        if (e.key === 'ArrowUp') { e.preventDefault(); acIndex = (acIndex - 1 + acItems.length) % acItems.length; acMark(); return; }
+        if (e.key === 'Tab' || e.key === 'Enter') { e.preventDefault(); acAccept(); return; }
+        if (e.key === 'Escape') { e.preventDefault(); acHide(); return; }
+      }
       var pad = new Array(L.indent + 1).join(' ');
       var s = ta.selectionStart, t = ta.selectionEnd, v = ta.value;
       /* Tab / Shift+Tab: تورفتگی یک یا چند خط */
@@ -348,7 +577,7 @@
     var m = el('div', {class: 'modal wide cx-modal cx-editor'}, [
       el('button', {class: 'x', text: '✕', onclick: askClose}),
       el('h2', {text: o.title || 'محیط کدنویسی'}),
-      bar, pane, foot
+      bar, pane, acBox, keysRow, snipRow, foot
     ]);
     bg.appendChild(m);
     document.body.appendChild(bg);
@@ -368,6 +597,7 @@
   window.SiteCode = {
     LANGS: LANGS, lang: lang, highlight: highlight, blockHtml: blockHtml, html: html, split: split,
     fence: fence, parseFence: parseFence, hasFence: hasFence, open: open, openWithPicker: openWithPicker,
-    pickLanguage: pickLanguage, MAX: MAX
+    pickLanguage: pickLanguage, symbolsFor: symbolsFor, snippetsFor: snippetsFor,
+    completions: completions, MAX: MAX
   };
 })();

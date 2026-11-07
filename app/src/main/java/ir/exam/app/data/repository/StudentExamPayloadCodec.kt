@@ -223,7 +223,11 @@ internal object StudentExamPayloadCodec {
             else -> EssayQuestion(
                 id, text, score, images, maxAnswerImages, answerImagesRequired, originalIndex,
                 // V306 — پاسخ با تخته (حالت ابتدایی)
-                answerMode = obj.text("mode")?.takeIf { it in setOf("draw", "voice", "steps", "proof", "construct") } ?: "text",
+                answerMode = obj.text("mode")?.takeIf { it in setOf("draw", "voice", "steps", "proof", "construct", "code") } ?: "text",
+                // V349 — پاسخ کدنویسی: زبان ثابت، کد آغازین و کادر متن همراه
+                codeLang = obj.text("code_lang").orEmpty(),
+                codeStarter = obj.text("code_starter").orEmpty(),
+                codeWithText = obj.text("answer_form") == "both",
                 // V309 — سقف ضبط پاسخ صوتی
                 voiceMaxSeconds = obj.int("voice_max_seconds") ?: 0,
                 passage = passage,

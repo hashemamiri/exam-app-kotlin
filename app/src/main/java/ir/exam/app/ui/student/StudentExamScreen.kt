@@ -472,6 +472,13 @@ fun StudentExamContent(
                         StepwiseEssayAnswer(question, (state.answers[question.id] as? TextAnswer)?.value.orEmpty()) {
                             onAnswer(TextAnswer(question.id, it))
                         }
+                    } else if (question.answerMode == "code") {
+                        // V349 — پاسخ کدنویسی: محیط اختصاصی زبان؛ در حالت «هر دو» کادر متن هم هست
+                        StudentCodeAnswer(
+                            question = question,
+                            current = (state.answers[question.id] as? TextAnswer)?.value.orEmpty(),
+                            onAnswer = { onAnswer(TextAnswer(question.id, it)) }
+                        )
                     } else if (question.answerMode == "voice") {
                         // V309 — پاسخ صوتی: ضبط با سقف مدت تعیین‌شدهٔ معلم؛ فایل مثل نقاشی ذخیره می‌شود
                         StudentVoiceAnswerEntry(

@@ -1735,6 +1735,8 @@ private fun QuestionEditor(
                 )
             }
             }
+            // V349 — شکل پاسخ کدنویسی برای هر سؤال تشریحی (مستقل از حالت ابتدایی)
+            BuilderCodeSection(question, viewModel)
             // V305 — حالت ابتدایی: نوع ویژهٔ سؤال (فقط وقتی کلید «حالت ابتدایی» آزمون روشن است)
             // V310.1 — در آزمون چاپی هم مثل سایت نمایش داده می‌شود (قبلاً `!printMode` بود و املا در چاپ دیده نمی‌شد).
             if (primary && (question.type == QuestionType.ESSAY || question.type == QuestionType.FILL_BLANK || question.type == QuestionType.MULTIPLE_CHOICE)) {

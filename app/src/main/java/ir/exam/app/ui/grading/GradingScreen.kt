@@ -331,7 +331,7 @@ private fun SubmissionCard(
                             }
                         } else if (question.answerMode == "construct" || hasGeometrySpec) {
                             Text("پاسخ هندسی: ${ir.exam.app.core.geometry.GeometryConstructionEvaluator.formatResponseSummary(rawJsonString, question.constructionLabels)}")
-                        } else Text("پاسخ: ${submission.responses.getOrNull(index).displayText()}")
+                        } else ir.exam.app.ui.code.CodeAwareAnswer(submission.responses.getOrNull(index).displayText())
                         AnswerImagesRow(submission.answerImagesFor(question.id, index))
                         val scoreKey = "${submission.id}:$index"
                         question.assessmentParts.forEachIndexed { partIndex, part ->
@@ -465,7 +465,7 @@ private fun QuestionCentricContent(state: GradingUiState, viewModel: GradingView
                             )
                         }
                         if (scoreKey in state.scoreErrors) Text("نمره باید بین ${PersianDigits.convert(exam.minimumScore(index).toString())} و ${PersianDigits.convert(question.score.toString())} باشد.", color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
-                        Text("پاسخ: ${submission.responses.getOrNull(index).displayText()}", style = MaterialTheme.typography.bodyMedium)
+                        ir.exam.app.ui.code.CodeAwareAnswer(submission.responses.getOrNull(index).displayText())
                         AnswerImagesRow(submission.answerImagesFor(question.id, index))
                     }
                 }

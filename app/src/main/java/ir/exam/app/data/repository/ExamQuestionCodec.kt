@@ -234,7 +234,11 @@ internal object ExamQuestionCodec {
                 audioBytes = (obj["audioBytes"] as? JsonPrimitive)?.longOrNull ?: 0L,
                 audioMs = (obj["audioMs"] as? JsonPrimitive)?.longOrNull ?: 0L,
                 // V305 / V314.0 — حالت ویژهٔ ابتدایی (مرتب‌سازی / انتخاب روی تصویر / بخش‌کردن / سبد)
-                mode = obj["mode"]?.asString()?.takeIf { it in setOf("order", "hotspot", "draw", "dictation", "voice", "syllable", "bucket", "paint", "steps", "proof", "construct") }.orEmpty(),
+                mode = obj["mode"]?.asString()?.takeIf { it in setOf("order", "hotspot", "draw", "dictation", "voice", "syllable", "bucket", "paint", "steps", "proof", "construct", "code") }.orEmpty(),
+                // V349 — پاسخ کدنویسی
+                codeLang = obj["code_lang"]?.asString().orEmpty(),
+                codeStarter = obj["code_starter"]?.asString().orEmpty(),
+                codeWithText = obj["answer_form"]?.asString() == "both",
                 // V327 — تنظیم‌های رنگ‌آمیزی و املا
                 paintRows = (obj["paintRows"]?.asInt() ?: 4).coerceIn(1, 8),
                 paintCols = (obj["paintCols"]?.asInt() ?: 4).coerceIn(1, 8),
@@ -343,6 +347,7 @@ internal object ExamQuestionCodec {
             }
             // V305 / V314.0 — حالت ویژه: mode/items/hotspots/buckets/syllableCount فقط وقتی فعال است نوشته می‌شود
             values.remove("mode"); values.remove("items"); values.remove("hotspots"); values.remove("speak"); values.remove("buckets"); values.remove("syllableCount")
+            values.remove("code_lang"); values.remove("code_starter"); values.remove("answer_form") // V349
             values.remove("paintRows"); values.remove("paintCols"); values.remove("paintGoal"); values.remove("dict_gap"); values.remove("dict_repeat")
             // V306 — پاسخ با تخته: فقط نشانهٔ حالت؛ پاسخ دانش‌آموز تصویر تخته است.
             if (question.type == QuestionType.ESSAY && question.mode == "draw") values["mode"] = JsonPrimitive("draw")
@@ -350,6 +355,13 @@ internal object ExamQuestionCodec {
             if (question.type == QuestionType.ESSAY && question.mode == "voice") {
                 values["mode"] = JsonPrimitive("voice")
                 values["voice_max_seconds"] = JsonPrimitive(question.voiceMaxSeconds.takeIf { it > 0 }?.coerceIn(10, 300) ?: 60)
+            }
+            // V349 — پاسخ کدنویسی: حالت، زبان، کد آغازین و شکل «هر دو»
+            if (question.type == QuestionType.ESSAY && question.mode == "code") {
+                values["mode"] = JsonPrimitive("code")
+                if (question.codeLang.isNotBlank()) values["code_lang"] = JsonPrimitive(question.codeLang)
+                if (question.codeStarter.isNotBlank()) values["code_starter"] = JsonPrimitive(question.codeStarter)
+                if (question.codeWithText) values["answer_form"] = JsonPrimitive("both")
             }
             if (question.type == QuestionType.ESSAY && question.mode in setOf("steps", "proof", "construct")) {
                 values["mode"] = JsonPrimitive(question.mode)

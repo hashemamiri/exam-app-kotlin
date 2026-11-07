@@ -174,6 +174,7 @@
     /* V348 — پاسخ کدنویسی: زبان و کد آغازین */
     q.codeLang = obj.code_lang ? String(obj.code_lang) : '';
     q.codeStarter = obj.code_starter ? String(obj.code_starter) : '';
+    q.codeWithText = obj.answer_form === 'both'; /* V349 */
     q.orderItems = q.mode === 'order' ? ((key.accept && key.accept[0]) ? String(key.accept[0]).split(',').map(function (x) { return x.trim(); }).filter(Boolean) : (obj.items || []).map(String)) : [];
     q.hotspots = q.mode === 'hotspot' ? (Array.isArray(obj.hotspots) ? obj.hotspots.map(function (h) { return {x: Number(h.x) || 0, y: Number(h.y) || 0, w: Number(h.w) || 0, h: Number(h.h) || 0}; }) : []) : [];
     q.correctIndex = key.correctOption != null ? Number(key.correctOption) : (obj.correctIndex != null ? Number(obj.correctIndex) : null);
@@ -241,7 +242,8 @@
         v.mode = 'code';
         if (q.codeLang) v.code_lang = String(q.codeLang); else delete v.code_lang;
         if (q.codeStarter) v.code_starter = String(q.codeStarter); else delete v.code_starter;
-      } else { delete v.code_lang; delete v.code_starter; }
+        if (q.codeWithText) v.answer_form = 'both'; else delete v.answer_form; /* V349 — هر دو شکل پاسخ */
+      } else { delete v.code_lang; delete v.code_starter; delete v.answer_form; }
       if (isDict) { v.mode = 'dictation'; if (!q.audio) v.speak = String(q.expectedText || '').split('|')[0].trim(); else delete v.speak; } else delete v.speak;
       if (isSyl) {
         v.mode = 'syllable';
@@ -1293,11 +1295,22 @@
     /* V348 — پاسخ کدنویسی: در هر آزمونی در دسترس است (نه فقط حالت ابتدایی) */
     function codeModeSection(q, redraw) {
       var on = q.mode === 'code';
+      /* V349 — «متنی» و «کدنویسی» هرکدام جدا روشن/خاموش می‌شوند؛ می‌توان هر دو را با هم خواست */
+      var textOn = !on || !!q.codeWithText;
+      function setForms(wantText, wantCode) {
+        if (!wantText && !wantCode) return; /* دست‌کم یکی باید بماند */
+        if (wantCode) { q.mode = 'code'; q.codeWithText = !!wantText; }
+        else { q.mode = ''; q.codeWithText = false; }
+        mark(); redraw();
+      }
       var C = window.SiteCode;
       var row = el('div', {class: 'row', style: 'gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px'}, [
         el('b', {text: 'شکل پاسخ:'}),
-        el('button', {type: 'button', class: 'btn sm ' + (on ? 'light' : ''), text: 'متنی', onclick: function () { if (q.mode === 'code') { q.mode = ''; mark(); redraw(); } }}),
-        el('button', {type: 'button', class: 'btn sm ' + (on ? '' : 'light'), text: '</> کدنویسی', onclick: function () { q.mode = 'code'; mark(); redraw(); }})
+        el('button', {type: 'button', class: 'btn sm ' + (textOn ? '' : 'light'), text: 'متنی',
+          title: 'کادر توضیح متنی', onclick: function () { setForms(!textOn, on); }}),
+        el('button', {type: 'button', class: 'btn sm ' + (on ? '' : 'light'), text: '</> کدنویسی',
+          title: 'محیط کدنویسی', onclick: function () { setForms(textOn, !on); }}),
+        (on && textOn) ? el('span', {class: 'cx-form-hint', text: 'هر دو: دانش‌آموز هم توضیح می‌نویسد و هم کد.'}) : null
       ]);
       if (!on) return row;
       var wrap = el('div', {class: 'card', style: 'padding:10px;margin-bottom:8px;background:var(--soft)'});

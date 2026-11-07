@@ -186,10 +186,17 @@ class ExamBuilderViewModel(
     fun setQuestionMode(id: String, mode: String) = update(id) { q ->
         when (mode) {
             "order" -> q.copy(mode = mode, orderItems = q.orderItems.ifEmpty { listOf("", "", "") })
-            "draw", "dictation", "voice", "paint", "steps", "proof", "construct" -> q.copy(mode = mode)
+            "draw", "dictation", "voice", "paint", "steps", "proof", "construct", "code" -> q.copy(mode = mode)
             "hotspot" -> q.copy(mode = mode, hotspots = q.hotspots.takeIf { it.size == q.options.size } ?: List(q.options.size) { ir.exam.app.ui.builder.HotspotRect(0f, 0f, 0f, 0f) })
             else -> q.copy(mode = "")
         }
+    }
+
+    /** V349 — پاسخ کدنویسی: زبان ثابت، کد آغازین و کادر متن همراه با کد. */
+    fun setQuestionCodeLang(id: String, value: String) = update(id) { q -> q.copy(codeLang = value) }
+    fun setQuestionCodeStarter(id: String, value: String) = update(id) { q -> q.copy(codeStarter = value) }
+    fun setQuestionCodeWithText(id: String, value: Boolean) = update(id) { q ->
+        if (value) q.copy(mode = "code", codeWithText = true) else q.copy(codeWithText = false)
     }
 
     /** V308 / ۱۴ — برچسب پایه/درس سؤال (حالت ابتدایی). */

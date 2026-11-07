@@ -72,7 +72,7 @@
       /* V309 — پاسخ صوتی با سقف مدت معلم */
       if (obj.mode === 'voice' && type === 'essay') { q.mode = 'voice'; q.voiceMaxSeconds = Math.max(10, Math.min(300, Number(obj.voice_max_seconds) || 60)); }
       /* V348 — پاسخ کدنویسی */
-      if (obj.mode === 'code' && type === 'essay') { q.mode = 'code'; q.codeLang = obj.code_lang ? String(obj.code_lang) : ''; q.codeStarter = obj.code_starter ? String(obj.code_starter) : ''; }
+      if (obj.mode === 'code' && type === 'essay') { q.mode = 'code'; q.codeLang = obj.code_lang ? String(obj.code_lang) : ''; q.codeStarter = obj.code_starter ? String(obj.code_starter) : ''; q.codeWithText = obj.answer_form === 'both'; }
       if (obj.mode === 'dictation' && type === 'fill') { q.mode = 'dictation'; q.dictationText = obj.speak ? String(obj.speak) : ''; }
       if (obj.mode === 'hotspot' && type === 'multiple') { q.mode = 'hotspot'; q.hotspots = (Array.isArray(obj.hotspots) ? obj.hotspots : []).map(function (h) { return {x: Number(h.x) || 0, y: Number(h.y) || 0, w: Number(h.w) || 0, h: Number(h.h) || 0}; }); }
       return q;
@@ -1054,22 +1054,46 @@
       return wrap;
     }
 
-    /* V348 — پاسخ کدنویسی: دانش‌آموز در محیط کد می‌نویسد؛ پاسخ به‌صورت بلوک ``` ذخیره می‌شود */
+    /* V348/V349 — پاسخ کدنویسی. اگر معلم «هر دو» خواسته باشد، دو کادر جدا هست:
+       توضیح متنی و کد. هر دو در یک رشته ذخیره می‌شوند: متن، سپس بلوک ``` کد.
+       به این ترتیب نه پایگاه داده تغییر می‌کند و نه نسخهٔ قدیمی اپ چیزی از دست می‌دهد. */
     function codeAnswerBlock(q, existing, save, redraw) {
       var C = window.SiteCode;
-      var wrap = el('div', {class: 'cx-answer'});
+      var wrap = el('div', {class: 'cx-answer' + (q.codeWithText ? ' cx-answer-both' : '')});
       if (!C) { wrap.appendChild(el('p', {class: 'st-hint', text: 'ابزار کد در دسترس نیست؛ صفحه را تازه کنید.'})); return wrap; }
-      var cur = C.parseFence(existing);
+      var both = !!q.codeWithText;
+      var raw = String(existing == null ? '' : existing);
+      var cur = C.parseFence(raw);
+      /* بخش متنی = هرچه بیرون بلوک کد است */
+      var textPart = both ? C.split(raw).filter(function (p) { return !p.code; }).map(function (p) { return p.text; }).join('').trim() : '';
+      function compose(nextText, nextFence) {
+        var t = String(nextText == null ? '' : nextText).replace(/`{3,}/g, "'''").trim();
+        var f = String(nextFence == null ? '' : nextFence);
+        if (t && f) return t + '\n\n' + f;
+        return t || f || '';
+      }
       function openEditor(langId, startCode) {
         C.open({lang: langId, code: startCode, blank: !startCode && !q.codeStarter, starter: q.codeStarter || '',
           title: 'پاسخ کدنویسی' + (q.codeLang ? ' — ' + C.lang(q.codeLang).name : ''), doneLabel: 'ذخیره در پاسخ',
-          onDone: function (r) { save(C.fence(r.code, r.lang)); redraw(); }});
+          onDone: function (r) { save(compose(textPart, C.fence(r.code, r.lang))); redraw(); }});
+      }
+      if (both) {
+        wrap.appendChild(el('b', {style: 'font-size:13px', text: '۱) توضیح متنی شما'}));
+        var ta = el('textarea', {class: 'st-input', rows: '4', placeholder: 'توضیح، استدلال یا نکته‌های خود را اینجا بنویسید…'});
+        ta.value = textPart;
+        ta.addEventListener('input', function () {
+          textPart = ta.value;
+          save(compose(textPart, cur ? C.fence(cur.code, cur.lang) : ''));
+        });
+        wrap.appendChild(ta);
+        wrap.appendChild(el('b', {style: 'font-size:13px', text: '۲) پاسخ کد شما'}));
       }
       if (cur) {
         wrap.appendChild(el('div', {class: 'row'}, [
-          el('b', {style: 'font-size:13px', text: '</> پاسخ کد شما'}), el('span', {class: 'grow'}),
+          both ? el('span', {class: 'grow'}) : el('b', {style: 'font-size:13px', text: '</> پاسخ کد شما'}),
+          both ? null : el('span', {class: 'grow'}),
           el('button', {class: 'btn soft sm', text: 'ویرایش کد', onclick: function () { openEditor(cur.lang, cur.code); }}),
-          el('button', {class: 'btn light sm', text: 'حذف پاسخ', onclick: async function () { if (await S.confirmDlg('حذف پاسخ', 'کد نوشته‌شده پاک شود؟', 'حذف', true)) { save(''); redraw(); } }})
+          el('button', {class: 'btn light sm', text: 'حذف کد', onclick: async function () { if (await S.confirmDlg('حذف کد', 'کد نوشته‌شده پاک شود؟', 'حذف', true)) { save(compose(textPart, '')); redraw(); } }})
         ]));
         var view = el('div'); view.innerHTML = C.blockHtml(cur.code, cur.lang); wrap.appendChild(view);
         return wrap;

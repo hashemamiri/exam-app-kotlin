@@ -403,7 +403,11 @@ data class QuestionDraft(
     val orderItems: List<String> = emptyList(),
     val hotspots: List<HotspotRect> = emptyList(),
     val rawPublic: JsonObject = JsonObject(emptyMap()),
-    val rawAnswer: JsonObject = JsonObject(emptyMap())
+    val rawAnswer: JsonObject = JsonObject(emptyMap()),
+    /** V349 — پاسخ کدنویسی: زبان ثابت (خالی = آزاد)، کد آغازین، و اجازهٔ کادر متن همراه با کد. */
+    val codeLang: String = "",
+    val codeStarter: String = "",
+    val codeWithText: Boolean = false
 )
 
 data class AudienceClassOption(val id: String, val name: String, val grade: String? = null)

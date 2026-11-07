@@ -102,7 +102,11 @@ data class EssayQuestion(
     val proofGoal: String = "",
     val constructionPrompt: String = "",
     val constructionLabels: List<String> = emptyList(),
-    val constructionAngleLabels: List<String> = emptyList()
+    val constructionAngleLabels: List<String> = emptyList(),
+    /** V349 — پاسخ کدنویسی (answerMode = "code"): زبان، کد آغازین و کادر متن همراه. */
+    val codeLang: String = "",
+    val codeStarter: String = "",
+    val codeWithText: Boolean = false
 ) : Question
 
 data class MultipleChoiceQuestion(

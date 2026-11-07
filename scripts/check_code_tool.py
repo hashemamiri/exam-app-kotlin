@@ -63,6 +63,18 @@ with sync_playwright() as pw:
     unit = page.evaluate("""() => {
       const C = window.SiteCode, out = {};
       out.langCount = C.LANGS.length;
+      out.syms = {}; out.snips = {}; out.comps = {};
+      C.LANGS.forEach(function (L) {
+        out.syms[L.id] = C.symbolsFor(L.id).length;
+        out.snips[L.id] = C.snippetsFor(L.id).length;
+        out.comps[L.id] = C.completions(L.id).length;
+      });
+      out.pySyms = C.symbolsFor('python').slice(0, 3).join(' ');
+      out.htmlSyms = C.symbolsFor('html').slice(0, 3).join(' ');
+      out.sqlSyms = C.symbolsFor('sql').slice(0, 5).join(' ');
+      out.pySnip = C.snippetsFor('python')[0].label;
+      out.sqlSnip = C.snippetsFor('sql')[0].code.slice(0, 6);
+      out.hasCaretMark = C.snippetsFor('python')[0].code.indexOf('$0') >= 0;
       out.ids = C.LANGS.map(l => l.id);
       out.aliasPy = C.lang('py').id; out.aliasCpp = C.lang('c++').id; out.aliasCs = C.lang('c#').id;
       out.aliasUnknown = C.lang('klingon').id;
@@ -98,7 +110,18 @@ with sync_playwright() as pw:
       out.trickyFence = back && back.code === 'let s = "```";';
       return out;
     }""")
-    check('۱۲ زبان در فهرست', unit['langCount'] == 12, unit['langCount'])
+    check('۳۲ زبان در فهرست', unit['langCount'] == 32, unit['langCount'])
+    check('هر ۳۲ زبان نوار علائم دارند', all(v >= 12 for v in unit['syms'].values()),
+          min(unit['syms'].values()))
+    check('هر ۳۲ زبان دکمهٔ آماده دارند', all(v >= 4 for v in unit['snips'].values()),
+          {k: v for k, v in unit['snips'].items() if v < 4})
+    check('هر ۳۲ زبان واژهٔ پیشنهاد دارند', all(v >= 15 for v in unit['comps'].values()),
+          {k: v for k, v in unit['comps'].items() if v < 15})
+    check('چیدمان علائم هر زبان ویژهٔ خودش است',
+          unit['pySyms'] != unit['htmlSyms'] and unit['htmlSyms'].startswith('<'),
+          {'python': unit['pySyms'], 'html': unit['htmlSyms'], 'sql': unit['sqlSyms']})
+    check('قطعه‌کدها جای نشانگر دارند', unit['hasCaretMark'])
+    check('قطعهٔ SQL واقعاً SQL است', unit['sqlSnip'] == 'SELECT', unit['sqlSnip'])
     check('نام‌های جایگزین کار می‌کنند',
           unit['aliasPy'] == 'python' and unit['aliasCpp'] == 'cpp' and unit['aliasCs'] == 'csharp')
     check('زبان ناشناخته به پیش‌فرض می‌افتد', unit['aliasUnknown'] == 'python')
@@ -124,7 +147,7 @@ with sync_playwright() as pw:
     page.click('.b-tools .tool-btn.is-code')
     page.wait_for_selector('.cx-grid .cx-tile', timeout=15000)
     tiles = page.eval_on_selector_all('.cx-grid .cx-tile .cx-tile-name', 'e => e.map(x => x.textContent)')
-    check('با لمس ابزار، فهرست ۱۲ زبان باز می‌شود', len(tiles) == 12, ' | '.join(tiles))
+    check('با لمس ابزار، فهرست ۳۲ زبان باز می‌شود', len(tiles) == 32, len(tiles))
     page.screenshot(path=str(OUT / 'language-picker.png'))
 
     page.click('.cx-grid .cx-tile:has-text("پایتون")')
@@ -165,6 +188,63 @@ with sync_playwright() as pw:
     page.wait_for_timeout(80)
     after_tab = page.eval_on_selector('.cx-editor .cx-ta', 'e => e.value')
     check('Tab تورفتگی می‌گذارد', '        x = 1' in after_tab, repr(after_tab.split('\n')[-1]))
+    # ---------- V349: نوار علائم، دکمه‌های آماده، کامل‌کردن خودکار ----------
+    keys = page.eval_on_selector_all('.cx-editor .cx-keys .cx-key', 'e => e.map(x => x.textContent)')
+    check('نوار علائم در محیط کد دیده می‌شود', len(keys) >= 12, len(keys))
+    check('علائم پرکاربرد پایتون در نوار هست', ':' in keys and '(' in keys and '#' in keys, keys[:8])
+    ta.fill('x = ')
+    page.evaluate("() => { const t = document.querySelector('.cx-editor .cx-ta'); t.focus(); t.selectionStart = t.selectionEnd = t.value.length; }")
+    page.evaluate("() => Array.from(document.querySelectorAll('.cx-editor .cx-key')).find(b => b.textContent === '(').click()")
+    page.wait_for_timeout(120)
+    check('با لمس علامت، در جای نشانگر درج می‌شود',
+          page.eval_on_selector('.cx-editor .cx-ta', 'e => e.value') == 'x = (',
+          repr(page.eval_on_selector('.cx-editor .cx-ta', 'e => e.value')))
+
+    snips = page.eval_on_selector_all('.cx-editor .cx-snips .cx-snip', 'e => e.map(x => x.textContent)')
+    check('دکمه‌های آمادهٔ پایتون دیده می‌شوند', 'تابع' in snips and 'حلقه for' in snips, snips)
+    ta.fill('')
+    page.evaluate("() => { const t = document.querySelector('.cx-editor .cx-ta'); t.focus(); t.selectionStart = t.selectionEnd = 0; }")
+    page.evaluate("() => Array.from(document.querySelectorAll('.cx-editor .cx-snip')).find(b => b.textContent === 'تابع').click()")
+    page.wait_for_timeout(150)
+    snip_val = page.eval_on_selector('.cx-editor .cx-ta', 'e => e.value')
+    snip_caret = page.eval_on_selector('.cx-editor .cx-ta', 'e => e.selectionStart')
+    check('دکمهٔ آماده، قطعه‌کد را می‌گذارد', snip_val.startswith('def ') and 'pass' in snip_val, repr(snip_val))
+    check('نشانگر داخل نام تابع می‌نشیند', snip_caret == 4, snip_caret)
+    check('نشان $0 در متن باقی نمی‌ماند', '$0' not in snip_val)
+
+    ta.fill('de')
+    page.evaluate("() => { const t = document.querySelector('.cx-editor .cx-ta'); t.focus(); t.selectionStart = t.selectionEnd = 2; t.dispatchEvent(new Event('input')); }")
+    page.wait_for_selector('.cx-editor .cx-ac .cx-ac-item', timeout=8000)
+    ac = page.eval_on_selector_all('.cx-editor .cx-ac .cx-ac-item', 'e => e.map(x => x.textContent)')
+    check('با تایپ چند حرف، فهرست پیشنهاد باز می‌شود', 'def' in ac, ac)
+    page.screenshot(path=str(OUT / 'autocomplete.png'))
+    ta.press('Tab')
+    page.wait_for_timeout(150)
+    check('با Tab پیشنهاد پذیرفته می‌شود',
+          page.eval_on_selector('.cx-editor .cx-ta', 'e => e.value') == 'def',
+          repr(page.eval_on_selector('.cx-editor .cx-ta', 'e => e.value')))
+    check('پس از پذیرش، فهرست بسته می‌شود', page.locator('.cx-editor .cx-ac .cx-ac-item').count() == 0)
+    # بزرگی حروف کاربر حفظ شود (SQL)
+    page.evaluate("() => document.querySelector('.cx-editor .cx-bar .btn').click()")
+    page.wait_for_selector('.cx-grid', timeout=8000)
+    page.evaluate("() => Array.from(document.querySelectorAll('.cx-tile')).find(t => /اس‌کیوال/.test(t.textContent)).click()")
+    page.wait_for_timeout(400)
+    sta = page.locator('.cx-editor .cx-ta')
+    sta.fill('SEL')
+    page.evaluate("() => { const t = document.querySelector('.cx-editor .cx-ta'); t.focus(); t.selectionStart = t.selectionEnd = 3; t.dispatchEvent(new Event('input')); }")
+    page.wait_for_selector('.cx-editor .cx-ac .cx-ac-item', timeout=8000)
+    sta.press('Enter')
+    page.wait_for_timeout(150)
+    check('در SQL بزرگی حروفِ نوشتهٔ کاربر حفظ می‌شود',
+          page.eval_on_selector('.cx-editor .cx-ta', 'e => e.value') == 'SELECT',
+          repr(page.eval_on_selector('.cx-editor .cx-ta', 'e => e.value')))
+    sql_keys = page.eval_on_selector_all('.cx-editor .cx-keys .cx-key', 'e => e.map(x => x.textContent)')
+    check('با تغییر زبان، نوار علائم هم عوض می‌شود', sql_keys != keys and ';' in sql_keys, sql_keys[:8])
+    # بازگشت به پایتون برای ادامهٔ آزمون
+    page.evaluate("() => document.querySelector('.cx-editor .cx-bar .btn').click()")
+    page.wait_for_selector('.cx-grid', timeout=8000)
+    page.evaluate("() => Array.from(document.querySelectorAll('.cx-tile')).find(t => /پایتون/.test(t.textContent)).click()")
+    page.wait_for_timeout(400)
     page.screenshot(path=str(OUT / 'editor.png'))
 
     ta.fill('def add(a, b):\n    return a + b\n')
@@ -204,23 +284,58 @@ with sync_playwright() as pw:
     page.wait_for_timeout(400)
     fixed = page.evaluate("""() => Array.from(document.querySelectorAll('.b-type button')).map(b => b.textContent).find(t => /ثابت/.test(t)) || ''""")
     check('زبان پاسخ دانش‌آموز ثابت می‌شود', 'جاوااسکریپت' in fixed, fixed)
+    # ---------- V349: انتخاب هم‌زمان «متنی» و «کدنویسی» ----------
+    def read_forms():
+        return page.evaluate("""() => Array.from(document.querySelectorAll('button'))
+          .filter(b => ['متنی', '</> کدنویسی'].includes(b.textContent.trim()))
+          .map(b => ({label: b.textContent.trim(), on: !b.className.includes('light')}))""")
+
+    def tap(label):
+        page.evaluate("(l) => Array.from(document.querySelectorAll('button')).find(b => b.textContent.trim() === l).click()", label)
+        page.wait_for_timeout(350)
+
+    def state():
+        f = read_forms()
+        return (next(x['on'] for x in f if x['label'] == 'متنی'),
+                next(x['on'] for x in f if x['label'] != 'متنی'))
+
+    forms = read_forms()
+    check('هر دو دکمهٔ شکل پاسخ پیدا می‌شوند', len(forms) == 2, forms)
+    if not state()[0]:
+        tap('متنی')
+    check('هر دو شکل را می‌توان با هم روشن کرد', state() == (True, True), state())
+    hint = page.evaluate("() => { const h = document.querySelector('.cx-form-hint'); return h ? h.textContent : ''; }")
+    check('راهنمای «هر دو» به معلم نشان داده می‌شود', 'هر دو' in hint, hint)
+    page.screenshot(path=str(OUT / 'both-forms.png'))
+    tap('متنی')
+    check('با خاموش‌کردن متن، فقط کدنویسی می‌ماند', state() == (False, True), state())
+    tap('متنی')
+    check('روشن‌کردن دوبارهٔ متن، حالت «هر دو» را برمی‌گرداند', state() == (True, True), state())
+    tap('</> کدنویسی')
+    check('با خاموش‌کردن کد، فقط متن می‌ماند', state() == (True, False), state())
+    tap('متنی')
+    check('آخرین شکل پاسخ را نمی‌توان خاموش کرد', state() == (True, False), state())
+    tap('</> کدنویسی')
+    check('بازگشت به «هر دو» برای ادامهٔ آزمون', state() == (True, True), state())
     page.screenshot(path=str(OUT / 'code-mode.png'))
 
     # ---------- ۴) رفت‌وبرگشت دادهٔ سؤال ----------
     rt = page.evaluate("""() => {
       const B = window.SiteBuilder;
       const q = B.newQuestion('essay');
-      q.text = 'تابع را بنویس'; q.mode = 'code'; q.codeLang = 'python'; q.codeStarter = 'def f():\\n    pass';
+      q.text = 'تابع را بنویس'; q.mode = 'code'; q.codeLang = 'python'; q.codeStarter = 'def f():\\n    pass'; q.codeWithText = true;
       const enc = B.encodeQuestions([q]);
       const pub = enc.publicQuestions[0];
       const back = B.decodeQuestion(pub, enc.answerKey[0] || {});
-      return {mode: pub.mode, lang: pub.code_lang, starter: pub.code_starter,
-              backMode: back.mode, backLang: back.codeLang, backStarter: back.codeStarter};
+      return {mode: pub.mode, lang: pub.code_lang, starter: pub.code_starter, form: pub.answer_form,
+              backMode: back.mode, backLang: back.codeLang, backStarter: back.codeStarter, backBoth: back.codeWithText};
     }""")
     check('حالت code در دادهٔ سؤال ذخیره می‌شود', rt['mode'] == 'code', rt)
     check('زبان و کد آغازین ذخیره می‌شوند', rt['lang'] == 'python' and 'def f' in (rt['starter'] or ''), rt)
     check('هنگام بازخوانی، حالت و زبان برمی‌گردند',
           rt['backMode'] == 'code' and rt['backLang'] == 'python' and 'def f' in (rt['backStarter'] or ''), rt)
+    check('شکل «هر دو» در دادهٔ سؤال ذخیره می‌شود', rt['form'] == 'both', rt['form'])
+    check('شکل «هر دو» هنگام بازخوانی برمی‌گردد', rt['backBoth'] is True, rt['backBoth'])
 
     # ---------- ۵) رندر پاسخ دانش‌آموز در تصحیح ----------
     grading = page.evaluate("""async () => {
@@ -239,18 +354,20 @@ with sync_playwright() as pw:
     exam_id = 'exam-v348-code'
     mock_state.exams[exam_id] = {
         'id': exam_id, 'code': EXAM_CODE, 'title': 'آزمون برنامه‌نویسی', 'subject': 'کامپیوتر',
-        'duration': 30, 'total_score': 20, 'is_open': True,
+        'duration': 30, 'total_score': 30, 'is_open': True,
         'teacher_id': next(iter(mock_state.users_by_id), ''),
         'questions': [
             {'type': 'essay', 'mode': 'code', 'code_lang': 'python',
              'code_starter': 'def solve(n):\n    pass', 'text': 'تابع را کامل کن.', 'score': 10},
             {'type': 'essay', 'mode': 'code', 'text': 'به زبان دلخواه بنویس.', 'score': 10},
+            {'type': 'essay', 'mode': 'code', 'answer_form': 'both', 'code_lang': 'python',
+             'text': 'هم توضیح بده و هم کد بنویس.', 'score': 10},
         ],
         'options': {}, 'shuffle_q': False, 'shuffle_opt': False, 'attempts_allowed': 1,
         'grade_policy': 'last', 'pick_count': 0, 'pick_rules': {}, 'audience': 'all',
         'class_id': None, 'created_at': mock_state.now_iso(),
     }
-    mock_state.exam_keys[exam_id] = {'exam_id': exam_id, 'answers': [{}, {}]}
+    mock_state.exam_keys[exam_id] = {'exam_id': exam_id, 'answers': [{}, {}, {}]}
 
     mctx = browser.new_context(viewport={'width': 390, 'height': 844}, is_mobile=True, has_touch=True)
     mp = mctx.new_page()
@@ -310,10 +427,54 @@ with sync_playwright() as pw:
         mp.evaluate("() => Array.from(document.querySelectorAll('.cx-answer button')).find(b => /نوشتن کد/.test(b.textContent)).click()")
         mp.wait_for_selector('.cx-grid', timeout=20000)
         tiles = mp.eval_on_selector_all('.cx-grid .cx-tile', 'e => e.length')
-        check('برای زبان آزاد، دانش‌آموز خودش از ۱۲ زبان انتخاب می‌کند', tiles == 12, tiles)
+        check('برای زبان آزاد، دانش‌آموز خودش از ۳۲ زبان انتخاب می‌کند', tiles == 32, tiles)
         mp.screenshot(path=str(OUT / 'student-mobile-picker.png'))
     else:
         check('سؤال دوم (زبان آزاد) در دسترس است', False, 'دکمهٔ نوشتن کد پیدا نشد')
+    # ---------- V349: دانش‌آموز با «هر دو» — دو کادر جدا ----------
+    mp.keyboard.press('Escape')
+    mp.wait_for_timeout(300)
+    mp.evaluate("() => { const b = Array.from(document.querySelectorAll('button')).find(x => x.textContent.trim() === '۳'); if (b) b.click(); }")
+    mp.wait_for_timeout(700)
+    boxes = mp.evaluate("() => ({text: document.querySelectorAll('.cx-answer-both textarea').length, code: Array.from(document.querySelectorAll('.cx-answer button')).filter(b => /نوشتن کد/.test(b.textContent)).length})")
+    check('برای «هر دو»، دانش‌آموز دو کادر جدا می‌بیند', boxes['text'] == 1 and boxes['code'] == 1, boxes)
+    labels = mp.eval_on_selector_all('.cx-answer-both b', 'e => e.map(x => x.textContent)')
+    check('کادرها شماره و عنوان دارند', any('توضیح متنی' in t for t in labels) and any('پاسخ کد' in t for t in labels), labels)
+    mp.fill('.cx-answer-both textarea', 'ابتدا ورودی را بررسی می‌کنم، سپس دو برابر برمی‌گردانم.')
+    mp.wait_for_timeout(300)
+    mp.evaluate("() => Array.from(document.querySelectorAll('.cx-answer button')).find(b => /نوشتن کد/.test(b.textContent)).click()")
+    mp.wait_for_selector('.cx-editor .cx-ta', timeout=20000)
+    mp.locator('.cx-editor .cx-ta').fill('def twice(n):\n    return n * 2')
+    mp.wait_for_timeout(200)
+    mp.evaluate("() => Array.from(document.querySelectorAll('button')).find(b => /ذخیره در پاسخ/.test(b.textContent)).click()")
+    mp.wait_for_selector('.cx-answer .cx-block', timeout=20000)
+    kept = mp.eval_on_selector('.cx-answer-both textarea', 'e => e.value')
+    check('پس از ذخیرهٔ کد، توضیح متنی پاک نمی‌شود', 'دو برابر' in kept, repr(kept))
+    saved_code = mp.eval_on_selector('.cx-answer .cx-block .cx-code', 'e => e.textContent')
+    check('کد هم درست ذخیره می‌شود', 'return n * 2' in saved_code, repr(saved_code))
+    draft = mp.evaluate("() => Object.keys(localStorage).map(k => localStorage.getItem(k) || '').join('\\n')")
+    check('متن و کد با هم در یک پاسخ ذخیره می‌شوند',
+          'دو برابر' in draft and '```python' in draft and 'return n * 2' in draft)
+    ans = mp.evaluate("""() => {
+      for (const k of Object.keys(localStorage)) {
+        const v = localStorage.getItem(k) || '';
+        if (v.indexOf('دو برابر') < 0) continue;
+        let o; try { o = JSON.parse(v); } catch (e) { continue; }
+        const hits = [];
+        (function walk(x) {
+          if (typeof x === 'string') { if (x.indexOf('دو برابر') >= 0) hits.push(x); }
+          else if (x && typeof x === 'object') Object.values(x).forEach(walk);
+        })(o);
+        if (hits.length) return hits[0];
+      }
+      return '';
+    }""")
+    parts = mp.evaluate("(a) => window.SiteCode.split(a).map(p => ({code: p.code, text: p.text}))", ans)
+    check('پاسخ از یک بخش متنی و سپس یک بلوک کد ساخته شده',
+          len(parts) == 2 and parts[0]['code'] is False and parts[1]['code'] is True,
+          [{'code': x['code'], 'head': x['text'][:24]} for x in parts])
+    check('متن پاسخ بیرون بلوک کد می‌نشیند', 'دو برابر' in parts[0]['text'] and 'return n * 2' in parts[1]['text'])
+    mp.screenshot(path=str(OUT / 'student-both.png'))
     check('در گوشی هیچ خطای جاوااسکریپتی رخ نداد', not merrors, merrors[:3])
     mctx.close()
 
