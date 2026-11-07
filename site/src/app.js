@@ -3169,7 +3169,11 @@
   /* V234 — کلیک روی هر کد آزمون (.code) در سراسر سایت = کپی در حافظهٔ موقت */
   document.addEventListener('click', function (e) {
     var t = e.target && e.target.closest ? e.target.closest('.code') : null;
-    if (!t || t.closest('input,textarea,button,a')) return;
+    /* V352.4 — تداخل نام کلاس: تراشهٔ ابزار کد هم کلاس «code» دارد (b-chip code).
+       این شنونده از V234 برای «کد آزمون» است، نه ابزار کد؛ بدون این مهار، یک کلیک
+       روی تراشه کلِ متن کادر (نشان زبان + شمار خط + شمارهٔ سطرها + کد) را کپی
+       می‌کرد و توست «کد آزمون … کپی شد» می‌داد. کادر کد و ویرایشگر متن مستثنا شدند. */
+    if (!t || t.closest('input,textarea,button,a,.b-chip,.cx-block,.b-rich')) return;
     var code = (t.textContent || '').trim(); if (!code || code === '—') return;
     var done = function () { toast('کد آزمون ' + code + ' کپی شد.', 'ok'); };
     if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(code).then(done, function () { legacyCopy(code); done(); }); else { legacyCopy(code); done(); }

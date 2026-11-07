@@ -742,6 +742,76 @@ def run_suite(site_dir_arg: str | None, out_dir: Path) -> int:
                 t0,
             )
 
+
+            # --------------------------------------------------------
+            # ۳ب) V352.4 — تراشهٔ ابزار کد نباید «کد آزمون» شمرده شود
+            #     تداخل کلاس: تراشه کلاس «code» دارد و شنوندهٔ V234 در app.js
+            #     هر .code را کد آزمون می‌گیرد. این گام جلوی بازگشت آن را می‌گیرد.
+            # --------------------------------------------------------
+            t0 = time.monotonic()
+            desktop_ctx.grant_permissions(["clipboard-read", "clipboard-write"])
+            chip_code = '<?php\n\nfunction greet(string $name): string {\n    return "سلام " . $name;\n}\n\necho greet("دنیا");'
+            chip_fence = "```php\n" + chip_code + "\n```"
+            saved_q = page.evaluate(
+                """() => {
+                    const ta = document.querySelector("textarea[placeholder*='متن سؤال']");
+                    return ta ? ta.value : null;
+                }"""
+            )
+            set_question_text(page, "متن سؤال با ابزار کد\n" + chip_fence)
+            page.wait_for_selector(".b-rich .b-chip.code .cx-block", timeout=8000)
+            page.wait_for_timeout(400)
+
+            # ۱) کلیک اول نباید چیزی کپی کند و نباید توست «کد آزمون» بدهد
+            page.evaluate("() => navigator.clipboard.writeText('__SENTINEL__')")
+            page.wait_for_timeout(150)
+            page.locator(".b-rich .b-chip.code .cx-code").first.click()
+            page.wait_for_timeout(350)
+            after_click = page.evaluate("() => navigator.clipboard.readText()")
+            assert after_click == "__SENTINEL__", (
+                "کلیک روی تراشهٔ کد در کلیپ‌بورد نوشت — تداخل کلاس .code برگشته: " + after_click[:90]
+            )
+            chip_toasts = page.evaluate("() => (document.getElementById('toasts') || {}).innerText || ''")
+            assert "کد آزمون" not in chip_toasts, "توست «کد آزمون» روی تراشهٔ ابزار کد ظاهر شد"
+            assert "sel" in page.eval_on_selector(".b-rich .b-chip.code", "n => n.className"), "تراشه انتخاب نشد"
+
+            # ۲) Ctrl+C داخل سازنده = قالب اصلی، بدون کروم
+            page.keyboard.press("Control+c")
+            page.wait_for_timeout(300)
+            raw_clip = page.evaluate("() => navigator.clipboard.readText()")
+            assert raw_clip.strip() == chip_fence, "کپیِ سازنده قالب اصلی نداد: " + raw_clip[:90]
+
+            # ۳) دکمهٔ کپی: فقط کد تمیز، بدون انتخاب و بدون باز کردن ویرایشگر
+            page.evaluate(
+                """() => {
+                    const c = document.querySelector('.b-rich .b-chip.code');
+                    c.classList.remove('sel');
+                    document.getSelection().removeAllRanges();
+                    return navigator.clipboard.writeText('__SENTINEL__');
+                }"""
+            )
+            page.wait_for_timeout(150)
+            page.locator(".b-rich .b-chip.code .cx-copy").first.click()
+            page.wait_for_timeout(350)
+            btn_clip = page.evaluate("() => navigator.clipboard.readText()")
+            assert btn_clip == chip_code, "دکمهٔ کپی کد تمیز نداد: " + btn_clip[:90]
+            assert page.locator(".cx-editor-bg").count() == 0, "دکمهٔ کپی پنجرهٔ ویرایش را باز کرد"
+            assert "sel" not in page.eval_on_selector(".b-rich .b-chip.code", "n => n.className"), "دکمهٔ کپی تراشه را انتخاب کرد"
+
+            # بازگرداندن متن سؤال تا بقیهٔ مجموعه دست‌نخورده بماند
+            if saved_q is not None:
+                set_question_text(page, saved_q)
+                page.wait_for_timeout(250)
+            page.evaluate("window.scrollTo(0, 0)")
+            record_step(
+                page,
+                "03b_code_chip_no_hijack.png",
+                "تراشهٔ ابزار کد — کلیک اول کپی نمی‌کند، کپی سازنده قالب اصلی می‌دهد، دکمهٔ کپی فقط کد تمیز",
+                "مهار تداخل کلاس .code میان «کد آزمون» (V234) و تراشهٔ ابزار کد (V350)",
+                "1366×900",
+                t0,
+            )
+
             # --------------------------------------------------------
             # ۴) ذخیرهٔ دوبار (اثبات ثبات کد ۶حرفی) + باز کردن آزمون برای دانش‌آموزان
             # --------------------------------------------------------
