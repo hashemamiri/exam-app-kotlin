@@ -3,6 +3,7 @@ package ir.exam.app.ui.app
 import ir.exam.app.core.figure.FigureCodec
 import ir.exam.app.core.figure.FigureSpec
 import ir.exam.app.core.math.FormulaTextCodec
+import ir.exam.app.core.text.CodeBlockCodec
 import ir.exam.app.core.text.RichSegment
 import ir.exam.app.core.text.RichTextSplitter
 import java.io.File
@@ -37,8 +38,9 @@ class V67_0QuestionFieldCaretOrderTest {
         val source = "با توجه به \$x^2\$ و شکل %%FIG:${spec.toJson()}%% ادامه دهید"
         val formulas = FormulaTextCodec.occurrences(source)
         val figures = FigureCodec.occurrences(source)
-        val parts = RichTextSplitter.split(source, formulas, figures)
-        val ranges = RichTextSplitter.segmentSourceRanges(parts, formulas, figures)
+        val codes = CodeBlockCodec.occurrences(source)
+        val parts = RichTextSplitter.split(source, formulas, figures, codes)
+        val ranges = RichTextSplitter.segmentSourceRanges(parts, formulas, figures, codes)
         assertEquals(parts.size, ranges.size)
         parts.forEachIndexed { i, seg ->
             when (seg) {
@@ -56,6 +58,12 @@ class V67_0QuestionFieldCaretOrderTest {
                     val occ = figures[seg.index]
                     assertTrue("figure start", occ.start == ranges[i].first)
                     assertTrue("figure end", occ.endExclusive == ranges[i].last + 1)
+                }
+                // V350 — بلوک کد هم شیء درون‌متنی است؛ when روی sealed باید کامل بماند.
+                is RichSegment.Code -> {
+                    val occ = CodeBlockCodec.occurrences(source)[seg.index]
+                    assertTrue("code start", occ.start == ranges[i].first)
+                    assertTrue("code end", occ.endExclusive == ranges[i].last + 1)
                 }
             }
         }

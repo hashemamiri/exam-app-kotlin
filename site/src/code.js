@@ -18,6 +18,10 @@
   var S = window.ExamSite;
   if (!S) return;
   var el = S.el, esc = S.esc, toast = S.toast;
+  /* V350 — شمار خط‌ها در رابط فارسی نوشته می‌شود، نه «1 lines» */
+  function faNum(n) {
+    return String(n).replace(/[0-9]/g, function (d) { return String.fromCharCode(0x6F0 + Number(d)); });
+  }
   var MAX = 20000; /* سقف نویسهٔ کد تا پاسخ‌ها و چاپ سنگین نشوند */
 
   /* زبان‌ها: نام، نشان کوتاه، رنگ، پسوند، توضیح کوتاه و نمونهٔ آغاز */
@@ -294,7 +298,7 @@
     return '<div class="cx-block" dir="ltr" data-lang="' + esc(L.id) + '">'
       + '<div class="cx-bar"><span class="cx-badge" style="--cx:' + L.color + '">' + esc(L.short) + '</span>'
       + '<span class="cx-name">' + esc(L.name) + '</span><span class="cx-grow"></span>'
-      + '<span class="cx-meta">' + esc(String(lines.length)) + ' lines</span>'
+      + '<span class="cx-meta">' + faNum(lines.length) + ' خط</span>'
       + '<button type="button" class="cx-copy" data-cx-copy="1">کپی</button></div>'
       + '<div class="cx-body"><pre class="cx-num" aria-hidden="true">' + esc(nums) + '</pre>'
       + '<pre class="cx-code"><code>' + highlight(src, L.id) + '</code></pre></div></div>';

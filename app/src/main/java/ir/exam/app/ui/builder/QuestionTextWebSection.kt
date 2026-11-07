@@ -26,6 +26,7 @@ import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -53,8 +54,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import ir.exam.app.core.figure.FigureCodec
 import ir.exam.app.core.figure.FigureSpec
+import ir.exam.app.ui.code.CodeBlockView
 import ir.exam.app.core.math.FormulaTextCodec
 import ir.exam.app.core.math.NativeMathSvgRenderer
+import ir.exam.app.core.text.CodeBlockCodec
 import ir.exam.app.core.text.RichSegment
 import ir.exam.app.core.text.RichTextSplitter
 import ir.exam.app.ui.figure.AtlasFigureView
@@ -94,12 +97,17 @@ fun QuestionTextWebSection(
     onEditFigureToken: (specJson: String, occurrenceIndex: Int, start: Int, end: Int) -> Unit =
         { _, _, _, _ -> },
     onOpenFormula: (text: String, selStart: Int, selEnd: Int) -> Unit = { _, _, _ -> },
+    // V350 — درج/ویرایش کد در متن سؤال، مثل بقیهٔ ابزارها.
+    onInsertCode: (insertOffset: Int) -> Unit = {},
+    onEditCodeToken: (occurrenceIndex: Int, lang: String, code: String, start: Int, end: Int) -> Unit =
+        { _, _, _, _, _ -> },
     modifier: Modifier = Modifier
 ) {
     val currentText by rememberUpdatedState(text)
     val currentOnText by rememberUpdatedState(onTextChanged)
     val currentOpenFormula by rememberUpdatedState(onOpenFormula)
     val currentEditToken by rememberUpdatedState(onEditFigureToken)
+    val currentEditCode by rememberUpdatedState(onEditCodeToken)
 
     // V67.0 — وضعیت مکان‌نما و انتخاب:
     // focusedTextSegment: آخرین بخش متنی که کاربر در آن تایپ کرده (محل درج).
@@ -114,12 +122,13 @@ fun QuestionTextWebSection(
     // بازترکیب ناشی از تغییر Stateهای دیگر کارت سؤال.
     val formulas = remember(text) { FormulaTextCodec.occurrences(text) }
     val figures = remember(text) { FigureCodec.occurrences(text) }
-    val parts = remember(text, formulas, figures) {
-        RichTextSplitter.split(text, formulas, figures)
+    val codes = remember(text) { CodeBlockCodec.occurrences(text) }
+    val parts = remember(text, formulas, figures, codes) {
+        RichTextSplitter.split(text, formulas, figures, codes)
     }
     // V67.0 — بازهٔ آفست هر بخش در متن خام برای درج در محل مکان‌نما.
-    val segRanges = remember(text, parts, formulas, figures) {
-        RichTextSplitter.segmentSourceRanges(parts, formulas, figures)
+    val segRanges = remember(text, parts, formulas, figures, codes) {
+        RichTextSplitter.segmentSourceRanges(parts, formulas, figures, codes)
     }
 
     // V67.0 — محل درج = پایان آخرین بخش متنی فعال؛ وگرنه انتهای متن.
@@ -381,6 +390,52 @@ fun QuestionTextWebSection(
                                 }
                             }
                         }
+                        is RichSegment.Code -> {
+                            // V350 — کادر کد داخل متن سؤال: لمس اول انتخاب (ضربدر حذف)،
+                            // لمس دوم باز شدن محیط کدنویسی با همان کد و زبان.
+                            val selected = selectedPartIndex == index
+                            val codeOcc = codes.getOrNull(part.index)
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 3.dp)
+                                    .then(
+                                        if (selected) {
+                                            Modifier.border(
+                                                2.dp, MaterialTheme.colorScheme.primary,
+                                                RoundedCornerShape(10.dp)
+                                            )
+                                        } else {
+                                            Modifier
+                                        }
+                                    )
+                                    .clickable {
+                                        if (selected) {
+                                            selectedPartIndex = null
+                                            currentEditCode(
+                                                part.index, part.lang, part.code,
+                                                codeOcc?.start ?: -1, codeOcc?.endExclusive ?: -1
+                                            )
+                                        } else {
+                                            selectedPartIndex = index
+                                        }
+                                    }
+                            ) {
+                                CodeBlockView(
+                                    code = part.code,
+                                    langId = part.lang,
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                                if (selected) {
+                                    TokenCloseButton(Modifier.align(Alignment.TopEnd)) {
+                                        if (codeOcc != null) {
+                                            currentOnText(CodeBlockCodec.remove(currentText, codeOcc))
+                                        }
+                                        selectedPartIndex = null
+                                    }
+                                }
+                            }
+                        }
                     }
                     }
                 }
@@ -398,7 +453,20 @@ fun QuestionTextWebSection(
             NativeToolButton(QuestionToolIcons.Table, "درج جدول") { onInsertTable(insertAtOffset) }
             NativeToolButton(QuestionToolIcons.Gallery, "گالری شکل‌ها") { onInsertGallery(insertAtOffset) }
             NativeToolButton(QuestionToolIcons.Periodic, "درج جدول تناوبی") { onInsertPeriodic(insertAtOffset) }
+            NativeCodeToolButton { onInsertCode(insertAtOffset) }
         }
+    }
+}
+
+/** V350 — دکمهٔ «</>» درج کد؛ همان نماد سایت. */
+@Composable
+private fun NativeCodeToolButton(onClick: () -> Unit) {
+    IconButton(onClick = onClick, modifier = Modifier.size(36.dp)) {
+        Text(
+            "</>",
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.primary
+        )
     }
 }
 

@@ -32,6 +32,24 @@ object QuestionToolIcons {
         }.build()
     }
 
+    /**
+     * V350 — کد `</>`؛ بازتولید خط‌به‌خط همان SVG سایت
+     * (`M8.6 8.2 4.4 12l4.2 3.8M15.4 8.2 19.6 12l-4.2 3.8M13.4 5.6l-2.8 12.8`).
+     */
+    val Code: ImageVector by lazy {
+        ImageVector.Builder("QTool.Code", 24.dp, 24.dp, 24f, 24f).apply {
+            path(
+                stroke = stroke, strokeLineWidth = 1.8f,
+                strokeLineCap = StrokeCap.Round, strokeLineJoin = StrokeJoin.Round,
+                fill = null
+            ) {
+                moveTo(8.6f, 8.2f); lineTo(4.4f, 12f); lineTo(8.6f, 15.8f)
+                moveTo(15.4f, 8.2f); lineTo(19.6f, 12f); lineTo(15.4f, 15.8f)
+                moveTo(13.4f, 5.6f); lineTo(10.6f, 18.4f)
+            }
+        }.build()
+    }
+
     /** شکل: مربع + دایره + مثلث مرجع. */
     val Figure: ImageVector by lazy {
         ImageVector.Builder("QTool.Figure", 24.dp, 24.dp, 24f, 24f).apply {

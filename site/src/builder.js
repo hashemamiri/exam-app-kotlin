@@ -634,20 +634,35 @@
     var live = el('div', {class: 'b-live', style: 'display:none'});
     previewCss();
     ta.style.display = 'none';
-    var TOKEN_RE = /%%FIG:(\{[\s\S]*?\})%%|\$([^$]+)\$/g;
+    /* V350 — کد هم یک شیء داخل متن است: اول کد، بعد شکل، بعد فرمول */
+    var TOKEN_RE = /```([A-Za-z0-9_+#.\-]*)[ \t]*\r?\n([\s\S]*?)```|%%FIG:(\{[\s\S]*?\})%%|\$([^$]+)\$/g;
+    function codeChipLabel(langId) {
+      return '</> ' + (window.SiteCode ? window.SiteCode.lang(langId).name : (langId || FA.lang));
+    }
     /* V189 — WYSIWYG: تراشه همان فرمول/شکل رندرشده را نشان می‌دهد (موتور چاپ)؛ تا آماده شدن، برچسب موقت */
     var WYSIWYG = document.body.classList.contains('dk');
     function chip(tok, label, cls) {
       var c = el('span', {class: 'b-chip ' + cls + (WYSIWYG ? ' live' : ''), contenteditable: 'false', title: cls === 'tex' ? tok.slice(1, -1) : label, text: '⟦' + label + '⟧'});
       c.setAttribute('data-tok', tok);
-      if (WYSIWYG) ensurePreviewFrame().then(function (w) { if (!w) return; try { var h = w.renderRichText(tok, null); if (h) { c.innerHTML = h; simplifyFigs(c); fitMath(w, c); } } catch (e) {} });
+      if (cls === 'code') {
+        /* V350 — کادر کد داخل متن سؤال/گزینه، مثل شکل و فرمول */
+        if (WYSIWYG && window.SiteCode) {
+          var pp = window.SiteCode.parseFence(tok);
+          if (pp) {
+            c.classList.add('code-live');
+            c.innerHTML = window.SiteCode.blockHtml(pp.code, pp.lang);
+            c.setAttribute('title', 'کد ' + window.SiteCode.lang(pp.lang).name + ' — یک کلیک: انتخاب و حذف، دو کلیک: ویرایش');
+          }
+        }
+      } else if (WYSIWYG) ensurePreviewFrame().then(function (w) { if (!w) return; try { var h = w.renderRichText(tok, null); if (h) { c.innerHTML = h; simplifyFigs(c); fitMath(w, c); } } catch (e) {} });
       return c;
     }
     function render(raw) {
       rich.innerHTML = ''; var last = 0, m; TOKEN_RE.lastIndex = 0;
       while ((m = TOKEN_RE.exec(raw))) {
         if (m.index > last) rich.appendChild(document.createTextNode(raw.slice(last, m.index)));
-        rich.appendChild(m[1] != null ? chip(m[0], figChipLabel(m[1]), 'fig') : chip(m[0], 'فرمول', 'tex'));
+        rich.appendChild(m[1] != null ? chip(m[0], codeChipLabel(m[1]), 'code')
+          : m[3] != null ? chip(m[0], figChipLabel(m[3]), 'fig') : chip(m[0], 'فرمول', 'tex'));
         last = m.index + m[0].length;
       }
       if (last < raw.length) rich.appendChild(document.createTextNode(raw.slice(last)));
@@ -706,6 +721,17 @@
     function openTokEditor(c) {
       var tok = c.getAttribute('data-tok'); var raw = ta.value; var idx = raw.indexOf(tok); if (idx < 0) return;
       if (c.classList.contains('tex')) { S.openFormulaEditor(raw, idx, idx + tok.length).then(function (t) { if (t != null && t !== ta.value) { ta.value = t; ta.selectionStart = ta.selectionEnd = idx; ta.dispatchEvent(new Event('input')); } }); }
+      else if (c.classList.contains('code') && window.SiteCode) {
+        /* V350 — ویرایش همان کد، در همان جای متن */
+        var p0 = window.SiteCode.parseFence(tok) || {lang: '', code: ''};
+        window.SiteCode.open({lang: p0.lang, code: p0.code, title: 'ویرایش کد', doneLabel: 'ذخیرهٔ کد',
+          onDone: function (r) {
+            var next = window.SiteCode.fence(r.code, r.lang);
+            ta.value = raw.slice(0, idx) + next + raw.slice(idx + tok.length);
+            ta.selectionStart = ta.selectionEnd = idx;
+            ta.dispatchEvent(new Event('input'));
+          }});
+      }
       else if (typeof editFigure === 'function') editFigure(ta, tok);
     }
     function deleteTok(c) {
@@ -717,7 +743,8 @@
       Array.prototype.forEach.call(rich.querySelectorAll('.b-chip.sel'), function (x) { if (x !== c) { x.classList.remove('sel'); var ox = x.querySelector('.b-chip-x'); if (ox) ox.remove(); } });
       c.classList.add('sel');
       /* V195 — ضربدر حذف روی شیء انتخاب‌شده (دسکتاپ) */
-      if (WYSIWYG && !c.querySelector('.b-chip-x')) c.appendChild(el('button', {type: 'button', class: 'b-chip-x', title: 'حذف این شیء', 'aria-label': 'حذف', text: '✕'}));
+      /* V350 — تراشهٔ کد روی گوشی هم ضربدر حذف بگیرد (بقیه مثل قبل) */
+      if ((WYSIWYG || c.classList.contains('code')) && !c.querySelector('.b-chip-x')) c.appendChild(el('button', {type: 'button', class: 'b-chip-x', title: 'حذف این شیء', 'aria-label': 'حذف', text: '✕'}));
       var r = document.createRange(); r.selectNode(c); var sel = document.getSelection(); sel.removeAllRanges(); sel.addRange(r); caretToRaw();
     }
     rich.addEventListener('click', function (e) {
@@ -1041,18 +1068,7 @@
         }}),
         /* V348 — ابزار کدنویسی: انتخاب زبان، سپس محیط نوشتن کد؛ بلوک کد در متن سؤال درج می‌شود */
         el('button', {class: 'tool-btn is-code', title: 'کد برنامه‌نویسی (انتخاب زبان)', 'aria-label': 'کد برنامه‌نویسی', html: toolSvg('code'), onclick: function () {
-          if (!window.SiteCode) return toast('ابزار کد در دسترس نیست.', 'err');
-          var at = ta.selectionStart == null ? ta.value.length : ta.selectionStart;
-          window.SiteCode.openWithPicker({title: 'کد در متن سؤال', doneLabel: 'افزودن کد به سؤال', onDone: function (r) {
-            var block = window.SiteCode.fence(r.code, r.lang);
-            var v = ta.value;
-            var pre = v.slice(0, at), post = v.slice(at);
-            var lead = pre && !/\n\n$/.test(pre) ? (/\n$/.test(pre) ? '\n' : '\n\n') : '';
-            var tail = post && !/^\n/.test(post) ? '\n' : '';
-            ta.value = pre + lead + block + tail + post;
-            ta.dispatchEvent(new Event('input'));
-            toast('بلوک کد به سؤال افزوده شد.', 'ok');
-          }});
+          insertCode(ta, {title: 'کد در متن سؤال', doneLabel: 'افزودن کد به سؤال', toast: 'بلوک کد به سؤال افزوده شد.'});
         }}),
         el('button', {class: 'tool-btn is-mic', title: 'گفتار به متن', 'aria-label': 'گفتار به متن', html: toolSvg('mic'), onclick: function () { dictate(ta, q); }}),
         /* V334.3 — مثل اپ اندروید (V135): صوت سؤال فقط در آزمون آنلاین نمایش داده می‌شود (کاغذ صدا ندارد) */
@@ -1747,12 +1763,30 @@
   var figFrame = null;
   /* V194 — مثل اپ: یک دکمهٔ «اطلس» با سه گزینه؛ «تصویر خودم» = انتخاب فایل → data-URL فشرده → ویرایشگر آناتومی با t='photo' (فلش‌گذاری و جای نام) */
   /* V258 — منوی ابزارهای درج برای گزینه/جورکردنی (مثل OptionInsertToolsDialog اپ): فرمول، شکل، نمودار، محور، جدول، جدول تناوبی، گالری (+ تصویر گزینه) */
+  /* V350 — درج کد در هر کادر متنی: متن سؤال، گزینه‌ها و جفت‌های جورکردنی.
+     یک پیاده‌سازی مشترک تا رفتار همه‌جا یکسان بماند (مثل بقیهٔ ابزارها). */
+  function insertCode(ta, o) {
+    o = o || {};
+    if (!window.SiteCode) return toast('ابزار کد در دسترس نیست.', 'err');
+    var at = ta.selectionStart == null ? ta.value.length : ta.selectionStart;
+    window.SiteCode.openWithPicker({title: o.title || 'کد در متن سؤال', doneLabel: o.doneLabel || 'افزودن کد', onDone: function (r) {
+      var block = window.SiteCode.fence(r.code, r.lang);
+      var v = ta.value;
+      var pre = v.slice(0, at), post = v.slice(at);
+      var lead = pre && !/\n\n$/.test(pre) ? (/\n$/.test(pre) ? '\n' : '\n\n') : '';
+      var tail = post && !/^\n/.test(post) ? '\n' : '';
+      ta.value = pre + lead + block + tail + post;
+      ta.dispatchEvent(new Event('input'));
+      toast(o.toast || 'بلوک کد افزوده شد.', 'ok');
+    }});
+  }
   function insertMenu(anchor, ta, q, o) {
     o = o || {};
     /* توجه: به insertFigure «q» داده نمی‌شود، چون آن تابع q.text (متن سؤال) را با مقدار کادر بازنویسی می‌کند؛ اینجا کادر = گزینه است */
     var old = document.querySelector('.b-ins-menu'); if (old) old.remove(); var oldA = document.querySelector('.b-atlas-menu'); if (oldA) oldA.remove();
     function item(kind, title, cls, fn) { return el('button', {type: 'button', class: 'tool-btn ' + cls, title: title, 'aria-label': title, html: toolSvg(kind) + '<small>' + S.esc(title) + '</small>', onclick: function () { m.remove(); fn(); }}); }
     var items = [
+      item('code', 'کد', 'is-code', function () { insertCode(ta, {title: 'کد در ' + (o.label || 'این کادر')}); }),
       item('fx', 'فرمول', 'is-fx', function () { var s0 = ta.selectionStart, e0 = ta.selectionEnd; S.openFormulaEditor(ta.value, s0, e0).then(function (t) { if (t != null && t !== ta.value) { ta.value = t; ta.dispatchEvent(new Event('input')); } }); }),
       item('fig', 'شکل', 'is-fig', function () { insertFigure('geo', ta, null); }),
       item('graph', 'نمودار', 'is-gra', function () { insertFigure('graph', ta, null); }),

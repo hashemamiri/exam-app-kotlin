@@ -140,6 +140,7 @@ import ir.exam.app.ui.math.FormulaHostDialog
 import ir.exam.app.ui.math.QuestionEditorFieldController
 import ir.exam.app.ui.math.InlineMathTextEditor
 import ir.exam.app.core.math.FormulaTextCodec
+import ir.exam.app.core.text.CodeBlockCodec
 import ir.exam.app.core.text.RichTextSplitter
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
@@ -1319,6 +1320,15 @@ private data class FormulaHostTarget(
     val selEnd: Int
 )
 
+/** V350 — فیلد هدف ویرایش/درج کد: question / option / matching_left / matching_right. */
+private data class CodeTarget(
+    val field: String,
+    val index: Int = -1,
+    val occurrenceIndex: Int? = null,
+    val lang: String = "",
+    val code: String = ""
+)
+
 /** V55.16 — فیلد هدف پنجرهٔ ۸ ابزار درج: option / matching_left / matching_right. */
 private data class InsertMenuRef(
     val field: String,
@@ -1445,6 +1455,8 @@ private fun QuestionEditor(
     var insertMenuFor by remember(question.id) { mutableStateOf<InsertMenuRef?>(null) }
     // V55.16 — خروجی ویرایشگر ابزار بعدی به‌جای متن سؤال، در این فیلد درج شود.
     var fieldInsertTarget by remember(question.id) { mutableStateOf<InsertMenuRef?>(null) }
+    // V350 — کد در متن سؤال و گزینه‌ها، مثل بقیهٔ ابزارها.
+    var codeTarget by remember(question.id) { mutableStateOf<CodeTarget?>(null) }
     // V259 — ویرایش شکلِ موجود داخل فیلد گزینه/جورکردنی: (فیلد، شمارهٔ occurrence در همان فیلد).
     var fieldEditRef by remember(question.id) { mutableStateOf<Pair<InsertMenuRef, Int>?>(null) }
     // V259 — لمس شکل داخل کادر گزینه: ویرایشگر Native همان نوع باز می‌شود و خروجی جایگزین همان توکن می‌شود.
@@ -1610,6 +1622,11 @@ private fun QuestionEditor(
                 },
                 onInsertGraph = {
                     figureTarget = FigureTarget(kind = FigureKind.GRAPH, chooseType = true)
+                },
+                // V350 — کد داخل متن سؤال؛ لمس اول انتخاب/حذف، لمس دوم ویرایش.
+                onInsertCode = { codeTarget = CodeTarget("question") },
+                onEditCodeToken = { occurrence, lang, code, _, _ ->
+                    codeTarget = CodeTarget("question", occurrenceIndex = occurrence, lang = lang, code = code)
                 },
                 // V136 — آیکن محور کنار نمودار.
                 onInsertAxis = {
@@ -1835,6 +1852,18 @@ private fun QuestionEditor(
                                     onDeleteFigure = { occurrence ->
                                         viewModel.deleteFieldFigure(question.id, "option", index, occurrence)
                                     },
+                                    // V350 — کد در گزینه‌ها هم مثل فرمول/شکل.
+                                    onInsertCode = { codeTarget = CodeTarget("option", index) },
+                                    onEditCode = { occurrence, lang, code ->
+                                        codeTarget = CodeTarget("option", index, occurrence, lang, code)
+                                    },
+                                    onDeleteCode = { occurrence ->
+                                        CodeBlockCodec.occurrences(option).getOrNull(occurrence)?.let { occ ->
+                                            viewModel.updateOption(
+                                                question.id, index, CodeBlockCodec.remove(option, occ)
+                                            )
+                                        }
+                                    },
                                     label = "",
                                     placeholder = "متن $optionLabel",
                                     showToolbar = false,
@@ -1883,6 +1912,12 @@ private fun QuestionEditor(
                     },
                     onFormulaDelete = { side, itemIndex, occurrence ->
                         viewModel.deleteFormula(question.id, "matching_$side", itemIndex, occurrence)
+                    },
+                    // V350 — کد در جفت‌های جورکردنی.
+                    onCodeEdit = { side, itemIndex, occurrence, lang, code ->
+                        codeTarget = CodeTarget(
+                            "matching_$side", itemIndex, occurrence, lang, code
+                        )
                     },
                     onFigureEdit = { side, itemIndex, occurrence, spec ->
                         val label = if (side == "right") "مورد راست ${itemIndex + 1}" else "مورد چپ ${itemIndex + 1}"
@@ -1943,6 +1978,8 @@ private fun QuestionEditor(
                         fieldInsertTarget = ref
                         galleryChooserOpen = true
                     }
+                    OptionInsertTool.CODE ->
+                        codeTarget = CodeTarget(ref.field, ref.index)
                 }
             }
         )
@@ -2012,6 +2049,30 @@ private fun QuestionEditor(
                     }
                 }
             }
+        )
+    }
+    // V350 — درج/ویرایش کد در همان فیلد، با همان الگوی پنجرهٔ فرمول.
+    codeTarget?.let { target ->
+        val sourceText = when (target.field) {
+            "option" -> question.options.getOrNull(target.index).orEmpty()
+            "matching_left" -> question.matchingLeft.getOrNull(target.index).orEmpty()
+            "matching_right" -> question.matchingRight.getOrNull(target.index).orEmpty()
+            else -> question.text
+        }
+        FieldCodeEditor(
+            occurrenceIndex = target.occurrenceIndex,
+            initialLang = target.lang,
+            initialCode = target.code,
+            source = sourceText,
+            onSourceChange = { newText ->
+                when (target.field) {
+                    "option" -> viewModel.updateOption(question.id, target.index, newText)
+                    "matching_left" -> viewModel.updateMatchingText(question.id, "left", target.index, newText)
+                    "matching_right" -> viewModel.updateMatchingText(question.id, "right", target.index, newText)
+                    else -> viewModel.updateText(question.id, newText)
+                }
+            },
+            onDismiss = { codeTarget = null }
         )
     }
     // V55.16 — درج خروجی ابزار در «فیلد» گزینه/جورکردنی (توکن به انتهای متن فیلد).

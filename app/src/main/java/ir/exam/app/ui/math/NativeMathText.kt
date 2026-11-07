@@ -29,6 +29,8 @@ import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import ir.exam.app.core.figure.FigureSpec
+import ir.exam.app.core.text.CodeBlockCodec
+import ir.exam.app.ui.code.CodeBlockView
 import ir.exam.app.core.text.RichSegment
 import ir.exam.app.core.text.RichTextSplitter
 import ir.exam.app.ui.figure.AtlasFigureView
@@ -77,14 +79,17 @@ fun NativeMathText(
     val formulas = remember(source) { ir.exam.app.core.math.FormulaTextCodec.occurrences(source) }
     val figures = remember(source) { ir.exam.app.core.figure.FigureCodec.occurrences(source) }
     // معادل cache‌شدهٔ RichTextSplitter.splitRows(source) برای حفظ قرارداد رندر سطری.
-    val rows = remember(source, formulas, figures) {
-        RichTextSplitter.splitRows(source, formulas, figures)
+    val codes = remember(source) { CodeBlockCodec.occurrences(source) }
+    val rows = remember(source, formulas, figures, codes) {
+        RichTextSplitter.splitRows(source, formulas, figures, codes)
     }
     val effectiveSize = if (fontSize == TextUnit.Unspecified) 18.sp else fontSize
     val flat = rows.flatten()
     val hasMath = flat.any { it is RichSegment.Math }
     val hasFigure = flat.any { it is RichSegment.Figure }
-    if (!hasMath && !hasFigure) {
+    // V350 — کد هم باید رندر شود، وگرنه بک‌تیک‌های خام دیده می‌شدند.
+    val hasCode = flat.any { it is RichSegment.Code }
+    if (!hasMath && !hasFigure && !hasCode) {
         Text(
             text = source.replace("\\$", "$"),
             modifier = modifier,
@@ -110,8 +115,16 @@ fun NativeMathText(
 
     Column(modifier) {
         rows.forEach { segments ->
+            val codeSeg = segments.singleOrNull() as? RichSegment.Code
             val figure = segments.singleOrNull() as? RichSegment.Figure
-            if (figure != null) {
+            if (codeSeg != null) {
+                // V350 — کادر کد در متن سؤال/گزینه، تمام‌عرض و مثل شکل سطر مستقل.
+                CodeBlockView(
+                    code = codeSeg.code,
+                    langId = codeSeg.lang,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            } else if (figure != null) {
                 // شکل/نمودار: سطر کامل و تمام‌عرض خودش.
                 if (figure.spec.kind in setOf("a", "s")) {
                     AtlasFigureView(
@@ -194,6 +207,7 @@ fun NativeMathText(
                             )
                         }
                         is RichSegment.Figure -> Unit // شکل‌ها همیشه سطر مستقل دارند.
+                        is RichSegment.Code -> Unit // کادر کد هم سطر مستقل دارد.
                     }
                 }
             }

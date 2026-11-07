@@ -35,6 +35,8 @@ object ReadAloudText {
                 is RichSegment.Text -> out.append(seg.text)
                 is RichSegment.Math -> out.append(' ').append(spokenTex(seg.tex)).append(' ')
                 is RichSegment.Figure -> out.append(" شکل ")
+                // V350 — کد خوانده نمی‌شود؛ فقط جای آن اعلام می‌شود.
+                is RichSegment.Code -> out.append(" بلوک کد ")
             }
         } ?: out.append(source)
         return out.toString()

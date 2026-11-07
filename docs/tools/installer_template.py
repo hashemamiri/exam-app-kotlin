@@ -123,18 +123,25 @@ def main():
     # پیش‌تر نصاب همیشه روی origin/main می‌نشست؛ اگر نسخهٔ آزمایشیِ قبلی هنوز promote
     # نشده باشد (staging جلوتر از main)، کامیت تازه نوادگانِ staging نبود و push با
     # «non-fast-forward» رد می‌شد. حالا اگر staging شامل main است، پایه همان staging است.
+    # V350 — این انتخاب برای «هر دو مقصد» لازم است، نه فقط آزمایشی.
+    # اگر آزمایشی جلوتر از اصلی باشد و پایه origin/main بماند، کامیت تازه نوادگانِ
+    # آزمایشی نیست؛ در نتیجه push به آزمایشی fast-forward نمی‌شود و نصاب به ادغام
+    # سه‌طرفه می‌افتد که روی فایل‌های مشترک (سایت/نسخه) تعارض می‌دهد و آزمایشی را
+    # عقب جا می‌گذارد. با نشستن روی آزمایشی، هر دو push سریع و بدون تعارض است.
     base_ref = "origin/main"
-    if TARGET == "staging":
-        r = subprocess.run(["git", "merge-base", "--is-ancestor", "origin/main", "origin/staging"],
-                           capture_output=True)
-        if r.returncode == 0:
-            base_ref = "origin/staging"
-    local_branch = "staging" if base_ref == "origin/staging" else "main"
+    r = subprocess.run(["git", "merge-base", "--is-ancestor", "origin/main", "origin/staging"],
+                       capture_output=True)
+    if r.returncode == 0:
+        base_ref = "origin/staging"
+    # برای مقصد اصلی، شاخهٔ کاری همان main می‌ماند حتی اگر پایه آزمایشی باشد
+    # (درختِ نتیجه یکسان است؛ فقط نیای کامیت فرق می‌کند).
+    local_branch = "main" if TARGET == "main" else ("staging" if base_ref == "origin/staging" else "main")
     print("پایهٔ نصب: " + base_ref)
     run(["git", "checkout", "-B", local_branch, base_ref])
     run(["git", "reset", "--hard", base_ref])
-    if base_ref == "origin/staging":
-        # شاخهٔ main محلی اگر از نصب ناموفق قبلی کامیت اضافه دارد، به ریموت برگردانده می‌شود
+    if base_ref == "origin/staging" and local_branch != "main":
+        # شاخهٔ main محلی اگر از نصب ناموفق قبلی کامیت اضافه دارد، به ریموت برگردانده می‌شود.
+        # برای مقصد اصلی این کار لازم نیست (شاخهٔ جاری خودِ main است و git اجازه نمی‌دهد).
         run(["git", "branch", "-f", "main", "origin/main"], check=False)
     data = gzip.decompress(base64.b64decode(PAYLOAD))
     with tarfile.open(fileobj=io.BytesIO(data), mode="r") as t:
@@ -155,6 +162,18 @@ def main():
         if os.path.exists(p):
             os.remove(p)
             print("  ✗ حذف " + p)
+    # V350 — بسته‌های سایت که دیگر در panels_keep.txt نیستند پاک می‌شوند.
+    # چرا: فهرست REMOVE فقط فایل‌های «پایهٔ بسته» را می‌شناسد؛ اگر شاخهٔ مقصد
+    # بسته‌های تازه‌تری داشته باشد (آزمایشی جلوتر از اصلی)، آن‌ها بی‌استفاده
+    # روی دیسک می‌ماندند.panels_keep.txt مرجع یگانهٔ بسته‌های جاری است.
+    keep_path = os.path.join("site", "panels_keep.txt")
+    if os.path.exists(keep_path):
+        with open(keep_path, encoding="utf-8") as f:
+            keep = {ln.strip() for ln in f if ln.strip()}
+        for name in sorted(os.listdir("site")):
+            if name.startswith("panels.") and name.endswith(".js") and name not in keep:
+                os.remove(os.path.join("site", name))
+                print("  ✗ حذف بستهٔ کهنهٔ سایت " + name)
     run([sys.executable, "scripts/verify_native_final.py"])
     run([sys.executable, "scripts/check_site_sync.py"], check=False)  # V335.39 — نگهبان سایت/دامنه (خطا نمی‌دهد)
     run(["git", "add", "-A"])

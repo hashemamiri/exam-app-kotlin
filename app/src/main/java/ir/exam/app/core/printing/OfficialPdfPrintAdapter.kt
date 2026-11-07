@@ -248,6 +248,16 @@ class OfficialPrintLayoutEngine(private val context: Context) {
                             add(RenderBlock(text="[شکل]",textSize=question.fontSizeSp.coerceIn(8f,30f)))
                         }
                     }
+                    is RichSegment.Code -> {
+                        // V350 — کد روی کاغذ مثل شکل یک بلوک مستقل است: بی‌بک‌تیک،
+                        // با برچسب زبان و حفظ سطرها. کد اجرا نمی‌شود.
+                        __flushInline()
+                        val codeLabel = if (rich.lang.isBlank()) "کد" else "کد (" + rich.lang + ")"
+                        add(RenderBlock(
+                            text = codeLabel + "\n" + rich.code,
+                            textSize = question.fontSizeSp.coerceIn(8f, 30f)
+                        ))
+                    }
                     is RichSegment.Text -> if (rich.text.isNotEmpty()) {
                         // استایل‌های بازه‌ای بولد/ایتالیک با Spannable اعمال می‌شوند.
                         // V68.6 — الحاق به پاراگراف درون‌خطی با شیفت آفست استایل‌ها؛

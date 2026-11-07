@@ -1288,6 +1288,11 @@ button.stat:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
 .b-chip.live img,.b-chip.live svg{max-width:100%;max-height:160px;height:auto;vertical-align:middle}
 .b-chip.live .mathx,.b-chip.live .math-inline{display:inline-block;vertical-align:middle}
 .b-chip.live .qmf-fig,.b-chip.live .interactive-figure{display:inline-block;margin:4px 0}
+/* V350 — کادر کد داخل متن سؤال و گزینه‌ها: مثل شکل، ولی چپ‌به‌راست و با ارتفاع مهارشده */
+.b-chip.code{background:#1B2035;color:#E6E9F5;direction:ltr;font-family:'Vazirmatn',ui-monospace,monospace}
+.b-chip.code-live{background:transparent;color:inherit;padding:0;white-space:normal;direction:ltr;max-width:100%;vertical-align:middle}
+.b-chip.code-live .cx-block{margin:6px 0;max-height:150px;overflow:auto;font-size:12px;max-width:100%}
+.b-chip.code-live .cx-bar{font-size:10.5px;padding:4px 8px}
 .dk .b-editor .b-live{display:none!important}
 /* V348 — استثنا: بلوک کد باید در پیش‌نمایش زنده دیده شود */
 .dk .b-editor .b-live.cx-has-code{display:block!important}
@@ -2515,6 +2520,7 @@ body.st-in-exam-mode .nc-bell{display:none!important}
 .cx-name{font-size:12px;font-weight:700;color:#dfe4f5}
 .cx-grow{flex:1}
 .cx-meta{font:11px/1 ui-monospace,Menlo,Consolas,monospace;color:#8b95bd;direction:ltr}
+.cx-block .cx-meta{font-family:'Vazirmatn',sans-serif;direction:rtl}
 .cx-copy{border:1px solid #3a4368;background:#2b3350;color:#cfd6ef;border-radius:7px;padding:3px 9px;font-size:11px;cursor:pointer}
 .cx-copy:hover{background:#354066}
 .cx-body{display:flex;align-items:stretch;max-height:460px;overflow:auto}

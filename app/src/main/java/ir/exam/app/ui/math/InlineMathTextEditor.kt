@@ -31,6 +31,10 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.SolidColor
@@ -41,6 +45,7 @@ import ir.exam.app.core.figure.FigureSpec
 import ir.exam.app.core.text.RichSegment
 import ir.exam.app.core.text.RichTextSplitter
 import ir.exam.app.ui.figure.AtlasFigureView
+import ir.exam.app.ui.code.CodeBlockView
 import ir.exam.app.ui.figure.InlineFigureView
 
 /**
@@ -63,6 +68,10 @@ fun InlineMathTextEditor(
     onInsertGraph: () -> Unit = {},
     onEditFigure: (occurrenceIndex: Int, spec: FigureSpec) -> Unit = { _, _ -> },
     onDeleteFigure: (occurrenceIndex: Int) -> Unit = {},
+    // V350 — کد هم مثل شکل/فرمول در همین کادر (سؤال و گزینه‌ها) درج/ویرایش/حذف می‌شود.
+    onInsertCode: () -> Unit = {},
+    onEditCode: (occurrenceIndex: Int, lang: String, code: String) -> Unit = { _, _, _ -> },
+    onDeleteCode: (occurrenceIndex: Int) -> Unit = {},
     modifier: Modifier = Modifier,
     label: String = "متن سؤال",
     placeholder: String = "متن سؤال را بنویسید…",
@@ -139,6 +148,12 @@ fun InlineMathTextEditor(
                             onEdit = { onEditFigure(part.index, part.spec) },
                             onDelete = { onDeleteFigure(part.index) }
                         )
+                        is RichSegment.Code -> CodeChip(
+                            lang = part.lang,
+                            code = part.code,
+                            onEdit = { onEditCode(part.index, part.lang, part.code) },
+                            onDelete = { onDeleteCode(part.index) }
+                        )
                     }
                 }
             }
@@ -151,7 +166,20 @@ fun InlineMathTextEditor(
             ToolbarButton(Icons.Outlined.Functions, "درج فرمول", onInsertFormula)
             ToolbarButton(Icons.Outlined.Category, "درج شکل", onInsertFigure)
             ToolbarButton(Icons.Outlined.Insights, "درج نمودار", onInsertGraph)
+            ToolbarCodeButton(onInsertCode)
         }
+    }
+}
+
+/** V350 — دکمهٔ «</>» برای درج کد؛ همان نماد سایت. */
+@Composable
+private fun ToolbarCodeButton(onClick: () -> Unit) {
+    IconButton(onClick = onClick) {
+        Text(
+            "</>",
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.primary
+        )
     }
 }
 
@@ -248,6 +276,64 @@ private fun FigureChip(
                     modifier = Modifier.size(14.dp),
                     tint = MaterialTheme.colorScheme.onSurfaceVariant
                 )
+            }
+        }
+    }
+}
+
+/**
+ * V350 — تراشهٔ کد داخل متن سؤال و گزینه‌ها، با همان رفتار بقیهٔ ابزارها:
+ * لمس اول = انتخاب و پیدا شدن ضربدر حذف؛ لمس دوم = باز شدن محیط کدنویسی.
+ */
+@Composable
+private fun CodeChip(
+    lang: String,
+    code: String,
+    onEdit: () -> Unit,
+    onDelete: () -> Unit
+) {
+    var selected by remember(code, lang) { mutableStateOf(false) }
+    Surface(
+        shape = RoundedCornerShape(9.dp),
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.30f),
+        border = BorderStroke(
+            if (selected) 2.dp else 1.dp,
+            if (selected) MaterialTheme.colorScheme.primary
+            else MaterialTheme.colorScheme.outline.copy(alpha = 0.55f)
+        )
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Column(
+                modifier = Modifier
+                    .width(200.dp)
+                    .clickable {
+                        if (selected) { selected = false; onEdit() } else { selected = true }
+                    }
+                    .padding(4.dp)
+            ) {
+                // نوار خودِ CodeBlockView نام زبان و شمار خط را نشان می‌دهد.
+                CodeBlockView(
+                    code = code,
+                    langId = lang,
+                    modifier = Modifier.fillMaxWidth().heightIn(max = 96.dp)
+                )
+                if (selected) {
+                    Text(
+                        "برای ویرایش دوباره لمس کنید",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+            if (selected) {
+                IconButton(onClick = onDelete, modifier = Modifier.size(26.dp)) {
+                    Icon(
+                        Icons.Outlined.Close,
+                        contentDescription = "حذف کد",
+                        modifier = Modifier.size(14.dp),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
             }
         }
     }

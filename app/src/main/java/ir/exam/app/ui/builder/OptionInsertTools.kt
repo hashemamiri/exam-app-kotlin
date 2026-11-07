@@ -44,7 +44,9 @@ enum class OptionInsertTool(val label: String) {
     TABLE("جدول"),
     // V134 — آناتومی/فیزیک/شیمی/تصویر زیر یک «گالری» جمع شدند.
     GALLERY("گالری"),
-    PERIODIC("جدول تناوبی")
+    PERIODIC("جدول تناوبی"),
+    // V350 — کد هم مثل بقیهٔ ابزارها در گزینه‌ها و جفت‌های جورکردنی.
+    CODE("کد")
 }
 
 private fun toolIcon(tool: OptionInsertTool): ImageVector = when (tool) {
@@ -56,6 +58,7 @@ private fun toolIcon(tool: OptionInsertTool): ImageVector = when (tool) {
     OptionInsertTool.TABLE -> QuestionToolIcons.Table
     OptionInsertTool.GALLERY -> QuestionToolIcons.Gallery
     OptionInsertTool.PERIODIC -> QuestionToolIcons.Periodic
+    OptionInsertTool.CODE -> QuestionToolIcons.Code
 }
 
 /** دکمهٔ + روی کارت گزینه/جورکردنی؛ جایگزین آیکن فرمول قبلی. */

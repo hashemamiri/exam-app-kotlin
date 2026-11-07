@@ -62,6 +62,7 @@ import ir.exam.app.domain.model.ImageEditRequest
 import ir.exam.app.ui.image.FullScreenImageViewer
 import ir.exam.app.ui.image.InteractiveImageEditorDialog
 import ir.exam.app.core.figure.FigureSpec
+import ir.exam.app.core.text.CodeBlockCodec
 import ir.exam.app.ui.math.InlineMathTextEditor
 import kotlin.math.abs
 import kotlinx.coroutines.launch
@@ -288,6 +289,9 @@ fun MatchingQuestionEditor(
     question: QuestionDraft,
     viewModel: ExamBuilderViewModel,
     onFormulaEdit: (side: String, index: Int, occurrence: Int?, tex: String) -> Unit = { _, _, _, _ -> },
+    // V350 — کد در جفت‌های جورکردنی هم مثل فرمول/شکل.
+    onCodeEdit: (side: String, index: Int, occurrence: Int?, lang: String, code: String) -> Unit =
+        { _, _, _, _, _ -> },
     onFormulaDelete: (side: String, index: Int, occurrence: Int) -> Unit = { _, _, _ -> },
     onFigureEdit: (side: String, index: Int, occurrence: Int, spec: FigureSpec) -> Unit = { _, _, _, _ -> },
     onItemDragStarted: () -> Unit = {},
@@ -347,6 +351,16 @@ fun MatchingQuestionEditor(
                         onDeleteFormula = { occurrence -> onFormulaDelete("right", index, occurrence) },
                         onEditFigure = { occurrence, spec -> onFigureEdit("right", index, occurrence, spec) },
                         onDeleteFigure = { occurrence -> viewModel.deleteFieldFigure(question.id, "matching_right", index, occurrence) },
+                        // V350 — درج/ویرایش/حذف کد در این کادر.
+                        onInsertCode = { onCodeEdit("right", index, null, "", "") },
+                        onEditCode = { occurrence, lang, code -> onCodeEdit("right", index, occurrence, lang, code) },
+                        onDeleteCode = { occurrence ->
+                            CodeBlockCodec.occurrences(value).getOrNull(occurrence)?.let { occ ->
+                                viewModel.updateMatchingText(
+                                    question.id, "right", index, CodeBlockCodec.remove(value, occ)
+                                )
+                            }
+                        },
                         label = "",
                         placeholder = "متن $label",
                         showToolbar = false,
@@ -409,6 +423,16 @@ fun MatchingQuestionEditor(
                         onDeleteFormula = { occurrence -> onFormulaDelete("left", index, occurrence) },
                         onEditFigure = { occurrence, spec -> onFigureEdit("left", index, occurrence, spec) },
                         onDeleteFigure = { occurrence -> viewModel.deleteFieldFigure(question.id, "matching_left", index, occurrence) },
+                        // V350 — درج/ویرایش/حذف کد در این کادر.
+                        onInsertCode = { onCodeEdit("left", index, null, "", "") },
+                        onEditCode = { occurrence, lang, code -> onCodeEdit("left", index, occurrence, lang, code) },
+                        onDeleteCode = { occurrence ->
+                            CodeBlockCodec.occurrences(value).getOrNull(occurrence)?.let { occ ->
+                                viewModel.updateMatchingText(
+                                    question.id, "left", index, CodeBlockCodec.remove(value, occ)
+                                )
+                            }
+                        },
                         label = "",
                         placeholder = "متن مورد $label",
                         showToolbar = false,
