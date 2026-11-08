@@ -80,7 +80,8 @@ jobs:
                    check_kotlin_imports check_missing_imports check_kotlin_visibility \
                    check_sealed_when check_test_paths check_test_pins \
                    check_site_pins check_site_sync check_changelog \
-                   check_message_numbers; do
+                   check_message_numbers check_test_version_pins \
+                   check_site_chunk_ref; do
             echo "::group::$g"
             python3 "scripts/$g.py"
             echo "::endgroup::"

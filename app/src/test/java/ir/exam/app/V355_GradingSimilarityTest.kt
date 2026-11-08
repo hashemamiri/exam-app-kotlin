@@ -325,13 +325,17 @@ class V355_GradingSimilarityTest {
 
     @Test
     fun versionBumpedAndChangelogIsValid() {
-        assertEquals("1.03.72", src("text/APP_VERSION.txt").trim())
+        // V356.1 — عدد نسخه این‌جا سخت‌رمز نمی‌شود؛ وگرنه هر انتشار
+        // بعدی این آزمون را می‌شکست. چیزی که باید همیشه درست بماند،
+        // هم‌خوانی فایل نسخه با بلوک بالای فهرست تغییرات است.
+        val version = src("text/APP_VERSION.txt").trim()
+        assertTrue("قالب شمارهٔ نسخه نامعتبر است: $version", version.matches(Regex("\\d+\\.\\d+\\.\\d+")))
         val lines = src("text/CHANGELOG_FA.txt").lines()
         listOf(40, 60).forEach { take ->
             val top = ReleaseNotes.parse(lines.take(take)).first()
-            assertEquals("V355", top.version)
+            assertTrue("بلوک بالا باید شمارهٔ نسخه باشد", top.version.matches(Regex("V\\d+(\\.\\d+)?")))
             assertTrue(top.appAffecting)
-            assertEquals("1.03.72", top.appVersion)
+            assertEquals("فایل نسخه و بلوک بالای فهرست تغییرات باید یکی باشند", version, top.appVersion)
             assertTrue(top.bullets.size in 1..ReleaseNotes.MAX_BULLETS)
             top.bullets.forEach { assertFalse(it.contains(Regex("\\bV\\d"))) }
         }

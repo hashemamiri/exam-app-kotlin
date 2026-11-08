@@ -87,8 +87,22 @@ def build_chunked_site_out(dest_dir: Path, anon_key: str) -> None:
         + page_html[big_style.end() :]
     )
 
-    panel_files = sorted(glob.glob(str(site_dir / "panels.*.js")), key=os.path.getmtime)
-    pjs = Path(panel_files[-1]).read_text(encoding="utf-8")
+    # V356.1 — چانک باید همان باشد که index.html واقعاً بارگذاری می‌کند.
+    # پیش‌تر «تازه‌ترین زمان تغییر فایل» ملاک بود؛ چون فهرست نگه‌داشت
+    # چند چانک را در site/ نگه می‌دارد، آن انتخاب تصادفی می‌شد و آزمون
+    # ممکن بود کد کهنه را بسنجد و سبز شود. مرجع، خودِ __PANELS_URL است.
+    m_url = re.search(r'window\.__PANELS_URL\s*=\s*"([^"]+)"', page_html)
+    panel_path = None
+    if m_url:
+        cand = site_dir / Path(m_url.group(1)).name
+        if cand.exists():
+            panel_path = cand
+    if panel_path is None:
+        panel_files = sorted(glob.glob(str(site_dir / "panels.*.js")), key=os.path.getmtime)
+        if not panel_files:
+            raise SystemExit("هیچ چانک panels پیدا نشد؛ اول site/build_site.py را اجرا کنید.")
+        panel_path = Path(panel_files[-1])
+    pjs = panel_path.read_text(encoding="utf-8")
     phash = hashlib.sha256(pjs.encode("utf-8")).hexdigest()[:12]
     pstep = (len(pjs) + 4) // 5
     pchunks = [pjs[i : i + pstep] for i in range(0, len(pjs), pstep)]

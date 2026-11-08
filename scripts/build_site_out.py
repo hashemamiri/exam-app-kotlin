@@ -133,7 +133,21 @@ def main():
     open(os.path.join(out, f"s1.{chash}.css"), "w", encoding="utf-8").write(css[split_idx:])
     html = html[:big_style.start()] + f'<link rel="stylesheet" href="/s0.{chash}.css"><link rel="stylesheet" href="/s1.{chash}.css">' + html[big_style.end():]
 
-    pfile = sorted(glob.glob(os.path.join(site, "panels.*.js")), key=os.path.getmtime)[-1]
+    # V356.1 — چانک باید همان باشد که index.html به آن ارجاع می‌دهد.
+    # پیش‌تر «تازه‌ترین زمان تغییر فایل» ملاک بود؛ چون فهرست نگه‌داشت
+    # چند چانک را در site/ نگه می‌دارد و زمان تغییر فایل در checkout و
+    # کپی جابه‌جا می‌شود، ممکن بود کد کهنهٔ پنل منتشر شود.
+    m_url = re.search(r'window\.__PANELS_URL\s*=\s*"([^"]+)"', html)
+    pfile = None
+    if m_url:
+        cand = os.path.join(site, os.path.basename(m_url.group(1)))
+        if os.path.exists(cand):
+            pfile = cand
+    if pfile is None:
+        found = sorted(glob.glob(os.path.join(site, "panels.*.js")), key=os.path.getmtime)
+        if not found:
+            raise SystemExit("هیچ چانک panels پیدا نشد؛ اول site/build_site.py را اجرا کنید.")
+        pfile = found[-1]
     pjs = open(pfile, encoding="utf-8").read()
     phash = hashlib.sha256(pjs.encode("utf-8")).hexdigest()[:12]
     pstep = (len(pjs) + 4) // 5
