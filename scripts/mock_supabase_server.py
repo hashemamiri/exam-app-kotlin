@@ -328,6 +328,8 @@ class MockSupabaseState:
             self.attempts: dict[tuple[str, str], dict[str, Any]] = {}
             self.appeals: dict[str, dict[str, Any]] = {}   # V354
             self.grade_history: list[dict[str, Any]] = []  # V354
+            self.essay_keywords: list[dict[str, Any]] = []      # V355
+            self.similarity_reviews: dict[str, dict[str, Any]] = {}  # V355
             self.classes: dict[str, dict[str, Any]] = {}
 
             teacher_id = "11111111-1111-4111-8111-111111111111"
@@ -1465,10 +1467,10 @@ def make_handler(state: MockSupabaseState):
 
             # ---- V354: اعتراض، مصحح دوم، تاریخچهٔ نمره ----
             if fn == "native_appeal_create_v354":
-                aid = str(payload.get("p_answer") or "")
+                aid = str(params.get("p_answer") or "")
                 ans = state.answers.get(aid)
-                reason = str(payload.get("p_reason") or "").strip()
-                qi = int(payload.get("p_question") if payload.get("p_question") is not None else -1)
+                reason = str(params.get("p_reason") or "").strip()
+                qi = int(params.get("p_question") if params.get("p_question") is not None else -1)
                 if ans is None or ans["student_id"] != user["id"]:
                     self._send_json(400, {"message": "پاسخ یافت نشد یا از آنِ شما نیست."})
                     return
@@ -1505,7 +1507,7 @@ def make_handler(state: MockSupabaseState):
                 return
 
             if fn == "native_exam_appeals_v354":
-                eid = str(payload.get("p_exam") or "")
+                eid = str(params.get("p_exam") or "")
                 ex = state.exams.get(eid)
                 if ex is None or ex.get("teacher_id") != user["id"]:
                     self._send_json(400, {"message": "آزمون یافت نشد یا دسترسی ندارید."})
@@ -1521,7 +1523,7 @@ def make_handler(state: MockSupabaseState):
                 return
 
             if fn == "native_appeal_resolve_v354":
-                aid = str(payload.get("p_appeal") or "")
+                aid = str(params.get("p_appeal") or "")
                 ap = state.appeals.get(aid)
                 if ap is None:
                     self._send_json(400, {"message": "اعتراض یافت نشد."})
@@ -1533,11 +1535,11 @@ def make_handler(state: MockSupabaseState):
                 if ap["status"] not in ("open", "second"):
                     self._send_json(400, {"message": "این اعتراض پیش‌تر بسته شده است."})
                     return
-                st = str(payload.get("p_status") or "")
+                st = str(params.get("p_status") or "")
                 if st not in ("open", "second", "accepted", "rejected"):
                     self._send_json(400, {"message": "وضعیت نامعتبر است."})
                     return
-                note = str(payload.get("p_note") or "").strip()
+                note = str(params.get("p_note") or "").strip()
                 if st in ("accepted", "rejected") and len(note) < 3:
                     self._send_json(400, {"message": "توضیح نتیجه دست‌کم ۳ نویسه باشد."})
                     return
@@ -1545,7 +1547,7 @@ def make_handler(state: MockSupabaseState):
                 ap["resolution_note"] = note or None
                 if st == "second":
                     ap["second_by"] = user["id"]
-                    ap["second_score"] = payload.get("p_second_score")
+                    ap["second_score"] = params.get("p_second_score")
                 if st in ("accepted", "rejected"):
                     ap["resolved_by"] = user["id"]
                     ap["resolved_at"] = dt.datetime.now(dt.timezone.utc).isoformat()
@@ -1553,7 +1555,7 @@ def make_handler(state: MockSupabaseState):
                 return
 
             if fn == "native_grade_history_v354":
-                eid = str(payload.get("p_exam") or "")
+                eid = str(params.get("p_exam") or "")
                 ex = state.exams.get(eid)
                 if ex is None or ex.get("teacher_id") != user["id"]:
                     self._send_json(400, {"message": "آزمون یافت نشد یا دسترسی ندارید."})
@@ -1565,6 +1567,99 @@ def make_handler(state: MockSupabaseState):
                     u = state.users_by_id.get(h["student_id"]) or {}
                     items.append(dict(h, student_name=(u.get("full_name") or "دانش‌آموز")))
                 self._send_json(200, items)
+                return
+
+            # ---- V355: کلیدواژهٔ تشریحی و بررسی شباهت ----
+            if fn == "native_essay_keywords_v355":
+                eid = str(params.get("p_exam") or "")
+                ex = state.exams.get(eid)
+                if ex is None or ex.get("teacher_id") != user["id"]:
+                    self._send_json(400, {"message": "این آزمون متعلق به شما نیست."})
+                    return
+                items = [k for k in state.essay_keywords if k["exam_id"] == eid]
+                items.sort(key=lambda k: (k["question_index"], k["part_key"], k["id"]))
+                self._send_json(200, items)
+                return
+
+            if fn == "native_essay_keywords_save_v355":
+                eid = str(params.get("p_exam") or "")
+                ex = state.exams.get(eid)
+                if ex is None or ex.get("teacher_id") != user["id"]:
+                    self._send_json(400, {"message": "این آزمون متعلق به شما نیست."})
+                    return
+                qi = params.get("p_question")
+                part = str(params.get("p_part") or "")
+                items_in = params.get("p_items")
+                if not isinstance(qi, int) or qi < 0:
+                    self._send_json(400, {"message": "شاخص سؤال نامعتبر است."})
+                    return
+                if not isinstance(items_in, list):
+                    self._send_json(400, {"message": "فهرست کلیدواژه‌ها باید آرایه باشد."})
+                    return
+                if len(items_in) > 60:
+                    self._send_json(400, {"message": "برای هر مورد بیش از ۶۰ کلیدواژه نمی‌توان تعریف کرد."})
+                    return
+                cleaned = []
+                for it in items_in:
+                    kw = str((it or {}).get("keyword") or "").strip()
+                    w = _parse_float((it or {}).get("weight"))
+                    w = 1.0 if w is None else w
+                    if not (1 <= len(kw) <= 120):
+                        self._send_json(400, {"message": "هر کلیدواژه باید بین ۱ تا ۲۰ نویسه باشد."})
+                        return
+                    if not (0 < w <= 100):
+                        self._send_json(400, {"message": "وزن کلیدواژه نامعتبر است."})
+                        return
+                    cleaned.append((kw, w))
+                state.essay_keywords = [k for k in state.essay_keywords
+                                        if not (k["exam_id"] == eid and k["question_index"] == qi and k["part_key"] == part)]
+                for kw, w in cleaned:
+                    state.essay_keywords.append({
+                        "id": len(state.essay_keywords) + 1, "exam_id": eid,
+                        "question_index": qi, "part_key": part, "keyword": kw, "weight": w,
+                    })
+                self._send_json(200, {"ok": True, "count": len(cleaned)})
+                return
+
+            if fn == "native_similarity_reviews_v355":
+                eid = str(params.get("p_exam") or "")
+                ex = state.exams.get(eid)
+                if ex is None or ex.get("teacher_id") != user["id"]:
+                    self._send_json(400, {"message": "این آزمون متعلق به شما نیست."})
+                    return
+                items = [r for r in state.similarity_reviews.values() if r["exam_id"] == eid]
+                items.sort(key=lambda r: r["updated_at"], reverse=True)
+                self._send_json(200, items)
+                return
+
+            if fn == "native_similarity_review_save_v355":
+                eid = str(params.get("p_exam") or "")
+                ex = state.exams.get(eid)
+                if ex is None or ex.get("teacher_id") != user["id"]:
+                    self._send_json(400, {"message": "این آزمون متعلق به شما نیست."})
+                    return
+                pair = str(params.get("p_pair") or "").strip()
+                st = str(params.get("p_status") or "")
+                qi = params.get("p_question")
+                qi = -1 if qi is None else int(qi)
+                part = str(params.get("p_part") or "")
+                note = str(params.get("p_note") or "").strip() or None
+                if st not in ("open", "checked", "confirmed"):
+                    self._send_json(400, {"message": "وضعیت نامعتبر است."})
+                    return
+                if not (3 <= len(pair) <= 300):
+                    self._send_json(400, {"message": "شناسهٔ جفت پاسخ نامعتبر است."})
+                    return
+                if st == "confirmed" and (note is None or len(note) < 3):
+                    self._send_json(400, {"message": "برای تأیید تخلف، توضیح دست‌کم ۳ نویسه لازم است."})
+                    return
+                key = f"{eid}#{pair}#{qi}#{part}"
+                state.similarity_reviews[key] = {
+                    "id": len(state.similarity_reviews) + 1, "exam_id": eid, "pair_key": pair,
+                    "question_index": qi, "part_key": part, "status": st, "note": note,
+                    "reviewed_by": user["id"], "updated_at": state.now_iso(),
+                }
+                self._send_json(200, {"ok": True, "status": st})
                 return
 
             if fn == "native_my_answers_v1":

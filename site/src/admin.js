@@ -56,7 +56,7 @@
       c.innerHTML = '';
       var head = el('div', {class: 'row', style: 'margin-bottom:12px'}, [el('button', {class: 'btn light sm', text: '→ همهٔ آزمون‌ها', onclick: function () { S.go('grading'); }}), el('h2', {class: 'grow', style: 'margin:0;font-size:18px', text: exam.title}), el('span', {class: 'chip', text: 'بارم ' + fa(S.fmtScore(exam.total_score))}), el('span', {class: 'chip', text: fa(answers.length) + ' پاسخ'})]);
       c.appendChild(head);
-      var tabs = el('div', {class: 'tabs'}, [['grading', '✅ تصحیح'], ['question', '📋 تصحیح سؤال‌به‌سؤال'], ['attendance', '👥 حضور و وضعیت زنده'], ['monitor', '🛡 گزارش نظارتی'], ['analysis', '📈 تحلیل سؤال‌ها'], ['feedback', '💬 بانک بازخورد'], ['appeals', '⚖️ اعتراض‌ها'], ['history', '🧾 تاریخچهٔ نمره']].map(function (t) { return el('button', {class: tab === t[0] ? 'on' : '', text: t[1], onclick: function () { S.go('grading', {examId: examId, tab: t[0]}); }}); }));
+      var tabs = el('div', {class: 'tabs'}, [['grading', '✅ تصحیح'], ['question', '📋 تصحیح سؤال‌به‌سؤال'], ['attendance', '👥 حضور و وضعیت زنده'], ['monitor', '🛡 گزارش نظارتی'], ['analysis', '📈 تحلیل سؤال‌ها'], ['feedback', '💬 بانک بازخورد'], ['appeals', '⚖️ اعتراض‌ها'], ['history', '🧾 تاریخچهٔ نمره'], ['similarity', '🔍 شباهت پاسخ‌ها']].map(function (t) { return el('button', {class: tab === t[0] ? 'on' : '', text: t[1], onclick: function () { S.go('grading', {examId: examId, tab: t[0]}); }}); }));
       c.appendChild(tabs);
       var body = el('div'); c.appendChild(body);
       var ctx = {exam: exam, questions: questions, answers: answers, examId: examId, refresh: function () { gradingExam(c, examId, tab); }};
@@ -67,6 +67,7 @@
       else if (tab === 'analysis') tabAnalysis(body, ctx);
       else if (tab === 'appeals') tabAppeals(body, ctx);
       else if (tab === 'history') tabHistory(body, ctx);
+      else if (tab === 'similarity') tabSimilarity(body, ctx);
       else tabFeedbackBank(body, ctx);
     } catch (e) { S.showErr(c, e); }
   }
@@ -186,11 +187,26 @@
       default: return null;
     }
   }
-  function tabGrading(body, ctx) {
+  async function tabGrading(body, ctx) {
     /* V354 — تصحیح ناشناس: نام پنهان و ترتیب درهم (فقط در رابط) */
     var answers = applyBlind(ctx.answers), questions = ctx.questions;
     if (!answers.length) return body.appendChild(S.emptyBox('🗂', 'هنوز پاسخی برای این آزمون ارسال نشده است.'));
     body.appendChild(blindToggle(ctx));
+    /* V355 — کلیدواژه‌های راهنمای تصحیح تشریحی (فقط پیشنهاد، نه نمرهٔ خودکار) */
+    var kwByQ = {};
+    async function loadKeywords() {
+      try {
+        var rows = chk(await S.rpcObj('native_essay_keywords_v355', {p_exam: ctx.examId})) || [];
+        kwByQ = {};
+        rows.forEach(function (r) {
+          if (r.part_key) return;
+          (kwByQ[r.question_index] = kwByQ[r.question_index] || []).push({keyword: r.keyword, weight: Number(r.weight)});
+        });
+      } catch (e) { kwByQ = {}; }
+    }
+    await loadKeywords();
+    body.appendChild(el('div', {class: 'row', style: 'margin-bottom:8px'}, [
+      el('button', {class: 'btn light sm', text: ' کلیدواژه‌های تصحیح تشریحی', onclick: function () { keywordEditor(ctx, loadKeywords); }})]));
     var pend = answers.filter(function (a) { return !a.graded; }).length;
     body.appendChild(el('div', {class: 'row', style: 'margin-bottom:10px'}, [
       el('span', {class: 'muted', text: fa(pend) + ' پاسخ در انتظار تصحیح'}), el('span', {class: 'grow'}),
@@ -234,6 +250,21 @@
           ct ? el('div', {class: 'g-resp muted', style: 'font-size:13px'}, [el('span', {text: 'پاسخ درست: '}), richEl('span', '', ct)]) : null,
           qi.length ? el('div', {class: 'st-imgs'}, qi.map(function (u) { return answerMedia(u); })) : null
         ]);
+        /* V355 — دستیار کلیدواژه‌ای: پیشنهاد نمره، نه اعمال خودکار */
+        var SIM = window.ExamSimilarity;
+        var kws = kwByQ[i];
+        if (SIM && kws && kws.length && !structuredParts && q.__type === 'essay') {
+          var res = SIM.essayAssist(kws, String(responseText(q, r) || ''), Number(q.score) || 0);
+          var panel = el('div', {class: 'card', style: 'padding:8px;margin-top:6px;background:var(--soft)'}, [
+            el('div', {class: 'row'}, [
+              el('b', {class: 'grow', style: 'font-size:13px', text: 'دستیار تصحیح — پیشنهاد: ' + S.fmtScore(res.suggested) + ' از ' + S.fmtScore(Number(q.score) || 0)}),
+              el('button', {class: 'btn light sm', text: 'اعمال پیشنهاد', onclick: function () { inp.value = res.suggested; inp.dispatchEvent(new Event('input', {bubbles: true})); toast('پیشنهاد در کادر نمره گذاشته شد؛ ذخیره با خود شماست.', 'ok'); }})]),
+            el('div', {class: 'muted', style: 'font-size:12px;margin-top:4px',
+              text: 'آمده (' + fa(res.matched.length) + '): ' + (res.matched.join('، ') || '—')}),
+            el('div', {class: 'muted', style: 'font-size:12px',
+              text: 'نیامده (' + fa(res.missing.length) + '): ' + (res.missing.join('، ') || '—')})]);
+          box.appendChild(panel);
+        }
         detail.appendChild(box);
       });
       var fb = el('textarea', {rows: 2, style: 'width:100%;border:1px solid var(--line);border-radius:10px;padding:8px', placeholder: 'بازخورد به دانش‌آموز (اختیاری)'}); fb.value = a.feedback || '';
@@ -443,6 +474,193 @@
     return el('label', {class: 'row', style: 'gap:6px;font-size:13px;cursor:pointer'}, [
       el('input', {type: 'checkbox', checked: blindOn(), onchange: function (e) { setBlind(e.target.checked); ctx.refresh(); }}),
       el('span', {text: '🕶 تصحیح ناشناس (نام پنهان، ترتیب درهم)'})]);
+  }
+
+  /* ---------- V355 — ویرایشگر کلیدواژه‌های تصحیح تشریحی ----------
+     قالب هر خط: «کلیدواژه» یا «کلیدواژه = وزن».
+     برای چند بدل از «|» استفاده کنید: «وتر|ضلع بزرگ = ۲».
+     این کلیدواژه‌ها فقط پیشنهاد نمره می‌سازند؛ چیزی خودکار ذخیره نمی‌شود. */
+  async function keywordEditor(ctx, onSaved) {
+    var rows = [];
+    try { rows = chk(await S.rpcObj('native_essay_keywords_v355', {p_exam: ctx.examId})) || []; }
+    catch (e) { return toast(errMsg(e), 'err'); }
+    var essays = [];
+    ctx.questions.forEach(function (q, i) { if (q.__type === 'essay' && !(q.assessmentParts && q.assessmentParts.length)) essays.push(i); });
+    if (!essays.length) return toast('این آزمون سؤال تشریحی تک‌بخشی ندارد.', 'err');
+
+    var bg = el('div', {class: 'modal-bg', onclick: function (e) { if (e.target === bg) bg.remove(); }});
+    var m = el('div', {class: 'modal'}, [el('button', {class: 'x', text: '✕', onclick: function () { bg.remove(); }}),
+      el('h3', {style: 'margin:0 0 8px;font-size:16px', text: '🔑 کلیدواژه‌های تصحیح تشریحی'})]);
+    var sel = el('select', {style: 'width:100%;border:1px solid var(--line);border-radius:10px;padding:8px;margin-bottom:8px'});
+    essays.forEach(function (i) {
+      sel.appendChild(el('option', {value: String(i), text: 'سؤال ' + fa(i + 1) + ' — ' + String(ctx.questions[i].text || '').slice(0, 50)}));
+    });
+    var ta = el('textarea', {rows: 8, style: 'width:100%;border:1px solid var(--line);border-radius:10px;padding:8px;font-size:13px',
+      placeholder: 'هر خط یک کلیدواژه:\nقضیه فیثاغورس = 2\nوتر|ضلع بزرگ\nمجذور = 1.5'});
+    function fill() {
+      var qi = Number(sel.value);
+      ta.value = rows.filter(function (r) { return r.question_index === qi && !r.part_key; })
+        .map(function (r) { return Number(r.weight) === 1 ? r.keyword : r.keyword + ' = ' + r.weight; }).join('\n');
+    }
+    sel.addEventListener('change', fill);
+    var msg = el('div', {class: 'muted', style: 'font-size:12px;margin-top:6px'});
+    m.appendChild(sel); m.appendChild(ta);
+    m.appendChild(el('p', {class: 'muted', style: 'font-size:12px;margin:6px 0',
+      text: 'وزن پیش‌فرض ۱ است. برای چند بدل «|» بگذارید. حداکثر ۶۰ کلیدواژه برای هر سؤال.'}));
+    m.appendChild(msg);
+    m.appendChild(el('div', {class: 'row', style: 'margin-top:8px'}, [
+      el('span', {class: 'grow'}),
+      el('button', {class: 'btn', text: 'ذخیره', onclick: async function () {
+        var qi = Number(sel.value);
+        var items = [];
+        var lines = ta.value.split('\n');
+        for (var k = 0; k < lines.length; k++) {
+          var line = lines[k].trim();
+          if (!line) continue;
+          var w = 1, kw = line;
+          var eq = line.lastIndexOf('=');
+          if (eq > 0) {
+            var maybe = Number(en(line.slice(eq + 1).trim()));
+            if (isFinite(maybe) && maybe > 0) { w = maybe; kw = line.slice(0, eq).trim(); }
+          }
+          if (!kw) { msg.textContent = 'کلیدواژهٔ خالی در خط ' + fa(k + 1); return; }
+          if (kw.length > 120) { msg.textContent = 'کلیدواژهٔ خط ' + fa(k + 1) + ' بلندتر از ۱۲۰ نویسه است.'; return; }
+          items.push({keyword: kw, weight: w});
+        }
+        if (items.length > 60) { msg.textContent = 'بیش از ۶۰ کلیدواژه مجاز نیست.'; return; }
+        try {
+          chk(await S.rpcObj('native_essay_keywords_save_v355', {p_exam: ctx.examId, p_question: qi, p_part: '', p_items: items}));
+          rows = chk(await S.rpcObj('native_essay_keywords_v355', {p_exam: ctx.examId})) || [];
+          toast('کلیدواژه‌ها ذخیره شد.', 'ok');
+          fill();
+          if (onSaved) await onSaved();
+          ctx.refresh();
+        } catch (e) { msg.textContent = errMsg(e); }
+      }})]));
+    bg.appendChild(m); document.body.appendChild(bg);
+    fill();
+  }
+
+  /* ---------- V355 — تشخیص شباهت پاسخ‌ها ----------
+     فقط پرچم هشدار است؛ هیچ نمره‌ای خودکار کم نمی‌شود. مقایسه در همان
+     مرورگر معلم انجام می‌شود و کد دانش‌آموز هرگز اجرا نمی‌شود. */
+  var SIM_STATUS = {open: ['بررسی‌نشده', 'warn'], checked: ['مشکلی نبود', 'ok'], confirmed: ['تخلف تأیید شد', 'danger']};
+
+  async function tabSimilarity(body, ctx) {
+    var SIM = window.ExamSimilarity;
+    if (!SIM) return body.appendChild(S.emptyBox('⚠️', 'موتور شباهت بارگذاری نشد؛ صفحه را تازه کنید.'));
+    body.appendChild(el('p', {class: 'muted', style: 'font-size:13px;margin:0 0 10px',
+      text: 'شباهت فقط هشدار است و نمره‌ای را کم نمی‌کند. پاسخ کوتاه (کمتر از ۸ واژه) مقایسه نمی‌شود. کد با نام متغیر و توضیح متفاوت هم شناسایی می‌شود؛ کد اجرا نمی‌شود.'}));
+
+    var bar = el('div', {class: 'row', style: 'gap:8px;flex-wrap:wrap;margin-bottom:10px'});
+    var thSel = el('select', {style: 'border:1px solid var(--line);border-radius:10px;padding:8px'});
+    [['0.6', 'حساس (۶۰٪)'], ['0.75', 'متعادل (۷۵٪)'], ['0.9', 'سخت‌گیر (۹۰٪)']].forEach(function (o) {
+      thSel.appendChild(el('option', {value: o[0], text: o[1]}));
+    });
+    thSel.value = '0.75';
+    bar.appendChild(el('label', {class: 'muted', style: 'font-size:13px', text: 'آستانه:'}));
+    bar.appendChild(thSel);
+    var onlyOpen = el('input', {type: 'checkbox'});
+    bar.appendChild(el('label', {class: 'row muted', style: 'font-size:13px;gap:4px'}, [onlyOpen, el('span', {text: 'فقط بررسی‌نشده'})]));
+    body.appendChild(bar);
+
+    var holder = el('div'); body.appendChild(holder);
+    var reviews = {};
+    try {
+      (chk(await S.rpcObj('native_similarity_reviews_v355', {p_exam: ctx.examId})) || []).forEach(function (r) {
+        reviews[r.pair_key + '#' + r.question_index + '#' + (r.part_key || '')] = r;
+      });
+    } catch (e) { reviews = {}; }
+
+    var nameOf = {};
+    ctx.answers.forEach(function (a) { nameOf[a.id] = a.student_name || 'دانش‌آموز'; });
+
+    function draw() {
+      holder.textContent = '';
+      var th = Number(thSel.value);
+      var units = SIM.extractUnits(ctx.questions, ctx.answers);
+      var hits = SIM.findSimilar(units, {threshold: th});
+      if (onlyOpen.checked) hits = hits.filter(function (h) {
+        var r = reviews[h.pairKey + '#' + h.questionIndex + '#' + h.partKey];
+        return !r || r.status === 'open';
+      });
+      if (!hits.length) {
+        holder.appendChild(S.emptyBox('🔍', 'با این آستانه، پاسخ شبیهی پیدا نشد.'));
+        return;
+      }
+      holder.appendChild(el('p', {style: 'font-size:13px;margin:0 0 8px',
+        text: fa(hits.length) + ' جفت مشکوک در ' + fa(units.length) + ' واحد مقایسه'}));
+      hits.slice(0, 200).forEach(function (h) {
+        var key = h.pairKey + '#' + h.questionIndex + '#' + h.partKey;
+        var rev = reviews[key];
+        var st = SIM_STATUS[rev ? rev.status : 'open'] || SIM_STATUS.open;
+        var q = ctx.questions[h.questionIndex] || {};
+        var where = 'سؤال ' + fa(h.questionIndex + 1) + (h.partKey ? ' · زیربخش' : '') + (h.kind === 'code' ? ' · کد' : '');
+        var card = el('div', {class: 'card', style: 'padding:10px;margin-bottom:8px'}, [
+          el('div', {class: 'row'}, [
+            el('b', {class: 'grow', text: nameOf[h.aId] + ' ↔ ' + nameOf[h.bId]}),
+            el('span', {class: 'chip ' + st[1], text: st[0]})]),
+          el('div', {class: 'muted', style: 'font-size:12px;margin:4px 0',
+            text: where + ' — شباهت ' + fa(Math.round(h.score * 100)) + '٪ (اشتراک ' + fa(Math.round(h.jaccard * 100)) + '٪، پوشش ' + fa(Math.round(h.containment * 100)) + '٪)'}),
+          rev && rev.note ? el('div', {class: 'muted', style: 'font-size:12px', text: 'یادداشت: ' + rev.note}) : null,
+          el('div', {class: 'row', style: 'gap:6px;margin-top:6px;flex-wrap:wrap'}, [
+            el('button', {class: 'btn light sm', text: 'مقایسهٔ متن', onclick: function () { showPair(ctx, h); }}),
+            el('button', {class: 'btn light sm', text: 'مشکلی نبود', onclick: function () { save(h, 'checked'); }}),
+            el('button', {class: 'btn light sm', text: 'تأیید تخلف', onclick: function () { save(h, 'confirmed'); }})])]);
+        holder.appendChild(card);
+      });
+      if (hits.length > 200) holder.appendChild(el('p', {class: 'muted', text: 'فقط ۲۰۰ مورد نخست نشان داده شد؛ آستانه را بالاتر ببرید.'}));
+    }
+
+    async function save(h, status) {
+      try {
+        var note = '';
+        if (status === 'confirmed') {
+          note = await S.promptDlg('تأیید تخلف', 'این کار نمره را تغییر نمی‌دهد؛ فقط تصمیم شما ثبت می‌شود.', 'توضیح (دست‌کم ۳ نویسه)', '', 'ثبت');
+          if (note == null) return;
+        } else {
+          note = (await S.promptDlg('بررسی شباهت', 'پاسخ‌ها را دیدید و مشکلی نبود؟', 'یادداشت اختیاری', '', 'ثبت')) || '';
+        }
+        chk(await S.rpcObj('native_similarity_review_save_v355', {
+          p_exam: ctx.examId, p_pair: h.pairKey, p_question: h.questionIndex,
+          p_part: h.partKey, p_status: status, p_note: note}));
+        reviews[h.pairKey + '#' + h.questionIndex + '#' + h.partKey] = {status: status, note: note};
+        toast('ثبت شد. نمره‌ای تغییر نکرد.', 'ok');
+        draw();
+      } catch (e) { if (!(e && e.requested)) toast(errMsg(e), 'err'); }
+    }
+
+    thSel.addEventListener('change', draw);
+    onlyOpen.addEventListener('change', draw);
+    draw();
+  }
+
+  /** نمایش دو پاسخ کنار هم تا معلم خودش داوری کند. */
+  function showPair(ctx, h) {
+    var SIM = window.ExamSimilarity;
+    function textOf(id) {
+      var a = ctx.answers.filter(function (x) { return x.id === id; })[0];
+      if (!a) return '';
+      var raw = (a.responses || [])[h.questionIndex];
+      if (h.partKey) return SIM.partText(raw, h.partKey, true);
+      return typeof raw === 'string' ? raw : (raw && (raw.text || raw.answer)) || JSON.stringify(raw || '');
+    }
+    var nameOf = {};
+    ctx.answers.forEach(function (a) { nameOf[a.id] = a.student_name || 'دانش‌آموز'; });
+    var wrap = el('div', {style: 'display:grid;grid-template-columns:1fr 1fr;gap:10px'});
+    [h.aId, h.bId].forEach(function (id) {
+      wrap.appendChild(el('div', {class: 'card', style: 'padding:10px'}, [
+        el('b', {text: nameOf[id]}),
+        el('pre', {style: 'white-space:pre-wrap;font-size:12px;margin:6px 0;max-height:340px;overflow:auto',
+          text: textOf(id) || '—'})]));
+    });
+    var bg = el('div', {class: 'modal-bg', onclick: function (e) { if (e.target === bg) bg.remove(); }});
+    var m = el('div', {class: 'modal wide'}, [
+      el('button', {class: 'x', text: '✕', onclick: function () { bg.remove(); }}),
+      el('h3', {style: 'margin:0 0 10px;font-size:16px',
+        text: 'مقایسهٔ دو پاسخ — شباهت ' + fa(Math.round(h.score * 100)) + '٪'}),
+      wrap]);
+    bg.appendChild(m); document.body.appendChild(bg);
   }
 
   async function tabAnalysis(body, ctx) {

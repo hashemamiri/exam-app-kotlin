@@ -23,3 +23,7 @@ app/google-services.json
 # V335.43 — خروجی‌های محلی هم‌گام‌سازی دامنه (نباید در WIP یا کامیت بروند)
 site_out/
 site_mirror/
+
+# V355 — وابستگی موقت آزمون SQL (فقط محلی؛ هرگز کامیت نشود)
+node_modules/
+package-lock.json

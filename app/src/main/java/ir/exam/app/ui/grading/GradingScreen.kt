@@ -197,6 +197,7 @@ fun GradingScreen(
             FilterChip(selected = state.mode == "attendance", onClick = { viewModel.setMode("attendance") }, label = { Text("حضور") })
             FilterChip(selected = state.mode == "appeals", onClick = { viewModel.setMode("appeals") }, label = { Text("اعتراض‌ها") })
             FilterChip(selected = state.mode == "history", onClick = { viewModel.setMode("history") }, label = { Text("تاریخچهٔ نمره") })
+            FilterChip(selected = state.mode == "similarity", onClick = { viewModel.setMode("similarity") }, label = { Text("شباهت پاسخ‌ها") })
             FilterChip(selected = state.blindMarking, onClick = { viewModel.setBlindMarking(!state.blindMarking) }, label = { Text("تصحیح ناشناس") })
             FilterChip(selected = state.pendingOnly, onClick = { viewModel.setPendingOnly(!state.pendingOnly) }, label = { Text("فقط مانده") })
             FilterChip(selected = state.gradedOnly, onClick = { viewModel.setGradedOnly(!state.gradedOnly) }, label = { Text("فقط پاسخ") })
@@ -218,6 +219,8 @@ fun GradingScreen(
             AppealsContent(state, viewModel)
         } else if (state.mode == "history") {
             GradeHistoryContent(state, viewModel)
+        } else if (state.mode == "similarity") {
+            SimilarityContent(state, viewModel)
         } else if (state.mode == "question") {
             QuestionCentricContent(if (state.blindMarking) state.copy(submissions = blindSubmissions) else state, viewModel)
         } else {

@@ -234,7 +234,7 @@ class V354_GradingAppealsTest {
     @Test
     fun gradingModesIncludeNewTabs() {
         val vm = src("app/src/main/java/ir/exam/app/ui/grading/GradingViewModel.kt")
-        assertTrue(vm.contains("val GRADING_MODES: Set<String> = setOf(\"grading\", \"question\", \"attendance\", \"appeals\", \"history\")"))
+        assertTrue(vm.contains("val GRADING_MODES: Set<String> = setOf(\"grading\", \"question\", \"attendance\", \"appeals\", \"history\", \"similarity\")"))
         assertTrue(vm.contains("if (value == \"appeals\") loadAppeals()"))
         assertTrue(vm.contains("if (value == \"history\") loadGradeHistory()"))
         assertTrue("پذیرش نباید نمره را خودکار عوض کند", vm.contains("اگر لازم است نمره را در تب تصحیح اصلاح کنید"))
@@ -299,14 +299,17 @@ class V354_GradingAppealsTest {
 
     @Test
     fun versionIsBumpedAndChangelogHasAppScope() {
-        assertEquals("1.03.71", src("text/APP_VERSION.txt").trim())
+        // V355 — عدد نسخه این‌جا سخت‌رمز نمی‌شود؛ وگرنه هر انتشار بعدی
+        // این آزمون را می‌شکست. چیزی که باید همیشه درست بماند، هم‌خوانی
+        // فایل نسخه با بلوک بالای فهرست تغییرات است.
+        val version = src("text/APP_VERSION.txt").trim()
+        assertTrue("قالب شمارهٔ نسخه نامعتبر است: $version", version.matches(Regex("\\d+\\.\\d+\\.\\d+")))
         val lines = src("text/CHANGELOG_FA.txt").lines()
         // همان دو بازه‌ای که آزمون‌های V208 و V322 می‌سنجند.
         listOf(40, 60).forEach { take ->
             val top = ReleaseNotes.parse(lines.take(take)).first()
-            assertEquals("V354", top.version)
             assertTrue("بلوک بالا باید اپ را پوشش دهد", top.appAffecting)
-            assertEquals("1.03.71", top.appVersion)
+            assertEquals("فایل نسخه و بلوک بالای فهرست تغییرات باید یکی باشند", version, top.appVersion)
             assertTrue(top.bullets.isNotEmpty())
             assertTrue(top.bullets.size <= ReleaseNotes.MAX_BULLETS)
             top.bullets.forEach {

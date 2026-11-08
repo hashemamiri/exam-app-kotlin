@@ -16,6 +16,8 @@ import ir.exam.app.domain.model.AnalyticsSummary
 import ir.exam.app.domain.model.AttendanceRow
 import ir.exam.app.domain.model.ExamQuestionAnalysis
 import ir.exam.app.domain.model.FeedbackPhrase
+import ir.exam.app.domain.grading.EssayKeywordRow
+import ir.exam.app.domain.grading.SimilarityReviewRow
 import ir.exam.app.domain.model.GradeAppeal
 import ir.exam.app.domain.model.GradeHistoryRow
 import ir.exam.app.domain.model.GradingExam
@@ -464,6 +466,63 @@ class SupabaseGradingRepository {
     /** معلم: تاریخچهٔ تغییر نمره (فقط خواندنی). */
     suspend fun gradeHistory(examId: String): Result<List<GradeHistoryRow>> = runCatching {
         GradeHistoryRow.listFrom(rpcArray("native_grade_history_v354", buildJsonObject { put("p_exam", examId) }))
+    }
+
+    // ------------------------------------------------------------------
+    // V355 — کلیدواژهٔ تصحیح تشریحی و تصمیم بررسی شباهت
+    // خودِ الگوریتم شباهت در Similarity اجرا می‌شود، نه روی سرور.
+    // ------------------------------------------------------------------
+
+    suspend fun essayKeywords(examId: String): Result<List<EssayKeywordRow>> = runCatching {
+        EssayKeywordRow.listFrom(rpcArray("native_essay_keywords_v355", buildJsonObject { put("p_exam", examId) }))
+    }
+
+    suspend fun saveEssayKeywords(
+        examId: String,
+        questionIndex: Int,
+        partKey: String,
+        items: List<Pair<String, Double>>
+    ): Result<Unit> = runCatching {
+        require(questionIndex >= 0) { "شاخص سؤال نامعتبر است." }
+        require(items.size <= 60) { "برای هر مورد بیش از ۶۰ کلیدواژه نمی‌توان تعریف کرد." }
+        items.forEach { (kw, w) ->
+            require(kw.trim().length in 1..120) { "هر کلیدواژه باید بین ۱ تا ۲۰ نویسه باشد." }
+            require(w > 0 && w <= 100) { "وزن کلیدواژه نامعتبر است." }
+        }
+        rpcObject("native_essay_keywords_save_v355", buildJsonObject {
+            put("p_exam", examId)
+            put("p_question", questionIndex)
+            put("p_part", partKey)
+            put("p_items", buildJsonArray {
+                items.forEach { (kw, w) ->
+                    add(buildJsonObject { put("keyword", kw.trim()); put("weight", w) })
+                }
+            })
+        }).throwRpcError()
+        Unit
+    }
+
+    suspend fun similarityReviews(examId: String): Result<List<SimilarityReviewRow>> = runCatching {
+        SimilarityReviewRow.listFrom(rpcArray("native_similarity_reviews_v355", buildJsonObject { put("p_exam", examId) }))
+    }
+
+    /** ثبت تصمیم معلم؛ این هرگز نمره را تغییر نمی‌دهد. */
+    suspend fun saveSimilarityReview(
+        examId: String,
+        pairKey: String,
+        questionIndex: Int,
+        partKey: String,
+        status: String,
+        note: String
+    ): Result<Unit> = runCatching {
+        require(status in setOf("open", "checked", "confirmed")) { "وضعیت نامعتبر است." }
+        if (status == "confirmed") require(note.trim().length >= 3) { "برای تأیید تخلف، توضیح دست‌کم ۳ نویسه لازم است." }
+        rpcObject("native_similarity_review_save_v355", buildJsonObject {
+            put("p_exam", examId); put("p_pair", pairKey)
+            put("p_question", questionIndex); put("p_part", partKey)
+            put("p_status", status); put("p_note", note.trim())
+        }).throwRpcError()
+        Unit
     }
 
     private suspend fun rpcArray(name: String, parameters: JsonObject): JsonArray =

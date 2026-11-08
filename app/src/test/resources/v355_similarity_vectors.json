@@ -1,0 +1,1908 @@
+{
+ "normalize": [
+  {
+   "in": "",
+   "out": ""
+  },
+  {
+   "in": "   ",
+   "out": ""
+  },
+  {
+   "in": "سلام",
+   "out": "سلام"
+  },
+  {
+   "in": "کوتاه",
+   "out": "کوتاه"
+  },
+  {
+   "in": "قضیه فیثاغورس در مثلث قائم الزاویه بیان می کند که مجذور وتر برابر است با مجموع مجذور دو ضلع دیگر",
+   "out": "قضیه فیثاغورس در مثلث قائم الزاویه بیان می کند که مجذور وتر برابر است با مجموع مجذور دو ضلع دیگر"
+  },
+  {
+   "in": "قضيه فيثاغورس في مثلث قائم الزاويه بيان مي كند که مجذور وتر برابر است با مجموع مجذور دو ضلع ديگر",
+   "out": "قضیه فیثاغورس فی مثلث قائم الزاویه بیان می کند که مجذور وتر برابر است با مجموع مجذور دو ضلع دیگر"
+  },
+  {
+   "in": "می‌روم به مدرسه و کتاب می‌خوانم",
+   "out": "می روم به مدرسه و کتاب می خوانم"
+  },
+  {
+   "in": "ميروم به مدرسه و كتاب ميخوانم",
+   "out": "میروم به مدرسه و کتاب میخوانم"
+  },
+  {
+   "in": "اعداد ۱۲۳۴۵ و ٧٨ برابر 12345 و 6789 هستند",
+   "out": "اعداد 12345 و 78 برابر 12345 و 6789 هستند"
+  },
+  {
+   "in": "Hello, World! This is a TEST — with punctuation; and digits 42.",
+   "out": "hello world this is a test with punctuation and digits 42"
+  },
+  {
+   "in": "قیمت ۲۵۰ تومان است! واقعاً؟ بله…",
+   "out": "قیمت 250 تومان است واقعا بله"
+  },
+  {
+   "in": "Line one\nLine two\tTabbed\r\nWindows",
+   "out": "line one line two tabbed windows"
+  }
+ ],
+ "essayTokens": [
+  {
+   "in": "",
+   "out": []
+  },
+  {
+   "in": "   ",
+   "out": []
+  },
+  {
+   "in": "سلام",
+   "out": [
+    "سلام"
+   ]
+  },
+  {
+   "in": "کوتاه",
+   "out": [
+    "کوتاه"
+   ]
+  },
+  {
+   "in": "قضیه فیثاغورس در مثلث قائم الزاویه بیان می کند که مجذور وتر برابر است با مجموع مجذور دو ضلع دیگر",
+   "out": [
+    "قضیه",
+    "فیثاغورس",
+    "در",
+    "مثلث",
+    "قائم",
+    "الزاویه",
+    "بیان",
+    "می",
+    "کند",
+    "که",
+    "مجذور",
+    "وتر",
+    "برابر",
+    "است",
+    "با",
+    "مجموع",
+    "مجذور",
+    "دو",
+    "ضلع",
+    "دیگر"
+   ]
+  },
+  {
+   "in": "قضيه فيثاغورس في مثلث قائم الزاويه بيان مي كند که مجذور وتر برابر است با مجموع مجذور دو ضلع ديگر",
+   "out": [
+    "قضیه",
+    "فیثاغورس",
+    "فی",
+    "مثلث",
+    "قائم",
+    "الزاویه",
+    "بیان",
+    "می",
+    "کند",
+    "که",
+    "مجذور",
+    "وتر",
+    "برابر",
+    "است",
+    "با",
+    "مجموع",
+    "مجذور",
+    "دو",
+    "ضلع",
+    "دیگر"
+   ]
+  },
+  {
+   "in": "می‌روم به مدرسه و کتاب می‌خوانم",
+   "out": [
+    "می",
+    "روم",
+    "به",
+    "مدرسه",
+    "و",
+    "کتاب",
+    "می",
+    "خوانم"
+   ]
+  },
+  {
+   "in": "ميروم به مدرسه و كتاب ميخوانم",
+   "out": [
+    "میروم",
+    "به",
+    "مدرسه",
+    "و",
+    "کتاب",
+    "میخوانم"
+   ]
+  },
+  {
+   "in": "اعداد ۱۲۳۴۵ و ٧٨ برابر 12345 و 6789 هستند",
+   "out": [
+    "اعداد",
+    "12345",
+    "و",
+    "78",
+    "برابر",
+    "12345",
+    "و",
+    "6789",
+    "هستند"
+   ]
+  },
+  {
+   "in": "Hello, World! This is a TEST — with punctuation; and digits 42.",
+   "out": [
+    "hello",
+    "world",
+    "this",
+    "is",
+    "a",
+    "test",
+    "with",
+    "punctuation",
+    "and",
+    "digits",
+    "42"
+   ]
+  },
+  {
+   "in": "قیمت ۲۵۰ تومان است! واقعاً؟ بله…",
+   "out": [
+    "قیمت",
+    "250",
+    "تومان",
+    "است",
+    "واقعا",
+    "بله"
+   ]
+  },
+  {
+   "in": "Line one\nLine two\tTabbed\r\nWindows",
+   "out": [
+    "line",
+    "one",
+    "line",
+    "two",
+    "tabbed",
+    "windows"
+   ]
+  }
+ ],
+ "codeTokens": [
+  {
+   "in": "",
+   "out": []
+  },
+  {
+   "in": "x=1",
+   "out": [
+    "ID",
+    "=",
+    "NUM"
+   ]
+  },
+  {
+   "in": "def add(x, y):\n    # جمع\n    return x + y",
+   "out": [
+    "def",
+    "ID",
+    "(",
+    "ID",
+    ",",
+    "ID",
+    ")",
+    ":",
+    "return",
+    "ID",
+    "+",
+    "ID"
+   ]
+  },
+  {
+   "in": "```python\ndef add(x, y):\n    # جمع دو عدد\n    return x + y\n```",
+   "out": [
+    "def",
+    "ID",
+    "(",
+    "ID",
+    ",",
+    "ID",
+    ")",
+    ":",
+    "return",
+    "ID",
+    "+",
+    "ID"
+   ]
+  },
+  {
+   "in": "```python\ndef add(first, second):\n    # توضیح کاملاً متفاوت\n    return first + second\n```",
+   "out": [
+    "def",
+    "ID",
+    "(",
+    "ID",
+    ",",
+    "ID",
+    ")",
+    ":",
+    "return",
+    "ID",
+    "+",
+    "ID"
+   ]
+  },
+  {
+   "in": "```js\nfunction f(a,b){ /* note */ return a+b; }\n```",
+   "out": [
+    "function",
+    "ID",
+    "(",
+    "ID",
+    ",",
+    "ID",
+    ")",
+    "{",
+    "return",
+    "ID",
+    "+",
+    "ID",
+    ";",
+    "}"
+   ]
+  },
+  {
+   "in": "x = \"hi\"; y = 3.14; z = 'quoted';",
+   "out": [
+    "ID",
+    "=",
+    "STR",
+    ";",
+    "ID",
+    "=",
+    "NUM",
+    ";",
+    "ID",
+    "=",
+    "STR",
+    ";"
+   ]
+  },
+  {
+   "in": "if (a >= 10 && b != 3) { print(\"yes\"); } else { print(\"no\"); }",
+   "out": [
+    "if",
+    "(",
+    "ID",
+    ">",
+    "=",
+    "NUM",
+    "&",
+    "&",
+    "ID",
+    "!",
+    "=",
+    "NUM",
+    ")",
+    "{",
+    "ID",
+    "(",
+    "STR",
+    ")",
+    ";",
+    "}",
+    "else",
+    "{",
+    "ID",
+    "(",
+    "STR",
+    ")",
+    ";",
+    "}"
+   ]
+  },
+  {
+   "in": "SELECT * FROM t WHERE id = 5; -- comment\n",
+   "out": [
+    "select",
+    "*",
+    "from",
+    "ID",
+    "where",
+    "ID",
+    "=",
+    "NUM",
+    ";",
+    "-",
+    "-",
+    "ID"
+   ]
+  },
+  {
+   "in": "a--b; c++; d = e / f; # trailing",
+   "out": [
+    "ID",
+    "-",
+    "-",
+    "ID",
+    ";",
+    "ID",
+    "+",
+    "+",
+    ";",
+    "ID",
+    "=",
+    "ID",
+    "/",
+    "ID",
+    ";"
+   ]
+  }
+ ],
+ "stripFence": [
+  {
+   "in": "",
+   "out": ""
+  },
+  {
+   "in": "x=1",
+   "out": "x=1"
+  },
+  {
+   "in": "def add(x, y):\n    # جمع\n    return x + y",
+   "out": "def add(x, y):\n    # جمع\n    return x + y"
+  },
+  {
+   "in": "```python\ndef add(x, y):\n    # جمع دو عدد\n    return x + y\n```",
+   "out": "def add(x, y):\n    # جمع دو عدد\n    return x + y\n"
+  },
+  {
+   "in": "```python\ndef add(first, second):\n    # توضیح کاملاً متفاوت\n    return first + second\n```",
+   "out": "def add(first, second):\n    # توضیح کاملاً متفاوت\n    return first + second\n"
+  },
+  {
+   "in": "```js\nfunction f(a,b){ /* note */ return a+b; }\n```",
+   "out": "function f(a,b){ /* note */ return a+b; }\n"
+  },
+  {
+   "in": "x = \"hi\"; y = 3.14; z = 'quoted';",
+   "out": "x = \"hi\"; y = 3.14; z = 'quoted';"
+  },
+  {
+   "in": "if (a >= 10 && b != 3) { print(\"yes\"); } else { print(\"no\"); }",
+   "out": "if (a >= 10 && b != 3) { print(\"yes\"); } else { print(\"no\"); }"
+  },
+  {
+   "in": "SELECT * FROM t WHERE id = 5; -- comment\n",
+   "out": "SELECT * FROM t WHERE id = 5; -- comment\n"
+  },
+  {
+   "in": "a--b; c++; d = e / f; # trailing",
+   "out": "a--b; c++; d = e / f; # trailing"
+  }
+ ],
+ "stripComments": [
+  {
+   "in": "",
+   "out": ""
+  },
+  {
+   "in": "x=1",
+   "out": "x=1"
+  },
+  {
+   "in": "def add(x, y):\n    # جمع\n    return x + y",
+   "out": "def add(x, y):\n     \n    return x + y"
+  },
+  {
+   "in": "```python\ndef add(x, y):\n    # جمع دو عدد\n    return x + y\n```",
+   "out": "```python\ndef add(x, y):\n     \n    return x + y\n```"
+  },
+  {
+   "in": "```python\ndef add(first, second):\n    # توضیح کاملاً متفاوت\n    return first + second\n```",
+   "out": "```python\ndef add(first, second):\n     \n    return first + second\n```"
+  },
+  {
+   "in": "```js\nfunction f(a,b){ /* note */ return a+b; }\n```",
+   "out": "```js\nfunction f(a,b){   return a+b; }\n```"
+  },
+  {
+   "in": "x = \"hi\"; y = 3.14; z = 'quoted';",
+   "out": "x = \"hi\"; y = 3.14; z = 'quoted';"
+  },
+  {
+   "in": "if (a >= 10 && b != 3) { print(\"yes\"); } else { print(\"no\"); }",
+   "out": "if (a >= 10 && b != 3) { print(\"yes\"); } else { print(\"no\"); }"
+  },
+  {
+   "in": "SELECT * FROM t WHERE id = 5; -- comment\n",
+   "out": "SELECT * FROM t WHERE id = 5; -- comment\n"
+  },
+  {
+   "in": "a--b; c++; d = e / f; # trailing",
+   "out": "a--b; c++; d = e / f;  "
+  }
+ ],
+ "hash": [
+  {
+   "in": "",
+   "out": 0
+  },
+  {
+   "in": "a",
+   "out": 97
+  },
+  {
+   "in": "ab",
+   "out": 3105
+  },
+  {
+   "in": "a1",
+   "out": 3056
+  },
+  {
+   "in": "برگه",
+   "out": 48528449
+  },
+  {
+   "in": "11111111-1111-4111-8111-111111111111",
+   "out": -1343044828
+  },
+  {
+   "in": "def\u0001ID\u0001(\u0001ID\u0001,",
+   "out": -732340311
+  }
+ ],
+ "pairs": [
+  {
+   "a": "",
+   "b": "   ",
+   "kind": "essay",
+   "out": null
+  },
+  {
+   "a": "",
+   "b": "سلام",
+   "kind": "essay",
+   "out": null
+  },
+  {
+   "a": "",
+   "b": "کوتاه",
+   "kind": "essay",
+   "out": null
+  },
+  {
+   "a": "",
+   "b": "قضیه فیثاغورس در مثلث قائم الزاویه بیان می کند که مجذور وتر برابر است با مجموع مجذور دو ضلع دیگر",
+   "kind": "essay",
+   "out": null
+  },
+  {
+   "a": "",
+   "b": "قضيه فيثاغورس في مثلث قائم الزاويه بيان مي كند که مجذور وتر برابر است با مجموع مجذور دو ضلع ديگر",
+   "kind": "essay",
+   "out": null
+  },
+  {
+   "a": "",
+   "b": "می‌روم به مدرسه و کتاب می‌خوانم",
+   "kind": "essay",
+   "out": null
+  },
+  {
+   "a": "",
+   "b": "ميروم به مدرسه و كتاب ميخوانم",
+   "kind": "essay",
+   "out": null
+  },
+  {
+   "a": "",
+   "b": "اعداد ۱۲۳۴۵ و ٧٨ برابر 12345 و 6789 هستند",
+   "kind": "essay",
+   "out": null
+  },
+  {
+   "a": "",
+   "b": "Hello, World! This is a TEST — with punctuation; and digits 42.",
+   "kind": "essay",
+   "out": null
+  },
+  {
+   "a": "",
+   "b": "قیمت ۲۵۰ تومان است! واقعاً؟ بله…",
+   "kind": "essay",
+   "out": null
+  },
+  {
+   "a": "",
+   "b": "Line one\nLine two\tTabbed\r\nWindows",
+   "kind": "essay",
+   "out": null
+  },
+  {
+   "a": "   ",
+   "b": "سلام",
+   "kind": "essay",
+   "out": null
+  },
+  {
+   "a": "   ",
+   "b": "کوتاه",
+   "kind": "essay",
+   "out": null
+  },
+  {
+   "a": "   ",
+   "b": "قضیه فیثاغورس در مثلث قائم الزاویه بیان می کند که مجذور وتر برابر است با مجموع مجذور دو ضلع دیگر",
+   "kind": "essay",
+   "out": null
+  },
+  {
+   "a": "   ",
+   "b": "قضيه فيثاغورس في مثلث قائم الزاويه بيان مي كند که مجذور وتر برابر است با مجموع مجذور دو ضلع ديگر",
+   "kind": "essay",
+   "out": null
+  },
+  {
+   "a": "   ",
+   "b": "می‌روم به مدرسه و کتاب می‌خوانم",
+   "kind": "essay",
+   "out": null
+  },
+  {
+   "a": "   ",
+   "b": "ميروم به مدرسه و كتاب ميخوانم",
+   "kind": "essay",
+   "out": null
+  },
+  {
+   "a": "   ",
+   "b": "اعداد ۱۲۳۴۵ و ٧٨ برابر 12345 و 6789 هستند",
+   "kind": "essay",
+   "out": null
+  },
+  {
+   "a": "   ",
+   "b": "Hello, World! This is a TEST — with punctuation; and digits 42.",
+   "kind": "essay",
+   "out": null
+  },
+  {
+   "a": "   ",
+   "b": "قیمت ۲۵۰ تومان است! واقعاً؟ بله…",
+   "kind": "essay",
+   "out": null
+  },
+  {
+   "a": "   ",
+   "b": "Line one\nLine two\tTabbed\r\nWindows",
+   "kind": "essay",
+   "out": null
+  },
+  {
+   "a": "سلام",
+   "b": "کوتاه",
+   "kind": "essay",
+   "out": {
+    "jaccard": 0,
+    "containment": 0,
+    "score": 0,
+    "shared": 0,
+    "sizeA": 1,
+    "sizeB": 1
+   }
+  },
+  {
+   "a": "سلام",
+   "b": "قضیه فیثاغورس در مثلث قائم الزاویه بیان می کند که مجذور وتر برابر است با مجموع مجذور دو ضلع دیگر",
+   "kind": "essay",
+   "out": {
+    "jaccard": 0,
+    "containment": 0,
+    "score": 0,
+    "shared": 0,
+    "sizeA": 1,
+    "sizeB": 16
+   }
+  },
+  {
+   "a": "سلام",
+   "b": "قضيه فيثاغورس في مثلث قائم الزاويه بيان مي كند که مجذور وتر برابر است با مجموع مجذور دو ضلع ديگر",
+   "kind": "essay",
+   "out": {
+    "jaccard": 0,
+    "containment": 0,
+    "score": 0,
+    "shared": 0,
+    "sizeA": 1,
+    "sizeB": 16
+   }
+  },
+  {
+   "a": "سلام",
+   "b": "می‌روم به مدرسه و کتاب می‌خوانم",
+   "kind": "essay",
+   "out": {
+    "jaccard": 0,
+    "containment": 0,
+    "score": 0,
+    "shared": 0,
+    "sizeA": 1,
+    "sizeB": 4
+   }
+  },
+  {
+   "a": "سلام",
+   "b": "ميروم به مدرسه و كتاب ميخوانم",
+   "kind": "essay",
+   "out": {
+    "jaccard": 0,
+    "containment": 0,
+    "score": 0,
+    "shared": 0,
+    "sizeA": 1,
+    "sizeB": 2
+   }
+  },
+  {
+   "a": "سلام",
+   "b": "اعداد ۱۲۳۴۵ و ٧٨ برابر 12345 و 6789 هستند",
+   "kind": "essay",
+   "out": {
+    "jaccard": 0,
+    "containment": 0,
+    "score": 0,
+    "shared": 0,
+    "sizeA": 1,
+    "sizeB": 5
+   }
+  },
+  {
+   "a": "سلام",
+   "b": "Hello, World! This is a TEST — with punctuation; and digits 42.",
+   "kind": "essay",
+   "out": {
+    "jaccard": 0,
+    "containment": 0,
+    "score": 0,
+    "shared": 0,
+    "sizeA": 1,
+    "sizeB": 7
+   }
+  },
+  {
+   "a": "سلام",
+   "b": "قیمت ۲۵۰ تومان است! واقعاً؟ بله…",
+   "kind": "essay",
+   "out": {
+    "jaccard": 0,
+    "containment": 0,
+    "score": 0,
+    "shared": 0,
+    "sizeA": 1,
+    "sizeB": 2
+   }
+  },
+  {
+   "a": "سلام",
+   "b": "Line one\nLine two\tTabbed\r\nWindows",
+   "kind": "essay",
+   "out": {
+    "jaccard": 0,
+    "containment": 0,
+    "score": 0,
+    "shared": 0,
+    "sizeA": 1,
+    "sizeB": 2
+   }
+  },
+  {
+   "a": "کوتاه",
+   "b": "قضیه فیثاغورس در مثلث قائم الزاویه بیان می کند که مجذور وتر برابر است با مجموع مجذور دو ضلع دیگر",
+   "kind": "essay",
+   "out": {
+    "jaccard": 0,
+    "containment": 0,
+    "score": 0,
+    "shared": 0,
+    "sizeA": 1,
+    "sizeB": 16
+   }
+  },
+  {
+   "a": "کوتاه",
+   "b": "قضيه فيثاغورس في مثلث قائم الزاويه بيان مي كند که مجذور وتر برابر است با مجموع مجذور دو ضلع ديگر",
+   "kind": "essay",
+   "out": {
+    "jaccard": 0,
+    "containment": 0,
+    "score": 0,
+    "shared": 0,
+    "sizeA": 1,
+    "sizeB": 16
+   }
+  },
+  {
+   "a": "کوتاه",
+   "b": "می‌روم به مدرسه و کتاب می‌خوانم",
+   "kind": "essay",
+   "out": {
+    "jaccard": 0,
+    "containment": 0,
+    "score": 0,
+    "shared": 0,
+    "sizeA": 1,
+    "sizeB": 4
+   }
+  },
+  {
+   "a": "کوتاه",
+   "b": "ميروم به مدرسه و كتاب ميخوانم",
+   "kind": "essay",
+   "out": {
+    "jaccard": 0,
+    "containment": 0,
+    "score": 0,
+    "shared": 0,
+    "sizeA": 1,
+    "sizeB": 2
+   }
+  },
+  {
+   "a": "کوتاه",
+   "b": "اعداد ۱۲۳۴۵ و ٧٨ برابر 12345 و 6789 هستند",
+   "kind": "essay",
+   "out": {
+    "jaccard": 0,
+    "containment": 0,
+    "score": 0,
+    "shared": 0,
+    "sizeA": 1,
+    "sizeB": 5
+   }
+  },
+  {
+   "a": "کوتاه",
+   "b": "Hello, World! This is a TEST — with punctuation; and digits 42.",
+   "kind": "essay",
+   "out": {
+    "jaccard": 0,
+    "containment": 0,
+    "score": 0,
+    "shared": 0,
+    "sizeA": 1,
+    "sizeB": 7
+   }
+  },
+  {
+   "a": "کوتاه",
+   "b": "قیمت ۲۵۰ تومان است! واقعاً؟ بله…",
+   "kind": "essay",
+   "out": {
+    "jaccard": 0,
+    "containment": 0,
+    "score": 0,
+    "shared": 0,
+    "sizeA": 1,
+    "sizeB": 2
+   }
+  },
+  {
+   "a": "کوتاه",
+   "b": "Line one\nLine two\tTabbed\r\nWindows",
+   "kind": "essay",
+   "out": {
+    "jaccard": 0,
+    "containment": 0,
+    "score": 0,
+    "shared": 0,
+    "sizeA": 1,
+    "sizeB": 2
+   }
+  },
+  {
+   "a": "قضیه فیثاغورس در مثلث قائم الزاویه بیان می کند که مجذور وتر برابر است با مجموع مجذور دو ضلع دیگر",
+   "b": "قضيه فيثاغورس في مثلث قائم الزاويه بيان مي كند که مجذور وتر برابر است با مجموع مجذور دو ضلع ديگر",
+   "kind": "essay",
+   "out": {
+    "jaccard": 0.6842105263157895,
+    "containment": 0.8125,
+    "score": 0.8125,
+    "shared": 13,
+    "sizeA": 16,
+    "sizeB": 16
+   }
+  },
+  {
+   "a": "قضیه فیثاغورس در مثلث قائم الزاویه بیان می کند که مجذور وتر برابر است با مجموع مجذور دو ضلع دیگر",
+   "b": "می‌روم به مدرسه و کتاب می‌خوانم",
+   "kind": "essay",
+   "out": {
+    "jaccard": 0,
+    "containment": 0,
+    "score": 0,
+    "shared": 0,
+    "sizeA": 16,
+    "sizeB": 4
+   }
+  },
+  {
+   "a": "قضیه فیثاغورس در مثلث قائم الزاویه بیان می کند که مجذور وتر برابر است با مجموع مجذور دو ضلع دیگر",
+   "b": "ميروم به مدرسه و كتاب ميخوانم",
+   "kind": "essay",
+   "out": {
+    "jaccard": 0,
+    "containment": 0,
+    "score": 0,
+    "shared": 0,
+    "sizeA": 16,
+    "sizeB": 2
+   }
+  },
+  {
+   "a": "قضیه فیثاغورس در مثلث قائم الزاویه بیان می کند که مجذور وتر برابر است با مجموع مجذور دو ضلع دیگر",
+   "b": "اعداد ۱۲۳۴۵ و ٧٨ برابر 12345 و 6789 هستند",
+   "kind": "essay",
+   "out": {
+    "jaccard": 0,
+    "containment": 0,
+    "score": 0,
+    "shared": 0,
+    "sizeA": 16,
+    "sizeB": 5
+   }
+  },
+  {
+   "a": "قضیه فیثاغورس در مثلث قائم الزاویه بیان می کند که مجذور وتر برابر است با مجموع مجذور دو ضلع دیگر",
+   "b": "Hello, World! This is a TEST — with punctuation; and digits 42.",
+   "kind": "essay",
+   "out": {
+    "jaccard": 0,
+    "containment": 0,
+    "score": 0,
+    "shared": 0,
+    "sizeA": 16,
+    "sizeB": 7
+   }
+  },
+  {
+   "a": "قضیه فیثاغورس در مثلث قائم الزاویه بیان می کند که مجذور وتر برابر است با مجموع مجذور دو ضلع دیگر",
+   "b": "قیمت ۲۵۰ تومان است! واقعاً؟ بله…",
+   "kind": "essay",
+   "out": {
+    "jaccard": 0,
+    "containment": 0,
+    "score": 0,
+    "shared": 0,
+    "sizeA": 16,
+    "sizeB": 2
+   }
+  },
+  {
+   "a": "قضیه فیثاغورس در مثلث قائم الزاویه بیان می کند که مجذور وتر برابر است با مجموع مجذور دو ضلع دیگر",
+   "b": "Line one\nLine two\tTabbed\r\nWindows",
+   "kind": "essay",
+   "out": {
+    "jaccard": 0,
+    "containment": 0,
+    "score": 0,
+    "shared": 0,
+    "sizeA": 16,
+    "sizeB": 2
+   }
+  },
+  {
+   "a": "قضيه فيثاغورس في مثلث قائم الزاويه بيان مي كند که مجذور وتر برابر است با مجموع مجذور دو ضلع ديگر",
+   "b": "می‌روم به مدرسه و کتاب می‌خوانم",
+   "kind": "essay",
+   "out": {
+    "jaccard": 0,
+    "containment": 0,
+    "score": 0,
+    "shared": 0,
+    "sizeA": 16,
+    "sizeB": 4
+   }
+  },
+  {
+   "a": "قضيه فيثاغورس في مثلث قائم الزاويه بيان مي كند که مجذور وتر برابر است با مجموع مجذور دو ضلع ديگر",
+   "b": "ميروم به مدرسه و كتاب ميخوانم",
+   "kind": "essay",
+   "out": {
+    "jaccard": 0,
+    "containment": 0,
+    "score": 0,
+    "shared": 0,
+    "sizeA": 16,
+    "sizeB": 2
+   }
+  },
+  {
+   "a": "قضيه فيثاغورس في مثلث قائم الزاويه بيان مي كند که مجذور وتر برابر است با مجموع مجذور دو ضلع ديگر",
+   "b": "اعداد ۱۲۳۴۵ و ٧٨ برابر 12345 و 6789 هستند",
+   "kind": "essay",
+   "out": {
+    "jaccard": 0,
+    "containment": 0,
+    "score": 0,
+    "shared": 0,
+    "sizeA": 16,
+    "sizeB": 5
+   }
+  },
+  {
+   "a": "قضيه فيثاغورس في مثلث قائم الزاويه بيان مي كند که مجذور وتر برابر است با مجموع مجذور دو ضلع ديگر",
+   "b": "Hello, World! This is a TEST — with punctuation; and digits 42.",
+   "kind": "essay",
+   "out": {
+    "jaccard": 0,
+    "containment": 0,
+    "score": 0,
+    "shared": 0,
+    "sizeA": 16,
+    "sizeB": 7
+   }
+  },
+  {
+   "a": "قضيه فيثاغورس في مثلث قائم الزاويه بيان مي كند که مجذور وتر برابر است با مجموع مجذور دو ضلع ديگر",
+   "b": "قیمت ۲۵۰ تومان است! واقعاً؟ بله…",
+   "kind": "essay",
+   "out": {
+    "jaccard": 0,
+    "containment": 0,
+    "score": 0,
+    "shared": 0,
+    "sizeA": 16,
+    "sizeB": 2
+   }
+  },
+  {
+   "a": "قضيه فيثاغورس في مثلث قائم الزاويه بيان مي كند که مجذور وتر برابر است با مجموع مجذور دو ضلع ديگر",
+   "b": "Line one\nLine two\tTabbed\r\nWindows",
+   "kind": "essay",
+   "out": {
+    "jaccard": 0,
+    "containment": 0,
+    "score": 0,
+    "shared": 0,
+    "sizeA": 16,
+    "sizeB": 2
+   }
+  },
+  {
+   "a": "می‌روم به مدرسه و کتاب می‌خوانم",
+   "b": "ميروم به مدرسه و كتاب ميخوانم",
+   "kind": "essay",
+   "out": {
+    "jaccard": 0,
+    "containment": 0,
+    "score": 0,
+    "shared": 0,
+    "sizeA": 4,
+    "sizeB": 2
+   }
+  },
+  {
+   "a": "می‌روم به مدرسه و کتاب می‌خوانم",
+   "b": "اعداد ۱۲۳۴۵ و ٧٨ برابر 12345 و 6789 هستند",
+   "kind": "essay",
+   "out": {
+    "jaccard": 0,
+    "containment": 0,
+    "score": 0,
+    "shared": 0,
+    "sizeA": 4,
+    "sizeB": 5
+   }
+  },
+  {
+   "a": "می‌روم به مدرسه و کتاب می‌خوانم",
+   "b": "Hello, World! This is a TEST — with punctuation; and digits 42.",
+   "kind": "essay",
+   "out": {
+    "jaccard": 0,
+    "containment": 0,
+    "score": 0,
+    "shared": 0,
+    "sizeA": 4,
+    "sizeB": 7
+   }
+  },
+  {
+   "a": "می‌روم به مدرسه و کتاب می‌خوانم",
+   "b": "قیمت ۲۵۰ تومان است! واقعاً؟ بله…",
+   "kind": "essay",
+   "out": {
+    "jaccard": 0,
+    "containment": 0,
+    "score": 0,
+    "shared": 0,
+    "sizeA": 4,
+    "sizeB": 2
+   }
+  },
+  {
+   "a": "می‌روم به مدرسه و کتاب می‌خوانم",
+   "b": "Line one\nLine two\tTabbed\r\nWindows",
+   "kind": "essay",
+   "out": {
+    "jaccard": 0,
+    "containment": 0,
+    "score": 0,
+    "shared": 0,
+    "sizeA": 4,
+    "sizeB": 2
+   }
+  },
+  {
+   "a": "ميروم به مدرسه و كتاب ميخوانم",
+   "b": "اعداد ۱۲۳۴۵ و ٧٨ برابر 12345 و 6789 هستند",
+   "kind": "essay",
+   "out": {
+    "jaccard": 0,
+    "containment": 0,
+    "score": 0,
+    "shared": 0,
+    "sizeA": 2,
+    "sizeB": 5
+   }
+  },
+  {
+   "a": "ميروم به مدرسه و كتاب ميخوانم",
+   "b": "Hello, World! This is a TEST — with punctuation; and digits 42.",
+   "kind": "essay",
+   "out": {
+    "jaccard": 0,
+    "containment": 0,
+    "score": 0,
+    "shared": 0,
+    "sizeA": 2,
+    "sizeB": 7
+   }
+  },
+  {
+   "a": "ميروم به مدرسه و كتاب ميخوانم",
+   "b": "قیمت ۲۵۰ تومان است! واقعاً؟ بله…",
+   "kind": "essay",
+   "out": {
+    "jaccard": 0,
+    "containment": 0,
+    "score": 0,
+    "shared": 0,
+    "sizeA": 2,
+    "sizeB": 2
+   }
+  },
+  {
+   "a": "ميروم به مدرسه و كتاب ميخوانم",
+   "b": "Line one\nLine two\tTabbed\r\nWindows",
+   "kind": "essay",
+   "out": {
+    "jaccard": 0,
+    "containment": 0,
+    "score": 0,
+    "shared": 0,
+    "sizeA": 2,
+    "sizeB": 2
+   }
+  },
+  {
+   "a": "اعداد ۱۲۳۴۵ و ٧٨ برابر 12345 و 6789 هستند",
+   "b": "Hello, World! This is a TEST — with punctuation; and digits 42.",
+   "kind": "essay",
+   "out": {
+    "jaccard": 0,
+    "containment": 0,
+    "score": 0,
+    "shared": 0,
+    "sizeA": 5,
+    "sizeB": 7
+   }
+  },
+  {
+   "a": "اعداد ۱۲۳۴۵ و ٧٨ برابر 12345 و 6789 هستند",
+   "b": "قیمت ۲۵۰ تومان است! واقعاً؟ بله…",
+   "kind": "essay",
+   "out": {
+    "jaccard": 0,
+    "containment": 0,
+    "score": 0,
+    "shared": 0,
+    "sizeA": 5,
+    "sizeB": 2
+   }
+  },
+  {
+   "a": "اعداد ۱۲۳۴۵ و ٧٨ برابر 12345 و 6789 هستند",
+   "b": "Line one\nLine two\tTabbed\r\nWindows",
+   "kind": "essay",
+   "out": {
+    "jaccard": 0,
+    "containment": 0,
+    "score": 0,
+    "shared": 0,
+    "sizeA": 5,
+    "sizeB": 2
+   }
+  },
+  {
+   "a": "Hello, World! This is a TEST — with punctuation; and digits 42.",
+   "b": "قیمت ۲۵۰ تومان است! واقعاً؟ بله…",
+   "kind": "essay",
+   "out": {
+    "jaccard": 0,
+    "containment": 0,
+    "score": 0,
+    "shared": 0,
+    "sizeA": 7,
+    "sizeB": 2
+   }
+  },
+  {
+   "a": "Hello, World! This is a TEST — with punctuation; and digits 42.",
+   "b": "Line one\nLine two\tTabbed\r\nWindows",
+   "kind": "essay",
+   "out": {
+    "jaccard": 0,
+    "containment": 0,
+    "score": 0,
+    "shared": 0,
+    "sizeA": 7,
+    "sizeB": 2
+   }
+  },
+  {
+   "a": "قیمت ۲۵۰ تومان است! واقعاً؟ بله…",
+   "b": "Line one\nLine two\tTabbed\r\nWindows",
+   "kind": "essay",
+   "out": {
+    "jaccard": 0,
+    "containment": 0,
+    "score": 0,
+    "shared": 0,
+    "sizeA": 2,
+    "sizeB": 2
+   }
+  },
+  {
+   "a": "",
+   "b": "x=1",
+   "kind": "code",
+   "out": null
+  },
+  {
+   "a": "",
+   "b": "def add(x, y):\n    # جمع\n    return x + y",
+   "kind": "code",
+   "out": null
+  },
+  {
+   "a": "",
+   "b": "```python\ndef add(x, y):\n    # جمع دو عدد\n    return x + y\n```",
+   "kind": "code",
+   "out": null
+  },
+  {
+   "a": "",
+   "b": "```python\ndef add(first, second):\n    # توضیح کاملاً متفاوت\n    return first + second\n```",
+   "kind": "code",
+   "out": null
+  },
+  {
+   "a": "",
+   "b": "```js\nfunction f(a,b){ /* note */ return a+b; }\n```",
+   "kind": "code",
+   "out": null
+  },
+  {
+   "a": "",
+   "b": "x = \"hi\"; y = 3.14; z = 'quoted';",
+   "kind": "code",
+   "out": null
+  },
+  {
+   "a": "",
+   "b": "if (a >= 10 && b != 3) { print(\"yes\"); } else { print(\"no\"); }",
+   "kind": "code",
+   "out": null
+  },
+  {
+   "a": "",
+   "b": "SELECT * FROM t WHERE id = 5; -- comment\n",
+   "kind": "code",
+   "out": null
+  },
+  {
+   "a": "",
+   "b": "a--b; c++; d = e / f; # trailing",
+   "kind": "code",
+   "out": null
+  },
+  {
+   "a": "x=1",
+   "b": "def add(x, y):\n    # جمع\n    return x + y",
+   "kind": "code",
+   "out": {
+    "jaccard": 0,
+    "containment": 0,
+    "score": 0,
+    "shared": 0,
+    "sizeA": 1,
+    "sizeB": 8
+   }
+  },
+  {
+   "a": "x=1",
+   "b": "```python\ndef add(x, y):\n    # جمع دو عدد\n    return x + y\n```",
+   "kind": "code",
+   "out": {
+    "jaccard": 0,
+    "containment": 0,
+    "score": 0,
+    "shared": 0,
+    "sizeA": 1,
+    "sizeB": 8
+   }
+  },
+  {
+   "a": "x=1",
+   "b": "```python\ndef add(first, second):\n    # توضیح کاملاً متفاوت\n    return first + second\n```",
+   "kind": "code",
+   "out": {
+    "jaccard": 0,
+    "containment": 0,
+    "score": 0,
+    "shared": 0,
+    "sizeA": 1,
+    "sizeB": 8
+   }
+  },
+  {
+   "a": "x=1",
+   "b": "```js\nfunction f(a,b){ /* note */ return a+b; }\n```",
+   "kind": "code",
+   "out": {
+    "jaccard": 0,
+    "containment": 0,
+    "score": 0,
+    "shared": 0,
+    "sizeA": 1,
+    "sizeB": 10
+   }
+  },
+  {
+   "a": "x=1",
+   "b": "x = \"hi\"; y = 3.14; z = 'quoted';",
+   "kind": "code",
+   "out": {
+    "jaccard": 0,
+    "containment": 0,
+    "score": 0,
+    "shared": 0,
+    "sizeA": 1,
+    "sizeB": 8
+   }
+  },
+  {
+   "a": "x=1",
+   "b": "if (a >= 10 && b != 3) { print(\"yes\"); } else { print(\"no\"); }",
+   "kind": "code",
+   "out": {
+    "jaccard": 0,
+    "containment": 0,
+    "score": 0,
+    "shared": 0,
+    "sizeA": 1,
+    "sizeB": 21
+   }
+  },
+  {
+   "a": "x=1",
+   "b": "SELECT * FROM t WHERE id = 5; -- comment\n",
+   "kind": "code",
+   "out": {
+    "jaccard": 0,
+    "containment": 0,
+    "score": 0,
+    "shared": 0,
+    "sizeA": 1,
+    "sizeB": 8
+   }
+  },
+  {
+   "a": "x=1",
+   "b": "a--b; c++; d = e / f; # trailing",
+   "kind": "code",
+   "out": {
+    "jaccard": 0,
+    "containment": 0,
+    "score": 0,
+    "shared": 0,
+    "sizeA": 1,
+    "sizeB": 11
+   }
+  },
+  {
+   "a": "def add(x, y):\n    # جمع\n    return x + y",
+   "b": "```python\ndef add(x, y):\n    # جمع دو عدد\n    return x + y\n```",
+   "kind": "code",
+   "out": {
+    "jaccard": 1,
+    "containment": 1,
+    "score": 1,
+    "shared": 8,
+    "sizeA": 8,
+    "sizeB": 8
+   }
+  },
+  {
+   "a": "def add(x, y):\n    # جمع\n    return x + y",
+   "b": "```python\ndef add(first, second):\n    # توضیح کاملاً متفاوت\n    return first + second\n```",
+   "kind": "code",
+   "out": {
+    "jaccard": 1,
+    "containment": 1,
+    "score": 1,
+    "shared": 8,
+    "sizeA": 8,
+    "sizeB": 8
+   }
+  },
+  {
+   "a": "def add(x, y):\n    # جمع\n    return x + y",
+   "b": "```js\nfunction f(a,b){ /* note */ return a+b; }\n```",
+   "kind": "code",
+   "out": {
+    "jaccard": 0.125,
+    "containment": 0.25,
+    "score": 0.25,
+    "shared": 2,
+    "sizeA": 8,
+    "sizeB": 10
+   }
+  },
+  {
+   "a": "def add(x, y):\n    # جمع\n    return x + y",
+   "b": "x = \"hi\"; y = 3.14; z = 'quoted';",
+   "kind": "code",
+   "out": {
+    "jaccard": 0,
+    "containment": 0,
+    "score": 0,
+    "shared": 0,
+    "sizeA": 8,
+    "sizeB": 8
+   }
+  },
+  {
+   "a": "def add(x, y):\n    # جمع\n    return x + y",
+   "b": "if (a >= 10 && b != 3) { print(\"yes\"); } else { print(\"no\"); }",
+   "kind": "code",
+   "out": {
+    "jaccard": 0,
+    "containment": 0,
+    "score": 0,
+    "shared": 0,
+    "sizeA": 8,
+    "sizeB": 21
+   }
+  },
+  {
+   "a": "def add(x, y):\n    # جمع\n    return x + y",
+   "b": "SELECT * FROM t WHERE id = 5; -- comment\n",
+   "kind": "code",
+   "out": {
+    "jaccard": 0,
+    "containment": 0,
+    "score": 0,
+    "shared": 0,
+    "sizeA": 8,
+    "sizeB": 8
+   }
+  },
+  {
+   "a": "def add(x, y):\n    # جمع\n    return x + y",
+   "b": "a--b; c++; d = e / f; # trailing",
+   "kind": "code",
+   "out": {
+    "jaccard": 0,
+    "containment": 0,
+    "score": 0,
+    "shared": 0,
+    "sizeA": 8,
+    "sizeB": 11
+   }
+  },
+  {
+   "a": "```python\ndef add(x, y):\n    # جمع دو عدد\n    return x + y\n```",
+   "b": "```python\ndef add(first, second):\n    # توضیح کاملاً متفاوت\n    return first + second\n```",
+   "kind": "code",
+   "out": {
+    "jaccard": 1,
+    "containment": 1,
+    "score": 1,
+    "shared": 8,
+    "sizeA": 8,
+    "sizeB": 8
+   }
+  },
+  {
+   "a": "```python\ndef add(x, y):\n    # جمع دو عدد\n    return x + y\n```",
+   "b": "```js\nfunction f(a,b){ /* note */ return a+b; }\n```",
+   "kind": "code",
+   "out": {
+    "jaccard": 0.125,
+    "containment": 0.25,
+    "score": 0.25,
+    "shared": 2,
+    "sizeA": 8,
+    "sizeB": 10
+   }
+  },
+  {
+   "a": "```python\ndef add(x, y):\n    # جمع دو عدد\n    return x + y\n```",
+   "b": "x = \"hi\"; y = 3.14; z = 'quoted';",
+   "kind": "code",
+   "out": {
+    "jaccard": 0,
+    "containment": 0,
+    "score": 0,
+    "shared": 0,
+    "sizeA": 8,
+    "sizeB": 8
+   }
+  },
+  {
+   "a": "```python\ndef add(x, y):\n    # جمع دو عدد\n    return x + y\n```",
+   "b": "if (a >= 10 && b != 3) { print(\"yes\"); } else { print(\"no\"); }",
+   "kind": "code",
+   "out": {
+    "jaccard": 0,
+    "containment": 0,
+    "score": 0,
+    "shared": 0,
+    "sizeA": 8,
+    "sizeB": 21
+   }
+  },
+  {
+   "a": "```python\ndef add(x, y):\n    # جمع دو عدد\n    return x + y\n```",
+   "b": "SELECT * FROM t WHERE id = 5; -- comment\n",
+   "kind": "code",
+   "out": {
+    "jaccard": 0,
+    "containment": 0,
+    "score": 0,
+    "shared": 0,
+    "sizeA": 8,
+    "sizeB": 8
+   }
+  },
+  {
+   "a": "```python\ndef add(x, y):\n    # جمع دو عدد\n    return x + y\n```",
+   "b": "a--b; c++; d = e / f; # trailing",
+   "kind": "code",
+   "out": {
+    "jaccard": 0,
+    "containment": 0,
+    "score": 0,
+    "shared": 0,
+    "sizeA": 8,
+    "sizeB": 11
+   }
+  },
+  {
+   "a": "```python\ndef add(first, second):\n    # توضیح کاملاً متفاوت\n    return first + second\n```",
+   "b": "```js\nfunction f(a,b){ /* note */ return a+b; }\n```",
+   "kind": "code",
+   "out": {
+    "jaccard": 0.125,
+    "containment": 0.25,
+    "score": 0.25,
+    "shared": 2,
+    "sizeA": 8,
+    "sizeB": 10
+   }
+  },
+  {
+   "a": "```python\ndef add(first, second):\n    # توضیح کاملاً متفاوت\n    return first + second\n```",
+   "b": "x = \"hi\"; y = 3.14; z = 'quoted';",
+   "kind": "code",
+   "out": {
+    "jaccard": 0,
+    "containment": 0,
+    "score": 0,
+    "shared": 0,
+    "sizeA": 8,
+    "sizeB": 8
+   }
+  },
+  {
+   "a": "```python\ndef add(first, second):\n    # توضیح کاملاً متفاوت\n    return first + second\n```",
+   "b": "if (a >= 10 && b != 3) { print(\"yes\"); } else { print(\"no\"); }",
+   "kind": "code",
+   "out": {
+    "jaccard": 0,
+    "containment": 0,
+    "score": 0,
+    "shared": 0,
+    "sizeA": 8,
+    "sizeB": 21
+   }
+  },
+  {
+   "a": "```python\ndef add(first, second):\n    # توضیح کاملاً متفاوت\n    return first + second\n```",
+   "b": "SELECT * FROM t WHERE id = 5; -- comment\n",
+   "kind": "code",
+   "out": {
+    "jaccard": 0,
+    "containment": 0,
+    "score": 0,
+    "shared": 0,
+    "sizeA": 8,
+    "sizeB": 8
+   }
+  },
+  {
+   "a": "```python\ndef add(first, second):\n    # توضیح کاملاً متفاوت\n    return first + second\n```",
+   "b": "a--b; c++; d = e / f; # trailing",
+   "kind": "code",
+   "out": {
+    "jaccard": 0,
+    "containment": 0,
+    "score": 0,
+    "shared": 0,
+    "sizeA": 8,
+    "sizeB": 11
+   }
+  },
+  {
+   "a": "```js\nfunction f(a,b){ /* note */ return a+b; }\n```",
+   "b": "x = \"hi\"; y = 3.14; z = 'quoted';",
+   "kind": "code",
+   "out": {
+    "jaccard": 0,
+    "containment": 0,
+    "score": 0,
+    "shared": 0,
+    "sizeA": 10,
+    "sizeB": 8
+   }
+  },
+  {
+   "a": "```js\nfunction f(a,b){ /* note */ return a+b; }\n```",
+   "b": "if (a >= 10 && b != 3) { print(\"yes\"); } else { print(\"no\"); }",
+   "kind": "code",
+   "out": {
+    "jaccard": 0,
+    "containment": 0,
+    "score": 0,
+    "shared": 0,
+    "sizeA": 10,
+    "sizeB": 21
+   }
+  },
+  {
+   "a": "```js\nfunction f(a,b){ /* note */ return a+b; }\n```",
+   "b": "SELECT * FROM t WHERE id = 5; -- comment\n",
+   "kind": "code",
+   "out": {
+    "jaccard": 0,
+    "containment": 0,
+    "score": 0,
+    "shared": 0,
+    "sizeA": 10,
+    "sizeB": 8
+   }
+  },
+  {
+   "a": "```js\nfunction f(a,b){ /* note */ return a+b; }\n```",
+   "b": "a--b; c++; d = e / f; # trailing",
+   "kind": "code",
+   "out": {
+    "jaccard": 0,
+    "containment": 0,
+    "score": 0,
+    "shared": 0,
+    "sizeA": 10,
+    "sizeB": 11
+   }
+  },
+  {
+   "a": "x = \"hi\"; y = 3.14; z = 'quoted';",
+   "b": "if (a >= 10 && b != 3) { print(\"yes\"); } else { print(\"no\"); }",
+   "kind": "code",
+   "out": {
+    "jaccard": 0,
+    "containment": 0,
+    "score": 0,
+    "shared": 0,
+    "sizeA": 8,
+    "sizeB": 21
+   }
+  },
+  {
+   "a": "x = \"hi\"; y = 3.14; z = 'quoted';",
+   "b": "SELECT * FROM t WHERE id = 5; -- comment\n",
+   "kind": "code",
+   "out": {
+    "jaccard": 0,
+    "containment": 0,
+    "score": 0,
+    "shared": 0,
+    "sizeA": 8,
+    "sizeB": 8
+   }
+  },
+  {
+   "a": "x = \"hi\"; y = 3.14; z = 'quoted';",
+   "b": "a--b; c++; d = e / f; # trailing",
+   "kind": "code",
+   "out": {
+    "jaccard": 0,
+    "containment": 0,
+    "score": 0,
+    "shared": 0,
+    "sizeA": 8,
+    "sizeB": 11
+   }
+  },
+  {
+   "a": "if (a >= 10 && b != 3) { print(\"yes\"); } else { print(\"no\"); }",
+   "b": "SELECT * FROM t WHERE id = 5; -- comment\n",
+   "kind": "code",
+   "out": {
+    "jaccard": 0,
+    "containment": 0,
+    "score": 0,
+    "shared": 0,
+    "sizeA": 21,
+    "sizeB": 8
+   }
+  },
+  {
+   "a": "if (a >= 10 && b != 3) { print(\"yes\"); } else { print(\"no\"); }",
+   "b": "a--b; c++; d = e / f; # trailing",
+   "kind": "code",
+   "out": {
+    "jaccard": 0,
+    "containment": 0,
+    "score": 0,
+    "shared": 0,
+    "sizeA": 21,
+    "sizeB": 11
+   }
+  },
+  {
+   "a": "SELECT * FROM t WHERE id = 5; -- comment\n",
+   "b": "a--b; c++; d = e / f; # trailing",
+   "kind": "code",
+   "out": {
+    "jaccard": 0,
+    "containment": 0,
+    "score": 0,
+    "shared": 0,
+    "sizeA": 8,
+    "sizeB": 11
+   }
+  }
+ ],
+ "assist": [
+  {
+   "answer": "قضیه فیثاغورس در مثلث قائم الزاویه بیان می کند که مجذور وتر برابر است با مجموع مجذور دو ضلع دیگر",
+   "max": 4,
+   "keywords": [
+    {
+     "keyword": "فیثاغورس",
+     "weight": 2
+    },
+    {
+     "keyword": "وتر",
+     "weight": 1
+    },
+    {
+     "keyword": "مجذور|توان دو",
+     "weight": 1
+    },
+    {
+     "keyword": "قائم الزاویه",
+     "weight": 1.5
+    }
+   ],
+   "out": {
+    "matched": [
+     "فیثاغورس",
+     "وتر",
+     "مجذور|توان دو",
+     "قائم الزاویه"
+    ],
+    "missing": [],
+    "ratio": 1,
+    "suggested": 4,
+    "weightTotal": 5.5,
+    "weightGot": 5.5
+   }
+  },
+  {
+   "answer": "می‌روم به مدرسه و کتاب می‌خوانم",
+   "max": 4,
+   "keywords": [
+    {
+     "keyword": "فیثاغورس",
+     "weight": 2
+    },
+    {
+     "keyword": "وتر",
+     "weight": 1
+    },
+    {
+     "keyword": "مجذور|توان دو",
+     "weight": 1
+    },
+    {
+     "keyword": "قائم الزاویه",
+     "weight": 1.5
+    }
+   ],
+   "out": {
+    "matched": [],
+    "missing": [
+     "فیثاغورس",
+     "وتر",
+     "مجذور|توان دو",
+     "قائم الزاویه"
+    ],
+    "ratio": 0,
+    "suggested": 0,
+    "weightTotal": 5.5,
+    "weightGot": 0
+   }
+  },
+  {
+   "answer": "Hello, World! This is a TEST — with punctuation; and digits 42.",
+   "max": 4,
+   "keywords": [
+    {
+     "keyword": "فیثاغورس",
+     "weight": 2
+    },
+    {
+     "keyword": "وتر",
+     "weight": 1
+    },
+    {
+     "keyword": "مجذور|توان دو",
+     "weight": 1
+    },
+    {
+     "keyword": "قائم الزاویه",
+     "weight": 1.5
+    }
+   ],
+   "out": {
+    "matched": [],
+    "missing": [
+     "فیثاغورس",
+     "وتر",
+     "مجذور|توان دو",
+     "قائم الزاویه"
+    ],
+    "ratio": 0,
+    "suggested": 0,
+    "weightTotal": 5.5,
+    "weightGot": 0
+   }
+  },
+  {
+   "answer": "",
+   "max": 4,
+   "keywords": [
+    {
+     "keyword": "فیثاغورس",
+     "weight": 2
+    },
+    {
+     "keyword": "وتر",
+     "weight": 1
+    },
+    {
+     "keyword": "مجذور|توان دو",
+     "weight": 1
+    },
+    {
+     "keyword": "قائم الزاویه",
+     "weight": 1.5
+    }
+   ],
+   "out": {
+    "matched": [],
+    "missing": [
+     "فیثاغورس",
+     "وتر",
+     "مجذور|توان دو",
+     "قائم الزاویه"
+    ],
+    "ratio": 0,
+    "suggested": 0,
+    "weightTotal": 5.5,
+    "weightGot": 0
+   }
+  }
+ ],
+ "shingles": [
+  {
+   "tokens": [
+    "a",
+    "b",
+    "c",
+    "d",
+    "e",
+    "f",
+    "g"
+   ],
+   "k": 5,
+   "out": [
+    -585382165,
+    -1504408464,
+    1871532533
+   ]
+  },
+  {
+   "tokens": [
+    "a",
+    "b"
+   ],
+   "k": 5,
+   "out": [
+    93346
+   ]
+  }
+ ],
+ "pairKey": [
+  {
+   "a": "z",
+   "b": "a",
+   "out": "a|z"
+  },
+  {
+   "a": "a",
+   "b": "z",
+   "out": "a|z"
+  },
+  {
+   "a": "same",
+   "b": "same",
+   "out": "same|same"
+  }
+ ]
+}

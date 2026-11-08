@@ -10,6 +10,9 @@ import ir.exam.app.data.dto.ExamDashboardDto
 import ir.exam.app.data.repository.SupabaseGradingRepository
 import ir.exam.app.domain.model.AttendanceRow
 import ir.exam.app.domain.model.FeedbackPhrase
+import ir.exam.app.domain.grading.EssayKeywordRow
+import ir.exam.app.domain.grading.Similarity
+import ir.exam.app.domain.grading.SimilarityReviewRow
 import ir.exam.app.domain.model.GradeAppeal
 import ir.exam.app.domain.model.GradeHistoryRow
 import ir.exam.app.domain.model.GradingExam
@@ -25,6 +28,9 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.jsonPrimitive
 
 data class GradingEdit(val grades: List<Double>, val feedback: String, val partGrades: Map<String, Double> = emptyMap(), val partFeedback: Map<String, String> = emptyMap())
 
@@ -81,7 +87,13 @@ data class GradingUiState(
     /** V354 — اعتراض‌ها، تاریخچهٔ نمره، و کلید تصحیح ناشناس. */
     val appeals: List<GradeAppeal> = emptyList(),
     val gradeHistory: List<GradeHistoryRow> = emptyList(),
-    val blindMarking: Boolean = false
+    val blindMarking: Boolean = false,
+    /** V355 — شباهت پاسخ‌ها و کلیدواژه‌های راهنمای تصحیح. */
+    val similarityHits: List<Similarity.Hit> = emptyList(),
+    val similarityReviews: Map<String, SimilarityReviewRow> = emptyMap(),
+    val essayKeywords: List<EssayKeywordRow> = emptyList(),
+    val similarityThreshold: Double = Similarity.THRESHOLD,
+    val similarityUnits: Int = 0
 )
 
 /** V212 — بستهٔ حافظهٔ موقت صفحهٔ تصحیح */
@@ -195,6 +207,7 @@ class GradingViewModel(
         // V354 — محتوای این دو تب هنگام ورود تازه می‌شود
         if (value == "appeals") loadAppeals()
         if (value == "history") loadGradeHistory()
+        if (value == "similarity") loadSimilarity()
     }
 
     // ------------------------------------------------------------------
@@ -220,6 +233,63 @@ class GradingViewModel(
             .onSuccess { rows -> _state.update { it.copy(actionLoading = false, gradeHistory = rows) } }
             .onFailure(::fail)
     }
+
+    // ------------------------------------------------------------------
+    // V355 — شباهت پاسخ‌ها (محاسبه در دستگاه معلم، بدون اجرای کد)
+    // ------------------------------------------------------------------
+
+    fun setSimilarityThreshold(value: Double) {
+        _state.update { it.copy(similarityThreshold = value) }
+        recomputeSimilarity()
+    }
+
+    fun loadSimilarity() = viewModelScope.launch {
+        val id = state.value.selectedExam?.id ?: return@launch
+        _state.update { it.copy(actionLoading = true, error = null) }
+        repository.similarityReviews(id)
+            .onSuccess { rows ->
+                _state.update { st -> st.copy(similarityReviews = rows.associateBy { it.lookupKey }) }
+            }
+        repository.essayKeywords(id)
+            .onSuccess { rows -> _state.update { st -> st.copy(essayKeywords = rows, actionLoading = false) } }
+            .onFailure { _state.update { st -> st.copy(actionLoading = false) } }
+        recomputeSimilarity()
+    }
+
+    /** محاسبهٔ محلی؛ پاسخ‌ها از قبل بارگذاری شده‌اند. */
+    fun recomputeSimilarity() {
+        val st = state.value
+        val exam = st.selectedExam ?: return
+        val shapes = exam.questions.map { q ->
+            Similarity.QuestionShape(
+                mode = q.answerMode,
+                parts = q.assessmentParts.map { Similarity.PartShape(it.id, it.requiresReason) }
+            )
+        }
+        val raws = st.submissions.map { s ->
+            Similarity.RawAnswer(s.id, s.responses.map(::plainResponse))
+        }
+        val units = Similarity.extractUnits(shapes, raws)
+        val hits = Similarity.findSimilar(units, st.similarityThreshold)
+        _state.update { it.copy(similarityHits = hits, similarityUnits = units.size) }
+    }
+
+    /** ثبت تصمیم معلم دربارهٔ یک هشدار؛ نمره تغییر نمی‌کند. */
+    fun saveSimilarityReview(hit: Similarity.Hit, status: String, note: String) =
+        action(if (status == "confirmed") "تخلف ثبت شد. نمره‌ای تغییر نکرد." else "بررسی ثبت شد. نمره‌ای تغییر نکرد.") {
+            val id = state.value.selectedExam?.id ?: error("آزمون انتخاب نشده است.")
+            repository.saveSimilarityReview(id, hit.pairKey, hit.questionIndex, hit.partKey, status, note).getOrThrow()
+            repository.similarityReviews(id).onSuccess { rows ->
+                _state.update { st -> st.copy(similarityReviews = rows.associateBy { it.lookupKey }) }
+            }
+        }
+
+    fun saveEssayKeywords(questionIndex: Int, partKey: String, items: List<Pair<String, Double>>) =
+        action("کلیدواژه‌ها ذخیره شد.") {
+            val id = state.value.selectedExam?.id ?: error("آزمون انتخاب نشده است.")
+            repository.saveEssayKeywords(id, questionIndex, partKey, items).getOrThrow()
+            repository.essayKeywords(id).onSuccess { rows -> _state.update { st -> st.copy(essayKeywords = rows) } }
+        }
 
     /** تعیین‌تکلیف اعتراض؛ پذیرش نمره را خودکار عوض نمی‌کند. */
     fun resolveAppeal(appealId: String, status: String, note: String, secondScore: Double? = null) =
@@ -457,7 +527,19 @@ class GradingViewModel(
 }
 
 /** V354 — تب‌های مجاز صفحهٔ تصحیح. */
-val GRADING_MODES: Set<String> = setOf("grading", "question", "attendance", "appeals", "history")
+val GRADING_MODES: Set<String> = setOf("grading", "question", "attendance", "appeals", "history", "similarity")
+
+/** متن سادهٔ یک پاسخ برای مقایسه؛ شیء‌های ساختاری به text/answer تبدیل می‌شوند. */
+private fun plainResponse(el: kotlinx.serialization.json.JsonElement?): String? {
+    if (el == null) return null
+    if (el is JsonPrimitive) return el.contentOrNull
+    if (el is JsonObject) {
+        (el["text"] as? JsonPrimitive)?.contentOrNull?.let { return it }
+        (el["answer"] as? JsonPrimitive)?.contentOrNull?.let { return it }
+        return el.toString()
+    }
+    return el.toString()
+}
 
 private fun scoreKey(answerId: String, questionIndex: Int): String = "$answerId:$questionIndex"
 
