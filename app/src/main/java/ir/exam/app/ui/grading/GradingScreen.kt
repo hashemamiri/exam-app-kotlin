@@ -20,6 +20,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import ir.exam.app.core.calendar.PersianDigits
+import ir.exam.app.domain.model.BlindMarking
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
@@ -79,7 +80,7 @@ fun GradingScreen(
     LaunchedEffect(initialPendingOnly, initialGradedOnly, initialMode) {
         viewModel.setPendingOnly(initialPendingOnly)
         viewModel.setGradedOnly(initialGradedOnly)
-        if (initialMode in setOf("grading", "question", "attendance")) {
+        if (initialMode in GRADING_MODES) {
             viewModel.setMode(initialMode)
         }
     }
@@ -194,6 +195,9 @@ fun GradingScreen(
             FilterChip(selected = state.mode == "grading", onClick = { viewModel.setMode("grading") }, label = { Text("دانش‌آموزمحور") })
             FilterChip(selected = state.mode == "question", onClick = { viewModel.setMode("question") }, label = { Text("سؤال‌محور") })
             FilterChip(selected = state.mode == "attendance", onClick = { viewModel.setMode("attendance") }, label = { Text("حضور") })
+            FilterChip(selected = state.mode == "appeals", onClick = { viewModel.setMode("appeals") }, label = { Text("اعتراض‌ها") })
+            FilterChip(selected = state.mode == "history", onClick = { viewModel.setMode("history") }, label = { Text("تاریخچهٔ نمره") })
+            FilterChip(selected = state.blindMarking, onClick = { viewModel.setBlindMarking(!state.blindMarking) }, label = { Text("تصحیح ناشناس") })
             FilterChip(selected = state.pendingOnly, onClick = { viewModel.setPendingOnly(!state.pendingOnly) }, label = { Text("فقط مانده") })
             FilterChip(selected = state.gradedOnly, onClick = { viewModel.setGradedOnly(!state.gradedOnly) }, label = { Text("فقط پاسخ") })
             OutlinedButton(onClick = viewModel::approveAutoGrades) { Text("تأیید خودکار") }
@@ -203,15 +207,24 @@ fun GradingScreen(
         if(state.feedbackBank.isNotEmpty()) Row(horizontalArrangement=Arrangement.spacedBy(4.dp)) {
             state.feedbackBank.take(6).forEach { phrase -> FilterChip(selected=false,onClick={editingFeedback=phrase},label={Text(phrase.text.take(18))}) }
         }
+        // V354 — تصحیح ناشناس: نام پنهان و ترتیب درهم، فقط در لایهٔ نمایش.
+        // دادهٔ اصلی دست‌نخورده می‌ماند تا ذخیرهٔ نمره درست بماند.
+        val blindSubmissions = remember(state.submissions, state.blindMarking) {
+            BlindMarking.apply(state.submissions, state.blindMarking)
+        }
         if (state.mode == "attendance") {
             AttendanceContent(state.attendance,state.liveStatus, viewModel)
+        } else if (state.mode == "appeals") {
+            AppealsContent(state, viewModel)
+        } else if (state.mode == "history") {
+            GradeHistoryContent(state, viewModel)
         } else if (state.mode == "question") {
-            QuestionCentricContent(state, viewModel)
+            QuestionCentricContent(if (state.blindMarking) state.copy(submissions = blindSubmissions) else state, viewModel)
         } else {
             val visibleSubmissions = when {
-                state.pendingOnly -> state.submissions.filterNot { it.graded }
-                state.gradedOnly -> state.submissions.filter { it.graded }
-                else -> state.submissions
+                state.pendingOnly -> blindSubmissions.filterNot { it.graded }
+                state.gradedOnly -> blindSubmissions.filter { it.graded }
+                else -> blindSubmissions
             }
             if (visibleSubmissions.isEmpty()) {
                 Text(

@@ -5,6 +5,7 @@ import ir.exam.app.core.network.UserFacingError
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import ir.exam.app.data.repository.SupabaseGradingRepository
+import ir.exam.app.domain.model.GradeAppeal
 import ir.exam.app.domain.model.StudentAnswerReview
 import ir.exam.app.domain.model.StudentAnswerSummary
 import kotlinx.coroutines.async
@@ -39,7 +40,11 @@ data class StudentResultsState(
     val grades: List<StudentGradeCard> = emptyList(),
     val answers: List<StudentAnswerSummary> = emptyList(),
     val selectedAnswer: StudentAnswerReview? = null,
-    val error: String? = null
+    val error: String? = null,
+    /** V354 — اعتراض‌های دانش‌آموز و وضعیت ثبت آن‌ها. */
+    val appeals: List<GradeAppeal> = emptyList(),
+    val appealBusy: Boolean = false,
+    val appealMessage: String? = null
 )
 
 /** V212 — بستهٔ حافظهٔ موقت نتایج دانش‌آموز */
@@ -68,6 +73,8 @@ class StudentResultsViewModel(
         }.onSuccess { (grades, answers) ->
             SessionCache.put(CACHE_KEY, StudentResultsCache(grades, answers))
             _state.value = StudentResultsState(loading = false, grades = grades, answers = answers)
+            // V354 — اگر مهاجرت هنوز نصب نشده باشد، کارنامه باید کار کند
+            repository.myAppeals().onSuccess { rows -> _state.update { it.copy(appeals = rows) } }
         }.onFailure { error ->
             _state.update { it.copy(loading = false, error = if (cached == null) safeResultError(error) else null) }
         }
@@ -85,6 +92,35 @@ class StudentResultsViewModel(
 
     fun closeAnswer() {
         _state.update { it.copy(selectedAnswer = null) }
+    }
+
+    // ------------------------------------------------------------------
+    // V354 — اعتراض به نمره
+    // ------------------------------------------------------------------
+
+    /** آیا برای این برگه اعتراض باز دارد؟ */
+    fun hasOpenAppeal(answerId: String): Boolean =
+        state.value.appeals.any { it.answerId == answerId && it.status.isOpen }
+
+    fun submitAppeal(answerId: String, reason: String) = viewModelScope.launch {
+        GradeAppeal.reasonError(reason)?.let { msg ->
+            _state.update { it.copy(appealMessage = msg) }
+            return@launch
+        }
+        if (state.value.appealBusy) return@launch
+        _state.update { it.copy(appealBusy = true, appealMessage = null, error = null) }
+        repository.createAppeal(answerId, reason)
+            .onSuccess {
+                repository.myAppeals().onSuccess { rows -> _state.update { it.copy(appeals = rows) } }
+                _state.update { it.copy(appealBusy = false, appealMessage = "اعتراض شما ثبت شد و برای معلم ارسال شد.") }
+            }
+            .onFailure { error ->
+                _state.update { it.copy(appealBusy = false, appealMessage = safeResultError(error)) }
+            }
+    }
+
+    fun clearAppealMessage() {
+        _state.update { it.copy(appealMessage = null) }
     }
 
     private fun parseGrade(raw: JsonObject): StudentGradeCard? {

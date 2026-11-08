@@ -326,6 +326,8 @@ class MockSupabaseState:
             self.exam_keys: dict[str, dict[str, Any]] = {}
             self.answers: dict[str, dict[str, Any]] = {}
             self.attempts: dict[tuple[str, str], dict[str, Any]] = {}
+            self.appeals: dict[str, dict[str, Any]] = {}   # V354
+            self.grade_history: list[dict[str, Any]] = []  # V354
             self.classes: dict[str, dict[str, Any]] = {}
 
             teacher_id = "11111111-1111-4111-8111-111111111111"
@@ -1398,6 +1400,8 @@ def make_handler(state: MockSupabaseState):
 
                 fb_raw = params.get("p_feedback")
                 fb_str = fb_raw if isinstance(fb_raw, str) else ""
+                # V354 — مانند تریگر پایگاه‌داده، تغییر نمره ثبت می‌شود
+                _before_grade = copy.deepcopy({k: ans.get(k) for k in ("total_grade", "graded", "grades", "feedback")})
                 ans["grades"] = norm_grades
                 ans["total_grade"] = round(sum(norm_grades) * 100.0) / 100.0
                 ans["feedback"] = fb_str
@@ -1405,6 +1409,18 @@ def make_handler(state: MockSupabaseState):
                 ans["part_feedback"] = copy.deepcopy(pf_in)
                 ans["graded"] = True
                 ans["graded_at"] = state.now_iso()
+                _after_grade = {k: ans.get(k) for k in ("total_grade", "graded", "grades", "feedback")}
+                if _before_grade != _after_grade:
+                    state.grade_history.append({
+                        "id": len(state.grade_history) + 1,
+                        "answer_id": ans_id, "exam_id": ans["exam_id"], "student_id": ans["student_id"],
+                        "changed_by": user["id"],
+                        "before": {"score": _before_grade.get("total_grade"), "graded": _before_grade.get("graded"),
+                                   "grades": _before_grade.get("grades")},
+                        "after": {"score": _after_grade.get("total_grade"), "graded": _after_grade.get("graded"),
+                                  "grades": _after_grade.get("grades")},
+                        "created_at": state.now_iso(),
+                    })
                 self._send_json(200, {"ok": True, "total_grade": ans["total_grade"]})
                 return
 
@@ -1445,6 +1461,110 @@ def make_handler(state: MockSupabaseState):
                     if a["student_id"] == user["id"] and a["graded"]
                 ]
                 self._send_json(200, {"ok": True, "items": items})
+                return
+
+            # ---- V354: اعتراض، مصحح دوم، تاریخچهٔ نمره ----
+            if fn == "native_appeal_create_v354":
+                aid = str(payload.get("p_answer") or "")
+                ans = state.answers.get(aid)
+                reason = str(payload.get("p_reason") or "").strip()
+                qi = int(payload.get("p_question") if payload.get("p_question") is not None else -1)
+                if ans is None or ans["student_id"] != user["id"]:
+                    self._send_json(400, {"message": "پاسخ یافت نشد یا از آنِ شما نیست."})
+                    return
+                if not ans.get("graded"):
+                    self._send_json(400, {"message": "تصحیح این پاسخ هنوز نهایی نشده است."})
+                    return
+                if len(reason) < 5 or len(reason) > 2000:
+                    self._send_json(400, {"message": "متن اعتراض باید بین ۵ تا ۰۰ نویسه باشد."})
+                    return
+                for a in state.appeals.values():
+                    if (a["answer_id"] == aid and a["student_id"] == user["id"]
+                            and a["question_index"] == qi and a["status"] in ("open", "second")):
+                        self._send_json(400, {"message": "برای این مورد یک اعتراض باز دارید."})
+                        return
+                nid = str(uuid.uuid4())
+                state.appeals[nid] = {
+                    "id": nid, "answer_id": aid, "exam_id": ans["exam_id"], "student_id": user["id"],
+                    "question_index": qi, "reason": reason, "status": "open",
+                    "created_at": dt.datetime.now(dt.timezone.utc).isoformat(), "resolved_at": None,
+                    "second_score": None, "second_by": None, "second_note": None,
+                    "resolution_note": None, "resolved_by": None,
+                }
+                self._send_json(200, {"ok": True, "id": nid})
+                return
+
+            if fn == "native_my_appeals_v354":
+                items = []
+                for a in sorted(state.appeals.values(), key=lambda x: x["created_at"], reverse=True):
+                    if a["student_id"] != user["id"]:
+                        continue
+                    ex = state.exams.get(a["exam_id"]) or {}
+                    items.append(dict(a, exam_title=ex.get("title"), subject=ex.get("subject")))
+                self._send_json(200, items)
+                return
+
+            if fn == "native_exam_appeals_v354":
+                eid = str(payload.get("p_exam") or "")
+                ex = state.exams.get(eid)
+                if ex is None or ex.get("teacher_id") != user["id"]:
+                    self._send_json(400, {"message": "آزمون یافت نشد یا دسترسی ندارید."})
+                    return
+                items = []
+                for a in sorted(state.appeals.values(), key=lambda x: x["created_at"], reverse=True):
+                    if a["exam_id"] != eid:
+                        continue
+                    u = state.users_by_id.get(a["student_id"]) or {}
+                    items.append(dict(a, student_name=(u.get("full_name") or u.get("username") or "دانش‌آموز"),
+                                      student_username=u.get("username")))
+                self._send_json(200, items)
+                return
+
+            if fn == "native_appeal_resolve_v354":
+                aid = str(payload.get("p_appeal") or "")
+                ap = state.appeals.get(aid)
+                if ap is None:
+                    self._send_json(400, {"message": "اعتراض یافت نشد."})
+                    return
+                ex = state.exams.get(ap["exam_id"]) or {}
+                if ex.get("teacher_id") != user["id"]:
+                    self._send_json(400, {"message": "فقط معلم آزمون می‌تواند رسیدگی کند."})
+                    return
+                if ap["status"] not in ("open", "second"):
+                    self._send_json(400, {"message": "این اعتراض پیش‌تر بسته شده است."})
+                    return
+                st = str(payload.get("p_status") or "")
+                if st not in ("open", "second", "accepted", "rejected"):
+                    self._send_json(400, {"message": "وضعیت نامعتبر است."})
+                    return
+                note = str(payload.get("p_note") or "").strip()
+                if st in ("accepted", "rejected") and len(note) < 3:
+                    self._send_json(400, {"message": "توضیح نتیجه دست‌کم ۳ نویسه باشد."})
+                    return
+                ap["status"] = st
+                ap["resolution_note"] = note or None
+                if st == "second":
+                    ap["second_by"] = user["id"]
+                    ap["second_score"] = payload.get("p_second_score")
+                if st in ("accepted", "rejected"):
+                    ap["resolved_by"] = user["id"]
+                    ap["resolved_at"] = dt.datetime.now(dt.timezone.utc).isoformat()
+                self._send_json(200, {"ok": True, "status": st})
+                return
+
+            if fn == "native_grade_history_v354":
+                eid = str(payload.get("p_exam") or "")
+                ex = state.exams.get(eid)
+                if ex is None or ex.get("teacher_id") != user["id"]:
+                    self._send_json(400, {"message": "آزمون یافت نشد یا دسترسی ندارید."})
+                    return
+                items = []
+                for h in sorted(state.grade_history, key=lambda x: x["created_at"], reverse=True):
+                    if h["exam_id"] != eid:
+                        continue
+                    u = state.users_by_id.get(h["student_id"]) or {}
+                    items.append(dict(h, student_name=(u.get("full_name") or "دانش‌آموز")))
+                self._send_json(200, items)
                 return
 
             if fn == "native_my_answers_v1":

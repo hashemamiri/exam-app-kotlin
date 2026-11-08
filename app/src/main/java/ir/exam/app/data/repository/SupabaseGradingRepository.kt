@@ -16,6 +16,8 @@ import ir.exam.app.domain.model.AnalyticsSummary
 import ir.exam.app.domain.model.AttendanceRow
 import ir.exam.app.domain.model.ExamQuestionAnalysis
 import ir.exam.app.domain.model.FeedbackPhrase
+import ir.exam.app.domain.model.GradeAppeal
+import ir.exam.app.domain.model.GradeHistoryRow
 import ir.exam.app.domain.model.GradingExam
 import ir.exam.app.domain.model.GradingQuestion
 import ir.exam.app.domain.model.GradingSubmission
@@ -407,6 +409,65 @@ class SupabaseGradingRepository {
             questions = questions
         )
     }
+
+    // ------------------------------------------------------------------
+    // V354 — اعتراض به نمره، مصحح دوم، تاریخچهٔ نمره
+    // ------------------------------------------------------------------
+
+    /** دانش‌آموز: ثبت اعتراض روی برگهٔ خودش. */
+    suspend fun createAppeal(
+        answerId: String,
+        reason: String,
+        questionIndex: Int = -1
+    ): Result<Unit> = runCatching {
+        GradeAppeal.reasonError(reason)?.let(::error)
+        rpcObject("native_appeal_create_v354", buildJsonObject {
+            put("p_answer", answerId)
+            put("p_question", questionIndex)
+            put("p_reason", reason.trim())
+        }).throwRpcError()
+        Unit
+    }
+
+    /** دانش‌آموز: اعتراض‌های خودش. */
+    suspend fun myAppeals(): Result<List<GradeAppeal>> = runCatching {
+        GradeAppeal.listFrom(rpcArray("native_my_appeals_v354", buildJsonObject { }))
+    }
+
+    /** معلم: اعتراض‌های آزمون خودش. */
+    suspend fun examAppeals(examId: String): Result<List<GradeAppeal>> = runCatching {
+        GradeAppeal.listFrom(rpcArray("native_exam_appeals_v354", buildJsonObject { put("p_exam", examId) }))
+    }
+
+    /**
+     * معلم: ارجاع به مصحح دوم یا تعیین‌تکلیف اعتراض.
+     * پذیرش، نمره را خودکار عوض نمی‌کند؛ معلم باید آگاهانه در تب تصحیح
+     * نمره را اصلاح کند تا آن تغییر در تاریخچه ثبت شود.
+     */
+    suspend fun resolveAppeal(
+        appealId: String,
+        status: String,
+        note: String,
+        secondScore: Double? = null
+    ): Result<Unit> = runCatching {
+        require(status in setOf("second", "accepted", "rejected")) { "وضعیت نامعتبر است." }
+        if (status != "second") require(note.trim().length >= 3) { "توضیح نتیجه دست‌کم ۳ نویسه باشد." }
+        rpcObject("native_appeal_resolve_v354", buildJsonObject {
+            put("p_appeal", appealId)
+            put("p_status", status)
+            put("p_note", note.trim())
+            if (secondScore != null) put("p_second_score", secondScore)
+        }).throwRpcError()
+        Unit
+    }
+
+    /** معلم: تاریخچهٔ تغییر نمره (فقط خواندنی). */
+    suspend fun gradeHistory(examId: String): Result<List<GradeHistoryRow>> = runCatching {
+        GradeHistoryRow.listFrom(rpcArray("native_grade_history_v354", buildJsonObject { put("p_exam", examId) }))
+    }
+
+    private suspend fun rpcArray(name: String, parameters: JsonObject): JsonArray =
+        SupabaseProvider.client.postgrest.rpc(name, parameters).decodeAs()
 
     private suspend fun rpcObject(name: String, parameters: JsonObject): JsonObject =
         SupabaseProvider.client.postgrest.rpc(name, parameters).decodeAs()

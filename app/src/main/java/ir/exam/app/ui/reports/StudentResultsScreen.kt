@@ -164,6 +164,17 @@ fun StudentResultsScreen(viewModel: StudentResultsViewModel = remember { Student
                 }
             }
         }
+        // V354 — اعتراض به نمره و پیگیری آن
+        item {
+            StudentAppealsCard(
+                answers = state.answers,
+                appeals = state.appeals,
+                busy = state.appealBusy,
+                message = state.appealMessage,
+                onSubmit = viewModel::submitAppeal,
+                onClearMessage = viewModel::clearAppealMessage
+            )
+        }
     }
 
     state.selectedAnswer?.let { detail ->

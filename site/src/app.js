@@ -2915,6 +2915,58 @@
     } catch (e) { showErr(c, e); }
   }
 
+  /* ---------- V354 — اعتراض دانش‌آموز به نمره ----------
+     پیش‌تر دانش‌آموز هیچ راه رسمی برای اعتراض نداشت و «مصحح دوم» فقط
+     یک خانهٔ خالی روی فرم چاپی بود. اکنون اعتراض ثبت و پیگیری می‌شود. */
+  var AP_ST = {open: ['در انتظار بررسی', 'warn'], second: ['نزد مصحح دوم', 'brand'],
+               accepted: ['پذیرفته شد', 'ok'], rejected: ['رد شد', 'danger']};
+  async function appealsCard(answers) {
+    var card = el('div', {class: 'card no-print', style: 'margin-top:12px'},
+      [el('h3', {style: 'margin:0 0 8px;font-size:16px', text: '⚖️ اعتراض به نمره'})]);
+    var mine = [];
+    try { mine = chk(await rpcObj('native_my_appeals_v354', {})) || []; } catch (e) { mine = []; }
+    var graded = (answers || []).filter(function (a) { return a.graded; });
+    if (!graded.length) {
+      card.appendChild(el('p', {class: 'muted', style: 'font-size:13px;margin:0',
+        text: 'پس از نهایی‌شدن تصحیح، می‌توانید برای هر آزمون اعتراض ثبت کنید.'}));
+      return card;
+    }
+    card.appendChild(el('p', {class: 'muted', style: 'font-size:12px;margin:0 0 8px',
+      text: 'برای هر آزمون یک اعتراض باز می‌توانید داشته باشید. دلیل را روشن بنویسید تا معلم بتواند بررسی کند.'}));
+    graded.forEach(function (a) {
+      var open = mine.filter(function (m) { return m.answer_id === a.id && (m.status === 'open' || m.status === 'second'); });
+      card.appendChild(el('div', {class: 'row', style: 'padding:6px 0;border-top:1px solid var(--line)'}, [
+        el('span', {class: 'grow', text: a.title || 'آزمون'}),
+        open.length ? el('span', {class: 'chip warn', text: 'اعتراض باز دارید'})
+          : el('button', {class: 'btn light sm', text: 'ثبت اعتراض', onclick: async function () {
+              try {
+                var why = await promptDlg('اعتراض به نمره', 'دلیل اعتراض را بنویسید (دست‌کم ۵ نویسه):', '');
+                if (why == null) return;
+                chk(await rpcObj('native_appeal_create_v354', {p_answer: a.id, p_question: -1, p_reason: why}));
+                toast('اعتراض شما ثبت شد و برای معلم ارسال شد.', 'ok');
+                render();
+              } catch (e) { if (!(e && e.requested)) toast(errMsg(e), 'err'); }
+            }})]));
+    });
+    if (mine.length) {
+      card.appendChild(el('h4', {style: 'margin:14px 0 6px;font-size:14px', text: 'پیگیری اعتراض‌ها'}));
+      mine.forEach(function (m) {
+        var st = AP_ST[m.status] || [m.status, ''];
+        var box = el('div', {style: 'padding:8px 0;border-top:1px solid var(--line)'}, [
+          el('div', {class: 'row'}, [
+            el('span', {class: 'grow', text: m.exam_title || 'آزمون'}),
+            el('span', {class: 'chip ' + st[1], text: st[0]}),
+            el('span', {class: 'muted', style: 'font-size:12px', text: fmtDate(m.created_at)})]),
+          el('p', {class: 'muted', style: 'margin:4px 0;font-size:13px;white-space:pre-wrap', text: m.reason})]);
+        if (m.second_score != null) box.appendChild(el('p', {style: 'margin:2px 0;font-size:13px',
+          text: 'نمرهٔ مصحح دوم: ' + fa(fmtScore(Number(m.second_score)))}));
+        if (m.resolution_note) box.appendChild(el('p', {style: 'margin:2px 0;font-size:13px', text: 'پاسخ معلم: ' + m.resolution_note}));
+        card.appendChild(box);
+      });
+    }
+    return card;
+  }
+
   /* ---- کارنامه (دانش‌آموز) ---- */
   async function pageGrades(c) {
     loading(c);
@@ -2966,6 +3018,8 @@
         ]));
         c.appendChild(card2);
       }
+      /* V354 — اعتراض به نمره و پیگیری آن */
+      c.appendChild(await appealsCard(answers));
     } catch (e) { showErr(c, e); }
   }
 

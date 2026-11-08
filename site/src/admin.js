@@ -56,7 +56,7 @@
       c.innerHTML = '';
       var head = el('div', {class: 'row', style: 'margin-bottom:12px'}, [el('button', {class: 'btn light sm', text: '→ همهٔ آزمون‌ها', onclick: function () { S.go('grading'); }}), el('h2', {class: 'grow', style: 'margin:0;font-size:18px', text: exam.title}), el('span', {class: 'chip', text: 'بارم ' + fa(S.fmtScore(exam.total_score))}), el('span', {class: 'chip', text: fa(answers.length) + ' پاسخ'})]);
       c.appendChild(head);
-      var tabs = el('div', {class: 'tabs'}, [['grading', '✅ تصحیح'], ['question', '📋 تصحیح سؤال‌به‌سؤال'], ['attendance', '👥 حضور و وضعیت زنده'], ['monitor', '🛡 گزارش نظارتی'], ['analysis', '📈 تحلیل سؤال‌ها'], ['feedback', '💬 بانک بازخورد']].map(function (t) { return el('button', {class: tab === t[0] ? 'on' : '', text: t[1], onclick: function () { S.go('grading', {examId: examId, tab: t[0]}); }}); }));
+      var tabs = el('div', {class: 'tabs'}, [['grading', '✅ تصحیح'], ['question', '📋 تصحیح سؤال‌به‌سؤال'], ['attendance', '👥 حضور و وضعیت زنده'], ['monitor', '🛡 گزارش نظارتی'], ['analysis', '📈 تحلیل سؤال‌ها'], ['feedback', '💬 بانک بازخورد'], ['appeals', '⚖️ اعتراض‌ها'], ['history', '🧾 تاریخچهٔ نمره']].map(function (t) { return el('button', {class: tab === t[0] ? 'on' : '', text: t[1], onclick: function () { S.go('grading', {examId: examId, tab: t[0]}); }}); }));
       c.appendChild(tabs);
       var body = el('div'); c.appendChild(body);
       var ctx = {exam: exam, questions: questions, answers: answers, examId: examId, refresh: function () { gradingExam(c, examId, tab); }};
@@ -65,6 +65,8 @@
       else if (tab === 'attendance') tabAttendance(body, ctx);
       else if (tab === 'monitor') tabMonitor(body, ctx);
       else if (tab === 'analysis') tabAnalysis(body, ctx);
+      else if (tab === 'appeals') tabAppeals(body, ctx);
+      else if (tab === 'history') tabHistory(body, ctx);
       else tabFeedbackBank(body, ctx);
     } catch (e) { S.showErr(c, e); }
   }
@@ -185,8 +187,10 @@
     }
   }
   function tabGrading(body, ctx) {
-    var answers = ctx.answers, questions = ctx.questions;
+    /* V354 — تصحیح ناشناس: نام پنهان و ترتیب درهم (فقط در رابط) */
+    var answers = applyBlind(ctx.answers), questions = ctx.questions;
     if (!answers.length) return body.appendChild(S.emptyBox('🗂', 'هنوز پاسخی برای این آزمون ارسال نشده است.'));
+    body.appendChild(blindToggle(ctx));
     var pend = answers.filter(function (a) { return !a.graded; }).length;
     body.appendChild(el('div', {class: 'row', style: 'margin-bottom:10px'}, [
       el('span', {class: 'muted', text: fa(pend) + ' پاسخ در انتظار تصحیح'}), el('span', {class: 'grow'}),
@@ -262,8 +266,10 @@
     sel = answers.filter(function (a) { return !a.graded; })[0] || answers[0]; drawList(); drawDetail();
   }
   function tabByQuestion(body, ctx) {
-    var answers = ctx.answers, questions = ctx.questions;
+    /* V354 — تصحیح ناشناس: نام پنهان و ترتیب درهم (فقط در رابط) */
+    var answers = applyBlind(ctx.answers), questions = ctx.questions;
     if (!answers.length) return body.appendChild(S.emptyBox('🗂', 'پاسخی وجود ندارد.'));
+    body.appendChild(blindToggle(ctx));
     var qi = 0, holder = el('div');
     var selQ = el('select', {style: 'border:1px solid var(--line);border-radius:10px;padding:8px;max-width:100%'});
     questions.forEach(function (q, i) { selQ.appendChild(el('option', {value: String(i), text: 'سؤال ' + fa(i + 1) + ' — ' + TYPE_LABEL[q.__type] + ' — ' + (q.text || '').replace(/%%FIG:[\s\S]*?%%/g, '[شکل]').slice(0, 60)})); });
@@ -322,6 +328,123 @@
       });
     } catch (e) { S.showErr(body, e); }
   }
+  /* ---------- V354 — اعتراض‌ها و تاریخچهٔ نمره ----------
+     دغدغهٔ معلم: «دانش‌آموز می‌گوید نمره‌ام کم شده؛ چه کنم؟»
+     پیش‌تر «مصحح دوم» فقط یک خانهٔ خالی روی فرم چاپی بود. حالا اعتراض
+     ثبت می‌شود، به مصحح دوم ارجاع می‌گیرد، و هر تغییر نمره در تاریخچهٔ
+     دست‌کاری‌ناپذیر می‌ماند. پذیرشِ اعتراض خودکار نمره را عوض نمی‌کند؛
+     معلم آگاهانه در تب تصحیح اصلاح می‌کند و آن اصلاح ثبت می‌شود. */
+  var AP_STATUS = {open: ['در انتظار', 'warn'], second: ['نزد مصحح دوم', 'brand'],
+                   accepted: ['پذیرفته شد', 'ok'], rejected: ['رد شد', 'danger']};
+
+  async function tabAppeals(body, ctx) {
+    S.loading(body);
+    try {
+      var rows = chk(await S.rpcObj('native_exam_appeals_v354', {p_exam: ctx.examId})) || [];
+      body.innerHTML = '';
+      if (!rows.length) return body.appendChild(S.emptyBox('⚖️', 'هنوز اعتراضی ثبت نشده است.'));
+      var openCnt = rows.filter(function (r) { return r.status === 'open' || r.status === 'second'; }).length;
+      body.appendChild(el('div', {class: 'row', style: 'margin-bottom:10px'}, [
+        el('span', {class: 'chip ' + (openCnt ? 'warn' : 'ok'), text: fa(openCnt) + ' اعتراض باز'}),
+        el('span', {class: 'muted', style: 'font-size:12px', text: 'پذیرش اعتراض نمره را خودکار عوض نمی‌کند؛ پس از پذیرش، در تب «تصحیح» نمره را اصلاح کنید تا در تاریخچه ثبت شود.'})]));
+      rows.forEach(function (r) {
+        var st = AP_STATUS[r.status] || [r.status, ''];
+        var qLabel = r.question_index < 0 ? 'کل برگه' : 'سؤال ' + fa(r.question_index + 1);
+        var card = el('div', {class: 'card', style: 'margin-bottom:10px'}, [
+          el('div', {class: 'row'}, [
+            el('b', {class: 'grow', text: r.student_name || 'دانش‌آموز'}),
+            el('span', {class: 'chip', text: qLabel}),
+            el('span', {class: 'chip ' + st[1], text: st[0]}),
+            el('span', {class: 'muted', style: 'font-size:12px', text: S.fmtDate(r.created_at)})]),
+          el('p', {style: 'margin:8px 0;white-space:pre-wrap', text: r.reason})]);
+        if (r.second_score != null) card.appendChild(el('p', {class: 'muted', style: 'margin:4px 0;font-size:13px',
+          text: 'نمرهٔ مصحح دوم: ' + fa(S.fmtScore(Number(r.second_score))) + (r.second_note ? ' — ' + r.second_note : '')}));
+        if (r.resolution_note) card.appendChild(el('p', {class: 'muted', style: 'margin:4px 0;font-size:13px', text: 'نتیجه: ' + r.resolution_note}));
+        if (r.status === 'open' || r.status === 'second') {
+          card.appendChild(el('div', {class: 'row', style: 'margin-top:8px'}, [
+            el('button', {class: 'btn soft sm', text: '👤 ارجاع به مصحح دوم', onclick: function () { resolveAppeal(r, 'second', ctx); }}),
+            el('button', {class: 'btn sm', text: '✓ پذیرش', onclick: function () { resolveAppeal(r, 'accepted', ctx); }}),
+            el('button', {class: 'btn light sm', text: '✕ رد', onclick: function () { resolveAppeal(r, 'rejected', ctx); }})]));
+        }
+        body.appendChild(card);
+      });
+    } catch (e) { S.showErr(body, e); }
+  }
+
+  async function resolveAppeal(r, status, ctx) {
+    var titles = {second: 'ارجاع به مصحح دوم', accepted: 'پذیرش اعتراض', rejected: 'رد اعتراض'};
+    try {
+      var note = await S.promptDlg(titles[status],
+        status === 'second' ? 'یادداشت برای همکار (اختیاری):' : 'دلیل تصمیم را بنویسید تا برای دانش‌آموز نمایش داده شود:', '');
+      if (note == null) return;
+      var second = null;
+      if (status === 'second') {
+        var raw = await S.promptDlg('نمرهٔ مصحح دوم', 'نمرهٔ پیشنهادی همکار را وارد کنید (اختیاری):', '');
+        if (raw == null) return;
+        if (String(raw).trim() !== '') {
+          second = Number(String(raw).replace(/[۰-۹]/g, function (d) { return String('۰۱۳۴۵۷۸۹'.indexOf(d)); }));
+          if (!isFinite(second)) return toast('نمرهٔ واردشده عدد نیست.', 'err');
+        }
+      }
+      chk(await S.rpcObj('native_appeal_resolve_v354', {p_appeal: r.id, p_status: status, p_note: note, p_second_score: second}));
+      toast(status === 'accepted' ? 'اعتراض پذیرفته شد. اکنون نمره را در تب تصحیح اصلاح کنید.' : 'ثبت شد.', 'ok');
+      ctx.refresh();
+    } catch (e) { if (!(e && e.requested)) toast(errMsg(e), 'err'); }
+  }
+
+  async function tabHistory(body, ctx) {
+    S.loading(body);
+    try {
+      var rows = chk(await S.rpcObj('native_grade_history_v354', {p_exam: ctx.examId})) || [];
+      body.innerHTML = '';
+      body.appendChild(el('p', {class: 'muted', style: 'font-size:12px;margin:0 0 10px',
+        text: 'این سابقه را سامانه می‌نویسد و هیچ کاربری — حتی معلم — نمی‌تواند آن را پاک یا ویرایش کند.'}));
+      if (!rows.length) return body.appendChild(S.emptyBox('🧾', 'هنوز تغییری در نمره‌ها ثبت نشده است.'));
+      body.appendChild(el('div', {class: 'card'}, [el('table', {class: 'tbl'}, [
+        el('thead', {}, [el('tr', {}, ['زمان', 'دانش‌آموز', 'از', 'به', 'تغییردهنده'].map(function (h) { return el('th', {text: h}); }))]),
+        el('tbody', {}, rows.map(function (h) {
+          var b = h.before_score == null ? '—' : fa(S.fmtScore(Number(h.before_score)));
+          var a = h.after_score == null ? '—' : fa(S.fmtScore(Number(h.after_score)));
+          var changed = b !== a;
+          return el('tr', {}, [
+            el('td', {class: 'muted', style: 'font-size:12px', text: S.fmtDate(h.created_at)}),
+            el('td', {text: h.student_name || 'دانش‌آموز'}),
+            el('td', {text: b}),
+            el('td', {style: changed ? 'font-weight:800' : '', text: a}),
+            el('td', {class: 'muted', text: h.changed_by_name || 'سامانه'})]);
+        }))])]));
+    } catch (e) { S.showErr(body, e); }
+  }
+
+  /* ---------- V354 — تصحیح ناشناس ----------
+     نام دانش‌آموز پنهان و ترتیب پاسخ‌ها ثابت-ولی-درهم می‌شود تا سوگیری
+     ناخواسته کم شود. این پوشش در سطح رابط است؛ نام در پایگاه داده می‌ماند
+     و پس از خاموش‌کردن کلید دوباره دیده می‌شود. */
+  function blindOn() { try { return localStorage.getItem('examsite.blind.v354') === '1'; } catch (e) { return false; } }
+  function setBlind(v) { try { localStorage.setItem('examsite.blind.v354', v ? '1' : '0'); } catch (e) {} }
+  function blindLabel(i) { return 'برگهٔ ' + fa(i + 1); }
+  function blindOrder(list) {
+    /* درهم‌سازی پایدار بر پایهٔ شناسه تا با هر بار رندر جابه‌جا نشود */
+    return list.slice().sort(function (a, b) {
+      function h(s) { var x = 0; s = String(s || ''); for (var i = 0; i < s.length; i++) x = (x * 31 + s.charCodeAt(i)) | 0; return x; }
+      return h(a.id) - h(b.id);
+    });
+  }
+  function applyBlind(list) {
+    if (!blindOn()) return list;
+    return blindOrder(list).map(function (a, i) {
+      var c = Object.assign({}, a);
+      c.student_name = blindLabel(i);
+      c.__blind = true;
+      return c;
+    });
+  }
+  function blindToggle(ctx) {
+    return el('label', {class: 'row', style: 'gap:6px;font-size:13px;cursor:pointer'}, [
+      el('input', {type: 'checkbox', checked: blindOn(), onchange: function (e) { setBlind(e.target.checked); ctx.refresh(); }}),
+      el('span', {text: '🕶 تصحیح ناشناس (نام پنهان، ترتیب درهم)'})]);
+  }
+
   async function tabAnalysis(body, ctx) {
     S.loading(body);
     try {

@@ -10,6 +10,8 @@ import ir.exam.app.data.dto.ExamDashboardDto
 import ir.exam.app.data.repository.SupabaseGradingRepository
 import ir.exam.app.domain.model.AttendanceRow
 import ir.exam.app.domain.model.FeedbackPhrase
+import ir.exam.app.domain.model.GradeAppeal
+import ir.exam.app.domain.model.GradeHistoryRow
 import ir.exam.app.domain.model.GradingExam
 import ir.exam.app.domain.model.GradingSubmission
 import kotlinx.coroutines.Job
@@ -75,7 +77,11 @@ data class GradingUiState(
     val monitorExamId: String? = null,
     val monitorReports: JsonObject? = null,
     /** V130 — آمارِ کارت‌ها به تفکیکِ examId (به‌تدریج پر می‌شود). */
-    val cardStats: Map<String, ExamCardStats> = emptyMap()
+    val cardStats: Map<String, ExamCardStats> = emptyMap(),
+    /** V354 — اعتراض‌ها، تاریخچهٔ نمره، و کلید تصحیح ناشناس. */
+    val appeals: List<GradeAppeal> = emptyList(),
+    val gradeHistory: List<GradeHistoryRow> = emptyList(),
+    val blindMarking: Boolean = false
 )
 
 /** V212 — بستهٔ حافظهٔ موقت صفحهٔ تصحیح */
@@ -162,7 +168,7 @@ class GradingViewModel(
         val inputs = submissions.flatMap { answer ->
             exam.questions.indices.map { index -> scoreKey(answer.id, index) to edits.getValue(answer.id).grades[index].toString() }
         }.toMap()
-        val targetMode = state.value.mode.takeIf { it in setOf("grading", "question", "attendance") } ?: "grading"
+        val targetMode = state.value.mode.takeIf { it in GRADING_MODES } ?: "grading"
         _state.update {
             it.copy(
                 actionLoading = false,
@@ -183,10 +189,51 @@ class GradingViewModel(
     }
 
     fun setMode(value: String) {
-        if (value !in setOf("grading", "question", "attendance")) return
+        if (value !in GRADING_MODES) return
         _state.update { it.copy(mode = value) }
         if (value == "attendance") startLiveRefresh() else liveJob?.cancel()
+        // V354 — محتوای این دو تب هنگام ورود تازه می‌شود
+        if (value == "appeals") loadAppeals()
+        if (value == "history") loadGradeHistory()
     }
+
+    // ------------------------------------------------------------------
+    // V354 — اعتراض، مصحح دوم، تاریخچه، تصحیح ناشناس
+    // ------------------------------------------------------------------
+
+    fun setBlindMarking(value: Boolean) {
+        _state.update { it.copy(blindMarking = value) }
+    }
+
+    fun loadAppeals() = viewModelScope.launch {
+        val id = state.value.selectedExam?.id ?: return@launch
+        _state.update { it.copy(actionLoading = true, error = null) }
+        repository.examAppeals(id)
+            .onSuccess { rows -> _state.update { it.copy(actionLoading = false, appeals = rows) } }
+            .onFailure(::fail)
+    }
+
+    fun loadGradeHistory() = viewModelScope.launch {
+        val id = state.value.selectedExam?.id ?: return@launch
+        _state.update { it.copy(actionLoading = true, error = null) }
+        repository.gradeHistory(id)
+            .onSuccess { rows -> _state.update { it.copy(actionLoading = false, gradeHistory = rows) } }
+            .onFailure(::fail)
+    }
+
+    /** تعیین‌تکلیف اعتراض؛ پذیرش نمره را خودکار عوض نمی‌کند. */
+    fun resolveAppeal(appealId: String, status: String, note: String, secondScore: Double? = null) =
+        action(
+            when (status) {
+                "second" -> "به مصحح دوم ارجاع شد."
+                "accepted" -> "اعتراض پذیرفته شد. اگر لازم است نمره را در تب تصحیح اصلاح کنید."
+                else -> "اعتراض رد شد و نتیجه برای دانش‌آموز ثبت شد."
+            }
+        ) {
+            repository.resolveAppeal(appealId, status, note, secondScore).getOrThrow()
+            val id = state.value.selectedExam?.id ?: error("آزمون انتخاب نشده است.")
+            repository.examAppeals(id).onSuccess { rows -> _state.update { it.copy(appeals = rows) } }
+        }
 
     fun setPendingOnly(value: Boolean) {
         _state.update {
@@ -408,6 +455,9 @@ class GradingViewModel(
         _state.update { it.copy(loading = false, actionLoading = false, error = safeGradingError(error)) }
     }
 }
+
+/** V354 — تب‌های مجاز صفحهٔ تصحیح. */
+val GRADING_MODES: Set<String> = setOf("grading", "question", "attendance", "appeals", "history")
 
 private fun scoreKey(answerId: String, questionIndex: Int): String = "$answerId:$questionIndex"
 
