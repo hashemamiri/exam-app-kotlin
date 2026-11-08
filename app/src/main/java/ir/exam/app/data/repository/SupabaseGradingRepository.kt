@@ -16,6 +16,10 @@ import ir.exam.app.domain.model.AnalyticsSummary
 import ir.exam.app.domain.model.AttendanceRow
 import ir.exam.app.domain.model.ExamQuestionAnalysis
 import ir.exam.app.domain.model.FeedbackPhrase
+import ir.exam.app.domain.grading.CodeCheckRow
+import ir.exam.app.domain.grading.CodeGrading
+import ir.exam.app.domain.grading.CodeSpecRow
+import ir.exam.app.domain.grading.CodeTestRow
 import ir.exam.app.domain.grading.EssayKeywordRow
 import ir.exam.app.domain.grading.SimilarityReviewRow
 import ir.exam.app.domain.model.GradeAppeal
@@ -486,7 +490,7 @@ class SupabaseGradingRepository {
         require(questionIndex >= 0) { "شاخص سؤال نامعتبر است." }
         require(items.size <= 60) { "برای هر مورد بیش از ۶۰ کلیدواژه نمی‌توان تعریف کرد." }
         items.forEach { (kw, w) ->
-            require(kw.trim().length in 1..120) { "هر کلیدواژه باید بین ۱ تا ۲۰ نویسه باشد." }
+            require(kw.trim().length in 1..120) { "هر کلیدواژه باید بین ۱ تا ۱۲۰ نویسه باشد." }
             require(w > 0 && w <= 100) { "وزن کلیدواژه نامعتبر است." }
         }
         rpcObject("native_essay_keywords_save_v355", buildJsonObject {
@@ -521,6 +525,67 @@ class SupabaseGradingRepository {
             put("p_exam", examId); put("p_pair", pairKey)
             put("p_question", questionIndex); put("p_part", partKey)
             put("p_status", status); put("p_note", note.trim())
+        }).throwRpcError()
+        Unit
+    }
+
+    // ------------------------------------------------------------------
+    // V356 — تصحیح کد، فاز صفر (کد هرگز اجرا نمی‌شود)
+    // ------------------------------------------------------------------
+
+    /** مشخصات و موارد آزمون یک آزمون. */
+    suspend fun codeSpecs(examId: String): Result<Pair<List<CodeSpecRow>, List<CodeTestRow>>> = runCatching {
+        val obj = rpcObject("native_code_spec_get_v356", buildJsonObject { put("p_exam", examId) }).throwRpcError()
+        val specs = CodeSpecRow.listFrom(obj["specs"] as? JsonArray ?: JsonArray(emptyList()))
+        val tests = CodeTestRow.listFrom(obj["tests"] as? JsonArray ?: JsonArray(emptyList()))
+        specs to tests
+    }
+
+    /** ذخیرهٔ مشخصات و موارد یک سؤال؛ چک‌لیست همان سؤال پاک می‌شود. */
+    suspend fun saveCodeSpec(
+        examId: String,
+        questionIndex: Int,
+        language: String,
+        reference: String,
+        tests: List<CodeGrading.TestCase>
+    ): Result<Int> = runCatching {
+        require(questionIndex >= 0) { "شاخص سؤال نامعتبر است." }
+        require(language.trim().isNotEmpty()) { "نام زبان را بنویسید." }
+        require(reference.length <= CodeGrading.MAX_REFERENCE) { "پاسخ مرجع بیش از حد بلند است." }
+        require(tests.size <= CodeGrading.MAX_TESTS) { "برای هر سؤال بیش از ۴۰ مورد آزمون نمی‌توان تعریف کرد." }
+        val res = rpcObject("native_code_spec_save_v356", buildJsonObject {
+            put("p_exam", examId)
+            put("p_question", questionIndex)
+            put("p_language", language.trim())
+            put("p_reference", reference)
+            put("p_tests", buildJsonArray {
+                tests.forEach { t ->
+                    add(buildJsonObject {
+                        put("label", t.label); put("input", t.input); put("expected", t.expected)
+                        put("weight", t.weight); put("hidden", t.hidden)
+                    })
+                }
+            })
+        }).throwRpcError()
+        res["cleared_checks"]?.jsonPrimitive?.intOrNull ?: 0
+    }
+
+    suspend fun codeChecks(examId: String): Result<List<CodeCheckRow>> = runCatching {
+        CodeCheckRow.listFrom(rpcArray("native_code_checks_v356", buildJsonObject { put("p_exam", examId) }))
+    }
+
+    /** ثبت نتیجهٔ یک مورد؛ نمره را تغییر نمی‌دهد. */
+    suspend fun saveCodeCheck(
+        answerId: String,
+        questionIndex: Int,
+        testId: Long,
+        passed: Boolean,
+        actual: String
+    ): Result<Unit> = runCatching {
+        require(actual.length <= CodeGrading.MAX_TEXT) { "خروجی واقعی بیش از حد بلند است." }
+        rpcObject("native_code_check_save_v356", buildJsonObject {
+            put("p_answer", answerId); put("p_question", questionIndex); put("p_test", testId)
+            put("p_passed", passed); put("p_actual", actual); put("p_note", "")
         }).throwRpcError()
         Unit
     }

@@ -175,7 +175,7 @@ begin
   for v_item in select * from jsonb_array_elements(p_items) loop
     v_kw := btrim(coalesce(v_item ->> 'keyword', ''));
     if char_length(v_kw) < 1 or char_length(v_kw) > 120 then
-      raise exception 'هر کلیدواژه باید بین ۱ تا ۲۰ نویسه باشد.';
+      raise exception 'هر کلیدواژه باید بین ۱ تا ۱۲۰ نویسه باشد.';
     end if;
     v_w := coalesce((v_item ->> 'weight')::numeric, 1);
     if v_w <= 0 or v_w > 100 then raise exception 'وزن کلیدواژه نامعتبر است.'; end if;

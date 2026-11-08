@@ -79,7 +79,8 @@ jobs:
           for g in check_kotlin_braces check_kotlin_quotes check_kotlin_escapes \
                    check_kotlin_imports check_missing_imports check_kotlin_visibility \
                    check_sealed_when check_test_paths check_test_pins \
-                   check_site_pins check_site_sync check_changelog; do
+                   check_site_pins check_site_sync check_changelog \
+                   check_message_numbers; do
             echo "::group::$g"
             python3 "scripts/$g.py"
             echo "::endgroup::"

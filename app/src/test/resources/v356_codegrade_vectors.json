@@ -1,0 +1,9717 @@
+{
+ "normalize": [
+  {
+   "in": "",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": ""
+  },
+  {
+   "in": "   ",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": ""
+  },
+  {
+   "in": "5",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": "5"
+  },
+  {
+   "in": "  5  ",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": "5"
+  },
+  {
+   "in": "5\n",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": "5"
+  },
+  {
+   "in": "5\r\n",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": "5"
+  },
+  {
+   "in": "a\n\nb",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": "a\nb"
+  },
+  {
+   "in": "a\r\nb",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": "a\nb"
+  },
+  {
+   "in": "a\rb",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": "a\nb"
+  },
+  {
+   "in": "  a  \n  b  ",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": "a\nb"
+  },
+  {
+   "in": "OK",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": "OK"
+  },
+  {
+   "in": "ok",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": "ok"
+  },
+  {
+   "in": "a\tb",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": "a\tb"
+  },
+  {
+   "in": "\n\n",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": ""
+  },
+  {
+   "in": "line1\nline2\n\n\nline3",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": "line1\nline2\nline3"
+  },
+  {
+   "in": "  spaced  out  ",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": "spaced  out"
+  },
+  {
+   "in": "MiXeD CaSe\nSecond LINE",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": "MiXeD CaSe\nSecond LINE"
+  },
+  {
+   "in": "",
+   "opts": {
+    "trimLines": false,
+    "collapseBlank": false,
+    "ignoreCase": false
+   },
+   "out": ""
+  },
+  {
+   "in": "   ",
+   "opts": {
+    "trimLines": false,
+    "collapseBlank": false,
+    "ignoreCase": false
+   },
+   "out": "   "
+  },
+  {
+   "in": "5",
+   "opts": {
+    "trimLines": false,
+    "collapseBlank": false,
+    "ignoreCase": false
+   },
+   "out": "5"
+  },
+  {
+   "in": "  5  ",
+   "opts": {
+    "trimLines": false,
+    "collapseBlank": false,
+    "ignoreCase": false
+   },
+   "out": "  5  "
+  },
+  {
+   "in": "5\n",
+   "opts": {
+    "trimLines": false,
+    "collapseBlank": false,
+    "ignoreCase": false
+   },
+   "out": "5\n"
+  },
+  {
+   "in": "5\r\n",
+   "opts": {
+    "trimLines": false,
+    "collapseBlank": false,
+    "ignoreCase": false
+   },
+   "out": "5\n"
+  },
+  {
+   "in": "a\n\nb",
+   "opts": {
+    "trimLines": false,
+    "collapseBlank": false,
+    "ignoreCase": false
+   },
+   "out": "a\n\nb"
+  },
+  {
+   "in": "a\r\nb",
+   "opts": {
+    "trimLines": false,
+    "collapseBlank": false,
+    "ignoreCase": false
+   },
+   "out": "a\nb"
+  },
+  {
+   "in": "a\rb",
+   "opts": {
+    "trimLines": false,
+    "collapseBlank": false,
+    "ignoreCase": false
+   },
+   "out": "a\nb"
+  },
+  {
+   "in": "  a  \n  b  ",
+   "opts": {
+    "trimLines": false,
+    "collapseBlank": false,
+    "ignoreCase": false
+   },
+   "out": "  a  \n  b  "
+  },
+  {
+   "in": "OK",
+   "opts": {
+    "trimLines": false,
+    "collapseBlank": false,
+    "ignoreCase": false
+   },
+   "out": "OK"
+  },
+  {
+   "in": "ok",
+   "opts": {
+    "trimLines": false,
+    "collapseBlank": false,
+    "ignoreCase": false
+   },
+   "out": "ok"
+  },
+  {
+   "in": "a\tb",
+   "opts": {
+    "trimLines": false,
+    "collapseBlank": false,
+    "ignoreCase": false
+   },
+   "out": "a\tb"
+  },
+  {
+   "in": "\n\n",
+   "opts": {
+    "trimLines": false,
+    "collapseBlank": false,
+    "ignoreCase": false
+   },
+   "out": "\n\n"
+  },
+  {
+   "in": "line1\nline2\n\n\nline3",
+   "opts": {
+    "trimLines": false,
+    "collapseBlank": false,
+    "ignoreCase": false
+   },
+   "out": "line1\nline2\n\n\nline3"
+  },
+  {
+   "in": "  spaced  out  ",
+   "opts": {
+    "trimLines": false,
+    "collapseBlank": false,
+    "ignoreCase": false
+   },
+   "out": "  spaced  out  "
+  },
+  {
+   "in": "MiXeD CaSe\nSecond LINE",
+   "opts": {
+    "trimLines": false,
+    "collapseBlank": false,
+    "ignoreCase": false
+   },
+   "out": "MiXeD CaSe\nSecond LINE"
+  },
+  {
+   "in": "",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": true
+   },
+   "out": ""
+  },
+  {
+   "in": "   ",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": true
+   },
+   "out": ""
+  },
+  {
+   "in": "5",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": true
+   },
+   "out": "5"
+  },
+  {
+   "in": "  5  ",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": true
+   },
+   "out": "5"
+  },
+  {
+   "in": "5\n",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": true
+   },
+   "out": "5"
+  },
+  {
+   "in": "5\r\n",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": true
+   },
+   "out": "5"
+  },
+  {
+   "in": "a\n\nb",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": true
+   },
+   "out": "a\nb"
+  },
+  {
+   "in": "a\r\nb",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": true
+   },
+   "out": "a\nb"
+  },
+  {
+   "in": "a\rb",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": true
+   },
+   "out": "a\nb"
+  },
+  {
+   "in": "  a  \n  b  ",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": true
+   },
+   "out": "a\nb"
+  },
+  {
+   "in": "OK",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": true
+   },
+   "out": "ok"
+  },
+  {
+   "in": "ok",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": true
+   },
+   "out": "ok"
+  },
+  {
+   "in": "a\tb",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": true
+   },
+   "out": "a\tb"
+  },
+  {
+   "in": "\n\n",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": true
+   },
+   "out": ""
+  },
+  {
+   "in": "line1\nline2\n\n\nline3",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": true
+   },
+   "out": "line1\nline2\nline3"
+  },
+  {
+   "in": "  spaced  out  ",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": true
+   },
+   "out": "spaced  out"
+  },
+  {
+   "in": "MiXeD CaSe\nSecond LINE",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": true
+   },
+   "out": "mixed case\nsecond line"
+  },
+  {
+   "in": "",
+   "opts": {
+    "trimLines": false,
+    "collapseBlank": true,
+    "ignoreCase": true
+   },
+   "out": ""
+  },
+  {
+   "in": "   ",
+   "opts": {
+    "trimLines": false,
+    "collapseBlank": true,
+    "ignoreCase": true
+   },
+   "out": ""
+  },
+  {
+   "in": "5",
+   "opts": {
+    "trimLines": false,
+    "collapseBlank": true,
+    "ignoreCase": true
+   },
+   "out": "5"
+  },
+  {
+   "in": "  5  ",
+   "opts": {
+    "trimLines": false,
+    "collapseBlank": true,
+    "ignoreCase": true
+   },
+   "out": "  5  "
+  },
+  {
+   "in": "5\n",
+   "opts": {
+    "trimLines": false,
+    "collapseBlank": true,
+    "ignoreCase": true
+   },
+   "out": "5"
+  },
+  {
+   "in": "5\r\n",
+   "opts": {
+    "trimLines": false,
+    "collapseBlank": true,
+    "ignoreCase": true
+   },
+   "out": "5"
+  },
+  {
+   "in": "a\n\nb",
+   "opts": {
+    "trimLines": false,
+    "collapseBlank": true,
+    "ignoreCase": true
+   },
+   "out": "a\nb"
+  },
+  {
+   "in": "a\r\nb",
+   "opts": {
+    "trimLines": false,
+    "collapseBlank": true,
+    "ignoreCase": true
+   },
+   "out": "a\nb"
+  },
+  {
+   "in": "a\rb",
+   "opts": {
+    "trimLines": false,
+    "collapseBlank": true,
+    "ignoreCase": true
+   },
+   "out": "a\nb"
+  },
+  {
+   "in": "  a  \n  b  ",
+   "opts": {
+    "trimLines": false,
+    "collapseBlank": true,
+    "ignoreCase": true
+   },
+   "out": "  a  \n  b  "
+  },
+  {
+   "in": "OK",
+   "opts": {
+    "trimLines": false,
+    "collapseBlank": true,
+    "ignoreCase": true
+   },
+   "out": "ok"
+  },
+  {
+   "in": "ok",
+   "opts": {
+    "trimLines": false,
+    "collapseBlank": true,
+    "ignoreCase": true
+   },
+   "out": "ok"
+  },
+  {
+   "in": "a\tb",
+   "opts": {
+    "trimLines": false,
+    "collapseBlank": true,
+    "ignoreCase": true
+   },
+   "out": "a\tb"
+  },
+  {
+   "in": "\n\n",
+   "opts": {
+    "trimLines": false,
+    "collapseBlank": true,
+    "ignoreCase": true
+   },
+   "out": ""
+  },
+  {
+   "in": "line1\nline2\n\n\nline3",
+   "opts": {
+    "trimLines": false,
+    "collapseBlank": true,
+    "ignoreCase": true
+   },
+   "out": "line1\nline2\nline3"
+  },
+  {
+   "in": "  spaced  out  ",
+   "opts": {
+    "trimLines": false,
+    "collapseBlank": true,
+    "ignoreCase": true
+   },
+   "out": "  spaced  out  "
+  },
+  {
+   "in": "MiXeD CaSe\nSecond LINE",
+   "opts": {
+    "trimLines": false,
+    "collapseBlank": true,
+    "ignoreCase": true
+   },
+   "out": "mixed case\nsecond line"
+  },
+  {
+   "in": "",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": false,
+    "ignoreCase": false
+   },
+   "out": ""
+  },
+  {
+   "in": "   ",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": false,
+    "ignoreCase": false
+   },
+   "out": ""
+  },
+  {
+   "in": "5",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": false,
+    "ignoreCase": false
+   },
+   "out": "5"
+  },
+  {
+   "in": "  5  ",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": false,
+    "ignoreCase": false
+   },
+   "out": "5"
+  },
+  {
+   "in": "5\n",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": false,
+    "ignoreCase": false
+   },
+   "out": "5"
+  },
+  {
+   "in": "5\r\n",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": false,
+    "ignoreCase": false
+   },
+   "out": "5"
+  },
+  {
+   "in": "a\n\nb",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": false,
+    "ignoreCase": false
+   },
+   "out": "a\n\nb"
+  },
+  {
+   "in": "a\r\nb",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": false,
+    "ignoreCase": false
+   },
+   "out": "a\nb"
+  },
+  {
+   "in": "a\rb",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": false,
+    "ignoreCase": false
+   },
+   "out": "a\nb"
+  },
+  {
+   "in": "  a  \n  b  ",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": false,
+    "ignoreCase": false
+   },
+   "out": "a\nb"
+  },
+  {
+   "in": "OK",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": false,
+    "ignoreCase": false
+   },
+   "out": "OK"
+  },
+  {
+   "in": "ok",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": false,
+    "ignoreCase": false
+   },
+   "out": "ok"
+  },
+  {
+   "in": "a\tb",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": false,
+    "ignoreCase": false
+   },
+   "out": "a\tb"
+  },
+  {
+   "in": "\n\n",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": false,
+    "ignoreCase": false
+   },
+   "out": ""
+  },
+  {
+   "in": "line1\nline2\n\n\nline3",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": false,
+    "ignoreCase": false
+   },
+   "out": "line1\nline2\n\n\nline3"
+  },
+  {
+   "in": "  spaced  out  ",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": false,
+    "ignoreCase": false
+   },
+   "out": "spaced  out"
+  },
+  {
+   "in": "MiXeD CaSe\nSecond LINE",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": false,
+    "ignoreCase": false
+   },
+   "out": "MiXeD CaSe\nSecond LINE"
+  }
+ ],
+ "matches": [
+  {
+   "a": "",
+   "b": "",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": true
+  },
+  {
+   "a": "",
+   "b": "   ",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": true
+  },
+  {
+   "a": "",
+   "b": "5",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "",
+   "b": "  5  ",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "",
+   "b": "5\n",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "",
+   "b": "5\r\n",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "",
+   "b": "a\n\nb",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "",
+   "b": "a\r\nb",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "",
+   "b": "a\rb",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "",
+   "b": "  a  \n  b  ",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "",
+   "b": "OK",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "",
+   "b": "ok",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "",
+   "b": "a\tb",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "",
+   "b": "\n\n",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": true
+  },
+  {
+   "a": "",
+   "b": "line1\nline2\n\n\nline3",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "",
+   "b": "  spaced  out  ",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "",
+   "b": "MiXeD CaSe\nSecond LINE",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "   ",
+   "b": "",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": true
+  },
+  {
+   "a": "   ",
+   "b": "   ",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": true
+  },
+  {
+   "a": "   ",
+   "b": "5",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "   ",
+   "b": "  5  ",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "   ",
+   "b": "5\n",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "   ",
+   "b": "5\r\n",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "   ",
+   "b": "a\n\nb",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "   ",
+   "b": "a\r\nb",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "   ",
+   "b": "a\rb",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "   ",
+   "b": "  a  \n  b  ",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "   ",
+   "b": "OK",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "   ",
+   "b": "ok",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "   ",
+   "b": "a\tb",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "   ",
+   "b": "\n\n",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": true
+  },
+  {
+   "a": "   ",
+   "b": "line1\nline2\n\n\nline3",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "   ",
+   "b": "  spaced  out  ",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "   ",
+   "b": "MiXeD CaSe\nSecond LINE",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "5",
+   "b": "",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "5",
+   "b": "   ",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "5",
+   "b": "5",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": true
+  },
+  {
+   "a": "5",
+   "b": "  5  ",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": true
+  },
+  {
+   "a": "5",
+   "b": "5\n",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": true
+  },
+  {
+   "a": "5",
+   "b": "5\r\n",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": true
+  },
+  {
+   "a": "5",
+   "b": "a\n\nb",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "5",
+   "b": "a\r\nb",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "5",
+   "b": "a\rb",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "5",
+   "b": "  a  \n  b  ",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "5",
+   "b": "OK",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "5",
+   "b": "ok",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "5",
+   "b": "a\tb",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "5",
+   "b": "\n\n",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "5",
+   "b": "line1\nline2\n\n\nline3",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "5",
+   "b": "  spaced  out  ",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "5",
+   "b": "MiXeD CaSe\nSecond LINE",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "  5  ",
+   "b": "",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "  5  ",
+   "b": "   ",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "  5  ",
+   "b": "5",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": true
+  },
+  {
+   "a": "  5  ",
+   "b": "  5  ",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": true
+  },
+  {
+   "a": "  5  ",
+   "b": "5\n",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": true
+  },
+  {
+   "a": "  5  ",
+   "b": "5\r\n",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": true
+  },
+  {
+   "a": "  5  ",
+   "b": "a\n\nb",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "  5  ",
+   "b": "a\r\nb",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "  5  ",
+   "b": "a\rb",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "  5  ",
+   "b": "  a  \n  b  ",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "  5  ",
+   "b": "OK",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "  5  ",
+   "b": "ok",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "  5  ",
+   "b": "a\tb",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "  5  ",
+   "b": "\n\n",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "  5  ",
+   "b": "line1\nline2\n\n\nline3",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "  5  ",
+   "b": "  spaced  out  ",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "  5  ",
+   "b": "MiXeD CaSe\nSecond LINE",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "5\n",
+   "b": "",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "5\n",
+   "b": "   ",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "5\n",
+   "b": "5",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": true
+  },
+  {
+   "a": "5\n",
+   "b": "  5  ",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": true
+  },
+  {
+   "a": "5\n",
+   "b": "5\n",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": true
+  },
+  {
+   "a": "5\n",
+   "b": "5\r\n",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": true
+  },
+  {
+   "a": "5\n",
+   "b": "a\n\nb",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "5\n",
+   "b": "a\r\nb",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "5\n",
+   "b": "a\rb",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "5\n",
+   "b": "  a  \n  b  ",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "5\n",
+   "b": "OK",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "5\n",
+   "b": "ok",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "5\n",
+   "b": "a\tb",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "5\n",
+   "b": "\n\n",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "5\n",
+   "b": "line1\nline2\n\n\nline3",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "5\n",
+   "b": "  spaced  out  ",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "5\n",
+   "b": "MiXeD CaSe\nSecond LINE",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "5\r\n",
+   "b": "",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "5\r\n",
+   "b": "   ",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "5\r\n",
+   "b": "5",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": true
+  },
+  {
+   "a": "5\r\n",
+   "b": "  5  ",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": true
+  },
+  {
+   "a": "5\r\n",
+   "b": "5\n",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": true
+  },
+  {
+   "a": "5\r\n",
+   "b": "5\r\n",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": true
+  },
+  {
+   "a": "5\r\n",
+   "b": "a\n\nb",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "5\r\n",
+   "b": "a\r\nb",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "5\r\n",
+   "b": "a\rb",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "5\r\n",
+   "b": "  a  \n  b  ",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "5\r\n",
+   "b": "OK",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "5\r\n",
+   "b": "ok",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "5\r\n",
+   "b": "a\tb",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "5\r\n",
+   "b": "\n\n",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "5\r\n",
+   "b": "line1\nline2\n\n\nline3",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "5\r\n",
+   "b": "  spaced  out  ",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "5\r\n",
+   "b": "MiXeD CaSe\nSecond LINE",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "a\n\nb",
+   "b": "",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "a\n\nb",
+   "b": "   ",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "a\n\nb",
+   "b": "5",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "a\n\nb",
+   "b": "  5  ",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "a\n\nb",
+   "b": "5\n",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "a\n\nb",
+   "b": "5\r\n",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "a\n\nb",
+   "b": "a\n\nb",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": true
+  },
+  {
+   "a": "a\n\nb",
+   "b": "a\r\nb",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": true
+  },
+  {
+   "a": "a\n\nb",
+   "b": "a\rb",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": true
+  },
+  {
+   "a": "a\n\nb",
+   "b": "  a  \n  b  ",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": true
+  },
+  {
+   "a": "a\n\nb",
+   "b": "OK",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "a\n\nb",
+   "b": "ok",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "a\n\nb",
+   "b": "a\tb",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "a\n\nb",
+   "b": "\n\n",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "a\n\nb",
+   "b": "line1\nline2\n\n\nline3",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "a\n\nb",
+   "b": "  spaced  out  ",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "a\n\nb",
+   "b": "MiXeD CaSe\nSecond LINE",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "a\r\nb",
+   "b": "",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "a\r\nb",
+   "b": "   ",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "a\r\nb",
+   "b": "5",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "a\r\nb",
+   "b": "  5  ",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "a\r\nb",
+   "b": "5\n",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "a\r\nb",
+   "b": "5\r\n",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "a\r\nb",
+   "b": "a\n\nb",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": true
+  },
+  {
+   "a": "a\r\nb",
+   "b": "a\r\nb",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": true
+  },
+  {
+   "a": "a\r\nb",
+   "b": "a\rb",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": true
+  },
+  {
+   "a": "a\r\nb",
+   "b": "  a  \n  b  ",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": true
+  },
+  {
+   "a": "a\r\nb",
+   "b": "OK",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "a\r\nb",
+   "b": "ok",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "a\r\nb",
+   "b": "a\tb",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "a\r\nb",
+   "b": "\n\n",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "a\r\nb",
+   "b": "line1\nline2\n\n\nline3",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "a\r\nb",
+   "b": "  spaced  out  ",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "a\r\nb",
+   "b": "MiXeD CaSe\nSecond LINE",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "a\rb",
+   "b": "",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "a\rb",
+   "b": "   ",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "a\rb",
+   "b": "5",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "a\rb",
+   "b": "  5  ",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "a\rb",
+   "b": "5\n",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "a\rb",
+   "b": "5\r\n",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "a\rb",
+   "b": "a\n\nb",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": true
+  },
+  {
+   "a": "a\rb",
+   "b": "a\r\nb",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": true
+  },
+  {
+   "a": "a\rb",
+   "b": "a\rb",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": true
+  },
+  {
+   "a": "a\rb",
+   "b": "  a  \n  b  ",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": true
+  },
+  {
+   "a": "a\rb",
+   "b": "OK",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "a\rb",
+   "b": "ok",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "a\rb",
+   "b": "a\tb",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "a\rb",
+   "b": "\n\n",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "a\rb",
+   "b": "line1\nline2\n\n\nline3",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "a\rb",
+   "b": "  spaced  out  ",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "a\rb",
+   "b": "MiXeD CaSe\nSecond LINE",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "  a  \n  b  ",
+   "b": "",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "  a  \n  b  ",
+   "b": "   ",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "  a  \n  b  ",
+   "b": "5",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "  a  \n  b  ",
+   "b": "  5  ",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "  a  \n  b  ",
+   "b": "5\n",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "  a  \n  b  ",
+   "b": "5\r\n",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "  a  \n  b  ",
+   "b": "a\n\nb",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": true
+  },
+  {
+   "a": "  a  \n  b  ",
+   "b": "a\r\nb",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": true
+  },
+  {
+   "a": "  a  \n  b  ",
+   "b": "a\rb",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": true
+  },
+  {
+   "a": "  a  \n  b  ",
+   "b": "  a  \n  b  ",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": true
+  },
+  {
+   "a": "  a  \n  b  ",
+   "b": "OK",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "  a  \n  b  ",
+   "b": "ok",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "  a  \n  b  ",
+   "b": "a\tb",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "  a  \n  b  ",
+   "b": "\n\n",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "  a  \n  b  ",
+   "b": "line1\nline2\n\n\nline3",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "  a  \n  b  ",
+   "b": "  spaced  out  ",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "  a  \n  b  ",
+   "b": "MiXeD CaSe\nSecond LINE",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "OK",
+   "b": "",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "OK",
+   "b": "   ",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "OK",
+   "b": "5",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "OK",
+   "b": "  5  ",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "OK",
+   "b": "5\n",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "OK",
+   "b": "5\r\n",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "OK",
+   "b": "a\n\nb",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "OK",
+   "b": "a\r\nb",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "OK",
+   "b": "a\rb",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "OK",
+   "b": "  a  \n  b  ",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "OK",
+   "b": "OK",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": true
+  },
+  {
+   "a": "OK",
+   "b": "ok",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "OK",
+   "b": "a\tb",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "OK",
+   "b": "\n\n",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "OK",
+   "b": "line1\nline2\n\n\nline3",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "OK",
+   "b": "  spaced  out  ",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "OK",
+   "b": "MiXeD CaSe\nSecond LINE",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "ok",
+   "b": "",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "ok",
+   "b": "   ",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "ok",
+   "b": "5",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "ok",
+   "b": "  5  ",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "ok",
+   "b": "5\n",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "ok",
+   "b": "5\r\n",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "ok",
+   "b": "a\n\nb",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "ok",
+   "b": "a\r\nb",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "ok",
+   "b": "a\rb",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "ok",
+   "b": "  a  \n  b  ",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "ok",
+   "b": "OK",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "ok",
+   "b": "ok",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": true
+  },
+  {
+   "a": "ok",
+   "b": "a\tb",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "ok",
+   "b": "\n\n",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "ok",
+   "b": "line1\nline2\n\n\nline3",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "ok",
+   "b": "  spaced  out  ",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "ok",
+   "b": "MiXeD CaSe\nSecond LINE",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "a\tb",
+   "b": "",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "a\tb",
+   "b": "   ",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "a\tb",
+   "b": "5",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "a\tb",
+   "b": "  5  ",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "a\tb",
+   "b": "5\n",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "a\tb",
+   "b": "5\r\n",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "a\tb",
+   "b": "a\n\nb",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "a\tb",
+   "b": "a\r\nb",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "a\tb",
+   "b": "a\rb",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "a\tb",
+   "b": "  a  \n  b  ",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "a\tb",
+   "b": "OK",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "a\tb",
+   "b": "ok",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "a\tb",
+   "b": "a\tb",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": true
+  },
+  {
+   "a": "a\tb",
+   "b": "\n\n",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "a\tb",
+   "b": "line1\nline2\n\n\nline3",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "a\tb",
+   "b": "  spaced  out  ",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "a\tb",
+   "b": "MiXeD CaSe\nSecond LINE",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "\n\n",
+   "b": "",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": true
+  },
+  {
+   "a": "\n\n",
+   "b": "   ",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": true
+  },
+  {
+   "a": "\n\n",
+   "b": "5",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "\n\n",
+   "b": "  5  ",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "\n\n",
+   "b": "5\n",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "\n\n",
+   "b": "5\r\n",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "\n\n",
+   "b": "a\n\nb",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "\n\n",
+   "b": "a\r\nb",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "\n\n",
+   "b": "a\rb",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "\n\n",
+   "b": "  a  \n  b  ",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "\n\n",
+   "b": "OK",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "\n\n",
+   "b": "ok",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "\n\n",
+   "b": "a\tb",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "\n\n",
+   "b": "\n\n",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": true
+  },
+  {
+   "a": "\n\n",
+   "b": "line1\nline2\n\n\nline3",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "\n\n",
+   "b": "  spaced  out  ",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "\n\n",
+   "b": "MiXeD CaSe\nSecond LINE",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "line1\nline2\n\n\nline3",
+   "b": "",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "line1\nline2\n\n\nline3",
+   "b": "   ",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "line1\nline2\n\n\nline3",
+   "b": "5",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "line1\nline2\n\n\nline3",
+   "b": "  5  ",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "line1\nline2\n\n\nline3",
+   "b": "5\n",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "line1\nline2\n\n\nline3",
+   "b": "5\r\n",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "line1\nline2\n\n\nline3",
+   "b": "a\n\nb",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "line1\nline2\n\n\nline3",
+   "b": "a\r\nb",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "line1\nline2\n\n\nline3",
+   "b": "a\rb",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "line1\nline2\n\n\nline3",
+   "b": "  a  \n  b  ",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "line1\nline2\n\n\nline3",
+   "b": "OK",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "line1\nline2\n\n\nline3",
+   "b": "ok",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "line1\nline2\n\n\nline3",
+   "b": "a\tb",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "line1\nline2\n\n\nline3",
+   "b": "\n\n",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "line1\nline2\n\n\nline3",
+   "b": "line1\nline2\n\n\nline3",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": true
+  },
+  {
+   "a": "line1\nline2\n\n\nline3",
+   "b": "  spaced  out  ",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "line1\nline2\n\n\nline3",
+   "b": "MiXeD CaSe\nSecond LINE",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "  spaced  out  ",
+   "b": "",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "  spaced  out  ",
+   "b": "   ",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "  spaced  out  ",
+   "b": "5",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "  spaced  out  ",
+   "b": "  5  ",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "  spaced  out  ",
+   "b": "5\n",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "  spaced  out  ",
+   "b": "5\r\n",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "  spaced  out  ",
+   "b": "a\n\nb",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "  spaced  out  ",
+   "b": "a\r\nb",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "  spaced  out  ",
+   "b": "a\rb",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "  spaced  out  ",
+   "b": "  a  \n  b  ",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "  spaced  out  ",
+   "b": "OK",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "  spaced  out  ",
+   "b": "ok",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "  spaced  out  ",
+   "b": "a\tb",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "  spaced  out  ",
+   "b": "\n\n",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "  spaced  out  ",
+   "b": "line1\nline2\n\n\nline3",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "  spaced  out  ",
+   "b": "  spaced  out  ",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": true
+  },
+  {
+   "a": "  spaced  out  ",
+   "b": "MiXeD CaSe\nSecond LINE",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "MiXeD CaSe\nSecond LINE",
+   "b": "",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "MiXeD CaSe\nSecond LINE",
+   "b": "   ",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "MiXeD CaSe\nSecond LINE",
+   "b": "5",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "MiXeD CaSe\nSecond LINE",
+   "b": "  5  ",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "MiXeD CaSe\nSecond LINE",
+   "b": "5\n",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "MiXeD CaSe\nSecond LINE",
+   "b": "5\r\n",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "MiXeD CaSe\nSecond LINE",
+   "b": "a\n\nb",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "MiXeD CaSe\nSecond LINE",
+   "b": "a\r\nb",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "MiXeD CaSe\nSecond LINE",
+   "b": "a\rb",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "MiXeD CaSe\nSecond LINE",
+   "b": "  a  \n  b  ",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "MiXeD CaSe\nSecond LINE",
+   "b": "OK",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "MiXeD CaSe\nSecond LINE",
+   "b": "ok",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "MiXeD CaSe\nSecond LINE",
+   "b": "a\tb",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "MiXeD CaSe\nSecond LINE",
+   "b": "\n\n",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "MiXeD CaSe\nSecond LINE",
+   "b": "line1\nline2\n\n\nline3",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "MiXeD CaSe\nSecond LINE",
+   "b": "  spaced  out  ",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": false
+  },
+  {
+   "a": "MiXeD CaSe\nSecond LINE",
+   "b": "MiXeD CaSe\nSecond LINE",
+   "opts": {
+    "trimLines": true,
+    "collapseBlank": true,
+    "ignoreCase": false
+   },
+   "out": true
+  }
+ ],
+ "parse": [
+  {
+   "in": "",
+   "out": {
+    "tests": [],
+    "errors": []
+   }
+  },
+  {
+   "in": "# فقط توضیح\n\n",
+   "out": {
+    "tests": [],
+    "errors": []
+   }
+  },
+  {
+   "in": "مثال ساده | 2 3 => 5",
+   "out": {
+    "tests": [
+     {
+      "label": "مثال ساده",
+      "input": "2 3",
+      "expected": "5",
+      "weight": 1,
+      "hidden": false
+     }
+    ],
+    "errors": []
+   }
+  },
+  {
+   "in": "مثال ساده | 2 3 => 5\nعدد منفی | 2 | -2 3 => 1\nحالت مرزی | پنهان | 0 0 => 0",
+   "out": {
+    "tests": [
+     {
+      "label": "مثال ساده",
+      "input": "2 3",
+      "expected": "5",
+      "weight": 1,
+      "hidden": false
+     },
+     {
+      "label": "عدد منفی",
+      "input": "-2 3",
+      "expected": "1",
+      "weight": 2,
+      "hidden": false
+     },
+     {
+      "label": "حالت مرزی",
+      "input": "0 0",
+      "expected": "0",
+      "weight": 1,
+      "hidden": true
+     }
+    ],
+    "errors": []
+   }
+  },
+  {
+   "in": "بدون جداکننده",
+   "out": {
+    "tests": [],
+    "errors": [
+     {
+      "line": 1,
+      "message": "ورودی و خروجی را با «=>» جدا کنید."
+     }
+    ]
+   }
+  },
+  {
+   "in": "a => 1 => 2",
+   "out": {
+    "tests": [
+     {
+      "label": "",
+      "input": "a",
+      "expected": "1 => 2",
+      "weight": 1,
+      "hidden": false
+     }
+    ],
+    "errors": []
+   }
+  },
+  {
+   "in": "برچسب | => ",
+   "out": {
+    "tests": [],
+    "errors": [
+     {
+      "line": 1,
+      "message": "خروجی انتظار خالی است."
+     }
+    ]
+   }
+  },
+  {
+   "in": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx | a => b",
+   "out": {
+    "tests": [],
+    "errors": [
+     {
+      "line": 1,
+      "message": "برچسب بلندتر از ۱۲۰ نویسه است."
+     }
+    ]
+   }
+  },
+  {
+   "in": "برچسب | 0 | a => b",
+   "out": {
+    "tests": [
+     {
+      "label": "برچسب",
+      "input": "a",
+      "expected": "b",
+      "weight": 1,
+      "hidden": false
+     }
+    ],
+    "errors": []
+   }
+  },
+  {
+   "in": "برچسب | 101 | a => b",
+   "out": {
+    "tests": [
+     {
+      "label": "برچسب",
+      "input": "a",
+      "expected": "b",
+      "weight": 1,
+      "hidden": false
+     }
+    ],
+    "errors": []
+   }
+  },
+  {
+   "in": "2 | hidden | برچسب | a => b",
+   "out": {
+    "tests": [
+     {
+      "label": "برچسب",
+      "input": "a",
+      "expected": "b",
+      "weight": 2,
+      "hidden": true
+     }
+    ],
+    "errors": []
+   }
+  },
+  {
+   "in": "چندخطی | a\\nb => 1\\n2",
+   "out": {
+    "tests": [
+     {
+      "label": "چندخطی",
+      "input": "a\nb",
+      "expected": "1\n2",
+      "weight": 1,
+      "hidden": false
+     }
+    ],
+    "errors": []
+   }
+  },
+  {
+   "in": "تب | a\\tb => ok",
+   "out": {
+    "tests": [
+     {
+      "label": "تب",
+      "input": "a\tb",
+      "expected": "ok",
+      "weight": 1,
+      "hidden": false
+     }
+    ],
+    "errors": []
+   }
+  },
+  {
+   "in": "بک‌اسلش | a\\\\nb => c\\\\d",
+   "out": {
+    "tests": [
+     {
+      "label": "بک‌اسلش",
+      "input": "a\\nb",
+      "expected": "c\\d",
+      "weight": 1,
+      "hidden": false
+     }
+    ],
+    "errors": []
+   }
+  },
+  {
+   "in": "t0 | 0 => 0\nt1 | 1 => 1\nt2 | 2 => 2\nt3 | 3 => 3\nt4 | 4 => 4\nt5 | 5 => 5\nt6 | 6 => 6\nt7 | 7 => 7\nt8 | 8 => 8\nt9 | 9 => 9\nt10 | 10 => 10\nt11 | 11 => 11\nt12 | 12 => 12\nt13 | 13 => 13\nt14 | 14 => 14\nt15 | 15 => 15\nt16 | 16 => 16\nt17 | 17 => 17\nt18 | 18 => 18\nt19 | 19 => 19\nt20 | 20 => 20\nt21 | 21 => 21\nt22 | 22 => 22\nt23 | 23 => 23\nt24 | 24 => 24\nt25 | 25 => 25\nt26 | 26 => 26\nt27 | 27 => 27\nt28 | 28 => 28\nt29 | 29 => 29\nt30 | 30 => 30\nt31 | 31 => 31\nt32 | 32 => 32\nt33 | 33 => 33\nt34 | 34 => 34\nt35 | 35 => 35\nt36 | 36 => 36\nt37 | 37 => 37\nt38 | 38 => 38\nt39 | 39 => 39\nt40 | 40 => 40\nt41 | 41 => 41\nt42 | 42 => 42\nt43 | 43 => 43\nt44 | 44 => 44",
+   "out": {
+    "tests": [
+     {
+      "label": "t0",
+      "input": "0",
+      "expected": "0",
+      "weight": 1,
+      "hidden": false
+     },
+     {
+      "label": "t1",
+      "input": "1",
+      "expected": "1",
+      "weight": 1,
+      "hidden": false
+     },
+     {
+      "label": "t2",
+      "input": "2",
+      "expected": "2",
+      "weight": 1,
+      "hidden": false
+     },
+     {
+      "label": "t3",
+      "input": "3",
+      "expected": "3",
+      "weight": 1,
+      "hidden": false
+     },
+     {
+      "label": "t4",
+      "input": "4",
+      "expected": "4",
+      "weight": 1,
+      "hidden": false
+     },
+     {
+      "label": "t5",
+      "input": "5",
+      "expected": "5",
+      "weight": 1,
+      "hidden": false
+     },
+     {
+      "label": "t6",
+      "input": "6",
+      "expected": "6",
+      "weight": 1,
+      "hidden": false
+     },
+     {
+      "label": "t7",
+      "input": "7",
+      "expected": "7",
+      "weight": 1,
+      "hidden": false
+     },
+     {
+      "label": "t8",
+      "input": "8",
+      "expected": "8",
+      "weight": 1,
+      "hidden": false
+     },
+     {
+      "label": "t9",
+      "input": "9",
+      "expected": "9",
+      "weight": 1,
+      "hidden": false
+     },
+     {
+      "label": "t10",
+      "input": "10",
+      "expected": "10",
+      "weight": 1,
+      "hidden": false
+     },
+     {
+      "label": "t11",
+      "input": "11",
+      "expected": "11",
+      "weight": 1,
+      "hidden": false
+     },
+     {
+      "label": "t12",
+      "input": "12",
+      "expected": "12",
+      "weight": 1,
+      "hidden": false
+     },
+     {
+      "label": "t13",
+      "input": "13",
+      "expected": "13",
+      "weight": 1,
+      "hidden": false
+     },
+     {
+      "label": "t14",
+      "input": "14",
+      "expected": "14",
+      "weight": 1,
+      "hidden": false
+     },
+     {
+      "label": "t15",
+      "input": "15",
+      "expected": "15",
+      "weight": 1,
+      "hidden": false
+     },
+     {
+      "label": "t16",
+      "input": "16",
+      "expected": "16",
+      "weight": 1,
+      "hidden": false
+     },
+     {
+      "label": "t17",
+      "input": "17",
+      "expected": "17",
+      "weight": 1,
+      "hidden": false
+     },
+     {
+      "label": "t18",
+      "input": "18",
+      "expected": "18",
+      "weight": 1,
+      "hidden": false
+     },
+     {
+      "label": "t19",
+      "input": "19",
+      "expected": "19",
+      "weight": 1,
+      "hidden": false
+     },
+     {
+      "label": "t20",
+      "input": "20",
+      "expected": "20",
+      "weight": 1,
+      "hidden": false
+     },
+     {
+      "label": "t21",
+      "input": "21",
+      "expected": "21",
+      "weight": 1,
+      "hidden": false
+     },
+     {
+      "label": "t22",
+      "input": "22",
+      "expected": "22",
+      "weight": 1,
+      "hidden": false
+     },
+     {
+      "label": "t23",
+      "input": "23",
+      "expected": "23",
+      "weight": 1,
+      "hidden": false
+     },
+     {
+      "label": "t24",
+      "input": "24",
+      "expected": "24",
+      "weight": 1,
+      "hidden": false
+     },
+     {
+      "label": "t25",
+      "input": "25",
+      "expected": "25",
+      "weight": 1,
+      "hidden": false
+     },
+     {
+      "label": "t26",
+      "input": "26",
+      "expected": "26",
+      "weight": 1,
+      "hidden": false
+     },
+     {
+      "label": "t27",
+      "input": "27",
+      "expected": "27",
+      "weight": 1,
+      "hidden": false
+     },
+     {
+      "label": "t28",
+      "input": "28",
+      "expected": "28",
+      "weight": 1,
+      "hidden": false
+     },
+     {
+      "label": "t29",
+      "input": "29",
+      "expected": "29",
+      "weight": 1,
+      "hidden": false
+     },
+     {
+      "label": "t30",
+      "input": "30",
+      "expected": "30",
+      "weight": 1,
+      "hidden": false
+     },
+     {
+      "label": "t31",
+      "input": "31",
+      "expected": "31",
+      "weight": 1,
+      "hidden": false
+     },
+     {
+      "label": "t32",
+      "input": "32",
+      "expected": "32",
+      "weight": 1,
+      "hidden": false
+     },
+     {
+      "label": "t33",
+      "input": "33",
+      "expected": "33",
+      "weight": 1,
+      "hidden": false
+     },
+     {
+      "label": "t34",
+      "input": "34",
+      "expected": "34",
+      "weight": 1,
+      "hidden": false
+     },
+     {
+      "label": "t35",
+      "input": "35",
+      "expected": "35",
+      "weight": 1,
+      "hidden": false
+     },
+     {
+      "label": "t36",
+      "input": "36",
+      "expected": "36",
+      "weight": 1,
+      "hidden": false
+     },
+     {
+      "label": "t37",
+      "input": "37",
+      "expected": "37",
+      "weight": 1,
+      "hidden": false
+     },
+     {
+      "label": "t38",
+      "input": "38",
+      "expected": "38",
+      "weight": 1,
+      "hidden": false
+     },
+     {
+      "label": "t39",
+      "input": "39",
+      "expected": "39",
+      "weight": 1,
+      "hidden": false
+     }
+    ],
+    "errors": [
+     {
+      "line": 41,
+      "message": "بیش از ۴۰ مورد آزمون مجاز نیست."
+     }
+    ]
+   }
+  }
+ ],
+ "format": [
+  {
+   "tests": [],
+   "out": ""
+  },
+  {
+   "tests": [],
+   "out": ""
+  },
+  {
+   "tests": [
+    {
+     "label": "مثال ساده",
+     "input": "2 3",
+     "expected": "5",
+     "weight": 1,
+     "hidden": false
+    }
+   ],
+   "out": "مثال ساده | 2 3 => 5"
+  },
+  {
+   "tests": [
+    {
+     "label": "مثال ساده",
+     "input": "2 3",
+     "expected": "5",
+     "weight": 1,
+     "hidden": false
+    },
+    {
+     "label": "عدد منفی",
+     "input": "-2 3",
+     "expected": "1",
+     "weight": 2,
+     "hidden": false
+    },
+    {
+     "label": "حالت مرزی",
+     "input": "0 0",
+     "expected": "0",
+     "weight": 1,
+     "hidden": true
+    }
+   ],
+   "out": "مثال ساده | 2 3 => 5\nعدد منفی | 2 | -2 3 => 1\nحالت مرزی | پنهان | 0 0 => 0"
+  },
+  {
+   "tests": [],
+   "out": ""
+  },
+  {
+   "tests": [
+    {
+     "label": "",
+     "input": "a",
+     "expected": "1 => 2",
+     "weight": 1,
+     "hidden": false
+    }
+   ],
+   "out": "a => 1 => 2"
+  },
+  {
+   "tests": [],
+   "out": ""
+  },
+  {
+   "tests": [],
+   "out": ""
+  },
+  {
+   "tests": [
+    {
+     "label": "برچسب",
+     "input": "a",
+     "expected": "b",
+     "weight": 1,
+     "hidden": false
+    }
+   ],
+   "out": "برچسب | a => b"
+  },
+  {
+   "tests": [
+    {
+     "label": "برچسب",
+     "input": "a",
+     "expected": "b",
+     "weight": 1,
+     "hidden": false
+    }
+   ],
+   "out": "برچسب | a => b"
+  },
+  {
+   "tests": [
+    {
+     "label": "برچسب",
+     "input": "a",
+     "expected": "b",
+     "weight": 2,
+     "hidden": true
+    }
+   ],
+   "out": "برچسب | 2 | پنهان | a => b"
+  },
+  {
+   "tests": [
+    {
+     "label": "چندخطی",
+     "input": "a\nb",
+     "expected": "1\n2",
+     "weight": 1,
+     "hidden": false
+    }
+   ],
+   "out": "چندخطی | a\\nb => 1\\n2"
+  },
+  {
+   "tests": [
+    {
+     "label": "تب",
+     "input": "a\tb",
+     "expected": "ok",
+     "weight": 1,
+     "hidden": false
+    }
+   ],
+   "out": "تب | a\\tb => ok"
+  },
+  {
+   "tests": [
+    {
+     "label": "بک‌اسلش",
+     "input": "a\\nb",
+     "expected": "c\\d",
+     "weight": 1,
+     "hidden": false
+    }
+   ],
+   "out": "بک‌اسلش | a\\\\nb => c\\\\d"
+  },
+  {
+   "tests": [
+    {
+     "label": "t0",
+     "input": "0",
+     "expected": "0",
+     "weight": 1,
+     "hidden": false
+    },
+    {
+     "label": "t1",
+     "input": "1",
+     "expected": "1",
+     "weight": 1,
+     "hidden": false
+    },
+    {
+     "label": "t2",
+     "input": "2",
+     "expected": "2",
+     "weight": 1,
+     "hidden": false
+    },
+    {
+     "label": "t3",
+     "input": "3",
+     "expected": "3",
+     "weight": 1,
+     "hidden": false
+    },
+    {
+     "label": "t4",
+     "input": "4",
+     "expected": "4",
+     "weight": 1,
+     "hidden": false
+    },
+    {
+     "label": "t5",
+     "input": "5",
+     "expected": "5",
+     "weight": 1,
+     "hidden": false
+    },
+    {
+     "label": "t6",
+     "input": "6",
+     "expected": "6",
+     "weight": 1,
+     "hidden": false
+    },
+    {
+     "label": "t7",
+     "input": "7",
+     "expected": "7",
+     "weight": 1,
+     "hidden": false
+    },
+    {
+     "label": "t8",
+     "input": "8",
+     "expected": "8",
+     "weight": 1,
+     "hidden": false
+    },
+    {
+     "label": "t9",
+     "input": "9",
+     "expected": "9",
+     "weight": 1,
+     "hidden": false
+    },
+    {
+     "label": "t10",
+     "input": "10",
+     "expected": "10",
+     "weight": 1,
+     "hidden": false
+    },
+    {
+     "label": "t11",
+     "input": "11",
+     "expected": "11",
+     "weight": 1,
+     "hidden": false
+    },
+    {
+     "label": "t12",
+     "input": "12",
+     "expected": "12",
+     "weight": 1,
+     "hidden": false
+    },
+    {
+     "label": "t13",
+     "input": "13",
+     "expected": "13",
+     "weight": 1,
+     "hidden": false
+    },
+    {
+     "label": "t14",
+     "input": "14",
+     "expected": "14",
+     "weight": 1,
+     "hidden": false
+    },
+    {
+     "label": "t15",
+     "input": "15",
+     "expected": "15",
+     "weight": 1,
+     "hidden": false
+    },
+    {
+     "label": "t16",
+     "input": "16",
+     "expected": "16",
+     "weight": 1,
+     "hidden": false
+    },
+    {
+     "label": "t17",
+     "input": "17",
+     "expected": "17",
+     "weight": 1,
+     "hidden": false
+    },
+    {
+     "label": "t18",
+     "input": "18",
+     "expected": "18",
+     "weight": 1,
+     "hidden": false
+    },
+    {
+     "label": "t19",
+     "input": "19",
+     "expected": "19",
+     "weight": 1,
+     "hidden": false
+    },
+    {
+     "label": "t20",
+     "input": "20",
+     "expected": "20",
+     "weight": 1,
+     "hidden": false
+    },
+    {
+     "label": "t21",
+     "input": "21",
+     "expected": "21",
+     "weight": 1,
+     "hidden": false
+    },
+    {
+     "label": "t22",
+     "input": "22",
+     "expected": "22",
+     "weight": 1,
+     "hidden": false
+    },
+    {
+     "label": "t23",
+     "input": "23",
+     "expected": "23",
+     "weight": 1,
+     "hidden": false
+    },
+    {
+     "label": "t24",
+     "input": "24",
+     "expected": "24",
+     "weight": 1,
+     "hidden": false
+    },
+    {
+     "label": "t25",
+     "input": "25",
+     "expected": "25",
+     "weight": 1,
+     "hidden": false
+    },
+    {
+     "label": "t26",
+     "input": "26",
+     "expected": "26",
+     "weight": 1,
+     "hidden": false
+    },
+    {
+     "label": "t27",
+     "input": "27",
+     "expected": "27",
+     "weight": 1,
+     "hidden": false
+    },
+    {
+     "label": "t28",
+     "input": "28",
+     "expected": "28",
+     "weight": 1,
+     "hidden": false
+    },
+    {
+     "label": "t29",
+     "input": "29",
+     "expected": "29",
+     "weight": 1,
+     "hidden": false
+    },
+    {
+     "label": "t30",
+     "input": "30",
+     "expected": "30",
+     "weight": 1,
+     "hidden": false
+    },
+    {
+     "label": "t31",
+     "input": "31",
+     "expected": "31",
+     "weight": 1,
+     "hidden": false
+    },
+    {
+     "label": "t32",
+     "input": "32",
+     "expected": "32",
+     "weight": 1,
+     "hidden": false
+    },
+    {
+     "label": "t33",
+     "input": "33",
+     "expected": "33",
+     "weight": 1,
+     "hidden": false
+    },
+    {
+     "label": "t34",
+     "input": "34",
+     "expected": "34",
+     "weight": 1,
+     "hidden": false
+    },
+    {
+     "label": "t35",
+     "input": "35",
+     "expected": "35",
+     "weight": 1,
+     "hidden": false
+    },
+    {
+     "label": "t36",
+     "input": "36",
+     "expected": "36",
+     "weight": 1,
+     "hidden": false
+    },
+    {
+     "label": "t37",
+     "input": "37",
+     "expected": "37",
+     "weight": 1,
+     "hidden": false
+    },
+    {
+     "label": "t38",
+     "input": "38",
+     "expected": "38",
+     "weight": 1,
+     "hidden": false
+    },
+    {
+     "label": "t39",
+     "input": "39",
+     "expected": "39",
+     "weight": 1,
+     "hidden": false
+    }
+   ],
+   "out": "t0 | 0 => 0\nt1 | 1 => 1\nt2 | 2 => 2\nt3 | 3 => 3\nt4 | 4 => 4\nt5 | 5 => 5\nt6 | 6 => 6\nt7 | 7 => 7\nt8 | 8 => 8\nt9 | 9 => 9\nt10 | 10 => 10\nt11 | 11 => 11\nt12 | 12 => 12\nt13 | 13 => 13\nt14 | 14 => 14\nt15 | 15 => 15\nt16 | 16 => 16\nt17 | 17 => 17\nt18 | 18 => 18\nt19 | 19 => 19\nt20 | 20 => 20\nt21 | 21 => 21\nt22 | 22 => 22\nt23 | 23 => 23\nt24 | 24 => 24\nt25 | 25 => 25\nt26 | 26 => 26\nt27 | 27 => 27\nt28 | 28 => 28\nt29 | 29 => 29\nt30 | 30 => 30\nt31 | 31 => 31\nt32 | 32 => 32\nt33 | 33 => 33\nt34 | 34 => 34\nt35 | 35 => 35\nt36 | 36 => 36\nt37 | 37 => 37\nt38 | 38 => 38\nt39 | 39 => 39"
+  }
+ ],
+ "escape": [
+  {
+   "in": "",
+   "out": ""
+  },
+  {
+   "in": "plain",
+   "out": "plain"
+  },
+  {
+   "in": "a\nb",
+   "out": "a\\nb"
+  },
+  {
+   "in": "a\tb",
+   "out": "a\\tb"
+  },
+  {
+   "in": "a\\b",
+   "out": "a\\\\b"
+  },
+  {
+   "in": "a\\nb",
+   "out": "a\\\\nb"
+  },
+  {
+   "in": "\\",
+   "out": "\\\\"
+  },
+  {
+   "in": "\\\\",
+   "out": "\\\\\\\\"
+  },
+  {
+   "in": "a\n\\n\tb",
+   "out": "a\\n\\\\n\\tb"
+  },
+  {
+   "in": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+   "out": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+  }
+ ],
+ "unescape": [
+  {
+   "in": "",
+   "out": ""
+  },
+  {
+   "in": "plain",
+   "out": "plain"
+  },
+  {
+   "in": "a\\nb",
+   "out": "a\nb"
+  },
+  {
+   "in": "a\\tb",
+   "out": "a\tb"
+  },
+  {
+   "in": "a\\\\b",
+   "out": "a\\b"
+  },
+  {
+   "in": "a\\\\nb",
+   "out": "a\\nb"
+  },
+  {
+   "in": "\\\\",
+   "out": "\\"
+  },
+  {
+   "in": "\\\\\\\\",
+   "out": "\\\\"
+  },
+  {
+   "in": "a\\n\\\\n\\tb",
+   "out": "a\n\\n\tb"
+  },
+  {
+   "in": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+   "out": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+  }
+ ],
+ "score": [
+  {
+   "tests": [],
+   "checks": {},
+   "max": 0,
+   "out": {
+    "suggested": 0,
+    "ratio": 0,
+    "passedWeight": 0,
+    "totalWeight": 0,
+    "checkedCount": 0,
+    "passedCount": 0,
+    "totalCount": 0,
+    "complete": false,
+    "hasTests": false
+   },
+   "tag": "0/0/0"
+  },
+  {
+   "tests": [],
+   "checks": {},
+   "max": 1,
+   "out": {
+    "suggested": 0,
+    "ratio": 0,
+    "passedWeight": 0,
+    "totalWeight": 0,
+    "checkedCount": 0,
+    "passedCount": 0,
+    "totalCount": 0,
+    "complete": false,
+    "hasTests": false
+   },
+   "tag": "0/0/1"
+  },
+  {
+   "tests": [],
+   "checks": {},
+   "max": 2,
+   "out": {
+    "suggested": 0,
+    "ratio": 0,
+    "passedWeight": 0,
+    "totalWeight": 0,
+    "checkedCount": 0,
+    "passedCount": 0,
+    "totalCount": 0,
+    "complete": false,
+    "hasTests": false
+   },
+   "tag": "0/0/2"
+  },
+  {
+   "tests": [],
+   "checks": {},
+   "max": 4,
+   "out": {
+    "suggested": 0,
+    "ratio": 0,
+    "passedWeight": 0,
+    "totalWeight": 0,
+    "checkedCount": 0,
+    "passedCount": 0,
+    "totalCount": 0,
+    "complete": false,
+    "hasTests": false
+   },
+   "tag": "0/0/4"
+  },
+  {
+   "tests": [],
+   "checks": {},
+   "max": 10,
+   "out": {
+    "suggested": 0,
+    "ratio": 0,
+    "passedWeight": 0,
+    "totalWeight": 0,
+    "checkedCount": 0,
+    "passedCount": 0,
+    "totalCount": 0,
+    "complete": false,
+    "hasTests": false
+   },
+   "tag": "0/0/10"
+  },
+  {
+   "tests": [],
+   "checks": {},
+   "max": 3,
+   "out": {
+    "suggested": 0,
+    "ratio": 0,
+    "passedWeight": 0,
+    "totalWeight": 0,
+    "checkedCount": 0,
+    "passedCount": 0,
+    "totalCount": 0,
+    "complete": false,
+    "hasTests": false
+   },
+   "tag": "0/0/3"
+  },
+  {
+   "tests": [],
+   "checks": {
+    "1": {
+     "passed": true
+    }
+   },
+   "max": 0,
+   "out": {
+    "suggested": 0,
+    "ratio": 0,
+    "passedWeight": 0,
+    "totalWeight": 0,
+    "checkedCount": 0,
+    "passedCount": 0,
+    "totalCount": 0,
+    "complete": false,
+    "hasTests": false
+   },
+   "tag": "0/1/0"
+  },
+  {
+   "tests": [],
+   "checks": {
+    "1": {
+     "passed": true
+    }
+   },
+   "max": 1,
+   "out": {
+    "suggested": 0,
+    "ratio": 0,
+    "passedWeight": 0,
+    "totalWeight": 0,
+    "checkedCount": 0,
+    "passedCount": 0,
+    "totalCount": 0,
+    "complete": false,
+    "hasTests": false
+   },
+   "tag": "0/1/1"
+  },
+  {
+   "tests": [],
+   "checks": {
+    "1": {
+     "passed": true
+    }
+   },
+   "max": 2,
+   "out": {
+    "suggested": 0,
+    "ratio": 0,
+    "passedWeight": 0,
+    "totalWeight": 0,
+    "checkedCount": 0,
+    "passedCount": 0,
+    "totalCount": 0,
+    "complete": false,
+    "hasTests": false
+   },
+   "tag": "0/1/2"
+  },
+  {
+   "tests": [],
+   "checks": {
+    "1": {
+     "passed": true
+    }
+   },
+   "max": 4,
+   "out": {
+    "suggested": 0,
+    "ratio": 0,
+    "passedWeight": 0,
+    "totalWeight": 0,
+    "checkedCount": 0,
+    "passedCount": 0,
+    "totalCount": 0,
+    "complete": false,
+    "hasTests": false
+   },
+   "tag": "0/1/4"
+  },
+  {
+   "tests": [],
+   "checks": {
+    "1": {
+     "passed": true
+    }
+   },
+   "max": 10,
+   "out": {
+    "suggested": 0,
+    "ratio": 0,
+    "passedWeight": 0,
+    "totalWeight": 0,
+    "checkedCount": 0,
+    "passedCount": 0,
+    "totalCount": 0,
+    "complete": false,
+    "hasTests": false
+   },
+   "tag": "0/1/10"
+  },
+  {
+   "tests": [],
+   "checks": {
+    "1": {
+     "passed": true
+    }
+   },
+   "max": 3,
+   "out": {
+    "suggested": 0,
+    "ratio": 0,
+    "passedWeight": 0,
+    "totalWeight": 0,
+    "checkedCount": 0,
+    "passedCount": 0,
+    "totalCount": 0,
+    "complete": false,
+    "hasTests": false
+   },
+   "tag": "0/1/3"
+  },
+  {
+   "tests": [],
+   "checks": {
+    "1": {
+     "passed": true
+    },
+    "2": {
+     "passed": false
+    },
+    "3": {
+     "passed": true
+    }
+   },
+   "max": 0,
+   "out": {
+    "suggested": 0,
+    "ratio": 0,
+    "passedWeight": 0,
+    "totalWeight": 0,
+    "checkedCount": 0,
+    "passedCount": 0,
+    "totalCount": 0,
+    "complete": false,
+    "hasTests": false
+   },
+   "tag": "0/2/0"
+  },
+  {
+   "tests": [],
+   "checks": {
+    "1": {
+     "passed": true
+    },
+    "2": {
+     "passed": false
+    },
+    "3": {
+     "passed": true
+    }
+   },
+   "max": 1,
+   "out": {
+    "suggested": 0,
+    "ratio": 0,
+    "passedWeight": 0,
+    "totalWeight": 0,
+    "checkedCount": 0,
+    "passedCount": 0,
+    "totalCount": 0,
+    "complete": false,
+    "hasTests": false
+   },
+   "tag": "0/2/1"
+  },
+  {
+   "tests": [],
+   "checks": {
+    "1": {
+     "passed": true
+    },
+    "2": {
+     "passed": false
+    },
+    "3": {
+     "passed": true
+    }
+   },
+   "max": 2,
+   "out": {
+    "suggested": 0,
+    "ratio": 0,
+    "passedWeight": 0,
+    "totalWeight": 0,
+    "checkedCount": 0,
+    "passedCount": 0,
+    "totalCount": 0,
+    "complete": false,
+    "hasTests": false
+   },
+   "tag": "0/2/2"
+  },
+  {
+   "tests": [],
+   "checks": {
+    "1": {
+     "passed": true
+    },
+    "2": {
+     "passed": false
+    },
+    "3": {
+     "passed": true
+    }
+   },
+   "max": 4,
+   "out": {
+    "suggested": 0,
+    "ratio": 0,
+    "passedWeight": 0,
+    "totalWeight": 0,
+    "checkedCount": 0,
+    "passedCount": 0,
+    "totalCount": 0,
+    "complete": false,
+    "hasTests": false
+   },
+   "tag": "0/2/4"
+  },
+  {
+   "tests": [],
+   "checks": {
+    "1": {
+     "passed": true
+    },
+    "2": {
+     "passed": false
+    },
+    "3": {
+     "passed": true
+    }
+   },
+   "max": 10,
+   "out": {
+    "suggested": 0,
+    "ratio": 0,
+    "passedWeight": 0,
+    "totalWeight": 0,
+    "checkedCount": 0,
+    "passedCount": 0,
+    "totalCount": 0,
+    "complete": false,
+    "hasTests": false
+   },
+   "tag": "0/2/10"
+  },
+  {
+   "tests": [],
+   "checks": {
+    "1": {
+     "passed": true
+    },
+    "2": {
+     "passed": false
+    },
+    "3": {
+     "passed": true
+    }
+   },
+   "max": 3,
+   "out": {
+    "suggested": 0,
+    "ratio": 0,
+    "passedWeight": 0,
+    "totalWeight": 0,
+    "checkedCount": 0,
+    "passedCount": 0,
+    "totalCount": 0,
+    "complete": false,
+    "hasTests": false
+   },
+   "tag": "0/2/3"
+  },
+  {
+   "tests": [],
+   "checks": {
+    "1": {
+     "passed": false
+    },
+    "2": {
+     "passed": false
+    }
+   },
+   "max": 0,
+   "out": {
+    "suggested": 0,
+    "ratio": 0,
+    "passedWeight": 0,
+    "totalWeight": 0,
+    "checkedCount": 0,
+    "passedCount": 0,
+    "totalCount": 0,
+    "complete": false,
+    "hasTests": false
+   },
+   "tag": "0/3/0"
+  },
+  {
+   "tests": [],
+   "checks": {
+    "1": {
+     "passed": false
+    },
+    "2": {
+     "passed": false
+    }
+   },
+   "max": 1,
+   "out": {
+    "suggested": 0,
+    "ratio": 0,
+    "passedWeight": 0,
+    "totalWeight": 0,
+    "checkedCount": 0,
+    "passedCount": 0,
+    "totalCount": 0,
+    "complete": false,
+    "hasTests": false
+   },
+   "tag": "0/3/1"
+  },
+  {
+   "tests": [],
+   "checks": {
+    "1": {
+     "passed": false
+    },
+    "2": {
+     "passed": false
+    }
+   },
+   "max": 2,
+   "out": {
+    "suggested": 0,
+    "ratio": 0,
+    "passedWeight": 0,
+    "totalWeight": 0,
+    "checkedCount": 0,
+    "passedCount": 0,
+    "totalCount": 0,
+    "complete": false,
+    "hasTests": false
+   },
+   "tag": "0/3/2"
+  },
+  {
+   "tests": [],
+   "checks": {
+    "1": {
+     "passed": false
+    },
+    "2": {
+     "passed": false
+    }
+   },
+   "max": 4,
+   "out": {
+    "suggested": 0,
+    "ratio": 0,
+    "passedWeight": 0,
+    "totalWeight": 0,
+    "checkedCount": 0,
+    "passedCount": 0,
+    "totalCount": 0,
+    "complete": false,
+    "hasTests": false
+   },
+   "tag": "0/3/4"
+  },
+  {
+   "tests": [],
+   "checks": {
+    "1": {
+     "passed": false
+    },
+    "2": {
+     "passed": false
+    }
+   },
+   "max": 10,
+   "out": {
+    "suggested": 0,
+    "ratio": 0,
+    "passedWeight": 0,
+    "totalWeight": 0,
+    "checkedCount": 0,
+    "passedCount": 0,
+    "totalCount": 0,
+    "complete": false,
+    "hasTests": false
+   },
+   "tag": "0/3/10"
+  },
+  {
+   "tests": [],
+   "checks": {
+    "1": {
+     "passed": false
+    },
+    "2": {
+     "passed": false
+    }
+   },
+   "max": 3,
+   "out": {
+    "suggested": 0,
+    "ratio": 0,
+    "passedWeight": 0,
+    "totalWeight": 0,
+    "checkedCount": 0,
+    "passedCount": 0,
+    "totalCount": 0,
+    "complete": false,
+    "hasTests": false
+   },
+   "tag": "0/3/3"
+  },
+  {
+   "tests": [],
+   "checks": {
+    "1": {
+     "passed": true
+    },
+    "2": {
+     "passed": true
+    },
+    "3": {
+     "passed": true
+    }
+   },
+   "max": 0,
+   "out": {
+    "suggested": 0,
+    "ratio": 0,
+    "passedWeight": 0,
+    "totalWeight": 0,
+    "checkedCount": 0,
+    "passedCount": 0,
+    "totalCount": 0,
+    "complete": false,
+    "hasTests": false
+   },
+   "tag": "0/4/0"
+  },
+  {
+   "tests": [],
+   "checks": {
+    "1": {
+     "passed": true
+    },
+    "2": {
+     "passed": true
+    },
+    "3": {
+     "passed": true
+    }
+   },
+   "max": 1,
+   "out": {
+    "suggested": 0,
+    "ratio": 0,
+    "passedWeight": 0,
+    "totalWeight": 0,
+    "checkedCount": 0,
+    "passedCount": 0,
+    "totalCount": 0,
+    "complete": false,
+    "hasTests": false
+   },
+   "tag": "0/4/1"
+  },
+  {
+   "tests": [],
+   "checks": {
+    "1": {
+     "passed": true
+    },
+    "2": {
+     "passed": true
+    },
+    "3": {
+     "passed": true
+    }
+   },
+   "max": 2,
+   "out": {
+    "suggested": 0,
+    "ratio": 0,
+    "passedWeight": 0,
+    "totalWeight": 0,
+    "checkedCount": 0,
+    "passedCount": 0,
+    "totalCount": 0,
+    "complete": false,
+    "hasTests": false
+   },
+   "tag": "0/4/2"
+  },
+  {
+   "tests": [],
+   "checks": {
+    "1": {
+     "passed": true
+    },
+    "2": {
+     "passed": true
+    },
+    "3": {
+     "passed": true
+    }
+   },
+   "max": 4,
+   "out": {
+    "suggested": 0,
+    "ratio": 0,
+    "passedWeight": 0,
+    "totalWeight": 0,
+    "checkedCount": 0,
+    "passedCount": 0,
+    "totalCount": 0,
+    "complete": false,
+    "hasTests": false
+   },
+   "tag": "0/4/4"
+  },
+  {
+   "tests": [],
+   "checks": {
+    "1": {
+     "passed": true
+    },
+    "2": {
+     "passed": true
+    },
+    "3": {
+     "passed": true
+    }
+   },
+   "max": 10,
+   "out": {
+    "suggested": 0,
+    "ratio": 0,
+    "passedWeight": 0,
+    "totalWeight": 0,
+    "checkedCount": 0,
+    "passedCount": 0,
+    "totalCount": 0,
+    "complete": false,
+    "hasTests": false
+   },
+   "tag": "0/4/10"
+  },
+  {
+   "tests": [],
+   "checks": {
+    "1": {
+     "passed": true
+    },
+    "2": {
+     "passed": true
+    },
+    "3": {
+     "passed": true
+    }
+   },
+   "max": 3,
+   "out": {
+    "suggested": 0,
+    "ratio": 0,
+    "passedWeight": 0,
+    "totalWeight": 0,
+    "checkedCount": 0,
+    "passedCount": 0,
+    "totalCount": 0,
+    "complete": false,
+    "hasTests": false
+   },
+   "tag": "0/4/3"
+  },
+  {
+   "tests": [
+    {
+     "id": 1,
+     "weight": 1
+    }
+   ],
+   "checks": {},
+   "max": 0,
+   "out": {
+    "suggested": 0,
+    "ratio": 0,
+    "passedWeight": 0,
+    "totalWeight": 1,
+    "checkedCount": 0,
+    "passedCount": 0,
+    "totalCount": 1,
+    "complete": false,
+    "hasTests": true
+   },
+   "tag": "1/0/0"
+  },
+  {
+   "tests": [
+    {
+     "id": 1,
+     "weight": 1
+    }
+   ],
+   "checks": {},
+   "max": 1,
+   "out": {
+    "suggested": 0,
+    "ratio": 0,
+    "passedWeight": 0,
+    "totalWeight": 1,
+    "checkedCount": 0,
+    "passedCount": 0,
+    "totalCount": 1,
+    "complete": false,
+    "hasTests": true
+   },
+   "tag": "1/0/1"
+  },
+  {
+   "tests": [
+    {
+     "id": 1,
+     "weight": 1
+    }
+   ],
+   "checks": {},
+   "max": 2,
+   "out": {
+    "suggested": 0,
+    "ratio": 0,
+    "passedWeight": 0,
+    "totalWeight": 1,
+    "checkedCount": 0,
+    "passedCount": 0,
+    "totalCount": 1,
+    "complete": false,
+    "hasTests": true
+   },
+   "tag": "1/0/2"
+  },
+  {
+   "tests": [
+    {
+     "id": 1,
+     "weight": 1
+    }
+   ],
+   "checks": {},
+   "max": 4,
+   "out": {
+    "suggested": 0,
+    "ratio": 0,
+    "passedWeight": 0,
+    "totalWeight": 1,
+    "checkedCount": 0,
+    "passedCount": 0,
+    "totalCount": 1,
+    "complete": false,
+    "hasTests": true
+   },
+   "tag": "1/0/4"
+  },
+  {
+   "tests": [
+    {
+     "id": 1,
+     "weight": 1
+    }
+   ],
+   "checks": {},
+   "max": 10,
+   "out": {
+    "suggested": 0,
+    "ratio": 0,
+    "passedWeight": 0,
+    "totalWeight": 1,
+    "checkedCount": 0,
+    "passedCount": 0,
+    "totalCount": 1,
+    "complete": false,
+    "hasTests": true
+   },
+   "tag": "1/0/10"
+  },
+  {
+   "tests": [
+    {
+     "id": 1,
+     "weight": 1
+    }
+   ],
+   "checks": {},
+   "max": 3,
+   "out": {
+    "suggested": 0,
+    "ratio": 0,
+    "passedWeight": 0,
+    "totalWeight": 1,
+    "checkedCount": 0,
+    "passedCount": 0,
+    "totalCount": 1,
+    "complete": false,
+    "hasTests": true
+   },
+   "tag": "1/0/3"
+  },
+  {
+   "tests": [
+    {
+     "id": 1,
+     "weight": 1
+    }
+   ],
+   "checks": {
+    "1": {
+     "passed": true
+    }
+   },
+   "max": 0,
+   "out": {
+    "suggested": 0,
+    "ratio": 1,
+    "passedWeight": 1,
+    "totalWeight": 1,
+    "checkedCount": 1,
+    "passedCount": 1,
+    "totalCount": 1,
+    "complete": true,
+    "hasTests": true
+   },
+   "tag": "1/1/0"
+  },
+  {
+   "tests": [
+    {
+     "id": 1,
+     "weight": 1
+    }
+   ],
+   "checks": {
+    "1": {
+     "passed": true
+    }
+   },
+   "max": 1,
+   "out": {
+    "suggested": 1,
+    "ratio": 1,
+    "passedWeight": 1,
+    "totalWeight": 1,
+    "checkedCount": 1,
+    "passedCount": 1,
+    "totalCount": 1,
+    "complete": true,
+    "hasTests": true
+   },
+   "tag": "1/1/1"
+  },
+  {
+   "tests": [
+    {
+     "id": 1,
+     "weight": 1
+    }
+   ],
+   "checks": {
+    "1": {
+     "passed": true
+    }
+   },
+   "max": 2,
+   "out": {
+    "suggested": 2,
+    "ratio": 1,
+    "passedWeight": 1,
+    "totalWeight": 1,
+    "checkedCount": 1,
+    "passedCount": 1,
+    "totalCount": 1,
+    "complete": true,
+    "hasTests": true
+   },
+   "tag": "1/1/2"
+  },
+  {
+   "tests": [
+    {
+     "id": 1,
+     "weight": 1
+    }
+   ],
+   "checks": {
+    "1": {
+     "passed": true
+    }
+   },
+   "max": 4,
+   "out": {
+    "suggested": 4,
+    "ratio": 1,
+    "passedWeight": 1,
+    "totalWeight": 1,
+    "checkedCount": 1,
+    "passedCount": 1,
+    "totalCount": 1,
+    "complete": true,
+    "hasTests": true
+   },
+   "tag": "1/1/4"
+  },
+  {
+   "tests": [
+    {
+     "id": 1,
+     "weight": 1
+    }
+   ],
+   "checks": {
+    "1": {
+     "passed": true
+    }
+   },
+   "max": 10,
+   "out": {
+    "suggested": 10,
+    "ratio": 1,
+    "passedWeight": 1,
+    "totalWeight": 1,
+    "checkedCount": 1,
+    "passedCount": 1,
+    "totalCount": 1,
+    "complete": true,
+    "hasTests": true
+   },
+   "tag": "1/1/10"
+  },
+  {
+   "tests": [
+    {
+     "id": 1,
+     "weight": 1
+    }
+   ],
+   "checks": {
+    "1": {
+     "passed": true
+    }
+   },
+   "max": 3,
+   "out": {
+    "suggested": 3,
+    "ratio": 1,
+    "passedWeight": 1,
+    "totalWeight": 1,
+    "checkedCount": 1,
+    "passedCount": 1,
+    "totalCount": 1,
+    "complete": true,
+    "hasTests": true
+   },
+   "tag": "1/1/3"
+  },
+  {
+   "tests": [
+    {
+     "id": 1,
+     "weight": 1
+    }
+   ],
+   "checks": {
+    "1": {
+     "passed": true
+    },
+    "2": {
+     "passed": false
+    },
+    "3": {
+     "passed": true
+    }
+   },
+   "max": 0,
+   "out": {
+    "suggested": 0,
+    "ratio": 1,
+    "passedWeight": 1,
+    "totalWeight": 1,
+    "checkedCount": 1,
+    "passedCount": 1,
+    "totalCount": 1,
+    "complete": true,
+    "hasTests": true
+   },
+   "tag": "1/2/0"
+  },
+  {
+   "tests": [
+    {
+     "id": 1,
+     "weight": 1
+    }
+   ],
+   "checks": {
+    "1": {
+     "passed": true
+    },
+    "2": {
+     "passed": false
+    },
+    "3": {
+     "passed": true
+    }
+   },
+   "max": 1,
+   "out": {
+    "suggested": 1,
+    "ratio": 1,
+    "passedWeight": 1,
+    "totalWeight": 1,
+    "checkedCount": 1,
+    "passedCount": 1,
+    "totalCount": 1,
+    "complete": true,
+    "hasTests": true
+   },
+   "tag": "1/2/1"
+  },
+  {
+   "tests": [
+    {
+     "id": 1,
+     "weight": 1
+    }
+   ],
+   "checks": {
+    "1": {
+     "passed": true
+    },
+    "2": {
+     "passed": false
+    },
+    "3": {
+     "passed": true
+    }
+   },
+   "max": 2,
+   "out": {
+    "suggested": 2,
+    "ratio": 1,
+    "passedWeight": 1,
+    "totalWeight": 1,
+    "checkedCount": 1,
+    "passedCount": 1,
+    "totalCount": 1,
+    "complete": true,
+    "hasTests": true
+   },
+   "tag": "1/2/2"
+  },
+  {
+   "tests": [
+    {
+     "id": 1,
+     "weight": 1
+    }
+   ],
+   "checks": {
+    "1": {
+     "passed": true
+    },
+    "2": {
+     "passed": false
+    },
+    "3": {
+     "passed": true
+    }
+   },
+   "max": 4,
+   "out": {
+    "suggested": 4,
+    "ratio": 1,
+    "passedWeight": 1,
+    "totalWeight": 1,
+    "checkedCount": 1,
+    "passedCount": 1,
+    "totalCount": 1,
+    "complete": true,
+    "hasTests": true
+   },
+   "tag": "1/2/4"
+  },
+  {
+   "tests": [
+    {
+     "id": 1,
+     "weight": 1
+    }
+   ],
+   "checks": {
+    "1": {
+     "passed": true
+    },
+    "2": {
+     "passed": false
+    },
+    "3": {
+     "passed": true
+    }
+   },
+   "max": 10,
+   "out": {
+    "suggested": 10,
+    "ratio": 1,
+    "passedWeight": 1,
+    "totalWeight": 1,
+    "checkedCount": 1,
+    "passedCount": 1,
+    "totalCount": 1,
+    "complete": true,
+    "hasTests": true
+   },
+   "tag": "1/2/10"
+  },
+  {
+   "tests": [
+    {
+     "id": 1,
+     "weight": 1
+    }
+   ],
+   "checks": {
+    "1": {
+     "passed": true
+    },
+    "2": {
+     "passed": false
+    },
+    "3": {
+     "passed": true
+    }
+   },
+   "max": 3,
+   "out": {
+    "suggested": 3,
+    "ratio": 1,
+    "passedWeight": 1,
+    "totalWeight": 1,
+    "checkedCount": 1,
+    "passedCount": 1,
+    "totalCount": 1,
+    "complete": true,
+    "hasTests": true
+   },
+   "tag": "1/2/3"
+  },
+  {
+   "tests": [
+    {
+     "id": 1,
+     "weight": 1
+    }
+   ],
+   "checks": {
+    "1": {
+     "passed": false
+    },
+    "2": {
+     "passed": false
+    }
+   },
+   "max": 0,
+   "out": {
+    "suggested": 0,
+    "ratio": 0,
+    "passedWeight": 0,
+    "totalWeight": 1,
+    "checkedCount": 1,
+    "passedCount": 0,
+    "totalCount": 1,
+    "complete": true,
+    "hasTests": true
+   },
+   "tag": "1/3/0"
+  },
+  {
+   "tests": [
+    {
+     "id": 1,
+     "weight": 1
+    }
+   ],
+   "checks": {
+    "1": {
+     "passed": false
+    },
+    "2": {
+     "passed": false
+    }
+   },
+   "max": 1,
+   "out": {
+    "suggested": 0,
+    "ratio": 0,
+    "passedWeight": 0,
+    "totalWeight": 1,
+    "checkedCount": 1,
+    "passedCount": 0,
+    "totalCount": 1,
+    "complete": true,
+    "hasTests": true
+   },
+   "tag": "1/3/1"
+  },
+  {
+   "tests": [
+    {
+     "id": 1,
+     "weight": 1
+    }
+   ],
+   "checks": {
+    "1": {
+     "passed": false
+    },
+    "2": {
+     "passed": false
+    }
+   },
+   "max": 2,
+   "out": {
+    "suggested": 0,
+    "ratio": 0,
+    "passedWeight": 0,
+    "totalWeight": 1,
+    "checkedCount": 1,
+    "passedCount": 0,
+    "totalCount": 1,
+    "complete": true,
+    "hasTests": true
+   },
+   "tag": "1/3/2"
+  },
+  {
+   "tests": [
+    {
+     "id": 1,
+     "weight": 1
+    }
+   ],
+   "checks": {
+    "1": {
+     "passed": false
+    },
+    "2": {
+     "passed": false
+    }
+   },
+   "max": 4,
+   "out": {
+    "suggested": 0,
+    "ratio": 0,
+    "passedWeight": 0,
+    "totalWeight": 1,
+    "checkedCount": 1,
+    "passedCount": 0,
+    "totalCount": 1,
+    "complete": true,
+    "hasTests": true
+   },
+   "tag": "1/3/4"
+  },
+  {
+   "tests": [
+    {
+     "id": 1,
+     "weight": 1
+    }
+   ],
+   "checks": {
+    "1": {
+     "passed": false
+    },
+    "2": {
+     "passed": false
+    }
+   },
+   "max": 10,
+   "out": {
+    "suggested": 0,
+    "ratio": 0,
+    "passedWeight": 0,
+    "totalWeight": 1,
+    "checkedCount": 1,
+    "passedCount": 0,
+    "totalCount": 1,
+    "complete": true,
+    "hasTests": true
+   },
+   "tag": "1/3/10"
+  },
+  {
+   "tests": [
+    {
+     "id": 1,
+     "weight": 1
+    }
+   ],
+   "checks": {
+    "1": {
+     "passed": false
+    },
+    "2": {
+     "passed": false
+    }
+   },
+   "max": 3,
+   "out": {
+    "suggested": 0,
+    "ratio": 0,
+    "passedWeight": 0,
+    "totalWeight": 1,
+    "checkedCount": 1,
+    "passedCount": 0,
+    "totalCount": 1,
+    "complete": true,
+    "hasTests": true
+   },
+   "tag": "1/3/3"
+  },
+  {
+   "tests": [
+    {
+     "id": 1,
+     "weight": 1
+    }
+   ],
+   "checks": {
+    "1": {
+     "passed": true
+    },
+    "2": {
+     "passed": true
+    },
+    "3": {
+     "passed": true
+    }
+   },
+   "max": 0,
+   "out": {
+    "suggested": 0,
+    "ratio": 1,
+    "passedWeight": 1,
+    "totalWeight": 1,
+    "checkedCount": 1,
+    "passedCount": 1,
+    "totalCount": 1,
+    "complete": true,
+    "hasTests": true
+   },
+   "tag": "1/4/0"
+  },
+  {
+   "tests": [
+    {
+     "id": 1,
+     "weight": 1
+    }
+   ],
+   "checks": {
+    "1": {
+     "passed": true
+    },
+    "2": {
+     "passed": true
+    },
+    "3": {
+     "passed": true
+    }
+   },
+   "max": 1,
+   "out": {
+    "suggested": 1,
+    "ratio": 1,
+    "passedWeight": 1,
+    "totalWeight": 1,
+    "checkedCount": 1,
+    "passedCount": 1,
+    "totalCount": 1,
+    "complete": true,
+    "hasTests": true
+   },
+   "tag": "1/4/1"
+  },
+  {
+   "tests": [
+    {
+     "id": 1,
+     "weight": 1
+    }
+   ],
+   "checks": {
+    "1": {
+     "passed": true
+    },
+    "2": {
+     "passed": true
+    },
+    "3": {
+     "passed": true
+    }
+   },
+   "max": 2,
+   "out": {
+    "suggested": 2,
+    "ratio": 1,
+    "passedWeight": 1,
+    "totalWeight": 1,
+    "checkedCount": 1,
+    "passedCount": 1,
+    "totalCount": 1,
+    "complete": true,
+    "hasTests": true
+   },
+   "tag": "1/4/2"
+  },
+  {
+   "tests": [
+    {
+     "id": 1,
+     "weight": 1
+    }
+   ],
+   "checks": {
+    "1": {
+     "passed": true
+    },
+    "2": {
+     "passed": true
+    },
+    "3": {
+     "passed": true
+    }
+   },
+   "max": 4,
+   "out": {
+    "suggested": 4,
+    "ratio": 1,
+    "passedWeight": 1,
+    "totalWeight": 1,
+    "checkedCount": 1,
+    "passedCount": 1,
+    "totalCount": 1,
+    "complete": true,
+    "hasTests": true
+   },
+   "tag": "1/4/4"
+  },
+  {
+   "tests": [
+    {
+     "id": 1,
+     "weight": 1
+    }
+   ],
+   "checks": {
+    "1": {
+     "passed": true
+    },
+    "2": {
+     "passed": true
+    },
+    "3": {
+     "passed": true
+    }
+   },
+   "max": 10,
+   "out": {
+    "suggested": 10,
+    "ratio": 1,
+    "passedWeight": 1,
+    "totalWeight": 1,
+    "checkedCount": 1,
+    "passedCount": 1,
+    "totalCount": 1,
+    "complete": true,
+    "hasTests": true
+   },
+   "tag": "1/4/10"
+  },
+  {
+   "tests": [
+    {
+     "id": 1,
+     "weight": 1
+    }
+   ],
+   "checks": {
+    "1": {
+     "passed": true
+    },
+    "2": {
+     "passed": true
+    },
+    "3": {
+     "passed": true
+    }
+   },
+   "max": 3,
+   "out": {
+    "suggested": 3,
+    "ratio": 1,
+    "passedWeight": 1,
+    "totalWeight": 1,
+    "checkedCount": 1,
+    "passedCount": 1,
+    "totalCount": 1,
+    "complete": true,
+    "hasTests": true
+   },
+   "tag": "1/4/3"
+  },
+  {
+   "tests": [
+    {
+     "id": 1,
+     "weight": 1
+    },
+    {
+     "id": 2,
+     "weight": 2
+    },
+    {
+     "id": 3,
+     "weight": 1
+    }
+   ],
+   "checks": {},
+   "max": 0,
+   "out": {
+    "suggested": 0,
+    "ratio": 0,
+    "passedWeight": 0,
+    "totalWeight": 4,
+    "checkedCount": 0,
+    "passedCount": 0,
+    "totalCount": 3,
+    "complete": false,
+    "hasTests": true
+   },
+   "tag": "2/0/0"
+  },
+  {
+   "tests": [
+    {
+     "id": 1,
+     "weight": 1
+    },
+    {
+     "id": 2,
+     "weight": 2
+    },
+    {
+     "id": 3,
+     "weight": 1
+    }
+   ],
+   "checks": {},
+   "max": 1,
+   "out": {
+    "suggested": 0,
+    "ratio": 0,
+    "passedWeight": 0,
+    "totalWeight": 4,
+    "checkedCount": 0,
+    "passedCount": 0,
+    "totalCount": 3,
+    "complete": false,
+    "hasTests": true
+   },
+   "tag": "2/0/1"
+  },
+  {
+   "tests": [
+    {
+     "id": 1,
+     "weight": 1
+    },
+    {
+     "id": 2,
+     "weight": 2
+    },
+    {
+     "id": 3,
+     "weight": 1
+    }
+   ],
+   "checks": {},
+   "max": 2,
+   "out": {
+    "suggested": 0,
+    "ratio": 0,
+    "passedWeight": 0,
+    "totalWeight": 4,
+    "checkedCount": 0,
+    "passedCount": 0,
+    "totalCount": 3,
+    "complete": false,
+    "hasTests": true
+   },
+   "tag": "2/0/2"
+  },
+  {
+   "tests": [
+    {
+     "id": 1,
+     "weight": 1
+    },
+    {
+     "id": 2,
+     "weight": 2
+    },
+    {
+     "id": 3,
+     "weight": 1
+    }
+   ],
+   "checks": {},
+   "max": 4,
+   "out": {
+    "suggested": 0,
+    "ratio": 0,
+    "passedWeight": 0,
+    "totalWeight": 4,
+    "checkedCount": 0,
+    "passedCount": 0,
+    "totalCount": 3,
+    "complete": false,
+    "hasTests": true
+   },
+   "tag": "2/0/4"
+  },
+  {
+   "tests": [
+    {
+     "id": 1,
+     "weight": 1
+    },
+    {
+     "id": 2,
+     "weight": 2
+    },
+    {
+     "id": 3,
+     "weight": 1
+    }
+   ],
+   "checks": {},
+   "max": 10,
+   "out": {
+    "suggested": 0,
+    "ratio": 0,
+    "passedWeight": 0,
+    "totalWeight": 4,
+    "checkedCount": 0,
+    "passedCount": 0,
+    "totalCount": 3,
+    "complete": false,
+    "hasTests": true
+   },
+   "tag": "2/0/10"
+  },
+  {
+   "tests": [
+    {
+     "id": 1,
+     "weight": 1
+    },
+    {
+     "id": 2,
+     "weight": 2
+    },
+    {
+     "id": 3,
+     "weight": 1
+    }
+   ],
+   "checks": {},
+   "max": 3,
+   "out": {
+    "suggested": 0,
+    "ratio": 0,
+    "passedWeight": 0,
+    "totalWeight": 4,
+    "checkedCount": 0,
+    "passedCount": 0,
+    "totalCount": 3,
+    "complete": false,
+    "hasTests": true
+   },
+   "tag": "2/0/3"
+  },
+  {
+   "tests": [
+    {
+     "id": 1,
+     "weight": 1
+    },
+    {
+     "id": 2,
+     "weight": 2
+    },
+    {
+     "id": 3,
+     "weight": 1
+    }
+   ],
+   "checks": {
+    "1": {
+     "passed": true
+    }
+   },
+   "max": 0,
+   "out": {
+    "suggested": 0,
+    "ratio": 0.25,
+    "passedWeight": 1,
+    "totalWeight": 4,
+    "checkedCount": 1,
+    "passedCount": 1,
+    "totalCount": 3,
+    "complete": false,
+    "hasTests": true
+   },
+   "tag": "2/1/0"
+  },
+  {
+   "tests": [
+    {
+     "id": 1,
+     "weight": 1
+    },
+    {
+     "id": 2,
+     "weight": 2
+    },
+    {
+     "id": 3,
+     "weight": 1
+    }
+   ],
+   "checks": {
+    "1": {
+     "passed": true
+    }
+   },
+   "max": 1,
+   "out": {
+    "suggested": 0.25,
+    "ratio": 0.25,
+    "passedWeight": 1,
+    "totalWeight": 4,
+    "checkedCount": 1,
+    "passedCount": 1,
+    "totalCount": 3,
+    "complete": false,
+    "hasTests": true
+   },
+   "tag": "2/1/1"
+  },
+  {
+   "tests": [
+    {
+     "id": 1,
+     "weight": 1
+    },
+    {
+     "id": 2,
+     "weight": 2
+    },
+    {
+     "id": 3,
+     "weight": 1
+    }
+   ],
+   "checks": {
+    "1": {
+     "passed": true
+    }
+   },
+   "max": 2,
+   "out": {
+    "suggested": 0.5,
+    "ratio": 0.25,
+    "passedWeight": 1,
+    "totalWeight": 4,
+    "checkedCount": 1,
+    "passedCount": 1,
+    "totalCount": 3,
+    "complete": false,
+    "hasTests": true
+   },
+   "tag": "2/1/2"
+  },
+  {
+   "tests": [
+    {
+     "id": 1,
+     "weight": 1
+    },
+    {
+     "id": 2,
+     "weight": 2
+    },
+    {
+     "id": 3,
+     "weight": 1
+    }
+   ],
+   "checks": {
+    "1": {
+     "passed": true
+    }
+   },
+   "max": 4,
+   "out": {
+    "suggested": 1,
+    "ratio": 0.25,
+    "passedWeight": 1,
+    "totalWeight": 4,
+    "checkedCount": 1,
+    "passedCount": 1,
+    "totalCount": 3,
+    "complete": false,
+    "hasTests": true
+   },
+   "tag": "2/1/4"
+  },
+  {
+   "tests": [
+    {
+     "id": 1,
+     "weight": 1
+    },
+    {
+     "id": 2,
+     "weight": 2
+    },
+    {
+     "id": 3,
+     "weight": 1
+    }
+   ],
+   "checks": {
+    "1": {
+     "passed": true
+    }
+   },
+   "max": 10,
+   "out": {
+    "suggested": 2.5,
+    "ratio": 0.25,
+    "passedWeight": 1,
+    "totalWeight": 4,
+    "checkedCount": 1,
+    "passedCount": 1,
+    "totalCount": 3,
+    "complete": false,
+    "hasTests": true
+   },
+   "tag": "2/1/10"
+  },
+  {
+   "tests": [
+    {
+     "id": 1,
+     "weight": 1
+    },
+    {
+     "id": 2,
+     "weight": 2
+    },
+    {
+     "id": 3,
+     "weight": 1
+    }
+   ],
+   "checks": {
+    "1": {
+     "passed": true
+    }
+   },
+   "max": 3,
+   "out": {
+    "suggested": 0.75,
+    "ratio": 0.25,
+    "passedWeight": 1,
+    "totalWeight": 4,
+    "checkedCount": 1,
+    "passedCount": 1,
+    "totalCount": 3,
+    "complete": false,
+    "hasTests": true
+   },
+   "tag": "2/1/3"
+  },
+  {
+   "tests": [
+    {
+     "id": 1,
+     "weight": 1
+    },
+    {
+     "id": 2,
+     "weight": 2
+    },
+    {
+     "id": 3,
+     "weight": 1
+    }
+   ],
+   "checks": {
+    "1": {
+     "passed": true
+    },
+    "2": {
+     "passed": false
+    },
+    "3": {
+     "passed": true
+    }
+   },
+   "max": 0,
+   "out": {
+    "suggested": 0,
+    "ratio": 0.5,
+    "passedWeight": 2,
+    "totalWeight": 4,
+    "checkedCount": 3,
+    "passedCount": 2,
+    "totalCount": 3,
+    "complete": true,
+    "hasTests": true
+   },
+   "tag": "2/2/0"
+  },
+  {
+   "tests": [
+    {
+     "id": 1,
+     "weight": 1
+    },
+    {
+     "id": 2,
+     "weight": 2
+    },
+    {
+     "id": 3,
+     "weight": 1
+    }
+   ],
+   "checks": {
+    "1": {
+     "passed": true
+    },
+    "2": {
+     "passed": false
+    },
+    "3": {
+     "passed": true
+    }
+   },
+   "max": 1,
+   "out": {
+    "suggested": 0.5,
+    "ratio": 0.5,
+    "passedWeight": 2,
+    "totalWeight": 4,
+    "checkedCount": 3,
+    "passedCount": 2,
+    "totalCount": 3,
+    "complete": true,
+    "hasTests": true
+   },
+   "tag": "2/2/1"
+  },
+  {
+   "tests": [
+    {
+     "id": 1,
+     "weight": 1
+    },
+    {
+     "id": 2,
+     "weight": 2
+    },
+    {
+     "id": 3,
+     "weight": 1
+    }
+   ],
+   "checks": {
+    "1": {
+     "passed": true
+    },
+    "2": {
+     "passed": false
+    },
+    "3": {
+     "passed": true
+    }
+   },
+   "max": 2,
+   "out": {
+    "suggested": 1,
+    "ratio": 0.5,
+    "passedWeight": 2,
+    "totalWeight": 4,
+    "checkedCount": 3,
+    "passedCount": 2,
+    "totalCount": 3,
+    "complete": true,
+    "hasTests": true
+   },
+   "tag": "2/2/2"
+  },
+  {
+   "tests": [
+    {
+     "id": 1,
+     "weight": 1
+    },
+    {
+     "id": 2,
+     "weight": 2
+    },
+    {
+     "id": 3,
+     "weight": 1
+    }
+   ],
+   "checks": {
+    "1": {
+     "passed": true
+    },
+    "2": {
+     "passed": false
+    },
+    "3": {
+     "passed": true
+    }
+   },
+   "max": 4,
+   "out": {
+    "suggested": 2,
+    "ratio": 0.5,
+    "passedWeight": 2,
+    "totalWeight": 4,
+    "checkedCount": 3,
+    "passedCount": 2,
+    "totalCount": 3,
+    "complete": true,
+    "hasTests": true
+   },
+   "tag": "2/2/4"
+  },
+  {
+   "tests": [
+    {
+     "id": 1,
+     "weight": 1
+    },
+    {
+     "id": 2,
+     "weight": 2
+    },
+    {
+     "id": 3,
+     "weight": 1
+    }
+   ],
+   "checks": {
+    "1": {
+     "passed": true
+    },
+    "2": {
+     "passed": false
+    },
+    "3": {
+     "passed": true
+    }
+   },
+   "max": 10,
+   "out": {
+    "suggested": 5,
+    "ratio": 0.5,
+    "passedWeight": 2,
+    "totalWeight": 4,
+    "checkedCount": 3,
+    "passedCount": 2,
+    "totalCount": 3,
+    "complete": true,
+    "hasTests": true
+   },
+   "tag": "2/2/10"
+  },
+  {
+   "tests": [
+    {
+     "id": 1,
+     "weight": 1
+    },
+    {
+     "id": 2,
+     "weight": 2
+    },
+    {
+     "id": 3,
+     "weight": 1
+    }
+   ],
+   "checks": {
+    "1": {
+     "passed": true
+    },
+    "2": {
+     "passed": false
+    },
+    "3": {
+     "passed": true
+    }
+   },
+   "max": 3,
+   "out": {
+    "suggested": 1.5,
+    "ratio": 0.5,
+    "passedWeight": 2,
+    "totalWeight": 4,
+    "checkedCount": 3,
+    "passedCount": 2,
+    "totalCount": 3,
+    "complete": true,
+    "hasTests": true
+   },
+   "tag": "2/2/3"
+  },
+  {
+   "tests": [
+    {
+     "id": 1,
+     "weight": 1
+    },
+    {
+     "id": 2,
+     "weight": 2
+    },
+    {
+     "id": 3,
+     "weight": 1
+    }
+   ],
+   "checks": {
+    "1": {
+     "passed": false
+    },
+    "2": {
+     "passed": false
+    }
+   },
+   "max": 0,
+   "out": {
+    "suggested": 0,
+    "ratio": 0,
+    "passedWeight": 0,
+    "totalWeight": 4,
+    "checkedCount": 2,
+    "passedCount": 0,
+    "totalCount": 3,
+    "complete": false,
+    "hasTests": true
+   },
+   "tag": "2/3/0"
+  },
+  {
+   "tests": [
+    {
+     "id": 1,
+     "weight": 1
+    },
+    {
+     "id": 2,
+     "weight": 2
+    },
+    {
+     "id": 3,
+     "weight": 1
+    }
+   ],
+   "checks": {
+    "1": {
+     "passed": false
+    },
+    "2": {
+     "passed": false
+    }
+   },
+   "max": 1,
+   "out": {
+    "suggested": 0,
+    "ratio": 0,
+    "passedWeight": 0,
+    "totalWeight": 4,
+    "checkedCount": 2,
+    "passedCount": 0,
+    "totalCount": 3,
+    "complete": false,
+    "hasTests": true
+   },
+   "tag": "2/3/1"
+  },
+  {
+   "tests": [
+    {
+     "id": 1,
+     "weight": 1
+    },
+    {
+     "id": 2,
+     "weight": 2
+    },
+    {
+     "id": 3,
+     "weight": 1
+    }
+   ],
+   "checks": {
+    "1": {
+     "passed": false
+    },
+    "2": {
+     "passed": false
+    }
+   },
+   "max": 2,
+   "out": {
+    "suggested": 0,
+    "ratio": 0,
+    "passedWeight": 0,
+    "totalWeight": 4,
+    "checkedCount": 2,
+    "passedCount": 0,
+    "totalCount": 3,
+    "complete": false,
+    "hasTests": true
+   },
+   "tag": "2/3/2"
+  },
+  {
+   "tests": [
+    {
+     "id": 1,
+     "weight": 1
+    },
+    {
+     "id": 2,
+     "weight": 2
+    },
+    {
+     "id": 3,
+     "weight": 1
+    }
+   ],
+   "checks": {
+    "1": {
+     "passed": false
+    },
+    "2": {
+     "passed": false
+    }
+   },
+   "max": 4,
+   "out": {
+    "suggested": 0,
+    "ratio": 0,
+    "passedWeight": 0,
+    "totalWeight": 4,
+    "checkedCount": 2,
+    "passedCount": 0,
+    "totalCount": 3,
+    "complete": false,
+    "hasTests": true
+   },
+   "tag": "2/3/4"
+  },
+  {
+   "tests": [
+    {
+     "id": 1,
+     "weight": 1
+    },
+    {
+     "id": 2,
+     "weight": 2
+    },
+    {
+     "id": 3,
+     "weight": 1
+    }
+   ],
+   "checks": {
+    "1": {
+     "passed": false
+    },
+    "2": {
+     "passed": false
+    }
+   },
+   "max": 10,
+   "out": {
+    "suggested": 0,
+    "ratio": 0,
+    "passedWeight": 0,
+    "totalWeight": 4,
+    "checkedCount": 2,
+    "passedCount": 0,
+    "totalCount": 3,
+    "complete": false,
+    "hasTests": true
+   },
+   "tag": "2/3/10"
+  },
+  {
+   "tests": [
+    {
+     "id": 1,
+     "weight": 1
+    },
+    {
+     "id": 2,
+     "weight": 2
+    },
+    {
+     "id": 3,
+     "weight": 1
+    }
+   ],
+   "checks": {
+    "1": {
+     "passed": false
+    },
+    "2": {
+     "passed": false
+    }
+   },
+   "max": 3,
+   "out": {
+    "suggested": 0,
+    "ratio": 0,
+    "passedWeight": 0,
+    "totalWeight": 4,
+    "checkedCount": 2,
+    "passedCount": 0,
+    "totalCount": 3,
+    "complete": false,
+    "hasTests": true
+   },
+   "tag": "2/3/3"
+  },
+  {
+   "tests": [
+    {
+     "id": 1,
+     "weight": 1
+    },
+    {
+     "id": 2,
+     "weight": 2
+    },
+    {
+     "id": 3,
+     "weight": 1
+    }
+   ],
+   "checks": {
+    "1": {
+     "passed": true
+    },
+    "2": {
+     "passed": true
+    },
+    "3": {
+     "passed": true
+    }
+   },
+   "max": 0,
+   "out": {
+    "suggested": 0,
+    "ratio": 1,
+    "passedWeight": 4,
+    "totalWeight": 4,
+    "checkedCount": 3,
+    "passedCount": 3,
+    "totalCount": 3,
+    "complete": true,
+    "hasTests": true
+   },
+   "tag": "2/4/0"
+  },
+  {
+   "tests": [
+    {
+     "id": 1,
+     "weight": 1
+    },
+    {
+     "id": 2,
+     "weight": 2
+    },
+    {
+     "id": 3,
+     "weight": 1
+    }
+   ],
+   "checks": {
+    "1": {
+     "passed": true
+    },
+    "2": {
+     "passed": true
+    },
+    "3": {
+     "passed": true
+    }
+   },
+   "max": 1,
+   "out": {
+    "suggested": 1,
+    "ratio": 1,
+    "passedWeight": 4,
+    "totalWeight": 4,
+    "checkedCount": 3,
+    "passedCount": 3,
+    "totalCount": 3,
+    "complete": true,
+    "hasTests": true
+   },
+   "tag": "2/4/1"
+  },
+  {
+   "tests": [
+    {
+     "id": 1,
+     "weight": 1
+    },
+    {
+     "id": 2,
+     "weight": 2
+    },
+    {
+     "id": 3,
+     "weight": 1
+    }
+   ],
+   "checks": {
+    "1": {
+     "passed": true
+    },
+    "2": {
+     "passed": true
+    },
+    "3": {
+     "passed": true
+    }
+   },
+   "max": 2,
+   "out": {
+    "suggested": 2,
+    "ratio": 1,
+    "passedWeight": 4,
+    "totalWeight": 4,
+    "checkedCount": 3,
+    "passedCount": 3,
+    "totalCount": 3,
+    "complete": true,
+    "hasTests": true
+   },
+   "tag": "2/4/2"
+  },
+  {
+   "tests": [
+    {
+     "id": 1,
+     "weight": 1
+    },
+    {
+     "id": 2,
+     "weight": 2
+    },
+    {
+     "id": 3,
+     "weight": 1
+    }
+   ],
+   "checks": {
+    "1": {
+     "passed": true
+    },
+    "2": {
+     "passed": true
+    },
+    "3": {
+     "passed": true
+    }
+   },
+   "max": 4,
+   "out": {
+    "suggested": 4,
+    "ratio": 1,
+    "passedWeight": 4,
+    "totalWeight": 4,
+    "checkedCount": 3,
+    "passedCount": 3,
+    "totalCount": 3,
+    "complete": true,
+    "hasTests": true
+   },
+   "tag": "2/4/4"
+  },
+  {
+   "tests": [
+    {
+     "id": 1,
+     "weight": 1
+    },
+    {
+     "id": 2,
+     "weight": 2
+    },
+    {
+     "id": 3,
+     "weight": 1
+    }
+   ],
+   "checks": {
+    "1": {
+     "passed": true
+    },
+    "2": {
+     "passed": true
+    },
+    "3": {
+     "passed": true
+    }
+   },
+   "max": 10,
+   "out": {
+    "suggested": 10,
+    "ratio": 1,
+    "passedWeight": 4,
+    "totalWeight": 4,
+    "checkedCount": 3,
+    "passedCount": 3,
+    "totalCount": 3,
+    "complete": true,
+    "hasTests": true
+   },
+   "tag": "2/4/10"
+  },
+  {
+   "tests": [
+    {
+     "id": 1,
+     "weight": 1
+    },
+    {
+     "id": 2,
+     "weight": 2
+    },
+    {
+     "id": 3,
+     "weight": 1
+    }
+   ],
+   "checks": {
+    "1": {
+     "passed": true
+    },
+    "2": {
+     "passed": true
+    },
+    "3": {
+     "passed": true
+    }
+   },
+   "max": 3,
+   "out": {
+    "suggested": 3,
+    "ratio": 1,
+    "passedWeight": 4,
+    "totalWeight": 4,
+    "checkedCount": 3,
+    "passedCount": 3,
+    "totalCount": 3,
+    "complete": true,
+    "hasTests": true
+   },
+   "tag": "2/4/3"
+  },
+  {
+   "tests": [
+    {
+     "id": 1,
+     "weight": 0.5
+    },
+    {
+     "id": 2,
+     "weight": 0.5
+    }
+   ],
+   "checks": {},
+   "max": 0,
+   "out": {
+    "suggested": 0,
+    "ratio": 0,
+    "passedWeight": 0,
+    "totalWeight": 1,
+    "checkedCount": 0,
+    "passedCount": 0,
+    "totalCount": 2,
+    "complete": false,
+    "hasTests": true
+   },
+   "tag": "3/0/0"
+  },
+  {
+   "tests": [
+    {
+     "id": 1,
+     "weight": 0.5
+    },
+    {
+     "id": 2,
+     "weight": 0.5
+    }
+   ],
+   "checks": {},
+   "max": 1,
+   "out": {
+    "suggested": 0,
+    "ratio": 0,
+    "passedWeight": 0,
+    "totalWeight": 1,
+    "checkedCount": 0,
+    "passedCount": 0,
+    "totalCount": 2,
+    "complete": false,
+    "hasTests": true
+   },
+   "tag": "3/0/1"
+  },
+  {
+   "tests": [
+    {
+     "id": 1,
+     "weight": 0.5
+    },
+    {
+     "id": 2,
+     "weight": 0.5
+    }
+   ],
+   "checks": {},
+   "max": 2,
+   "out": {
+    "suggested": 0,
+    "ratio": 0,
+    "passedWeight": 0,
+    "totalWeight": 1,
+    "checkedCount": 0,
+    "passedCount": 0,
+    "totalCount": 2,
+    "complete": false,
+    "hasTests": true
+   },
+   "tag": "3/0/2"
+  },
+  {
+   "tests": [
+    {
+     "id": 1,
+     "weight": 0.5
+    },
+    {
+     "id": 2,
+     "weight": 0.5
+    }
+   ],
+   "checks": {},
+   "max": 4,
+   "out": {
+    "suggested": 0,
+    "ratio": 0,
+    "passedWeight": 0,
+    "totalWeight": 1,
+    "checkedCount": 0,
+    "passedCount": 0,
+    "totalCount": 2,
+    "complete": false,
+    "hasTests": true
+   },
+   "tag": "3/0/4"
+  },
+  {
+   "tests": [
+    {
+     "id": 1,
+     "weight": 0.5
+    },
+    {
+     "id": 2,
+     "weight": 0.5
+    }
+   ],
+   "checks": {},
+   "max": 10,
+   "out": {
+    "suggested": 0,
+    "ratio": 0,
+    "passedWeight": 0,
+    "totalWeight": 1,
+    "checkedCount": 0,
+    "passedCount": 0,
+    "totalCount": 2,
+    "complete": false,
+    "hasTests": true
+   },
+   "tag": "3/0/10"
+  },
+  {
+   "tests": [
+    {
+     "id": 1,
+     "weight": 0.5
+    },
+    {
+     "id": 2,
+     "weight": 0.5
+    }
+   ],
+   "checks": {},
+   "max": 3,
+   "out": {
+    "suggested": 0,
+    "ratio": 0,
+    "passedWeight": 0,
+    "totalWeight": 1,
+    "checkedCount": 0,
+    "passedCount": 0,
+    "totalCount": 2,
+    "complete": false,
+    "hasTests": true
+   },
+   "tag": "3/0/3"
+  },
+  {
+   "tests": [
+    {
+     "id": 1,
+     "weight": 0.5
+    },
+    {
+     "id": 2,
+     "weight": 0.5
+    }
+   ],
+   "checks": {
+    "1": {
+     "passed": true
+    }
+   },
+   "max": 0,
+   "out": {
+    "suggested": 0,
+    "ratio": 0.5,
+    "passedWeight": 0.5,
+    "totalWeight": 1,
+    "checkedCount": 1,
+    "passedCount": 1,
+    "totalCount": 2,
+    "complete": false,
+    "hasTests": true
+   },
+   "tag": "3/1/0"
+  },
+  {
+   "tests": [
+    {
+     "id": 1,
+     "weight": 0.5
+    },
+    {
+     "id": 2,
+     "weight": 0.5
+    }
+   ],
+   "checks": {
+    "1": {
+     "passed": true
+    }
+   },
+   "max": 1,
+   "out": {
+    "suggested": 0.5,
+    "ratio": 0.5,
+    "passedWeight": 0.5,
+    "totalWeight": 1,
+    "checkedCount": 1,
+    "passedCount": 1,
+    "totalCount": 2,
+    "complete": false,
+    "hasTests": true
+   },
+   "tag": "3/1/1"
+  },
+  {
+   "tests": [
+    {
+     "id": 1,
+     "weight": 0.5
+    },
+    {
+     "id": 2,
+     "weight": 0.5
+    }
+   ],
+   "checks": {
+    "1": {
+     "passed": true
+    }
+   },
+   "max": 2,
+   "out": {
+    "suggested": 1,
+    "ratio": 0.5,
+    "passedWeight": 0.5,
+    "totalWeight": 1,
+    "checkedCount": 1,
+    "passedCount": 1,
+    "totalCount": 2,
+    "complete": false,
+    "hasTests": true
+   },
+   "tag": "3/1/2"
+  },
+  {
+   "tests": [
+    {
+     "id": 1,
+     "weight": 0.5
+    },
+    {
+     "id": 2,
+     "weight": 0.5
+    }
+   ],
+   "checks": {
+    "1": {
+     "passed": true
+    }
+   },
+   "max": 4,
+   "out": {
+    "suggested": 2,
+    "ratio": 0.5,
+    "passedWeight": 0.5,
+    "totalWeight": 1,
+    "checkedCount": 1,
+    "passedCount": 1,
+    "totalCount": 2,
+    "complete": false,
+    "hasTests": true
+   },
+   "tag": "3/1/4"
+  },
+  {
+   "tests": [
+    {
+     "id": 1,
+     "weight": 0.5
+    },
+    {
+     "id": 2,
+     "weight": 0.5
+    }
+   ],
+   "checks": {
+    "1": {
+     "passed": true
+    }
+   },
+   "max": 10,
+   "out": {
+    "suggested": 5,
+    "ratio": 0.5,
+    "passedWeight": 0.5,
+    "totalWeight": 1,
+    "checkedCount": 1,
+    "passedCount": 1,
+    "totalCount": 2,
+    "complete": false,
+    "hasTests": true
+   },
+   "tag": "3/1/10"
+  },
+  {
+   "tests": [
+    {
+     "id": 1,
+     "weight": 0.5
+    },
+    {
+     "id": 2,
+     "weight": 0.5
+    }
+   ],
+   "checks": {
+    "1": {
+     "passed": true
+    }
+   },
+   "max": 3,
+   "out": {
+    "suggested": 1.5,
+    "ratio": 0.5,
+    "passedWeight": 0.5,
+    "totalWeight": 1,
+    "checkedCount": 1,
+    "passedCount": 1,
+    "totalCount": 2,
+    "complete": false,
+    "hasTests": true
+   },
+   "tag": "3/1/3"
+  },
+  {
+   "tests": [
+    {
+     "id": 1,
+     "weight": 0.5
+    },
+    {
+     "id": 2,
+     "weight": 0.5
+    }
+   ],
+   "checks": {
+    "1": {
+     "passed": true
+    },
+    "2": {
+     "passed": false
+    },
+    "3": {
+     "passed": true
+    }
+   },
+   "max": 0,
+   "out": {
+    "suggested": 0,
+    "ratio": 0.5,
+    "passedWeight": 0.5,
+    "totalWeight": 1,
+    "checkedCount": 2,
+    "passedCount": 1,
+    "totalCount": 2,
+    "complete": true,
+    "hasTests": true
+   },
+   "tag": "3/2/0"
+  },
+  {
+   "tests": [
+    {
+     "id": 1,
+     "weight": 0.5
+    },
+    {
+     "id": 2,
+     "weight": 0.5
+    }
+   ],
+   "checks": {
+    "1": {
+     "passed": true
+    },
+    "2": {
+     "passed": false
+    },
+    "3": {
+     "passed": true
+    }
+   },
+   "max": 1,
+   "out": {
+    "suggested": 0.5,
+    "ratio": 0.5,
+    "passedWeight": 0.5,
+    "totalWeight": 1,
+    "checkedCount": 2,
+    "passedCount": 1,
+    "totalCount": 2,
+    "complete": true,
+    "hasTests": true
+   },
+   "tag": "3/2/1"
+  },
+  {
+   "tests": [
+    {
+     "id": 1,
+     "weight": 0.5
+    },
+    {
+     "id": 2,
+     "weight": 0.5
+    }
+   ],
+   "checks": {
+    "1": {
+     "passed": true
+    },
+    "2": {
+     "passed": false
+    },
+    "3": {
+     "passed": true
+    }
+   },
+   "max": 2,
+   "out": {
+    "suggested": 1,
+    "ratio": 0.5,
+    "passedWeight": 0.5,
+    "totalWeight": 1,
+    "checkedCount": 2,
+    "passedCount": 1,
+    "totalCount": 2,
+    "complete": true,
+    "hasTests": true
+   },
+   "tag": "3/2/2"
+  },
+  {
+   "tests": [
+    {
+     "id": 1,
+     "weight": 0.5
+    },
+    {
+     "id": 2,
+     "weight": 0.5
+    }
+   ],
+   "checks": {
+    "1": {
+     "passed": true
+    },
+    "2": {
+     "passed": false
+    },
+    "3": {
+     "passed": true
+    }
+   },
+   "max": 4,
+   "out": {
+    "suggested": 2,
+    "ratio": 0.5,
+    "passedWeight": 0.5,
+    "totalWeight": 1,
+    "checkedCount": 2,
+    "passedCount": 1,
+    "totalCount": 2,
+    "complete": true,
+    "hasTests": true
+   },
+   "tag": "3/2/4"
+  },
+  {
+   "tests": [
+    {
+     "id": 1,
+     "weight": 0.5
+    },
+    {
+     "id": 2,
+     "weight": 0.5
+    }
+   ],
+   "checks": {
+    "1": {
+     "passed": true
+    },
+    "2": {
+     "passed": false
+    },
+    "3": {
+     "passed": true
+    }
+   },
+   "max": 10,
+   "out": {
+    "suggested": 5,
+    "ratio": 0.5,
+    "passedWeight": 0.5,
+    "totalWeight": 1,
+    "checkedCount": 2,
+    "passedCount": 1,
+    "totalCount": 2,
+    "complete": true,
+    "hasTests": true
+   },
+   "tag": "3/2/10"
+  },
+  {
+   "tests": [
+    {
+     "id": 1,
+     "weight": 0.5
+    },
+    {
+     "id": 2,
+     "weight": 0.5
+    }
+   ],
+   "checks": {
+    "1": {
+     "passed": true
+    },
+    "2": {
+     "passed": false
+    },
+    "3": {
+     "passed": true
+    }
+   },
+   "max": 3,
+   "out": {
+    "suggested": 1.5,
+    "ratio": 0.5,
+    "passedWeight": 0.5,
+    "totalWeight": 1,
+    "checkedCount": 2,
+    "passedCount": 1,
+    "totalCount": 2,
+    "complete": true,
+    "hasTests": true
+   },
+   "tag": "3/2/3"
+  },
+  {
+   "tests": [
+    {
+     "id": 1,
+     "weight": 0.5
+    },
+    {
+     "id": 2,
+     "weight": 0.5
+    }
+   ],
+   "checks": {
+    "1": {
+     "passed": false
+    },
+    "2": {
+     "passed": false
+    }
+   },
+   "max": 0,
+   "out": {
+    "suggested": 0,
+    "ratio": 0,
+    "passedWeight": 0,
+    "totalWeight": 1,
+    "checkedCount": 2,
+    "passedCount": 0,
+    "totalCount": 2,
+    "complete": true,
+    "hasTests": true
+   },
+   "tag": "3/3/0"
+  },
+  {
+   "tests": [
+    {
+     "id": 1,
+     "weight": 0.5
+    },
+    {
+     "id": 2,
+     "weight": 0.5
+    }
+   ],
+   "checks": {
+    "1": {
+     "passed": false
+    },
+    "2": {
+     "passed": false
+    }
+   },
+   "max": 1,
+   "out": {
+    "suggested": 0,
+    "ratio": 0,
+    "passedWeight": 0,
+    "totalWeight": 1,
+    "checkedCount": 2,
+    "passedCount": 0,
+    "totalCount": 2,
+    "complete": true,
+    "hasTests": true
+   },
+   "tag": "3/3/1"
+  },
+  {
+   "tests": [
+    {
+     "id": 1,
+     "weight": 0.5
+    },
+    {
+     "id": 2,
+     "weight": 0.5
+    }
+   ],
+   "checks": {
+    "1": {
+     "passed": false
+    },
+    "2": {
+     "passed": false
+    }
+   },
+   "max": 2,
+   "out": {
+    "suggested": 0,
+    "ratio": 0,
+    "passedWeight": 0,
+    "totalWeight": 1,
+    "checkedCount": 2,
+    "passedCount": 0,
+    "totalCount": 2,
+    "complete": true,
+    "hasTests": true
+   },
+   "tag": "3/3/2"
+  },
+  {
+   "tests": [
+    {
+     "id": 1,
+     "weight": 0.5
+    },
+    {
+     "id": 2,
+     "weight": 0.5
+    }
+   ],
+   "checks": {
+    "1": {
+     "passed": false
+    },
+    "2": {
+     "passed": false
+    }
+   },
+   "max": 4,
+   "out": {
+    "suggested": 0,
+    "ratio": 0,
+    "passedWeight": 0,
+    "totalWeight": 1,
+    "checkedCount": 2,
+    "passedCount": 0,
+    "totalCount": 2,
+    "complete": true,
+    "hasTests": true
+   },
+   "tag": "3/3/4"
+  },
+  {
+   "tests": [
+    {
+     "id": 1,
+     "weight": 0.5
+    },
+    {
+     "id": 2,
+     "weight": 0.5
+    }
+   ],
+   "checks": {
+    "1": {
+     "passed": false
+    },
+    "2": {
+     "passed": false
+    }
+   },
+   "max": 10,
+   "out": {
+    "suggested": 0,
+    "ratio": 0,
+    "passedWeight": 0,
+    "totalWeight": 1,
+    "checkedCount": 2,
+    "passedCount": 0,
+    "totalCount": 2,
+    "complete": true,
+    "hasTests": true
+   },
+   "tag": "3/3/10"
+  },
+  {
+   "tests": [
+    {
+     "id": 1,
+     "weight": 0.5
+    },
+    {
+     "id": 2,
+     "weight": 0.5
+    }
+   ],
+   "checks": {
+    "1": {
+     "passed": false
+    },
+    "2": {
+     "passed": false
+    }
+   },
+   "max": 3,
+   "out": {
+    "suggested": 0,
+    "ratio": 0,
+    "passedWeight": 0,
+    "totalWeight": 1,
+    "checkedCount": 2,
+    "passedCount": 0,
+    "totalCount": 2,
+    "complete": true,
+    "hasTests": true
+   },
+   "tag": "3/3/3"
+  },
+  {
+   "tests": [
+    {
+     "id": 1,
+     "weight": 0.5
+    },
+    {
+     "id": 2,
+     "weight": 0.5
+    }
+   ],
+   "checks": {
+    "1": {
+     "passed": true
+    },
+    "2": {
+     "passed": true
+    },
+    "3": {
+     "passed": true
+    }
+   },
+   "max": 0,
+   "out": {
+    "suggested": 0,
+    "ratio": 1,
+    "passedWeight": 1,
+    "totalWeight": 1,
+    "checkedCount": 2,
+    "passedCount": 2,
+    "totalCount": 2,
+    "complete": true,
+    "hasTests": true
+   },
+   "tag": "3/4/0"
+  },
+  {
+   "tests": [
+    {
+     "id": 1,
+     "weight": 0.5
+    },
+    {
+     "id": 2,
+     "weight": 0.5
+    }
+   ],
+   "checks": {
+    "1": {
+     "passed": true
+    },
+    "2": {
+     "passed": true
+    },
+    "3": {
+     "passed": true
+    }
+   },
+   "max": 1,
+   "out": {
+    "suggested": 1,
+    "ratio": 1,
+    "passedWeight": 1,
+    "totalWeight": 1,
+    "checkedCount": 2,
+    "passedCount": 2,
+    "totalCount": 2,
+    "complete": true,
+    "hasTests": true
+   },
+   "tag": "3/4/1"
+  },
+  {
+   "tests": [
+    {
+     "id": 1,
+     "weight": 0.5
+    },
+    {
+     "id": 2,
+     "weight": 0.5
+    }
+   ],
+   "checks": {
+    "1": {
+     "passed": true
+    },
+    "2": {
+     "passed": true
+    },
+    "3": {
+     "passed": true
+    }
+   },
+   "max": 2,
+   "out": {
+    "suggested": 2,
+    "ratio": 1,
+    "passedWeight": 1,
+    "totalWeight": 1,
+    "checkedCount": 2,
+    "passedCount": 2,
+    "totalCount": 2,
+    "complete": true,
+    "hasTests": true
+   },
+   "tag": "3/4/2"
+  },
+  {
+   "tests": [
+    {
+     "id": 1,
+     "weight": 0.5
+    },
+    {
+     "id": 2,
+     "weight": 0.5
+    }
+   ],
+   "checks": {
+    "1": {
+     "passed": true
+    },
+    "2": {
+     "passed": true
+    },
+    "3": {
+     "passed": true
+    }
+   },
+   "max": 4,
+   "out": {
+    "suggested": 4,
+    "ratio": 1,
+    "passedWeight": 1,
+    "totalWeight": 1,
+    "checkedCount": 2,
+    "passedCount": 2,
+    "totalCount": 2,
+    "complete": true,
+    "hasTests": true
+   },
+   "tag": "3/4/4"
+  },
+  {
+   "tests": [
+    {
+     "id": 1,
+     "weight": 0.5
+    },
+    {
+     "id": 2,
+     "weight": 0.5
+    }
+   ],
+   "checks": {
+    "1": {
+     "passed": true
+    },
+    "2": {
+     "passed": true
+    },
+    "3": {
+     "passed": true
+    }
+   },
+   "max": 10,
+   "out": {
+    "suggested": 10,
+    "ratio": 1,
+    "passedWeight": 1,
+    "totalWeight": 1,
+    "checkedCount": 2,
+    "passedCount": 2,
+    "totalCount": 2,
+    "complete": true,
+    "hasTests": true
+   },
+   "tag": "3/4/10"
+  },
+  {
+   "tests": [
+    {
+     "id": 1,
+     "weight": 0.5
+    },
+    {
+     "id": 2,
+     "weight": 0.5
+    }
+   ],
+   "checks": {
+    "1": {
+     "passed": true
+    },
+    "2": {
+     "passed": true
+    },
+    "3": {
+     "passed": true
+    }
+   },
+   "max": 3,
+   "out": {
+    "suggested": 3,
+    "ratio": 1,
+    "passedWeight": 1,
+    "totalWeight": 1,
+    "checkedCount": 2,
+    "passedCount": 2,
+    "totalCount": 2,
+    "complete": true,
+    "hasTests": true
+   },
+   "tag": "3/4/3"
+  },
+  {
+   "tests": [
+    {
+     "id": 1,
+     "weight": 0
+    },
+    {
+     "id": 2,
+     "weight": -3
+    }
+   ],
+   "checks": {},
+   "max": 0,
+   "out": {
+    "suggested": 0,
+    "ratio": 0,
+    "passedWeight": 0,
+    "totalWeight": 2,
+    "checkedCount": 0,
+    "passedCount": 0,
+    "totalCount": 2,
+    "complete": false,
+    "hasTests": true
+   },
+   "tag": "4/0/0"
+  },
+  {
+   "tests": [
+    {
+     "id": 1,
+     "weight": 0
+    },
+    {
+     "id": 2,
+     "weight": -3
+    }
+   ],
+   "checks": {},
+   "max": 1,
+   "out": {
+    "suggested": 0,
+    "ratio": 0,
+    "passedWeight": 0,
+    "totalWeight": 2,
+    "checkedCount": 0,
+    "passedCount": 0,
+    "totalCount": 2,
+    "complete": false,
+    "hasTests": true
+   },
+   "tag": "4/0/1"
+  },
+  {
+   "tests": [
+    {
+     "id": 1,
+     "weight": 0
+    },
+    {
+     "id": 2,
+     "weight": -3
+    }
+   ],
+   "checks": {},
+   "max": 2,
+   "out": {
+    "suggested": 0,
+    "ratio": 0,
+    "passedWeight": 0,
+    "totalWeight": 2,
+    "checkedCount": 0,
+    "passedCount": 0,
+    "totalCount": 2,
+    "complete": false,
+    "hasTests": true
+   },
+   "tag": "4/0/2"
+  },
+  {
+   "tests": [
+    {
+     "id": 1,
+     "weight": 0
+    },
+    {
+     "id": 2,
+     "weight": -3
+    }
+   ],
+   "checks": {},
+   "max": 4,
+   "out": {
+    "suggested": 0,
+    "ratio": 0,
+    "passedWeight": 0,
+    "totalWeight": 2,
+    "checkedCount": 0,
+    "passedCount": 0,
+    "totalCount": 2,
+    "complete": false,
+    "hasTests": true
+   },
+   "tag": "4/0/4"
+  },
+  {
+   "tests": [
+    {
+     "id": 1,
+     "weight": 0
+    },
+    {
+     "id": 2,
+     "weight": -3
+    }
+   ],
+   "checks": {},
+   "max": 10,
+   "out": {
+    "suggested": 0,
+    "ratio": 0,
+    "passedWeight": 0,
+    "totalWeight": 2,
+    "checkedCount": 0,
+    "passedCount": 0,
+    "totalCount": 2,
+    "complete": false,
+    "hasTests": true
+   },
+   "tag": "4/0/10"
+  },
+  {
+   "tests": [
+    {
+     "id": 1,
+     "weight": 0
+    },
+    {
+     "id": 2,
+     "weight": -3
+    }
+   ],
+   "checks": {},
+   "max": 3,
+   "out": {
+    "suggested": 0,
+    "ratio": 0,
+    "passedWeight": 0,
+    "totalWeight": 2,
+    "checkedCount": 0,
+    "passedCount": 0,
+    "totalCount": 2,
+    "complete": false,
+    "hasTests": true
+   },
+   "tag": "4/0/3"
+  },
+  {
+   "tests": [
+    {
+     "id": 1,
+     "weight": 0
+    },
+    {
+     "id": 2,
+     "weight": -3
+    }
+   ],
+   "checks": {
+    "1": {
+     "passed": true
+    }
+   },
+   "max": 0,
+   "out": {
+    "suggested": 0,
+    "ratio": 0.5,
+    "passedWeight": 1,
+    "totalWeight": 2,
+    "checkedCount": 1,
+    "passedCount": 1,
+    "totalCount": 2,
+    "complete": false,
+    "hasTests": true
+   },
+   "tag": "4/1/0"
+  },
+  {
+   "tests": [
+    {
+     "id": 1,
+     "weight": 0
+    },
+    {
+     "id": 2,
+     "weight": -3
+    }
+   ],
+   "checks": {
+    "1": {
+     "passed": true
+    }
+   },
+   "max": 1,
+   "out": {
+    "suggested": 0.5,
+    "ratio": 0.5,
+    "passedWeight": 1,
+    "totalWeight": 2,
+    "checkedCount": 1,
+    "passedCount": 1,
+    "totalCount": 2,
+    "complete": false,
+    "hasTests": true
+   },
+   "tag": "4/1/1"
+  },
+  {
+   "tests": [
+    {
+     "id": 1,
+     "weight": 0
+    },
+    {
+     "id": 2,
+     "weight": -3
+    }
+   ],
+   "checks": {
+    "1": {
+     "passed": true
+    }
+   },
+   "max": 2,
+   "out": {
+    "suggested": 1,
+    "ratio": 0.5,
+    "passedWeight": 1,
+    "totalWeight": 2,
+    "checkedCount": 1,
+    "passedCount": 1,
+    "totalCount": 2,
+    "complete": false,
+    "hasTests": true
+   },
+   "tag": "4/1/2"
+  },
+  {
+   "tests": [
+    {
+     "id": 1,
+     "weight": 0
+    },
+    {
+     "id": 2,
+     "weight": -3
+    }
+   ],
+   "checks": {
+    "1": {
+     "passed": true
+    }
+   },
+   "max": 4,
+   "out": {
+    "suggested": 2,
+    "ratio": 0.5,
+    "passedWeight": 1,
+    "totalWeight": 2,
+    "checkedCount": 1,
+    "passedCount": 1,
+    "totalCount": 2,
+    "complete": false,
+    "hasTests": true
+   },
+   "tag": "4/1/4"
+  },
+  {
+   "tests": [
+    {
+     "id": 1,
+     "weight": 0
+    },
+    {
+     "id": 2,
+     "weight": -3
+    }
+   ],
+   "checks": {
+    "1": {
+     "passed": true
+    }
+   },
+   "max": 10,
+   "out": {
+    "suggested": 5,
+    "ratio": 0.5,
+    "passedWeight": 1,
+    "totalWeight": 2,
+    "checkedCount": 1,
+    "passedCount": 1,
+    "totalCount": 2,
+    "complete": false,
+    "hasTests": true
+   },
+   "tag": "4/1/10"
+  },
+  {
+   "tests": [
+    {
+     "id": 1,
+     "weight": 0
+    },
+    {
+     "id": 2,
+     "weight": -3
+    }
+   ],
+   "checks": {
+    "1": {
+     "passed": true
+    }
+   },
+   "max": 3,
+   "out": {
+    "suggested": 1.5,
+    "ratio": 0.5,
+    "passedWeight": 1,
+    "totalWeight": 2,
+    "checkedCount": 1,
+    "passedCount": 1,
+    "totalCount": 2,
+    "complete": false,
+    "hasTests": true
+   },
+   "tag": "4/1/3"
+  },
+  {
+   "tests": [
+    {
+     "id": 1,
+     "weight": 0
+    },
+    {
+     "id": 2,
+     "weight": -3
+    }
+   ],
+   "checks": {
+    "1": {
+     "passed": true
+    },
+    "2": {
+     "passed": false
+    },
+    "3": {
+     "passed": true
+    }
+   },
+   "max": 0,
+   "out": {
+    "suggested": 0,
+    "ratio": 0.5,
+    "passedWeight": 1,
+    "totalWeight": 2,
+    "checkedCount": 2,
+    "passedCount": 1,
+    "totalCount": 2,
+    "complete": true,
+    "hasTests": true
+   },
+   "tag": "4/2/0"
+  },
+  {
+   "tests": [
+    {
+     "id": 1,
+     "weight": 0
+    },
+    {
+     "id": 2,
+     "weight": -3
+    }
+   ],
+   "checks": {
+    "1": {
+     "passed": true
+    },
+    "2": {
+     "passed": false
+    },
+    "3": {
+     "passed": true
+    }
+   },
+   "max": 1,
+   "out": {
+    "suggested": 0.5,
+    "ratio": 0.5,
+    "passedWeight": 1,
+    "totalWeight": 2,
+    "checkedCount": 2,
+    "passedCount": 1,
+    "totalCount": 2,
+    "complete": true,
+    "hasTests": true
+   },
+   "tag": "4/2/1"
+  },
+  {
+   "tests": [
+    {
+     "id": 1,
+     "weight": 0
+    },
+    {
+     "id": 2,
+     "weight": -3
+    }
+   ],
+   "checks": {
+    "1": {
+     "passed": true
+    },
+    "2": {
+     "passed": false
+    },
+    "3": {
+     "passed": true
+    }
+   },
+   "max": 2,
+   "out": {
+    "suggested": 1,
+    "ratio": 0.5,
+    "passedWeight": 1,
+    "totalWeight": 2,
+    "checkedCount": 2,
+    "passedCount": 1,
+    "totalCount": 2,
+    "complete": true,
+    "hasTests": true
+   },
+   "tag": "4/2/2"
+  },
+  {
+   "tests": [
+    {
+     "id": 1,
+     "weight": 0
+    },
+    {
+     "id": 2,
+     "weight": -3
+    }
+   ],
+   "checks": {
+    "1": {
+     "passed": true
+    },
+    "2": {
+     "passed": false
+    },
+    "3": {
+     "passed": true
+    }
+   },
+   "max": 4,
+   "out": {
+    "suggested": 2,
+    "ratio": 0.5,
+    "passedWeight": 1,
+    "totalWeight": 2,
+    "checkedCount": 2,
+    "passedCount": 1,
+    "totalCount": 2,
+    "complete": true,
+    "hasTests": true
+   },
+   "tag": "4/2/4"
+  },
+  {
+   "tests": [
+    {
+     "id": 1,
+     "weight": 0
+    },
+    {
+     "id": 2,
+     "weight": -3
+    }
+   ],
+   "checks": {
+    "1": {
+     "passed": true
+    },
+    "2": {
+     "passed": false
+    },
+    "3": {
+     "passed": true
+    }
+   },
+   "max": 10,
+   "out": {
+    "suggested": 5,
+    "ratio": 0.5,
+    "passedWeight": 1,
+    "totalWeight": 2,
+    "checkedCount": 2,
+    "passedCount": 1,
+    "totalCount": 2,
+    "complete": true,
+    "hasTests": true
+   },
+   "tag": "4/2/10"
+  },
+  {
+   "tests": [
+    {
+     "id": 1,
+     "weight": 0
+    },
+    {
+     "id": 2,
+     "weight": -3
+    }
+   ],
+   "checks": {
+    "1": {
+     "passed": true
+    },
+    "2": {
+     "passed": false
+    },
+    "3": {
+     "passed": true
+    }
+   },
+   "max": 3,
+   "out": {
+    "suggested": 1.5,
+    "ratio": 0.5,
+    "passedWeight": 1,
+    "totalWeight": 2,
+    "checkedCount": 2,
+    "passedCount": 1,
+    "totalCount": 2,
+    "complete": true,
+    "hasTests": true
+   },
+   "tag": "4/2/3"
+  },
+  {
+   "tests": [
+    {
+     "id": 1,
+     "weight": 0
+    },
+    {
+     "id": 2,
+     "weight": -3
+    }
+   ],
+   "checks": {
+    "1": {
+     "passed": false
+    },
+    "2": {
+     "passed": false
+    }
+   },
+   "max": 0,
+   "out": {
+    "suggested": 0,
+    "ratio": 0,
+    "passedWeight": 0,
+    "totalWeight": 2,
+    "checkedCount": 2,
+    "passedCount": 0,
+    "totalCount": 2,
+    "complete": true,
+    "hasTests": true
+   },
+   "tag": "4/3/0"
+  },
+  {
+   "tests": [
+    {
+     "id": 1,
+     "weight": 0
+    },
+    {
+     "id": 2,
+     "weight": -3
+    }
+   ],
+   "checks": {
+    "1": {
+     "passed": false
+    },
+    "2": {
+     "passed": false
+    }
+   },
+   "max": 1,
+   "out": {
+    "suggested": 0,
+    "ratio": 0,
+    "passedWeight": 0,
+    "totalWeight": 2,
+    "checkedCount": 2,
+    "passedCount": 0,
+    "totalCount": 2,
+    "complete": true,
+    "hasTests": true
+   },
+   "tag": "4/3/1"
+  },
+  {
+   "tests": [
+    {
+     "id": 1,
+     "weight": 0
+    },
+    {
+     "id": 2,
+     "weight": -3
+    }
+   ],
+   "checks": {
+    "1": {
+     "passed": false
+    },
+    "2": {
+     "passed": false
+    }
+   },
+   "max": 2,
+   "out": {
+    "suggested": 0,
+    "ratio": 0,
+    "passedWeight": 0,
+    "totalWeight": 2,
+    "checkedCount": 2,
+    "passedCount": 0,
+    "totalCount": 2,
+    "complete": true,
+    "hasTests": true
+   },
+   "tag": "4/3/2"
+  },
+  {
+   "tests": [
+    {
+     "id": 1,
+     "weight": 0
+    },
+    {
+     "id": 2,
+     "weight": -3
+    }
+   ],
+   "checks": {
+    "1": {
+     "passed": false
+    },
+    "2": {
+     "passed": false
+    }
+   },
+   "max": 4,
+   "out": {
+    "suggested": 0,
+    "ratio": 0,
+    "passedWeight": 0,
+    "totalWeight": 2,
+    "checkedCount": 2,
+    "passedCount": 0,
+    "totalCount": 2,
+    "complete": true,
+    "hasTests": true
+   },
+   "tag": "4/3/4"
+  },
+  {
+   "tests": [
+    {
+     "id": 1,
+     "weight": 0
+    },
+    {
+     "id": 2,
+     "weight": -3
+    }
+   ],
+   "checks": {
+    "1": {
+     "passed": false
+    },
+    "2": {
+     "passed": false
+    }
+   },
+   "max": 10,
+   "out": {
+    "suggested": 0,
+    "ratio": 0,
+    "passedWeight": 0,
+    "totalWeight": 2,
+    "checkedCount": 2,
+    "passedCount": 0,
+    "totalCount": 2,
+    "complete": true,
+    "hasTests": true
+   },
+   "tag": "4/3/10"
+  },
+  {
+   "tests": [
+    {
+     "id": 1,
+     "weight": 0
+    },
+    {
+     "id": 2,
+     "weight": -3
+    }
+   ],
+   "checks": {
+    "1": {
+     "passed": false
+    },
+    "2": {
+     "passed": false
+    }
+   },
+   "max": 3,
+   "out": {
+    "suggested": 0,
+    "ratio": 0,
+    "passedWeight": 0,
+    "totalWeight": 2,
+    "checkedCount": 2,
+    "passedCount": 0,
+    "totalCount": 2,
+    "complete": true,
+    "hasTests": true
+   },
+   "tag": "4/3/3"
+  },
+  {
+   "tests": [
+    {
+     "id": 1,
+     "weight": 0
+    },
+    {
+     "id": 2,
+     "weight": -3
+    }
+   ],
+   "checks": {
+    "1": {
+     "passed": true
+    },
+    "2": {
+     "passed": true
+    },
+    "3": {
+     "passed": true
+    }
+   },
+   "max": 0,
+   "out": {
+    "suggested": 0,
+    "ratio": 1,
+    "passedWeight": 2,
+    "totalWeight": 2,
+    "checkedCount": 2,
+    "passedCount": 2,
+    "totalCount": 2,
+    "complete": true,
+    "hasTests": true
+   },
+   "tag": "4/4/0"
+  },
+  {
+   "tests": [
+    {
+     "id": 1,
+     "weight": 0
+    },
+    {
+     "id": 2,
+     "weight": -3
+    }
+   ],
+   "checks": {
+    "1": {
+     "passed": true
+    },
+    "2": {
+     "passed": true
+    },
+    "3": {
+     "passed": true
+    }
+   },
+   "max": 1,
+   "out": {
+    "suggested": 1,
+    "ratio": 1,
+    "passedWeight": 2,
+    "totalWeight": 2,
+    "checkedCount": 2,
+    "passedCount": 2,
+    "totalCount": 2,
+    "complete": true,
+    "hasTests": true
+   },
+   "tag": "4/4/1"
+  },
+  {
+   "tests": [
+    {
+     "id": 1,
+     "weight": 0
+    },
+    {
+     "id": 2,
+     "weight": -3
+    }
+   ],
+   "checks": {
+    "1": {
+     "passed": true
+    },
+    "2": {
+     "passed": true
+    },
+    "3": {
+     "passed": true
+    }
+   },
+   "max": 2,
+   "out": {
+    "suggested": 2,
+    "ratio": 1,
+    "passedWeight": 2,
+    "totalWeight": 2,
+    "checkedCount": 2,
+    "passedCount": 2,
+    "totalCount": 2,
+    "complete": true,
+    "hasTests": true
+   },
+   "tag": "4/4/2"
+  },
+  {
+   "tests": [
+    {
+     "id": 1,
+     "weight": 0
+    },
+    {
+     "id": 2,
+     "weight": -3
+    }
+   ],
+   "checks": {
+    "1": {
+     "passed": true
+    },
+    "2": {
+     "passed": true
+    },
+    "3": {
+     "passed": true
+    }
+   },
+   "max": 4,
+   "out": {
+    "suggested": 4,
+    "ratio": 1,
+    "passedWeight": 2,
+    "totalWeight": 2,
+    "checkedCount": 2,
+    "passedCount": 2,
+    "totalCount": 2,
+    "complete": true,
+    "hasTests": true
+   },
+   "tag": "4/4/4"
+  },
+  {
+   "tests": [
+    {
+     "id": 1,
+     "weight": 0
+    },
+    {
+     "id": 2,
+     "weight": -3
+    }
+   ],
+   "checks": {
+    "1": {
+     "passed": true
+    },
+    "2": {
+     "passed": true
+    },
+    "3": {
+     "passed": true
+    }
+   },
+   "max": 10,
+   "out": {
+    "suggested": 10,
+    "ratio": 1,
+    "passedWeight": 2,
+    "totalWeight": 2,
+    "checkedCount": 2,
+    "passedCount": 2,
+    "totalCount": 2,
+    "complete": true,
+    "hasTests": true
+   },
+   "tag": "4/4/10"
+  },
+  {
+   "tests": [
+    {
+     "id": 1,
+     "weight": 0
+    },
+    {
+     "id": 2,
+     "weight": -3
+    }
+   ],
+   "checks": {
+    "1": {
+     "passed": true
+    },
+    "2": {
+     "passed": true
+    },
+    "3": {
+     "passed": true
+    }
+   },
+   "max": 3,
+   "out": {
+    "suggested": 3,
+    "ratio": 1,
+    "passedWeight": 2,
+    "totalWeight": 2,
+    "checkedCount": 2,
+    "passedCount": 2,
+    "totalCount": 2,
+    "complete": true,
+    "hasTests": true
+   },
+   "tag": "4/4/3"
+  }
+ ],
+ "summary": [
+  {
+   "tests": [],
+   "checks": {},
+   "out": "مورد آزمونی تعریف نشده",
+   "tag": "0/0"
+  },
+  {
+   "tests": [],
+   "checks": {
+    "1": {
+     "passed": true
+    }
+   },
+   "out": "مورد آزمونی تعریف نشده",
+   "tag": "0/1"
+  },
+  {
+   "tests": [],
+   "checks": {
+    "1": {
+     "passed": true
+    },
+    "2": {
+     "passed": false
+    },
+    "3": {
+     "passed": true
+    }
+   },
+   "out": "مورد آزمونی تعریف نشده",
+   "tag": "0/2"
+  },
+  {
+   "tests": [],
+   "checks": {
+    "1": {
+     "passed": false
+    },
+    "2": {
+     "passed": false
+    }
+   },
+   "out": "مورد آزمونی تعریف نشده",
+   "tag": "0/3"
+  },
+  {
+   "tests": [],
+   "checks": {
+    "1": {
+     "passed": true
+    },
+    "2": {
+     "passed": true
+    },
+    "3": {
+     "passed": true
+    }
+   },
+   "out": "مورد آزمونی تعریف نشده",
+   "tag": "0/4"
+  },
+  {
+   "tests": [
+    {
+     "id": 1,
+     "weight": 1
+    }
+   ],
+   "checks": {},
+   "out": "هنوز بررسی نشده",
+   "tag": "1/0"
+  },
+  {
+   "tests": [
+    {
+     "id": 1,
+     "weight": 1
+    }
+   ],
+   "checks": {
+    "1": {
+     "passed": true
+    }
+   },
+   "out": "بررسی کامل",
+   "tag": "1/1"
+  },
+  {
+   "tests": [
+    {
+     "id": 1,
+     "weight": 1
+    }
+   ],
+   "checks": {
+    "1": {
+     "passed": true
+    },
+    "2": {
+     "passed": false
+    },
+    "3": {
+     "passed": true
+    }
+   },
+   "out": "بررسی کامل",
+   "tag": "1/2"
+  },
+  {
+   "tests": [
+    {
+     "id": 1,
+     "weight": 1
+    }
+   ],
+   "checks": {
+    "1": {
+     "passed": false
+    },
+    "2": {
+     "passed": false
+    }
+   },
+   "out": "بررسی کامل",
+   "tag": "1/3"
+  },
+  {
+   "tests": [
+    {
+     "id": 1,
+     "weight": 1
+    }
+   ],
+   "checks": {
+    "1": {
+     "passed": true
+    },
+    "2": {
+     "passed": true
+    },
+    "3": {
+     "passed": true
+    }
+   },
+   "out": "بررسی کامل",
+   "tag": "1/4"
+  },
+  {
+   "tests": [
+    {
+     "id": 1,
+     "weight": 1
+    },
+    {
+     "id": 2,
+     "weight": 2
+    },
+    {
+     "id": 3,
+     "weight": 1
+    }
+   ],
+   "checks": {},
+   "out": "هنوز بررسی نشده",
+   "tag": "2/0"
+  },
+  {
+   "tests": [
+    {
+     "id": 1,
+     "weight": 1
+    },
+    {
+     "id": 2,
+     "weight": 2
+    },
+    {
+     "id": 3,
+     "weight": 1
+    }
+   ],
+   "checks": {
+    "1": {
+     "passed": true
+    }
+   },
+   "out": "بررسی ناقص",
+   "tag": "2/1"
+  },
+  {
+   "tests": [
+    {
+     "id": 1,
+     "weight": 1
+    },
+    {
+     "id": 2,
+     "weight": 2
+    },
+    {
+     "id": 3,
+     "weight": 1
+    }
+   ],
+   "checks": {
+    "1": {
+     "passed": true
+    },
+    "2": {
+     "passed": false
+    },
+    "3": {
+     "passed": true
+    }
+   },
+   "out": "بررسی کامل",
+   "tag": "2/2"
+  },
+  {
+   "tests": [
+    {
+     "id": 1,
+     "weight": 1
+    },
+    {
+     "id": 2,
+     "weight": 2
+    },
+    {
+     "id": 3,
+     "weight": 1
+    }
+   ],
+   "checks": {
+    "1": {
+     "passed": false
+    },
+    "2": {
+     "passed": false
+    }
+   },
+   "out": "بررسی ناقص",
+   "tag": "2/3"
+  },
+  {
+   "tests": [
+    {
+     "id": 1,
+     "weight": 1
+    },
+    {
+     "id": 2,
+     "weight": 2
+    },
+    {
+     "id": 3,
+     "weight": 1
+    }
+   ],
+   "checks": {
+    "1": {
+     "passed": true
+    },
+    "2": {
+     "passed": true
+    },
+    "3": {
+     "passed": true
+    }
+   },
+   "out": "بررسی کامل",
+   "tag": "2/4"
+  },
+  {
+   "tests": [
+    {
+     "id": 1,
+     "weight": 0.5
+    },
+    {
+     "id": 2,
+     "weight": 0.5
+    }
+   ],
+   "checks": {},
+   "out": "هنوز بررسی نشده",
+   "tag": "3/0"
+  },
+  {
+   "tests": [
+    {
+     "id": 1,
+     "weight": 0.5
+    },
+    {
+     "id": 2,
+     "weight": 0.5
+    }
+   ],
+   "checks": {
+    "1": {
+     "passed": true
+    }
+   },
+   "out": "بررسی ناقص",
+   "tag": "3/1"
+  },
+  {
+   "tests": [
+    {
+     "id": 1,
+     "weight": 0.5
+    },
+    {
+     "id": 2,
+     "weight": 0.5
+    }
+   ],
+   "checks": {
+    "1": {
+     "passed": true
+    },
+    "2": {
+     "passed": false
+    },
+    "3": {
+     "passed": true
+    }
+   },
+   "out": "بررسی کامل",
+   "tag": "3/2"
+  },
+  {
+   "tests": [
+    {
+     "id": 1,
+     "weight": 0.5
+    },
+    {
+     "id": 2,
+     "weight": 0.5
+    }
+   ],
+   "checks": {
+    "1": {
+     "passed": false
+    },
+    "2": {
+     "passed": false
+    }
+   },
+   "out": "بررسی کامل",
+   "tag": "3/3"
+  },
+  {
+   "tests": [
+    {
+     "id": 1,
+     "weight": 0.5
+    },
+    {
+     "id": 2,
+     "weight": 0.5
+    }
+   ],
+   "checks": {
+    "1": {
+     "passed": true
+    },
+    "2": {
+     "passed": true
+    },
+    "3": {
+     "passed": true
+    }
+   },
+   "out": "بررسی کامل",
+   "tag": "3/4"
+  },
+  {
+   "tests": [
+    {
+     "id": 1,
+     "weight": 0
+    },
+    {
+     "id": 2,
+     "weight": -3
+    }
+   ],
+   "checks": {},
+   "out": "هنوز بررسی نشده",
+   "tag": "4/0"
+  },
+  {
+   "tests": [
+    {
+     "id": 1,
+     "weight": 0
+    },
+    {
+     "id": 2,
+     "weight": -3
+    }
+   ],
+   "checks": {
+    "1": {
+     "passed": true
+    }
+   },
+   "out": "بررسی ناقص",
+   "tag": "4/1"
+  },
+  {
+   "tests": [
+    {
+     "id": 1,
+     "weight": 0
+    },
+    {
+     "id": 2,
+     "weight": -3
+    }
+   ],
+   "checks": {
+    "1": {
+     "passed": true
+    },
+    "2": {
+     "passed": false
+    },
+    "3": {
+     "passed": true
+    }
+   },
+   "out": "بررسی کامل",
+   "tag": "4/2"
+  },
+  {
+   "tests": [
+    {
+     "id": 1,
+     "weight": 0
+    },
+    {
+     "id": 2,
+     "weight": -3
+    }
+   ],
+   "checks": {
+    "1": {
+     "passed": false
+    },
+    "2": {
+     "passed": false
+    }
+   },
+   "out": "بررسی کامل",
+   "tag": "4/3"
+  },
+  {
+   "tests": [
+    {
+     "id": 1,
+     "weight": 0
+    },
+    {
+     "id": 2,
+     "weight": -3
+    }
+   ],
+   "checks": {
+    "1": {
+     "passed": true
+    },
+    "2": {
+     "passed": true
+    },
+    "3": {
+     "passed": true
+    }
+   },
+   "out": "بررسی کامل",
+   "tag": "4/4"
+  }
+ ]
+}

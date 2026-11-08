@@ -83,9 +83,12 @@ class V352_2_ChangelogGuardTest {
     @Test
     fun guardIsRegisteredInCiBeforeGradle() {
         val ci = src(".github/workflows/android.yml")
-        assertTrue("نگهبان در حلقهٔ CI نیست", ci.contains("check_site_pins check_site_sync check_changelog; do"))
+        // V356 — حلقهٔ نگهبان یک عضو تازه گرفت؛ پین به‌جای دنبالهٔ پایانی،
+        // حضور خودِ نگهبان در حلقه را می‌سنجد تا با هر افزودن نشکند.
+        assertTrue("نگهبان در حلقهٔ CI نیست", ci.contains("check_site_pins check_site_sync check_changelog"))
+        assertTrue("حلقهٔ نگهبان باید بسته شود", ci.contains("; do"))
         assertTrue("آزمون خودِ نگهبان در CI نیست", ci.contains("python3 scripts/check_changelog.py --selftest"))
-        val guards = ci.indexOf("check_site_sync check_changelog; do")
+        val guards = ci.indexOf("check_site_sync check_changelog")
         val gradle = ci.indexOf("testDebugUnitTest")
         assertTrue("گام Gradle پیدا نشد", gradle > 0)
         assertTrue("نگهبان باید پیش از Gradle باشد", guards in 1 until gradle)

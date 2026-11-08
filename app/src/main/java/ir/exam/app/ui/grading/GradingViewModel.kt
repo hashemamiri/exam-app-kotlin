@@ -10,6 +10,10 @@ import ir.exam.app.data.dto.ExamDashboardDto
 import ir.exam.app.data.repository.SupabaseGradingRepository
 import ir.exam.app.domain.model.AttendanceRow
 import ir.exam.app.domain.model.FeedbackPhrase
+import ir.exam.app.domain.grading.CodeCheckRow
+import ir.exam.app.domain.grading.CodeGrading
+import ir.exam.app.domain.grading.CodeSpecRow
+import ir.exam.app.domain.grading.CodeTestRow
 import ir.exam.app.domain.grading.EssayKeywordRow
 import ir.exam.app.domain.grading.Similarity
 import ir.exam.app.domain.grading.SimilarityReviewRow
@@ -93,7 +97,11 @@ data class GradingUiState(
     val similarityReviews: Map<String, SimilarityReviewRow> = emptyMap(),
     val essayKeywords: List<EssayKeywordRow> = emptyList(),
     val similarityThreshold: Double = Similarity.THRESHOLD,
-    val similarityUnits: Int = 0
+    val similarityUnits: Int = 0,
+    /** V356 — تصحیح کد، فاز صفر (بدون اجرای کد). */
+    val codeSpecs: List<CodeSpecRow> = emptyList(),
+    val codeTests: List<CodeTestRow> = emptyList(),
+    val codeChecks: Map<String, Map<Long, CodeGrading.Check>> = emptyMap()
 )
 
 /** V212 — بستهٔ حافظهٔ موقت صفحهٔ تصحیح */
@@ -208,6 +216,7 @@ class GradingViewModel(
         if (value == "appeals") loadAppeals()
         if (value == "history") loadGradeHistory()
         if (value == "similarity") loadSimilarity()
+        if (value == "grading") loadCodeGrading()
     }
 
     // ------------------------------------------------------------------
@@ -232,6 +241,69 @@ class GradingViewModel(
         repository.gradeHistory(id)
             .onSuccess { rows -> _state.update { it.copy(actionLoading = false, gradeHistory = rows) } }
             .onFailure(::fail)
+    }
+
+    // ------------------------------------------------------------------
+    // V356 — تصحیح کد، فاز صفر: چک‌لیست معلم، بدون اجرای کد
+    // ------------------------------------------------------------------
+
+    fun loadCodeGrading() = viewModelScope.launch {
+        val id = state.value.selectedExam?.id ?: return@launch
+        repository.codeSpecs(id).onSuccess { (specs, tests) ->
+            _state.update { it.copy(codeSpecs = specs, codeTests = tests) }
+        }
+        repository.codeChecks(id).onSuccess { rows ->
+            _state.update { it.copy(codeChecks = CodeCheckRow.group(rows)) }
+        }
+    }
+
+    fun codeTestsFor(questionIndex: Int): List<CodeTestRow> =
+        state.value.codeTests.filter { it.questionIndex == questionIndex }
+
+    fun codeSpecFor(questionIndex: Int): CodeSpecRow? =
+        state.value.codeSpecs.firstOrNull { it.questionIndex == questionIndex }
+
+    fun codeChecksFor(answerId: String, questionIndex: Int): Map<Long, CodeGrading.Check> =
+        state.value.codeChecks[CodeCheckRow.key(answerId, questionIndex)] ?: emptyMap()
+
+    /** پیشنهاد نمره از چک‌لیست؛ هیچ چیز خودکار ذخیره نمی‌شود. */
+    fun codeSuggestedScore(answerId: String, questionIndex: Int, maxScore: Double): CodeGrading.ScoreResult =
+        CodeGrading.scoreFromTests(
+            codeTestsFor(questionIndex).map { it.weighted },
+            codeChecksFor(answerId, questionIndex),
+            maxScore
+        )
+
+    fun saveCodeCheck(answerId: String, questionIndex: Int, testId: Long, passed: Boolean, actual: String) =
+        viewModelScope.launch {
+            val id = state.value.selectedExam?.id ?: return@launch
+            repository.saveCodeCheck(answerId, questionIndex, testId, passed, actual)
+                .onSuccess {
+                    repository.codeChecks(id).onSuccess { rows ->
+                        _state.update { it.copy(codeChecks = CodeCheckRow.group(rows)) }
+                    }
+                }
+                .onFailure(::fail)
+        }
+
+    fun saveCodeSpec(
+        questionIndex: Int,
+        language: String,
+        reference: String,
+        tests: List<CodeGrading.TestCase>
+    ) = action("موارد آزمون ذخیره شد.") {
+        val id = state.value.selectedExam?.id ?: error("آزمون انتخاب نشده است.")
+        repository.saveCodeSpec(id, questionIndex, language, reference, tests).getOrThrow()
+        loadCodeGradingNow(id)
+    }
+
+    private suspend fun loadCodeGradingNow(id: String) {
+        repository.codeSpecs(id).onSuccess { (specs, tests) ->
+            _state.update { it.copy(codeSpecs = specs, codeTests = tests) }
+        }
+        repository.codeChecks(id).onSuccess { rows ->
+            _state.update { it.copy(codeChecks = CodeCheckRow.group(rows)) }
+        }
     }
 
     // ------------------------------------------------------------------

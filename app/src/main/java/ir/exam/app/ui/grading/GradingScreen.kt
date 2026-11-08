@@ -75,6 +75,7 @@ fun GradingScreen(
 ) {
     val state by viewModel.state.collectAsState()
     var showFeedbackDialog by remember { mutableStateOf(false) }
+    var codeSpecOpen by remember { mutableStateOf(false) }  // V356
     var editingFeedback by remember { mutableStateOf<ir.exam.app.domain.model.FeedbackPhrase?>(null) }
     LaunchedEffect(Unit) { viewModel.load() }
     LaunchedEffect(initialPendingOnly, initialGradedOnly, initialMode) {
@@ -201,6 +202,7 @@ fun GradingScreen(
             FilterChip(selected = state.blindMarking, onClick = { viewModel.setBlindMarking(!state.blindMarking) }, label = { Text("تصحیح ناشناس") })
             FilterChip(selected = state.pendingOnly, onClick = { viewModel.setPendingOnly(!state.pendingOnly) }, label = { Text("فقط مانده") })
             FilterChip(selected = state.gradedOnly, onClick = { viewModel.setGradedOnly(!state.gradedOnly) }, label = { Text("فقط پاسخ") })
+            OutlinedButton(onClick = { codeSpecOpen = true }) { Text("موارد آزمون کد") }
             OutlinedButton(onClick = viewModel::approveAutoGrades) { Text("تأیید خودکار") }
             TextButton(onClick = { showFeedbackDialog = true }) { Text("بازخورد جدید") }
         }
@@ -251,8 +253,32 @@ fun GradingScreen(
                         state.partScoreErrors,
                         viewModel
                     )
+                    // V356 — چک‌لیست تصحیح کد (فاز صفر، بدون اجرای کد)
+                    exam.questions.forEachIndexed { qi, q ->
+                        if (q.answerMode == "code") {
+                            CodeChecklistCard(
+                                question = q,
+                                questionIndex = qi,
+                                answerId = submission.id,
+                                state = state,
+                                viewModel = viewModel,
+                                onApply = { v -> viewModel.setScore(submission.id, qi, v.toString()) }
+                            )
+                        }
+                    }
                 }
             }
+        }
+        if (codeSpecOpen) {
+            CodeSpecEditorDialog(
+                state = state,
+                questionCount = exam.questions.size,
+                onDismiss = { codeSpecOpen = false },
+                onSave = { qi, lang, ref, tests ->
+                    viewModel.saveCodeSpec(qi, lang, ref, tests)
+                    codeSpecOpen = false
+                }
+            )
         }
     }
 

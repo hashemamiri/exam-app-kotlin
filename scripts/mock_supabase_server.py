@@ -330,6 +330,10 @@ class MockSupabaseState:
             self.grade_history: list[dict[str, Any]] = []  # V354
             self.essay_keywords: list[dict[str, Any]] = []      # V355
             self.similarity_reviews: dict[str, dict[str, Any]] = {}  # V355
+            self.code_specs: dict[str, dict[str, Any]] = {}      # V356
+            self.code_tests: list[dict[str, Any]] = []           # V356
+            self.code_checks: dict[str, dict[str, Any]] = {}     # V356
+            self.code_test_seq = 0                               # V356
             self.classes: dict[str, dict[str, Any]] = {}
 
             teacher_id = "11111111-1111-4111-8111-111111111111"
@@ -1478,7 +1482,7 @@ def make_handler(state: MockSupabaseState):
                     self._send_json(400, {"message": "تصحیح این پاسخ هنوز نهایی نشده است."})
                     return
                 if len(reason) < 5 or len(reason) > 2000:
-                    self._send_json(400, {"message": "متن اعتراض باید بین ۵ تا ۰۰ نویسه باشد."})
+                    self._send_json(400, {"message": "متن اعتراض باید بین ۵ تا ۲۰۰۰ نویسه باشد."})
                     return
                 for a in state.appeals.values():
                     if (a["answer_id"] == aid and a["student_id"] == user["id"]
@@ -1605,7 +1609,7 @@ def make_handler(state: MockSupabaseState):
                     w = _parse_float((it or {}).get("weight"))
                     w = 1.0 if w is None else w
                     if not (1 <= len(kw) <= 120):
-                        self._send_json(400, {"message": "هر کلیدواژه باید بین ۱ تا ۲۰ نویسه باشد."})
+                        self._send_json(400, {"message": "هر کلیدواژه باید بین ۱ تا ۱۲۰ نویسه باشد."})
                         return
                     if not (0 < w <= 100):
                         self._send_json(400, {"message": "وزن کلیدواژه نامعتبر است."})
@@ -1660,6 +1664,131 @@ def make_handler(state: MockSupabaseState):
                     "reviewed_by": user["id"], "updated_at": state.now_iso(),
                 }
                 self._send_json(200, {"ok": True, "status": st})
+                return
+
+            # ---- V356: تصحیح کد، فاز صفر (بدون اجرای کد) ----
+            if fn == "native_code_spec_get_v356":
+                eid = str(params.get("p_exam") or "")
+                ex = state.exams.get(eid)
+                if ex is None or ex.get("teacher_id") != user["id"]:
+                    self._send_json(400, {"message": "این آزمون متعلق به شما نیست."})
+                    return
+                specs = [s for s in state.code_specs.values() if s["exam_id"] == eid]
+                specs.sort(key=lambda s: s["question_index"])
+                tests = [x for x in state.code_tests if x["exam_id"] == eid]
+                tests.sort(key=lambda x: (x["question_index"], x["ord"], x["id"]))
+                self._send_json(200, {
+                    "specs": [{k: v for k, v in s.items() if k != "exam_id"} for s in specs],
+                    "tests": [{k: v for k, v in x.items() if k != "exam_id"} for x in tests],
+                })
+                return
+
+            if fn == "native_code_spec_save_v356":
+                eid = str(params.get("p_exam") or "")
+                ex = state.exams.get(eid)
+                if ex is None or ex.get("teacher_id") != user["id"]:
+                    self._send_json(400, {"message": "این آزمون متعلق به شما نیست."})
+                    return
+                qi = params.get("p_question")
+                lang = str(params.get("p_language") or "python").strip()
+                ref = str(params.get("p_reference") or "")
+                items_in = params.get("p_tests")
+                if not isinstance(qi, int) or qi < 0:
+                    self._send_json(400, {"message": "شاخص سؤال نامعتبر است."})
+                    return
+                if not (1 <= len(lang) <= 40):
+                    self._send_json(400, {"message": "نام زبان نامعتبر است."})
+                    return
+                if len(ref) > 20000:
+                    self._send_json(400, {"message": "پاسخ مرجع بیش از حد بلند است."})
+                    return
+                if not isinstance(items_in, list):
+                    self._send_json(400, {"message": "فهرست موارد آزمون باید آرایه باشد."})
+                    return
+                if len(items_in) > 40:
+                    self._send_json(400, {"message": "برای هر سؤال بیش از ۴۰ مورد آزمون نمی‌توان تعریف کرد."})
+                    return
+                cleaned = []
+                for it in items_in:
+                    it = it or {}
+                    label = str(it.get("label") or "")
+                    inp = str(it.get("input") or "")
+                    exp = str(it.get("expected") or "")
+                    w = _parse_float(it.get("weight"))
+                    w = 1.0 if w is None else w
+                    if len(label) > 120:
+                        self._send_json(400, {"message": "برچسب مورد آزمون بلندتر از ۱۲۰ نویسه است."})
+                        return
+                    if len(inp) > 4000 or len(exp) > 4000:
+                        self._send_json(400, {"message": "ورودی یا خروجی مورد آزمون بیش از حد بلند است."})
+                        return
+                    if not (0 < w <= 100):
+                        self._send_json(400, {"message": "وزن مورد آزمون نامعتبر است."})
+                        return
+                    cleaned.append((label, inp, exp, w, bool(it.get("hidden"))))
+                cleared = len([k for k, v in state.code_checks.items()
+                               if v["exam_id"] == eid and v["question_index"] == qi])
+                state.code_checks = {k: v for k, v in state.code_checks.items()
+                                     if not (v["exam_id"] == eid and v["question_index"] == qi)}
+                state.code_tests = [x for x in state.code_tests
+                                    if not (x["exam_id"] == eid and x["question_index"] == qi)]
+                state.code_specs[f"{eid}#{qi}"] = {
+                    "exam_id": eid, "question_index": qi, "language": lang, "reference": ref,
+                    "ignore_case": bool(params.get("p_ignore_case")),
+                    "trim_lines": params.get("p_trim_lines") is not False,
+                    "collapse_blank": params.get("p_collapse_blank") is not False,
+                }
+                for ord_i, (label, inp, exp, w, hidden) in enumerate(cleaned):
+                    state.code_test_seq += 1
+                    state.code_tests.append({
+                        "id": state.code_test_seq, "exam_id": eid, "question_index": qi,
+                        "ord": ord_i, "label": label, "input": inp, "expected": exp,
+                        "weight": w, "hidden": hidden,
+                    })
+                self._send_json(200, {"ok": True, "count": len(cleaned), "cleared_checks": cleared})
+                return
+
+            if fn == "native_code_checks_v356":
+                eid = str(params.get("p_exam") or "")
+                ex = state.exams.get(eid)
+                if ex is None or ex.get("teacher_id") != user["id"]:
+                    self._send_json(400, {"message": "این آزمون متعلق به شما نیست."})
+                    return
+                rows = [v for v in state.code_checks.values() if v["exam_id"] == eid]
+                rows.sort(key=lambda v: (v["answer_id"], v["question_index"], v["test_id"]))
+                self._send_json(200, [{k: v for k, v in r.items() if k != "exam_id"} for r in rows])
+                return
+
+            if fn == "native_code_check_save_v356":
+                aid = str(params.get("p_answer") or "").strip()
+                qi = params.get("p_question")
+                tid = params.get("p_test")
+                actual = str(params.get("p_actual") or "")
+                ans = state.answers.get(aid)
+                if ans is None:
+                    self._send_json(400, {"message": "پاسخ پیدا نشد."})
+                    return
+                eid = ans["exam_id"]
+                ex = state.exams.get(eid) or {}
+                if ex.get("teacher_id") != user["id"]:
+                    self._send_json(400, {"message": "این آزمون متعلق به شما نیست."})
+                    return
+                if not isinstance(qi, int) or qi < 0:
+                    self._send_json(400, {"message": "شاخص سؤال نامعتبر است."})
+                    return
+                if len(actual) > 4000:
+                    self._send_json(400, {"message": "خروجی واقعی بیش از حد بلند است."})
+                    return
+                if not any(x["id"] == tid and x["exam_id"] == eid and x["question_index"] == qi
+                           for x in state.code_tests):
+                    self._send_json(400, {"message": "مورد آزمون پیدا نشد یا از این سؤال نیست."})
+                    return
+                passed = bool(params.get("p_passed"))
+                state.code_checks[f"{aid}#{qi}#{tid}"] = {
+                    "answer_id": aid, "exam_id": eid, "question_index": qi, "test_id": tid,
+                    "passed": passed, "actual": actual, "note": None,
+                }
+                self._send_json(200, {"ok": True, "passed": passed})
                 return
 
             if fn == "native_my_answers_v1":

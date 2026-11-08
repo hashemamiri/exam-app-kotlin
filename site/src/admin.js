@@ -205,8 +205,24 @@
       } catch (e) { kwByQ = {}; }
     }
     await loadKeywords();
-    body.appendChild(el('div', {class: 'row', style: 'margin-bottom:8px'}, [
-      el('button', {class: 'btn light sm', text: ' کلیدواژه‌های تصحیح تشریحی', onclick: function () { keywordEditor(ctx, loadKeywords); }})]));
+    /* V356 — مشخصات و چک‌لیست تصحیح کد (فاز صفر، بدون اجرای کد) */
+    var codeState = {specs: [], tests: [], checks: {}};
+    async function loadCodeSpecs() {
+      try {
+        var d = chk(await S.rpcObj('native_code_spec_get_v356', {p_exam: ctx.examId})) || {};
+        codeState.specs = d.specs || []; codeState.tests = d.tests || [];
+        var rows = chk(await S.rpcObj('native_code_checks_v356', {p_exam: ctx.examId})) || [];
+        codeState.checks = {};
+        rows.forEach(function (r) {
+          var k = r.answer_id + ':' + r.question_index;
+          (codeState.checks[k] = codeState.checks[k] || {})[r.test_id] = {passed: r.passed, actual: r.actual};
+        });
+      } catch (e) { codeState = {specs: [], tests: [], checks: {}}; }
+    }
+    await loadCodeSpecs();
+    body.appendChild(el('div', {class: 'row', style: 'margin-bottom:8px;gap:6px;flex-wrap:wrap'}, [
+      el('button', {class: 'btn light sm', text: '🔑 کلیدواژه‌های تصحیح تشریحی', onclick: function () { keywordEditor(ctx, loadKeywords); }}),
+      el('button', {class: 'btn light sm', text: ' موارد آزمون کد', onclick: function () { codeSpecEditor(ctx, loadCodeSpecs); }})]));
     var pend = answers.filter(function (a) { return !a.graded; }).length;
     body.appendChild(el('div', {class: 'row', style: 'margin-bottom:10px'}, [
       el('span', {class: 'muted', text: fa(pend) + ' پاسخ در انتظار تصحیح'}), el('span', {class: 'grow'}),
@@ -264,6 +280,11 @@
             el('div', {class: 'muted', style: 'font-size:12px',
               text: 'نیامده (' + fa(res.missing.length) + '): ' + (res.missing.join('، ') || '—')})]);
           box.appendChild(panel);
+        }
+        /* V356 — چک‌لیست کد؛ فقط پیشنهاد نمره، بدون اجرای کد */
+        if (window.ExamCodeGrade && isCodeQ(q, r) && !structuredParts) {
+          var cgPanel = codeChecklistPanel(ctx, q, i, a, r, inp, codeState);
+          if (cgPanel) box.appendChild(cgPanel);
         }
         detail.appendChild(box);
       });
@@ -474,6 +495,157 @@
     return el('label', {class: 'row', style: 'gap:6px;font-size:13px;cursor:pointer'}, [
       el('input', {type: 'checkbox', checked: blindOn(), onchange: function (e) { setBlind(e.target.checked); ctx.refresh(); }}),
       el('span', {text: '🕶 تصحیح ناشناس (نام پنهان، ترتیب درهم)'})]);
+  }
+
+  /* ---------- V356 — تصحیح کد، فاز صفر ----------
+     پاسخ مرجع و موارد آزمون نگه داشته می‌شوند؛ معلم نتیجهٔ هر مورد را
+     خودش علامت می‌زند. کد دانش‌آموز هرگز اجرا نمی‌شود و نمره خودکار
+     تغییر نمی‌کند؛ فقط پیشنهاد ساخته می‌شود. */
+  function isCodeQ(q, raw) {
+    if (q && q.mode === 'code') return true;
+    return !!(window.SiteCode && window.SiteCode.hasFence(String(raw == null ? '' : raw)));
+  }
+
+  async function codeSpecEditor(ctx, onSaved) {
+    var CG = window.ExamCodeGrade;
+    if (!CG) return toast('موتور تصحیح کد بارگذاری نشد.', 'err');
+    var data;
+    try { data = chk(await S.rpcObj('native_code_spec_get_v356', {p_exam: ctx.examId})) || {}; }
+    catch (e) { return toast(errMsg(e), 'err'); }
+    var codeQs = [];
+    ctx.questions.forEach(function (q, i) { if (q.mode === 'code' || q.__type === 'essay') codeQs.push(i); });
+    if (!codeQs.length) return toast('این آزمون سؤال کد یا تشریحی ندارد.', 'err');
+
+    var bg = el('div', {class: 'modal-bg', onclick: function (e) { if (e.target === bg) bg.remove(); }});
+    var m = el('div', {class: 'modal wide'}, [el('button', {class: 'x', text: '✕', onclick: function () { bg.remove(); }}),
+      el('h3', {style: 'margin:0 0 8px;font-size:16px', text: '🧪 موارد آزمون کد (بدون اجرای کد)'})]);
+    var sel = el('select', {style: 'width:100%;border:1px solid var(--line);border-radius:10px;padding:8px;margin-bottom:8px'});
+    codeQs.forEach(function (i) {
+      sel.appendChild(el('option', {value: String(i), text: 'سؤال ' + fa(i + 1) + ' — ' + String(ctx.questions[i].text || '').slice(0, 50)}));
+    });
+    var lang = el('input', {type: 'text', value: 'python', placeholder: 'python',
+      style: 'width:100%;border:1px solid var(--line);border-radius:10px;padding:8px;direction:ltr;margin-bottom:8px'});
+    var ref = el('textarea', {rows: 5, placeholder: 'پاسخ مرجع (فقط شما می‌بینید)',
+      style: 'width:100%;border:1px solid var(--line);border-radius:10px;padding:8px;font-size:12px;direction:ltr;font-family:monospace'});
+    var tests = el('textarea', {rows: 6, placeholder: 'مثال ساده | 2 3 => 5\nعدد منفی | 2 | -2 3 => 1\nحالت مرزی | پنهان | 0 0 => 0',
+      style: 'width:100%;border:1px solid var(--line);border-radius:10px;padding:8px;font-size:12px;direction:ltr;font-family:monospace'});
+    var msg = el('div', {class: 'muted', style: 'font-size:12px;margin-top:6px'});
+
+    function fill() {
+      var qi = Number(sel.value);
+      var sp = (data.specs || []).filter(function (s) { return s.question_index === qi; })[0];
+      lang.value = sp ? sp.language : 'python';
+      ref.value = sp ? sp.reference : '';
+      tests.value = CG.formatTests((data.tests || []).filter(function (t) { return t.question_index === qi; }));
+      msg.textContent = '';
+    }
+    sel.addEventListener('change', fill);
+    m.appendChild(sel);
+    m.appendChild(el('label', {class: 'muted', style: 'font-size:12px', text: 'زبان'}));
+    m.appendChild(lang);
+    m.appendChild(el('label', {class: 'muted', style: 'font-size:12px', text: 'پاسخ مرجع'}));
+    m.appendChild(ref);
+    m.appendChild(el('label', {class: 'muted', style: 'font-size:12px', text: 'موارد آزمون — هر خط: برچسب | وزن | ورودی => خروجی'}));
+    m.appendChild(tests);
+    m.appendChild(el('p', {class: 'muted', style: 'font-size:12px;margin:6px 0',
+      text: 'برای مورد پنهان «پنهان» بنویسید. برای خط جدید در ورودی/خروجی «\\n» بگذارید. حداکثر ۴۰ مورد. توجه: ذخیره، چک‌لیست ثبت‌شدهٔ همین سؤال را پاک می‌کند.'}));
+    m.appendChild(msg);
+    m.appendChild(el('div', {class: 'row', style: 'margin-top:8px'}, [
+      el('span', {class: 'grow'}),
+      el('button', {class: 'btn', text: 'ذخیره', onclick: async function () {
+        var qi = Number(sel.value);
+        var parsed = CG.parseTests(tests.value);
+        if (parsed.errors.length) {
+          msg.textContent = 'خط ' + fa(parsed.errors[0].line) + ': ' + parsed.errors[0].message;
+          return;
+        }
+        if (ref.value.length > CG.MAX_REFERENCE) { msg.textContent = 'پاسخ مرجع بیش از حد بلند است.'; return; }
+        try {
+          var res = chk(await S.rpcObj('native_code_spec_save_v356', {
+            p_exam: ctx.examId, p_question: qi, p_language: lang.value.trim() || 'python',
+            p_reference: ref.value, p_tests: parsed.tests}));
+          data = chk(await S.rpcObj('native_code_spec_get_v356', {p_exam: ctx.examId})) || {};
+          fill();
+          var cleared = res && res.cleared_checks ? res.cleared_checks : 0;
+          toast('ذخیره شد: ' + fa(parsed.tests.length) + ' مورد' +
+            (cleared ? ' — ' + fa(cleared) + ' ردیف چک‌لیست پاک شد' : ''), 'ok');
+          if (onSaved) await onSaved();
+        } catch (e) { msg.textContent = errMsg(e); }
+      }})]));
+    bg.appendChild(m); document.body.appendChild(bg);
+    fill();
+  }
+
+  /** چک‌لیست یک سؤال کد برای یک پاسخ؛ نمره فقط پیشنهاد می‌شود. */
+  function codeChecklistPanel(ctx, q, qi, answer, raw, scoreInput, state) {
+    var CG = window.ExamCodeGrade;
+    var tests = (state.tests || []).filter(function (t) { return t.question_index === qi; });
+    if (!tests.length) return null;
+    var spec = (state.specs || []).filter(function (s) { return s.question_index === qi; })[0] || {};
+    var opts = {trimLines: spec.trim_lines !== false, collapseBlank: spec.collapse_blank !== false, ignoreCase: !!spec.ignore_case};
+    var checks = state.checks[answer.id + ':' + qi] || {};
+    var box = el('div', {class: 'card', style: 'padding:8px;margin-top:6px;background:var(--soft)'});
+    var headTitle = el('b', {class: 'grow', style: 'font-size:13px', text: '🧪 چک‌لیست کد — ' + CG.summary(tests, checks)});
+    var head = el('div', {class: 'row'}, [
+      headTitle,
+      el('span', {class: 'muted', style: 'font-size:12px', text: 'کد اجرا نمی‌شود'})]);
+    box.appendChild(head);
+    var scoreLine = el('div', {style: 'font-size:13px;margin:4px 0'});
+    var applyBtn = el('button', {class: 'btn light sm', text: 'اعمال پیشنهاد'});
+    function refresh() {
+      var r = CG.scoreFromTests(tests, checks, Number(q.score) || 0);
+      /* عنوان وضعیت هم باید تازه شود، وگرنه پس از علامت‌زدن «هنوز بررسی نشده» می‌ماند */
+      headTitle.textContent = '🧪 چک‌لیست کد — ' + CG.summary(tests, checks);
+      scoreLine.textContent = 'قبول ' + fa(r.passedCount) + ' از ' + fa(r.totalCount) +
+        ' — بررسی‌شده ' + fa(r.checkedCount) + ' — پیشنهاد: ' + fa(S.fmtScore(r.suggested)) + ' از ' + fa(S.fmtScore(Number(q.score) || 0));
+      applyBtn.onclick = function () {
+        scoreInput.value = r.suggested;
+        scoreInput.dispatchEvent(new Event('input', {bubbles: true}));
+        toast('پیشنهاد در کادر نمره گذاشته شد؛ ذخیره با خود شماست.', 'ok');
+      };
+    }
+    box.appendChild(scoreLine);
+    tests.forEach(function (t) {
+      var c = checks[t.id] || {};
+      var cb = el('input', {type: 'checkbox'});
+      cb.checked = !!c.passed;
+      var actual = el('input', {type: 'text', value: c.actual || '', placeholder: 'خروجی واقعی (اختیاری)',
+        style: 'flex:1;min-width:120px;border:1px solid var(--line);border-radius:8px;padding:5px;font-size:12px;direction:ltr'});
+      var verdict = el('span', {class: 'muted', style: 'font-size:11px'});
+      function judge() {
+        if (!actual.value) { verdict.textContent = ''; return; }
+        verdict.textContent = CG.outputMatches(t.expected, actual.value, opts) ? '✓ مطابق' : '✗ نامطابق';
+      }
+      actual.addEventListener('input', judge);
+      async function persist() {
+        try {
+          chk(await S.rpcObj('native_code_check_save_v356', {
+            p_answer: answer.id, p_question: qi, p_test: t.id,
+            p_passed: cb.checked, p_actual: actual.value, p_note: ''}));
+          checks[t.id] = {passed: cb.checked, actual: actual.value};
+          state.checks[answer.id + ':' + qi] = checks;
+          refresh();
+        } catch (e) { toast(errMsg(e), 'err'); }
+      }
+      cb.addEventListener('change', persist);
+      actual.addEventListener('change', persist);
+      judge();
+      box.appendChild(el('div', {style: 'padding:6px 0;border-top:1px solid var(--line)'}, [
+        el('div', {class: 'row', style: 'gap:6px;flex-wrap:wrap'}, [
+          cb, el('span', {style: 'font-size:12px', text: (t.label || 'مورد') + ' (وزن ' + fa(t.weight) + ')' + (t.hidden ? ' · پنهان' : '')}),
+          el('span', {class: 'grow'}), verdict]),
+        el('div', {class: 'muted', style: 'font-size:11px;direction:ltr;font-family:monospace',
+          text: 'in: ' + (t.input || '—') + '  →  expected: ' + t.expected}),
+        el('div', {class: 'row', style: 'gap:6px;margin-top:3px'}, [actual])]));
+    });
+    if (spec.reference) {
+      box.appendChild(el('details', {style: 'margin-top:6px'}, [
+        el('summary', {style: 'font-size:12px;cursor:pointer', text: 'پاسخ مرجع (' + (spec.language || 'code') + ')'}),
+        el('pre', {style: 'white-space:pre-wrap;font-size:11px;direction:ltr;margin:4px 0', text: spec.reference})]));
+    }
+    box.appendChild(el('div', {class: 'row', style: 'margin-top:6px'}, [el('span', {class: 'grow'}), applyBtn]));
+    refresh();
+    return box;
   }
 
   /* ---------- V355 — ویرایشگر کلیدواژه‌های تصحیح تشریحی ----------
