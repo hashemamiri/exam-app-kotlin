@@ -30,7 +30,8 @@ class V153_SiteMobileAppParityTest {
         assertTrue("ui.cycle = true" in m)
         for (g in listOf("#E0587F,#7D6CF4", "#4D5B74,#273247", "#7D6CF4,#E0587F", "#0EA5E9,#6366F1", "#2878DB,#24B8C8", "#25BFA4,#45D7BD")) assertTrue(g, "linear-gradient(135deg,$g)" in m)
         val css = source("site/src/site.css")
-        assertTrue(".m-wheel-card{" in css && "width:90%;height:190px" in css && ".m-wheel-dots i.on{width:23px" in css && "rotate(5deg)" !in css)
+        /* V353 — کارت چرخ‌وفلک با اندازهٔ واقعی گوشی پر می‌شود (پین از ۹۰٪/۱۹۰px به‌روز شد) */
+        assertTrue(".m-wheel-card{" in css && "left:0;width:100%;height:var(--wheel-h,190px)" in css && ".m-wheel-dots i.on{width:23px" in css && "rotate(5deg)" !in css)
         assertTrue(".m-cards{" !in css)
     }
 

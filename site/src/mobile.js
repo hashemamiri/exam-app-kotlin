@@ -10,6 +10,90 @@
   var MQ = window.matchMedia('(max-width: 860px) and (pointer: coarse)'); /* V267 — کوچک کردن پنجرهٔ دسکتاپ (ماوس) دیگر چیدمان گوشی نمی‌شود */
   var ui = {menuOpen: false, addOpen: false, expanded: null};
 
+  /* ---------- V353 — اندازه‌گیری واقعی نمایشگر گوشی ----------
+     کاربر: «طول و عرض صفحه گوشی را اندازه بگیرد و سایت را مطابق همان پیاده کند».
+     چه می‌کند: اندازهٔ واقعی ناحیهٔ دید را می‌خواند (با احتیاط از visualViewport
+     که با باز شدن کیبورد و نوار مرورگر هم به‌روز می‌شود) و آن را در متغیرهای CSS
+     می‌نشاند تا پوسته، پنجره‌ها و چرخ‌وفلک کارت‌ها با همان اندازه چیده شوند.
+     رویدادها: resize، orientationchange، visualViewport.resize/scroll و تغییر MQ.
+     مقیاس: نسبت عرض واقعی به عرض طراحی (۳۹۰). برای پنجره‌ای که واقعاً سرریز
+     دارد، همان پنجره با zoom جمع می‌شود — نه کل سایت — تا متن بی‌دلیل ریز نشود. */
+  var VP = (function () {
+    var DESIGN_W = 390, MIN_FIT = 0.72;
+    var st = {w: DESIGN_W, h: 844, kb: 0, fit: 1, dpr: 1};
+    var listeners = [];
+    function num(v, d) { v = Math.round(Number(v) || 0); return v > 0 ? v : d; }
+    function measure() {
+      var vv = window.visualViewport;
+      var w = num(vv && vv.width, num(window.innerWidth, DESIGN_W));
+      var h = num(vv && vv.height, num(window.innerHeight, 844));
+      var full = num(window.innerHeight, h);
+      st.w = w; st.h = h; st.kb = Math.max(0, full - h);
+      st.dpr = Number(window.devicePixelRatio) || 1;
+      st.fit = Math.max(MIN_FIT, Math.min(1.4, w / DESIGN_W));
+      var root = document.documentElement;
+      root.style.setProperty('--vp-w', w + 'px');
+      root.style.setProperty('--vp-h', h + 'px');
+      root.style.setProperty('--vp-kb', st.kb + 'px');
+      root.style.setProperty('--vp-fit', st.fit.toFixed(4));
+      root.setAttribute('data-vp', w < 360 ? 'compact' : (w < 430 ? 'normal' : 'wide'));
+      /* چرخ‌وفلک کارت‌ها: عرض کامل و ارتفاع متناسب با نمایشگر */
+      var stageH = Math.round(Math.max(316, Math.min(620, h * 0.55)));
+      var cardH = Math.round(Math.max(190, Math.min(340, h * 0.36)));
+      root.style.setProperty('--wheel-stage-h', stageH + 'px');
+      root.style.setProperty('--wheel-h', cardH + 'px');
+      root.style.setProperty('--wheel-top', Math.round((stageH - cardH) / 2) + 'px');
+      for (var i = 0; i < listeners.length; i++) { try { listeners[i](st); } catch (e) {} }
+      fitOverlays();
+      return st;
+    }
+    /* پنجره‌ای که محتوایش از عرض خودش پهن‌تر است، به‌اندازهٔ همان نسبت جمع شود */
+    function fitOne(n) {
+      if (!n || !n.isConnected) return;
+      n.style.zoom = '';
+      var cw = n.clientWidth, sw = n.scrollWidth;
+      if (!cw || sw <= cw + 1) return;
+      var z = Math.max(MIN_FIT, Math.min(1, cw / sw));
+      if (z < 0.999) n.style.zoom = z.toFixed(4);
+    }
+    function fitOverlays() {
+      var list = document.querySelectorAll('.modal, .m-sheet, .cx-editor, .m-sheet-dk');
+      for (var i = 0; i < list.length; i++) fitOne(list[i]);
+    }
+    function start() {
+      measure();
+      var t = null;
+      function soon() { if (t) clearTimeout(t); t = setTimeout(function () { t = null; measure(); }, 80); }
+      window.addEventListener('resize', soon);
+      window.addEventListener('orientationchange', soon);
+      if (window.visualViewport) {
+        window.visualViewport.addEventListener('resize', soon);
+        window.visualViewport.addEventListener('scroll', soon);
+      }
+      if (window.MutationObserver) {
+        new MutationObserver(function (recs) {
+          for (var i = 0; i < recs.length; i++) {
+            var added = recs[i].addedNodes;
+            for (var j = 0; j < added.length; j++) {
+              var n = added[j];
+              if (n && n.nodeType === 1 && (n.matches('.modal-bg, .m-sheet-bg, .modal, .m-sheet') || n.querySelector('.modal, .m-sheet, .cx-editor'))) {
+                setTimeout(fitOverlays, 30);
+                return;
+              }
+            }
+          }
+        }).observe(document.body, {childList: true, subtree: true});
+      }
+    }
+    return {start: start, measure: measure, state: function () { return st; },
+            fit: function () { return st.fit; }, fitOverlays: fitOverlays,
+            onChange: function (f) { if (typeof f === 'function') listeners.push(f); },
+            DESIGN_W: DESIGN_W, MIN_FIT: MIN_FIT};
+  })();
+  window.SiteViewport = VP;
+  if (document.body) VP.start(); else document.addEventListener('DOMContentLoaded', function () { VP.start(); });
+
+
   /* V149 — معلم و دانش‌آموز (مدیر در مرحلهٔ بعد) */
   /* V150 — هر سه نقش */
   function active() { var u = S.user(); return MQ.matches && u && (u.role === 'teacher' || u.role === 'student' || u.role === 'manager'); }
@@ -170,28 +254,12 @@
      فهرست کارت‌ها (و رشته‌های پین‌شدهٔ تست‌های اپ) دست‌نخورده می‌ماند؛ هنگام ساخت شبکهٔ منو،
      کاشی‌ای که برچسبش «سایت» است با کاشی «دریافت برنامه» عوض می‌شود که آخرین APK را از
      جدول عمومی `app_version` می‌گیرد و مستقیم دانلود می‌کند (همان منبعی که «درباره» استفاده می‌کند). */
-  /* V335.72 — زنجیرهٔ جایگزین برای دانلود: دیتابیس → گیت‌هاب → صفحهٔ انتشار.
-     (CI فقط ۵ APK آخر را در باکت نگه می‌دارد؛ ردیف قدیمی `app_version` لینک مرده می‌دهد.) */
-  var APK_RELEASES_PAGE = 'https://github.com/hashemamiri/exam-app-kotlin/releases';
-  var APK_GH_API = 'https://api.github.com/repos/hashemamiri/exam-app-kotlin/releases/latest';
-  function apkUrlAlive(url) {
-    if (!url) return Promise.resolve(false);
-    return fetch(url, {method: 'HEAD', cache: 'no-store', mode: 'cors'})
-      .then(function (r) { return !!r && r.ok; })
-      .catch(function () { return false; });
-  }
-  function githubApk() {
-    return fetch(APK_GH_API, {headers: {Accept: 'application/vnd.github+json'}, cache: 'no-store'})
-      .then(function (r) { return r.ok ? r.json() : null; })
-      .then(function (j) {
-        var list = (j && j.assets) || [];
-        for (var i = 0; i < list.length; i++) {
-          if (/\.apk$/i.test(String(list[i].name || ''))) return {name: String(j.tag_name || j.name || '').replace(/^v/, ''), url: list[i].browser_download_url};
-        }
-        return null;
-      })
-      .catch(function () { return null; });
-  }
+  /* V353 — تصمیم کاربر: کارت دانلود منو «دقیقاً مثل دکمهٔ صفحهٔ ورود» رفتار کند.
+     پیش‌تر این کارت سه مرحلهٔ اضافه داشت: بررسی زنده‌بودن لینک با HEAD، سپس
+     گیت‌هاب API و سپس صفحهٔ انتشار. آن محکِ HEAD روی فضای ذخیره‌سازی به‌خاطر
+     CORS خطا می‌دهد و لینکِ سالم «مرده» تلقی می‌شد؛ نتیجه: کاربر بی‌دلیل به
+     گیت‌هاب می‌رفت، در حالی که دکمهٔ صفحهٔ ورود همان لینک را درست دانلود می‌کرد.
+     اکنون هر دو از یک منبع (جدول عمومی app_version) و بی‌واسطه دانلود می‌کنند. */
   function startApkDownload(v) {
     ui.menuOpen = false;
     var a = el('a', {href: v.url, download: 'exam-app-' + (v.name || 'latest') + '.apk'});
@@ -199,38 +267,15 @@
     toast('دانلود برنامه آغاز شد' + (v.name ? ' (نسخهٔ ' + fa(v.name) + ')' : '') + '.', 'ok');
     paint();
   }
-  function openReleases(message) {
-    ui.menuOpen = false;
-    toast(message, 'info');
-    paint();
-    try { window.open(APK_RELEASES_PAGE, '_blank', 'noopener'); } catch (e) {}
-  }
   function downloadApk(btn) {
     if (btn && btn.disabled) return;
     if (btn) btn.disabled = true;
     var done = function () { if (btn) btn.disabled = false; };
     api.latestApk().then(function (v) {
-      if (!v || !v.url) {
-        done();
-        return githubApk().then(function (g) {
-          if (g && g.url) return startApkDownload(g);
-          openReleases('نسخهٔ اندروید در دسترس نیست؛ صفحهٔ انتشار باز شد.');
-        });
-      }
-      return apkUrlAlive(v.url).then(function (alive) {
-        if (alive) { done(); return startApkDownload(v); }
-        /* لینک دیتابیس مرده است: کش را پاک کن و سراغ گیت‌هاب برو */
-        try { localStorage.removeItem('examsite.apk.v1'); } catch (e) {}
-        return githubApk().then(function (g) {
-          done();
-          if (g && g.url) return startApkDownload(g);
-          openReleases('فایل نسخهٔ ' + (v.name || '') + ' روی سرور نیست؛ صفحهٔ انتشار باز شد.');
-        });
-      });
-    }).catch(function () {
       done();
-      openReleases('دریافت برنامه ممکن نشد؛ صفحهٔ انتشار باز شد.');
-    });
+      if (!v || !v.url) { toast('نسخهٔ اندروید در دسترس نیست.', 'err'); return; }
+      startApkDownload(v);
+    }).catch(function () { done(); toast('دریافت برنامه ممکن نشد؛ دوباره تلاش کنید.', 'err'); });
   }
   function appDownloadTile() {
     return el('button', {class: 'm-tile neo', onclick: function (e) { downloadApk(e && e.currentTarget); }},
@@ -351,6 +396,15 @@
     var info = el('div', {class: 'm-deck-info neo pressed'}, [el('b'), el('span')]);
     var els = [], p = 0, target = 0, vel = 0, drag = false, lastX = 0, lastT = 0, moved = 0;
     var DRAG_PX = 190, RX = 112, RY = 44;
+    /* V353 — همان ثابت‌های dp اپ به‌عنوان پایه می‌مانند و با عرض واقعی گوشی
+       مقیاس می‌شوند تا کارت‌ها روی گوشی بزرگ‌تر بزرگ‌تر و روی کوچک‌تر جمع شوند. */
+    var BASE_DRAG = DRAG_PX, BASE_RX = RX, BASE_RY = RY;
+    function rescale() {
+      var vw = window.SiteViewport ? window.SiteViewport.state().w : 390;
+      var f = Math.max(0.85, Math.min(1.35, vw / 390));
+      DRAG_PX = BASE_DRAG * f; RX = BASE_RX * f; RY = BASE_RY * f;
+    }
+    rescale();
     var reduce = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
     function wrap(d) { d = ((d % n) + n) % n; return d > n / 2 ? d - n : d; }
     function activeIndex() { return ((Math.round(p) % n) + n) % n; }
@@ -381,6 +435,7 @@
       info.querySelector('span').textContent = cards[act][1];
       deckIndex[key] = act;
     }
+    if (window.SiteViewport) window.SiteViewport.onChange(function () { rescale(); paint(); });
     /* کشیدن/لمس/کلید مثل اپ؛ در RTL کشیدن به چپ = کارت بعدی */
     stage.addEventListener('pointerdown', function (e) {
       drag = true; moved = 0; vel = 0; lastX = e.clientX; lastT = performance.now();

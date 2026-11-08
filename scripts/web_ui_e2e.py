@@ -812,6 +812,101 @@ def run_suite(site_dir_arg: str | None, out_dir: Path) -> int:
                 t0,
             )
 
+
+            # --------------------------------------------------------
+            # ۳پ) V353 — اندازه‌گیری واقعی نمایشگر گوشی + کارت دانلود منو
+            #     کاربر: کارت دانلود باید مثل دکمهٔ صفحهٔ ورود مستقیم دانلود کند
+            #     و صفحه کارت‌ها عرض/ارتفاع واقعی گوشی را پر کند.
+            # --------------------------------------------------------
+            t0 = time.monotonic()
+            mob_state = desktop_ctx.storage_state()
+            mob_ctx = browser.new_context(
+                viewport={"width": 390, "height": 844},
+                locale="fa-IR",
+                is_mobile=True,
+                has_touch=True,
+                service_workers="block",
+                storage_state=mob_state,
+            )
+            mob = mob_ctx.new_page()
+            mob.set_default_timeout(8000)
+            gh_calls: list[str] = []
+            mob.on("request", lambda r: gh_calls.append(r.url) if "github" in r.url else None)
+            mob.goto(web_url + "/", wait_until="domcontentloaded")
+            mob.wait_for_timeout(700)
+            if not mob.locator("input[type='text']").count():
+                click_visible_button(mob, "ورود", substring=True)
+                mob.wait_for_timeout(600)
+            if mob.locator("input[type='text']").count():
+                mob.locator("input[type='text']").first.fill("uitest_teacher")
+                mob.locator("input[type='password']").first.fill("TestPass1234!")
+                mob.locator("input[type='password']").first.press("Enter")
+                mob.wait_for_timeout(1200)
+
+            mob.evaluate("() => window.ExamSite.go('cards')")
+            mob.wait_for_timeout(1200)
+            vp = mob.evaluate(
+                """() => {
+                    const cs = getComputedStyle(document.documentElement);
+                    const box = (s) => { const n = document.querySelector(s); if (!n) return null;
+                        const r = n.getBoundingClientRect();
+                        return {w: Math.round(r.width), top: Math.round(r.top), bottom: Math.round(r.bottom)}; };
+                    const cards = [...document.querySelectorAll('.m-wheel-card')].map(n => n.getBoundingClientRect().width);
+                    return {vw: innerWidth, vh: innerHeight,
+                        vpW: cs.getPropertyValue('--vp-w').trim(), vpH: cs.getPropertyValue('--vp-h').trim(),
+                        fit: cs.getPropertyValue('--vp-fit').trim(),
+                        card: cards.length ? Math.round(Math.max(...cards)) : 0,
+                        info: box('.m-deck-info'), dock: box('.m-dock'),
+                        docSW: document.scrollingElement.scrollWidth};
+                }"""
+            )
+            assert vp["vpW"] == "390px" and vp["vpH"] == "844px", "متغیرهای اندازهٔ نمایشگر ست نشده: %r" % vp
+            assert vp["fit"], "متغیر مقیاس --vp-fit خالی است"
+            assert vp["card"] >= vp["vw"] * 0.90, "کارت چرخ‌وفلک عرض گوشی را پر نمی‌کند: %r" % vp
+            assert vp["docSW"] <= vp["vw"] + 1, "صفحه کارت‌ها سرریز افقی دارد: %r" % vp
+            assert vp["info"] and vp["dock"] and vp["info"]["bottom"] <= vp["dock"]["top"] + 2, "کادر توضیح زیر داک رفته"
+
+            # چرخش گوشی: متغیرها باید با اندازهٔ تازه به‌روز شوند
+            mob.set_viewport_size({"width": 844, "height": 390})
+            mob.wait_for_timeout(500)
+            rot = mob.evaluate("() => getComputedStyle(document.documentElement).getPropertyValue('--vp-w').trim()")
+            assert rot == "844px", "پس از چرخش، اندازه به‌روز نشد: %s" % rot
+            mob.set_viewport_size({"width": 390, "height": 844})
+            mob.wait_for_timeout(500)
+
+            # کارت دانلود منو: مستقیم از app_version، بی‌گیت‌هاب
+            mob.evaluate("() => window.ExamSite.go('exams')")
+            mob.wait_for_timeout(600)
+            click_visible_button(mob, "منو")
+            mob.wait_for_timeout(700)
+            dl_tile = mob.locator(".m-tile", has_text="دریافت برنامه")
+            assert dl_tile.count() == 1, "کارت «دریافت برنامه» در منوی همبرگری نیست"
+            mob.evaluate(
+                """() => {
+                    const orig = HTMLAnchorElement.prototype.click;
+                    window.__apkDl = null;
+                    HTMLAnchorElement.prototype.click = function () {
+                        if (this.download) { window.__apkDl = {href: this.href, name: this.download}; return; }
+                        return orig.apply(this, arguments);
+                    };
+                }"""
+            )
+            gh_calls.clear()
+            dl_tile.first.tap()
+            mob.wait_for_timeout(1200)
+            dl = mob.evaluate("() => window.__apkDl")
+            assert dl and dl["name"].endswith(".apk"), "کارت منو دانلود مستقیم APK را آغاز نکرد: %r" % dl
+            assert not gh_calls, "کارت دانلود هنوز به گیت‌هاب درخواست می‌فرستد: %r" % gh_calls
+            record_step(
+                mob,
+                "03c_mobile_viewport_download.png",
+                "گوشی ۳۹۰×۸۴۴ — اندازهٔ واقعی نمایشگر، کارت‌ها تمام عرض، و دانلود مستقیم از منو",
+                "متغیرهای --vp-w/--vp-h/--vp-fit، به‌روزرسانی با چرخش، و بی‌نیازی از گیت‌هاب",
+                "390×844",
+                t0,
+            )
+            mob_ctx.close()
+
             # --------------------------------------------------------
             # ۴) ذخیرهٔ دوبار (اثبات ثبات کد ۶حرفی) + باز کردن آزمون برای دانش‌آموزان
             # --------------------------------------------------------

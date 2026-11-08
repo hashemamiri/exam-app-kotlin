@@ -831,6 +831,11 @@ def make_handler(state: MockSupabaseState):
                         "version_code": 1001027500,
                         "version_name": "1.02.75",
                         "download_url": "https://onlineexam.ir/download/latest.apk",
+                        # V353 — ستون‌های واقعی جدول app_version تا مسیر دانلود
+                        # (api.latestApk) در آزمون‌ها همان‌طور کار کند که در تولید.
+                        "apk_url": "https://onlineexam.ir/download/latest.apk",
+                        "apk_size_bytes": 12345678,
+                        "is_active": True,
                         "notes_fa": "نسخه آزمایشی خودکار",
                         "force_update": False,
                     }
