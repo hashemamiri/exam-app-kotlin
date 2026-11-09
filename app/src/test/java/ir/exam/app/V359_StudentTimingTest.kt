@@ -281,10 +281,39 @@ class V359_StudentTimingTest {
         assertTrue("سنجهٔ غلط پیشین باید مستند شود", t.contains("سنجهٔ") && t.contains("همه پایه‌ها"))
     }
 
+    // ------------------------------------------------------------------
+    // V359.2 — نگهبان ارجاع اسکریپت‌های گردش‌کار
+    // ------------------------------------------------------------------
+
+    @Test
+    fun workflowScriptGuardCatchesLoopBuiltReferences() {
+        val guard = src("scripts/check_workflow_scripts.py")
+        assertTrue("باید سرِ حلقه را بگیرد", guard.contains("loop_start"))
+        assertTrue("باید بدنه را دستی بخواند", guard.contains("text.find(\"; do\""))
+        assertTrue("حلقهٔ پایتونی باید رد شود", guard.contains("[](){}"))
+        assertTrue("پیام راهنما باید فارسی باشد", guard.contains("بستهٔ ترمیم"))
+        // این نگهبان باید نخستین گام باشد، نه آخر حلقه
+        val android = src(".github/workflows/android.yml")
+        val guardAt = android.indexOf("python3 scripts/check_workflow_scripts.py")
+        val loopAt = android.indexOf("for g in check_kotlin_braces")
+        assertTrue("نگهبان در android.yml نیست", guardAt > 0)
+        assertTrue("باید پیش از حلقه باشد", guardAt < loopAt)
+        val site = src(".github/workflows/site.yml")
+        assertTrue("در site.yml هم باید باشد", site.contains("check_workflow_scripts.py"))
+    }
+
+    @Test
+    fun lostGuardFileIsBackInRepository() {
+        val f = java.io.File(root(), "scripts/check_v357_sql_sync.py")
+        assertTrue("فایل نگهبان V357 باید موجود باشد", f.isFile)
+        val builder = java.io.File(root(), "scripts/build_v357_sql.py")
+        assertTrue("سازندهٔ SQL یک‌جا باید موجود باشد", builder.isFile)
+    }
+
     @Test
     fun versionAndChangelogAgree() {
         val version = src("text/APP_VERSION.txt").trim()
-        assertEquals("1.03.79", version)
+        assertEquals("1.03.81", version)
         val changelog = src("text/CHANGELOG_FA.txt")
         val first = changelog.lines().first()
         assertTrue("تیتر باید V359 باشد", first.startsWith("V359"))

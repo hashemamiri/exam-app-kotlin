@@ -283,6 +283,54 @@ class V357_ExamTimingTest {
         assertTrue(check.contains("native_offline_submit_v357(text,text,jsonb,jsonb,timestamptz)"))
     }
 
+    // ------------------------------------------------------------------
+    // ۷) ایمنی نصب — V357.1
+    //    خطای واقعی کاربر: فایل «بررسی» پیش از «نصب» اجرا شد و
+    //    ۴۲P01 داد. حالا یک فایل است و ترتیب اشتباه ممکن نیست.
+    // ------------------------------------------------------------------
+
+    @Test
+    fun singleFileInstallExistsAndCarriesGuardAndVerify() {
+        val all = src("supabase/sql/SQL_EXAM_TIMING_V357_ALL.sql")
+        assertTrue("نگهبان پیش‌نیاز نیست", all.contains("جدول پایه پیدا نشد"))
+        assertTrue("نگهبان ستون نیست", all.contains("ستون پایه پیدا نشد"))
+        assertTrue("جدول زمان اضافه ساخته نمی‌شود",
+            all.contains("create table if not exists public.exam_time_grants"))
+        assertTrue("بخش بررسی نیست", all.contains("with checks(label, ok) as ("))
+        assertTrue("ردیف صریح نصب نیست", all.contains("نصب V357 انجام شده است"))
+        // نصب باید پیش از بررسی بیاید
+        assertTrue("ترتیب نصب و بررسی برعکس است",
+            all.indexOf("create table if not exists public.exam_time_grants") <
+                all.indexOf("with checks(label, ok) as ("))
+        listOf("native_time_grant_save_v357", "native_question_limits_save_v357",
+               "native_sync_exam_question_v357", "native_offline_pack_v357",
+               "native_offline_submit_v357").forEach {
+            assertTrue("تابع در فایل یک‌جا نیست: $it", all.contains(it))
+        }
+    }
+
+    @Test
+    fun checkFileCannotCrashOnUninstalledDatabase() {
+        val chk = src("supabase/sql/SQL_EXAM_TIMING_V357_CHECK.sql")
+        // ارجاع مستقیم به جدول در یک عبارت معمولی، روی پایگاه نصب‌نشده
+        // خطای ۴۲P01 می‌داد. شمارش باید در بلوک do و پشت to_regclass باشد.
+        assertFalse("شمارش مستقیم و بی‌محافظ برگشته است",
+            chk.contains("(select count(*) from public.exam_time_grants)"))
+        assertTrue("محافظ to_regclass نیست", chk.contains("to_regclass('public.exam_time_grants') is null"))
+        assertTrue("شمارش پویا نیست", chk.contains("execute 'select count(*) from public.exam_time_grants'"))
+        assertTrue("پیام «نصب نشده» نیست", chk.contains("هنوز نصب نشده است"))
+    }
+
+    @Test
+    fun generatedSqlIsGuardedInCi() {
+        val ci = src(".github/workflows/android.yml")
+        assertTrue("نگهبان هم‌خوانی در CI نیست", ci.contains("check_v357_sql_sync"))
+        val builder = src("scripts/build_v357_sql.py")
+        assertTrue("سازنده حالت بررسی ندارد", builder.contains("--check"))
+        assertTrue("فایل یک‌جا باید تولیدشده بماند",
+            src("supabase/sql/SQL_EXAM_TIMING_V357_ALL.sql").contains("این فایل تولیدشده است"))
+    }
+
     @Test
     fun noCodeExecutionOrNetworkInTimingModule() {
         val site = src("site/src/examtiming.js")

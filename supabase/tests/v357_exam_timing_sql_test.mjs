@@ -223,8 +223,22 @@ ok('اجرای دوباره زمان را دوباره اضافه نکرد', r[0
 
 console.log('\n=== ۱۵) فایل بررسی نصب ===');
 const chk = fs.readFileSync(SQL('SQL_EXAM_TIMING_V357_CHECK.sql'), 'utf8');
-const stmts = chk.split('\n').filter(l => !l.trim().startsWith('--')).join('\n')
-  .split(';').map(s => s.trim()).filter(Boolean);
+// V357.1 — تقسیم روی ';' باید بلوک‌های $$ ... $$ و رشته‌ها را نشکند،
+// وگرنه بلوک do تکه‌تکه می‌شود و خطای دروغ می‌دهد.
+function splitSql(text) {
+  const lines = text.split('\n').filter(l => !l.trim().startsWith('--')).join('\n');
+  const out = []; let buf = '', i = 0, dollar = false, quote = false;
+  while (i < lines.length) {
+    if (!quote && lines.startsWith('$$', i)) { dollar = !dollar; buf += '$$'; i += 2; continue; }
+    const c = lines[i];
+    if (!dollar && c === "'") quote = !quote;
+    if (c === ';' && !dollar && !quote) { if (buf.trim()) out.push(buf.trim()); buf = ''; i++; continue; }
+    buf += c; i++;
+  }
+  if (buf.trim()) out.push(buf.trim());
+  return out;
+}
+const stmts = splitSql(chk);
 let chkFail = 0, chkCount = 0;
 for (const s of stmts) {
   try {

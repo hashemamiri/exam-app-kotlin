@@ -1,9 +1,16 @@
 -- =====================================================================
 -- V357 — بررسی درستی نصب (فقط خواندنی؛ چیزی را تغییر نمی‌دهد)
 -- انتظار: همهٔ ردیف‌ها ستون «درست» = true داشته باشند.
+-- اگر نصب نشده باشد، ردیف‌ها false می‌شوند و پیام روشن می‌آید — نه خطا.
 -- =====================================================================
 
 with checks(label, ok) as (
+  select '>>> نصب V357 انجام شده است <<<',
+         to_regclass('public.exam_time_grants') is not null
+         and to_regclass('public.exam_question_limits') is not null
+         and exists (select 1 from pg_proc p join pg_namespace n on n.oid=p.pronamespace
+                      where n.nspname='public' and p.proname='native_offline_submit_v357')
+  union all
   select 'جدول زمان اضافه ساخته شد', to_regclass('public.exam_time_grants') is not null
   union all
   select 'جدول محدودیت سؤال ساخته شد', to_regclass('public.exam_question_limits') is not null
@@ -86,7 +93,19 @@ with checks(label, ok) as (
 )
 select label as "بررسی", ok as "درست" from checks;
 
-select
-  (select count(*) from public.exam_time_grants)     as "مجوز زمان",
-  (select count(*) from public.exam_question_limits) as "محدودیت سؤال",
-  (select count(*) from public.exam_attempts where offline_token is not null) as "بستهٔ آفلاین صادرشده";
+-- خلاصهٔ شمارش: اگر نصب نشده باشد، به‌جای خطای ۴۲P01 پیام روشن می‌دهد.
+do $$
+declare v_n bigint;
+begin
+  if to_regclass('public.exam_time_grants') is null
+     or to_regclass('public.exam_question_limits') is null then
+    raise notice 'هنوز نصب نشده است. ابتدا فایل نصب را اجرا کنید.';
+    return;
+  end if;
+  execute 'select count(*) from public.exam_time_grants' into v_n;
+  raise notice 'مجوز زمان ثبت‌شده: %', v_n;
+  execute 'select count(*) from public.exam_question_limits' into v_n;
+  raise notice 'محدودیت سؤال ثبت‌شده: %', v_n;
+  execute 'select count(*) from public.exam_attempts where offline_token is not null' into v_n;
+  raise notice 'بستهٔ آفلاین صادرشده: %', v_n;
+end $$;

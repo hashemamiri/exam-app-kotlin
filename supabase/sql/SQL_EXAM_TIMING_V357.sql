@@ -303,7 +303,7 @@ begin
   if v_dl ? v_key then
     v_exp := (v_dl ->> v_key)::timestamptz;
   else
-    -- مهلت سؤال هرگز از مهل کل آزمون جلوتر نمی‌رود
+    -- مهلت سؤال هرگز از مهلت کل آزمون جلوتر نمی‌رود
     v_exp := v_now + make_interval(secs => v_sec);
     if v_att.expires_at is not null and v_exp > v_att.expires_at then
       v_exp := v_att.expires_at;

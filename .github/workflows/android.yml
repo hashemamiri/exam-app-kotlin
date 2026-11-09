@@ -76,6 +76,10 @@ jobs:
       - name: نگهبان‌های سریع سورس (ایمپورت، when، مسیر تست، پین‌ها)
         run: |
           set -e
+          # V359.2 — نخست existence همهٔ اسکریپت‌های ارجاع‌شده؛ وگرنه
+          # حلقه پس از ۱۶ نگهبانِ سالم به فایل گم‌شده می‌رسید و پیام خام
+          # پایتون هیچ راهنمایی نمی‌داد.
+          python3 scripts/check_workflow_scripts.py
           for g in check_kotlin_braces check_kotlin_quotes check_kotlin_escapes \
                    check_kotlin_imports check_missing_imports check_kotlin_visibility \
                    check_sealed_when check_test_paths check_test_pins \
