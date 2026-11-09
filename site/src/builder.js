@@ -1684,7 +1684,7 @@
           var d = BP.depthOf(cats, c.id);
           cs.appendChild(el('option', {value: String(c.id), text: (d > 1 ? '‏' + '— '.repeat(d - 1) : '') + c.name + ' (' + fa(c.count || 0) + ')'}));
         });
-        var ds = el('select', {title: 'سطح دشواری', style: 'border:1px solid var(--line);border-radius:10px;padding:8px'});
+        var ds = el('select', {title: 'پالایش دشواری', style: 'border:1px solid var(--line);border-radius:10px;padding:8px'});
         ds.appendChild(el('option', {value: '', text: 'همهٔ سطح‌ها'}));
         BP.DIFFICULTY_LABELS.forEach(function (lb, i) { ds.appendChild(el('option', {value: String(i), text: lb})); });
         var gs = el('select', {style: 'border:1px solid var(--line);border-radius:10px;padding:8px'}); gs.appendChild(el('option', {value: '', text: 'همه پایه‌ها'}));

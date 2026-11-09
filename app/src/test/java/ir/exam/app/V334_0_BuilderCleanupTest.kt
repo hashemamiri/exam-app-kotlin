@@ -23,9 +23,11 @@ class V334_0_BuilderCleanupTest {
         "بخش آزمون / صورت مشترک",
         "فصل یا مبحث",
         "همهٔ فصل‌ها/مباحث",
-        "سطح دشواری",
+        // V358 — «سطح دشواری» و «همهٔ سطوح» از این فهرست بیرون رفتند:
+        // کاربر صریحاً پالایش دشواری را در بانک خواست. آنچه V334 حذف
+        // کرده بود «تعیین دشواری هر سؤال» در ویرایشگر بود و آن همچنان
+        // حذف است؛ سنجهٔ مثبت پایین این تفاوت را پین می‌کند.
         "سطح تعیین‌نشده",
-        "همهٔ سطوح",
         "هدف یادگیری",
         "متن/مسئلهٔ مشترک",
         "متن مشترک / صورت چندبخشی",
@@ -52,6 +54,23 @@ class V334_0_BuilderCleanupTest {
         assertFalse("SecondaryQuestionControls" in builderKt)
         assertFalse("AssessmentPartsEditor" in builderKt)
         assertTrue("حالت ابتدایی باید دست‌نخورده باقی بماند", "PrimaryModeChooser" in builderKt)
+    }
+
+    /**
+     * V358 — مرز میان «پالایش بانک» و «ویرایش سؤال».
+     * پالایش دشواری در بانک برگشته (درخواست کاربر)، ولی کنترل تعیین
+     * دشواری برای هر سؤال همچنان از ویرایشگر حذف است.
+     */
+    @Test
+    fun bankDifficultyFilterIsBackButPerQuestionEditorStaysRemoved() {
+        val builderJs = src("site/src/builder.js")
+        assertTrue("پالایشگر دشواری بانک باید در وب باشد", "پالایش دشواری" in builderJs)
+        assertTrue("پالایشگر باید از پیمانهٔ مشترک بیاید", "BP.filterItems" in builderJs)
+        val screenKt = src("app/src/main/java/ir/exam/app/ui/bank/QuestionBankScreen.kt")
+        assertTrue("پالایشگر دشواری بانک باید در اپ باشد", "BankPicker.DIFFICULTY_LABELS" in screenKt)
+        val builderKt = src("app/src/main/java/ir/exam/app/ui/builder/ExamBuilderScreen.kt")
+        assertFalse("ویرایشگر دشواری هر سؤال نباید برگردد", "SecondaryQuestionControls" in builderKt)
+        assertFalse("ویرایشگر بخش‌های ثانویه نباید برگردد", "AssessmentPartsEditor" in builderKt)
     }
 
     @Test

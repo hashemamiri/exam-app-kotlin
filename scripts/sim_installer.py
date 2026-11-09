@@ -62,9 +62,14 @@ def scenario(name, installer, base, ref, setup, expect="install") -> bool:
         problems = [m for m in FAIL_MARKERS if m in log]
         print(f"\n=== {name} ===")
         if expect == "already":
-            ok = ("nothing to commit" in log and "❌" in log
-                  and "Updates were rejected" not in log)
-            print("  تشخیص «از قبل نصب شده» و توقف بی‌خطر:", "بله ✓" if ok else "خیر ✗")
+            # V358.1 — نصاب دیگر در این حالت ❌ نمی‌دهد؛ پیام روشن
+            # «از قبل نصب شده» می‌دهد و با صفر خارج می‌شود. هر دو
+            # رفتار پذیرفته می‌شود تا نصاب‌های قدیمی هم شبیه‌سازی شوند.
+            legacy = "nothing to commit" in log and "❌" in log
+            modern = "از قبل روی این شاخه نصب شده است" in log and r.returncode == 0
+            ok = (legacy or modern) and "Updates were rejected" not in log
+            print("  تشخیص «از قبل نصب شده» و توقف بی‌خطر:",
+                  ("بله ✓ (پیام روشن)" if modern else "بله ✓ (رفتار قدیم)") if ok else "خیر ✗")
         else:
             ok = r.returncode == 0 and not problems
             print("  اجرا:", "موفق" if r.returncode == 0 else f"کد {r.returncode}")

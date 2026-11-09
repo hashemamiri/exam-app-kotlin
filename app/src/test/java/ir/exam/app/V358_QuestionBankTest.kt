@@ -262,6 +262,47 @@ class V358_QuestionBankTest {
         }
     }
 
+    // ------------------------------------------------------------------
+    // ۶) V358.1 — پوشش آزمون محلی
+    //    در V358 تنها ۱۲۸ آزمون از ۱۶۵ دستی انتخاب و اجرا شد و یک
+    //    آزمونِ اسکن منبع از قلم افتاد و CI را شکست. انتخاب دستی،
+    //    خودِ نقص بود؛ حالا اجراکننده همهٔ آزمون‌های خالص را می‌یابد.
+    // ------------------------------------------------------------------
+
+    @Test
+    fun localTestRunnerDiscoversTestsInsteadOfHandPicking() {
+        val runner = src("scripts/run_local_kotlin_tests.py")
+        assertTrue("باید آزمون‌ها را کشف کند", runner.contains("test_base.rglob(\"*.kt\")"))
+        assertTrue("باید وابستگی اندرویدی را تشخیص دهد", runner.contains("androidx\\."))
+        assertTrue("پلاگین serialization باید اعمال شود", runner.contains("-Xplugin="))
+        assertTrue("موارد اجرا‌نشده باید گزارش شوند", runner.contains("نیازمند CI"))
+        assertTrue("شکست واقعی باید از محدودیت ابزار جدا شود", runner.contains("شکست واقعی"))
+        // فهرست دستیِ کلاس‌ها نباید برگردد
+        assertFalse("فهرست دستی کلاس آزمون ممنوع", runner.contains("JUnitCore ir.exam.app.V3"))
+    }
+
+    @Test
+    fun bankFilterLabelDoesNotCollideWithRemovedEditorControl() {
+        val builder = src("site/src/builder.js")
+        assertTrue("برچسب پالایش باید روشن باشد", builder.contains("پالایش دشواری"))
+        val cleanup = src("app/src/test/java/ir/exam/app/V334_0_BuilderCleanupTest.kt")
+        assertTrue("مرز پالایش/ویرایش باید پین شود",
+            cleanup.contains("bankDifficultyFilterIsBackButPerQuestionEditorStaysRemoved"))
+        assertTrue("تصمیم باید مستند شود", cleanup.contains("کاربر صریحاً پالایش دشواری را در بانک خواست"))
+    }
+
+    @Test
+    fun installerExplainsAlreadyAppliedInsteadOfScaringTheUser() {
+        val tpl = src("docs/tools/installer_template.py")
+        assertTrue("پیام روشن نیست", tpl.contains("از قبل روی این شاخه نصب شده است"))
+        assertTrue("نام نسخه باید گفته شود", tpl.contains("VERSION +"))
+        assertTrue("راهنمای انتخاب نصاب درست نیست", tpl.contains("apply_v358_1*"))
+        assertTrue("نباید چیزی خراب شده تلقی شود", tpl.contains("چیزی خراب نشد"))
+        val sim = src("scripts/sim_installer.py")
+        assertTrue("شبیه‌ساز باید رفتار تازه را بپذیرد", sim.contains("modern ="))
+        assertTrue("شبیه‌ساز باید رفتار قدیم را هم بپذیرد", sim.contains("legacy ="))
+    }
+
     @Test
     fun versionAndChangelogAgree() {
         val version = src("text/APP_VERSION.txt").trim()
