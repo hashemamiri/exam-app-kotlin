@@ -391,7 +391,8 @@
     var startIdx = 0;
     while (startIdx < exam.questions.length && exam.questions[startIdx].sectionTitle && mergedExpired[String(exam.questions[startIdx].sectionTitle).trim()]) startIdx++;
     if (startIdx >= exam.questions.length) startIdx = 0;
-    run = {exam: exam, practice: !!exam.practice, index: startIdx, answers: d.answers || {}, images: d.images || {}, started: true, finished: false, submitting: false, enteredAt: Date.now(), qEnter: {}, qTime: {}, qVisits: {}, events: {}, sectionDeadlines: mergedDeadlines, expiredSections: mergedExpired, syncedSections: {}, timer: null, monitorTimer: null};
+    run = {exam: exam, practice: !!exam.practice, index: startIdx, answers: d.answers || {}, images: d.images || {}, started: true, finished: false, submitting: false, enteredAt: Date.now(), qEnter: {}, qTime: {}, qVisits: {}, events: {}, sectionDeadlines: mergedDeadlines, expiredSections: mergedExpired, syncedSections: {}, timer: null, monitorTimer: null,
+           /* V357 */ qTiming: {}, qLocked: {}, offlinePack: null, offlineEvents: [], qTimer: null};
     run.qEnter[startIdx] = Date.now(); run.qVisits[exam.questions[startIdx] && exam.questions[startIdx].id] = 1;
     document.addEventListener('visibilitychange', onVis);
     window.addEventListener('blur', onBlur);
@@ -481,7 +482,10 @@
     var body = el('div', {class: 'card st-body'});
     var foot = el('div', {class: 'row', style: 'margin-top:12px'});
     if (ex.primary) navBar.style.display = 'none'; /* V301 — ابتدایی: نوار شماره‌ها پنهان؛ فقط قبلی/بعدی بزرگ */
+    /* V357 — کارت آفلاین زیر بدنهٔ آزمون */
     wrap.appendChild(navBar); wrap.appendChild(body); wrap.appendChild(foot);
+    var offHost = el('div'); wrap.appendChild(offHost);
+    if (!ex.practice) { var oc = offlineCard(); if (oc) offHost.appendChild(oc); }
     function answered(q) { var a = run.answers[q.id]; return (a != null && a !== '' && !(typeof a === 'object' && !Object.keys(a).length)) || (run.images[q.id] || []).length > 0; }
     function drawNav() {
       nav.innerHTML = '';
@@ -501,6 +505,40 @@
       var q = ex.questions[run.index]; body.innerHTML = '';
       if (!q) return;
       if (q.sectionTitle && run.expiredSections[String(q.sectionTitle).trim()]) { body.appendChild(el('div',{class:'alert warn',text:'زمان این بخش تمام شد؛ پاسخ‌های ثبت‌شده حفظ شده‌اند و امکان ویرایش یا بازگشت نیست.'})); return; }
+      /* V357 — محدودیت زمان هر سؤال؛ مهلت و قفل از سرور می‌آید */
+      if (!run.practice && window.ExamTiming) {
+        var qi357 = run.index;
+        if (run.qLocked[qi357]) {
+          body.appendChild(el('div', {class: 'alert warn', text: 'زمان این سؤال تمام شد؛ پاسخ ثبت‌شده حفظ شده است و امکان ویرایش نیست.'}));
+          return;
+        }
+        if (!run.qTiming[qi357]) {
+          try {
+            var sy = chk(await S.rpcObj('native_sync_exam_question_v357', {p_exam: run.exam.id, p_question: qi357}));
+            if (sy && sy.limited) {
+              var expMs = parseMs(sy.expires_at), snMs = parseMs(sy.server_now);
+              run.qTiming[qi357] = window.ExamTiming.alignDeadline(expMs, snMs, Date.now());
+              run.qLocked[qi357] = !!sy.locked;
+              run.qSecs = run.qSecs || {}; run.qSecs[qi357] = sy.seconds;
+            } else { run.qTiming[qi357] = 0; }
+          } catch (e) { run.qTiming[qi357] = 0; }
+          if (run.qLocked[qi357]) { drawBody(); return; }
+        }
+        if (run.qTiming[qi357] > 0) {
+          var st357 = window.ExamTiming.questionState({limited: true}, run.qTiming[qi357], Date.now(), !!run.qLocked[qi357]);
+          var chip357 = el('span', {class: 'chip ' + (st357.warn ? 'warn' : 'brand'), text: '⏳ ' + fa(st357.clock)});
+          body.appendChild(el('div', {class: 'row', style: 'margin-bottom:8px'}, [chip357,
+            el('span', {class: 'muted', style: 'font-size:12px', text: 'زمان این سؤال؛ پس از پایان، همین سؤال قفل می‌شود.'})]));
+          if (run.qTimer) clearInterval(run.qTimer);
+          run.qTimer = setInterval(function () {
+            if (!run || run.finished || run.index !== qi357) { clearInterval(run.qTimer); run.qTimer = null; return; }
+            var s2 = window.ExamTiming.questionState({limited: true}, run.qTiming[qi357], Date.now(), false);
+            chip357.textContent = '⏳ ' + fa(s2.clock);
+            chip357.className = 'chip ' + (s2.warn ? 'warn' : 'brand');
+            if (s2.locked) { run.qLocked[qi357] = true; clearInterval(run.qTimer); run.qTimer = null; drawAll(); }
+          }, 1000);
+        }
+      }
       var p = q.pres;
       var txt = el('div', {class: 'st-qtext', style: 'text-align:' + p.align + ';font-size:' + p.fontSize + 'px;' + (p.bold ? 'font-weight:700;' : '') + (p.italic ? 'font-style:italic;' : '') + (p.font && p.font !== 'default' ? 'font-family:' + p.font + ',Vazirmatn;' : ''), html: esc(q.text).replace(/\n/g, '<br>')});
       if (q.sectionTitle) { var sq = ex.questions.filter(function (x) { return x.sectionTitle === q.sectionTitle; }); var ss = sq.reduce(function (n, x) { return n + num(x.score); }, 0); body.appendChild(el('div', {class: 'card', style: 'padding:10px;margin-bottom:8px;color:var(--brand)'}, [el('b',{text:q.sectionTitle}),el('div',{class:'muted',style:'font-size:12px;margin-top:3px',text:fa(sq.length)+' سؤال · جمع بارم '+fa(S.fmtScore(ss))+(ex.sectionDurations&&ex.sectionDurations[String(q.sectionTitle).trim()]?' · زمان '+fa(ex.sectionDurations[String(q.sectionTitle).trim()])+' دقیقه':'' )})])); }
@@ -1368,6 +1406,69 @@
   function lightbox(u) { var bg = el('div', {class: 'modal-bg', onclick: function () { bg.remove(); }}, [el('img', {src: u, style: 'max-width:92vw;max-height:90vh;border-radius:12px;background:#fff'})]); document.body.appendChild(bg); }
 
   /* ================================================================ مرور و ارسال */
+  /* ---------- V357 — بستهٔ آفلاین ----------
+     مهلت را سرور در بسته می‌گذارد و توکن یک‌بارمصرف می‌دهد. هنگام ارسال،
+     سرور توکن و زمان پایان را می‌سنجد و برگه را «آفلاین» علامت می‌زند
+     تا معلم بداند نظارت زنده نداشته است. */
+  var LS_OFFLINE = 'examsite.student.offline.v1.';
+  function offlineGet(examId) { try { return JSON.parse(localStorage.getItem(LS_OFFLINE + examId) || 'null'); } catch (e) { return null; } }
+  function offlineSet(examId, p) { try { if (p) localStorage.setItem(LS_OFFLINE + examId, JSON.stringify(p)); else localStorage.removeItem(LS_OFFLINE + examId); } catch (e) {} }
+
+  async function takeOfflinePack() {
+    if (!run || run.practice) return toast('بستهٔ آفلاین برای آزمون تمرینی نیست.', 'err');
+    try {
+      var p = chk(await S.rpcObj('native_offline_pack_v357', {p_exam: run.exam.id}));
+      var T = window.ExamTiming;
+      var aligned = T.alignDeadline(parseMs(p.expires_at), parseMs(p.server_now), Date.now());
+      var pack = {token: p.token, aligned: aligned, used: false, limits: p.limits || {}, takenAt: Date.now()};
+      offlineSet(run.exam.id, pack);
+      run.offlinePack = pack;
+      toast('بستهٔ آفلاین گرفته شد؛ تا پایان مهلت می‌توانید بدون اینترنت پاسخ دهید.', 'ok');
+    } catch (e) { toast(errMsg(e), 'err'); }
+  }
+
+  async function submitOffline() {
+    if (!run) return;
+    var T = window.ExamTiming;
+    var pack = run.offlinePack || offlineGet(run.exam.id);
+    if (!pack) return toast('اول بستهٔ آفلاین بگیرید.', 'err');
+    var v = T.offlineSubmittable(pack, Date.now(), pack.aligned);
+    if (!v.ok) return toast(v.reason, 'err');
+    var responses = run.exam.questions.map(function (q) { var a = run.answers[q.id]; return a == null ? '' : a; });
+    try {
+      chk(await S.rpcObj('native_offline_submit_v357', {
+        p_exam: run.exam.id, p_token: pack.token, p_responses: responses,
+        p_events: run.offlineEvents || [], p_finished_at: new Date().toISOString()}));
+      pack.used = true; offlineSet(run.exam.id, pack); run.offlinePack = pack;
+      run.finished = true;
+      draftClear(run.exam.id);
+      toast('برگهٔ آفلاین ارسال شد و برای بررسی معلم علامت خورد.', 'ok');
+    } catch (e) { toast(errMsg(e), 'err'); }
+  }
+
+  function offlineCard() {
+    var T = window.ExamTiming;
+    if (!T || !run || run.practice) return null;
+    var pack = run.offlinePack || offlineGet(run.exam.id);
+    if (pack && !run.offlinePack) run.offlinePack = pack;
+    var box = el('div', {class: 'card', style: 'padding:10px;margin-top:10px'});
+    box.appendChild(el('div', {class: 'row'}, [
+      el('b', {class: 'grow', style: 'font-size:13px', text: '📴 حالت آفلاین'}),
+      el('span', {class: 'chip ' + (pack && !pack.used ? 'brand' : ''), text: pack ? (pack.used ? 'مصرف‌شده' : 'آماده') : 'گرفته نشده'})]));
+    box.appendChild(el('p', {class: 'muted', style: 'font-size:12px;margin:6px 0',
+      text: 'برای مناطق کم‌پوشش: پیش از قطع اینترنت بسته را بگیرید. مهلت همان مهلت سرور است و برگه با نشان «آفلاین» به دست معلم می‌رسد، چون نظارت زنده ممکن نیست.'}));
+    var row = el('div', {class: 'row', style: 'gap:6px;flex-wrap:wrap'});
+    if (!pack || pack.used) {
+      row.appendChild(el('button', {class: 'btn light sm', text: 'گرفتن بستهٔ آفلاین', onclick: takeOfflinePack}));
+    } else {
+      var left = T.remainingMs(pack.aligned, Date.now());
+      row.appendChild(el('span', {class: 'muted', style: 'font-size:12px', text: 'مهلت باقی‌مانده: ' + fa(T.formatClock(left))}));
+      row.appendChild(el('button', {class: 'btn sm', text: 'ارسال آفلاین', onclick: submitOffline}));
+    }
+    box.appendChild(row);
+    return box;
+  }
+
   function review(c) {
     var ex = run.exam; var un = ex.questions.filter(function (q) { var a = run.answers[q.id]; return (a == null || a === '' || (typeof a === 'object' && !Object.keys(a).length)) && !(run.images[q.id] || []).length; });
     var missingImg = ex.questions.findIndex(function (q) { return q.answerImagesRequired && !(run.images[q.id] || []).length; });

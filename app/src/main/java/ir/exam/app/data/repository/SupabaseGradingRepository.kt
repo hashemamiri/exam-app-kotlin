@@ -16,6 +16,7 @@ import ir.exam.app.domain.model.AnalyticsSummary
 import ir.exam.app.domain.model.AttendanceRow
 import ir.exam.app.domain.model.ExamQuestionAnalysis
 import ir.exam.app.domain.model.FeedbackPhrase
+import ir.exam.app.domain.exam.ExamTiming
 import ir.exam.app.domain.grading.CodeCheckRow
 import ir.exam.app.domain.grading.CodeGrading
 import ir.exam.app.domain.grading.CodeSpecRow
@@ -588,6 +589,62 @@ class SupabaseGradingRepository {
             put("p_passed", passed); put("p_actual", actual); put("p_note", "")
         }).throwRpcError()
         Unit
+    }
+
+    // ------------------------------------------------------------------
+    // V357 — زمان اضافهٔ فردی و محدودیت زمان سؤال
+    // مهلت را سرور تعیین می‌کند؛ این مخزن فقط مجوز و قاعده را ثبت می‌کند.
+    // ------------------------------------------------------------------
+
+    data class TimeGrant(val studentId: String, val extraMinutes: Int, val reason: String)
+
+    suspend fun timeGrants(examId: String): Result<List<TimeGrant>> = runCatching {
+        rpcArray("native_time_grants_v357", buildJsonObject { put("p_exam", examId) }).mapNotNull { el ->
+            val o = el as? JsonObject ?: return@mapNotNull null
+            val sid = o["student_id"]?.jsonPrimitive?.contentOrNull ?: return@mapNotNull null
+            TimeGrant(
+                studentId = sid,
+                extraMinutes = o["extra_minutes"]?.jsonPrimitive?.intOrNull ?: 0,
+                reason = o["reason"]?.jsonPrimitive?.contentOrNull.orEmpty()
+            )
+        }
+    }
+
+    /** minutes = 0 یعنی لغو مجوز. دلیل اجباری است. */
+    suspend fun saveTimeGrant(
+        examId: String, studentId: String, minutes: Int, reason: String
+    ): Result<Unit> = runCatching {
+        val err = ExamTiming.validateGrant(minutes, reason)
+        require(err.isEmpty()) { err }
+        require(studentId.isNotBlank()) { "شناسهٔ دانش‌آموز نامعتبر است." }
+        rpcObject("native_time_grant_save_v357", buildJsonObject {
+            put("p_exam", examId); put("p_student", studentId)
+            put("p_minutes", minutes); put("p_reason", reason.trim())
+        }).throwRpcError()
+        Unit
+    }
+
+    suspend fun questionLimits(examId: String): Result<Map<Int, Int>> = runCatching {
+        val obj = rpcObject("native_question_limits_v357", buildJsonObject { put("p_exam", examId) })
+        obj.entries.mapNotNull { (k, v) ->
+            val qi = k.toIntOrNull() ?: return@mapNotNull null
+            val sec = v.jsonPrimitive.intOrNull ?: return@mapNotNull null
+            qi to sec
+        }.toMap()
+    }
+
+    suspend fun saveQuestionLimits(examId: String, limits: Map<Int, Int>): Result<Int> = runCatching {
+        limits.forEach { (qi, sec) ->
+            require(qi >= -1) { "شاخص سؤال نامعتبر است." }
+            require(sec in ExamTiming.MIN_QUESTION_SECONDS..ExamTiming.MAX_QUESTION_SECONDS) {
+                "زمان هر سؤال باید بین ۱۰ تا ۷۲۰۰ ثانیه باشد."
+            }
+        }
+        val res = rpcObject("native_question_limits_save_v357", buildJsonObject {
+            put("p_exam", examId)
+            put("p_limits", buildJsonObject { limits.forEach { (k, v) -> put(k.toString(), v) } })
+        }).throwRpcError()
+        res["count"]?.jsonPrimitive?.intOrNull ?: 0
     }
 
     private suspend fun rpcArray(name: String, parameters: JsonObject): JsonArray =

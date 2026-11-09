@@ -1,0 +1,4819 @@
+{
+ "latinDigits": [
+  {
+   "in": "",
+   "out": ""
+  },
+  {
+   "in": "۰۱۲۴۵۶۷۸۹",
+   "out": "012456789"
+  },
+  {
+   "in": "٠١٢٤٥٦٧٨٩",
+   "out": "012456789"
+  },
+  {
+   "in": "abc۱۲۳",
+   "out": "abc123"
+  },
+  {
+   "in": "۲ = ۳۴۵",
+   "out": "2 = 345"
+  },
+  {
+   "in": "سؤال ۲",
+   "out": "سؤال 2"
+  }
+ ],
+ "align": [
+  {
+   "expires": 0,
+   "serverNow": 0,
+   "localNow": 0,
+   "out": 0
+  },
+  {
+   "expires": 0,
+   "serverNow": 0,
+   "localNow": 500,
+   "out": 0
+  },
+  {
+   "expires": 0,
+   "serverNow": 0,
+   "localNow": 1000,
+   "out": 0
+  },
+  {
+   "expires": 0,
+   "serverNow": 0,
+   "localNow": 999999,
+   "out": 0
+  },
+  {
+   "expires": 0,
+   "serverNow": 0,
+   "localNow": 1000000,
+   "out": 0
+  },
+  {
+   "expires": 0,
+   "serverNow": 0,
+   "localNow": 1060000,
+   "out": 0
+  },
+  {
+   "expires": 0,
+   "serverNow": 0,
+   "localNow": 2000000,
+   "out": 0
+  },
+  {
+   "expires": 0,
+   "serverNow": 500,
+   "localNow": 0,
+   "out": 0
+  },
+  {
+   "expires": 0,
+   "serverNow": 500,
+   "localNow": 500,
+   "out": 0
+  },
+  {
+   "expires": 0,
+   "serverNow": 500,
+   "localNow": 1000,
+   "out": 0
+  },
+  {
+   "expires": 0,
+   "serverNow": 500,
+   "localNow": 999999,
+   "out": 0
+  },
+  {
+   "expires": 0,
+   "serverNow": 500,
+   "localNow": 1000000,
+   "out": 0
+  },
+  {
+   "expires": 0,
+   "serverNow": 500,
+   "localNow": 1060000,
+   "out": 0
+  },
+  {
+   "expires": 0,
+   "serverNow": 500,
+   "localNow": 2000000,
+   "out": 0
+  },
+  {
+   "expires": 0,
+   "serverNow": 1000,
+   "localNow": 0,
+   "out": 0
+  },
+  {
+   "expires": 0,
+   "serverNow": 1000,
+   "localNow": 500,
+   "out": 0
+  },
+  {
+   "expires": 0,
+   "serverNow": 1000,
+   "localNow": 1000,
+   "out": 0
+  },
+  {
+   "expires": 0,
+   "serverNow": 1000,
+   "localNow": 999999,
+   "out": 0
+  },
+  {
+   "expires": 0,
+   "serverNow": 1000,
+   "localNow": 1000000,
+   "out": 0
+  },
+  {
+   "expires": 0,
+   "serverNow": 1000,
+   "localNow": 1060000,
+   "out": 0
+  },
+  {
+   "expires": 0,
+   "serverNow": 1000,
+   "localNow": 2000000,
+   "out": 0
+  },
+  {
+   "expires": 0,
+   "serverNow": 999999,
+   "localNow": 0,
+   "out": 0
+  },
+  {
+   "expires": 0,
+   "serverNow": 999999,
+   "localNow": 500,
+   "out": 0
+  },
+  {
+   "expires": 0,
+   "serverNow": 999999,
+   "localNow": 1000,
+   "out": 0
+  },
+  {
+   "expires": 0,
+   "serverNow": 999999,
+   "localNow": 999999,
+   "out": 0
+  },
+  {
+   "expires": 0,
+   "serverNow": 999999,
+   "localNow": 1000000,
+   "out": 0
+  },
+  {
+   "expires": 0,
+   "serverNow": 999999,
+   "localNow": 1060000,
+   "out": 0
+  },
+  {
+   "expires": 0,
+   "serverNow": 999999,
+   "localNow": 2000000,
+   "out": 0
+  },
+  {
+   "expires": 0,
+   "serverNow": 1000000,
+   "localNow": 0,
+   "out": 0
+  },
+  {
+   "expires": 0,
+   "serverNow": 1000000,
+   "localNow": 500,
+   "out": 0
+  },
+  {
+   "expires": 0,
+   "serverNow": 1000000,
+   "localNow": 1000,
+   "out": 0
+  },
+  {
+   "expires": 0,
+   "serverNow": 1000000,
+   "localNow": 999999,
+   "out": 0
+  },
+  {
+   "expires": 0,
+   "serverNow": 1000000,
+   "localNow": 1000000,
+   "out": 0
+  },
+  {
+   "expires": 0,
+   "serverNow": 1000000,
+   "localNow": 1060000,
+   "out": 0
+  },
+  {
+   "expires": 0,
+   "serverNow": 1000000,
+   "localNow": 2000000,
+   "out": 0
+  },
+  {
+   "expires": 0,
+   "serverNow": 1060000,
+   "localNow": 0,
+   "out": 0
+  },
+  {
+   "expires": 0,
+   "serverNow": 1060000,
+   "localNow": 500,
+   "out": 0
+  },
+  {
+   "expires": 0,
+   "serverNow": 1060000,
+   "localNow": 1000,
+   "out": 0
+  },
+  {
+   "expires": 0,
+   "serverNow": 1060000,
+   "localNow": 999999,
+   "out": 0
+  },
+  {
+   "expires": 0,
+   "serverNow": 1060000,
+   "localNow": 1000000,
+   "out": 0
+  },
+  {
+   "expires": 0,
+   "serverNow": 1060000,
+   "localNow": 1060000,
+   "out": 0
+  },
+  {
+   "expires": 0,
+   "serverNow": 1060000,
+   "localNow": 2000000,
+   "out": 0
+  },
+  {
+   "expires": 0,
+   "serverNow": 2000000,
+   "localNow": 0,
+   "out": 0
+  },
+  {
+   "expires": 0,
+   "serverNow": 2000000,
+   "localNow": 500,
+   "out": 0
+  },
+  {
+   "expires": 0,
+   "serverNow": 2000000,
+   "localNow": 1000,
+   "out": 0
+  },
+  {
+   "expires": 0,
+   "serverNow": 2000000,
+   "localNow": 999999,
+   "out": 0
+  },
+  {
+   "expires": 0,
+   "serverNow": 2000000,
+   "localNow": 1000000,
+   "out": 0
+  },
+  {
+   "expires": 0,
+   "serverNow": 2000000,
+   "localNow": 1060000,
+   "out": 0
+  },
+  {
+   "expires": 0,
+   "serverNow": 2000000,
+   "localNow": 2000000,
+   "out": 0
+  },
+  {
+   "expires": -1,
+   "serverNow": 0,
+   "localNow": 0,
+   "out": 0
+  },
+  {
+   "expires": -1,
+   "serverNow": 0,
+   "localNow": 500,
+   "out": 0
+  },
+  {
+   "expires": -1,
+   "serverNow": 0,
+   "localNow": 1000,
+   "out": 0
+  },
+  {
+   "expires": -1,
+   "serverNow": 0,
+   "localNow": 999999,
+   "out": 0
+  },
+  {
+   "expires": -1,
+   "serverNow": 0,
+   "localNow": 1000000,
+   "out": 0
+  },
+  {
+   "expires": -1,
+   "serverNow": 0,
+   "localNow": 1060000,
+   "out": 0
+  },
+  {
+   "expires": -1,
+   "serverNow": 0,
+   "localNow": 2000000,
+   "out": 0
+  },
+  {
+   "expires": -1,
+   "serverNow": 500,
+   "localNow": 0,
+   "out": 0
+  },
+  {
+   "expires": -1,
+   "serverNow": 500,
+   "localNow": 500,
+   "out": 0
+  },
+  {
+   "expires": -1,
+   "serverNow": 500,
+   "localNow": 1000,
+   "out": 0
+  },
+  {
+   "expires": -1,
+   "serverNow": 500,
+   "localNow": 999999,
+   "out": 0
+  },
+  {
+   "expires": -1,
+   "serverNow": 500,
+   "localNow": 1000000,
+   "out": 0
+  },
+  {
+   "expires": -1,
+   "serverNow": 500,
+   "localNow": 1060000,
+   "out": 0
+  },
+  {
+   "expires": -1,
+   "serverNow": 500,
+   "localNow": 2000000,
+   "out": 0
+  },
+  {
+   "expires": -1,
+   "serverNow": 1000,
+   "localNow": 0,
+   "out": 0
+  },
+  {
+   "expires": -1,
+   "serverNow": 1000,
+   "localNow": 500,
+   "out": 0
+  },
+  {
+   "expires": -1,
+   "serverNow": 1000,
+   "localNow": 1000,
+   "out": 0
+  },
+  {
+   "expires": -1,
+   "serverNow": 1000,
+   "localNow": 999999,
+   "out": 0
+  },
+  {
+   "expires": -1,
+   "serverNow": 1000,
+   "localNow": 1000000,
+   "out": 0
+  },
+  {
+   "expires": -1,
+   "serverNow": 1000,
+   "localNow": 1060000,
+   "out": 0
+  },
+  {
+   "expires": -1,
+   "serverNow": 1000,
+   "localNow": 2000000,
+   "out": 0
+  },
+  {
+   "expires": -1,
+   "serverNow": 999999,
+   "localNow": 0,
+   "out": 0
+  },
+  {
+   "expires": -1,
+   "serverNow": 999999,
+   "localNow": 500,
+   "out": 0
+  },
+  {
+   "expires": -1,
+   "serverNow": 999999,
+   "localNow": 1000,
+   "out": 0
+  },
+  {
+   "expires": -1,
+   "serverNow": 999999,
+   "localNow": 999999,
+   "out": 0
+  },
+  {
+   "expires": -1,
+   "serverNow": 999999,
+   "localNow": 1000000,
+   "out": 0
+  },
+  {
+   "expires": -1,
+   "serverNow": 999999,
+   "localNow": 1060000,
+   "out": 0
+  },
+  {
+   "expires": -1,
+   "serverNow": 999999,
+   "localNow": 2000000,
+   "out": 0
+  },
+  {
+   "expires": -1,
+   "serverNow": 1000000,
+   "localNow": 0,
+   "out": 0
+  },
+  {
+   "expires": -1,
+   "serverNow": 1000000,
+   "localNow": 500,
+   "out": 0
+  },
+  {
+   "expires": -1,
+   "serverNow": 1000000,
+   "localNow": 1000,
+   "out": 0
+  },
+  {
+   "expires": -1,
+   "serverNow": 1000000,
+   "localNow": 999999,
+   "out": 0
+  },
+  {
+   "expires": -1,
+   "serverNow": 1000000,
+   "localNow": 1000000,
+   "out": 0
+  },
+  {
+   "expires": -1,
+   "serverNow": 1000000,
+   "localNow": 1060000,
+   "out": 0
+  },
+  {
+   "expires": -1,
+   "serverNow": 1000000,
+   "localNow": 2000000,
+   "out": 0
+  },
+  {
+   "expires": -1,
+   "serverNow": 1060000,
+   "localNow": 0,
+   "out": 0
+  },
+  {
+   "expires": -1,
+   "serverNow": 1060000,
+   "localNow": 500,
+   "out": 0
+  },
+  {
+   "expires": -1,
+   "serverNow": 1060000,
+   "localNow": 1000,
+   "out": 0
+  },
+  {
+   "expires": -1,
+   "serverNow": 1060000,
+   "localNow": 999999,
+   "out": 0
+  },
+  {
+   "expires": -1,
+   "serverNow": 1060000,
+   "localNow": 1000000,
+   "out": 0
+  },
+  {
+   "expires": -1,
+   "serverNow": 1060000,
+   "localNow": 1060000,
+   "out": 0
+  },
+  {
+   "expires": -1,
+   "serverNow": 1060000,
+   "localNow": 2000000,
+   "out": 0
+  },
+  {
+   "expires": -1,
+   "serverNow": 2000000,
+   "localNow": 0,
+   "out": 0
+  },
+  {
+   "expires": -1,
+   "serverNow": 2000000,
+   "localNow": 500,
+   "out": 0
+  },
+  {
+   "expires": -1,
+   "serverNow": 2000000,
+   "localNow": 1000,
+   "out": 0
+  },
+  {
+   "expires": -1,
+   "serverNow": 2000000,
+   "localNow": 999999,
+   "out": 0
+  },
+  {
+   "expires": -1,
+   "serverNow": 2000000,
+   "localNow": 1000000,
+   "out": 0
+  },
+  {
+   "expires": -1,
+   "serverNow": 2000000,
+   "localNow": 1060000,
+   "out": 0
+  },
+  {
+   "expires": -1,
+   "serverNow": 2000000,
+   "localNow": 2000000,
+   "out": 0
+  },
+  {
+   "expires": 1000,
+   "serverNow": 0,
+   "localNow": 0,
+   "out": 1000
+  },
+  {
+   "expires": 1000,
+   "serverNow": 0,
+   "localNow": 500,
+   "out": 1000
+  },
+  {
+   "expires": 1000,
+   "serverNow": 0,
+   "localNow": 1000,
+   "out": 1000
+  },
+  {
+   "expires": 1000,
+   "serverNow": 0,
+   "localNow": 999999,
+   "out": 1000
+  },
+  {
+   "expires": 1000,
+   "serverNow": 0,
+   "localNow": 1000000,
+   "out": 1000
+  },
+  {
+   "expires": 1000,
+   "serverNow": 0,
+   "localNow": 1060000,
+   "out": 1000
+  },
+  {
+   "expires": 1000,
+   "serverNow": 0,
+   "localNow": 2000000,
+   "out": 1000
+  },
+  {
+   "expires": 1000,
+   "serverNow": 500,
+   "localNow": 0,
+   "out": 500
+  },
+  {
+   "expires": 1000,
+   "serverNow": 500,
+   "localNow": 500,
+   "out": 1000
+  },
+  {
+   "expires": 1000,
+   "serverNow": 500,
+   "localNow": 1000,
+   "out": 1500
+  },
+  {
+   "expires": 1000,
+   "serverNow": 500,
+   "localNow": 999999,
+   "out": 1000499
+  },
+  {
+   "expires": 1000,
+   "serverNow": 500,
+   "localNow": 1000000,
+   "out": 1000500
+  },
+  {
+   "expires": 1000,
+   "serverNow": 500,
+   "localNow": 1060000,
+   "out": 1060500
+  },
+  {
+   "expires": 1000,
+   "serverNow": 500,
+   "localNow": 2000000,
+   "out": 2000500
+  },
+  {
+   "expires": 1000,
+   "serverNow": 1000,
+   "localNow": 0,
+   "out": 0
+  },
+  {
+   "expires": 1000,
+   "serverNow": 1000,
+   "localNow": 500,
+   "out": 500
+  },
+  {
+   "expires": 1000,
+   "serverNow": 1000,
+   "localNow": 1000,
+   "out": 1000
+  },
+  {
+   "expires": 1000,
+   "serverNow": 1000,
+   "localNow": 999999,
+   "out": 999999
+  },
+  {
+   "expires": 1000,
+   "serverNow": 1000,
+   "localNow": 1000000,
+   "out": 1000000
+  },
+  {
+   "expires": 1000,
+   "serverNow": 1000,
+   "localNow": 1060000,
+   "out": 1060000
+  },
+  {
+   "expires": 1000,
+   "serverNow": 1000,
+   "localNow": 2000000,
+   "out": 2000000
+  },
+  {
+   "expires": 1000,
+   "serverNow": 999999,
+   "localNow": 0,
+   "out": -998999
+  },
+  {
+   "expires": 1000,
+   "serverNow": 999999,
+   "localNow": 500,
+   "out": -998499
+  },
+  {
+   "expires": 1000,
+   "serverNow": 999999,
+   "localNow": 1000,
+   "out": -997999
+  },
+  {
+   "expires": 1000,
+   "serverNow": 999999,
+   "localNow": 999999,
+   "out": 1000
+  },
+  {
+   "expires": 1000,
+   "serverNow": 999999,
+   "localNow": 1000000,
+   "out": 1001
+  },
+  {
+   "expires": 1000,
+   "serverNow": 999999,
+   "localNow": 1060000,
+   "out": 61001
+  },
+  {
+   "expires": 1000,
+   "serverNow": 999999,
+   "localNow": 2000000,
+   "out": 1001001
+  },
+  {
+   "expires": 1000,
+   "serverNow": 1000000,
+   "localNow": 0,
+   "out": -999000
+  },
+  {
+   "expires": 1000,
+   "serverNow": 1000000,
+   "localNow": 500,
+   "out": -998500
+  },
+  {
+   "expires": 1000,
+   "serverNow": 1000000,
+   "localNow": 1000,
+   "out": -998000
+  },
+  {
+   "expires": 1000,
+   "serverNow": 1000000,
+   "localNow": 999999,
+   "out": 999
+  },
+  {
+   "expires": 1000,
+   "serverNow": 1000000,
+   "localNow": 1000000,
+   "out": 1000
+  },
+  {
+   "expires": 1000,
+   "serverNow": 1000000,
+   "localNow": 1060000,
+   "out": 61000
+  },
+  {
+   "expires": 1000,
+   "serverNow": 1000000,
+   "localNow": 2000000,
+   "out": 1001000
+  },
+  {
+   "expires": 1000,
+   "serverNow": 1060000,
+   "localNow": 0,
+   "out": -1059000
+  },
+  {
+   "expires": 1000,
+   "serverNow": 1060000,
+   "localNow": 500,
+   "out": -1058500
+  },
+  {
+   "expires": 1000,
+   "serverNow": 1060000,
+   "localNow": 1000,
+   "out": -1058000
+  },
+  {
+   "expires": 1000,
+   "serverNow": 1060000,
+   "localNow": 999999,
+   "out": -59001
+  },
+  {
+   "expires": 1000,
+   "serverNow": 1060000,
+   "localNow": 1000000,
+   "out": -59000
+  },
+  {
+   "expires": 1000,
+   "serverNow": 1060000,
+   "localNow": 1060000,
+   "out": 1000
+  },
+  {
+   "expires": 1000,
+   "serverNow": 1060000,
+   "localNow": 2000000,
+   "out": 941000
+  },
+  {
+   "expires": 1000,
+   "serverNow": 2000000,
+   "localNow": 0,
+   "out": -1999000
+  },
+  {
+   "expires": 1000,
+   "serverNow": 2000000,
+   "localNow": 500,
+   "out": -1998500
+  },
+  {
+   "expires": 1000,
+   "serverNow": 2000000,
+   "localNow": 1000,
+   "out": -1998000
+  },
+  {
+   "expires": 1000,
+   "serverNow": 2000000,
+   "localNow": 999999,
+   "out": -999001
+  },
+  {
+   "expires": 1000,
+   "serverNow": 2000000,
+   "localNow": 1000000,
+   "out": -999000
+  },
+  {
+   "expires": 1000,
+   "serverNow": 2000000,
+   "localNow": 1060000,
+   "out": -939000
+  },
+  {
+   "expires": 1000,
+   "serverNow": 2000000,
+   "localNow": 2000000,
+   "out": 1000
+  },
+  {
+   "expires": 60000,
+   "serverNow": 0,
+   "localNow": 0,
+   "out": 60000
+  },
+  {
+   "expires": 60000,
+   "serverNow": 0,
+   "localNow": 500,
+   "out": 60000
+  },
+  {
+   "expires": 60000,
+   "serverNow": 0,
+   "localNow": 1000,
+   "out": 60000
+  },
+  {
+   "expires": 60000,
+   "serverNow": 0,
+   "localNow": 999999,
+   "out": 60000
+  },
+  {
+   "expires": 60000,
+   "serverNow": 0,
+   "localNow": 1000000,
+   "out": 60000
+  },
+  {
+   "expires": 60000,
+   "serverNow": 0,
+   "localNow": 1060000,
+   "out": 60000
+  },
+  {
+   "expires": 60000,
+   "serverNow": 0,
+   "localNow": 2000000,
+   "out": 60000
+  },
+  {
+   "expires": 60000,
+   "serverNow": 500,
+   "localNow": 0,
+   "out": 59500
+  },
+  {
+   "expires": 60000,
+   "serverNow": 500,
+   "localNow": 500,
+   "out": 60000
+  },
+  {
+   "expires": 60000,
+   "serverNow": 500,
+   "localNow": 1000,
+   "out": 60500
+  },
+  {
+   "expires": 60000,
+   "serverNow": 500,
+   "localNow": 999999,
+   "out": 1059499
+  },
+  {
+   "expires": 60000,
+   "serverNow": 500,
+   "localNow": 1000000,
+   "out": 1059500
+  },
+  {
+   "expires": 60000,
+   "serverNow": 500,
+   "localNow": 1060000,
+   "out": 1119500
+  },
+  {
+   "expires": 60000,
+   "serverNow": 500,
+   "localNow": 2000000,
+   "out": 2059500
+  },
+  {
+   "expires": 60000,
+   "serverNow": 1000,
+   "localNow": 0,
+   "out": 59000
+  },
+  {
+   "expires": 60000,
+   "serverNow": 1000,
+   "localNow": 500,
+   "out": 59500
+  },
+  {
+   "expires": 60000,
+   "serverNow": 1000,
+   "localNow": 1000,
+   "out": 60000
+  },
+  {
+   "expires": 60000,
+   "serverNow": 1000,
+   "localNow": 999999,
+   "out": 1058999
+  },
+  {
+   "expires": 60000,
+   "serverNow": 1000,
+   "localNow": 1000000,
+   "out": 1059000
+  },
+  {
+   "expires": 60000,
+   "serverNow": 1000,
+   "localNow": 1060000,
+   "out": 1119000
+  },
+  {
+   "expires": 60000,
+   "serverNow": 1000,
+   "localNow": 2000000,
+   "out": 2059000
+  },
+  {
+   "expires": 60000,
+   "serverNow": 999999,
+   "localNow": 0,
+   "out": -939999
+  },
+  {
+   "expires": 60000,
+   "serverNow": 999999,
+   "localNow": 500,
+   "out": -939499
+  },
+  {
+   "expires": 60000,
+   "serverNow": 999999,
+   "localNow": 1000,
+   "out": -938999
+  },
+  {
+   "expires": 60000,
+   "serverNow": 999999,
+   "localNow": 999999,
+   "out": 60000
+  },
+  {
+   "expires": 60000,
+   "serverNow": 999999,
+   "localNow": 1000000,
+   "out": 60001
+  },
+  {
+   "expires": 60000,
+   "serverNow": 999999,
+   "localNow": 1060000,
+   "out": 120001
+  },
+  {
+   "expires": 60000,
+   "serverNow": 999999,
+   "localNow": 2000000,
+   "out": 1060001
+  },
+  {
+   "expires": 60000,
+   "serverNow": 1000000,
+   "localNow": 0,
+   "out": -940000
+  },
+  {
+   "expires": 60000,
+   "serverNow": 1000000,
+   "localNow": 500,
+   "out": -939500
+  },
+  {
+   "expires": 60000,
+   "serverNow": 1000000,
+   "localNow": 1000,
+   "out": -939000
+  },
+  {
+   "expires": 60000,
+   "serverNow": 1000000,
+   "localNow": 999999,
+   "out": 59999
+  },
+  {
+   "expires": 60000,
+   "serverNow": 1000000,
+   "localNow": 1000000,
+   "out": 60000
+  },
+  {
+   "expires": 60000,
+   "serverNow": 1000000,
+   "localNow": 1060000,
+   "out": 120000
+  },
+  {
+   "expires": 60000,
+   "serverNow": 1000000,
+   "localNow": 2000000,
+   "out": 1060000
+  },
+  {
+   "expires": 60000,
+   "serverNow": 1060000,
+   "localNow": 0,
+   "out": -1000000
+  },
+  {
+   "expires": 60000,
+   "serverNow": 1060000,
+   "localNow": 500,
+   "out": -999500
+  },
+  {
+   "expires": 60000,
+   "serverNow": 1060000,
+   "localNow": 1000,
+   "out": -999000
+  },
+  {
+   "expires": 60000,
+   "serverNow": 1060000,
+   "localNow": 999999,
+   "out": -1
+  },
+  {
+   "expires": 60000,
+   "serverNow": 1060000,
+   "localNow": 1000000,
+   "out": 0
+  },
+  {
+   "expires": 60000,
+   "serverNow": 1060000,
+   "localNow": 1060000,
+   "out": 60000
+  },
+  {
+   "expires": 60000,
+   "serverNow": 1060000,
+   "localNow": 2000000,
+   "out": 1000000
+  },
+  {
+   "expires": 60000,
+   "serverNow": 2000000,
+   "localNow": 0,
+   "out": -1940000
+  },
+  {
+   "expires": 60000,
+   "serverNow": 2000000,
+   "localNow": 500,
+   "out": -1939500
+  },
+  {
+   "expires": 60000,
+   "serverNow": 2000000,
+   "localNow": 1000,
+   "out": -1939000
+  },
+  {
+   "expires": 60000,
+   "serverNow": 2000000,
+   "localNow": 999999,
+   "out": -940001
+  },
+  {
+   "expires": 60000,
+   "serverNow": 2000000,
+   "localNow": 1000000,
+   "out": -940000
+  },
+  {
+   "expires": 60000,
+   "serverNow": 2000000,
+   "localNow": 1060000,
+   "out": -880000
+  },
+  {
+   "expires": 60000,
+   "serverNow": 2000000,
+   "localNow": 2000000,
+   "out": 60000
+  },
+  {
+   "expires": 1000000,
+   "serverNow": 0,
+   "localNow": 0,
+   "out": 1000000
+  },
+  {
+   "expires": 1000000,
+   "serverNow": 0,
+   "localNow": 500,
+   "out": 1000000
+  },
+  {
+   "expires": 1000000,
+   "serverNow": 0,
+   "localNow": 1000,
+   "out": 1000000
+  },
+  {
+   "expires": 1000000,
+   "serverNow": 0,
+   "localNow": 999999,
+   "out": 1000000
+  },
+  {
+   "expires": 1000000,
+   "serverNow": 0,
+   "localNow": 1000000,
+   "out": 1000000
+  },
+  {
+   "expires": 1000000,
+   "serverNow": 0,
+   "localNow": 1060000,
+   "out": 1000000
+  },
+  {
+   "expires": 1000000,
+   "serverNow": 0,
+   "localNow": 2000000,
+   "out": 1000000
+  },
+  {
+   "expires": 1000000,
+   "serverNow": 500,
+   "localNow": 0,
+   "out": 999500
+  },
+  {
+   "expires": 1000000,
+   "serverNow": 500,
+   "localNow": 500,
+   "out": 1000000
+  },
+  {
+   "expires": 1000000,
+   "serverNow": 500,
+   "localNow": 1000,
+   "out": 1000500
+  },
+  {
+   "expires": 1000000,
+   "serverNow": 500,
+   "localNow": 999999,
+   "out": 1999499
+  },
+  {
+   "expires": 1000000,
+   "serverNow": 500,
+   "localNow": 1000000,
+   "out": 1999500
+  },
+  {
+   "expires": 1000000,
+   "serverNow": 500,
+   "localNow": 1060000,
+   "out": 2059500
+  },
+  {
+   "expires": 1000000,
+   "serverNow": 500,
+   "localNow": 2000000,
+   "out": 2999500
+  },
+  {
+   "expires": 1000000,
+   "serverNow": 1000,
+   "localNow": 0,
+   "out": 999000
+  },
+  {
+   "expires": 1000000,
+   "serverNow": 1000,
+   "localNow": 500,
+   "out": 999500
+  },
+  {
+   "expires": 1000000,
+   "serverNow": 1000,
+   "localNow": 1000,
+   "out": 1000000
+  },
+  {
+   "expires": 1000000,
+   "serverNow": 1000,
+   "localNow": 999999,
+   "out": 1998999
+  },
+  {
+   "expires": 1000000,
+   "serverNow": 1000,
+   "localNow": 1000000,
+   "out": 1999000
+  },
+  {
+   "expires": 1000000,
+   "serverNow": 1000,
+   "localNow": 1060000,
+   "out": 2059000
+  },
+  {
+   "expires": 1000000,
+   "serverNow": 1000,
+   "localNow": 2000000,
+   "out": 2999000
+  },
+  {
+   "expires": 1000000,
+   "serverNow": 999999,
+   "localNow": 0,
+   "out": 1
+  },
+  {
+   "expires": 1000000,
+   "serverNow": 999999,
+   "localNow": 500,
+   "out": 501
+  },
+  {
+   "expires": 1000000,
+   "serverNow": 999999,
+   "localNow": 1000,
+   "out": 1001
+  },
+  {
+   "expires": 1000000,
+   "serverNow": 999999,
+   "localNow": 999999,
+   "out": 1000000
+  },
+  {
+   "expires": 1000000,
+   "serverNow": 999999,
+   "localNow": 1000000,
+   "out": 1000001
+  },
+  {
+   "expires": 1000000,
+   "serverNow": 999999,
+   "localNow": 1060000,
+   "out": 1060001
+  },
+  {
+   "expires": 1000000,
+   "serverNow": 999999,
+   "localNow": 2000000,
+   "out": 2000001
+  },
+  {
+   "expires": 1000000,
+   "serverNow": 1000000,
+   "localNow": 0,
+   "out": 0
+  },
+  {
+   "expires": 1000000,
+   "serverNow": 1000000,
+   "localNow": 500,
+   "out": 500
+  },
+  {
+   "expires": 1000000,
+   "serverNow": 1000000,
+   "localNow": 1000,
+   "out": 1000
+  },
+  {
+   "expires": 1000000,
+   "serverNow": 1000000,
+   "localNow": 999999,
+   "out": 999999
+  },
+  {
+   "expires": 1000000,
+   "serverNow": 1000000,
+   "localNow": 1000000,
+   "out": 1000000
+  },
+  {
+   "expires": 1000000,
+   "serverNow": 1000000,
+   "localNow": 1060000,
+   "out": 1060000
+  },
+  {
+   "expires": 1000000,
+   "serverNow": 1000000,
+   "localNow": 2000000,
+   "out": 2000000
+  },
+  {
+   "expires": 1000000,
+   "serverNow": 1060000,
+   "localNow": 0,
+   "out": -60000
+  },
+  {
+   "expires": 1000000,
+   "serverNow": 1060000,
+   "localNow": 500,
+   "out": -59500
+  },
+  {
+   "expires": 1000000,
+   "serverNow": 1060000,
+   "localNow": 1000,
+   "out": -59000
+  },
+  {
+   "expires": 1000000,
+   "serverNow": 1060000,
+   "localNow": 999999,
+   "out": 939999
+  },
+  {
+   "expires": 1000000,
+   "serverNow": 1060000,
+   "localNow": 1000000,
+   "out": 940000
+  },
+  {
+   "expires": 1000000,
+   "serverNow": 1060000,
+   "localNow": 1060000,
+   "out": 1000000
+  },
+  {
+   "expires": 1000000,
+   "serverNow": 1060000,
+   "localNow": 2000000,
+   "out": 1940000
+  },
+  {
+   "expires": 1000000,
+   "serverNow": 2000000,
+   "localNow": 0,
+   "out": -1000000
+  },
+  {
+   "expires": 1000000,
+   "serverNow": 2000000,
+   "localNow": 500,
+   "out": -999500
+  },
+  {
+   "expires": 1000000,
+   "serverNow": 2000000,
+   "localNow": 1000,
+   "out": -999000
+  },
+  {
+   "expires": 1000000,
+   "serverNow": 2000000,
+   "localNow": 999999,
+   "out": -1
+  },
+  {
+   "expires": 1000000,
+   "serverNow": 2000000,
+   "localNow": 1000000,
+   "out": 0
+  },
+  {
+   "expires": 1000000,
+   "serverNow": 2000000,
+   "localNow": 1060000,
+   "out": 60000
+  },
+  {
+   "expires": 1000000,
+   "serverNow": 2000000,
+   "localNow": 2000000,
+   "out": 1000000
+  }
+ ],
+ "remaining": [
+  {
+   "deadline": 0,
+   "now": 0,
+   "out": -1
+  },
+  {
+   "deadline": 0,
+   "now": 500,
+   "out": -1
+  },
+  {
+   "deadline": 0,
+   "now": 1000,
+   "out": -1
+  },
+  {
+   "deadline": 0,
+   "now": 999999,
+   "out": -1
+  },
+  {
+   "deadline": 0,
+   "now": 1000000,
+   "out": -1
+  },
+  {
+   "deadline": 0,
+   "now": 1060000,
+   "out": -1
+  },
+  {
+   "deadline": 0,
+   "now": 2000000,
+   "out": -1
+  },
+  {
+   "deadline": -1,
+   "now": 0,
+   "out": -1
+  },
+  {
+   "deadline": -1,
+   "now": 500,
+   "out": -1
+  },
+  {
+   "deadline": -1,
+   "now": 1000,
+   "out": -1
+  },
+  {
+   "deadline": -1,
+   "now": 999999,
+   "out": -1
+  },
+  {
+   "deadline": -1,
+   "now": 1000000,
+   "out": -1
+  },
+  {
+   "deadline": -1,
+   "now": 1060000,
+   "out": -1
+  },
+  {
+   "deadline": -1,
+   "now": 2000000,
+   "out": -1
+  },
+  {
+   "deadline": 1000,
+   "now": 0,
+   "out": 1000
+  },
+  {
+   "deadline": 1000,
+   "now": 500,
+   "out": 500
+  },
+  {
+   "deadline": 1000,
+   "now": 1000,
+   "out": 0
+  },
+  {
+   "deadline": 1000,
+   "now": 999999,
+   "out": 0
+  },
+  {
+   "deadline": 1000,
+   "now": 1000000,
+   "out": 0
+  },
+  {
+   "deadline": 1000,
+   "now": 1060000,
+   "out": 0
+  },
+  {
+   "deadline": 1000,
+   "now": 2000000,
+   "out": 0
+  },
+  {
+   "deadline": 60000,
+   "now": 0,
+   "out": 60000
+  },
+  {
+   "deadline": 60000,
+   "now": 500,
+   "out": 59500
+  },
+  {
+   "deadline": 60000,
+   "now": 1000,
+   "out": 59000
+  },
+  {
+   "deadline": 60000,
+   "now": 999999,
+   "out": 0
+  },
+  {
+   "deadline": 60000,
+   "now": 1000000,
+   "out": 0
+  },
+  {
+   "deadline": 60000,
+   "now": 1060000,
+   "out": 0
+  },
+  {
+   "deadline": 60000,
+   "now": 2000000,
+   "out": 0
+  },
+  {
+   "deadline": 1000000,
+   "now": 0,
+   "out": 1000000
+  },
+  {
+   "deadline": 1000000,
+   "now": 500,
+   "out": 999500
+  },
+  {
+   "deadline": 1000000,
+   "now": 1000,
+   "out": 999000
+  },
+  {
+   "deadline": 1000000,
+   "now": 999999,
+   "out": 1
+  },
+  {
+   "deadline": 1000000,
+   "now": 1000000,
+   "out": 0
+  },
+  {
+   "deadline": 1000000,
+   "now": 1060000,
+   "out": 0
+  },
+  {
+   "deadline": 1000000,
+   "now": 2000000,
+   "out": 0
+  }
+ ],
+ "clock": [
+  {
+   "in": -5,
+   "out": "∞"
+  },
+  {
+   "in": 0,
+   "out": "0:00"
+  },
+  {
+   "in": 1,
+   "out": "0:00"
+  },
+  {
+   "in": 999,
+   "out": "0:00"
+  },
+  {
+   "in": 1000,
+   "out": "0:01"
+  },
+  {
+   "in": 59000,
+   "out": "0:59"
+  },
+  {
+   "in": 60000,
+   "out": "1:00"
+  },
+  {
+   "in": 65000,
+   "out": "1:05"
+  },
+  {
+   "in": 3599000,
+   "out": "59:59"
+  },
+  {
+   "in": 3600000,
+   "out": "1:00:00"
+  },
+  {
+   "in": 3723000,
+   "out": "1:02:03"
+  },
+  {
+   "in": 86400000,
+   "out": "24:00:00"
+  }
+ ],
+ "question": [
+  {
+   "limited": true,
+   "deadline": 0,
+   "now": 0,
+   "serverLocked": true,
+   "out": {
+    "limited": true,
+    "locked": true,
+    "remainingMs": -1,
+    "clock": "∞",
+    "warn": false
+   }
+  },
+  {
+   "limited": true,
+   "deadline": 0,
+   "now": 0,
+   "serverLocked": false,
+   "out": {
+    "limited": true,
+    "locked": false,
+    "remainingMs": -1,
+    "clock": "∞",
+    "warn": false
+   }
+  },
+  {
+   "limited": true,
+   "deadline": 0,
+   "now": 500,
+   "serverLocked": true,
+   "out": {
+    "limited": true,
+    "locked": true,
+    "remainingMs": -1,
+    "clock": "∞",
+    "warn": false
+   }
+  },
+  {
+   "limited": true,
+   "deadline": 0,
+   "now": 500,
+   "serverLocked": false,
+   "out": {
+    "limited": true,
+    "locked": false,
+    "remainingMs": -1,
+    "clock": "∞",
+    "warn": false
+   }
+  },
+  {
+   "limited": true,
+   "deadline": 0,
+   "now": 1000,
+   "serverLocked": true,
+   "out": {
+    "limited": true,
+    "locked": true,
+    "remainingMs": -1,
+    "clock": "∞",
+    "warn": false
+   }
+  },
+  {
+   "limited": true,
+   "deadline": 0,
+   "now": 1000,
+   "serverLocked": false,
+   "out": {
+    "limited": true,
+    "locked": false,
+    "remainingMs": -1,
+    "clock": "∞",
+    "warn": false
+   }
+  },
+  {
+   "limited": true,
+   "deadline": 0,
+   "now": 999999,
+   "serverLocked": true,
+   "out": {
+    "limited": true,
+    "locked": true,
+    "remainingMs": -1,
+    "clock": "∞",
+    "warn": false
+   }
+  },
+  {
+   "limited": true,
+   "deadline": 0,
+   "now": 999999,
+   "serverLocked": false,
+   "out": {
+    "limited": true,
+    "locked": false,
+    "remainingMs": -1,
+    "clock": "∞",
+    "warn": false
+   }
+  },
+  {
+   "limited": true,
+   "deadline": 0,
+   "now": 1000000,
+   "serverLocked": true,
+   "out": {
+    "limited": true,
+    "locked": true,
+    "remainingMs": -1,
+    "clock": "∞",
+    "warn": false
+   }
+  },
+  {
+   "limited": true,
+   "deadline": 0,
+   "now": 1000000,
+   "serverLocked": false,
+   "out": {
+    "limited": true,
+    "locked": false,
+    "remainingMs": -1,
+    "clock": "∞",
+    "warn": false
+   }
+  },
+  {
+   "limited": true,
+   "deadline": 0,
+   "now": 1060000,
+   "serverLocked": true,
+   "out": {
+    "limited": true,
+    "locked": true,
+    "remainingMs": -1,
+    "clock": "∞",
+    "warn": false
+   }
+  },
+  {
+   "limited": true,
+   "deadline": 0,
+   "now": 1060000,
+   "serverLocked": false,
+   "out": {
+    "limited": true,
+    "locked": false,
+    "remainingMs": -1,
+    "clock": "∞",
+    "warn": false
+   }
+  },
+  {
+   "limited": true,
+   "deadline": 0,
+   "now": 2000000,
+   "serverLocked": true,
+   "out": {
+    "limited": true,
+    "locked": true,
+    "remainingMs": -1,
+    "clock": "∞",
+    "warn": false
+   }
+  },
+  {
+   "limited": true,
+   "deadline": 0,
+   "now": 2000000,
+   "serverLocked": false,
+   "out": {
+    "limited": true,
+    "locked": false,
+    "remainingMs": -1,
+    "clock": "∞",
+    "warn": false
+   }
+  },
+  {
+   "limited": true,
+   "deadline": -1,
+   "now": 0,
+   "serverLocked": true,
+   "out": {
+    "limited": true,
+    "locked": true,
+    "remainingMs": -1,
+    "clock": "∞",
+    "warn": false
+   }
+  },
+  {
+   "limited": true,
+   "deadline": -1,
+   "now": 0,
+   "serverLocked": false,
+   "out": {
+    "limited": true,
+    "locked": false,
+    "remainingMs": -1,
+    "clock": "∞",
+    "warn": false
+   }
+  },
+  {
+   "limited": true,
+   "deadline": -1,
+   "now": 500,
+   "serverLocked": true,
+   "out": {
+    "limited": true,
+    "locked": true,
+    "remainingMs": -1,
+    "clock": "∞",
+    "warn": false
+   }
+  },
+  {
+   "limited": true,
+   "deadline": -1,
+   "now": 500,
+   "serverLocked": false,
+   "out": {
+    "limited": true,
+    "locked": false,
+    "remainingMs": -1,
+    "clock": "∞",
+    "warn": false
+   }
+  },
+  {
+   "limited": true,
+   "deadline": -1,
+   "now": 1000,
+   "serverLocked": true,
+   "out": {
+    "limited": true,
+    "locked": true,
+    "remainingMs": -1,
+    "clock": "∞",
+    "warn": false
+   }
+  },
+  {
+   "limited": true,
+   "deadline": -1,
+   "now": 1000,
+   "serverLocked": false,
+   "out": {
+    "limited": true,
+    "locked": false,
+    "remainingMs": -1,
+    "clock": "∞",
+    "warn": false
+   }
+  },
+  {
+   "limited": true,
+   "deadline": -1,
+   "now": 999999,
+   "serverLocked": true,
+   "out": {
+    "limited": true,
+    "locked": true,
+    "remainingMs": -1,
+    "clock": "∞",
+    "warn": false
+   }
+  },
+  {
+   "limited": true,
+   "deadline": -1,
+   "now": 999999,
+   "serverLocked": false,
+   "out": {
+    "limited": true,
+    "locked": false,
+    "remainingMs": -1,
+    "clock": "∞",
+    "warn": false
+   }
+  },
+  {
+   "limited": true,
+   "deadline": -1,
+   "now": 1000000,
+   "serverLocked": true,
+   "out": {
+    "limited": true,
+    "locked": true,
+    "remainingMs": -1,
+    "clock": "∞",
+    "warn": false
+   }
+  },
+  {
+   "limited": true,
+   "deadline": -1,
+   "now": 1000000,
+   "serverLocked": false,
+   "out": {
+    "limited": true,
+    "locked": false,
+    "remainingMs": -1,
+    "clock": "∞",
+    "warn": false
+   }
+  },
+  {
+   "limited": true,
+   "deadline": -1,
+   "now": 1060000,
+   "serverLocked": true,
+   "out": {
+    "limited": true,
+    "locked": true,
+    "remainingMs": -1,
+    "clock": "∞",
+    "warn": false
+   }
+  },
+  {
+   "limited": true,
+   "deadline": -1,
+   "now": 1060000,
+   "serverLocked": false,
+   "out": {
+    "limited": true,
+    "locked": false,
+    "remainingMs": -1,
+    "clock": "∞",
+    "warn": false
+   }
+  },
+  {
+   "limited": true,
+   "deadline": -1,
+   "now": 2000000,
+   "serverLocked": true,
+   "out": {
+    "limited": true,
+    "locked": true,
+    "remainingMs": -1,
+    "clock": "∞",
+    "warn": false
+   }
+  },
+  {
+   "limited": true,
+   "deadline": -1,
+   "now": 2000000,
+   "serverLocked": false,
+   "out": {
+    "limited": true,
+    "locked": false,
+    "remainingMs": -1,
+    "clock": "∞",
+    "warn": false
+   }
+  },
+  {
+   "limited": true,
+   "deadline": 1000,
+   "now": 0,
+   "serverLocked": true,
+   "out": {
+    "limited": true,
+    "locked": true,
+    "remainingMs": 1000,
+    "clock": "0:01",
+    "warn": true
+   }
+  },
+  {
+   "limited": true,
+   "deadline": 1000,
+   "now": 0,
+   "serverLocked": false,
+   "out": {
+    "limited": true,
+    "locked": false,
+    "remainingMs": 1000,
+    "clock": "0:01",
+    "warn": true
+   }
+  },
+  {
+   "limited": true,
+   "deadline": 1000,
+   "now": 500,
+   "serverLocked": true,
+   "out": {
+    "limited": true,
+    "locked": true,
+    "remainingMs": 500,
+    "clock": "0:00",
+    "warn": true
+   }
+  },
+  {
+   "limited": true,
+   "deadline": 1000,
+   "now": 500,
+   "serverLocked": false,
+   "out": {
+    "limited": true,
+    "locked": false,
+    "remainingMs": 500,
+    "clock": "0:00",
+    "warn": true
+   }
+  },
+  {
+   "limited": true,
+   "deadline": 1000,
+   "now": 1000,
+   "serverLocked": true,
+   "out": {
+    "limited": true,
+    "locked": true,
+    "remainingMs": 0,
+    "clock": "0:00",
+    "warn": false
+   }
+  },
+  {
+   "limited": true,
+   "deadline": 1000,
+   "now": 1000,
+   "serverLocked": false,
+   "out": {
+    "limited": true,
+    "locked": true,
+    "remainingMs": 0,
+    "clock": "0:00",
+    "warn": false
+   }
+  },
+  {
+   "limited": true,
+   "deadline": 1000,
+   "now": 999999,
+   "serverLocked": true,
+   "out": {
+    "limited": true,
+    "locked": true,
+    "remainingMs": 0,
+    "clock": "0:00",
+    "warn": false
+   }
+  },
+  {
+   "limited": true,
+   "deadline": 1000,
+   "now": 999999,
+   "serverLocked": false,
+   "out": {
+    "limited": true,
+    "locked": true,
+    "remainingMs": 0,
+    "clock": "0:00",
+    "warn": false
+   }
+  },
+  {
+   "limited": true,
+   "deadline": 1000,
+   "now": 1000000,
+   "serverLocked": true,
+   "out": {
+    "limited": true,
+    "locked": true,
+    "remainingMs": 0,
+    "clock": "0:00",
+    "warn": false
+   }
+  },
+  {
+   "limited": true,
+   "deadline": 1000,
+   "now": 1000000,
+   "serverLocked": false,
+   "out": {
+    "limited": true,
+    "locked": true,
+    "remainingMs": 0,
+    "clock": "0:00",
+    "warn": false
+   }
+  },
+  {
+   "limited": true,
+   "deadline": 1000,
+   "now": 1060000,
+   "serverLocked": true,
+   "out": {
+    "limited": true,
+    "locked": true,
+    "remainingMs": 0,
+    "clock": "0:00",
+    "warn": false
+   }
+  },
+  {
+   "limited": true,
+   "deadline": 1000,
+   "now": 1060000,
+   "serverLocked": false,
+   "out": {
+    "limited": true,
+    "locked": true,
+    "remainingMs": 0,
+    "clock": "0:00",
+    "warn": false
+   }
+  },
+  {
+   "limited": true,
+   "deadline": 1000,
+   "now": 2000000,
+   "serverLocked": true,
+   "out": {
+    "limited": true,
+    "locked": true,
+    "remainingMs": 0,
+    "clock": "0:00",
+    "warn": false
+   }
+  },
+  {
+   "limited": true,
+   "deadline": 1000,
+   "now": 2000000,
+   "serverLocked": false,
+   "out": {
+    "limited": true,
+    "locked": true,
+    "remainingMs": 0,
+    "clock": "0:00",
+    "warn": false
+   }
+  },
+  {
+   "limited": true,
+   "deadline": 60000,
+   "now": 0,
+   "serverLocked": true,
+   "out": {
+    "limited": true,
+    "locked": true,
+    "remainingMs": 60000,
+    "clock": "1:00",
+    "warn": false
+   }
+  },
+  {
+   "limited": true,
+   "deadline": 60000,
+   "now": 0,
+   "serverLocked": false,
+   "out": {
+    "limited": true,
+    "locked": false,
+    "remainingMs": 60000,
+    "clock": "1:00",
+    "warn": false
+   }
+  },
+  {
+   "limited": true,
+   "deadline": 60000,
+   "now": 500,
+   "serverLocked": true,
+   "out": {
+    "limited": true,
+    "locked": true,
+    "remainingMs": 59500,
+    "clock": "0:59",
+    "warn": false
+   }
+  },
+  {
+   "limited": true,
+   "deadline": 60000,
+   "now": 500,
+   "serverLocked": false,
+   "out": {
+    "limited": true,
+    "locked": false,
+    "remainingMs": 59500,
+    "clock": "0:59",
+    "warn": false
+   }
+  },
+  {
+   "limited": true,
+   "deadline": 60000,
+   "now": 1000,
+   "serverLocked": true,
+   "out": {
+    "limited": true,
+    "locked": true,
+    "remainingMs": 59000,
+    "clock": "0:59",
+    "warn": false
+   }
+  },
+  {
+   "limited": true,
+   "deadline": 60000,
+   "now": 1000,
+   "serverLocked": false,
+   "out": {
+    "limited": true,
+    "locked": false,
+    "remainingMs": 59000,
+    "clock": "0:59",
+    "warn": false
+   }
+  },
+  {
+   "limited": true,
+   "deadline": 60000,
+   "now": 999999,
+   "serverLocked": true,
+   "out": {
+    "limited": true,
+    "locked": true,
+    "remainingMs": 0,
+    "clock": "0:00",
+    "warn": false
+   }
+  },
+  {
+   "limited": true,
+   "deadline": 60000,
+   "now": 999999,
+   "serverLocked": false,
+   "out": {
+    "limited": true,
+    "locked": true,
+    "remainingMs": 0,
+    "clock": "0:00",
+    "warn": false
+   }
+  },
+  {
+   "limited": true,
+   "deadline": 60000,
+   "now": 1000000,
+   "serverLocked": true,
+   "out": {
+    "limited": true,
+    "locked": true,
+    "remainingMs": 0,
+    "clock": "0:00",
+    "warn": false
+   }
+  },
+  {
+   "limited": true,
+   "deadline": 60000,
+   "now": 1000000,
+   "serverLocked": false,
+   "out": {
+    "limited": true,
+    "locked": true,
+    "remainingMs": 0,
+    "clock": "0:00",
+    "warn": false
+   }
+  },
+  {
+   "limited": true,
+   "deadline": 60000,
+   "now": 1060000,
+   "serverLocked": true,
+   "out": {
+    "limited": true,
+    "locked": true,
+    "remainingMs": 0,
+    "clock": "0:00",
+    "warn": false
+   }
+  },
+  {
+   "limited": true,
+   "deadline": 60000,
+   "now": 1060000,
+   "serverLocked": false,
+   "out": {
+    "limited": true,
+    "locked": true,
+    "remainingMs": 0,
+    "clock": "0:00",
+    "warn": false
+   }
+  },
+  {
+   "limited": true,
+   "deadline": 60000,
+   "now": 2000000,
+   "serverLocked": true,
+   "out": {
+    "limited": true,
+    "locked": true,
+    "remainingMs": 0,
+    "clock": "0:00",
+    "warn": false
+   }
+  },
+  {
+   "limited": true,
+   "deadline": 60000,
+   "now": 2000000,
+   "serverLocked": false,
+   "out": {
+    "limited": true,
+    "locked": true,
+    "remainingMs": 0,
+    "clock": "0:00",
+    "warn": false
+   }
+  },
+  {
+   "limited": true,
+   "deadline": 1000000,
+   "now": 0,
+   "serverLocked": true,
+   "out": {
+    "limited": true,
+    "locked": true,
+    "remainingMs": 1000000,
+    "clock": "16:40",
+    "warn": false
+   }
+  },
+  {
+   "limited": true,
+   "deadline": 1000000,
+   "now": 0,
+   "serverLocked": false,
+   "out": {
+    "limited": true,
+    "locked": false,
+    "remainingMs": 1000000,
+    "clock": "16:40",
+    "warn": false
+   }
+  },
+  {
+   "limited": true,
+   "deadline": 1000000,
+   "now": 500,
+   "serverLocked": true,
+   "out": {
+    "limited": true,
+    "locked": true,
+    "remainingMs": 999500,
+    "clock": "16:39",
+    "warn": false
+   }
+  },
+  {
+   "limited": true,
+   "deadline": 1000000,
+   "now": 500,
+   "serverLocked": false,
+   "out": {
+    "limited": true,
+    "locked": false,
+    "remainingMs": 999500,
+    "clock": "16:39",
+    "warn": false
+   }
+  },
+  {
+   "limited": true,
+   "deadline": 1000000,
+   "now": 1000,
+   "serverLocked": true,
+   "out": {
+    "limited": true,
+    "locked": true,
+    "remainingMs": 999000,
+    "clock": "16:39",
+    "warn": false
+   }
+  },
+  {
+   "limited": true,
+   "deadline": 1000000,
+   "now": 1000,
+   "serverLocked": false,
+   "out": {
+    "limited": true,
+    "locked": false,
+    "remainingMs": 999000,
+    "clock": "16:39",
+    "warn": false
+   }
+  },
+  {
+   "limited": true,
+   "deadline": 1000000,
+   "now": 999999,
+   "serverLocked": true,
+   "out": {
+    "limited": true,
+    "locked": true,
+    "remainingMs": 1,
+    "clock": "0:00",
+    "warn": true
+   }
+  },
+  {
+   "limited": true,
+   "deadline": 1000000,
+   "now": 999999,
+   "serverLocked": false,
+   "out": {
+    "limited": true,
+    "locked": false,
+    "remainingMs": 1,
+    "clock": "0:00",
+    "warn": true
+   }
+  },
+  {
+   "limited": true,
+   "deadline": 1000000,
+   "now": 1000000,
+   "serverLocked": true,
+   "out": {
+    "limited": true,
+    "locked": true,
+    "remainingMs": 0,
+    "clock": "0:00",
+    "warn": false
+   }
+  },
+  {
+   "limited": true,
+   "deadline": 1000000,
+   "now": 1000000,
+   "serverLocked": false,
+   "out": {
+    "limited": true,
+    "locked": true,
+    "remainingMs": 0,
+    "clock": "0:00",
+    "warn": false
+   }
+  },
+  {
+   "limited": true,
+   "deadline": 1000000,
+   "now": 1060000,
+   "serverLocked": true,
+   "out": {
+    "limited": true,
+    "locked": true,
+    "remainingMs": 0,
+    "clock": "0:00",
+    "warn": false
+   }
+  },
+  {
+   "limited": true,
+   "deadline": 1000000,
+   "now": 1060000,
+   "serverLocked": false,
+   "out": {
+    "limited": true,
+    "locked": true,
+    "remainingMs": 0,
+    "clock": "0:00",
+    "warn": false
+   }
+  },
+  {
+   "limited": true,
+   "deadline": 1000000,
+   "now": 2000000,
+   "serverLocked": true,
+   "out": {
+    "limited": true,
+    "locked": true,
+    "remainingMs": 0,
+    "clock": "0:00",
+    "warn": false
+   }
+  },
+  {
+   "limited": true,
+   "deadline": 1000000,
+   "now": 2000000,
+   "serverLocked": false,
+   "out": {
+    "limited": true,
+    "locked": true,
+    "remainingMs": 0,
+    "clock": "0:00",
+    "warn": false
+   }
+  },
+  {
+   "limited": false,
+   "deadline": 0,
+   "now": 0,
+   "serverLocked": true,
+   "out": {
+    "limited": false,
+    "locked": true,
+    "remainingMs": -1,
+    "clock": "",
+    "warn": false
+   }
+  },
+  {
+   "limited": false,
+   "deadline": 0,
+   "now": 0,
+   "serverLocked": false,
+   "out": {
+    "limited": false,
+    "locked": false,
+    "remainingMs": -1,
+    "clock": "",
+    "warn": false
+   }
+  },
+  {
+   "limited": false,
+   "deadline": 0,
+   "now": 500,
+   "serverLocked": true,
+   "out": {
+    "limited": false,
+    "locked": true,
+    "remainingMs": -1,
+    "clock": "",
+    "warn": false
+   }
+  },
+  {
+   "limited": false,
+   "deadline": 0,
+   "now": 500,
+   "serverLocked": false,
+   "out": {
+    "limited": false,
+    "locked": false,
+    "remainingMs": -1,
+    "clock": "",
+    "warn": false
+   }
+  },
+  {
+   "limited": false,
+   "deadline": 0,
+   "now": 1000,
+   "serverLocked": true,
+   "out": {
+    "limited": false,
+    "locked": true,
+    "remainingMs": -1,
+    "clock": "",
+    "warn": false
+   }
+  },
+  {
+   "limited": false,
+   "deadline": 0,
+   "now": 1000,
+   "serverLocked": false,
+   "out": {
+    "limited": false,
+    "locked": false,
+    "remainingMs": -1,
+    "clock": "",
+    "warn": false
+   }
+  },
+  {
+   "limited": false,
+   "deadline": 0,
+   "now": 999999,
+   "serverLocked": true,
+   "out": {
+    "limited": false,
+    "locked": true,
+    "remainingMs": -1,
+    "clock": "",
+    "warn": false
+   }
+  },
+  {
+   "limited": false,
+   "deadline": 0,
+   "now": 999999,
+   "serverLocked": false,
+   "out": {
+    "limited": false,
+    "locked": false,
+    "remainingMs": -1,
+    "clock": "",
+    "warn": false
+   }
+  },
+  {
+   "limited": false,
+   "deadline": 0,
+   "now": 1000000,
+   "serverLocked": true,
+   "out": {
+    "limited": false,
+    "locked": true,
+    "remainingMs": -1,
+    "clock": "",
+    "warn": false
+   }
+  },
+  {
+   "limited": false,
+   "deadline": 0,
+   "now": 1000000,
+   "serverLocked": false,
+   "out": {
+    "limited": false,
+    "locked": false,
+    "remainingMs": -1,
+    "clock": "",
+    "warn": false
+   }
+  },
+  {
+   "limited": false,
+   "deadline": 0,
+   "now": 1060000,
+   "serverLocked": true,
+   "out": {
+    "limited": false,
+    "locked": true,
+    "remainingMs": -1,
+    "clock": "",
+    "warn": false
+   }
+  },
+  {
+   "limited": false,
+   "deadline": 0,
+   "now": 1060000,
+   "serverLocked": false,
+   "out": {
+    "limited": false,
+    "locked": false,
+    "remainingMs": -1,
+    "clock": "",
+    "warn": false
+   }
+  },
+  {
+   "limited": false,
+   "deadline": 0,
+   "now": 2000000,
+   "serverLocked": true,
+   "out": {
+    "limited": false,
+    "locked": true,
+    "remainingMs": -1,
+    "clock": "",
+    "warn": false
+   }
+  },
+  {
+   "limited": false,
+   "deadline": 0,
+   "now": 2000000,
+   "serverLocked": false,
+   "out": {
+    "limited": false,
+    "locked": false,
+    "remainingMs": -1,
+    "clock": "",
+    "warn": false
+   }
+  },
+  {
+   "limited": false,
+   "deadline": -1,
+   "now": 0,
+   "serverLocked": true,
+   "out": {
+    "limited": false,
+    "locked": true,
+    "remainingMs": -1,
+    "clock": "",
+    "warn": false
+   }
+  },
+  {
+   "limited": false,
+   "deadline": -1,
+   "now": 0,
+   "serverLocked": false,
+   "out": {
+    "limited": false,
+    "locked": false,
+    "remainingMs": -1,
+    "clock": "",
+    "warn": false
+   }
+  },
+  {
+   "limited": false,
+   "deadline": -1,
+   "now": 500,
+   "serverLocked": true,
+   "out": {
+    "limited": false,
+    "locked": true,
+    "remainingMs": -1,
+    "clock": "",
+    "warn": false
+   }
+  },
+  {
+   "limited": false,
+   "deadline": -1,
+   "now": 500,
+   "serverLocked": false,
+   "out": {
+    "limited": false,
+    "locked": false,
+    "remainingMs": -1,
+    "clock": "",
+    "warn": false
+   }
+  },
+  {
+   "limited": false,
+   "deadline": -1,
+   "now": 1000,
+   "serverLocked": true,
+   "out": {
+    "limited": false,
+    "locked": true,
+    "remainingMs": -1,
+    "clock": "",
+    "warn": false
+   }
+  },
+  {
+   "limited": false,
+   "deadline": -1,
+   "now": 1000,
+   "serverLocked": false,
+   "out": {
+    "limited": false,
+    "locked": false,
+    "remainingMs": -1,
+    "clock": "",
+    "warn": false
+   }
+  },
+  {
+   "limited": false,
+   "deadline": -1,
+   "now": 999999,
+   "serverLocked": true,
+   "out": {
+    "limited": false,
+    "locked": true,
+    "remainingMs": -1,
+    "clock": "",
+    "warn": false
+   }
+  },
+  {
+   "limited": false,
+   "deadline": -1,
+   "now": 999999,
+   "serverLocked": false,
+   "out": {
+    "limited": false,
+    "locked": false,
+    "remainingMs": -1,
+    "clock": "",
+    "warn": false
+   }
+  },
+  {
+   "limited": false,
+   "deadline": -1,
+   "now": 1000000,
+   "serverLocked": true,
+   "out": {
+    "limited": false,
+    "locked": true,
+    "remainingMs": -1,
+    "clock": "",
+    "warn": false
+   }
+  },
+  {
+   "limited": false,
+   "deadline": -1,
+   "now": 1000000,
+   "serverLocked": false,
+   "out": {
+    "limited": false,
+    "locked": false,
+    "remainingMs": -1,
+    "clock": "",
+    "warn": false
+   }
+  },
+  {
+   "limited": false,
+   "deadline": -1,
+   "now": 1060000,
+   "serverLocked": true,
+   "out": {
+    "limited": false,
+    "locked": true,
+    "remainingMs": -1,
+    "clock": "",
+    "warn": false
+   }
+  },
+  {
+   "limited": false,
+   "deadline": -1,
+   "now": 1060000,
+   "serverLocked": false,
+   "out": {
+    "limited": false,
+    "locked": false,
+    "remainingMs": -1,
+    "clock": "",
+    "warn": false
+   }
+  },
+  {
+   "limited": false,
+   "deadline": -1,
+   "now": 2000000,
+   "serverLocked": true,
+   "out": {
+    "limited": false,
+    "locked": true,
+    "remainingMs": -1,
+    "clock": "",
+    "warn": false
+   }
+  },
+  {
+   "limited": false,
+   "deadline": -1,
+   "now": 2000000,
+   "serverLocked": false,
+   "out": {
+    "limited": false,
+    "locked": false,
+    "remainingMs": -1,
+    "clock": "",
+    "warn": false
+   }
+  },
+  {
+   "limited": false,
+   "deadline": 1000,
+   "now": 0,
+   "serverLocked": true,
+   "out": {
+    "limited": false,
+    "locked": true,
+    "remainingMs": -1,
+    "clock": "",
+    "warn": false
+   }
+  },
+  {
+   "limited": false,
+   "deadline": 1000,
+   "now": 0,
+   "serverLocked": false,
+   "out": {
+    "limited": false,
+    "locked": false,
+    "remainingMs": -1,
+    "clock": "",
+    "warn": false
+   }
+  },
+  {
+   "limited": false,
+   "deadline": 1000,
+   "now": 500,
+   "serverLocked": true,
+   "out": {
+    "limited": false,
+    "locked": true,
+    "remainingMs": -1,
+    "clock": "",
+    "warn": false
+   }
+  },
+  {
+   "limited": false,
+   "deadline": 1000,
+   "now": 500,
+   "serverLocked": false,
+   "out": {
+    "limited": false,
+    "locked": false,
+    "remainingMs": -1,
+    "clock": "",
+    "warn": false
+   }
+  },
+  {
+   "limited": false,
+   "deadline": 1000,
+   "now": 1000,
+   "serverLocked": true,
+   "out": {
+    "limited": false,
+    "locked": true,
+    "remainingMs": -1,
+    "clock": "",
+    "warn": false
+   }
+  },
+  {
+   "limited": false,
+   "deadline": 1000,
+   "now": 1000,
+   "serverLocked": false,
+   "out": {
+    "limited": false,
+    "locked": false,
+    "remainingMs": -1,
+    "clock": "",
+    "warn": false
+   }
+  },
+  {
+   "limited": false,
+   "deadline": 1000,
+   "now": 999999,
+   "serverLocked": true,
+   "out": {
+    "limited": false,
+    "locked": true,
+    "remainingMs": -1,
+    "clock": "",
+    "warn": false
+   }
+  },
+  {
+   "limited": false,
+   "deadline": 1000,
+   "now": 999999,
+   "serverLocked": false,
+   "out": {
+    "limited": false,
+    "locked": false,
+    "remainingMs": -1,
+    "clock": "",
+    "warn": false
+   }
+  },
+  {
+   "limited": false,
+   "deadline": 1000,
+   "now": 1000000,
+   "serverLocked": true,
+   "out": {
+    "limited": false,
+    "locked": true,
+    "remainingMs": -1,
+    "clock": "",
+    "warn": false
+   }
+  },
+  {
+   "limited": false,
+   "deadline": 1000,
+   "now": 1000000,
+   "serverLocked": false,
+   "out": {
+    "limited": false,
+    "locked": false,
+    "remainingMs": -1,
+    "clock": "",
+    "warn": false
+   }
+  },
+  {
+   "limited": false,
+   "deadline": 1000,
+   "now": 1060000,
+   "serverLocked": true,
+   "out": {
+    "limited": false,
+    "locked": true,
+    "remainingMs": -1,
+    "clock": "",
+    "warn": false
+   }
+  },
+  {
+   "limited": false,
+   "deadline": 1000,
+   "now": 1060000,
+   "serverLocked": false,
+   "out": {
+    "limited": false,
+    "locked": false,
+    "remainingMs": -1,
+    "clock": "",
+    "warn": false
+   }
+  },
+  {
+   "limited": false,
+   "deadline": 1000,
+   "now": 2000000,
+   "serverLocked": true,
+   "out": {
+    "limited": false,
+    "locked": true,
+    "remainingMs": -1,
+    "clock": "",
+    "warn": false
+   }
+  },
+  {
+   "limited": false,
+   "deadline": 1000,
+   "now": 2000000,
+   "serverLocked": false,
+   "out": {
+    "limited": false,
+    "locked": false,
+    "remainingMs": -1,
+    "clock": "",
+    "warn": false
+   }
+  },
+  {
+   "limited": false,
+   "deadline": 60000,
+   "now": 0,
+   "serverLocked": true,
+   "out": {
+    "limited": false,
+    "locked": true,
+    "remainingMs": -1,
+    "clock": "",
+    "warn": false
+   }
+  },
+  {
+   "limited": false,
+   "deadline": 60000,
+   "now": 0,
+   "serverLocked": false,
+   "out": {
+    "limited": false,
+    "locked": false,
+    "remainingMs": -1,
+    "clock": "",
+    "warn": false
+   }
+  },
+  {
+   "limited": false,
+   "deadline": 60000,
+   "now": 500,
+   "serverLocked": true,
+   "out": {
+    "limited": false,
+    "locked": true,
+    "remainingMs": -1,
+    "clock": "",
+    "warn": false
+   }
+  },
+  {
+   "limited": false,
+   "deadline": 60000,
+   "now": 500,
+   "serverLocked": false,
+   "out": {
+    "limited": false,
+    "locked": false,
+    "remainingMs": -1,
+    "clock": "",
+    "warn": false
+   }
+  },
+  {
+   "limited": false,
+   "deadline": 60000,
+   "now": 1000,
+   "serverLocked": true,
+   "out": {
+    "limited": false,
+    "locked": true,
+    "remainingMs": -1,
+    "clock": "",
+    "warn": false
+   }
+  },
+  {
+   "limited": false,
+   "deadline": 60000,
+   "now": 1000,
+   "serverLocked": false,
+   "out": {
+    "limited": false,
+    "locked": false,
+    "remainingMs": -1,
+    "clock": "",
+    "warn": false
+   }
+  },
+  {
+   "limited": false,
+   "deadline": 60000,
+   "now": 999999,
+   "serverLocked": true,
+   "out": {
+    "limited": false,
+    "locked": true,
+    "remainingMs": -1,
+    "clock": "",
+    "warn": false
+   }
+  },
+  {
+   "limited": false,
+   "deadline": 60000,
+   "now": 999999,
+   "serverLocked": false,
+   "out": {
+    "limited": false,
+    "locked": false,
+    "remainingMs": -1,
+    "clock": "",
+    "warn": false
+   }
+  },
+  {
+   "limited": false,
+   "deadline": 60000,
+   "now": 1000000,
+   "serverLocked": true,
+   "out": {
+    "limited": false,
+    "locked": true,
+    "remainingMs": -1,
+    "clock": "",
+    "warn": false
+   }
+  },
+  {
+   "limited": false,
+   "deadline": 60000,
+   "now": 1000000,
+   "serverLocked": false,
+   "out": {
+    "limited": false,
+    "locked": false,
+    "remainingMs": -1,
+    "clock": "",
+    "warn": false
+   }
+  },
+  {
+   "limited": false,
+   "deadline": 60000,
+   "now": 1060000,
+   "serverLocked": true,
+   "out": {
+    "limited": false,
+    "locked": true,
+    "remainingMs": -1,
+    "clock": "",
+    "warn": false
+   }
+  },
+  {
+   "limited": false,
+   "deadline": 60000,
+   "now": 1060000,
+   "serverLocked": false,
+   "out": {
+    "limited": false,
+    "locked": false,
+    "remainingMs": -1,
+    "clock": "",
+    "warn": false
+   }
+  },
+  {
+   "limited": false,
+   "deadline": 60000,
+   "now": 2000000,
+   "serverLocked": true,
+   "out": {
+    "limited": false,
+    "locked": true,
+    "remainingMs": -1,
+    "clock": "",
+    "warn": false
+   }
+  },
+  {
+   "limited": false,
+   "deadline": 60000,
+   "now": 2000000,
+   "serverLocked": false,
+   "out": {
+    "limited": false,
+    "locked": false,
+    "remainingMs": -1,
+    "clock": "",
+    "warn": false
+   }
+  },
+  {
+   "limited": false,
+   "deadline": 1000000,
+   "now": 0,
+   "serverLocked": true,
+   "out": {
+    "limited": false,
+    "locked": true,
+    "remainingMs": -1,
+    "clock": "",
+    "warn": false
+   }
+  },
+  {
+   "limited": false,
+   "deadline": 1000000,
+   "now": 0,
+   "serverLocked": false,
+   "out": {
+    "limited": false,
+    "locked": false,
+    "remainingMs": -1,
+    "clock": "",
+    "warn": false
+   }
+  },
+  {
+   "limited": false,
+   "deadline": 1000000,
+   "now": 500,
+   "serverLocked": true,
+   "out": {
+    "limited": false,
+    "locked": true,
+    "remainingMs": -1,
+    "clock": "",
+    "warn": false
+   }
+  },
+  {
+   "limited": false,
+   "deadline": 1000000,
+   "now": 500,
+   "serverLocked": false,
+   "out": {
+    "limited": false,
+    "locked": false,
+    "remainingMs": -1,
+    "clock": "",
+    "warn": false
+   }
+  },
+  {
+   "limited": false,
+   "deadline": 1000000,
+   "now": 1000,
+   "serverLocked": true,
+   "out": {
+    "limited": false,
+    "locked": true,
+    "remainingMs": -1,
+    "clock": "",
+    "warn": false
+   }
+  },
+  {
+   "limited": false,
+   "deadline": 1000000,
+   "now": 1000,
+   "serverLocked": false,
+   "out": {
+    "limited": false,
+    "locked": false,
+    "remainingMs": -1,
+    "clock": "",
+    "warn": false
+   }
+  },
+  {
+   "limited": false,
+   "deadline": 1000000,
+   "now": 999999,
+   "serverLocked": true,
+   "out": {
+    "limited": false,
+    "locked": true,
+    "remainingMs": -1,
+    "clock": "",
+    "warn": false
+   }
+  },
+  {
+   "limited": false,
+   "deadline": 1000000,
+   "now": 999999,
+   "serverLocked": false,
+   "out": {
+    "limited": false,
+    "locked": false,
+    "remainingMs": -1,
+    "clock": "",
+    "warn": false
+   }
+  },
+  {
+   "limited": false,
+   "deadline": 1000000,
+   "now": 1000000,
+   "serverLocked": true,
+   "out": {
+    "limited": false,
+    "locked": true,
+    "remainingMs": -1,
+    "clock": "",
+    "warn": false
+   }
+  },
+  {
+   "limited": false,
+   "deadline": 1000000,
+   "now": 1000000,
+   "serverLocked": false,
+   "out": {
+    "limited": false,
+    "locked": false,
+    "remainingMs": -1,
+    "clock": "",
+    "warn": false
+   }
+  },
+  {
+   "limited": false,
+   "deadline": 1000000,
+   "now": 1060000,
+   "serverLocked": true,
+   "out": {
+    "limited": false,
+    "locked": true,
+    "remainingMs": -1,
+    "clock": "",
+    "warn": false
+   }
+  },
+  {
+   "limited": false,
+   "deadline": 1000000,
+   "now": 1060000,
+   "serverLocked": false,
+   "out": {
+    "limited": false,
+    "locked": false,
+    "remainingMs": -1,
+    "clock": "",
+    "warn": false
+   }
+  },
+  {
+   "limited": false,
+   "deadline": 1000000,
+   "now": 2000000,
+   "serverLocked": true,
+   "out": {
+    "limited": false,
+    "locked": true,
+    "remainingMs": -1,
+    "clock": "",
+    "warn": false
+   }
+  },
+  {
+   "limited": false,
+   "deadline": 1000000,
+   "now": 2000000,
+   "serverLocked": false,
+   "out": {
+    "limited": false,
+    "locked": false,
+    "remainingMs": -1,
+    "clock": "",
+    "warn": false
+   }
+  }
+ ],
+ "validate": [
+  {
+   "minutes": 0,
+   "reason": "دلیل کافی است",
+   "out": ""
+  },
+  {
+   "minutes": 15,
+   "reason": "مشکل یادگیری",
+   "out": ""
+  },
+  {
+   "minutes": 240,
+   "reason": "دلیل کافی است",
+   "out": ""
+  },
+  {
+   "minutes": 241,
+   "reason": "دلیل کافی است",
+   "out": "زمان اضافه باید عدد صحیح بین ۰ تا ۲۴۰ دقیقه باشد."
+  },
+  {
+   "minutes": -1,
+   "reason": "دلیل کافی است",
+   "out": "زمان اضافه باید عدد صحیح بین ۰ تا ۲۴۰ دقیقه باشد."
+  },
+  {
+   "minutes": 15,
+   "reason": "کم",
+   "out": "دلیل زمان اضافه باید بین ۵ تا ۵۰۰ نویسه باشد."
+  },
+  {
+   "minutes": 15,
+   "reason": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+   "out": "دلیل زمان اضافه باید بین ۵ تا ۵۰۰ نویسه باشد."
+  },
+  {
+   "minutes": 15,
+   "reason": "   ",
+   "out": "دلیل زمان اضافه باید بین ۵ تا ۵۰۰ نویسه باشد."
+  },
+  {
+   "minutes": 15,
+   "reason": null,
+   "out": "دلیل زمان اضافه باید بین ۵ تا ۵۰۰ نویسه باشد."
+  },
+  {
+   "minutes": 1.5,
+   "reason": "دلیل کافی است",
+   "out": "زمان اضافه باید عدد صحیح بین ۰ تا ۲۴۰ دقیقه باشد."
+  }
+ ],
+ "parse": [
+  {
+   "in": "",
+   "out": {
+    "limits": {},
+    "errors": [],
+    "count": 0
+   }
+  },
+  {
+   "in": "# راهنما\n\n",
+   "out": {
+    "limits": {},
+    "errors": [],
+    "count": 0
+   }
+  },
+  {
+   "in": "همه = 300",
+   "out": {
+    "limits": {
+     "-1": 300
+    },
+    "errors": [],
+    "count": 1
+   }
+  },
+  {
+   "in": "همه = ۳۰۰\n۱ = ۶۰\n2 = ٩٠",
+   "out": {
+    "limits": {
+     "0": 60,
+     "1": 90,
+     "-1": 300
+    },
+    "errors": [],
+    "count": 3
+   }
+  },
+  {
+   "in": "1 = 60\n2 = 90\nهمه = 300",
+   "out": {
+    "limits": {
+     "0": 60,
+     "1": 90,
+     "-1": 300
+    },
+    "errors": [],
+    "count": 3
+   }
+  },
+  {
+   "in": "all = 120",
+   "out": {
+    "limits": {
+     "-1": 120
+    },
+    "errors": [],
+    "count": 1
+   }
+  },
+  {
+   "in": "* = 600",
+   "out": {
+    "limits": {
+     "-1": 600
+    },
+    "errors": [],
+    "count": 1
+   }
+  },
+  {
+   "in": "بدون مساوی",
+   "out": {
+    "limits": {},
+    "errors": [
+     {
+      "line": 1,
+      "message": "شمارهٔ سؤال و ثانیه را با «=» جدا کنید."
+     }
+    ],
+    "count": 0
+   }
+  },
+  {
+   "in": "x = 60",
+   "out": {
+    "limits": {},
+    "errors": [
+     {
+      "line": 1,
+      "message": "شمارهٔ سؤال باید عدد باشد یا «همه»."
+     }
+    ],
+    "count": 0
+   }
+  },
+  {
+   "in": "0 = 60",
+   "out": {
+    "limits": {},
+    "errors": [
+     {
+      "line": 1,
+      "message": "شمارهٔ سؤال از ۱ شروع می‌شود."
+     }
+    ],
+    "count": 0
+   }
+  },
+  {
+   "in": "1 = 5",
+   "out": {
+    "limits": {},
+    "errors": [
+     {
+      "line": 1,
+      "message": "زمان هر سؤال باید بین ۱۰ تا ۷۲۰۰ ثانیه باشد."
+     }
+    ],
+    "count": 0
+   }
+  },
+  {
+   "in": "1 = 7201",
+   "out": {
+    "limits": {},
+    "errors": [
+     {
+      "line": 1,
+      "message": "زمان هر سؤال باید بین ۱۰ تا ۷۲۰۰ ثانیه باشد."
+     }
+    ],
+    "count": 0
+   }
+  },
+  {
+   "in": "1 = abc",
+   "out": {
+    "limits": {},
+    "errors": [
+     {
+      "line": 1,
+      "message": "ثانیه باید عدد صحیح باشد."
+     }
+    ],
+    "count": 0
+   }
+  },
+  {
+   "in": "۰ = ۶۰",
+   "out": {
+    "limits": {},
+    "errors": [
+     {
+      "line": 1,
+      "message": "شمارهٔ سؤال از ۱ شروع می‌شود."
+     }
+    ],
+    "count": 0
+   }
+  },
+  {
+   "in": "همه=300\n\n#نظر\n۳ = ۴۵",
+   "out": {
+    "limits": {
+     "2": 45,
+     "-1": 300
+    },
+    "errors": [],
+    "count": 2
+   }
+  },
+  {
+   "in": "1 = 60\n1 = 90",
+   "out": {
+    "limits": {
+     "0": 90
+    },
+    "errors": [],
+    "count": 2
+   }
+  }
+ ],
+ "format": [
+  {
+   "limits": {},
+   "out": ""
+  },
+  {
+   "limits": {},
+   "out": ""
+  },
+  {
+   "limits": {
+    "-1": 300
+   },
+   "out": "همه = 300"
+  },
+  {
+   "limits": {
+    "0": 60,
+    "1": 90,
+    "-1": 300
+   },
+   "out": "همه = 300\n1 = 60\n2 = 90"
+  },
+  {
+   "limits": {
+    "0": 60,
+    "1": 90,
+    "-1": 300
+   },
+   "out": "همه = 300\n1 = 60\n2 = 90"
+  },
+  {
+   "limits": {
+    "-1": 120
+   },
+   "out": "همه = 120"
+  },
+  {
+   "limits": {
+    "-1": 600
+   },
+   "out": "همه = 600"
+  },
+  {
+   "limits": {},
+   "out": ""
+  },
+  {
+   "limits": {},
+   "out": ""
+  },
+  {
+   "limits": {},
+   "out": ""
+  },
+  {
+   "limits": {},
+   "out": ""
+  },
+  {
+   "limits": {},
+   "out": ""
+  },
+  {
+   "limits": {},
+   "out": ""
+  },
+  {
+   "limits": {},
+   "out": ""
+  },
+  {
+   "limits": {
+    "2": 45,
+    "-1": 300
+   },
+   "out": "همه = 300\n3 = 45"
+  },
+  {
+   "limits": {
+    "0": 90
+   },
+   "out": "1 = 90"
+  }
+ ],
+ "offline": [
+  {
+   "pack": {
+    "token": ""
+   },
+   "now": 0,
+   "deadline": 0,
+   "out": {
+    "ok": false,
+    "reason": "بستهٔ آفلاین گرفته نشده است."
+   }
+  },
+  {
+   "pack": {
+    "token": ""
+   },
+   "now": 0,
+   "deadline": 1000,
+   "out": {
+    "ok": false,
+    "reason": "بستهٔ آفلاین گرفته نشده است."
+   }
+  },
+  {
+   "pack": {
+    "token": ""
+   },
+   "now": 0,
+   "deadline": 60000,
+   "out": {
+    "ok": false,
+    "reason": "بستهٔ آفلاین گرفته نشده است."
+   }
+  },
+  {
+   "pack": {
+    "token": ""
+   },
+   "now": 500,
+   "deadline": 0,
+   "out": {
+    "ok": false,
+    "reason": "بستهٔ آفلاین گرفته نشده است."
+   }
+  },
+  {
+   "pack": {
+    "token": ""
+   },
+   "now": 500,
+   "deadline": 1000,
+   "out": {
+    "ok": false,
+    "reason": "بستهٔ آفلاین گرفته نشده است."
+   }
+  },
+  {
+   "pack": {
+    "token": ""
+   },
+   "now": 500,
+   "deadline": 60000,
+   "out": {
+    "ok": false,
+    "reason": "بستهٔ آفلاین گرفته نشده است."
+   }
+  },
+  {
+   "pack": {
+    "token": ""
+   },
+   "now": 1000,
+   "deadline": 0,
+   "out": {
+    "ok": false,
+    "reason": "بستهٔ آفلاین گرفته نشده است."
+   }
+  },
+  {
+   "pack": {
+    "token": ""
+   },
+   "now": 1000,
+   "deadline": 1000,
+   "out": {
+    "ok": false,
+    "reason": "بستهٔ آفلاین گرفته نشده است."
+   }
+  },
+  {
+   "pack": {
+    "token": ""
+   },
+   "now": 1000,
+   "deadline": 60000,
+   "out": {
+    "ok": false,
+    "reason": "بستهٔ آفلاین گرفته نشده است."
+   }
+  },
+  {
+   "pack": {
+    "token": ""
+   },
+   "now": 999999,
+   "deadline": 0,
+   "out": {
+    "ok": false,
+    "reason": "بستهٔ آفلاین گرفته نشده است."
+   }
+  },
+  {
+   "pack": {
+    "token": ""
+   },
+   "now": 999999,
+   "deadline": 1000,
+   "out": {
+    "ok": false,
+    "reason": "بستهٔ آفلاین گرفته نشده است."
+   }
+  },
+  {
+   "pack": {
+    "token": ""
+   },
+   "now": 999999,
+   "deadline": 60000,
+   "out": {
+    "ok": false,
+    "reason": "بستهٔ آفلاین گرفته نشده است."
+   }
+  },
+  {
+   "pack": {
+    "token": ""
+   },
+   "now": 1000000,
+   "deadline": 0,
+   "out": {
+    "ok": false,
+    "reason": "بستهٔ آفلاین گرفته نشده است."
+   }
+  },
+  {
+   "pack": {
+    "token": ""
+   },
+   "now": 1000000,
+   "deadline": 1000,
+   "out": {
+    "ok": false,
+    "reason": "بستهٔ آفلاین گرفته نشده است."
+   }
+  },
+  {
+   "pack": {
+    "token": ""
+   },
+   "now": 1000000,
+   "deadline": 60000,
+   "out": {
+    "ok": false,
+    "reason": "بستهٔ آفلاین گرفته نشده است."
+   }
+  },
+  {
+   "pack": {
+    "token": ""
+   },
+   "now": 1060000,
+   "deadline": 0,
+   "out": {
+    "ok": false,
+    "reason": "بستهٔ آفلاین گرفته نشده است."
+   }
+  },
+  {
+   "pack": {
+    "token": ""
+   },
+   "now": 1060000,
+   "deadline": 1000,
+   "out": {
+    "ok": false,
+    "reason": "بستهٔ آفلاین گرفته نشده است."
+   }
+  },
+  {
+   "pack": {
+    "token": ""
+   },
+   "now": 1060000,
+   "deadline": 60000,
+   "out": {
+    "ok": false,
+    "reason": "بستهٔ آفلاین گرفته نشده است."
+   }
+  },
+  {
+   "pack": {
+    "token": ""
+   },
+   "now": 2000000,
+   "deadline": 0,
+   "out": {
+    "ok": false,
+    "reason": "بستهٔ آفلاین گرفته نشده است."
+   }
+  },
+  {
+   "pack": {
+    "token": ""
+   },
+   "now": 2000000,
+   "deadline": 1000,
+   "out": {
+    "ok": false,
+    "reason": "بستهٔ آفلاین گرفته نشده است."
+   }
+  },
+  {
+   "pack": {
+    "token": ""
+   },
+   "now": 2000000,
+   "deadline": 60000,
+   "out": {
+    "ok": false,
+    "reason": "بستهٔ آفلاین گرفته نشده است."
+   }
+  },
+  {
+   "pack": {
+    "token": "abc"
+   },
+   "now": 0,
+   "deadline": 0,
+   "out": {
+    "ok": false,
+    "reason": "مهلت آزمون معلوم نیست."
+   }
+  },
+  {
+   "pack": {
+    "token": "abc"
+   },
+   "now": 0,
+   "deadline": 1000,
+   "out": {
+    "ok": true,
+    "reason": ""
+   }
+  },
+  {
+   "pack": {
+    "token": "abc"
+   },
+   "now": 0,
+   "deadline": 60000,
+   "out": {
+    "ok": true,
+    "reason": ""
+   }
+  },
+  {
+   "pack": {
+    "token": "abc"
+   },
+   "now": 500,
+   "deadline": 0,
+   "out": {
+    "ok": false,
+    "reason": "مهلت آزمون معلوم نیست."
+   }
+  },
+  {
+   "pack": {
+    "token": "abc"
+   },
+   "now": 500,
+   "deadline": 1000,
+   "out": {
+    "ok": true,
+    "reason": ""
+   }
+  },
+  {
+   "pack": {
+    "token": "abc"
+   },
+   "now": 500,
+   "deadline": 60000,
+   "out": {
+    "ok": true,
+    "reason": ""
+   }
+  },
+  {
+   "pack": {
+    "token": "abc"
+   },
+   "now": 1000,
+   "deadline": 0,
+   "out": {
+    "ok": false,
+    "reason": "مهلت آزمون معلوم نیست."
+   }
+  },
+  {
+   "pack": {
+    "token": "abc"
+   },
+   "now": 1000,
+   "deadline": 1000,
+   "out": {
+    "ok": true,
+    "reason": ""
+   }
+  },
+  {
+   "pack": {
+    "token": "abc"
+   },
+   "now": 1000,
+   "deadline": 60000,
+   "out": {
+    "ok": true,
+    "reason": ""
+   }
+  },
+  {
+   "pack": {
+    "token": "abc"
+   },
+   "now": 999999,
+   "deadline": 0,
+   "out": {
+    "ok": false,
+    "reason": "مهلت آزمون معلوم نیست."
+   }
+  },
+  {
+   "pack": {
+    "token": "abc"
+   },
+   "now": 999999,
+   "deadline": 1000,
+   "out": {
+    "ok": false,
+    "reason": "مهلت آزمون گذشته است؛ برگهٔ آفلاین پذیرفته نمی‌شود."
+   }
+  },
+  {
+   "pack": {
+    "token": "abc"
+   },
+   "now": 999999,
+   "deadline": 60000,
+   "out": {
+    "ok": false,
+    "reason": "مهلت آزمون گذشته است؛ برگهٔ آفلاین پذیرفته نمی‌شود."
+   }
+  },
+  {
+   "pack": {
+    "token": "abc"
+   },
+   "now": 1000000,
+   "deadline": 0,
+   "out": {
+    "ok": false,
+    "reason": "مهلت آزمون معلوم نیست."
+   }
+  },
+  {
+   "pack": {
+    "token": "abc"
+   },
+   "now": 1000000,
+   "deadline": 1000,
+   "out": {
+    "ok": false,
+    "reason": "مهلت آزمون گذشته است؛ برگهٔ آفلاین پذیرفته نمی‌شود."
+   }
+  },
+  {
+   "pack": {
+    "token": "abc"
+   },
+   "now": 1000000,
+   "deadline": 60000,
+   "out": {
+    "ok": false,
+    "reason": "مهلت آزمون گذشته است؛ برگهٔ آفلاین پذیرفته نمی‌شود."
+   }
+  },
+  {
+   "pack": {
+    "token": "abc"
+   },
+   "now": 1060000,
+   "deadline": 0,
+   "out": {
+    "ok": false,
+    "reason": "مهلت آزمون معلوم نیست."
+   }
+  },
+  {
+   "pack": {
+    "token": "abc"
+   },
+   "now": 1060000,
+   "deadline": 1000,
+   "out": {
+    "ok": false,
+    "reason": "مهلت آزمون گذشته است؛ برگهٔ آفلاین پذیرفته نمی‌شود."
+   }
+  },
+  {
+   "pack": {
+    "token": "abc"
+   },
+   "now": 1060000,
+   "deadline": 60000,
+   "out": {
+    "ok": false,
+    "reason": "مهلت آزمون گذشته است؛ برگهٔ آفلاین پذیرفته نمی‌شود."
+   }
+  },
+  {
+   "pack": {
+    "token": "abc"
+   },
+   "now": 2000000,
+   "deadline": 0,
+   "out": {
+    "ok": false,
+    "reason": "مهلت آزمون معلوم نیست."
+   }
+  },
+  {
+   "pack": {
+    "token": "abc"
+   },
+   "now": 2000000,
+   "deadline": 1000,
+   "out": {
+    "ok": false,
+    "reason": "مهلت آزمون گذشته است؛ برگهٔ آفلاین پذیرفته نمی‌شود."
+   }
+  },
+  {
+   "pack": {
+    "token": "abc"
+   },
+   "now": 2000000,
+   "deadline": 60000,
+   "out": {
+    "ok": false,
+    "reason": "مهلت آزمون گذشته است؛ برگهٔ آفلاین پذیرفته نمی‌شود."
+   }
+  },
+  {
+   "pack": {
+    "token": "abc",
+    "used": true
+   },
+   "now": 0,
+   "deadline": 0,
+   "out": {
+    "ok": false,
+    "reason": "این بستهٔ آفلاین پیش‌تر مصرف شده است."
+   }
+  },
+  {
+   "pack": {
+    "token": "abc",
+    "used": true
+   },
+   "now": 0,
+   "deadline": 1000,
+   "out": {
+    "ok": false,
+    "reason": "این بستهٔ آفلاین پیش‌تر مصرف شده است."
+   }
+  },
+  {
+   "pack": {
+    "token": "abc",
+    "used": true
+   },
+   "now": 0,
+   "deadline": 60000,
+   "out": {
+    "ok": false,
+    "reason": "این بستهٔ آفلاین پیش‌تر مصرف شده است."
+   }
+  },
+  {
+   "pack": {
+    "token": "abc",
+    "used": true
+   },
+   "now": 500,
+   "deadline": 0,
+   "out": {
+    "ok": false,
+    "reason": "این بستهٔ آفلاین پیش‌تر مصرف شده است."
+   }
+  },
+  {
+   "pack": {
+    "token": "abc",
+    "used": true
+   },
+   "now": 500,
+   "deadline": 1000,
+   "out": {
+    "ok": false,
+    "reason": "این بستهٔ آفلاین پیش‌تر مصرف شده است."
+   }
+  },
+  {
+   "pack": {
+    "token": "abc",
+    "used": true
+   },
+   "now": 500,
+   "deadline": 60000,
+   "out": {
+    "ok": false,
+    "reason": "این بستهٔ آفلاین پیش‌تر مصرف شده است."
+   }
+  },
+  {
+   "pack": {
+    "token": "abc",
+    "used": true
+   },
+   "now": 1000,
+   "deadline": 0,
+   "out": {
+    "ok": false,
+    "reason": "این بستهٔ آفلاین پیش‌تر مصرف شده است."
+   }
+  },
+  {
+   "pack": {
+    "token": "abc",
+    "used": true
+   },
+   "now": 1000,
+   "deadline": 1000,
+   "out": {
+    "ok": false,
+    "reason": "این بستهٔ آفلاین پیش‌تر مصرف شده است."
+   }
+  },
+  {
+   "pack": {
+    "token": "abc",
+    "used": true
+   },
+   "now": 1000,
+   "deadline": 60000,
+   "out": {
+    "ok": false,
+    "reason": "این بستهٔ آفلاین پیش‌تر مصرف شده است."
+   }
+  },
+  {
+   "pack": {
+    "token": "abc",
+    "used": true
+   },
+   "now": 999999,
+   "deadline": 0,
+   "out": {
+    "ok": false,
+    "reason": "این بستهٔ آفلاین پیش‌تر مصرف شده است."
+   }
+  },
+  {
+   "pack": {
+    "token": "abc",
+    "used": true
+   },
+   "now": 999999,
+   "deadline": 1000,
+   "out": {
+    "ok": false,
+    "reason": "این بستهٔ آفلاین پیش‌تر مصرف شده است."
+   }
+  },
+  {
+   "pack": {
+    "token": "abc",
+    "used": true
+   },
+   "now": 999999,
+   "deadline": 60000,
+   "out": {
+    "ok": false,
+    "reason": "این بستهٔ آفلاین پیش‌تر مصرف شده است."
+   }
+  },
+  {
+   "pack": {
+    "token": "abc",
+    "used": true
+   },
+   "now": 1000000,
+   "deadline": 0,
+   "out": {
+    "ok": false,
+    "reason": "این بستهٔ آفلاین پیش‌تر مصرف شده است."
+   }
+  },
+  {
+   "pack": {
+    "token": "abc",
+    "used": true
+   },
+   "now": 1000000,
+   "deadline": 1000,
+   "out": {
+    "ok": false,
+    "reason": "این بستهٔ آفلاین پیش‌تر مصرف شده است."
+   }
+  },
+  {
+   "pack": {
+    "token": "abc",
+    "used": true
+   },
+   "now": 1000000,
+   "deadline": 60000,
+   "out": {
+    "ok": false,
+    "reason": "این بستهٔ آفلاین پیش‌تر مصرف شده است."
+   }
+  },
+  {
+   "pack": {
+    "token": "abc",
+    "used": true
+   },
+   "now": 1060000,
+   "deadline": 0,
+   "out": {
+    "ok": false,
+    "reason": "این بستهٔ آفلاین پیش‌تر مصرف شده است."
+   }
+  },
+  {
+   "pack": {
+    "token": "abc",
+    "used": true
+   },
+   "now": 1060000,
+   "deadline": 1000,
+   "out": {
+    "ok": false,
+    "reason": "این بستهٔ آفلاین پیش‌تر مصرف شده است."
+   }
+  },
+  {
+   "pack": {
+    "token": "abc",
+    "used": true
+   },
+   "now": 1060000,
+   "deadline": 60000,
+   "out": {
+    "ok": false,
+    "reason": "این بستهٔ آفلاین پیش‌تر مصرف شده است."
+   }
+  },
+  {
+   "pack": {
+    "token": "abc",
+    "used": true
+   },
+   "now": 2000000,
+   "deadline": 0,
+   "out": {
+    "ok": false,
+    "reason": "این بستهٔ آفلاین پیش‌تر مصرف شده است."
+   }
+  },
+  {
+   "pack": {
+    "token": "abc",
+    "used": true
+   },
+   "now": 2000000,
+   "deadline": 1000,
+   "out": {
+    "ok": false,
+    "reason": "این بستهٔ آفلاین پیش‌تر مصرف شده است."
+   }
+  },
+  {
+   "pack": {
+    "token": "abc",
+    "used": true
+   },
+   "now": 2000000,
+   "deadline": 60000,
+   "out": {
+    "ok": false,
+    "reason": "این بستهٔ آفلاین پیش‌تر مصرف شده است."
+   }
+  },
+  {
+   "pack": null,
+   "now": 0,
+   "deadline": 0,
+   "out": {
+    "ok": false,
+    "reason": "بستهٔ آفلاین گرفته نشده است."
+   }
+  },
+  {
+   "pack": null,
+   "now": 0,
+   "deadline": 1000,
+   "out": {
+    "ok": false,
+    "reason": "بستهٔ آفلاین گرفته نشده است."
+   }
+  },
+  {
+   "pack": null,
+   "now": 0,
+   "deadline": 60000,
+   "out": {
+    "ok": false,
+    "reason": "بستهٔ آفلاین گرفته نشده است."
+   }
+  },
+  {
+   "pack": null,
+   "now": 500,
+   "deadline": 0,
+   "out": {
+    "ok": false,
+    "reason": "بستهٔ آفلاین گرفته نشده است."
+   }
+  },
+  {
+   "pack": null,
+   "now": 500,
+   "deadline": 1000,
+   "out": {
+    "ok": false,
+    "reason": "بستهٔ آفلاین گرفته نشده است."
+   }
+  },
+  {
+   "pack": null,
+   "now": 500,
+   "deadline": 60000,
+   "out": {
+    "ok": false,
+    "reason": "بستهٔ آفلاین گرفته نشده است."
+   }
+  },
+  {
+   "pack": null,
+   "now": 1000,
+   "deadline": 0,
+   "out": {
+    "ok": false,
+    "reason": "بستهٔ آفلاین گرفته نشده است."
+   }
+  },
+  {
+   "pack": null,
+   "now": 1000,
+   "deadline": 1000,
+   "out": {
+    "ok": false,
+    "reason": "بستهٔ آفلاین گرفته نشده است."
+   }
+  },
+  {
+   "pack": null,
+   "now": 1000,
+   "deadline": 60000,
+   "out": {
+    "ok": false,
+    "reason": "بستهٔ آفلاین گرفته نشده است."
+   }
+  },
+  {
+   "pack": null,
+   "now": 999999,
+   "deadline": 0,
+   "out": {
+    "ok": false,
+    "reason": "بستهٔ آفلاین گرفته نشده است."
+   }
+  },
+  {
+   "pack": null,
+   "now": 999999,
+   "deadline": 1000,
+   "out": {
+    "ok": false,
+    "reason": "بستهٔ آفلاین گرفته نشده است."
+   }
+  },
+  {
+   "pack": null,
+   "now": 999999,
+   "deadline": 60000,
+   "out": {
+    "ok": false,
+    "reason": "بستهٔ آفلاین گرفته نشده است."
+   }
+  },
+  {
+   "pack": null,
+   "now": 1000000,
+   "deadline": 0,
+   "out": {
+    "ok": false,
+    "reason": "بستهٔ آفلاین گرفته نشده است."
+   }
+  },
+  {
+   "pack": null,
+   "now": 1000000,
+   "deadline": 1000,
+   "out": {
+    "ok": false,
+    "reason": "بستهٔ آفلاین گرفته نشده است."
+   }
+  },
+  {
+   "pack": null,
+   "now": 1000000,
+   "deadline": 60000,
+   "out": {
+    "ok": false,
+    "reason": "بستهٔ آفلاین گرفته نشده است."
+   }
+  },
+  {
+   "pack": null,
+   "now": 1060000,
+   "deadline": 0,
+   "out": {
+    "ok": false,
+    "reason": "بستهٔ آفلاین گرفته نشده است."
+   }
+  },
+  {
+   "pack": null,
+   "now": 1060000,
+   "deadline": 1000,
+   "out": {
+    "ok": false,
+    "reason": "بستهٔ آفلاین گرفته نشده است."
+   }
+  },
+  {
+   "pack": null,
+   "now": 1060000,
+   "deadline": 60000,
+   "out": {
+    "ok": false,
+    "reason": "بستهٔ آفلاین گرفته نشده است."
+   }
+  },
+  {
+   "pack": null,
+   "now": 2000000,
+   "deadline": 0,
+   "out": {
+    "ok": false,
+    "reason": "بستهٔ آفلاین گرفته نشده است."
+   }
+  },
+  {
+   "pack": null,
+   "now": 2000000,
+   "deadline": 1000,
+   "out": {
+    "ok": false,
+    "reason": "بستهٔ آفلاین گرفته نشده است."
+   }
+  },
+  {
+   "pack": null,
+   "now": 2000000,
+   "deadline": 60000,
+   "out": {
+    "ok": false,
+    "reason": "بستهٔ آفلاین گرفته نشده است."
+   }
+  }
+ ],
+ "events": [
+  {
+   "kind": "focus",
+   "at": 1000,
+   "detail": "خروج",
+   "out": [
+    {
+     "t": "focus",
+     "at": 1000,
+     "d": "خروج"
+    }
+   ]
+  },
+  {
+   "kind": "",
+   "at": 500,
+   "detail": "x",
+   "out": []
+  },
+  {
+   "kind": "copy",
+   "at": 0,
+   "detail": null,
+   "out": [
+    {
+     "t": "copy",
+     "at": 0,
+     "d": ""
+    }
+   ]
+  },
+  {
+   "kind": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+   "at": 99,
+   "detail": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+   "out": [
+    {
+     "t": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+     "at": 99,
+     "d": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+    }
+   ]
+  }
+ ]
+}

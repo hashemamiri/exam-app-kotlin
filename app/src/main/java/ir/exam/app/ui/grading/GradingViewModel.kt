@@ -10,6 +10,8 @@ import ir.exam.app.data.dto.ExamDashboardDto
 import ir.exam.app.data.repository.SupabaseGradingRepository
 import ir.exam.app.domain.model.AttendanceRow
 import ir.exam.app.domain.model.FeedbackPhrase
+import ir.exam.app.core.calendar.PersianDigits
+import ir.exam.app.domain.exam.ExamTiming
 import ir.exam.app.domain.grading.CodeCheckRow
 import ir.exam.app.domain.grading.CodeGrading
 import ir.exam.app.domain.grading.CodeSpecRow
@@ -101,7 +103,10 @@ data class GradingUiState(
     /** V356 — تصحیح کد، فاز صفر (بدون اجرای کد). */
     val codeSpecs: List<CodeSpecRow> = emptyList(),
     val codeTests: List<CodeTestRow> = emptyList(),
-    val codeChecks: Map<String, Map<Long, CodeGrading.Check>> = emptyMap()
+    val codeChecks: Map<String, Map<Long, CodeGrading.Check>> = emptyMap(),
+    /** V357 — زمان اضافهٔ فردی و محدودیت زمان سؤال. */
+    val timeGrants: List<SupabaseGradingRepository.TimeGrant> = emptyList(),
+    val questionLimits: Map<Int, Int> = emptyMap()
 )
 
 /** V212 — بستهٔ حافظهٔ موقت صفحهٔ تصحیح */
@@ -217,6 +222,7 @@ class GradingViewModel(
         if (value == "history") loadGradeHistory()
         if (value == "similarity") loadSimilarity()
         if (value == "grading") loadCodeGrading()
+        if (value == "timing") loadTiming()
     }
 
     // ------------------------------------------------------------------
@@ -241,6 +247,38 @@ class GradingViewModel(
         repository.gradeHistory(id)
             .onSuccess { rows -> _state.update { it.copy(actionLoading = false, gradeHistory = rows) } }
             .onFailure(::fail)
+    }
+
+    // ------------------------------------------------------------------
+    // V357 — زمان‌بندی: مهلت را سرور تعیین می‌کند؛ این‌جا فقط مجوز و
+    // قاعده ثبت می‌شود. دلیل زمان اضافه اجباری است تا قابل حسابرسی باشد.
+    // ------------------------------------------------------------------
+
+    fun loadTiming() = viewModelScope.launch {
+        val id = state.value.selectedExam?.id ?: return@launch
+        repository.timeGrants(id).onSuccess { g -> _state.update { it.copy(timeGrants = g) } }
+        repository.questionLimits(id).onSuccess { l -> _state.update { it.copy(questionLimits = l) } }
+    }
+
+    fun grantFor(studentId: String): SupabaseGradingRepository.TimeGrant? =
+        state.value.timeGrants.firstOrNull { it.studentId == studentId }
+
+    fun saveTimeGrant(studentId: String, minutes: Int, reason: String) =
+        action("زمان اضافه ثبت شد.") {
+            val id = state.value.selectedExam?.id ?: error("آزمون انتخاب نشده است.")
+            repository.saveTimeGrant(id, studentId, minutes, reason).getOrThrow()
+            repository.timeGrants(id).onSuccess { g -> _state.update { it.copy(timeGrants = g) } }
+        }
+
+    fun saveQuestionLimits(text: String) = action("محدودیت زمان ذخیره شد.") {
+        val id = state.value.selectedExam?.id ?: error("آزمون انتخاب نشده است.")
+        val parsed = ExamTiming.parseLimits(text)
+        require(parsed.errors.isEmpty()) {
+            val e = parsed.errors.first()
+            "خط ${PersianDigits.convert(e.line)}: ${e.message}"
+        }
+        repository.saveQuestionLimits(id, parsed.limits).getOrThrow()
+        repository.questionLimits(id).onSuccess { l -> _state.update { it.copy(questionLimits = l) } }
     }
 
     // ------------------------------------------------------------------
@@ -599,7 +637,7 @@ class GradingViewModel(
 }
 
 /** V354 — تب‌های مجاز صفحهٔ تصحیح. */
-val GRADING_MODES: Set<String> = setOf("grading", "question", "attendance", "appeals", "history", "similarity")
+val GRADING_MODES: Set<String> = setOf("grading", "question", "attendance", "appeals", "history", "similarity", "timing")
 
 /** متن سادهٔ یک پاسخ برای مقایسه؛ شیء‌های ساختاری به text/answer تبدیل می‌شوند. */
 private fun plainResponse(el: kotlinx.serialization.json.JsonElement?): String? {

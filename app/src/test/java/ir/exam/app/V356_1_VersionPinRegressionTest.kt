@@ -104,10 +104,13 @@ class V356_1_VersionPinRegressionTest {
             assertTrue(top.bullets.size in 1..ReleaseNotes.MAX_BULLETS)
             top.bullets.forEach { assertFalse(it.contains(Regex("\\bV\\d"))) }
         }
-        // این انتشار قابلیت تازه ندارد؛ فهرست تغییرات نباید وعدهٔ دروغ بدهد.
-        val top = ReleaseNotes.parse(lines.take(60)).first()
-        assertTrue("نباید ادعای قابلیت تازه شود",
-            top.bullets.any { it.contains("تغییر نکرده") || it.contains("قابلیت تازه‌ای ندارد") })
+        // V357 — این وعده به بلوک مخصوص V356.1 گره خورده، نه بلوک بالا؛
+        // وگرنه هر انتشار بعدی این سنجه را می‌شکست (و شکست).
+        val patch = ReleaseNotes.parse(src("text/CHANGELOG_FA.txt").lines())
+            .firstOrNull { it.version == "V356.1" }
+        assertTrue("بلوک V356.1 در فهرست تغییرات نیست", patch != null)
+        assertTrue("آن انتشار نباید ادعای قابلیت تازه کند",
+            patch!!.bullets.any { it.contains("تغییر نکرده") || it.contains("قابلیت تازه‌ای ندارد") })
     }
 
     /**

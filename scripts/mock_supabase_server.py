@@ -334,6 +334,11 @@ class MockSupabaseState:
             self.code_tests: list[dict[str, Any]] = []           # V356
             self.code_checks: dict[str, dict[str, Any]] = {}     # V356
             self.code_test_seq = 0                               # V356
+            self.time_grants: dict[str, dict[str, Any]] = {}      # V357
+            self.question_limits: dict[str, dict[str, int]] = {}  # V357
+            self.question_deadlines: dict[str, dict[str, str]] = {}  # V357
+            self.question_locked: dict[str, dict[str, bool]] = {}    # V357
+            self.offline_packs: dict[str, dict[str, Any]] = {}    # V357
             self.classes: dict[str, dict[str, Any]] = {}
 
             teacher_id = "11111111-1111-4111-8111-111111111111"
@@ -1789,6 +1794,191 @@ def make_handler(state: MockSupabaseState):
                     "passed": passed, "actual": actual, "note": None,
                 }
                 self._send_json(200, {"ok": True, "passed": passed})
+                return
+
+            # V357 — حضور و وضعیت، از پاسخ‌های ثبت‌شده ساخته می‌شود تا
+            # پنل زمان‌بندی دانش‌آموزها را نشان دهد (پیش‌تر خالی بود).
+            if fn == "exam_attendance":
+                eid = str(params.get("p_exam") or "")
+                rows = []
+                seen = set()
+                for ans in state.answers.values():
+                    if ans.get("exam_id") != eid:
+                        continue
+                    sid = ans.get("student_id")
+                    if sid in seen:
+                        continue
+                    seen.add(sid)
+                    prof = state.users_by_id.get(sid) or {}
+                    rows.append({
+                        "student_id": sid,
+                        "full_name": ans.get("student_name") or prof.get("full_name") or "دانش‌آموز",
+                        "username": prof.get("username"),
+                        "status": "graded" if ans.get("graded") else "submitted",
+                    })
+                rows.sort(key=lambda r: r["full_name"])
+                self._send_json(200, rows)
+                return
+
+            # ---- V357: زمان اضافه، محدودیت سؤال، آفلاین ----
+            if fn == "native_time_grants_v357":
+                eid = str(params.get("p_exam") or "")
+                ex = state.exams.get(eid)
+                if ex is None or ex.get("teacher_id") != user["id"]:
+                    self._send_json(400, {"message": "این آزمون متعلق به شما نیست."})
+                    return
+                rows = [v for v in state.time_grants.values() if v["exam_id"] == eid]
+                rows.sort(key=lambda v: v["student_id"])
+                self._send_json(200, [{k: v for k, v in r.items() if k != "exam_id"} for r in rows])
+                return
+
+            if fn == "native_time_grant_save_v357":
+                eid = str(params.get("p_exam") or "")
+                ex = state.exams.get(eid)
+                if ex is None or ex.get("teacher_id") != user["id"]:
+                    self._send_json(400, {"message": "این آزمون متعلق به شما نیست."})
+                    return
+                sid = str(params.get("p_student") or "").strip()
+                mins = params.get("p_minutes")
+                reason = str(params.get("p_reason") or "").strip()
+                if not sid:
+                    self._send_json(400, {"message": "شناسهٔ دانش‌آموز نامعتبر است."})
+                    return
+                if not isinstance(mins, int) or not (0 <= mins <= 240):
+                    self._send_json(400, {"message": "زمان اضافه باید عدد صحیح بین ۰ تا ۲۴۰ دقیقه باشد."})
+                    return
+                if not (5 <= len(reason) <= 500):
+                    self._send_json(400, {"message": "دلیل زمان اضافه باید بین ۵ تا ۵۰۰ نویسه باشد."})
+                    return
+                state.time_grants[f"{eid}#{sid}"] = {
+                    "exam_id": eid, "student_id": sid, "extra_minutes": mins,
+                    "reason": reason, "updated_at": state.now_iso(),
+                }
+                self._send_json(200, {"ok": True, "extra_minutes": mins})
+                return
+
+            if fn == "native_question_limits_v357":
+                eid = str(params.get("p_exam") or "")
+                self._send_json(200, state.question_limits.get(eid, {}))
+                return
+
+            if fn == "native_question_limits_save_v357":
+                eid = str(params.get("p_exam") or "")
+                ex = state.exams.get(eid)
+                if ex is None or ex.get("teacher_id") != user["id"]:
+                    self._send_json(400, {"message": "این آزمون متعلق به شما نیست."})
+                    return
+                lim = params.get("p_limits")
+                if not isinstance(lim, dict):
+                    self._send_json(400, {"message": "فهرست محدودیت‌ها باید شیء باشد."})
+                    return
+                cleaned = {}
+                for k, v in lim.items():
+                    try:
+                        qi, sec = int(k), int(v)
+                    except (TypeError, ValueError):
+                        self._send_json(400, {"message": "شاخص سؤال نامعتبر است."})
+                        return
+                    if qi < -1:
+                        self._send_json(400, {"message": "شاخص سؤال نامعتبر است."})
+                        return
+                    if not (10 <= sec <= 7200):
+                        self._send_json(400, {"message": "زمان هر سؤال باید بین ۱۰ تا ۷۲۰۰ ثانیه باشد."})
+                        return
+                    cleaned[str(qi)] = sec
+                state.question_limits[eid] = cleaned
+                self._send_json(200, {"ok": True, "count": len(cleaned)})
+                return
+
+            if fn == "native_sync_exam_question_v357":
+                eid = str(params.get("p_exam") or "")
+                qi = params.get("p_question")
+                if not isinstance(qi, int) or qi < 0:
+                    self._send_json(400, {"message": "شاخص سؤال نامعتبر است."})
+                    return
+                lim = state.question_limits.get(eid, {})
+                sec = lim.get(str(qi), lim.get("-1"))
+                if sec is None:
+                    self._send_json(200, {"limited": False, "locked": False,
+                                          "server_now": state.now_iso()})
+                    return
+                key = f"{eid}#{user['id']}"
+                dl = state.question_deadlines.setdefault(key, {})
+                lock = state.question_locked.setdefault(key, {})
+                if str(qi) not in dl:
+                    dl[str(qi)] = (dt.datetime.now(dt.timezone.utc) + dt.timedelta(seconds=sec)).isoformat()
+                exp = dl[str(qi)]
+                if dt.datetime.fromisoformat(exp) <= dt.datetime.now(dt.timezone.utc):
+                    lock[str(qi)] = True
+                self._send_json(200, {
+                    "limited": True, "locked": bool(lock.get(str(qi))),
+                    "expires_at": exp, "seconds": sec, "server_now": state.now_iso()})
+                return
+
+            if fn == "native_offline_pack_v357":
+                eid = str(params.get("p_exam") or "")
+                if eid not in state.exams:
+                    self._send_json(400, {"message": "آزمون پیدا نشد."})
+                    return
+                key = f"{eid}#{user['id']}"
+                pack = state.offline_packs.get(key)
+                if pack and pack.get("used"):
+                    self._send_json(400, {"message": "بستهٔ آفلاین این تلاش یک بار مصرف شده است."})
+                    return
+                if pack is None:
+                    pack = {"token": uuid.uuid4().hex + uuid.uuid4().hex, "used": False,
+                            "expires_at": (dt.datetime.now(dt.timezone.utc) + dt.timedelta(minutes=60)).isoformat()}
+                    state.offline_packs[key] = pack
+                self._send_json(200, {
+                    "token": pack["token"], "expires_at": pack["expires_at"],
+                    "server_now": state.now_iso(), "attempt_no": 1,
+                    "question_deadlines": state.question_deadlines.get(key, {}),
+                    "limits": state.question_limits.get(eid, {})})
+                return
+
+            if fn == "native_offline_submit_v357":
+                eid = str(params.get("p_exam") or "")
+                token = str(params.get("p_token") or "")
+                responses = params.get("p_responses")
+                events = params.get("p_events")
+                finished = params.get("p_finished_at")
+                key = f"{eid}#{user['id']}"
+                pack = state.offline_packs.get(key)
+                if not token or pack is None or pack["token"] != token:
+                    self._send_json(400, {"message": "توکن آفلاین با این تلاش نمی‌خواند."})
+                    return
+                if pack.get("used"):
+                    self._send_json(400, {"message": "این بستهٔ آفلاین پیش‌تر مصرف شده است."})
+                    return
+                if not isinstance(responses, list):
+                    self._send_json(400, {"message": "پاسخ‌ها باید آرایه باشند."})
+                    return
+                if events is not None and not isinstance(events, list):
+                    self._send_json(400, {"message": "رویدادها باید آرایه باشند."})
+                    return
+                if not finished:
+                    self._send_json(400, {"message": "زمان پایان آفلاین لازم است."})
+                    return
+                try:
+                    fin_dt = dt.datetime.fromisoformat(str(finished).replace("Z", "+00:00"))
+                    exp_dt = dt.datetime.fromisoformat(pack["expires_at"])
+                except ValueError:
+                    self._send_json(400, {"message": "زمان پایان آفلاین لازم است."})
+                    return
+                if fin_dt > exp_dt + dt.timedelta(seconds=120):
+                    self._send_json(400, {"message": "زمان پایان آفلاین پس از مهلت آزمون است."})
+                    return
+                pack["used"] = True
+                target = None
+                for aid, ans in state.answers.items():
+                    if ans.get("exam_id") == eid and ans.get("student_id") == user["id"]:
+                        target = aid
+                if target:
+                    state.answers[target]["responses"] = responses
+                    meta = state.answers[target].setdefault("meta", {})
+                    meta.update({"offline": True, "offline_finished_at": finished,
+                                 "offline_events": events or []})
+                self._send_json(200, {"ok": True, "answer_id": target, "offline": True})
                 return
 
             if fn == "native_my_answers_v1":

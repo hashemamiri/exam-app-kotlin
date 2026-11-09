@@ -56,7 +56,7 @@
       c.innerHTML = '';
       var head = el('div', {class: 'row', style: 'margin-bottom:12px'}, [el('button', {class: 'btn light sm', text: '→ همهٔ آزمون‌ها', onclick: function () { S.go('grading'); }}), el('h2', {class: 'grow', style: 'margin:0;font-size:18px', text: exam.title}), el('span', {class: 'chip', text: 'بارم ' + fa(S.fmtScore(exam.total_score))}), el('span', {class: 'chip', text: fa(answers.length) + ' پاسخ'})]);
       c.appendChild(head);
-      var tabs = el('div', {class: 'tabs'}, [['grading', '✅ تصحیح'], ['question', '📋 تصحیح سؤال‌به‌سؤال'], ['attendance', '👥 حضور و وضعیت زنده'], ['monitor', '🛡 گزارش نظارتی'], ['analysis', '📈 تحلیل سؤال‌ها'], ['feedback', '💬 بانک بازخورد'], ['appeals', '⚖️ اعتراض‌ها'], ['history', '🧾 تاریخچهٔ نمره'], ['similarity', '🔍 شباهت پاسخ‌ها']].map(function (t) { return el('button', {class: tab === t[0] ? 'on' : '', text: t[1], onclick: function () { S.go('grading', {examId: examId, tab: t[0]}); }}); }));
+      var tabs = el('div', {class: 'tabs'}, [['grading', '✅ تصحیح'], ['question', '📋 تصحیح سؤال‌به‌سؤال'], ['attendance', '👥 حضور و وضعیت زنده'], ['monitor', '🛡 گزارش نظارتی'], ['analysis', '📈 تحلیل سؤال‌ها'], ['feedback', '💬 بانک بازخورد'], ['appeals', '⚖️ اعتراض‌ها'], ['history', '🧾 تاریخچهٔ نمره'], ['similarity', '🔍 شباهت پاسخ‌ها'], ['timing', '⏱ زمان‌بندی']].map(function (t) { return el('button', {class: tab === t[0] ? 'on' : '', text: t[1], onclick: function () { S.go('grading', {examId: examId, tab: t[0]}); }}); }));
       c.appendChild(tabs);
       var body = el('div'); c.appendChild(body);
       var ctx = {exam: exam, questions: questions, answers: answers, examId: examId, refresh: function () { gradingExam(c, examId, tab); }};
@@ -68,6 +68,7 @@
       else if (tab === 'appeals') tabAppeals(body, ctx);
       else if (tab === 'history') tabHistory(body, ctx);
       else if (tab === 'similarity') tabSimilarity(body, ctx);
+      else if (tab === 'timing') tabTiming(body, ctx);
       else tabFeedbackBank(body, ctx);
     } catch (e) { S.showErr(c, e); }
   }
@@ -711,6 +712,122 @@
       }})]));
     bg.appendChild(m); document.body.appendChild(bg);
     fill();
+  }
+
+  /* ---------- V357 — زمان‌بندی: زمان اضافهٔ فردی و محدودیت سؤال ----------
+     مهلت را سرور تعیین می‌کند؛ این پنل فقط مجوز و محدودیت را ثبت می‌کند.
+     زمان اضافه دلیل اجباری دارد تا تصمیم قابل حسابرسی باشد. */
+  async function tabTiming(body, ctx) {
+    var T = window.ExamTiming;
+    if (!T) { S.showErr(body, new Error('موتور زمان‌بندی بارگذاری نشد.')); return; }
+    S.loading(body);
+    var grants = [], limits = {}, students = [];
+    async function load() {
+      try {
+        var r = await Promise.all([
+          S.rpcObj('native_time_grants_v357', {p_exam: ctx.examId}).catch(function () { return []; }),
+          S.rpcObj('native_question_limits_v357', {p_exam: ctx.examId}).catch(function () { return {}; }),
+          S.rpc('exam_attendance', {p_exam: ctx.examId}).catch(function () { return []; })
+        ]);
+        grants = r[0] || []; limits = r[1] || {}; students = r[2] || [];
+      } catch (e) { grants = []; limits = {}; students = []; }
+    }
+    await load();
+    body.innerHTML = '';
+
+    function grantFor(sid) {
+      return grants.filter(function (g) { return String(g.student_id) === String(sid); })[0];
+    }
+
+    function grantDialog(sid, name) {
+      var cur = grantFor(sid);
+      var bg = el('div', {class: 'modal-bg', onclick: function (e) { if (e.target === bg) bg.remove(); }});
+      var m = el('div', {class: 'modal'}, [el('button', {class: 'x', text: '✕', onclick: function () { bg.remove(); }}),
+        el('h3', {style: 'margin:0 0 8px;font-size:16px', text: '⏱ زمان اضافه — ' + name})]);
+      var mins = el('input', {type: 'text', value: cur ? String(cur.extra_minutes) : '15',
+        style: 'width:100%;border:1px solid var(--line);border-radius:10px;padding:8px;margin-bottom:8px'});
+      var reason = el('textarea', {rows: 3, placeholder: 'مثلاً: مشکل یادگیری تأییدشدهٔ مشاور مدرسه',
+        style: 'width:100%;border:1px solid var(--line);border-radius:10px;padding:8px;font-size:13px'});
+      if (cur) reason.value = cur.reason || '';
+      var msg = el('div', {class: 'muted', style: 'font-size:12px;margin-top:6px'});
+      m.appendChild(el('label', {class: 'muted', style: 'font-size:12px', text: 'دقیقهٔ اضافه (۰ = لغو)'}));
+      m.appendChild(mins);
+      m.appendChild(el('label', {class: 'muted', style: 'font-size:12px', text: 'دلیل (اجباری)'}));
+      m.appendChild(reason);
+      m.appendChild(msg);
+      m.appendChild(el('div', {class: 'row', style: 'margin-top:8px'}, [el('span', {class: 'grow'}),
+        el('button', {class: 'btn', text: 'ذخیره', onclick: async function () {
+          var mv = Number(T.latinDigits(mins.value.trim()));
+          var err = T.validateGrant(mv, reason.value);
+          if (err) { msg.textContent = err; return; }
+          try {
+            chk(await S.rpcObj('native_time_grant_save_v357', {
+              p_exam: ctx.examId, p_student: String(sid), p_minutes: mv, p_reason: reason.value.trim()}));
+            toast(mv ? fa(mv) + ' دقیقه اضافه ثبت شد.' : 'مجوز زمانی لغو شد.', 'ok');
+            bg.remove();
+            await load(); draw();
+          } catch (e) { msg.textContent = errMsg(e); }
+        }})]));
+      bg.appendChild(m); document.body.appendChild(bg);
+    }
+
+    function limitsDialog() {
+      var bg = el('div', {class: 'modal-bg', onclick: function (e) { if (e.target === bg) bg.remove(); }});
+      var m = el('div', {class: 'modal wide'}, [el('button', {class: 'x', text: '✕', onclick: function () { bg.remove(); }}),
+        el('h3', {style: 'margin:0 0 8px;font-size:16px', text: '⏳ محدودیت زمان هر سؤال'})]);
+      var ta = el('textarea', {rows: 8, placeholder: 'همه = 300\n1 = 60\n2 = 90',
+        style: 'width:100%;border:1px solid var(--line);border-radius:10px;padding:8px;font-size:13px;direction:ltr;font-family:monospace'});
+      ta.value = T.formatLimits(limits);
+      var msg = el('div', {class: 'muted', style: 'font-size:12px;margin-top:6px'});
+      m.appendChild(el('p', {class: 'muted', style: 'font-size:12px;margin:0 0 6px',
+        text: 'هر خط: «شمارهٔ سؤال = ثانیه». «همه» پیش‌فرض همهٔ سؤال‌ها است. رقم فارسی هم پذیرفته می‌شود. ساعت با نخستین بازدید هر سؤال روشن می‌شود و بازگشت به سؤال آن را از نو شروع نمی‌کند.'}));
+      m.appendChild(ta);
+      m.appendChild(msg);
+      m.appendChild(el('div', {class: 'row', style: 'margin-top:8px'}, [el('span', {class: 'grow'}),
+        el('button', {class: 'btn', text: 'ذخیره', onclick: async function () {
+          var p = T.parseLimits(ta.value);
+          if (p.errors.length) { msg.textContent = 'خط ' + fa(p.errors[0].line) + ': ' + p.errors[0].message; return; }
+          try {
+            chk(await S.rpcObj('native_question_limits_save_v357', {p_exam: ctx.examId, p_limits: p.limits}));
+            toast(fa(p.count) + ' محدودیت ذخیره شد.', 'ok');
+            bg.remove();
+            await load(); draw();
+          } catch (e) { msg.textContent = errMsg(e); }
+        }})]));
+      bg.appendChild(m); document.body.appendChild(bg);
+    }
+
+    function draw() {
+      body.innerHTML = '';
+      var lkeys = Object.keys(limits);
+      body.appendChild(el('div', {class: 'card', style: 'padding:10px;margin-bottom:10px'}, [
+        el('div', {class: 'row'}, [
+          el('b', {class: 'grow', style: 'font-size:14px', text: '⏳ محدودیت زمان سؤال‌ها'}),
+          el('span', {class: 'chip ' + (lkeys.length ? 'brand' : ''), text: lkeys.length ? fa(lkeys.length) + ' قاعده' : 'بدون محدودیت'}),
+          el('button', {class: 'btn light sm', text: 'ویرایش', onclick: limitsDialog})]),
+        el('p', {class: 'muted', style: 'font-size:12px;margin:6px 0 0',
+          text: 'پس از پایان زمان هر سؤال، همان سؤال قفل می‌شود؛ بقیهٔ آزمون باز می‌ماند. قفل سمت سرور اعمال می‌شود.'})]));
+      body.appendChild(el('div', {class: 'row', style: 'margin-bottom:8px'}, [
+        el('b', {class: 'grow', style: 'font-size:14px', text: '⏱ زمان اضافهٔ فردی'}),
+        el('span', {class: 'chip ' + (grants.filter(function (g) { return g.extra_minutes > 0; }).length ? 'brand' : ''),
+          text: fa(grants.filter(function (g) { return g.extra_minutes > 0; }).length) + ' دانش‌آموز'})]));
+      if (!students.length) { body.appendChild(S.emptyBox('👥', 'دانش‌آموزی در این آزمون نیست.')); return; }
+      body.appendChild(el('table', {class: 'tbl'}, [
+        el('thead', {}, [el('tr', {}, ['دانش‌آموز', 'زمان اضافه', 'دلیل', ''].map(function (h) { return el('th', {text: h}); }))]),
+        el('tbody', {}, students.map(function (st) {
+          var sid = st.student_id || st.id;
+          var name = st.full_name || st.student_name || 'دانش‌آموز';
+          var g = grantFor(sid);
+          return el('tr', {}, [
+            el('td', {text: name}),
+            el('td', {}, [el('span', {class: 'chip ' + (g && g.extra_minutes ? 'brand' : ''),
+              text: g && g.extra_minutes ? fa(g.extra_minutes) + ' دقیقه' : '—'})]),
+            el('td', {class: 'muted', style: 'font-size:12px', text: g ? (g.reason || '—') : '—'}),
+            el('td', {}, [el('button', {class: 'btn light sm', text: g ? 'ویرایش' : 'افزودن',
+              onclick: function () { grantDialog(sid, name); }})])]);
+        }))]));
+    }
+    draw();
   }
 
   /* ---------- V355 — تشخیص شباهت پاسخ‌ها ----------

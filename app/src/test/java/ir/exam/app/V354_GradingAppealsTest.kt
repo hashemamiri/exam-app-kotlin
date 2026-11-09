@@ -234,7 +234,7 @@ class V354_GradingAppealsTest {
     @Test
     fun gradingModesIncludeNewTabs() {
         val vm = src("app/src/main/java/ir/exam/app/ui/grading/GradingViewModel.kt")
-        assertTrue(vm.contains("val GRADING_MODES: Set<String> = setOf(\"grading\", \"question\", \"attendance\", \"appeals\", \"history\", \"similarity\")"))
+        assertTrue(vm.contains("val GRADING_MODES: Set<String> = setOf(\"grading\", \"question\", \"attendance\", \"appeals\", \"history\", \"similarity\", \"timing\")"))
         assertTrue(vm.contains("if (value == \"appeals\") loadAppeals()"))
         assertTrue(vm.contains("if (value == \"history\") loadGradeHistory()"))
         assertTrue("پذیرش نباید نمره را خودکار عوض کند", vm.contains("اگر لازم است نمره را در تب تصحیح اصلاح کنید"))
