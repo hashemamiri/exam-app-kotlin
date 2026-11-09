@@ -18,6 +18,7 @@ import ir.exam.app.domain.model.StudentDraft
 import ir.exam.app.domain.model.SubmittedExam
 import ir.exam.app.domain.model.TextAnswer
 import ir.exam.app.domain.repository.AnswerDraftRepository
+import ir.exam.app.domain.exam.StudentTiming
 import ir.exam.app.domain.repository.ExamRepository
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -63,6 +64,13 @@ data class StudentExamUiState(
     // V281 — وضعیت اتصال و آخرین ذخیرهٔ محلی (برای نوار اطمینان وسط آزمون)
     val online: Boolean = true,
     val draftSavedAtMs: Long = 0L,
+    // V359 — ساعت هر سؤال و حالت آفلاین (همتا با سایت)
+    val questionClocks: Map<Int, StudentTiming.QuestionClock> = emptyMap(),
+    val offlinePack: StudentTiming.OfflinePack? = null,
+    val offlineBusy: Boolean = false,
+    val offlineMessage: String? = null,
+    /** آزمون تمرینی بستهٔ آفلاین ندارد. */
+    val practice: Boolean = false,
     val error: String? = null
 )
 
@@ -86,6 +94,10 @@ class StudentExamViewModel(
     private var draftSaveJob: Job? = null
     private val sectionStartedAtEpochMs = mutableMapOf<String, Long>()
     private val expiredSections = mutableSetOf<String>()
+    // V359 — ساعت سؤال‌ها یک‌بار از سرور گرفته می‌شود؛ رویداد آفلاین
+    // فقط روی دستگاه می‌ماند تا با برگه ارسال شود.
+    private val syncedQuestions = mutableSetOf<Int>()
+    private val offlineEvents = mutableListOf<String>()
 
     /**
      * V252 — این ViewModel با `remember` ساخته می‌شود (نه ViewModelProvider)، پس onCleared هرگز صدا زده نمی‌شد و پس از
@@ -523,22 +535,134 @@ class StudentExamViewModel(
         if (next != state.value.questionIndex) markQuestionEnter(next)
         _state.update { it.copy(questionIndex = next, activeSectionTitle = targetSection, sectionRemainingSeconds = sectionRemainingFor(exam, targetSection), error = null) }
         saveDraft(exam.id,state.value.answers,state.value.responseImages)
+        // V359 — ساعت سؤال مقصد؛ فقط یک‌بار در هر آزمون.
+        syncCurrentQuestion()
+    }
+
+    // ------------------------------------------------------------------
+    // V359 — زمان هر سؤال و حالت آفلاین (همتا با سایت)
+    // ------------------------------------------------------------------
+
+    /**
+     * ساعت سؤال جاری را از سرور می‌گیرد. مهلت را **سرور** می‌سازد؛
+     * اپ فقط تراز می‌کند. اگر شبکه خطا داد، محدودیت اعمال نمی‌شود
+     * (شکست باز) تا دانش‌آموز بی‌جهت محروم نشود — ولی قفلِ ثبت‌شده
+     * هرگز باز نمی‌شود.
+     */
+    fun syncCurrentQuestion() {
+        val st = state.value
+        val exam = st.exam ?: return
+        if (st.practice || !st.started || st.finished) return
+        val index = st.questionIndex
+        if (index in syncedQuestions) return
+        syncedQuestions += index
+        viewModelScope.launch {
+            val r = exams.syncQuestionTiming(exam.id, index).getOrNull() ?: return@launch
+            val now = System.currentTimeMillis()
+            _state.update { cur ->
+                val prev = cur.questionClocks[index]
+                val clock = StudentTiming.applySync(
+                    previous = prev, limited = r.limited, locked = r.locked,
+                    expiresAtMs = r.expiresAtMs, serverNowMs = r.serverNowMs,
+                    seconds = r.seconds, localNowMs = now
+                )
+                cur.copy(questionClocks = cur.questionClocks + (index to clock))
+            }
+        }
+    }
+
+    /** آیا سؤال جاری قفل است؟ (برای غیرفعال کردن ورودی‌ها) */
+    fun currentQuestionLocked(nowMs: Long = System.currentTimeMillis()): Boolean =
+        StudentTiming.isLocked(state.value.questionClocks[state.value.questionIndex], nowMs)
+
+    /** گرفتن بستهٔ آفلاین پیش از قطع اینترنت. */
+    fun takeOfflinePack() {
+        val st = state.value
+        val exam = st.exam ?: return
+        if (!StudentTiming.canTakePack(st.offlinePack, st.practice)) return
+        _state.update { it.copy(offlineBusy = true, offlineMessage = null) }
+        viewModelScope.launch {
+            exams.offlinePack(exam.id)
+                .onSuccess { p ->
+                    val now = System.currentTimeMillis()
+                    val aligned = ir.exam.app.domain.exam.ExamTiming.alignDeadline(
+                        p.expiresAtMs, p.serverNowMs, now
+                    )
+                    _state.update {
+                        it.copy(
+                            offlinePack = StudentTiming.OfflinePack(p.token, aligned, false, now),
+                            offlineBusy = false,
+                            offlineMessage = "بستهٔ آفلاین گرفته شد؛ تا پایان مهلت می‌توانید بدون اینترنت پاسخ دهید."
+                        )
+                    }
+                }
+                .onFailure { e ->
+                    _state.update { it.copy(offlineBusy = false, offlineMessage = UserFacingError.sanitize(e.message)) }
+                }
+        }
+    }
+
+    /** ارسال برگهٔ آفلاین؛ سرور توکن و مهلت را می‌سنجد. */
+    fun submitOffline() {
+        val st = state.value
+        val exam = st.exam ?: return
+        val pack = st.offlinePack
+        val now = System.currentTimeMillis()
+        if (!StudentTiming.canSubmitOffline(pack, now)) {
+            _state.update { it.copy(offlineMessage = "ارسال آفلاین مجاز نیست؛ بسته یا مهلت را بررسی کنید.") }
+            return
+        }
+        _state.update { it.copy(offlineBusy = true, offlineMessage = null) }
+        val responses = StudentTiming.responsesInOrder(
+            exam.questions.map { it.id },
+            st.answers.mapValues { (_, a) -> encodeAnswer(a) }
+        )
+        viewModelScope.launch {
+            val finishedIso = java.time.Instant.ofEpochMilli(now).toString()
+            exams.submitOffline(exam.id, pack!!.token, responses, offlineEvents.toList(), finishedIso)
+                .onSuccess {
+                    _state.update {
+                        it.copy(
+                            offlinePack = pack.copy(used = true), offlineBusy = false,
+                            finished = true, queued = false,
+                            offlineMessage = "برگهٔ آفلاین ارسال شد و برای بررسی معلم علامت خورد."
+                        )
+                    }
+                    runCatching { drafts.clear(exam.id) }
+                }
+                .onFailure { e ->
+                    _state.update { it.copy(offlineBusy = false, offlineMessage = UserFacingError.sanitize(e.message)) }
+                }
+        }
+    }
+
+    /** رویداد نظارتی در حالت آفلاین؛ فقط روی دستگاه تا ارسال. */
+    fun recordOfflineEvent(kind: String) {
+        if (state.value.offlinePack?.taken != true) return
+        if (offlineEvents.size >= StudentTiming.MAX_EVENTS) return
+        offlineEvents += "{\"t\":\"${kind}\",\"at\":${System.currentTimeMillis()}}"
+    }
+
+    /**
+     * V359 — تبدیل پاسخ به رشته، همان قالبی که همگام‌سازی بخش و سایت
+     * استفاده می‌کنند. یک پیاده‌سازی، تا قالب آفلاین از پاسخ معمولی
+     * جدا نیفتد.
+     */
+    private fun encodeAnswer(answer: StudentAnswer?): String = when (answer) {
+        is TextAnswer -> answer.value
+        is ChoiceAnswer -> answer.selectedIndex.toString()
+        is BooleanAnswer -> answer.value.toString()
+        is MatchingAnswer -> JsonObject(
+            answer.pairs.mapKeys { it.key.toString() }.mapValues { JsonPrimitive(it.value) }
+        ).toString()
+        null -> ""
     }
 
     private fun sectionSnapshotStrings(exam: Exam, sectionTitle: String, answers: Map<String, StudentAnswer>): Map<Int, String> = buildMap {
         exam.questions.forEachIndexed { qIdx, q ->
             if (q.sectionTitle.trim() == sectionTitle) {
                 val canonicalIdx = q.originalIndex.takeIf { it >= 0 } ?: qIdx
-                val encoded = when (val answer = answers[q.id]) {
-                    is TextAnswer -> answer.value
-                    is ChoiceAnswer -> answer.selectedIndex.toString()
-                    is BooleanAnswer -> answer.value.toString()
-                    is MatchingAnswer -> JsonObject(
-                        answer.pairs.mapKeys { it.key.toString() }.mapValues { JsonPrimitive(it.value) }
-                    ).toString()
-                    null -> ""
-                }
-                put(canonicalIdx, encoded)
+                put(canonicalIdx, encodeAnswer(answers[q.id]))
             }
         }
     }

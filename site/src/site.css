@@ -892,11 +892,11 @@ img,video,canvas,iframe{max-width:100%}
 .m-stcard-b{padding:0 14px 10px;display:flex;flex-direction:column;gap:7px}.m-stcard-kv{display:flex;gap:12px}.m-stcard-kv span{flex:1}
 .m-stcard-acts{display:flex;justify-content:space-between;align-items:center}.m-stcard-acts .m-iconbtn{flex:1;height:52px}
 .m-sheet-bg.m-center{align-items:center;padding:16px}.m-sheet.m-dlg{border-radius:24px;max-height:86dvh}
-.m-fbar{display:flex;justify-content:center;align-items:center;gap:6px;margin-bottom:10px}.m-textbtn{border:0;background:transparent;color:var(--m-acc);font-weight:700;font-size:13px;padding:8px 10px}
+.m-fbar{display:flex;justify-content:center;align-items:center;gap:6px;margin-bottom:10px}.m-textbtn{border:0;background:transparent;color:var(--m-acc);font-weight:700;font-size:13px;padding:8px 10px;min-height:44px}
 .m-fsec{border-radius:16px;padding:10px;margin-bottom:8px}.m-fsec-h{width:100%;border:0;background:transparent;display:flex;justify-content:space-between;align-items:center;font:inherit;color:inherit;padding:0}
 .m-fsec-t{display:inline-flex;align-items:center;gap:6px}.m-fsec-t .mi{width:20px;height:20px}.m-fsec-b{padding-top:8px;display:flex;flex-wrap:wrap;gap:6px}
 .m-chips{display:flex;flex-wrap:wrap;gap:6px}.m-chips.nowrap{flex-wrap:nowrap;overflow:auto;padding-bottom:4px;margin-bottom:8px}
-.m-fchip{border:1px solid var(--m-muted);background:transparent;border-radius:10px;padding:6px 12px;font-size:13px;color:var(--m-ink);white-space:nowrap}.m-fchip.on{background:#dfe4ff;border-color:#dfe4ff;color:#3c3f9e;font-weight:700}
+.m-fchip{border:1px solid var(--m-muted);background:transparent;border-radius:10px;padding:6px 12px;font-size:13px;color:var(--m-ink);white-space:nowrap;min-height:44px}.m-fchip.on{background:#dfe4ff;border-color:#dfe4ff;color:#3c3f9e;font-weight:700}
 .m-checks{display:flex;flex-direction:column;gap:8px}.m-check{display:flex;align-items:center;gap:8px}
 .m-bulkbar{display:flex;gap:8px;margin-bottom:8px}.m-bulkbar .m-btn{flex:1;font-size:20px;padding:8px}.m-bulkbar .grow2{flex:2;font-size:15px}.m-btn.green{background:#25A86B}.m-btn.red{background:#E5484D}
 .m-bulkcard .grid2{display:grid;grid-template-columns:1fr 1fr;gap:6px}.m-bulkcard .field{margin:0}.m-bulkcard .field label{font-size:11px}
@@ -938,7 +938,7 @@ img,video,canvas,iframe{max-width:100%}
 @media (max-width:700px) and (pointer:coarse){.studio-tools{max-height:48vh}.studio-tab{font-size:12px;padding:5px 9px}}
 .img-broken{outline:2px dashed #dc2626;min-width:48px;min-height:32px}
 /* V161 — حساب گوشی مثل ProfileSettingsScreen */
-.m-chip{border:1px solid var(--m-dark);background:transparent;color:var(--m-ink);border-radius:999px;padding:6px 14px;font:inherit;font-size:13px}
+.m-chip{border:1px solid var(--m-dark);background:transparent;color:var(--m-ink);border-radius:999px;padding:6px 14px;font:inherit;font-size:13px;min-height:44px}
 .m-chip.on{background:var(--m-acc);border-color:var(--m-acc);color:#fff}
 .m-pcard{padding:14px 16px;margin-bottom:12px}.m-pcard h3{margin:0 0 8px;font-size:15px}.m-pcard.center{text-align:center}
 .m-avatar.xl{width:112px;height:112px;font-size:40px;margin:4px auto 10px}
@@ -2621,3 +2621,5 @@ body.st-in-exam-mode .nc-bell{display:none!important}
 @media print{
   .cx-keys,.cx-snips,.cx-ac{display:none!important}
 }
+
+/* V359 — کمینهٔ ارتفاع هدف لمس ۴۴px (رهنمود دسترس‌پذیری). پیش‌تر تراشه‌های فیلتر ۳۷px بودند و لمس دشوار می‌شد. */

@@ -193,22 +193,16 @@ class SupabaseStudentExamRepository(context: Context) : ExamRepository {
     // مهلت و قفل از سرور می‌آید؛ اپ فقط تراز و نمایش می‌کند.
     // ------------------------------------------------------------------
 
-    data class QuestionTiming(
-        val limited: Boolean,
-        val locked: Boolean,
-        val expiresAtMs: Long,
-        val serverNowMs: Long,
-        val seconds: Int
-    )
-
+    // V359 — نوع‌ها به دامنه منتقل شدند (StudentQuestionTiming و
+    // StudentOfflinePackPayload) تا اینترفیس مشترک آن‌ها را بشناسد.
     /** ساعت سؤال با نخستین بازدید روشن می‌شود؛ بازگشت آن را از نو شروع نمی‌کند. */
-    suspend fun syncQuestionTiming(examId: String, questionIndex: Int): Result<QuestionTiming> = runCatching {
+    override suspend fun syncQuestionTiming(examId: String, questionIndex: Int): Result<ir.exam.app.domain.repository.StudentQuestionTiming> = runCatching {
         val raw = SupabaseProvider.client.postgrest.rpc(
             "native_sync_exam_question_v357",
             buildJsonObject { put("p_exam", examId); put("p_question", questionIndex) }
         ).data.let { Json.parseToJsonElement(it) }.jsonObject
         raw["message"]?.jsonPrimitive?.contentOrNull?.let { error(it) }
-        QuestionTiming(
+        ir.exam.app.domain.repository.StudentQuestionTiming(
             limited = raw["limited"]?.jsonPrimitive?.booleanOrNull ?: false,
             locked = raw["locked"]?.jsonPrimitive?.booleanOrNull ?: false,
             expiresAtMs = raw["expires_at"]?.jsonPrimitive?.contentOrNull?.let(::parseEpochMs) ?: 0L,
@@ -217,15 +211,8 @@ class SupabaseStudentExamRepository(context: Context) : ExamRepository {
         )
     }
 
-    data class OfflinePackPayload(
-        val token: String,
-        val expiresAtMs: Long,
-        val serverNowMs: Long,
-        val limits: Map<Int, Int>
-    )
-
     /** بستهٔ آفلاین: توکن یک‌بارمصرف + مهلت سرور. کلید پاسخ در آن نیست. */
-    suspend fun offlinePack(examId: String): Result<OfflinePackPayload> = runCatching {
+    override suspend fun offlinePack(examId: String): Result<ir.exam.app.domain.repository.StudentOfflinePackPayload> = runCatching {
         val raw = SupabaseProvider.client.postgrest.rpc(
             "native_offline_pack_v357", buildJsonObject { put("p_exam", examId) }
         ).data.let { Json.parseToJsonElement(it) }.jsonObject
@@ -235,7 +222,7 @@ class SupabaseStudentExamRepository(context: Context) : ExamRepository {
             val sec = v.jsonPrimitive.intOrNull ?: return@mapNotNull null
             qi to sec
         }?.toMap() ?: emptyMap()
-        OfflinePackPayload(
+        ir.exam.app.domain.repository.StudentOfflinePackPayload(
             token = raw["token"]?.jsonPrimitive?.contentOrNull.orEmpty(),
             expiresAtMs = raw["expires_at"]?.jsonPrimitive?.contentOrNull?.let(::parseEpochMs) ?: 0L,
             serverNowMs = raw["server_now"]?.jsonPrimitive?.contentOrNull?.let(::parseEpochMs) ?: 0L,
@@ -244,18 +231,20 @@ class SupabaseStudentExamRepository(context: Context) : ExamRepository {
     }
 
     /** ارسال آفلاین؛ سرور توکن و زمان پایان را می‌سنجد و برگه را آفلاین علامت می‌زند. */
-    suspend fun submitOffline(
+    override suspend fun submitOffline(
         examId: String,
         token: String,
-        responses: JsonArray,
-        events: JsonArray,
+        responses: List<String>,
+        events: List<String>,
         finishedAtIso: String
     ): Result<Unit> = runCatching {
+        val responsesJson = JsonArray(responses.map { JsonPrimitive(it) })
+        val eventsJson = JsonArray(events.map { Json.parseToJsonElement(it) })
         val raw = SupabaseProvider.client.postgrest.rpc(
             "native_offline_submit_v357",
             buildJsonObject {
                 put("p_exam", examId); put("p_token", token)
-                put("p_responses", responses); put("p_events", events)
+                put("p_responses", responsesJson); put("p_events", eventsJson)
                 put("p_finished_at", finishedAtIso)
             }
         ).data.let { Json.parseToJsonElement(it) }.jsonObject

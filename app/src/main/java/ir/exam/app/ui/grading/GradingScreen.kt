@@ -204,8 +204,19 @@ fun GradingScreen(
             FilterChip(selected = state.pendingOnly, onClick = { viewModel.setPendingOnly(!state.pendingOnly) }, label = { Text("فقط مانده") })
             FilterChip(selected = state.gradedOnly, onClick = { viewModel.setGradedOnly(!state.gradedOnly) }, label = { Text("فقط پاسخ") })
             OutlinedButton(onClick = { codeSpecOpen = true }) { Text("موارد آزمون کد") }
-            OutlinedButton(onClick = viewModel::approveAutoGrades) { Text("تأیید خودکار") }
+            OutlinedButton(onClick = viewModel::requestAutoGradeApproval) { Text("تأیید خودکار") }
             TextButton(onClick = { showFeedbackDialog = true }) { Text("بازخورد جدید") }
+        }
+
+        // V359 — پیش‌آگاهی پیش از تأیید خودکار (همتا با سایت)
+        state.autoGradeNotice?.let { notice ->
+            AlertDialog(
+                onDismissRequest = viewModel::dismissAutoGradeNotice,
+                title = { Text("تأیید نمره‌های خودکار") },
+                text = { Text(notice) },
+                confirmButton = { Button(onClick = viewModel::confirmAutoGradeApproval) { Text("تأیید") } },
+                dismissButton = { TextButton(onClick = viewModel::dismissAutoGradeNotice) { Text("انصراف") } }
+            )
         }
 
         if(state.feedbackBank.isNotEmpty()) Row(horizontalArrangement=Arrangement.spacedBy(4.dp)) {

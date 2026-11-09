@@ -121,6 +121,7 @@ import ir.exam.app.domain.model.TrueFalseQuestion
 import ir.exam.app.core.ui.persianFontFamily
 import ir.exam.app.ui.figure.ZoomableFigureDialog
 import ir.exam.app.ui.image.InteractiveImageEditorDialog
+import ir.exam.app.domain.exam.StudentTiming
 import ir.exam.app.ui.math.NativeMathText
 
 @Composable
@@ -186,7 +187,10 @@ fun StudentExamContent(
     onDone: () -> Unit,
     onDismissExamChanges: () -> Unit = {},
     onSecurityEvent: (String) -> Unit = {},
-    onExitExam: () -> Unit = {}
+    onExitExam: () -> Unit = {},
+    // V359 — حالت آفلاین؛ پیش‌فرض خالی تا فراخوان‌های پیشین نشکنند
+    onTakeOfflinePack: () -> Unit = {},
+    onSubmitOffline: () -> Unit = {}
 ) {
     val exam = state.exam ?: return
     val context = LocalContext.current
@@ -454,6 +458,11 @@ fun StudentExamContent(
                 }
             }
             val currentSectionExpired = question.sectionTitle.trim().isNotBlank() && question.sectionTitle.trim() in state.expiredSections
+            // V359 — تراشهٔ زمان سؤال، بالای صورت سؤال
+            item { QuestionClockChip(state.questionClocks[state.questionIndex], primary) }
+            // V359 — قفل و شمارش معکوس هر سؤال (همتا با سایت)
+            val questionClock = state.questionClocks[state.questionIndex]
+            val questionLockedNow = StudentTiming.isLocked(questionClock, System.currentTimeMillis())
             item {
                 if (currentSectionExpired) {
                     Card(Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer)) {
@@ -463,6 +472,8 @@ fun StudentExamContent(
                             color = MaterialTheme.colorScheme.onErrorContainer
                         )
                     }
+                } else if (questionLockedNow) {
+                    QuestionLockedCard()
                 } else when (question) {
                     is EssayQuestion -> if (question.answerMode == "construct" && question.constructionLabels.isNotEmpty()) {
                         StudentConstructionAnswer(question, (state.answers[question.id] as? TextAnswer)?.value.orEmpty()) {
@@ -705,6 +716,17 @@ fun StudentExamContent(
                         questionImages = question.images
                     )
                 }
+            }
+            // V359 — کارت حالت آفلاین، همتای سایت
+            item {
+                OfflineExamCard(
+                    pack = state.offlinePack,
+                    practice = state.practice,
+                    busy = state.offlineBusy,
+                    message = state.offlineMessage,
+                    onTake = onTakeOfflinePack,
+                    onSubmit = onSubmitOffline
+                )
             }
             state.error?.let { item { Text(it, color = MaterialTheme.colorScheme.error) } }
         }

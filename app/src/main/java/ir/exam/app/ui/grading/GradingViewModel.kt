@@ -36,6 +36,7 @@ import kotlinx.coroutines.launch
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.jsonPrimitive
 
 data class GradingEdit(val grades: List<Double>, val feedback: String, val partGrades: Map<String, Double> = emptyMap(), val partFeedback: Map<String, String> = emptyMap())
@@ -106,6 +107,8 @@ data class GradingUiState(
     val codeChecks: Map<String, Map<Long, CodeGrading.Check>> = emptyMap(),
     /** V357 — زمان اضافهٔ فردی و محدودیت زمان سؤال. */
     val timeGrants: List<SupabaseGradingRepository.TimeGrant> = emptyList(),
+    /** V359 — متن پنجرهٔ تأیید نمرهٔ خودکار؛ null یعنی بسته. */
+    val autoGradeNotice: String? = null,
     val questionLimits: Map<Int, Int> = emptyMap()
 )
 
@@ -554,6 +557,35 @@ class GradingViewModel(
     }
     fun deleteFeedbackPhrase(id:Long)=action("بازخورد حذف شد."){
         repository.deleteFeedback(id).getOrThrow();_state.update{it.copy(feedbackBank=repository.feedbackBank().getOrThrow())}
+    }
+
+    /**
+     * V359 — پیش‌آگاهی پیش از تأیید خودکار، همتای سایت.
+     * سایت پیش از تأیید `exam_autograde_info` را می‌خواند و توضیح
+     * می‌دهد که اگر آزمون تشریحی دارد، فقط تستی‌ها نمره می‌گیرند.
+     * اپ این گام را نداشت و معلم بی‌خبر تأیید می‌زد.
+     * نتیجه در [autoGradeNotice] می‌نشیند و صفحه پنجرهٔ تأیید نشان می‌دهد.
+     */
+    fun requestAutoGradeApproval() = viewModelScope.launch {
+        val id = state.value.selectedExam?.id ?: return@launch
+        _state.update { it.copy(actionLoading = true, error = null) }
+        val info = repository.autoGradeInfo(id).getOrNull()
+        val essays = (info?.get("essay_questions") as? kotlinx.serialization.json.JsonArray)
+            ?.mapNotNull { it.jsonPrimitive.intOrNull } ?: emptyList()
+        val notice = if (essays.isEmpty()) {
+            "سؤال‌های تستی همهٔ پاسخ‌ها خودکار نمره می‌گیرند. ادامه؟"
+        } else {
+            "این آزمون سؤال تشریحی دارد (" + essays.joinToString("، ") +
+                ")؛ فقط تستی‌ها خودکار نمره می‌گیرند و تشریحی‌ها برای تصحیح دستی می‌مانند. ادامه؟"
+        }
+        _state.update { it.copy(actionLoading = false, autoGradeNotice = notice) }
+    }
+
+    fun dismissAutoGradeNotice() { _state.update { it.copy(autoGradeNotice = null) } }
+
+    fun confirmAutoGradeApproval() {
+        _state.update { it.copy(autoGradeNotice = null) }
+        approveAutoGrades()
     }
 
     fun approveAutoGrades() = viewModelScope.launch {

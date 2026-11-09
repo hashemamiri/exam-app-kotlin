@@ -89,7 +89,9 @@ fun StudentHomeScreen(
                 onDone = viewModel::leaveFinishedExam,
                 onDismissExamChanges = viewModel::dismissExamChanges,
                 onSecurityEvent = viewModel::recordSecurityEvent,
-                onExitExam = viewModel::exitExamScreen
+                onExitExam = viewModel::exitExamScreen,
+                onTakeOfflinePack = viewModel::takeOfflinePack,
+                onSubmitOffline = viewModel::submitOffline
             )
         }
         return
