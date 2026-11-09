@@ -130,6 +130,9 @@ jobs:
       # موتور چاپ «خالی» گزارش نشود و صفحهٔ واقعاً خالی هم رد شود.
       - name: Guard the layout-health assertion (V352.1)
         run: python3 scripts/check_layout_health.py
+      # V359.1 — نگهبان سهمیهٔ فضای Actions (۵۱۲ مگابایت رایگان)
+      - name: Guard Actions storage budget (V359.1)
+        run: python3 scripts/check_actions_storage.py
       - name: Run automated browser visual & E2E gate on site_out
         run: |
           python3 scripts/web_ui_e2e.py --site-dir site_out --out-dir web-ui-report
@@ -147,7 +150,11 @@ jobs:
         with:
           name: web-ui-visual-report-${{ github.ref_name }}
           path: web-ui-report/
-          retention-days: 14
+          # V359.1 — سهمیهٔ رایگان ۵۱۲MB است و هر گزارش ~۹MB؛ با ۱۴ روز
+          # ماندگاری پس از ~۲۸ اجرا فضا پر می‌شد. گزارش فقط برای بررسی
+          # همان اجرا لازم است.
+          retention-days: 3
+          compression-level: 9
       # V313.5 — انتشار هم‌زمان روی شاخهٔ gh-pages (GitHub Pages) برای عبور از مسدودی آی‌پی رایگان کلودفلر در همراه اول
       - name: Deploy to GitHub Pages (gh-pages)
         if: github.ref_name == 'main'

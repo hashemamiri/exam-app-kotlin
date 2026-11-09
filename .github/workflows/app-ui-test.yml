@@ -183,7 +183,7 @@ jobs:
             android-ui-report/
             app/build/outputs/androidTest-results/
           if-no-files-found: ignore
-          retention-days: 14
+          retention-days: 3
       - name: توقف سرور آزمایشی محلی
         if: always()
         run: kill "${{ steps.target_cfg.outputs.mock_pid }}" 2>/dev/null || true

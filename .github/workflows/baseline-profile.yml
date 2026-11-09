@@ -68,6 +68,8 @@ jobs:
         with:
           name: baseline-profile
           path: app/src/release/generated/baselineProfiles/
+          # V359.1 — بدون این خط، پیش‌فرض ۹۰ روز بود.
+          retention-days: 3
           if-no-files-found: error
       - name: افزایش شمارهٔ نسخه و کامیت
         if: steps.check.outputs.changed == 'true'

@@ -20,7 +20,6 @@ V333 — ربات تست خودکار بصری و سرتاسری (Visual & E2E) 
 from __future__ import annotations
 
 import argparse
-import base64
 import glob
 import hashlib
 import html
@@ -370,7 +369,11 @@ def write_visual_reports(out_dir: Path, steps: list[dict[str, Any]], meta: dict[
     cards_html = []
     for idx, st in enumerate(steps, 1):
         shot_path = out_dir / st["screenshot"]
-        b64 = base64.b64encode(shot_path.read_bytes()).decode("ascii") if shot_path.exists() else ""
+        # V359.1 — پیش‌تر تصویر به‌صورت base64 داخل HTML تکرار می‌شد و
+        # آرتیفکت را دو برابر می‌کرد (۹MB به‌جای ۴MB). چون PNGها در همان
+        # پوشهٔ آرتیفکت هستند، ارجاع نسبی هم پس از دانلود کار می‌کند و
+        # سهمیهٔ Actions نصف مصرف می‌شود.
+        img_src = html.escape(st["screenshot"]) if shot_path.exists() else ""
         badge_cls = "ok" if st["passed"] else "fail"
         cards_html.append(
             f"""
@@ -383,7 +386,7 @@ def write_visual_reports(out_dir: Path, steps: list[dict[str, Any]], meta: dict[
                 </div>
                 <span class="badge {badge_cls}">{'PASS' if st['passed'] else 'FAIL'} · {st['viewport']} · {st['duration_ms']}ms</span>
               </header>
-              <img src="data:image/png;base64,{b64}" alt="{html.escape(st['title'])}">
+              <img src="{img_src}" alt="{html.escape(st['title'])}" loading="lazy">
             </article>
             """
         )
