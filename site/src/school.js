@@ -575,12 +575,22 @@
       c.innerHTML = '';
       var TYPE = {multiple: 'چندگزینه‌ای', truefalse: 'صحیح/غلط', fill: 'جای‌خالی', numeric: 'عددی', matching: 'جورکردنی', essay: 'تشریحی', long: 'تشریحی'};
       var q = el('input', {type: 'search', placeholder: 'جست‌وجو در متن یا درس…', style: 'min-width:240px'});
-      var cs = el('select'); cs.appendChild(el('option', {value: '', text: 'همهٔ دسته‌ها'})); cats.forEach(function (k) { cs.appendChild(el('option', {value: String(k.id), text: k.name + ' (' + fa(k.count || 0) + ')'})); });
+      /* V358 — دسته‌ها درخت‌اند: مسیر کامل نشان داده می‌شود و انتخاب
+       * یک فصل، همهٔ مبحث‌های زیرش را هم می‌گیرد. */
+      var BP = window.BankPicker;
+      var cs = el('select'); cs.appendChild(el('option', {value: '', text: 'همهٔ دسته‌ها'}));
+      cats.slice().sort(function (a, b) { return String(BP.categoryPath(cats, a.id)).localeCompare(String(BP.categoryPath(cats, b.id)), 'fa'); }).forEach(function (k) {
+        var d = BP.depthOf(cats, k.id);
+        cs.appendChild(el('option', {value: String(k.id), text: (d > 1 ? '‏' + '— '.repeat(d - 1) : '') + k.name + ' (' + fa(k.count || 0) + ')'}));
+      });
+      var ds = el('select', {title: 'پالایش بر پایهٔ سطح دشواری'});
+      ds.appendChild(el('option', {value: '', text: 'همهٔ سطح‌ها'}));
+      BP.DIFFICULTY_LABELS.forEach(function (lb, i) { ds.appendChild(el('option', {value: String(i), text: lb})); });
       var cnt = el('span', {class: 'muted'}); var lst = el('div', {class: 'bank-grid'}); /* V257 — کارت‌ها */
       function refresh() { bankPage(c); }
       function draw() {
-        var s = q.value.trim().toLowerCase(), cid = cs.value ? Number(cs.value) : null;
-        var f = items.filter(function (it) { var qq = it.question || {}; return (!s || String(qq.text || '').toLowerCase().indexOf(s) >= 0 || String(it.subject || '').toLowerCase().indexOf(s) >= 0) && (!cid || (it.cat_ids || []).indexOf(cid) >= 0); });
+        /* V358 — همان منطق سایت و اپ؛ زیردرخت و دشواری هم لحاظ می‌شود */
+        var f = BP.filterItems(items, cats, {text: q.value, categoryId: cs.value || null, difficulty: ds.value === '' ? null : Number(ds.value)});
         cnt.textContent = fa(f.length) + ' از ' + fa(items.length) + ' سؤال';
         lst.innerHTML = '';
         if (!f.length) { lst.appendChild(S.emptyBox('🏦', 'سؤالی در بانک نیست. با دکمهٔ «➕ سؤال جدید در بانک» یا آیکون «افزودن به بانک سؤال» در سازندهٔ آزمون اضافه کنید.')); return; }
@@ -597,7 +607,9 @@
               el('button', {class: 'icon-btn' + (it.shared ? ' on' : ''), title: it.shared ? 'اشتراک با مدرسه فعال است — لغو اشتراک' : 'اشتراک با همکاران مدرسه', html: it.shared ? '🏫' : '🔒', onclick: async function () { try { chk(await S.rpcObj('native_bank_set_shared_v1', {p_id: it.id, p_shared: !it.shared})); it.shared = !it.shared; toast(it.shared ? 'با همکاران مدرسه به اشتراک گذاشته شد.' : 'اشتراک لغو شد.', 'ok'); draw(); } catch (e) { toast(/does not exist|PGRST202/i.test(String(e.message)) ? 'اشتراک بانک هنوز روی سرور فعال نشده است (SQL نسخهٔ V230).' : errMsg(e), 'err'); } }}),
               el('button', {class: 'icon-btn', title: 'دسته‌ها', html: '🏷', onclick: function () { catPick(it); }}),
               el('button', {class: 'icon-btn', title: 'ویرایش در سازنده', html: '✎', onclick: function () { if (!B) return toast('سازندهٔ آزمون در دسترس نیست.', 'err'); S.go('builder', {bankEdit: {id: it.id, subject: it.subject || '', cats: it.cat_ids || [], question: qq}}); }}),
-              el('button', {class: 'icon-btn danger', title: 'حذف', html: '🗑', onclick: async function () { if (!(await S.confirmDlg('حذف سؤال', 'این سؤال از بانک حذف شود؟', 'حذف', true))) return; try { chk(await S.rpcObj('native_bank_delete_question_v1', {p_id: it.id})); toast('حذف شد.', 'ok'); refresh(); } catch (e) { if (!(e && e.requested)) toast(errMsg(e), 'err'); } }})]), el('span', {class: 'bk-date', text: it.created_at ? S.fmtDate(it.created_at) : ''})])
+              el('button', {class: 'icon-btn danger', title: 'حذف', html: '🗑', onclick: async function () { if (!(await S.confirmDlg('حذف سؤال', 'این سؤال از بانک حذف شود؟', 'حذف', true))) return; try { chk(await S.rpcObj('native_bank_delete_question_v1', {p_id: it.id})); toast('حذف شد.', 'ok'); refresh(); } catch (e) { if (!(e && e.requested)) toast(errMsg(e), 'err'); } }})]), el('span', {class: 'bk-date', text: it.created_at ? S.fmtDate(it.created_at) : ''}),
+              BP.itemDifficulty(it) ? el('span', {class: 'chip', text: BP.DIFFICULTY_LABELS[BP.itemDifficulty(it)]}) : null,
+              BP.itemTopic(it) ? el('span', {class: 'chip', text: BP.itemTopic(it)}) : null].filter(Boolean))
           ]));
         });
       }
@@ -612,7 +624,7 @@
         function drawCats() {
           body.innerHTML = '';
           if (!cats.length) body.appendChild(el('p', {class: 'muted', text: 'هنوز دسته‌ای نساخته‌اید.'}));
-          cats.forEach(function (k) { body.appendChild(el('div', {class: 'g-item'}, [el('span', {class: 'grow', text: k.name}), el('span', {class: 'muted', style: 'font-size:12px', text: fa(k.count || 0) + ' سؤال'}), el('button', {class: 'icon-btn danger', html: '🗑', title: 'حذف دسته', onclick: async function () {
+          cats.slice().sort(function (a, b) { return String(BP.categoryPath(cats, a.id)).localeCompare(String(BP.categoryPath(cats, b.id)), 'fa'); }).forEach(function (k) { body.appendChild(el('div', {class: 'g-item'}, [el('span', {class: 'grow', text: BP.categoryPath(cats, k.id)}), el('span', {class: 'muted', style: 'font-size:12px', text: fa(k.count || 0) + ' سؤال'}), el('button', {class: 'icon-btn danger', html: '🗑', title: 'حذف دسته', onclick: async function () {
             var delQ = false;
             if ((k.count || 0) > 0) { var r = await S.confirmDlg('حذف دسته', 'دستهٔ «' + esc(k.name) + '» ' + fa(k.count) + ' سؤال دارد. سؤال‌ها هم حذف شوند؟ (با «فقط دسته» سؤال‌ها بدون دسته می‌مانند)', 'حذف با سؤال‌ها', true); if (r) delQ = true; else if (!(await S.confirmDlg('حذف دسته', 'فقط خودِ دسته حذف شود؟', 'فقط دسته'))) return; }
             else if (!(await S.confirmDlg('حذف دسته', 'دستهٔ «' + esc(k.name) + '» حذف شود؟', 'حذف', true))) return;
@@ -621,8 +633,15 @@
         }
         drawCats();
         var nm = inp({placeholder: 'نام دستهٔ جدید'});
-        bg.appendChild(el('div', {class: 'modal'}, [el('button', {class: 'x', text: '✕', onclick: function () { bg.remove(); }}), el('h2', {text: '🏷 دسته‌های بانک'}), body,
-          el('div', {class: 'row', style: 'margin-top:10px'}, [nm, el('button', {class: 'btn sm', text: 'افزودن', onclick: async function () { if (!nm.value.trim()) return; try { chk(await S.rpcObj('native_bank_category_add_v1', {p_name: nm.value.trim()})); bg.remove(); toast('دسته افزوده شد.', 'ok'); refresh(); } catch (e) { if (!(e && e.requested)) toast(errMsg(e), 'err'); } }})])]));
+        /* V358 — والد اختیاری: درس <- فصل <- مبحث (حداکثر سه سطح) */
+        var ps = el('select', {title: 'زیرمجموعهٔ کدام دسته باشد؟'});
+        ps.appendChild(el('option', {value: '', text: 'سطح اول (درس)'}));
+        cats.filter(function (k) { return BP.depthOf(cats, k.id) < BP.MAX_DEPTH; })
+          .sort(function (a, b) { return String(BP.categoryPath(cats, a.id)).localeCompare(String(BP.categoryPath(cats, b.id)), 'fa'); })
+          .forEach(function (k) { ps.appendChild(el('option', {value: String(k.id), text: 'زیرِ ' + BP.categoryPath(cats, k.id)})); });
+        bg.appendChild(el('div', {class: 'modal'}, [el('button', {class: 'x', text: '✕', onclick: function () { bg.remove(); }}), el('h2', {text: '🏷 دسته‌های بانک'}),
+          el('p', {class: 'muted', text: 'سه سطح: درس، فصل، مبحث. حذف یک دسته، زیردسته‌هایش را هم برمی‌دارد ولی سؤال‌ها را حذف نمی‌کند مگر خودتان بخواهید.'}), body,
+          el('div', {class: 'row', style: 'margin-top:10px;flex-wrap:wrap'}, [nm, ps, el('button', {class: 'btn sm', text: 'افزودن', onclick: async function () { if (!nm.value.trim()) return; try { chk(await S.rpcObj('native_bank_category_add_v358', {p_name: nm.value.trim(), p_parent: ps.value ? Number(ps.value) : null})); bg.remove(); toast('دسته افزوده شد.', 'ok'); refresh(); } catch (e) { if (!(e && e.requested)) toast(errMsg(e), 'err'); } }})])]));
         document.body.appendChild(bg);
       }
       /* V230 — بانک مدرسه: سؤال‌های به‌اشتراک‌گذاشتهٔ همکاران همان مدرسه؛ «افزودن به بانک من» کپی می‌کند */
@@ -644,8 +663,8 @@
           bg.addEventListener('click', function (ev) { if (ev.target === bg) { bg.remove(); if (its.some(function (x) { return x.already; })) refresh(); } });
         } catch (e) { body.innerHTML = ''; body.appendChild(el('div', {class: 'alert warn', text: /does not exist|PGRST202/i.test(String(e.message)) ? 'بانک مدرسه هنوز روی سرور فعال نشده است (فایل SQL نسخهٔ V230 باید یک بار اجرا شود).' : errMsg(e)})); }
       }
-      q.addEventListener('input', draw); cs.addEventListener('change', draw);
-      c.appendChild(el('div', {class: 'row', style: 'margin-bottom:12px;flex-wrap:wrap'}, [q, cs, el('span', {class: 'grow'}), cnt, el('button', {class: 'btn light', text: '🏫 بانک مدرسه', onclick: schoolBank}), el('button', {class: 'btn light', text: '🏷 دسته‌ها', onclick: manageCats}), el('button', {class: 'btn', text: '➕ سؤال جدید در بانک', onclick: function () { S.go('builder', {bankEdit: {id: null, subject: '', cats: [], question: null}}); }})]));
+      q.addEventListener('input', draw); cs.addEventListener('change', draw); ds.addEventListener('change', draw);
+      c.appendChild(el('div', {class: 'row', style: 'margin-bottom:12px;flex-wrap:wrap'}, [q, cs, ds, el('span', {class: 'grow'}), cnt, el('button', {class: 'btn light', text: '🏫 بانک مدرسه', onclick: schoolBank}), el('button', {class: 'btn light', text: '🏷 دسته‌ها', onclick: manageCats}), el('button', {class: 'btn', text: '➕ سؤال جدید در بانک', onclick: function () { S.go('builder', {bankEdit: {id: null, subject: '', cats: [], question: null}}); }})]));
       c.appendChild(lst); draw();
     } catch (e) { S.showErr(c, e); }
   }

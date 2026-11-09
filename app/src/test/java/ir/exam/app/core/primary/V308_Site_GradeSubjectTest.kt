@@ -16,8 +16,8 @@ class V308_Site_GradeSubjectTest {
     fun `app editor and bank filter use grade and subject tags`() {
         val screen = File(root(), "app/src/main/java/ir/exam/app/ui/builder/ExamBuilderScreen.kt").readText()
         assertTrue(screen.contains("if (primary) PrimaryTagEditor(question, viewModel)"))
-        assertTrue(screen.contains("item.question.grade == tagGrade"))
-        assertTrue(screen.contains("item.question.subject.orEmpty().equals(tagSubject, ignoreCase = true)"))
+        assertTrue(screen.contains("grade = if (state.primaryMode && tagGrade != 0) tagGrade else null"))
+        assertTrue(screen.contains("subject = tagSubject"))
         val codec = File(root(), "app/src/main/java/ir/exam/app/data/repository/ExamQuestionCodec.kt").readText()
         assertTrue(codec.contains("if (question.grade in 1..6) values[\"grade\"] = JsonPrimitive(question.grade)"))
     }
@@ -28,6 +28,8 @@ class V308_Site_GradeSubjectTest {
         assertTrue(builder.contains("q.grade = Math.max(0, Math.min(6, Number(obj.grade) || 0)); q.subject = obj.subject ? String(obj.subject) : '';"))
         assertTrue(builder.contains("if (q.grade >= 1 && q.grade <= 6) v.grade = q.grade; else delete v.grade;"))
         assertTrue(builder.contains("function primaryTagEditor(q, redraw)"))
-        assertTrue(builder.contains("(!state.primaryMode || !gs.value || Number(qq.grade) === Number(gs.value)) && (!ss.value || subject === ss.value)"))
+        // V358 — پالایش به پیمانهٔ مشترک BankPicker رفت؛ پایه و درس هنوز اعمال می‌شوند.
+        assertTrue(builder.contains("grade: (state.primaryMode && gs.value) ? Number(gs.value) : null"))
+        assertTrue(builder.contains("subject: ss.value || ''"))
     }
 }

@@ -48,6 +48,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import ir.exam.app.ui.app.NeumorphicPanel
+import ir.exam.app.domain.bank.BankPicker
 import ir.exam.app.ui.builder.BankCategoryOption
 import ir.exam.app.ui.builder.BankQuestionOption
 import ir.exam.app.ui.builder.QuestionDraft
@@ -109,16 +110,39 @@ fun QuestionBankScreen(
                 ) { Text("بانک مدرسه") }
             }
         }
+        // V358 — پالایش دشواری؛ سه سطح، مثل سایت
+        item {
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                FilterChip(
+                    selected = state.difficulty == null,
+                    onClick = { viewModel.selectDifficulty(null) },
+                    label = { Text("همهٔ سطح‌ها") }
+                )
+                BankPicker.DIFFICULTY_LABELS.forEachIndexed { level, label ->
+                    FilterChip(
+                        selected = state.difficulty == level,
+                        onClick = { viewModel.selectDifficulty(level) },
+                        label = { Text(label) }
+                    )
+                }
+            }
+        }
         if (state.categories.isNotEmpty()) {
             item {
                 Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
-                    state.categories.chunked(3).forEach { row ->
+                    // V358 — ترتیب بر پایهٔ مسیر کامل، تا فصل‌ها زیر درس خود دیده شوند
+                    state.categories
+                        .sortedBy { state.categoryPath(it.id) }
+                        .chunked(3).forEach { row ->
                         Row(horizontalArrangement = Arrangement.spacedBy(5.dp)) {
                             row.forEach { category ->
                                 FilterChip(
                                     selected = state.categoryId == category.id,
                                     onClick = { viewModel.selectCategory(category.id) },
-                                    label = { Text("${category.name} (${category.count})") }
+                                    label = {
+                                        Text("› ".repeat((state.categoryDepth(category.id) - 1).coerceAtLeast(0)) +
+                                            "${category.name} (${category.count})")
+                                    }
                                 )
                             }
                         }
@@ -188,13 +212,34 @@ fun QuestionBankScreen(
 
     if (newCategory) {
         var name by remember { mutableStateOf("") }
+        // V358 — والد اختیاری؛ فقط دسته‌هایی که جا برای فرزند دارند
+        var parent by remember { mutableStateOf<Long?>(null) }
+        val parents = state.categories.filter { state.categoryDepth(it.id) < BankPicker.MAX_DEPTH }
+            .sortedBy { state.categoryPath(it.id) }
         AlertDialog(
             onDismissRequest = { newCategory = false },
             title = { Text("دسته جدید") },
-            text = { OutlinedTextField(name, { name = it.take(100) }, label = { Text("نام دسته") }) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedTextField(name, { name = it.take(100) }, label = { Text("نام دسته") })
+                    Text("سه سطح: درس، فصل، مبحث.", style = MaterialTheme.typography.bodySmall)
+                    FilterChip(
+                        selected = parent == null,
+                        onClick = { parent = null },
+                        label = { Text("سطح اول (درس)") }
+                    )
+                    parents.forEach { c ->
+                        FilterChip(
+                            selected = parent == c.id,
+                            onClick = { parent = c.id },
+                            label = { Text("زیرِ " + state.categoryPath(c.id)) }
+                        )
+                    }
+                }
+            },
             confirmButton = {
                 Button(
-                    onClick = { viewModel.addCategory(name); newCategory = false },
+                    onClick = { viewModel.addCategory(name, parent); newCategory = false },
                     enabled = name.isNotBlank()
                 ) { Text("ساخت") }
             },

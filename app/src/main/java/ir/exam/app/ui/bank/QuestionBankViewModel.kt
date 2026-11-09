@@ -7,6 +7,7 @@ import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import ir.exam.app.data.repository.SupabaseExamBuilderRepository
+import ir.exam.app.domain.bank.BankPicker
 import ir.exam.app.ui.builder.BankCategoryOption
 import ir.exam.app.ui.builder.BankQuestionOption
 import ir.exam.app.ui.builder.QuestionDraft
@@ -23,6 +24,8 @@ data class QuestionBankUiState(
     val categories: List<BankCategoryOption> = emptyList(),
     val query: String = "",
     val categoryId: Long? = null,
+    // V358 — پالایش دشواری؛ null یعنی همهٔ سطح‌ها، صفر یعنی تعیین‌نشده‌ها
+    val difficulty: Int? = null,
     val message: String? = null,
     val error: String? = null,
     // V263 — بانک مدرسه
@@ -30,16 +33,39 @@ data class QuestionBankUiState(
     val schoolLoading: Boolean = false,
     val schoolItems: List<ir.exam.app.ui.builder.SchoolBankItem> = emptyList()
 ) {
+    /** V358 — همان منطق سایت؛ انتخاب یک فصل، زیرمجموعه‌هایش را هم می‌گیرد. */
     val visibleQuestions: List<BankQuestionOption>
         get() {
-            val needle = query.trim().lowercase()
-            return questions.filter { item ->
-                (categoryId == null || categoryId in item.categoryIds) &&
-                    (needle.isBlank() || item.question.text.lowercase().contains(needle) ||
-                        item.subject.orEmpty().lowercase().contains(needle))
-            }
+            val allowed = BankPicker.filterItems(
+                questions.map { it.toPickerItem() },
+                categories.map { BankPicker.Category(it.id.toString(), it.name, it.parentId?.toString()) },
+                BankPicker.FilterOpts(
+                    text = query,
+                    categoryId = categoryId?.toString(),
+                    difficulty = difficulty
+                )
+            ).map { it.id }.toSet()
+            return questions.filter { it.id.toString() in allowed }
         }
+
+    /** مسیر کامل دسته برای نمایش در پالایشگر. */
+    fun categoryPath(id: Long): String =
+        BankPicker.categoryPath(categories.map { BankPicker.Category(it.id.toString(), it.name, it.parentId?.toString()) }, id.toString())
+
+    fun categoryDepth(id: Long): Int =
+        BankPicker.depthOf(categories.map { BankPicker.Category(it.id.toString(), it.name, it.parentId?.toString()) }, id.toString())
 }
+
+/** V358 — پل میان مدل بانک و پیمانهٔ مشترک انتخاب. */
+internal fun BankQuestionOption.toPickerItem(): BankPicker.Item = BankPicker.Item(
+    id = id.toString(),
+    subject = subject.orEmpty(),
+    text = question.text,
+    topic = question.topic,
+    difficulty = question.difficulty,
+    grade = question.grade,
+    catIds = categoryIds.map { it.toString() }
+)
 
 /** V214 — بستهٔ حافظهٔ موقت بانک سؤال */
 private data class BankCache(val questions: List<BankQuestionOption>, val categories: List<BankCategoryOption>)
@@ -91,8 +117,18 @@ class QuestionBankViewModel(
         _state.update { it.copy(categoryId = id, error = null) }
     }
 
-    fun addCategory(name: String) = action("دسته ساخته شد.") {
-        repository.addBankCategory(name).getOrThrow()
+    /** V358 — null یعنی همهٔ سطح‌ها. */
+    fun selectDifficulty(level: Int?) {
+        _state.update { it.copy(difficulty = level?.takeIf { d -> d in 0..3 }, error = null) }
+    }
+
+    fun addCategory(name: String, parentId: Long? = null) = action("دسته ساخته شد.") {
+        repository.addBankCategory(name, parentId).getOrThrow()
+    }
+
+    /** V358 — جابه‌جایی دسته؛ سرور حلقه و سرریز ژرفا را رد می‌کند. */
+    fun moveCategory(id: Long, parentId: Long?) = action("دسته جابه‌جا شد.") {
+        repository.moveBankCategory(id, parentId).getOrThrow()
     }
 
     fun deleteCategory(id: Long, deleteQuestions: Boolean) = action("دسته حذف شد.") {

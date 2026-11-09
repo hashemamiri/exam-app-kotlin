@@ -48,7 +48,10 @@ class V328_Site_SecondaryAssessmentTest {
         assertTrue("دانش‌آموز پله‌های پاسخ را می‌بیند", "q.mode === 'steps'" in student)
         assertTrue("ارجاع به نتیجهٔ گام قبلی باید در وب نمایش داده شود", "ارجاع به نتیجهٔ گام قبل" in student)
         assertTrue("ساخت هندسی در نسخهٔ وب برای آزمون‌های قبلی پابرجاست", "q.mode === 'construct'" in student)
-        assertFalse("فیلترهای موضوع/دشواری/هدف یادگیری از پنجرهٔ بانک وب حذف شده‌اند", "ts.value" in builder || "ds.value" in builder || "os.value" in builder)
+        // V358 — تصمیم V328 دربارهٔ «دشواری» برگشت: کاربر صریحاً پالایش
+        // دشواری را خواست. موضوع و هدف یادگیری همچنان فیلتر جدا ندارند.
+        assertFalse("فیلتر موضوع/هدف یادگیری هنوز از پنجرهٔ بانک وب حذف است", "ts.value" in builder || "os.value" in builder)
+        assertTrue("V358 — پالایش دشواری به پنجرهٔ بانک وب برگشت", "ds.value" in builder)
         assertTrue("rubric در تصحیح وب نمایش داده می‌شود", "q.rubric" in admin)
         assertTrue("تصحیح خودکار نقاط در پنل وب نمایش داده می‌شود", "Math.hypot" in admin && "constructionTargets" in admin)
         assertFalse("سهم تصادفی بر اساس مبحث/بخش از رابط سازندهٔ وب حذف شده است", "'topic:'" in builder || "'section:'" in builder)

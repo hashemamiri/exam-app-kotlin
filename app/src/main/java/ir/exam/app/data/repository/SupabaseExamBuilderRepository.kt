@@ -21,6 +21,8 @@ import java.time.Instant
 import java.util.UUID
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonNull
+import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.contentOrNull
@@ -297,8 +299,20 @@ class SupabaseExamBuilderRepository(context: Context) {
         rpcObject("native_bank_delete_question_v1", buildJsonObject { put("p_id", id) })
     }
 
-    suspend fun addBankCategory(name: String): Result<Unit> = runCatching {
-        rpcObject("native_bank_category_add_v1", buildJsonObject { put("p_name", name.trim()) })
+    /** V358 — دستهٔ تازه؛ با والد اختیاری در درخت سه‌سطحی. */
+    suspend fun addBankCategory(name: String, parentId: Long? = null): Result<Unit> = runCatching {
+        rpcObject("native_bank_category_add_v358", buildJsonObject {
+            put("p_name", name.trim())
+            if (parentId == null) put("p_parent", JsonNull) else put("p_parent", JsonPrimitive(parentId))
+        })
+    }
+
+    /** V358 — جابه‌جایی دسته در درخت؛ حلقه و سرریز ژرفا سمت سرور رد می‌شود. */
+    suspend fun moveBankCategory(id: Long, parentId: Long?): Result<Unit> = runCatching {
+        rpcObject("native_bank_category_move_v358", buildJsonObject {
+            put("p_id", id)
+            if (parentId == null) put("p_parent", JsonNull) else put("p_parent", JsonPrimitive(parentId))
+        })
     }
 
     suspend fun setBankCategories(questionId: Long, categoryIds: Set<Long>): Result<Unit> = runCatching {
@@ -327,7 +341,11 @@ class SupabaseExamBuilderRepository(context: Context) {
         val categories = (raw["categories"] as? JsonArray).orEmpty().mapNotNull { element ->
             val row = element as? JsonObject ?: return@mapNotNull null
             val id = row["id"]?.jsonPrimitive?.longOrNull ?: return@mapNotNull null
-            BankCategoryOption(id, row["name"]?.jsonPrimitive?.contentOrNull.orEmpty(), row["count"]?.jsonPrimitive?.intOrNull ?: 0)
+            BankCategoryOption(
+                id, row["name"]?.jsonPrimitive?.contentOrNull.orEmpty(),
+                row["count"]?.jsonPrimitive?.intOrNull ?: 0,
+                parentId = row["parent_id"]?.jsonPrimitive?.longOrNull
+            )
         }
         val questions = (raw["items"] as? JsonArray).orEmpty().mapNotNull { element ->
             val row = element as? JsonObject ?: return@mapNotNull null

@@ -1622,6 +1622,53 @@
     /* --- بانک سؤال --- */
     /* V259.3 — بانک سؤال در دسکتاپ برای آزمون چاپی هم در دسترس است (گوشی: فقط آنلاین، مثل قبل) */
     function bankAllowed() { return true; } /* V274 — بانک سؤال برای آزمون چاپی روی گوشی هم (مثل منوی شعاعی اپ: onBank در هر دو حالت) */
+    /* V358 — نقشهٔ آزمون: «از کدام دسته، با کدام دشواری، چندتا».
+     * انتخاب با بذر انجام می‌شود تا با «قرعهٔ تازه» بتوان گزینش دیگری
+     * گرفت، ولی همان بذر همیشه همان نتیجه را بدهد. */
+    function blueprintDialog(items, cats, addItems) {
+      var BP = window.BankPicker;
+      var bg = el('div', {class: 'modal-bg'});
+      var m = el('div', {class: 'modal wide'});
+      var ta = el('textarea', {rows: 6, style: 'width:100%;font-family:inherit;border:1px solid var(--line);border-radius:10px;padding:10px',
+        placeholder: 'فصل ' + fa(1) + ' | آسان | ' + fa(5) + '\nفصل ' + fa(2) + ' | متوسط | ' + fa(5) + '\nهمه | دشوار | ' + fa(2)});
+      var seed = Math.floor(Math.random() * 1000000) + 1;
+      var out = el('div');
+      var addBtn = el('button', {class: 'btn', text: 'افزودن به آزمون', disabled: true});
+      var last = null;
+      function run() {
+        var parsed = BP.parseBlueprint(ta.value, cats);
+        out.innerHTML = '';
+        if (parsed.errors.length) {
+          out.appendChild(el('div', {class: 'alert warn'}, parsed.errors.map(function (x) { return el('div', {text: x}); })));
+        }
+        if (!parsed.rules.length) { addBtn.disabled = true; addBtn.textContent = 'افزودن به آزمون'; last = null; return; }
+        var res = BP.pick(items, cats, parsed.rules, seed);
+        last = res;
+        out.appendChild(el('p', {class: 'muted', text: BP.summary(res)}));
+        out.appendChild(el('table', {class: 'tbl'}, [
+          el('thead', {}, [el('tr', {}, ['دسته', 'سطح', 'خواسته', 'یافت‌شده'].map(function (h) { return el('th', {text: h}); }))]),
+          el('tbody', {}, res.perRule.map(function (r) {
+            return el('tr', {}, [el('td', {text: r.category}),
+              el('td', {text: r.difficulty < 0 ? 'هر' : BP.DIFFICULTY_LABELS[r.difficulty]}),
+              el('td', {text: fa(r.wanted)}),
+              el('td', {}, [el('span', {class: 'chip ' + (r.shortage ? 'warn' : 'ok'), text: fa(r.got) + (r.shortage ? ' (' + fa(r.shortage) + ' کمبود)' : '')})])]);
+          }))
+        ]));
+        addBtn.disabled = !res.picked.length;
+        addBtn.textContent = res.picked.length ? 'افزودن ' + fa(res.picked.length) + ' سؤال به آزمون' : 'افزودن به آزمون';
+      }
+      ta.addEventListener('input', run);
+      addBtn.addEventListener('click', function () { if (last && last.picked.length) { addItems(last.picked.slice()); bg.remove(); } });
+      m.appendChild(el('button', {class: 'x', text: '✕', onclick: function () { bg.remove(); }}));
+      m.appendChild(el('h2', {text: '🎯 انتخاب خودکار از بانک'}));
+      m.appendChild(el('p', {class: 'muted', text: 'هر خط: «دسته | دشواری | تعداد». برای همهٔ دسته‌ها بنویسید «همه» و برای هر سطحی «هر». رقم فارسی هم پذیرفته می‌شود.'}));
+      m.appendChild(ta);
+      m.appendChild(el('div', {class: 'row', style: 'margin-top:8px;gap:8px'}, [
+        el('button', {class: 'btn light sm', text: '🎲 قرعهٔ تازه', onclick: function () { seed = Math.floor(Math.random() * 1000000) + 1; run(); }}),
+        el('span', {class: 'grow'}), addBtn]));
+      m.appendChild(out);
+      bg.appendChild(m); document.body.appendChild(bg); run();
+    }
     async function openBank() {
       var bg = el('div', {class: 'modal-bg'});
       var m = el('div', {class: 'modal wide b-bank-modal'}, [el('button', {class: 'x', text: '✕', onclick: function () { bg.remove(); }}), el('h2', {text: '🏦 بانک سؤال'})]);
@@ -1630,7 +1677,16 @@
         var raw = await S.rpcObj('native_bank_snapshot_v1', {});
         var items = raw.items || [], cats = raw.categories || [];
         var q = el('input', {type: 'search', placeholder: 'جست‌وجو…', style: 'border:1px solid var(--line);border-radius:10px;padding:8px 12px;flex:1'});
-        var cs = el('select', {style: 'border:1px solid var(--line);border-radius:10px;padding:8px'}); cs.appendChild(el('option', {value: '', text: 'همهٔ دسته‌ها'})); cats.forEach(function (c) { cs.appendChild(el('option', {value: String(c.id), text: c.name + ' (' + fa(c.count || 0) + ')'})); });
+        /* V358 — درختواره و پالایش دشواری، با همان منطق اپ */
+        var BP = window.BankPicker;
+        var cs = el('select', {style: 'border:1px solid var(--line);border-radius:10px;padding:8px'}); cs.appendChild(el('option', {value: '', text: 'همهٔ دسته‌ها'}));
+        cats.slice().sort(function (a, b) { return String(BP.categoryPath(cats, a.id)).localeCompare(String(BP.categoryPath(cats, b.id)), 'fa'); }).forEach(function (c) {
+          var d = BP.depthOf(cats, c.id);
+          cs.appendChild(el('option', {value: String(c.id), text: (d > 1 ? '‏' + '— '.repeat(d - 1) : '') + c.name + ' (' + fa(c.count || 0) + ')'}));
+        });
+        var ds = el('select', {title: 'سطح دشواری', style: 'border:1px solid var(--line);border-radius:10px;padding:8px'});
+        ds.appendChild(el('option', {value: '', text: 'همهٔ سطح‌ها'}));
+        BP.DIFFICULTY_LABELS.forEach(function (lb, i) { ds.appendChild(el('option', {value: String(i), text: lb})); });
         var gs = el('select', {style: 'border:1px solid var(--line);border-radius:10px;padding:8px'}); gs.appendChild(el('option', {value: '', text: 'همه پایه‌ها'}));
         for (var gi = 1; gi <= 6; gi++) gs.appendChild(el('option', {value: String(gi), text: 'پایهٔ ' + fa(gi)}));
         var bankSubjects=Array.from(new Set(items.map(function(it){return String(it.subject||(it.question||{}).subject||'').trim();}).filter(Boolean))).sort();
@@ -1644,9 +1700,8 @@
         var lastFiltered = [];
         function syncAddBtn() { addSel.disabled = !picked.length; addSel.textContent = picked.length ? 'افزودن ' + fa(picked.length) + ' سؤال انتخاب‌شده' : 'افزودن انتخاب‌شده‌ها'; }
         function draw() {
-          var s = q.value.trim().toLowerCase(), cid = cs.value ? Number(cs.value) : null;
           lst.innerHTML = '';
-          var f = items.filter(function (it) { var qq = it.question || {}; var subject=String(it.subject||qq.subject||'');return (!s || String(qq.text || '').toLowerCase().indexOf(s) >= 0 || subject.toLowerCase().indexOf(s) >= 0) && (!cid || (it.cat_ids || []).indexOf(cid) >= 0) && (!state.primaryMode || !gs.value || Number(qq.grade) === Number(gs.value)) && (!ss.value || subject === ss.value); });
+          var f = BP.filterItems(items, cats, {text: q.value, categoryId: cs.value || null, difficulty: ds.value === '' ? null : Number(ds.value), subject: ss.value || '', grade: (state.primaryMode && gs.value) ? Number(gs.value) : null});
           lastFiltered = f;
           if (!f.length) { lst.appendChild(S.emptyBox('🏦', 'سؤالی پیدا نشد.')); return; }
           /* V260 — کارت‌های فشرده مثل صفحهٔ بانک: تیک انتخاب چندتایی، نوع/بارم، چشم (محتوای کامل)، عنوان آزمون/درس، دسته‌ها، دکمهٔ افزودن تکی */
@@ -1659,10 +1714,12 @@
             ]);
             lst.appendChild(card); });
         }
-        q.addEventListener('input', draw); cs.addEventListener('change', draw); gs.addEventListener('change', draw); ss.addEventListener('change', draw);
-        body.innerHTML = ''; body.appendChild(el('div', {class: 'row', style: 'margin-bottom:8px;flex-wrap:wrap'}, [q, cs].concat(state.primaryMode ? [gs] : []).concat([ss]))); body.appendChild(lst); draw();
+        q.addEventListener('input', draw); cs.addEventListener('change', draw); gs.addEventListener('change', draw); ss.addEventListener('change', draw); ds.addEventListener('change', draw);
+        body.innerHTML = ''; body.appendChild(el('div', {class: 'row', style: 'margin-bottom:8px;flex-wrap:wrap'}, [q, cs, ds].concat(state.primaryMode ? [gs] : []).concat([ss]))); body.appendChild(lst); draw();
         var cur = state.questions[state.selected];
-        body.appendChild(el('div', {class: 'row', style: 'margin-top:12px;gap:8px;flex-wrap:wrap'}, [addSel, selAll, el('span', {class: 'grow'}), cur ? el('button', {class: 'btn light sm', text: 'ذخیرهٔ سؤال جاری در بانک', onclick: function () { addToBank(cur); }}) : null].filter(Boolean)));
+        body.appendChild(el('div', {class: 'row', style: 'margin-top:12px;gap:8px;flex-wrap:wrap'}, [addSel, selAll,
+          el('button', {class: 'btn sm', text: '🎯 انتخاب خودکار', onclick: function () { blueprintDialog(items, cats, addItems); }}),
+          el('span', {class: 'grow'}), cur ? el('button', {class: 'btn light sm', text: 'ذخیرهٔ سؤال جاری در بانک', onclick: function () { addToBank(cur); }}) : null].filter(Boolean)));
         syncAddBtn();
       } catch (e) { S.showErr(body, e); }
     }

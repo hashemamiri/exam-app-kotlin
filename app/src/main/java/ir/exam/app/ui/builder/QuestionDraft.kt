@@ -423,7 +423,8 @@ object PrimaryGrades {
 }
 data class AudienceStudentOption(val id: String, val name: String, val classNames: String? = null)
 data class AudienceSchoolOption(val id: String, val name: String, val city: String? = null)
-data class BankCategoryOption(val id: Long, val name: String, val count: Int = 0)
+/** V358 — دسته‌ها درخت‌اند: درس <- فصل <- مبحث (حداکثر سه سطح). */
+data class BankCategoryOption(val id: Long, val name: String, val count: Int = 0, val parentId: Long? = null)
 data class BankQuestionOption(
     val id: Long,
     val subject: String?,

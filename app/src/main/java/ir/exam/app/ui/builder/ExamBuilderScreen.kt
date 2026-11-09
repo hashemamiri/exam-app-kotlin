@@ -119,6 +119,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import kotlin.math.abs
+import ir.exam.app.domain.bank.BankPicker
+import ir.exam.app.ui.bank.toPickerItem
 import ir.exam.app.core.calendar.PersianDigits
 import ir.exam.app.core.figure.FigureCodec
 import ir.exam.app.core.figure.FigureSpec
@@ -1102,12 +1104,27 @@ private fun BuilderQuestionBankDialog(
     var tagGrade by remember { mutableIntStateOf(0) }
     var tagSubject by remember { mutableStateOf("") }
     val bankSubjects = state.bankQuestions.map { it.question.subject.orEmpty().trim() }.filter(String::isNotBlank).distinct().sorted()
+    // V358 — دسته/دشواری/پایه/درس از پیمانهٔ مشترک؛ جست‌وجوی عنوان آزمون
+    // همچنان محلی می‌ماند چون مخصوص بانک اپ است.
+    var tagDifficulty by remember { mutableStateOf<Int?>(null) }
+    var blueprintOpen by remember { mutableStateOf(false) }
+    val pickerCats = state.bankCategories.map {
+        BankPicker.Category(it.id.toString(), it.name, it.parentId?.toString())
+    }
+    val structurallyVisible = BankPicker.filterItems(
+        state.bankQuestions.map { it.toPickerItem() }, pickerCats,
+        BankPicker.FilterOpts(
+            categoryId = state.selectedBankCategory?.toString(),
+            difficulty = tagDifficulty,
+            subject = tagSubject,
+            grade = if (state.primaryMode && tagGrade != 0) tagGrade else null
+        )
+    ).map { it.id }.toSet()
     val visible = state.bankQuestions.filter { item ->
-        (!state.primaryMode || tagGrade == 0 || item.question.grade == tagGrade) &&
-        (tagSubject.isEmpty() || item.question.subject.orEmpty().equals(tagSubject, ignoreCase = true)) &&
-        (state.selectedBankCategory == null || state.selectedBankCategory in item.categoryIds) &&
+        item.id.toString() in structurallyVisible &&
             (query.isBlank() || item.question.text.lowercase().contains(query) ||
                 item.question.subject.orEmpty().lowercase().contains(query) ||
+                item.question.topic.lowercase().contains(query) ||
                 item.examTitle.orEmpty().lowercase().contains(query))
     }
     val selected = remember { mutableStateListOf<Long>() }
@@ -1164,6 +1181,32 @@ private fun BuilderQuestionBankDialog(
                 if (!state.primaryMode) {
                     PrimaryDropdown(selectedValue = tagSubject, options = listOf("" to "همهٔ درس‌ها") + bankSubjects.map { it to it }, onSelect = { tagSubject = it }, modifier = Modifier.fillMaxWidth())
                 }
+                // V358 — پالایش دشواری و انتخاب خودکار با نقشهٔ آزمون
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+                    FilterChip(
+                        selected = tagDifficulty == null,
+                        onClick = { tagDifficulty = null },
+                        label = { Text("همهٔ سطح‌ها") }
+                    )
+                    BankPicker.DIFFICULTY_LABELS.forEachIndexed { level, label ->
+                        FilterChip(
+                            selected = tagDifficulty == level,
+                            onClick = { tagDifficulty = level },
+                            label = { Text(label) }
+                        )
+                    }
+                }
+                OutlinedButton(onClick = { blueprintOpen = true }, modifier = Modifier.fillMaxWidth()) {
+                    Text("🎯 انتخاب خودکار از بانک")
+                }
+                if (blueprintOpen) {
+                    BankBlueprintDialog(
+                        items = state.bankQuestions,
+                        categories = state.bankCategories,
+                        onDismiss = { blueprintOpen = false },
+                        onAdd = { ids -> ids.forEach { if (it !in selected) selected.add(it) }; blueprintOpen = false }
+                    )
+                }
                 Row(
                     Modifier.fillMaxWidth().padding(vertical = 6.dp),
                     horizontalArrangement = Arrangement.spacedBy(5.dp)
@@ -1173,11 +1216,11 @@ private fun BuilderQuestionBankDialog(
                         onClick = { viewModel.selectBankCategory(null) },
                         label = { Text("همه") }
                     )
-                    state.bankCategories.take(4).forEach { category ->
+                    state.bankCategories.sortedBy { BankPicker.categoryPath(pickerCats, it.id.toString()) }.take(4).forEach { category ->
                         FilterChip(
                             selected = state.selectedBankCategory == category.id,
                             onClick = { viewModel.selectBankCategory(category.id) },
-                            label = { Text(category.name) }
+                            label = { Text("› ".repeat((BankPicker.depthOf(pickerCats, category.id.toString()) - 1).coerceAtLeast(0)) + category.name) }
                         )
                     }
                 }

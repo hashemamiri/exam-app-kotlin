@@ -23,7 +23,7 @@ class V142_SitePhase5Test {
         assertTrue("native_teacher_share_class_v137" in js && "native_teacher_share_student_v136" in js)
         assertTrue("native_school_invite_preview_v39" in js && "native_join_school_v39" in js && "/^[A-Z0-9]{6}$/" in js)
         assertTrue("native_teacher_manager_requests_v41" in js && "native_teacher_decide_manager_request_v41" in js)
-        assertTrue("native_bank_delete_question_v1" in js && "native_bank_set_categories_v1" in js && "native_bank_category_add_v1" in js && "native_bank_category_delete_v1" in js && "p_delete_questions" in js)
+        assertTrue("native_bank_delete_question_v1" in js && "native_bank_set_categories_v1" in js && "native_bank_category_add_v358" in js && "native_bank_category_delete_v1" in js && "p_delete_questions" in js)
     }
 
     @Test

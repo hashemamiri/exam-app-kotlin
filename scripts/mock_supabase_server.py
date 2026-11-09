@@ -2184,10 +2184,96 @@ def make_handler(state: MockSupabaseState):
                 state.bank_items = []
 
             if fn == "native_bank_category_add_v1":
-                cid = len(state.bank_categories) + 1
+                cid = max([c["id"] for c in state.bank_categories] or [0]) + 1
                 nm = str(params.get("p_name") or "").strip()
-                state.bank_categories.append({"id": cid, "name": nm})
+                state.bank_categories.append({"id": cid, "name": nm, "parent_id": None})
                 self._send_json(200, {"ok": True, "id": cid})
+                return
+
+            # V358 — درختوارهٔ دسته‌ها
+            if fn == "native_bank_category_add_v358":
+                nm = str(params.get("p_name") or "").strip()
+                par = params.get("p_parent")
+                par = int(par) if par not in (None, "", 0) else None
+                if not nm:
+                    self._send_json(400, {"message": "نام دسته را وارد کنید."})
+                    return
+                if par is not None and not any(c["id"] == par for c in state.bank_categories):
+                    self._send_json(400, {"message": "دستهٔ والد پیدا نشد یا متعلق به شما نیست."})
+                    return
+                def _depth(node):
+                    d, cur, guard = 1, node, 0
+                    while cur is not None and guard < 10:
+                        guard += 1
+                        nxt = next((c for c in state.bank_categories if c["id"] == cur), None)
+                        if nxt is None:
+                            break
+                        cur = nxt.get("parent_id")
+                        if cur is not None:
+                            d += 1
+                    return d
+                if par is not None and _depth(par) + 1 > 3:
+                    self._send_json(400, {"message": "ژرفای درخت حداکثر سه سطح است: درس، فصل، مبحث."})
+                    return
+                if any(c.get("parent_id") == par and c["name"].strip().lower() == nm.lower() for c in state.bank_categories):
+                    self._send_json(400, {"message": "در این سطح، دسته‌ای با همین نام هست."})
+                    return
+                cid = max([c["id"] for c in state.bank_categories] or [0]) + 1
+                state.bank_categories.append({"id": cid, "name": nm, "parent_id": par})
+                self._send_json(200, {"ok": True, "id": cid, "name": nm, "parent_id": par})
+                return
+
+            if fn == "native_bank_category_move_v358":
+                cid = int(params.get("p_id") or 0)
+                par = params.get("p_parent")
+                par = int(par) if par not in (None, "", 0) else None
+                node = next((c for c in state.bank_categories if c["id"] == cid), None)
+                if node is None:
+                    self._send_json(400, {"message": "دسته پیدا نشد یا متعلق به شما نیست."})
+                    return
+                if par == cid:
+                    self._send_json(400, {"message": "یک دسته نمی‌تواند والد خودش باشد."})
+                    return
+                cur, guard = par, 0
+                while cur is not None and guard < 10:
+                    guard += 1
+                    if cur == cid:
+                        self._send_json(400, {"message": "این جابه‌جایی حلقه می‌سازد."})
+                        return
+                    nxt = next((c for c in state.bank_categories if c["id"] == cur), None)
+                    cur = nxt.get("parent_id") if nxt else None
+                if any(c["id"] != cid and c.get("parent_id") == par and c["name"].strip().lower() == node["name"].strip().lower()
+                       for c in state.bank_categories):
+                    self._send_json(400, {"message": "در مقصد، دسته‌ای با همین نام هست. ابتدا نام را عوض کنید."})
+                    return
+                node["parent_id"] = par
+                self._send_json(200, {"ok": True, "id": cid, "parent_id": par})
+                return
+
+            if fn == "native_bank_tree_v358":
+                kids = {}
+                for c in state.bank_categories:
+                    kids.setdefault(c.get("parent_id"), []).append(c)
+                out = []
+                def walk(node, path, depth):
+                    p = (path + " / " + node["name"]) if path else node["name"]
+                    sub, stack = set(), [node["id"]]
+                    while stack:
+                        cur = stack.pop()
+                        if cur in sub:
+                            continue
+                        sub.add(cur)
+                        stack.extend(k["id"] for k in kids.get(cur, []))
+                    out.append({"id": node["id"], "name": node["name"], "parent_id": node.get("parent_id"),
+                                "depth": depth, "path": p,
+                                "count": sum(1 for it in state.bank_items if node["id"] in (it.get("cat_ids") or [])),
+                                "subtree_count": sum(1 for it in state.bank_items
+                                                     if sub & set(it.get("cat_ids") or []))})
+                    for k in sorted(kids.get(node["id"], []), key=lambda x: x["name"]):
+                        walk(k, p, depth + 1)
+                for r in sorted(kids.get(None, []), key=lambda x: x["name"]):
+                    walk(r, "", 1)
+                self._send_json(200, out)
                 return
 
             if fn == "native_bank_category_delete_v1":
@@ -2257,12 +2343,16 @@ def make_handler(state: MockSupabaseState):
                     {
                         "id": c["id"],
                         "name": c["name"],
+                        "parent_id": c.get("parent_id"),
                         "count": sum(1 for it in state.bank_items if c["id"] in (it.get("cat_ids") or [])),
                     }
                     for c in state.bank_categories
                 ]
                 items_out = [
-                    {**copy.deepcopy(it), "cat_names": [cmap[cid] for cid in (it.get("cat_ids") or []) if cid in cmap]}
+                    {**copy.deepcopy(it),
+                     "difficulty": int((it.get("question") or {}).get("difficulty") or 0),
+                     "topic": str((it.get("question") or {}).get("topic") or ""),
+                     "cat_names": [cmap[cid] for cid in (it.get("cat_ids") or []) if cid in cmap]}
                     for it in state.bank_items
                 ]
                 self._send_json(200, {"ok": True, "items": items_out, "questions": items_out, "categories": cats_out})
