@@ -47,6 +47,20 @@ def main() -> int:
                    f"بیش از سقف {MAX_RETENTION} روز")
     ok("آرتیفکتی پیدا شد", found > 0, found)
 
+    print("\n=== پر شدن سهمیه هیچ job ای را متوقف نکند ===")
+    # V360.8 — لاگ 0.txt: گام «بایگانی گزارشهای Lint و تست» در android.yml
+    # بدون continue-on-error بود و با «Artifact storage quota has been hit»
+    # ساخت APK را متوقف کرد. site.yml از قبل درست بود.
+    for p in sorted(wf.glob("*.yml")):
+        text = p.read_text(encoding="utf-8")
+        for part in re.split(r"(?=^      - name: )", text, flags=re.M):
+            if "uses: actions/upload-artifact@" not in part:
+                continue
+            nm = re.search(r"- name: (.+)", part)
+            label = nm.group(1).strip() if nm else "?"
+            ok(f"{p.name}: {label[:44]} غیرمسدودکننده است",
+               "continue-on-error: true" in part)
+
     print("\n=== گالری HTML تصاویر را تکرار نکند ===")
     e2e = (ROOT / "scripts" / "web_ui_e2e.py").read_text(encoding="utf-8")
     ok("جاسازی base64 تصویر حذف شده", "base64.b64encode(shot_path" not in e2e)

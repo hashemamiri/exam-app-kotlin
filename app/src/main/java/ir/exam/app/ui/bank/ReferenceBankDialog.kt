@@ -362,6 +362,15 @@ private fun ReferenceBankPreview(
                     Text("گزینهها", style = MaterialTheme.typography.labelMedium)
                     question.options.forEachIndexed { i, o ->
                         Text("${i + 1}) $o", style = MaterialTheme.typography.bodySmall)
+                        // V360.8 — تصویر گزینه کنار همان گزینه، نه زیر متن سؤال.
+                        question.optionImages.getOrNull(i)?.let { url ->
+                            AsyncImage(
+                                model = url,
+                                contentDescription = "تصویر گزینه ${i + 1}",
+                                modifier = Modifier.fillMaxWidth().heightIn(max = 180.dp).padding(vertical = 4.dp),
+                                contentScale = ContentScale.Fit
+                            )
+                        }
                     }
                 }
                 if (includeAnswer) {

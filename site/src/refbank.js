@@ -85,8 +85,13 @@
     return out;
   }
   function splitImages(p) {
-    var all = p.image_urls || [], ans = imgUrls(p.answer_html || '').filter(function (u) { return all.indexOf(u) >= 0; });
-    return {question: all.filter(function (u) { return ans.indexOf(u) < 0; }), answer: ans};
+    var all = p.image_urls || [];
+    /* V360.8 — صورت سؤال فقط تصویرهای q_html را میگیرد؛ تصویر گزینهها
+       جداگانه از option_images خوانده میشود و هرگز وارد متن سؤال نمیشود. */
+    var q = imgUrls(p.q_html || '').filter(function (u) { return all.indexOf(u) >= 0; });
+    var ans = imgUrls(p.answer_html || '').filter(function (u) { return all.indexOf(u) >= 0; });
+    var opts = (p.option_images || []).map(function (u) { return u || null; });
+    return {question: q, answer: ans, options: opts};
   }
   function plain(html) {
     return String(html || '').replace(/<[^>]*>/g, ' ').replace(/&zwnj;/g, ' ').replace(/&nbsp;/g, ' ')
@@ -98,11 +103,15 @@
       type: p.type || 'essay', text: p.text || '', grade: p.grade || 0,
       subject: p.subject || '', topic: p.topic || '', difficulty: p.difficulty || 0,
       score: 1, options: p.options || [], correctIndex: p.correct_index == null ? null : p.correct_index,
-      expectedText: '', images: sp.question.slice(0, 8),
+      expectedText: '', images: sp.question.slice(0, 8), optionImages: [],
       answerExplanation: inc ? (plain(p.answer_html) || p.answer_text || '') : '',
       answerImages: inc ? sp.answer.slice(0, 8) : []
     };
     if (q.type === 'multiple' && (!q.options || q.options.length < 2)) q.type = 'essay';
+    /* V360.8 — تصویر هر گزینه دقیقاً همتراز با همان گزینه. */
+    q.optionImages = q.type === 'multiple'
+      ? q.options.map(function (_, i) { return sp.options[i] || null; })
+      : [];
     if (q.type === 'fill') q.expectedText = p.answer_text || '';
     if (q.type === 'truefalse') q.expectedText = /غلط|نادرست/.test(p.answer_text || '') ? 'false' : 'true';
     return q;
@@ -248,9 +257,14 @@
         var qv = el('div', {style: 'margin:10px 0;line-height:1.9'}); qv.innerHTML = p.q_html || '';
         pc.appendChild(qv);
         if ((p.options || []).length) {
-          pc.appendChild(el('div', {style: 'margin:8px 0', html: p.options.map(function (o, i) {
-            return '<div>' + fa(i + 1) + ') ' + esc(o) + '</div>';
-          }).join('')}));
+          var obox = el('div', {style: 'margin:8px 0'});
+          (p.options || []).forEach(function (o, i) {
+            obox.appendChild(el('div', {text: fa(i + 1) + ') ' + String(o || '')}));
+            var ou = (p.option_images || [])[i];
+            if (ou) obox.appendChild(el('img', {src: ou, alt: 'تصویر گزینه', loading: 'lazy',
+              style: 'max-width:100%;max-height:180px;border-radius:8px;margin:4px 0'}));
+          });
+          pc.appendChild(obox);
         }
         if (st.includeAnswer && (p.answer_html || p.answer_text)) {
           var det = el('details', {}, [el('summary', {text: 'پاسخ / راهنما'})]);

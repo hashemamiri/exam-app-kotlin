@@ -197,13 +197,17 @@ data class ReferenceBankQuestion(
     val options: List<String> = emptyList(),
     @SerialName("correct_index") val correctIndex: Int? = null,
     @SerialName("answer_text") val answerText: String = "",
-    @SerialName("image_urls") val imageUrls: List<String> = emptyList()
+    @SerialName("image_urls") val imageUrls: List<String> = emptyList(),
+    /** V360.8 — تصویر هر گزینه، همتراز با options؛ null یعنی بدون تصویر. */
+    @SerialName("option_images") val optionImages: List<String?> = emptyList()
 ) {
+    /** فقط تصویرهای صورت سؤال؛ تصویر گزینهها و پاسخ هرگز اینجا نمیآیند. */
     val questionImageUrls: List<String>
-        get() = ReferenceBankMedia.splitImages(qHtml, answerHtml, imageUrls).first
+        get() = ReferenceBankMedia.imageUrlsFromHtml(qHtml).filter { it in imageUrls }
 
+    /** فقط تصویرهای پاسخ. */
     val answerImageUrls: List<String>
-        get() = ReferenceBankMedia.splitImages(qHtml, answerHtml, imageUrls).second
+        get() = ReferenceBankMedia.imageUrlsFromHtml(answerHtml).filter { it in imageUrls }
 
     val answerExplanation: String
         get() = ReferenceBankMedia.plainText(answerHtml).ifBlank { answerText }

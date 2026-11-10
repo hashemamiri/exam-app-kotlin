@@ -1,6 +1,5 @@
 package ir.exam.app.ui.bank
 
-import ir.exam.app.domain.bank.ReferenceBankMedia
 import ir.exam.app.domain.bank.ReferenceBankQuestion
 import ir.exam.app.ui.builder.BankQuestionOption
 import ir.exam.app.ui.builder.MediaDraft
@@ -27,9 +26,11 @@ internal fun ReferenceBankQuestion.toBankQuestionOption(
         else -> QuestionType.ESSAY
     }
     val safeType = if (kind == QuestionType.MULTIPLE_CHOICE && options.size < 2) QuestionType.ESSAY else kind
-    val split = ReferenceBankMedia.splitImages(qHtml, answerHtml, imageUrls)
-    val qImages = split.first.take(8)
-    val aImages = split.second.take(8)
+    // V360.8 — تصویر گزینهها فقط به همان گزینه وصل میشود، نه به متن سؤال.
+    val qImages = questionImageUrls.take(8)
+    val aImages = answerImageUrls.take(8)
+    val optionImagesForDraft = if (safeType == QuestionType.MULTIPLE_CHOICE)
+        options.indices.map { index -> optionImages.getOrNull(index) } else emptyList()
     val expected = when (safeType) {
         QuestionType.FILL_BLANK -> answerText
         QuestionType.TRUE_FALSE -> when {
@@ -49,6 +50,7 @@ internal fun ReferenceBankQuestion.toBankQuestionOption(
         correctIndex = correctIndex,
         expectedText = expected,
         images = qImages.map { MediaDraft(uri = it) },
+        optionImages = optionImagesForDraft,
         answerExplanation = if (includeAnswer) answerExplanation else "",
         answerImages = if (includeAnswer) aImages else emptyList(),
         grade = grade,

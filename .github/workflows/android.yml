@@ -87,7 +87,7 @@ jobs:
                    check_message_numbers check_test_version_pins \
                    check_site_chunk_ref check_v357_sql_sync \
                    check_actions_storage check_reference_bank_bundle \
-                   check_compose_scope; do
+                   check_reference_bank_option_images check_compose_scope; do
             echo "::group::$g"
             python3 "scripts/$g.py"
             echo "::endgroup::"
@@ -185,6 +185,8 @@ jobs:
           done
       - name: بایگانی گزارش‌های Lint و تست
         if: always()
+        # V360.8 — پر شدن سهمیهٔ آرتیفکت فقط هشدار است و نباید job را متوقف کند.
+        continue-on-error: true
         uses: actions/upload-artifact@v4
         with:
           name: reports-${{ github.run_number }}

@@ -50,6 +50,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import coil.compose.AsyncImage
 import ir.exam.app.ui.app.NeumorphicPanel
 import ir.exam.app.domain.bank.BankPicker
 import ir.exam.app.ui.builder.BankCategoryOption
@@ -624,6 +625,15 @@ internal fun BankQuestionContent(q: QuestionDraft) {
                         color = if (correct) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     NativeMathText(option.ifBlank { "—" }, modifier = Modifier.weight(1f))
+                }
+                // V360.8 — تصویر اختصاصی همین گزینه.
+                q.optionImages.getOrNull(index)?.let { url ->
+                    AsyncImage(
+                        model = url,
+                        contentDescription = "تصویر گزینه",
+                        modifier = Modifier.fillMaxWidth().heightIn(max = 180.dp).padding(vertical = 4.dp),
+                        contentScale = androidx.compose.ui.layout.ContentScale.Fit
+                    )
                 }
             }
             QuestionType.MATCHING -> {

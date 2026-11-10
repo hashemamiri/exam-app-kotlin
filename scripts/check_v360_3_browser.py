@@ -24,6 +24,8 @@ import web_ui_e2e as e2e  # noqa: E402
 BASE = "https://azmoon-media.s3.ir-thr-at1.arvanstorage.ir/reference-bank"
 Q_IMG = BASE + "/images/q.webp"
 A_IMG = BASE + "/images/a.webp"
+O1_IMG = BASE + "/images/o1.webp"
+O2_IMG = BASE + "/images/o2.webp"
 
 fails = []
 
@@ -41,7 +43,7 @@ def catalog():
             "type_fa": "تستی", "type": "multiple", "difficulty": diff,
             "difficulty_fa": ["تعییننشده", "ساده", "متوسط", "دشوار", "خیلی دشوار"][diff],
             "score": 1, "text": qtext, "has_image": True, "image_count": 2,
-            "image_urls": [Q_IMG, A_IMG]
+            "image_urls": [Q_IMG, O1_IMG, O2_IMG, A_IMG]
         }
     return [row(1, "ریاضی", "فصل یک", 1, "پرسش ریاضی یک"),
             row(2, "فارسی", "فصل دو", 2, "پرسش فارسی دو")]
@@ -54,7 +56,8 @@ def question(i, subject, chapter):
         "text": "پرسش " + str(i), "q_html": "<div>صورت سؤال <img src=\"" + Q_IMG + "\"></div>",
         "answer_html": "<div>پاسخ درست <img src=\"" + A_IMG + "\"></div>",
         "options": ["الف", "ب", "ج", "د"], "correct_index": 1,
-        "answer_text": "گزینهٔ ب درست است", "image_urls": [Q_IMG, A_IMG]
+        "option_images": [O1_IMG, O2_IMG, None, None],
+        "answer_text": "گزینهٔ ب درست است", "image_urls": [Q_IMG, O1_IMG, O2_IMG, A_IMG]
     }
 
 
@@ -169,6 +172,7 @@ def main():
                     var enc = window.SiteBuilder.encodeQuestions([q]);
                     return {
                         images: p.images, answerImages: p.answerImages,
+                        optionImages: p.optionImages,
                         explanation: p.answerExplanation, expected: p.expectedText,
                         offAnswerImages: off.answerImages, offExplanation: off.answerExplanation,
                         pub: enc.publicQuestions[0] || {}, key: enc.answerKey[0] || {}
@@ -176,6 +180,10 @@ def main():
                 }""" % (json.dumps(qs["1"], ensure_ascii=False), json.dumps(qs["1"], ensure_ascii=False)))
                 ok("تصویر سؤال فقط تصویر صورت است", sep["images"] == [Q_IMG], sep["images"])
                 ok("تصویر پاسخ وارد سؤال نشد", A_IMG not in sep["images"], sep["images"])
+                ok("تصویر گزینهها وارد متن سؤال نشد",
+                   O1_IMG not in sep["images"] and O2_IMG not in sep["images"], sep["images"])
+                ok("تصویر گزینهها کنار همان گزینههاست",
+                   sep["optionImages"] == [O1_IMG, O2_IMG, None, None], sep["optionImages"])
                 ok("تصویر پاسخ در بخش پاسخ است", sep["answerImages"] == [A_IMG], sep["answerImages"])
                 ok("متن پاسخ در بخش پاسخ است", "پاسخ درست" in sep["explanation"], sep["explanation"])
                 ok("متن پاسخ وارد پاسخ قابل قبول نشد", sep["expected"] == "", sep["expected"])

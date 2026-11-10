@@ -64,6 +64,8 @@ jobs:
             echo "پروفایل تغییری نکرد؛ کامیتی انجام نمی‌شود."
           fi
       - name: نگه‌داری پروفایل به‌عنوان Artifact
+        # V360.8 — پر شدن سهمیهٔ آرتیفکت فقط هشدار است و نباید job را متوقف کند.
+        continue-on-error: true
         uses: actions/upload-artifact@v4
         with:
           name: baseline-profile

@@ -18,6 +18,8 @@
   python3 scripts/upload_reference_bank.py --dir /مسیر/publish
   python3 scripts/upload_reference_bank.py --dir /مسیر/publish --apply
   python3 scripts/upload_reference_bank.py --dir /مسیر/publish --env-file ~/.exam_s3 --apply
+  python3 scripts/upload_reference_bank.py --dir /مسیر/publish --only questions/g1.json \
+      --env-file ~/.exam_s3 --apply
 
 بدون --apply فقط گزارش میدهد و هیچ چیز آپلود نمیشود.
 """
@@ -137,6 +139,7 @@ def main():
     ap.add_argument("--apply", action="store_true")
     ap.add_argument("--env-file")
     ap.add_argument("--base", help="آدرس عمومی رسانه، فقط برای مانیفست خروجی")
+    ap.add_argument("--only", help="فقط یک فایل مشخص برحسب مسیر نسبی به publish بارگذاری شود")
     args = ap.parse_args()
     load_env_file(args.env_file)
     c = cfg()
@@ -145,6 +148,13 @@ def main():
         print("REFERENCE_BANK_UPLOAD: FAIL — پوشه پیدا نشد:", root)
         return 1
     files = sorted(p for p in root.rglob("*") if p.is_file() and p.name != "upload_manifest.json")
+    if args.only:
+        wanted = args.only.lstrip("/")
+        files = [p for p in files if p.relative_to(root).as_posix() == wanted]
+        if not files:
+            print("REFERENCE_BANK_UPLOAD: FAIL — فایل پیدا نشد:", wanted)
+            return 1
+        print("فقط یک فایل:", wanted)
     if not files:
         print("REFERENCE_BANK_UPLOAD: FAIL — پوشه خالی است")
         return 1

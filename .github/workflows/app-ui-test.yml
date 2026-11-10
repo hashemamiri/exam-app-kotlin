@@ -176,6 +176,8 @@ jobs:
           exit $RC
       - name: بارگذاری گالری بصری و تصاویر شبیه‌ساز اندروید
         if: always()
+        # V360.8 — پر شدن سهمیهٔ آرتیفکت فقط هشدار است و نباید job را متوقف کند.
+        continue-on-error: true
         uses: actions/upload-artifact@v4
         with:
           name: android-visual-ui-report-${{ github.ref_name }}

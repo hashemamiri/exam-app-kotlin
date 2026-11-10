@@ -12,6 +12,8 @@
   • سطح چهارم دشواری «خیلی دشوار» اضافه میشود.
   • هیچ فیلد منبع، مجوز یا ارجاع حقوقی نگهداری نمیشود.
   • محتوای سنگین و تصویرها فقط برای ذخیرهٔ شیء آماده میشوند.
+  • V360.8 — تصویر هر گزینهٔ تستی جداگانه به همان گزینه وصل میشود،
+    نه به متن سؤال.
 
 استفاده:
   python3 scripts/review_reference_bank.py \
@@ -98,6 +100,18 @@ def load_source(path):
 def image_refs(blob):
     return sorted(set(re.findall(r'data-fig=["\\]*([0-9a-fA-F-]{36})["\\]*', json.dumps(blob, ensure_ascii=False))))
 
+def image_urls_in_order(html, fig_file, base):
+    """V360.8 — تصویرها به ترتیب قرارگرفتن در HTML، بدون تکرار."""
+    ids = re.findall(r'data-fig=["\\]*([0-9a-fA-F-]{36})["\\]*',
+                     json.dumps(html, ensure_ascii=False))
+    out = []
+    for key in ids:
+        if key in fig_file:
+            url = base + "/images/" + fig_file[key]
+            if url not in out:
+                out.append(url)
+    return out
+
 
 def keyword_flag(text, subject):
     s = norm(text)
@@ -164,7 +178,8 @@ def main():
     # --- بازبینی تکبهتک ---------------------------------------------------
     catalog, payloads, report, corrections = [], {}, [], []
     counts = {"total": len(data), "dropped": 0, "type_mapped": 0,
-              "subject_fixed": 0, "ambiguous": 0, "keyword_flagged": 0}
+              "subject_fixed": 0, "ambiguous": 0, "keyword_flagged": 0,
+              "option_images": 0, "option_image_rows": 0}
 
     for d in data:
         qid = int(d["id"])
@@ -225,13 +240,19 @@ def main():
         q_html = rewrite_html(d.get("q", ""))
         a_html = rewrite_html(d.get("a", ""))
         choices = d.get("ch", []) or []
-        options_text, correct_index = [], None
+        options_text, option_images, correct_index = [], [], None
         for i, c in enumerate(choices):
             if not isinstance(c, list) or len(c) < 2:
                 continue
             options_text.append(plain(c[1]))
+            # V360.8 — تصویر همین گزینه، به ترتیب HTML؛ هیچ تصویری به متن سؤال نمیرود.
+            imgs = image_urls_in_order(c[1], fig_file, base)
+            option_images.append(imgs[0] if imgs else None)
             if len(c) > 2 and c[2] is True and correct_index is None:
                 correct_index = i
+        n_option_images = sum(1 for u in option_images if u)
+        counts["option_images"] += n_option_images
+        counts["option_image_rows"] += 1 if n_option_images else 0
         blob = {"q": d.get("q", ""), "a": d.get("a", ""), "ch": choices}
         image_ids = image_refs(blob)
         image_urls = [base + "/images/" + fig_file[k] for k in image_ids if k in fig_file]
@@ -255,6 +276,7 @@ def main():
             "text": d.get("s", ""),
             "q_html": q_html, "answer_html": a_html,
             "options": options_text, "correct_index": correct_index,
+            "option_images": option_images,
             "answer_text": plain(d.get("a", "")),
             "image_urls": image_urls,
         }
