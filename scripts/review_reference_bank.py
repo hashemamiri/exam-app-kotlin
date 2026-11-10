@@ -17,7 +17,7 @@
   python3 scripts/review_reference_bank.py \
       --source samples/bank-soal-paye-aval/bank-soal-paye-aval-matni.html \
       --out samples/bank-soal-paye-aval \
-      --base https://media.onlineexam.ir/reference-bank
+      --base https://azmoon-media.s3.ir-thr-at1.arvanstorage.ir/reference-bank
 
 هیچ کلید، رمز یا توکنی در این فایل نیست.
 """
@@ -112,7 +112,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--source", required=True)
     ap.add_argument("--out", required=True)
-    ap.add_argument("--base", default="https://media.onlineexam.ir/reference-bank")
+    ap.add_argument("--base", default="https://azmoon-media.s3.ir-thr-at1.arvanstorage.ir/reference-bank")
     args = ap.parse_args()
     base = args.base.rstrip("/")
     out = Path(args.out)

@@ -5,14 +5,14 @@
  * متن کامل سؤال و تصویرها تنها هنگام پیشنمایش یا افزودن خوانده میشوند.
  *
  * آدرس پایه در window.__REF_BANK_BASE__ است و با همان S3سازگار فعلی
- * (media.onlineexam.ir/reference-bank) تنظیم میشود.
+ * (azmoon-media.s3.ir-thr-at1.arvanstorage.ir/reference-bank) تنظیم میشود.
  */
 (function (root) {
   'use strict';
   var S = root.ExamSite;
   if (!S) return;
   var el = S.el, fa = S.fa, esc = S.esc, toast = S.toast;
-  var BASE = String(root.__REF_BANK_BASE__ || 'https://media.onlineexam.ir/reference-bank').replace(/\/+$/, '');
+  var BASE = String(root.__REF_BANK_BASE__ || 'https://azmoon-media.s3.ir-thr-at1.arvanstorage.ir/reference-bank').replace(/\/+$/, '');
   var BP = root.BankPicker;
   var DIFF = (BP && BP.DIFFICULTY_LABELS) || ['تعییننشده', 'ساده', 'متوسط', 'دشوار', 'خیلی دشوار'];
   var TRACKS = ['', 'عمومی', 'ریاضی فیزیک', 'علوم تجربی', 'انسانی', 'هنرستان'];

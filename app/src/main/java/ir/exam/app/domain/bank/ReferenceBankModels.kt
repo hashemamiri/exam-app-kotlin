@@ -16,7 +16,7 @@ import kotlinx.serialization.Serializable
  *  • هیچ فیلد منبع، مجوز یا ارجاع حقوقی نگهداری نمیشود.
  */
 object ReferenceBankContract {
-    const val BASE = "https://media.onlineexam.ir/reference-bank"
+    const val BASE = "https://azmoon-media.s3.ir-thr-at1.arvanstorage.ir/reference-bank"
     const val MIN_GRADE = 1
     const val MAX_GRADE = 12
     const val PAGE_SIZE = 25

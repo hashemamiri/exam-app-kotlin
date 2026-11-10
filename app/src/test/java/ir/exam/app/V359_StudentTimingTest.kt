@@ -313,7 +313,7 @@ class V359_StudentTimingTest {
     @Test
     fun versionAndChangelogAgree() {
         val version = src("text/APP_VERSION.txt").trim()
-        assertEquals("1.03.83", version)
+        assertEquals("1.03.84", version)
         val changelog = src("text/CHANGELOG_FA.txt")
         val first = changelog.lines().first()
         assertTrue("تیتر باید V360 باشد", first.startsWith("V360"))

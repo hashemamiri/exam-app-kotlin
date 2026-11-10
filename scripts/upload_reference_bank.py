@@ -12,7 +12,7 @@
   S3_SECRET_ACCESS_KEY  یا R2_SECRET_ACCESS_KEY
   S3_BUCKET             پیشفرض azmoon-media
   S3_REGION             پیشفرض auto
-  S3_PUBLIC_BASE        مثلا https://media.onlineexam.ir
+  S3_PUBLIC_BASE        مثلا https://azmoon-media.s3.ir-thr-at1.arvanstorage.ir
 
 استفاده:
   python3 scripts/upload_reference_bank.py --dir /مسیر/publish

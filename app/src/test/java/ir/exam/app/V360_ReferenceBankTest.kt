@@ -108,7 +108,7 @@ class V360_ReferenceBankTest {
         val tpl = src("site/src/template.html")
         val idx = src("site/index.html")
         assertTrue(tpl.contains("__REF_BANK_BASE__"))
-        assertTrue(idx.contains("media.onlineexam.ir/reference-bank"))
+        assertTrue(idx.contains("https://azmoon-media.s3.ir-thr-at1.arvanstorage.ir/reference-bank"))
         val ref = src("site/src/refbank.js")
         assertTrue(ref.contains("__REF_BANK_BASE__"))
         assertTrue(ref.contains("loading: 'lazy'"))
@@ -131,7 +131,7 @@ class V360_ReferenceBankTest {
         assertTrue(vm.contains("referenceOpen") && vm.contains("loadReferenceCatalog"))
         assertTrue(screen.contains("ReferenceBankDialog"))
         assertTrue(mapper.contains("toBankQuestionOption"))
-        assertTrue(models.contains("BASE = \"https://media.onlineexam.ir/reference-bank\""))
+        assertTrue(models.contains("BASE = \"https://azmoon-media.s3.ir-thr-at1.arvanstorage.ir/reference-bank\""))
     }
 
     @Test
@@ -157,7 +157,7 @@ class V360_ReferenceBankTest {
     @Test
     fun versionAndChangelogAgreeWithV360() {
         val version = src("text/APP_VERSION.txt").trim()
-        assertEquals("1.03.83", version)
+        assertEquals("1.03.84", version)
         val first = src("text/CHANGELOG_FA.txt").lines().first()
         assertTrue(first.startsWith("V360"))
         assertTrue(first.contains("اپ $version"))
