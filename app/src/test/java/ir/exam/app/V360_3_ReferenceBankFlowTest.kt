@@ -176,6 +176,17 @@ class V360_3_ReferenceBankFlowTest {
     }
 
     @Test
+    fun versionBumpStillTriggersAppCi() {
+        val yml = src(".github/workflows/android.yml")
+        assertTrue("workflow_dispatch:" in yml)
+        assertTrue("'!site/**'" in yml)
+        assertFalse("!text/APP_VERSION.txt" in yml)
+        val version = src("text/APP_VERSION.txt").trim()
+        assertTrue(version.isNotBlank())
+        assertTrue(version.split(".").size == 3)
+    }
+
+    @Test
     fun composeScopeGuardProtectsTheShell() {
         val app = src("app/src/main/java/ir/exam/app/ui/app/ExamApp.kt")
         assertTrue("private fun AuthenticatedShell(" in app)
