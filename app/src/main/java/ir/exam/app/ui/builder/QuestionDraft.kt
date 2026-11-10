@@ -330,6 +330,13 @@ data class QuestionDraft(
     /** V58.0 — اجازهٔ رسم نمودار پاسخ توسط دانش‌آموز. */
     val allowAnswerGraph: Boolean = false,
     val images: List<MediaDraft> = emptyList(),
+    /**
+     * V360.3 — متن پاسخ/راهنما و تصویرهای پاسخ فقط در «بخش پاسخ» (کلید معلم)
+     * نگهداری میشوند؛ هرگز وارد متن سؤال یا images سؤال نمیشوند. هر دو
+     * در کلید پاسخ سرور ذخیره و از دادهٔ عمومی سؤال حذف میشوند.
+     */
+    val answerExplanation: String = "",
+    val answerImages: List<String> = emptyList(),
     /** V135 — فایل صوتی سؤال (آزمون آنلاین): file:// محلی پیش از ذخیره یا https:// پس از آپلود. */
     val audioUri: String? = null,
     /** V135 — حجم خروجی فشرده‌شده (بایت) — مبنای هزینه (تا ۱/۲/۳ مگابایت). */

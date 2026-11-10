@@ -841,6 +841,17 @@ class ExamBuilderViewModel(
         return changed
     }
 
+    /** V360.3 — افزودن یک سؤال بانک مرجع به آزمون جاری (گروهی هم از همین مسیر میآید). */
+    fun addReferenceQuestion(question: QuestionDraft) {
+        _state.update {
+            it.copy(
+                questions = it.questions + question
+                    .copy(id = UUID.randomUUID().toString())
+                    .ensureEditorIds()
+            )
+        }
+    }
+
     fun addFromBank(id: Long) {
         val item = state.value.bankQuestions.firstOrNull { it.id == id } ?: return
         _state.update {

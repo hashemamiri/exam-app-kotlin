@@ -229,6 +229,8 @@
       /* V225 — عمل پنجم فقط دسکتاپ: آزمون چاپی جدید (همان دکمهٔ «آزمون چاپی جدید» بخش چاپ) */
     ];
     if (opts.withPrint && !mgr) items.push(['آزمون چاپی جدید', 'ساخت برگهٔ چاپی', 'print', function () { S.go('builder', {mode: 'print', fresh: true}); }]);
+    /* V360.3 — بانک مرجع هم از دکمهٔ + در دسترس است (فیلتر مرحلهای + افزودن گروهی). */
+    if (!mgr) items.push(['بانک مرجع', 'فیلتر و افزودن گروهی سؤال', 'filter', function () { ui.addOpen = false; paint(); if (window.RefBank) window.RefBank.open(); else toast('بانک مرجع بارگذاری نشده است.', 'err'); }]);
     return items;
   }
   function quickAdd() {
@@ -236,17 +238,18 @@
     var items = quickAddItems();
     /* V153 — چیدمان ضربدری اپ: پنل فرورفته، ۴ کارت ۸۸dp در چهار گوشه، خط‌چین از مرکز، دکمهٔ ✕ گرادیانی وسط */
     var close = function () { ui.addOpen = false; paint(); };
-    var pos = [[1, -1], [-1, -1], [1, 1], [-1, 1]]; /* x: راست/چپ (RTL: مثبت = راست)، y: بالا/پایین */
+    var pos = [[1, -1], [-1, -1], [1, 1], [-1, 1], [0, -1.7]]; /* V360.3 — جای پنجم: بالا وسط */
     var xs = [];
     var stage = el('div', {class: 'm-qa-stage'}, [
       el('div', {class: 'm-qa-panel neo pressed'}),
       el('svg', {class: 'm-qa-lines'}),
       el('button', {class: 'm-qa-x', 'aria-label': 'بستن افزودن سریع', onclick: close}, [ic('plus')])
     ].concat(items.map(function (it, i) {
-      var b = el('button', {class: 'm-qa-item', style: '--qx:' + (pos[i][0] * -1) + ';--qy:' + pos[i][1] + ';animation-delay:' + (i * 40) + 'ms', onclick: it[3]}, [ic(it[2], 'm-qa-ic'), el('span', {text: it[0]})]);
+      var pp = pos[i] || [0, 0];
+      var b = el('button', {class: 'm-qa-item', style: '--qx:' + (pp[0] * -1) + ';--qy:' + pp[1] + ';animation-delay:' + (i * 40) + 'ms', onclick: it[3]}, [ic(it[2], 'm-qa-ic'), el('span', {text: it[0]})]);
       xs.push(b); return b;
     })));
-    var svg = stage.querySelector('svg'); svg.setAttribute('viewBox', '-160 -165 320 330'); svg.innerHTML = pos.map(function (p) { return '<line x1="0" y1="0" x2="' + (p[0] * -108) + '" y2="' + (p[1] * 108) + '"/>'; }).join('');
+    var svg = stage.querySelector('svg'); svg.setAttribute('viewBox', '-160 -165 320 330'); svg.innerHTML = pos.slice(0, items.length).map(function (p) { return '<line x1="0" y1="0" x2="' + (p[0] * -108) + '" y2="' + (p[1] * 108) + '"/>'; }).join('');
     return el('div', {class: 'm-sheet-bg m-qa-bg', onclick: function (e) { if (e.target === e.currentTarget) close(); }}, [stage]);
   }
 

@@ -121,6 +121,7 @@ import androidx.compose.ui.unit.dp
 import kotlin.math.abs
 import ir.exam.app.domain.bank.BankPicker
 import ir.exam.app.ui.bank.toPickerItem
+import ir.exam.app.ui.bank.ReferenceBankHost
 import ir.exam.app.core.calendar.PersianDigits
 import ir.exam.app.core.figure.FigureCodec
 import ir.exam.app.core.figure.FigureSpec
@@ -171,6 +172,8 @@ fun ExamBuilderScreen(
     var preflightReport by remember { mutableStateOf<BuilderPreflightReport?>(null) }
     var radialMenuOpen by rememberSaveable { mutableStateOf(false) }
     var bankDialogOpen by rememberSaveable { mutableStateOf(false) }
+    // V360.3 — بانک مرجع مستقیماً از «آزمون جدید» باز میشود.
+    var referenceBankOpen by rememberSaveable { mutableStateOf(false) }
     var settingsExpanded by rememberSaveable { mutableStateOf(false) }
     // V86.7 — پنجرهٔ سربرگ فقط در مسیرِ چاپ باز می‌شود
     var showHeaderSettings by rememberSaveable { mutableStateOf(false) }
@@ -643,7 +646,22 @@ fun ExamBuilderScreen(
                 expandedQuestionId = viewModel.state.value.questions.lastOrNull()?.id
                 bankDialogOpen = false
                 scope.launch { scrollQuestionToHeader(questionIndex) }
-            }
+            },
+            onOpenReferenceBank = { bankDialogOpen = false; referenceBankOpen = true }
+        )
+    }
+
+    // V360.3 — پنجرهٔ فیلتر مرحلهای و افزودن گروهی، مستقیماً به آزمون جاری.
+    if (referenceBankOpen) {
+        ReferenceBankHost(
+            onAdd = { items ->
+                val questionIndex = state.questions.size
+                items.forEach { viewModel.addReferenceQuestion(it.question) }
+                expandedQuestionId = viewModel.state.value.questions.lastOrNull()?.id
+                referenceBankOpen = false
+                scope.launch { scrollQuestionToHeader(questionIndex) }
+            },
+            onDismiss = { referenceBankOpen = false }
         )
     }
 
@@ -1097,7 +1115,8 @@ private fun BuilderQuestionBankDialog(
     state: ExamBuilderState,
     viewModel: ExamBuilderViewModel,
     onDismiss: () -> Unit,
-    onAdd: (List<Long>) -> Unit
+    onAdd: (List<Long>) -> Unit,
+    onOpenReferenceBank: () -> Unit = {}
 ) {
     val query = state.bankQuery.trim().lowercase()
     // V308 / ۱۴ — فیلتر پایه و درس فقط در حالت ابتدایی
@@ -1151,6 +1170,10 @@ private fun BuilderQuestionBankDialog(
                     }
                 }
                 HorizontalDivider(Modifier.padding(vertical = 6.dp))
+                // V360.3 — همان پنجرهٔ فیلتر مرحلهای بانک مرجع از مسیر «آزمون جدید».
+                OutlinedButton(onClick = onOpenReferenceBank, modifier = Modifier.fillMaxWidth()) {
+                    Text("🏛 بانک مرجع (فیلتر و افزودن گروهی)")
+                }
                 // V306 / ۱۲ — بانک آمادهٔ ابتدایی فقط وقتی حالت ابتدایی آزمون روشن است
                 if (state.primaryMode) {
                     OutlinedButton(onClick = { primaryBankOpen = true }, modifier = Modifier.fillMaxWidth()) { Text("🏫 بانک آمادهٔ ابتدایی") }
@@ -1753,6 +1776,21 @@ private fun QuestionEditor(
             // V107 — «تصویر پاسخ دانش‌آموز» و «نمودار پاسخ دانش‌آموز» فقط در
             // آزمونِ آنلاین معنا دارند؛ در آزمونِ چاپی به‌جای آن‌ها «فضای پاسخ»
             // (تعداد سطر / نوع سطر / فاصلهٔ سطر به سانتی‌متر) نشان داده می‌شود.
+            // V360.3 — «بخش پاسخ»: متن پاسخ و تصویر پاسخ بانک مرجع فقط اینجا هستند.
+            if (question.answerExplanation.isNotBlank() || question.answerImages.isNotEmpty()) {
+                Text("پاسخ / پاسخنامه", style = MaterialTheme.typography.titleSmall)
+                if (question.answerExplanation.isNotBlank()) {
+                    Text(question.answerExplanation, style = MaterialTheme.typography.bodySmall)
+                }
+                question.answerImages.take(8).forEach { url ->
+                    AsyncImage(
+                        model = url,
+                        contentDescription = "تصویر پاسخ",
+                        modifier = Modifier.fillMaxWidth().heightIn(max = 220.dp).padding(vertical = 6.dp),
+                        contentScale = androidx.compose.ui.layout.ContentScale.Fit
+                    )
+                }
+            }
             if (printMode) {
                 // V110 — فضای پاسخ برای تشریحی، جای‌خالی و عددی (درخواست کاربر).
                 if (question.type == QuestionType.ESSAY || question.type == QuestionType.FILL_BLANK || question.type == QuestionType.NUMERIC) {

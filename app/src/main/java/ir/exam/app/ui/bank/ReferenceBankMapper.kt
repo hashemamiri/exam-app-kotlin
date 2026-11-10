@@ -1,13 +1,23 @@
 package ir.exam.app.ui.bank
 
+import ir.exam.app.domain.bank.ReferenceBankMedia
 import ir.exam.app.domain.bank.ReferenceBankQuestion
 import ir.exam.app.ui.builder.BankQuestionOption
 import ir.exam.app.ui.builder.MediaDraft
 import ir.exam.app.ui.builder.QuestionDraft
 import ir.exam.app.ui.builder.QuestionType
 
-/** V360 — تبدیل سؤال مرجع به همان مدلی که سازندهٔ آزمون میفهمد. */
-internal fun ReferenceBankQuestion.toBankQuestionOption(): BankQuestionOption {
+/**
+ * V360.3 — تبدیل سؤال مرجع به همان مدلی که سازندهٔ آزمون میفهمد.
+ *
+ * تصمیم کاربر: تصویر پاسخ نباید در سؤال قرار گیرد؛ پاسخ متنی و تصویر پاسخ
+ * فقط در «بخش پاسخ» (answerExplanation / answerImages) و فقط به انتخاب
+ * کاربر کپی میشوند. تصویرهای سؤال همان qHtmlاند و تصویرهای پاسخ همان
+ * answerHtml؛ نیازی به انتشار دوبارهای شاردها نیست.
+ */
+internal fun ReferenceBankQuestion.toBankQuestionOption(
+    includeAnswer: Boolean = true
+): BankQuestionOption {
     val kind = when (type) {
         "multiple" -> QuestionType.MULTIPLE_CHOICE
         "truefalse" -> QuestionType.TRUE_FALSE
@@ -17,14 +27,30 @@ internal fun ReferenceBankQuestion.toBankQuestionOption(): BankQuestionOption {
         else -> QuestionType.ESSAY
     }
     val safeType = if (kind == QuestionType.MULTIPLE_CHOICE && options.size < 2) QuestionType.ESSAY else kind
+    val split = ReferenceBankMedia.splitImages(qHtml, answerHtml, imageUrls)
+    val qImages = split.first.take(8)
+    val aImages = split.second.take(8)
+    val expected = when (safeType) {
+        QuestionType.FILL_BLANK -> answerText
+        QuestionType.TRUE_FALSE -> when {
+            answerText.contains("صحیح") -> "true"
+            answerText.contains("غلط") || answerText.contains("نادرست") -> "false"
+            correctIndex == 0 -> "true"
+            correctIndex == 1 -> "false"
+            else -> "true"
+        }
+        else -> ""
+    }
     val draft = QuestionDraft(
         type = safeType,
         text = text,
         score = 1.0,
         options = options,
         correctIndex = correctIndex,
-        expectedText = answerText,
-        images = imageUrls.take(8).map { MediaDraft(uri = it) },
+        expectedText = expected,
+        images = qImages.map { MediaDraft(uri = it) },
+        answerExplanation = if (includeAnswer) answerExplanation else "",
+        answerImages = if (includeAnswer) aImages else emptyList(),
         grade = grade,
         subject = subject,
         topic = topic,

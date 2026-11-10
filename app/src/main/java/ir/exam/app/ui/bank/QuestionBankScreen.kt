@@ -2,6 +2,8 @@ package ir.exam.app.ui.bank
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -17,6 +19,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Visibility
+import androidx.compose.material.icons.outlined.FilterList
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -55,10 +58,10 @@ import ir.exam.app.ui.builder.QuestionDraft
 import ir.exam.app.ui.builder.QuestionType
 import ir.exam.app.ui.math.NativeMathText
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun QuestionBankScreen(
-    onUseInExam: (BankQuestionOption) -> Unit
+    onUseInExam: (List<BankQuestionOption>) -> Unit
 ) {
     val context = LocalContext.current
     val viewModel = remember(context.applicationContext) {
@@ -96,13 +99,13 @@ fun QuestionBankScreen(
             )
         }
         item {
-            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 FilterChip(
                     selected = state.categoryId == null,
                     onClick = { viewModel.selectCategory(null) },
-                    label = { Text("همه (${state.questions.size})") }
+                    label = { Text("همه (${state.questions.size})", maxLines = 1) }
                 )
-                OutlinedButton(onClick = { newCategory = true }) { Text("دسته جدید") }
+                OutlinedButton(onClick = { newCategory = true }) { Text("دسته جدید", maxLines = 1) }
                 // V263 — بانک مدرسه (سؤال‌های اشتراکی همکاران هم‌مدرسه؛ آینهٔ سایت V230)
                 OutlinedButton(
                     onClick = { viewModel.openSchoolBank(true) },
@@ -112,12 +115,20 @@ fun QuestionBankScreen(
                 OutlinedButton(
                     onClick = { viewModel.openReferenceBank(true) },
                     modifier = Modifier.semantics { contentDescription = "بانک مرجع" }
-                ) { Text("بانک مرجع") }
+                ) { Text("🏛 بانک مرجع", maxLines = 1) }
+                // V360.3 — آیکن فیلتر همان پنجرهٔ مرحلهای را باز میکند
+                OutlinedButton(
+                    onClick = { viewModel.openReferenceBank(true) },
+                    modifier = Modifier.semantics { contentDescription = "فیلتر بانک مرجع" }
+                ) {
+                    Icon(Icons.Outlined.FilterList, contentDescription = null, modifier = Modifier.size(16.dp))
+                    Text(" فیلتر مرجع", maxLines = 1)
+                }
             }
         }
         // V360 — پالایش دشواری؛ چهار سطح، مثل سایت
         item {
-            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 FilterChip(
                     selected = state.difficulty == null,
                     onClick = { viewModel.selectDifficulty(null) },
@@ -127,7 +138,7 @@ fun QuestionBankScreen(
                     FilterChip(
                         selected = state.difficulty == level,
                         onClick = { viewModel.selectDifficulty(level) },
-                        label = { Text(label) }
+                        label = { Text(label, maxLines = 1) }
                     )
                 }
             }
@@ -139,7 +150,7 @@ fun QuestionBankScreen(
                     state.categories
                         .sortedBy { state.categoryPath(it.id) }
                         .chunked(3).forEach { row ->
-                        Row(horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+                        FlowRow(horizontalArrangement = Arrangement.spacedBy(5.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
                             row.forEach { category ->
                                 FilterChip(
                                     selected = state.categoryId == category.id,
@@ -173,7 +184,7 @@ fun QuestionBankScreen(
                 // V257 — کارت سؤال بانک: سربرگ (نوع/بارم/درس)، متن، پیش‌نمایش گزینه‌ها، دسته‌ها، ردیف اقدام‌ها.
                 BankQuestionCard(
                     item = item,
-                    onUse = { onUseInExam(item) },
+                    onUse = { onUseInExam(listOf(item)) },
                     onEdit = { editing = item },
                     onDelete = { deleting = item },
                     onShare = { shared -> viewModel.setShared(item.id, shared) }
@@ -519,9 +530,9 @@ private fun BankQuestionCard(
                 }
             }
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-            Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
-                Button(onClick = onUse) { Text("افزودن به آزمون") }
-                OutlinedButton(onClick = onEdit) { Text("ویرایش") }
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Button(onClick = onUse) { Text("افزودن به آزمون", maxLines = 1) }
+                OutlinedButton(onClick = onEdit) { Text("ویرایش", maxLines = 1) }
                 TextButton(onClick = onDelete) { Text("حذف", color = MaterialTheme.colorScheme.error) }
             }
             // V263 — اشتراک با همکاران هم‌مدرسه

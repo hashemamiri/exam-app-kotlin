@@ -86,6 +86,7 @@ import ir.exam.app.domain.model.UserRole
 import ir.exam.app.ui.auth.AuthViewModel
 import ir.exam.app.ui.auth.SignInScreen
 import ir.exam.app.ui.bank.QuestionBankScreen
+import ir.exam.app.ui.bank.ReferenceBankHost
 import ir.exam.app.ui.billing.WalletScreen
 import ir.exam.app.ui.builder.ExamBuilderScreen
 import ir.exam.app.ui.builder.ExamBuilderViewModel
@@ -182,6 +183,8 @@ private fun AuthenticatedExamApp(
     // V58.0.2 — آزمون فعال دانش‌آموز: هدر و منوی همبرگری پنهان می‌شوند.
     var studentExamActive by rememberSaveable(user.id) { mutableStateOf(false) }
     var quickAddOpen by rememberSaveable(user.id) { mutableStateOf(false) }
+    // V360.3 — پنجرهٔ بانک مرجع از دکمهٔ + (آیکن فیلتر و افزودن گروهی)
+    var referenceBankOpen by rememberSaveable(user.id) { mutableStateOf(false) }
     var walletRefreshKey by rememberSaveable(user.id) { mutableIntStateOf(0) }
     var dashboardRefreshKey by rememberSaveable(user.id) { mutableIntStateOf(0) }
     var managerNewTeacherKey by rememberSaveable(user.id) { mutableIntStateOf(0) }
@@ -224,6 +227,7 @@ private fun AuthenticatedExamApp(
     fun closeTransientNavigation() {
         menuOpen = false
         quickAddOpen = false
+        referenceBankOpen = false
     }
 
     fun openHome() {
@@ -631,9 +635,9 @@ private fun AuthenticatedExamApp(
                     )
                 }
                 MainPage.QUESTION_BANK -> if (user.role == UserRole.TEACHER) {
-                    QuestionBankScreen { item ->
+                    QuestionBankScreen { items ->
                         editingExamId = null
-                        importedExam = item.toExamImportDraft()
+                        importedExam = items.toExamImportDraft()
                         builderCameFromPrint = false
                         page = MainPage.BUILDER
                     }
@@ -1400,7 +1404,24 @@ private fun AuthenticatedShell(
                         onCreateSchool = onCreateSchool,
                         primaryTitle = if (user.role == UserRole.MANAGER) "دعوت معلم" else "آزمون جدید",
                         // V61.9 — آیکن حرفه‌ای «دعوت معلم» (معلم + پاکت دعوت).
-                        primaryIcon = if (user.role == UserRole.MANAGER) Design69Icons.TeacherInvite else Design69Icons.ExamAdd
+                        primaryIcon = if (user.role == UserRole.MANAGER) Design69Icons.TeacherInvite else Design69Icons.ExamAdd,
+                        // V360.3 — «بانک مرجع» از همان دکمهٔ + در دسترس است
+                        onOpenReferenceBank = { quickAddOpen = false; referenceBankOpen = true },
+                        referenceBankVisible = user.role == UserRole.TEACHER
+                    )
+                }
+
+                // V360.3 — پنجرهٔ مستقل بانک مرجع؛ سؤالهای انتخابشده یک آزمون تازه میسازند.
+                if (referenceBankOpen && user.role == UserRole.TEACHER) {
+                    ReferenceBankHost(
+                        onAdd = { items ->
+                            referenceBankOpen = false
+                            editingExamId = null
+                            importedExam = items.toExamImportDraft()
+                            builderCameFromPrint = false
+                            page = MainPage.BUILDER
+                        },
+                        onDismiss = { referenceBankOpen = false }
                     )
                 }
             }
@@ -1448,9 +1469,12 @@ private fun MainPage.teacherDockSection(): TeacherDockSection = when (this) {
     else -> TeacherDockSection.NONE
 }
 
-private fun BankQuestionOption.toExamImportDraft(): ExamImportDraft = ExamImportDraft(
-    title = "آزمون جدید از بانک سؤال",
-    subject = subject.orEmpty(),
+private fun BankQuestionOption.toExamImportDraft(): ExamImportDraft = listOf(this).toExamImportDraft()
+
+/** V360.3 — افزودن گروهی: همان آزمون تازه با همهٔ سؤالهای انتخابشده. */
+private fun List<BankQuestionOption>.toExamImportDraft(): ExamImportDraft = ExamImportDraft(
+    title = "آزمون جدید از بانک مرجع",
+    subject = firstOrNull()?.subject.orEmpty(),
     durationMinutes = 0,
     negativeMarking = 0.0,
     shuffleQuestions = false,
@@ -1460,6 +1484,6 @@ private fun BankQuestionOption.toExamImportDraft(): ExamImportDraft = ExamImport
     attemptOnTimeout = false,
     gradePolicy = "last",
     attemptCooldown = 0,
-    questions = listOf(question.copy(id = java.util.UUID.randomUUID().toString())),
-    exportedBy = "بانک سؤال"
+    questions = map { it.question.copy(id = java.util.UUID.randomUUID().toString()) },
+    exportedBy = "بانک سؤال مرجع"
 )

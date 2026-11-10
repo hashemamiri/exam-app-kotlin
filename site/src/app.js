@@ -2264,7 +2264,7 @@
   function dkGo(panel) { view.panel = panel; view.arg = null; closeSidebar(); render(); }
   /* V226 — «افزودن سریع» دسکتاپ = منوی دایره‌ای وسط صفحه مثل انواع سؤال (radialMenu اپ/سایت)؛ ۵ کارت پاستلی بزرگ‌تر حول حلقهٔ خط‌چین؛
      اعمال = SiteMobile.quickAddItems (همان Design69QuickAddOverlay اپ) + «آزمون چاپی جدید» */
-  var DK_QA_STYLE = {'آزمون جدید': ['exam', '📝', '#AEC6CF'], 'دعوت معلم': ['invite', '✉️', '#AEC6CF'], 'دانش‌آموز جدید': ['student', '🎓', '#B4EEB4'], 'کلاس جدید': ['class', '🏫', '#FDFD96'], 'مدرسه جدید': ['school', '🏛', '#C3B1E1'], 'آزمون چاپی جدید': ['print', '🖨', '#FFDAB9']};
+  var DK_QA_STYLE = {'آزمون جدید': ['exam', '📝', '#AEC6CF'], 'دعوت معلم': ['invite', '✉️', '#AEC6CF'], 'دانش‌آموز جدید': ['student', '🎓', '#B4EEB4'], 'کلاس جدید': ['class', '🏫', '#FDFD96'], 'مدرسه جدید': ['school', '🏛', '#C3B1E1'], 'آزمون چاپی جدید': ['print', '🖨', '#FFDAB9'], 'بانک مرجع': ['refbank', '🏛', '#D7E9F7']};
   function dkQuickAdd(anchor) {
     var open = document.querySelector('.m-radial-bg.dk-qa-radial'); if (open) { open.remove(); return; }
     if (!window.SiteMobile || !window.SiteMobile.quickAddItems || !window.SiteMobile.radialMenu) return dkGo('builder');

@@ -159,6 +159,8 @@ internal object ExamQuestionCodec {
                     )
                 },
                 rubric = key["rubric"]?.asString().orEmpty(),
+                answerExplanation = key["answerExplanation"]?.asString().orEmpty(),
+                answerImages = key["answerImages"].asArrayOrEmpty().mapNotNull { it.asString() },
                 solutionSteps = obj["solutionSteps"].asArrayOrEmpty().mapNotNull { it.asString() },
                 assessmentParts = obj["assessmentParts"].asArrayOrEmpty().mapIndexedNotNull { partIndex, rawPart ->
                     val part = rawPart as? JsonObject ?: return@mapIndexedNotNull null
@@ -431,6 +433,8 @@ internal object ExamQuestionCodec {
             val values = question.rawAnswer.toMutableMap()
             values["i"] = JsonPrimitive(index)
             if (question.rubric.isNotBlank()) values["rubric"] = JsonPrimitive(question.rubric) else values.remove("rubric")
+            if (question.answerExplanation.isNotBlank()) values["answerExplanation"] = JsonPrimitive(question.answerExplanation) else values.remove("answerExplanation")
+            if (question.answerImages.isNotEmpty()) values["answerImages"] = JsonArray(question.answerImages.take(8).map(::JsonPrimitive)) else values.remove("answerImages")
             if (question.assessmentParts.isNotEmpty()) values["partRubrics"] = JsonArray(question.assessmentParts.map { JsonPrimitive(it.rubric) }) else values.remove("partRubrics")
             if (question.constructionTargets.isNotEmpty()) values["constructionTargets"] = JsonArray(question.constructionTargets.map { target -> JsonObject(mapOf("id" to JsonPrimitive(target.id), "label" to JsonPrimitive(target.label), "x" to JsonPrimitive(target.x), "y" to JsonPrimitive(target.y), "tolerance" to JsonPrimitive(target.tolerance), "score" to JsonPrimitive(target.score))) }) else values.remove("constructionTargets")
             if (question.constructionConstraints.isNotEmpty()) values["constructionConstraints"] = JsonArray(question.constructionConstraints.map { c ->
@@ -530,7 +534,8 @@ internal object ExamQuestionCodec {
 
     private val ANSWER_FIELDS = setOf(
         "correctOption", "correctAnswer", "accept", "answer", "tolerance", "caseSensitive",
-        "matchAnswer", "pairs", "rubric", "partRubrics", "constructionTargets", "constructionConstraints"
+        "matchAnswer", "pairs", "rubric", "partRubrics", "constructionTargets", "constructionConstraints",
+        "answerExplanation", "answerImages"
     )
 }
 
