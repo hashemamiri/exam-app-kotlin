@@ -3,6 +3,7 @@ package ir.exam.app
 import ir.exam.app.domain.bank.ReferenceBankQuestion
 import java.io.File
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -59,8 +60,30 @@ class V360_8_OptionImagesTest {
             imageUrls = listOf(q, o1, o2)
         )
         assertTrue("هیچ تصویر گزینهای نباید وارد صورت سؤال شود",
-            question.questionImageUrls.none { it in question.optionImages.filterNotNull() })
+            question.questionImageUrls.none { it in question.optionImageList.filterNotNull() })
         assertEquals(listOf(o1, o2, null, null), question.optionImages)
+    }
+
+    @Test
+    fun staleShardIsDetectedAndCacheIsBusted() {
+        val models = src("app/src/main/java/ir/exam/app/domain/bank/ReferenceBankModels.kt")
+        assertTrue("SHARD_VERSION = \"v3609\"" in models)
+        assertTrue("fun shardUrl(path: String)" in models)
+        assertTrue("optionImages: List<String?>? = null" in models)
+        val repo = src("app/src/main/java/ir/exam/app/data/repository/ReferenceBankRepository.kt")
+        assertTrue("ReferenceBankContract.shardUrl(path)" in repo)
+        val ref = src("site/src/refbank.js")
+        assertTrue("SHARD_VERSION = 'v3609'" in ref)
+        assertTrue("cache: 'no-store'" in ref)
+        assertTrue("cache.catalog = {}" in ref)
+        assertTrue("p.option_images === undefined" in ref)
+        assertFalse("cache: 'force-cache'" in ref)
+        val stale = ReferenceBankQuestion(id = 3, type = "multiple", options = listOf("الف", "ب"))
+        assertTrue(stale.shardIsStale)
+        assertTrue(stale.optionImageList.isEmpty())
+        val fresh = ReferenceBankQuestion(id = 4, type = "multiple", options = listOf("الف", "ب"),
+            optionImages = listOf(null, null))
+        assertTrue(!fresh.shardIsStale)
     }
 
     @Test
@@ -85,9 +108,10 @@ class V360_8_OptionImagesTest {
         assertTrue("optionImages = optionImagesForDraft" in mapper)
         assertTrue("questionImageUrls.take(8)" in mapper)
         val dialog = src("app/src/main/java/ir/exam/app/ui/bank/ReferenceBankDialog.kt")
-        assertTrue("question.optionImages.getOrNull(i)" in dialog)
+        assertTrue("question.optionImageList.getOrNull(i)" in dialog)
+        assertTrue("question.shardIsStale" in dialog)
         val screen = src("app/src/main/java/ir/exam/app/ui/bank/QuestionBankScreen.kt")
-        assertTrue("q.optionImages.getOrNull(index)" in screen)
+        assertTrue("q.optionImages.orEmpty().getOrNull(index)" in screen)
         val ref = src("site/src/refbank.js")
         assertTrue("p.option_images" in ref)
         assertTrue("q.optionImages = q.type === 'multiple'" in ref)

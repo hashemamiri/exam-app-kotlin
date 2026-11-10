@@ -627,7 +627,7 @@ internal fun BankQuestionContent(q: QuestionDraft) {
                     NativeMathText(option.ifBlank { "—" }, modifier = Modifier.weight(1f))
                 }
                 // V360.8 — تصویر اختصاصی همین گزینه.
-                q.optionImages.getOrNull(index)?.let { url ->
+                q.optionImages.orEmpty().getOrNull(index)?.let { url ->
                     AsyncImage(
                         model = url,
                         contentDescription = "تصویر گزینه",

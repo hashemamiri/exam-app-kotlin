@@ -22,6 +22,12 @@ object ReferenceBankContract {
     const val MAX_GRADE = 12
     const val PAGE_SIZE = 25
 
+    /** V360.9 — کلید نسخهٔ شارد؛ کش لبه و مرورگر را دور میزند. */
+    const val SHARD_VERSION = "v3609"
+
+    /** نشانی شارد تازه، بدون کش کهنه. */
+    fun shardUrl(path: String): String = path + "?v=" + SHARD_VERSION
+
     /** V360.3 — پایههای ۱ تا ۹ رشته ندارند؛ فیلد رشته فقط از پایهٔ ۱۰ میآید. */
     const val TRACK_MIN_GRADE = 10
 
@@ -198,9 +204,19 @@ data class ReferenceBankQuestion(
     @SerialName("correct_index") val correctIndex: Int? = null,
     @SerialName("answer_text") val answerText: String = "",
     @SerialName("image_urls") val imageUrls: List<String> = emptyList(),
-    /** V360.8 — تصویر هر گزینه، همتراز با options؛ null یعنی بدون تصویر. */
-    @SerialName("option_images") val optionImages: List<String?> = emptyList()
+    /**
+     * V360.9 — nullable است تا بتوان «شارد کهنه» (بدون این فیلد) را از
+     * «سؤال بدون تصویر گزینه» (فیلد هست ولی همگی null) تشخیص داد.
+     */
+    @SerialName("option_images") val optionImages: List<String?>? = null
 ) {
+    val optionImageList: List<String?>
+        get() = optionImages.orEmpty()
+
+    /** آیا شارد قدیمی است؟ یعنی فیلد option_images اصلاً وجود ندارد. */
+    val shardIsStale: Boolean
+        get() = optionImages == null
+
     /** فقط تصویرهای صورت سؤال؛ تصویر گزینهها و پاسخ هرگز اینجا نمیآیند. */
     val questionImageUrls: List<String>
         get() = ReferenceBankMedia.imageUrlsFromHtml(qHtml).filter { it in imageUrls }

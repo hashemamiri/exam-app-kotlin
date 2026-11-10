@@ -30,11 +30,13 @@
     'هنرستان': ['فنی و حرفهای', 'کاردانش', 'ریاضی', 'فارسی', 'دین و زندگی']
   };
   var ALL_HIGH = []; Object.keys(HIGH).forEach(function (k) { HIGH[k].forEach(function (x) { if (ALL_HIGH.indexOf(x) < 0) ALL_HIGH.push(x); }); }); ALL_HIGH.sort();
+  var SHARD_VERSION = 'v3609';
   var cache = {catalog: {}, questions: {}, catalogAll: null};
 
-  function url(path) { return BASE + '/' + path; }
+  function url(path) { return BASE + '/' + path + '?v=' + SHARD_VERSION; }
   function getJSON(path) {
-    return fetch(url(path), {cache: 'force-cache'}).then(function (r) {
+    /* V360.9 — بدون کش: شارد تازه بعد از آپلود حتماً خوانده شود. */
+    return fetch(url(path), {cache: 'no-store'}).then(function (r) {
       if (!r.ok) throw new Error('HTTP ' + r.status);
       return r.json();
     });
@@ -120,6 +122,8 @@
   function open(opts) {
     opts = opts || {};
     var append = !!opts.append;
+    /* V360.9 — هر بار پنجره باز میشود، حافظهٔ درونبرنامهای پاک شود. */
+    cache.catalog = {}; cache.questions = {}; cache.catalogAll = null;
     var bg = el('div', {class: 'modal-bg'});
     var card = el('div', {class: 'modal wide', style: 'max-width:960px;width:96vw;max-height:90vh;overflow:auto'});
     bg.appendChild(card); document.body.appendChild(bg);
@@ -165,6 +169,23 @@
 
     function filterPanel() {
       card.appendChild(el('p', {class: 'muted', style: 'font-size:12px', text: 'همهٔ فیلترها کشویی و پیشفرض «همه»اند؛ میتوانید فقط پایه را بگزینید و فیلتر را ببندید.'}));
+      /* V360.9 — نسخهٔ شارد و دکمهٔ بررسی تازگی، قابل دیدن برای کاربر. */
+      card.appendChild(el('div', {class: 'row', style: 'gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px'}, [
+        el('span', {class: 'muted', style: 'font-size:12px', text: 'نسخهٔ شارد: ' + SHARD_VERSION + ' (بدون کش)'}),
+        el('button', {class: 'btn light sm', text: '🔄 بررسی شارد', onclick: function () {
+          var g = Number(st.grade) || 1;
+          questions(g).then(function (all) {
+            var vals = Object.keys(all || {}).map(function (k) { return all[k]; });
+            if (!vals.length) return toast('شاردی برای این پایه یافت نشد.', 'err');
+            var withField = vals.filter(function (p) { return p && p.option_images !== undefined; }).length;
+            if (!withField) return toast('شارد قدیمی است؛ فیلد تصویر گزینهها وجود ندارد.', 'err');
+            var withImg = vals.filter(function (p) {
+              return p && Array.isArray(p.option_images) && p.option_images.some(Boolean);
+            }).length;
+            toast('شارد تازه: ' + fa(withImg) + ' سؤال تصویر گزینه دارند.', 'ok');
+          }).catch(function (e) { toast('خواندن شارد ناموفق: ' + String(e.message || e), 'err'); });
+        }})
+      ]));
       if (st.note) card.appendChild(el('p', {class: 'muted', style: 'font-size:12px', text: st.note}));
       if (st.loading) card.appendChild(el('div', {class: 'muted', text: 'در حال خواندن فهرست پایهها…'}));
       if (st.missing) card.appendChild(el('div', {class: 'alert warn', text: 'فهرست این پایه هنوز روی فضای ابری بارگذاری نشده است.'}));
@@ -254,6 +275,13 @@
           el('button', {class: 'x', text: '✕', onclick: function () { pbg.remove(); }})
         ]));
         pc.appendChild(el('div', {class: 'muted', style: 'font-size:12px', text: [r.subject, r.chapter, r.type_fa, r.difficulty_fa].filter(Boolean).join(' · ')}));
+        /* V360.9 — تشخیص قابل دیدن شارد کهنه. */
+        if (p.option_images === undefined) {
+          pc.appendChild(el('div', {class: 'alert warn', text: 'هشدار: شارد قدیمی است؛ فیلد تصویر گزینهها وجود ندارد. پنجره را ببندید و دوباره باز کنید.'}));
+        } else {
+          var n = (p.option_images || []).filter(Boolean).length;
+          if (n) pc.appendChild(el('div', {class: 'muted', style: 'font-size:12px', text: 'تصویر گزینهها: ' + fa(n)}));
+        }
         var qv = el('div', {style: 'margin:10px 0;line-height:1.9'}); qv.innerHTML = p.q_html || '';
         pc.appendChild(qv);
         if ((p.options || []).length) {

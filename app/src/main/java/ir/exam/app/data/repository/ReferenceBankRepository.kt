@@ -22,7 +22,8 @@ class ReferenceBankRepository(
     private val json = Json { ignoreUnknownKeys = true }
 
     private suspend fun fetch(path: String): String = withContext(Dispatchers.IO) {
-        val url = base.trimEnd('/') + "/" + path
+        // V360.9 — کلید نسخه، تا پاسخ کششدۀ لبه/مرورگر برنگردد.
+        val url = base.trimEnd('/') + "/" + ReferenceBankContract.shardUrl(path)
         val request = Request.Builder().url(url).get().build()
         RelayHttp.client.newCall(request).execute().use { response ->
             if (!response.isSuccessful) error("دریافت فهرست بانک ناموفق بود (HTTP ${response.code})")

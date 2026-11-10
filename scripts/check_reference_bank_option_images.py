@@ -10,7 +10,8 @@
 این نگهبان:
   ۱) پین میکند که سازندهٔ شارد، سورس اپ و سورس سایت فیلد تازه را دارند؛
   ۲) شارد واقعی را (با --shard) از نظر همترازی و سالمبودن نشانیها میسنجد؛
-  ۳) --selftest روی نمونهٔ ساختگی، هم حالت سالم و هم حالت خراب را میآزماید.
+  ۳) --selftest روی نمونهٔ ساختگی، هم حالت سالم و هم حالت خراب را میآزماید؛
+  ۴) V360.9 — کش شاردها حتماً شکسته شود و شارد کهنه قابل تشخیص باشد.
 """
 import argparse
 import json
@@ -84,6 +85,20 @@ def main() -> int:
     ok("سایت صورت سؤال را از q_html میگیرد", "imgUrls(p.q_html || '')" in ref)
     uploader = (ROOT / "scripts/upload_reference_bank.py").read_text(encoding="utf-8")
     ok("بارگذار تکفایل دارد", '"--only"' in uploader)
+
+    print("\n=== V360.9 — شارد تازه حتماً خوانده شود ===")
+    ok("اپ کلید نسخه دارد", 'SHARD_VERSION = "v3609"' in models)
+    ok("اپ نشانی نسخهدار میسازد", "fun shardUrl(path: String)" in models)
+    ok("مخزن اپ از نشانی نسخهدار میخواند",
+       "ReferenceBankContract.shardUrl(path)" in
+       (ROOT / "app/src/main/java/ir/exam/app/data/repository/ReferenceBankRepository.kt").read_text(encoding="utf-8"))
+    ok("اپ شارد کهنه را تشخیص میدهد", "val shardIsStale: Boolean" in models)
+    ok("اپ null بودن فیلد را نگه میدارد", "List<String?>? = null" in models)
+    ok("سایت کلید نسخه دارد", "SHARD_VERSION = 'v3609'" in ref)
+    ok("سایت کش مرورگر را دور میزند", "cache: 'no-store'" in ref)
+    ok("سایت حافظهٔ درونبرنامهای را پاک میکند", "cache.catalog = {}" in ref)
+    ok("سایت شارد کهنه را نشان میدهد", "p.option_images === undefined" in ref)
+    ok("دیگر force-cache باقی نمانده", "cache: 'force-cache'" not in ref)
 
     print("\n=== شارد ===")
     if args.shard:

@@ -30,7 +30,7 @@ internal fun ReferenceBankQuestion.toBankQuestionOption(
     val qImages = questionImageUrls.take(8)
     val aImages = answerImageUrls.take(8)
     val optionImagesForDraft = if (safeType == QuestionType.MULTIPLE_CHOICE)
-        options.indices.map { index -> optionImages.getOrNull(index) } else emptyList()
+        options.indices.map { index -> optionImageList.getOrNull(index) } else emptyList()
     val expected = when (safeType) {
         QuestionType.FILL_BLANK -> answerText
         QuestionType.TRUE_FALSE -> when {

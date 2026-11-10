@@ -349,6 +349,20 @@ private fun ReferenceBankPreview(
                         .filter { it.isNotBlank() }.joinToString(" · "),
                     style = MaterialTheme.typography.labelSmall
                 )
+                // V360.9 — تشخیص قابل دیدن شارد کهنه.
+                if (question.shardIsStale) {
+                    Text(
+                        "هشدار: شارد قدیمی است؛ فیلد تصویر گزینهها وجود ندارد. پنجره را ببندید و دوباره باز کنید.",
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                } else {
+                    val n = question.optionImageList.count { !it.isNullOrBlank() }
+                    if (n > 0) {
+                        Text("تصویر گزینهها: $n", style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.primary)
+                    }
+                }
                 Text(plain(question.qHtml).ifBlank { question.text }, style = MaterialTheme.typography.bodyMedium)
                 question.questionImageUrls.take(8).forEach { url ->
                     AsyncImage(
@@ -363,7 +377,7 @@ private fun ReferenceBankPreview(
                     question.options.forEachIndexed { i, o ->
                         Text("${i + 1}) $o", style = MaterialTheme.typography.bodySmall)
                         // V360.8 — تصویر گزینه کنار همان گزینه، نه زیر متن سؤال.
-                        question.optionImages.getOrNull(i)?.let { url ->
+                        question.optionImageList.getOrNull(i)?.let { url ->
                             AsyncImage(
                                 model = url,
                                 contentDescription = "تصویر گزینه ${i + 1}",

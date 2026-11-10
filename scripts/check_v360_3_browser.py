@@ -98,6 +98,14 @@ def main():
                                   headers={"Access-Control-Allow-Origin": "*"}, body=body)
 
                 page.route("**/reference-bank/**", storage)
+                page.add_init_script("""
+                  var origFetch = window.fetch;
+                  window.__refFetch = [];
+                  window.fetch = function (u, opt) {
+                    window.__refFetch.push([String(u), String(opt && opt.cache)]);
+                    return origFetch.apply(this, arguments);
+                  };
+                """)
                 page.goto(url + "/", wait_until="domcontentloaded")
                 page.locator("input[type='text']").first.fill("uitest_teacher")
                 page.locator("input[type='password']").first.fill("TestPass1234!")
@@ -122,6 +130,19 @@ def main():
                 md.get_by_text("بستن فیلتر و نمایش سؤالها", exact=True).first.wait_for(timeout=8000)
                 selects = md.locator("select")
                 ok("همهٔ فیلترها کشوییاند", selects.count() >= 5, selects.count())
+
+                print("\n=== شارد تازه: بدون کش و با کلید نسخه ===")
+                calls = page.evaluate("() => window.__refFetch || []")
+                shard = [c for c in calls if "/reference-bank/" in c[0]]
+                ok("شاردی خوانده شد", len(shard) > 0, shard[:3])
+                ok("همهٔ درخواستها نسخهداراند",
+                   bool(shard) and all("?v=v3609" in c[0] for c in shard), shard[:3])
+                ok("هیچ درخواستی force-cache ندارد",
+                   all(c[1] != "force-cache" for c in shard), shard[:3])
+                ok("درخواستها بدون کشاند",
+                   bool(shard) and all(c[1] == "no-store" for c in shard), shard[:3])
+                ok("دکمهٔ بررسی شارد دیده میشود",
+                   md.get_by_text("بررسی شارد", exact=False).count() > 0)
                 def sel(title):
                     return md.locator("select[title='" + title + "']").first
 
@@ -200,6 +221,57 @@ def main():
                 page.evaluate("() => window.ExamSite.go('builder', null)")
                 page.locator("button", has_text="بانک مرجع").first.wait_for(timeout=12000, state="attached")
                 ok("دکمهٔ بانک مرجع در سازندهٔ آزمون هست", True)
+
+                print("\n=== شارد کهنه: هشدار قابل دیدن ===")
+                # مسیر دوم: همان فایلها ولی بدون فیلد option_images (شبیهسازی کش کهنه)
+                stale_rows = json.loads(json.dumps(rows, ensure_ascii=False))
+                stale_qs = {}
+                for k, v in qs.items():
+                    v2 = dict(v)
+                    v2.pop("option_images", None)
+                    stale_qs[k] = v2
+
+                def stale_storage(route):
+                    u = route.request.url
+                    if "catalog/g1.json" in u:
+                        body = json.dumps(stale_rows, ensure_ascii=False)
+                    elif "questions/g1.json" in u:
+                        body = json.dumps(stale_qs, ensure_ascii=False)
+                    elif "catalog/" in u:
+                        body = "[]"
+                    else:
+                        body = "{}"
+                    route.fulfill(status=200, content_type="application/json",
+                                  headers={"Access-Control-Allow-Origin": "*"}, body=body)
+
+                page2 = br.new_page(viewport={"width": 1440, "height": 950})
+                page2.add_init_script("""
+                  var origFetch2 = window.fetch;
+                  window.fetch = function (u, opt) { return origFetch2.apply(this, arguments); };
+                """)
+                page2.route("**/reference-bank/**", stale_storage)
+                page2.goto(url + "/", wait_until="domcontentloaded")
+                page2.locator("input[type='text']").first.fill("uitest_teacher")
+                page2.locator("input[type='password']").first.fill("TestPass1234!")
+                page2.locator("input[type='password']").first.press("Enter")
+                page2.locator("button[aria-label='افزودن']").wait_for()
+                page2.wait_for_function("() => !!window.RefBank", timeout=15000)
+                page2.evaluate("() => window.ExamSite.go('bank')")
+                page2.get_by_text("سؤال جدید در بانک", exact=False).first.wait_for(timeout=15000)
+                page2.locator("button", has_text="بانک مرجع").first.click()
+                md2 = page2.locator(".modal.wide").last
+                md2.get_by_text("بستن فیلتر و نمایش سؤالها", exact=True).first.wait_for(timeout=8000)
+                md2.locator("select[title='پایه']").first.select_option("1")
+                page2.wait_for_timeout(500)
+                md2.get_by_text("بستن فیلتر و نمایش سؤالها", exact=True).first.click()
+                md2.get_by_text("پیشنمایش", exact=True).first.click()
+                warn = page2.locator(".modal.wide").last.get_by_text("شارد قدیمی است", exact=False)
+                try:
+                    warn.first.wait_for(timeout=8000, state="attached")
+                    ok("هشدار شارد کهنه در پیشنمایش دیده میشود", True)
+                except Exception as e:
+                    ok("هشدار شارد کهنه در پیشنمایش دیده میشود", False, str(e)[:120])
+                page2.close()
 
                 ok("هیچ خطای جاوااسکریپتی رخ نداد", not errors, errors[:3])
                 br.close()
