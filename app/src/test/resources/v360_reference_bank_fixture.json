@@ -1,0 +1,48 @@
+{
+  "version": "V360",
+  "decisions": {
+    "short_essay_maps_to": "تشریحی",
+    "dropped_types": ["درسنامه"],
+    "difficulty_levels": ["تعییننشده", "ساده", "متوسط", "دشوار", "خیلی دشوار"],
+    "max_grade": 12,
+    "fields_removed": ["source", "license", "reviewed"]
+  },
+  "rows": [
+    {
+      "id": 1285411,
+      "grade": 1,
+      "track": "",
+      "subject": "فارسی",
+      "chapter": "سوالات و مطالب ترکیبی و کلی",
+      "type_fa": "تستی",
+      "type": "multiple",
+      "difficulty": 4,
+      "difficulty_fa": "خیلی دشوار",
+      "text": "کدام حرف روی شکل در کلمهٔ «درازا» نیست؟"
+    },
+    {
+      "id": 1285133,
+      "grade": 1,
+      "track": "",
+      "subject": "علوم تجربی",
+      "chapter": "فصل ١: زنگ علوم",
+      "type_fa": "تشریحی",
+      "type": "essay",
+      "difficulty": 2,
+      "difficulty_fa": "متوسط",
+      "text": "نمونهٔ نگاشت تشریحی کوتاه به تشریحی."
+    },
+    {
+      "id": 1259767,
+      "grade": 1,
+      "track": "",
+      "subject": "علوم تجربی",
+      "chapter": "سوالات و مطالب ترکیبی و کلی",
+      "type_fa": "تشریحی",
+      "type": "essay",
+      "difficulty": 1,
+      "difficulty_fa": "ساده",
+      "text": "دربارهٔ آب رودخانه گفتگو کن."
+    }
+  ]
+}

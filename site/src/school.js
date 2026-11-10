@@ -664,7 +664,7 @@
         } catch (e) { body.innerHTML = ''; body.appendChild(el('div', {class: 'alert warn', text: /does not exist|PGRST202/i.test(String(e.message)) ? 'بانک مدرسه هنوز روی سرور فعال نشده است (فایل SQL نسخهٔ V230 باید یک بار اجرا شود).' : errMsg(e)})); }
       }
       q.addEventListener('input', draw); cs.addEventListener('change', draw); ds.addEventListener('change', draw);
-      c.appendChild(el('div', {class: 'row', style: 'margin-bottom:12px;flex-wrap:wrap'}, [q, cs, ds, el('span', {class: 'grow'}), cnt, el('button', {class: 'btn light', text: '🏫 بانک مدرسه', onclick: schoolBank}), el('button', {class: 'btn light', text: '🏷 دسته‌ها', onclick: manageCats}), el('button', {class: 'btn', text: '➕ سؤال جدید در بانک', onclick: function () { S.go('builder', {bankEdit: {id: null, subject: '', cats: [], question: null}}); }})]));
+      c.appendChild(el('div', {class: 'row', style: 'margin-bottom:12px;flex-wrap:wrap'}, [q, cs, ds, el('span', {class: 'grow'}), cnt, el('button', {class: 'btn light', text: '🏛 بانک مرجع', onclick: function () { if (window.RefBank) window.RefBank.open(); else toast('بانک مرجع بارگذاری نشده است.', 'err'); }}), el('button', {class: 'btn light', text: '🏫 بانک مدرسه', onclick: schoolBank}), el('button', {class: 'btn light', text: '🏷 دسته‌ها', onclick: manageCats}), el('button', {class: 'btn', text: '➕ سؤال جدید در بانک', onclick: function () { S.go('builder', {bankEdit: {id: null, subject: '', cats: [], question: null}}); }})]));
       c.appendChild(lst); draw();
     } catch (e) { S.showErr(c, e); }
   }

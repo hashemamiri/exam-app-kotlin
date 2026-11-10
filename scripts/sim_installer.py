@@ -10,6 +10,8 @@
 یکی باشد. هیچ چیز به مخزن واقعی کاربر push نمی‌شود؛ همه‌کار روی یک
 origin برهنهٔ موقت انجام می‌گیرد.
 
+V360: شاخهٔ هدف از TARGET داخل نصاب خوانده می‌شود؛ اگر مقصد staging باشد، نشستن روی main انتظار نمی‌رود.
+
 نمونه:
   python3 scripts/sim_installer.py \
       --installer /home/user/apply_v356_1.py \
@@ -19,6 +21,7 @@ from __future__ import annotations
 
 import argparse
 import pathlib
+import re
 import shutil
 import subprocess
 import sys
@@ -43,7 +46,7 @@ def tree_of(cwd: pathlib.Path, rev: str) -> dict[str, str]:
     return dict(line.split(" ", 1) for line in out.splitlines() if line)
 
 
-def scenario(name, installer, base, ref, setup, expect="install") -> bool:
+def scenario(name, installer, base, ref, setup, expect="install", target="main") -> bool:
     tmp = pathlib.Path(tempfile.mkdtemp(prefix="siminst_"))
     try:
         origin = tmp / "origin.git"
@@ -80,10 +83,15 @@ def scenario(name, installer, base, ref, setup, expect="install") -> bool:
         same = tree_of(work, "HEAD") == want
         print("  درخت کامیت مرجع یکسان است:", "بله ✓" if same else "خیر ✗")
         branches = git(work, "branch", "-r")
-        pushed = "origin/main" in branches and tree_of(work, "origin/main") == want
-        print("  روی main نشست:", "بله ✓" if pushed else "خیر ✗")
-        synced = "origin/staging" in branches and tree_of(work, "origin/staging") == want
-        print("  staging هم همگام شد:", "بله ✓" if synced else "خیر ✗")
+        target_ref = "origin/staging" if target == "staging" else "origin/main"
+        other_ref = "origin/main" if target == "staging" else "origin/staging"
+        pushed = target_ref in branches and tree_of(work, target_ref) == want
+        print("  روی شاخهٔ هدف (" + target + ") نشست:", "بله ✓" if pushed else "خیر ✗")
+        synced = other_ref in branches and tree_of(work, other_ref) == want
+        if target == "staging":
+            print("  شاخهٔ اصلی:", "همگام ✓" if synced else "دست‌نخورده (درست است)")
+        else:
+            print("  شاخهٔ آزمایشی هم همگام شد:", "بله ✓" if synced else "خیر ✗")
         return ok and same and pushed
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
@@ -100,6 +108,9 @@ def main() -> int:
     if not installer.exists():
         print("نصاب پیدا نشد:", installer)
         return 1
+    m = re.search(r'^TARGET\s*=\s*.?(main|staging)', installer.read_text(encoding="utf-8"), re.M)
+    target = m.group(1) if m else "main"
+    print("مقصد نصاب:", target)
 
     def both_at_base(origin, base, ref):
         git(REPO, "push", "-q", str(origin), f"{base}:refs/heads/main")
@@ -114,10 +125,10 @@ def main() -> int:
         git(REPO, "push", "-q", str(origin), f"{base}:refs/heads/staging")
 
     results = [
-        scenario("۱) main و staging هر دو روی پایه", installer, a.base, a.ref, both_at_base),
+        scenario("۱) main و staging هر دو روی پایه", installer, a.base, a.ref, both_at_base, target=target),
         scenario("۲) از قبل نشسته — اجرای دوباره باید بی‌خطر متوقف شود",
-                 installer, a.base, a.ref, already, expect="already"),
-        scenario("۳) main عقب‌تر است", installer, a.base, a.ref, main_behind),
+                 installer, a.base, a.ref, already, expect="already", target=target),
+        scenario("۳) main عقب‌تر است", installer, a.base, a.ref, main_behind, target=target),
     ]
     print(f'\nSIM: {"PASS" if all(results) else "FAIL"} — {sum(results)}/3 سناریو')
     return 0 if all(results) else 1

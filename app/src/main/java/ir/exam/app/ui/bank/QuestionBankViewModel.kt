@@ -7,7 +7,11 @@ import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import ir.exam.app.data.repository.SupabaseExamBuilderRepository
+import ir.exam.app.data.repository.ReferenceBankRepository
 import ir.exam.app.domain.bank.BankPicker
+import ir.exam.app.domain.bank.ReferenceBankContract
+import ir.exam.app.domain.bank.ReferenceBankQuestion
+import ir.exam.app.domain.bank.ReferenceBankRow
 import ir.exam.app.ui.builder.BankCategoryOption
 import ir.exam.app.ui.builder.BankQuestionOption
 import ir.exam.app.ui.builder.QuestionDraft
@@ -31,8 +35,50 @@ data class QuestionBankUiState(
     // V263 — بانک مدرسه
     val schoolOpen: Boolean = false,
     val schoolLoading: Boolean = false,
-    val schoolItems: List<ir.exam.app.ui.builder.SchoolBankItem> = emptyList()
+    val schoolItems: List<ir.exam.app.ui.builder.SchoolBankItem> = emptyList(),
+    // V360 — بانک مرجع، فقطخواندنی از روی فضای ابری
+    val referenceOpen: Boolean = false,
+    val referenceGrade: Int = 1,
+    val referenceTrack: String = "",
+    val referenceSubject: String = "",
+    val referenceChapter: String = "",
+    val referenceType: String = "",
+    val referenceDifficulty: Int? = null,
+    val referenceQuery: String = "",
+    val referencePage: Int = 0,
+    val referencePageSize: Int = ReferenceBankContract.PAGE_SIZE,
+    val referenceRows: List<ReferenceBankRow> = emptyList(),
+    val referenceLoading: Boolean = false,
+    val referenceError: String? = null,
+    val referencePreview: ReferenceBankQuestion? = null
 ) {
+    /** V360 — پالایش محلی روی همان شارد کوچک؛ هیچ سؤال حجیمی یکجا گرفته نمیشود. */
+    val referenceFiltered: List<ReferenceBankRow>
+        get() = referenceRows.filter { r ->
+            (referenceTrack.isBlank() || r.track == referenceTrack) &&
+                (referenceSubject.isBlank() || r.subject == referenceSubject) &&
+                (referenceChapter.isBlank() || r.chapter == referenceChapter) &&
+                (referenceType.isBlank() || r.typeFa == referenceType) &&
+                (referenceDifficulty == null || r.difficulty == referenceDifficulty) &&
+                (referenceQuery.isBlank() || r.text.contains(referenceQuery, ignoreCase = true))
+        }
+
+    val referencePages: Int
+        get() = ((referenceFiltered.size + referencePageSize - 1) / referencePageSize).coerceAtLeast(1)
+
+    val referencePageRows: List<ReferenceBankRow>
+        get() = referenceFiltered.drop(referencePage * referencePageSize).take(referencePageSize)
+
+    val referenceSubjects: List<String>
+        get() = referenceRows.map { it.subject }.filter { it.isNotBlank() }.distinct().sorted()
+
+    val referenceChapters: List<String>
+        get() = referenceRows.filter { referenceSubject.isBlank() || it.subject == referenceSubject }
+            .map { it.chapter }.filter { it.isNotBlank() }.distinct().sorted()
+
+    val referenceTypes: List<String>
+        get() = referenceRows.map { it.typeFa }.filter { it.isNotBlank() }.distinct().sorted()
+
     /** V358 — همان منطق سایت؛ انتخاب یک فصل، زیرمجموعه‌هایش را هم می‌گیرد. */
     val visibleQuestions: List<BankQuestionOption>
         get() {
@@ -74,7 +120,8 @@ private const val CACHE_KEY = "bank.snapshot"
 class QuestionBankViewModel(
     context: Context,
     private val repository: SupabaseExamBuilderRepository =
-        SupabaseExamBuilderRepository(context.applicationContext)
+        SupabaseExamBuilderRepository(context.applicationContext),
+    private val referenceRepository: ReferenceBankRepository = ReferenceBankRepository()
 ) : ViewModel() {
     private val _state = MutableStateFlow(QuestionBankUiState())
     val state = _state.asStateFlow()
@@ -119,7 +166,7 @@ class QuestionBankViewModel(
 
     /** V358 — null یعنی همهٔ سطح‌ها. */
     fun selectDifficulty(level: Int?) {
-        _state.update { it.copy(difficulty = level?.takeIf { d -> d in 0..3 }, error = null) }
+        _state.update { it.copy(difficulty = level?.takeIf { d -> d in 0..4 }, error = null) }
     }
 
     fun addCategory(name: String, parentId: Long? = null) = action("دسته ساخته شد.") {
@@ -169,6 +216,60 @@ class QuestionBankViewModel(
     fun copyFromSchool(id: Long) = action("سؤال به بانک شما افزوده شد.") {
         repository.copyFromSchoolBank(id).getOrThrow()
         repository.schoolBank().onSuccess { items -> _state.update { it.copy(schoolItems = items) } }
+    }
+
+    // ------------------------------------------------------------------
+    // V360 — بانک مرجع
+    // ------------------------------------------------------------------
+
+    fun openReferenceBank(open: Boolean) {
+        _state.update { it.copy(referenceOpen = open, referenceError = null) }
+        if (open && _state.value.referenceRows.isEmpty()) loadReferenceCatalog()
+    }
+
+    fun setReferenceGrade(grade: Int) {
+        val g = grade.coerceIn(ReferenceBankContract.MIN_GRADE, ReferenceBankContract.MAX_GRADE)
+        _state.update {
+            it.copy(referenceGrade = g, referencePage = 0, referenceSubject = "",
+                referenceChapter = "", referenceType = "", referenceRows = emptyList(),
+                referenceError = null)
+        }
+        loadReferenceCatalog()
+    }
+
+    fun setReferenceTrack(value: String) = _state.update { it.copy(referenceTrack = value, referencePage = 0) }
+    fun setReferenceSubject(value: String) = _state.update { it.copy(referenceSubject = value, referenceChapter = "", referencePage = 0) }
+    fun setReferenceChapter(value: String) = _state.update { it.copy(referenceChapter = value, referencePage = 0) }
+    fun setReferenceType(value: String) = _state.update { it.copy(referenceType = value, referencePage = 0) }
+    fun setReferenceDifficulty(value: Int?) = _state.update { it.copy(referenceDifficulty = value, referencePage = 0) }
+    fun setReferenceQuery(value: String) = _state.update { it.copy(referenceQuery = value.take(200), referencePage = 0) }
+    fun setReferencePageSize(value: Int) = _state.update { it.copy(referencePageSize = value.coerceIn(10, 100), referencePage = 0) }
+    fun nextReferencePage() = _state.update { it.copy(referencePage = (it.referencePage + 1).coerceAtMost(it.referencePages - 1)) }
+    fun prevReferencePage() = _state.update { it.copy(referencePage = (it.referencePage - 1).coerceAtLeast(0)) }
+
+    fun loadReferenceCatalog() = viewModelScope.launch {
+        _state.update { it.copy(referenceLoading = true, referenceError = null) }
+        runCatching { referenceRepository.catalog(_state.value.referenceGrade) }
+            .onSuccess { rows -> _state.update { it.copy(referenceLoading = false, referenceRows = rows, referencePage = 0) } }
+            .onFailure { e -> _state.update { it.copy(referenceLoading = false, referenceError = safeBankError(e)) } }
+    }
+
+    fun previewReference(row: ReferenceBankRow) = viewModelScope.launch {
+        runCatching { referenceRepository.questions(_state.value.referenceGrade)[row.id.toString()] }
+            .onSuccess { q -> _state.update { it.copy(referencePreview = q, referenceError = if (q == null) "محتوای این سؤال یافت نشد." else null) } }
+            .onFailure { e -> _state.update { it.copy(referenceError = safeBankError(e)) } }
+    }
+
+    fun dismissReferencePreview() = _state.update { it.copy(referencePreview = null) }
+
+    /** V360 — افزودن مستقیم: محتوای همان یک سؤال خوانده و کپی میشود. */
+    fun addReference(row: ReferenceBankRow, onAdd: (BankQuestionOption) -> Unit) = viewModelScope.launch {
+        runCatching { referenceRepository.questions(_state.value.referenceGrade)[row.id.toString()] }
+            .onSuccess { q ->
+                if (q == null) _state.update { it.copy(referenceError = "محتوای این سؤال یافت نشد.") }
+                else onAdd(q.toBankQuestionOption())
+            }
+            .onFailure { e -> _state.update { it.copy(referenceError = safeBankError(e)) } }
     }
 
     private fun action(success: String, block: suspend () -> Unit) = viewModelScope.launch {

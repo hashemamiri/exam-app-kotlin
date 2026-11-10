@@ -204,7 +204,7 @@ class ExamBuilderViewModel(
     /** V328 — بخش/مبحث، rubric دبیر و گام‌های پاسخ. */
     fun setQuestionGrouping(id: String, section: String, topic: String) = update(id) { q -> q.copy(sectionTitle = section.take(100), topic = topic.take(100)) }
     fun setRubric(id: String, value: String) = update(id) { it.copy(rubric = value.take(4000)) }
-    fun setLearningTags(id: String, difficulty: Int, objective: String) = update(id) { it.copy(difficulty = difficulty.coerceIn(0, 3), learningObjective = objective.take(160)) }
+    fun setLearningTags(id: String, difficulty: Int, objective: String) = update(id) { it.copy(difficulty = difficulty.coerceIn(0, 4), learningObjective = objective.take(160)) }
     fun setSolutionSteps(id: String, value: List<String>) = update(id) { it.copy(solutionSteps = value.map(String::trim).filter(String::isNotBlank).take(10)) }
     fun addAssessmentPart(id: String, requireReason: Boolean = false) = update(id) { q ->
         if (q.assessmentParts.size >= 12) q else q.copy(assessmentParts = q.assessmentParts + AssessmentPartDraft(label = "${q.assessmentParts.size + 1}", reasonPrompt = if (requireReason) "دلیل این گام" else "", requiresReason = requireReason))

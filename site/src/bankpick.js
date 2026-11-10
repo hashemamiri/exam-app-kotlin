@@ -14,8 +14,8 @@
   var MAX_PICK = 500;
   var MAX_COUNT = 200;
 
-  /* سطح‌ها: صفر یعنی تعیین‌نشده. سه سطح، طبق تصمیم کاربر. */
-  var DIFFICULTY_LABELS = ['تعیین‌نشده', 'ساده', 'متوسط', 'دشوار'];
+  /* سطح‌ها: صفر یعنی تعیین‌نشده. چهار سطح، تصمیم V360 کاربر. */
+  var DIFFICULTY_LABELS = ['تعیین‌نشده', 'ساده', 'متوسط', 'دشوار', 'خیلی دشوار'];
 
   function latinDigits(s) {
     var out = '';
@@ -83,7 +83,7 @@
     var q = (it && it.question) || {};
     var d = it && it.difficulty != null ? it.difficulty : q.difficulty;
     d = Number(d) || 0;
-    return d < 0 || d > 3 ? 0 : d;
+    return d < 0 || d > 4 ? 0 : d;
   }
 
   function itemTopic(it) {
@@ -130,6 +130,7 @@
     if (t === '1' || t === 'ساده' || t === 'آسان' || t === 'easy') return 1;
     if (t === '2' || t === 'متوسط' || t === 'medium') return 2;
     if (t === '3' || t === 'دشوار' || t === 'سخت' || t === 'hard') return 3;
+    if (t === '4' || t === 'خیلی دشوار' || t === 'بسیار دشوار' || t === 'veryhard') return 4;
     return null;
   }
 

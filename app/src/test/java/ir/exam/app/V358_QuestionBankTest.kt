@@ -16,7 +16,7 @@ import org.junit.Test
  *  • درخت حداکثر سه سطح است و حلقه نمی‌پذیرد.
  *  • حذف دسته هرگز سؤال را حذف نمی‌کند مگر معلم صریح بخواهد.
  *  • یکتایی نام در هر سطح است، نه سراسری؛ «فصل ۱» زیر دو درس مجاز است.
- *  • سطح دشواری سه‌تاست (تصمیم کاربر)؛ سطح چهارم ساخته نشده.
+ *  • سطح دشواری چهارتاست (تصمیم V360 کاربر)؛ «خیلی دشوار» = ۴.
  *  • گزینش با بذر بازتولیدپذیر است و سؤال تکراری برنمی‌دارد.
  *
  * برابری دقیق با جاوااسکریپت در V358_BankPickerParityTest سنجیده می‌شود.
@@ -83,18 +83,22 @@ class V358_QuestionBankTest {
     }
 
     // ------------------------------------------------------------------
-    // ۲) پالایش دشواری — سه سطح
+    // ۲) پالایش دشواری — چهار سطح
     // ------------------------------------------------------------------
 
     @Test
-    fun difficultyHasExactlyThreeLevelsPlusUnset() {
-        assertEquals(4, BankPicker.DIFFICULTY_LABELS.size)
+    fun difficultyHasFourLevelsPlusUnset() {
+        assertEquals(5, BankPicker.DIFFICULTY_LABELS.size)
         assertEquals("تعیین‌نشده", BankPicker.DIFFICULTY_LABELS[0])
-        assertEquals(listOf("ساده", "متوسط", "دشوار"), BankPicker.DIFFICULTY_LABELS.drop(1))
-        assertFalse("سطح چهارم نباید ساخته شود", BankPicker.DIFFICULTY_LABELS.any { it.contains("المپیاد") })
+        assertEquals(listOf("ساده", "متوسط", "دشوار", "خیلی دشوار"), BankPicker.DIFFICULTY_LABELS.drop(1))
+        assertTrue("سطح چهارم باید حاضر باشد", BankPicker.DIFFICULTY_LABELS.contains("خیلی دشوار"))
         assertEquals(-1, BankPicker.difficultyFromWord("هر"))
         assertEquals(1, BankPicker.difficultyFromWord("آسان"))
         assertEquals(1, BankPicker.difficultyFromWord("ساده"))
+        assertEquals(4, BankPicker.difficultyFromWord("خیلی دشوار"))
+        assertEquals(4, BankPicker.difficultyFromWord("4"))
+        assertEquals(4, BankPicker.difficultyFromWord("خیلی دشوار"))
+        assertEquals(4, BankPicker.difficultyFromWord("4"))
         assertEquals(null, BankPicker.difficultyFromWord("المپیادی"))
     }
 
@@ -110,7 +114,8 @@ class V358_QuestionBankTest {
         val easyInMath = BankPicker.filterItems(items, tree, BankPicker.FilterOpts(categoryId = "1", difficulty = 1))
         assertTrue(easyInMath.isNotEmpty())
         assertTrue(easyInMath.all { it.difficulty == 1 })
-        // دشواری نامعتبر به تعیین‌نشده برمی‌گردد، نه سطح چهارم
+        // دشواری نامعتبر به تعیین‌نشده برمی‌گردد؛ ۴ معتبر است
+        assertEquals(4, BankPicker.itemDifficulty(BankPicker.Item("x", difficulty = 4)))
         assertEquals(0, BankPicker.itemDifficulty(BankPicker.Item("x", difficulty = 7)))
         assertEquals(0, BankPicker.itemDifficulty(BankPicker.Item("x", difficulty = -2)))
     }

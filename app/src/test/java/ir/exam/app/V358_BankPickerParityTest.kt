@@ -205,6 +205,6 @@ class V358_BankPickerParityTest {
         assertEquals(40, BankPicker.MAX_RULES)
         assertEquals(500, BankPicker.MAX_PICK)
         assertEquals(200, BankPicker.MAX_COUNT)
-        assertEquals(listOf("تعیین‌نشده", "ساده", "متوسط", "دشوار"), BankPicker.DIFFICULTY_LABELS)
+        assertEquals(listOf("تعیین‌نشده", "ساده", "متوسط", "دشوار", "خیلی دشوار"), BankPicker.DIFFICULTY_LABELS)
     }
 }

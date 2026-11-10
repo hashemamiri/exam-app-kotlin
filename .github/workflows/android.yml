@@ -85,7 +85,8 @@ jobs:
                    check_sealed_when check_test_paths check_test_pins \
                    check_site_pins check_site_sync check_changelog \
                    check_message_numbers check_test_version_pins \
-                   check_site_chunk_ref check_v357_sql_sync; do
+                   check_site_chunk_ref check_v357_sql_sync \
+                   check_actions_storage check_reference_bank_bundle; do
             echo "::group::$g"
             python3 "scripts/$g.py"
             echo "::endgroup::"

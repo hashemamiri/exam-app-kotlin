@@ -129,7 +129,7 @@ internal object ExamQuestionCodec {
                 passage = obj["passage"]?.asString().orEmpty(),
                 sectionTitle = obj["sectionTitle"]?.asString().orEmpty(),
                 topic = obj["topic"]?.asString().orEmpty(),
-                difficulty = obj["difficulty"]?.asInt()?.coerceIn(1, 3) ?: 0,
+                difficulty = obj["difficulty"]?.asInt()?.coerceIn(1, 4) ?: 0,
                 learningObjective = obj["learningObjective"]?.asString().orEmpty(),
                 proofAssumptions = obj["proofAssumptions"]?.asString().orEmpty(),
                 proofGoal = obj["proofGoal"]?.asString().orEmpty(),
@@ -174,7 +174,7 @@ internal object ExamQuestionCodec {
                     )
                 },
                 score = obj["score"]?.asDouble() ?: 1.0,
-                grade = obj["grade"]?.asInt()?.coerceIn(0, 6) ?: 0,
+                grade = obj["grade"]?.asInt()?.coerceIn(0, 12) ?: 0,
                 subject = obj["subject"]?.asString().orEmpty(),
                 voiceMaxSeconds = obj["voice_max_seconds"]?.asInt()?.coerceIn(10, 300) ?: 0,
                 options = obj["options"].asArrayOrEmpty().map { it.asString().orEmpty() },
@@ -273,7 +273,7 @@ internal object ExamQuestionCodec {
             if (question.passage.isNotBlank()) values["passage"] = JsonPrimitive(question.passage) else values.remove("passage")
             if (question.sectionTitle.isNotBlank()) values["sectionTitle"] = JsonPrimitive(question.sectionTitle) else values.remove("sectionTitle")
             if (question.topic.isNotBlank()) values["topic"] = JsonPrimitive(question.topic) else values.remove("topic")
-            if (question.difficulty in 1..3) values["difficulty"] = JsonPrimitive(question.difficulty) else values.remove("difficulty")
+            if (question.difficulty in 1..4) values["difficulty"] = JsonPrimitive(question.difficulty) else values.remove("difficulty")
             if (question.learningObjective.isNotBlank()) values["learningObjective"] = JsonPrimitive(question.learningObjective.trim()) else values.remove("learningObjective")
             values.remove("rubric")
             if (question.solutionSteps.isNotEmpty()) values["solutionSteps"] = JsonArray(question.solutionSteps.map(::JsonPrimitive)) else values.remove("solutionSteps")
@@ -296,7 +296,7 @@ internal object ExamQuestionCodec {
             values.remove("constructionTargets")
             values.remove("constructionConstraints")
             // V308 / ۱۴ — برچسب پایه/درس فقط وقتی پر است نوشته می‌شود
-            if (question.grade in 1..6) values["grade"] = JsonPrimitive(question.grade)
+            if (question.grade in 1..12) values["grade"] = JsonPrimitive(question.grade)
             if (question.subject.isNotBlank()) values["subject"] = JsonPrimitive(question.subject.trim())
             values["images"] = JsonArray(question.images.map { JsonPrimitive(it.uri) })
             values["image"] = question.images.firstOrNull()?.let { JsonPrimitive(it.uri) } ?: JsonNull

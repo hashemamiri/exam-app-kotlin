@@ -36,7 +36,7 @@ function makeItems(n, offset) {
       subject: i % 2 ? 'ریاضی' : 'فیزیک',
       question: {
         text: 'پرسش ' + fa(i) + ' دربارهٔ ' + (i % 3 ? 'معادله' : 'نور'),
-        difficulty: i % 4,
+        difficulty: i % 5,
         topic: i % 3 ? 'معادله' : 'نور',
         grade: (i % 6) + 1
       },
@@ -73,7 +73,7 @@ const ITEMS = makeItems(24, 0);
 const optsList = [
   {}, { text: 'معادله' }, { text: fa(5) }, { text: 'نور' },
   { categoryId: '1' }, { categoryId: '2' }, { categoryId: '6' }, { categoryId: '999' },
-  { difficulty: 0 }, { difficulty: 1 }, { difficulty: 2 }, { difficulty: 3 },
+  { difficulty: 0 }, { difficulty: 1 }, { difficulty: 2 }, { difficulty: 3 }, { difficulty: 4 }, { difficulty: 4 },
   { subject: 'ریاضی' }, { subject: 'فیزیک' }, { grade: 1 }, { grade: 6 },
   { categoryId: '1', difficulty: 2 }, { categoryId: '2', difficulty: 1, subject: 'ریاضی' },
   { text: 'پرسش', categoryId: '1', difficulty: 3 }
@@ -84,7 +84,8 @@ optsList.forEach((o) => {
 
 // --- difficultyFromWord ---
 ['', 'هر', 'همه', 'any', '*', '-', '0', '1', '2', '3', 'ساده', 'آسان', 'easy', 'متوسط', 'medium',
-  'دشوار', 'سخت', 'hard', 'تعیین‌نشده', 'نامشخص', 'unset', 'المپیادی', 'xyz', fa(2), ar(3), '  آسان  '
+  'دشوار', 'سخت', 'hard', 'تعیین‌نشده', 'نامشخص', 'unset', 'المپیادی', 'xyz', fa(2), ar(3), '  آسان  ',
+  '4', 'خیلی دشوار', 'بسیار دشوار', 'veryhard'
 ].forEach((w) => V.diffWord.push({ word: w, value: B.difficultyFromWord(w) }));
 
 // --- parseBlueprint ---
@@ -97,6 +98,7 @@ const texts = [
   'ریاضی | متوسط | ' + ar(4),
   'ریاضی / فصل ' + fa(1) + ' / معادله | دشوار | 2',
   'همه | هر | 5\nهمه | هر | 5',
+  'همه | خیلی دشوار | 2',
   'نور | ساده | 2\nمعادله | دشوار | 3',
   'بدون جداکننده',
   'همه | هر',

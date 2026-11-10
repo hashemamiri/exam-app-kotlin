@@ -4,7 +4,8 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.File
 
-/** V308 / ۱۴ — هم‌ترازی برچسب پایه/درس: اپ و سایت هر دو ذخیره، ویرایش و فیلتر بانک را دارند. */
+/**
+ * V360 — پایهها از ۱..۶ به ۱..۱۲ گسترش یافتند؛ پینها آگاهانه بهروز شدند. V308 / ۱۴ — هم‌ترازی برچسب پایه/درس: اپ و سایت هر دو ذخیره، ویرایش و فیلتر بانک را دارند. */
 class V308_Site_GradeSubjectTest {
     private fun root(): File {
         var dir: File? = File("").absoluteFile
@@ -19,14 +20,14 @@ class V308_Site_GradeSubjectTest {
         assertTrue(screen.contains("grade = if (state.primaryMode && tagGrade != 0) tagGrade else null"))
         assertTrue(screen.contains("subject = tagSubject"))
         val codec = File(root(), "app/src/main/java/ir/exam/app/data/repository/ExamQuestionCodec.kt").readText()
-        assertTrue(codec.contains("if (question.grade in 1..6) values[\"grade\"] = JsonPrimitive(question.grade)"))
+        assertTrue(codec.contains("if (question.grade in 1..12) values[\"grade\"] = JsonPrimitive(question.grade)"))
     }
 
     @Test
     fun `site builder stores grade and subject and filters bank by them`() {
         val builder = File(root(), "site/src/builder.js").readText()
-        assertTrue(builder.contains("q.grade = Math.max(0, Math.min(6, Number(obj.grade) || 0)); q.subject = obj.subject ? String(obj.subject) : '';"))
-        assertTrue(builder.contains("if (q.grade >= 1 && q.grade <= 6) v.grade = q.grade; else delete v.grade;"))
+        assertTrue(builder.contains("q.grade = Math.max(0, Math.min(12, Number(obj.grade) || 0)); q.subject = obj.subject ? String(obj.subject) : '';"))
+        assertTrue(builder.contains("if (q.grade >= 1 && q.grade <= 12) v.grade = q.grade; else delete v.grade;"))
         assertTrue(builder.contains("function primaryTagEditor(q, redraw)"))
         // V358 — پالایش به پیمانهٔ مشترک BankPicker رفت؛ پایه و درس هنوز اعمال می‌شوند.
         assertTrue(builder.contains("grade: (state.primaryMode && gs.value) ? Number(gs.value) : null"))

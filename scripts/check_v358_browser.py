@@ -43,11 +43,13 @@ def main():
         {"id": 5, "name": "فیزیک", "parent_id": None},
     ]
     state.bank_items = []
+    # V360 — سه سؤال سطح چهارم اضافه شد؛ توزیع قدیمی سطوح ۱..۳ حفظ شد
+    # تا سنجهٔ «انتخاب خودکار» همچنان دو سؤال ساده در مبحث معادله ببیند.
     for i in range(1, 13):
         state.bank_items.append({
             "id": i,
             "question": {"id": f"q{i}", "type": "essay", "text": f"پرسش {fa(i)}", "score": 1.0,
-                         "difficulty": (i % 3) + 1, "topic": "معادله" if i % 2 else "نور"},
+                         "difficulty": 4 if i in (2, 8, 10) else (i % 3) + 1, "topic": "معادله" if i % 2 else "نور"},
             "subject": "ریاضی" if i <= 8 else "فیزیک",
             "cat_ids": [3] if i <= 6 else ([4] if i <= 8 else [5]),
             "shared": False,
@@ -79,9 +81,10 @@ def main():
                 ok("پالایشگر دسته ساخته شد", any("همهٔ دسته‌ها" in x for x in flat), str(opts)[:200])
                 ok("مسیر تورفتگی دارد", any("—" in x and "معادله" in x for x in flat), str(flat)[:300])
                 ok("پالایشگر دشواری ساخته شد", any("همهٔ سطح‌ها" in x for x in flat))
-                ok("سه سطح دشواری حاضر است",
-                   all(any(lb == x for x in flat) for lb in ["ساده", "متوسط", "دشوار"]), str(flat)[:300])
-                ok("سطح چهارم ساخته نشد", not any("المپیادی" in x for x in flat))
+                ok("چهار سطح دشواری حاضر است",
+                   all(any(lb == x for x in flat) for lb in ["ساده", "متوسط", "دشوار", "خیلی دشوار"]), str(flat)[:300])
+                ok("سطح چهارم حاضر است و المپیادی نیامده",
+                   any("خیلی دشوار" in x for x in flat) and not any("المپیادی" in x for x in flat))
 
                 print("\n=== پالایش زیردرخت ===")
                 before = page.evaluate("() => document.querySelectorAll('.bank-card').length")
@@ -109,6 +112,34 @@ def main():
                 body = page.evaluate("() => document.body.innerText")
                 ok("برچسب دشواری روی کارت دیده می‌شود", "ساده" in body)
                 ok("برچسب مبحث روی کارت دیده می‌شود", "معادله" in body)
+
+                # V360 — سنجهٔ مثبت سطح چهارم: نخست همهٔ فیلترها به پیشفرض برگردند،
+                # وگرنه پالایش درس ریاضی از مرحلهٔ قبل شمارش را کم میکند.
+                page.evaluate("""() => {
+                  document.querySelectorAll('select').forEach(s => {
+                    if ([...s.options].some(o => o.value === '')) { s.value = ''; s.dispatchEvent(new Event('change')); }
+                  });
+                  document.querySelectorAll('input[type=search]').forEach(i => { i.value = ''; i.dispatchEvent(new Event('input')); });
+                }""")
+                page.wait_for_timeout(400)
+                page.evaluate("""() => {
+                  const s = [...document.querySelectorAll('select')].find(x => [...x.options].some(o => o.text.includes('همهٔ سطح‌ها')));
+                  const o = [...s.options].find(o => o.text === 'خیلی دشوار');
+                  s.value = o.value; s.dispatchEvent(new Event('change'));
+                }""")
+                page.wait_for_timeout(400)
+                hard = page.evaluate("() => document.querySelectorAll('.bank-card').length")
+                want_hard = sum(1 for it in state.bank_items if it["question"]["difficulty"] == 4)
+                ok("پالایش سطح چهارم درست شمارش میکند", hard == want_hard, f"{hard} != {want_hard}")
+                ok("برچسب سطح چهارم دیده میشود", "خیلی دشوار" in page.evaluate("() => document.body.innerText"))
+                # بازگرداندن همهٔ فیلترها به حالت پیشفرض برای گامهای بعدی
+                page.evaluate("""() => {
+                  document.querySelectorAll('select').forEach(s => {
+                    if ([...s.options].some(o => o.value === '')) { s.value = ''; s.dispatchEvent(new Event('change')); }
+                  });
+                  document.querySelectorAll('input[type=search]').forEach(i => { i.value = ''; i.dispatchEvent(new Event('input')); });
+                }""")
+                page.wait_for_timeout(400)
 
                 print("\n=== ساخت دستهٔ فرزند ===")
                 e2e.click_visible_button(page, "دسته‌ها")

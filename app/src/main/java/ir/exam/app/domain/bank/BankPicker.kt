@@ -16,8 +16,8 @@ object BankPicker {
     const val MAX_PICK = 500
     const val MAX_COUNT = 200
 
-    /** سطح‌ها: صفر یعنی تعیین‌نشده. سه سطح، طبق تصمیم کاربر. */
-    val DIFFICULTY_LABELS = listOf("تعیین‌نشده", "ساده", "متوسط", "دشوار")
+    /** سطح‌ها: صفر یعنی تعیین‌نشده. چهار سطح، تصمیم V360 کاربر. */
+    val DIFFICULTY_LABELS = listOf("تعیین‌نشده", "ساده", "متوسط", "دشوار", "خیلی دشوار")
 
     data class Category(val id: String, val name: String, val parentId: String? = null)
 
@@ -124,7 +124,7 @@ object BankPicker {
     // پالایش
     // ------------------------------------------------------------------
 
-    fun itemDifficulty(it: Item): Int = if (it.difficulty < 0 || it.difficulty > 3) 0 else it.difficulty
+    fun itemDifficulty(it: Item): Int = if (it.difficulty < 0 || it.difficulty > 4) 0 else it.difficulty
 
     fun filterItems(items: List<Item>, categories: List<Category>, opts: FilterOpts): List<Item> {
         val s = norm(latinDigits(opts.text))
@@ -155,6 +155,7 @@ object BankPicker {
             "1", "ساده", "آسان", "easy" -> 1
             "2", "متوسط", "medium" -> 2
             "3", "دشوار", "سخت", "hard" -> 3
+            "4", "خیلی دشوار", "بسیار دشوار", "veryhard" -> 4
             else -> null
         }
     }

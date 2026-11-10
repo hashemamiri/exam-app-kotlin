@@ -108,9 +108,14 @@ fun QuestionBankScreen(
                     onClick = { viewModel.openSchoolBank(true) },
                     modifier = Modifier.semantics { contentDescription = "بانک مدرسه" }
                 ) { Text("بانک مدرسه") }
+                // V360 — بانک مرجع، فقطخواندنی از روی فضای ابری
+                OutlinedButton(
+                    onClick = { viewModel.openReferenceBank(true) },
+                    modifier = Modifier.semantics { contentDescription = "بانک مرجع" }
+                ) { Text("بانک مرجع") }
             }
         }
-        // V358 — پالایش دشواری؛ سه سطح، مثل سایت
+        // V360 — پالایش دشواری؛ چهار سطح، مثل سایت
         item {
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 FilterChip(
@@ -208,6 +213,15 @@ fun QuestionBankScreen(
                 }
             }
         }
+    }
+
+    if (state.referenceOpen) {
+        ReferenceBankDialog(
+            state = state,
+            viewModel = viewModel,
+            onAdd = onUseInExam,
+            onDismiss = { viewModel.openReferenceBank(false) }
+        )
     }
 
     if (newCategory) {

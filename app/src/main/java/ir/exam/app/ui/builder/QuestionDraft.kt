@@ -370,7 +370,7 @@ data class QuestionDraft(
     // V328 — بخش‌بندی آزمون، برچسب مبحث، معیار تصحیح و گام‌های پاسخ.
     val sectionTitle: String = "",
     val topic: String = "",
-    /** V329 — سطح دشواری: 1 ساده، 2 متوسط، 3 دشوار؛ صفر یعنی تعیین‌نشده. */
+    /** V360 — سطح دشواری: 1 ساده، 2 متوسط، 3 دشوار، 4 خیلی دشوار؛ صفر یعنی تعیین‌نشده. */
     val difficulty: Int = 0,
     /** V329 — هدف یادگیری کوتاه برای پالایش بانک سؤال. */
     val learningObjective: String = "",
@@ -395,7 +395,7 @@ data class QuestionDraft(
     val paintRows: Int = 4,
     val paintCols: Int = 4,
     val paintGoal: Int = 1,
-    // V308 / ۱۴ — برچسب پایه (۱ تا ۶؛ ۰ = بدون پایه) و درس؛ برای فیلتر بانک حالت ابتدایی
+    // V360 — برچسب پایه (۱ تا ۱۲؛ ۰ = بدون پایه) و درس؛ برای فیلتر بانک
     val grade: Int = 0,
     val subject: String = "",
     // V309 — سقف ضبط پاسخ صوتی (ثانیه؛ ۰ = پیش‌فرض ۶۰)

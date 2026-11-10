@@ -133,6 +133,8 @@ jobs:
       # V359.1 — نگهبان سهمیهٔ فضای Actions (۵۱۲ مگابایت رایگان)
       - name: Guard workflow script references (V359.2)
         run: python3 scripts/check_workflow_scripts.py
+      - name: Guard reference bank bundle size (V360)
+        run: python3 scripts/check_reference_bank_bundle.py
       - name: Guard Actions storage budget (V359.1)
         run: python3 scripts/check_actions_storage.py
       - name: Run automated browser visual & E2E gate on site_out

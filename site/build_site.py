@@ -132,6 +132,7 @@ def main():
         "window.__HEADER_SCHEMA = %s;\n" % read(os.path.join(ASSETS, "print", "header_settings_schema.json")).strip()
         + read(os.path.join(SITE, "src", "examtiming.js")) + "\n"
         + read(os.path.join(SITE, "src", "bankpick.js")) + "\n"
+        + read(os.path.join(SITE, "src", "refbank.js")) + "\n"
         + read(os.path.join(SITE, "src", "codegrade.js")) + "\n"
         + read(os.path.join(SITE, "src", "similarity.js")) + "\n"
         + read(os.path.join(SITE, "src", "code.js")) + "\n"
