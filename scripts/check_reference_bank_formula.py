@@ -60,6 +60,13 @@ def main() -> int:
     ok("سایت مبدل دارد", "function mathJaxToTokens(raw)" in ref)
     ok("سایت شارد را هنگام خواندن توکن میکند", "function tokenizeQuestion(q)" in ref)
     ok("سایت نماد فرمول رندر میکند", "function renderFormulaSpans(root)" in ref)
+    ok("پاسخ در سایت با ویرایشگر تراشهای است",
+       "tokenTextarea(ansTa, {small: true})" in
+       (ROOT / "site/src/builder.js").read_text(encoding="utf-8"))
+    site_app = (ROOT / "site/src/app.js").read_text(encoding="utf-8")
+    ok("بزرگنمایی یکپارچهٔ تصاویر در همهٔ پنلها هست", "function openImagePreview(src, alt)" in site_app)
+    ok("ضربدر بستن تصویر هست", "بستن تصویر" in site_app)
+    ok("دکمهٔ بررسی شارد حذف شده", "بررسی شارد" not in ref)
     ok("سازندهٔ شارد توکن تمیز مینویسد", "def mathjax_to_tokens(raw):" in
        (ROOT / "scripts/review_reference_bank.py").read_text(encoding="utf-8"))
 

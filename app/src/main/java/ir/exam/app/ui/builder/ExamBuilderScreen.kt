@@ -140,6 +140,7 @@ import ir.exam.app.ui.figure.FigureGalleryChooserDialog
 import ir.exam.app.ui.figure.PeriodicEditorDialog
 import ir.exam.app.ui.figure.TableEditorDialog
 import ir.exam.app.ui.math.FormulaHostDialog
+import ir.exam.app.ui.math.NativeMathText
 import ir.exam.app.ui.math.QuestionEditorFieldController
 import ir.exam.app.ui.math.InlineMathTextEditor
 import ir.exam.app.core.math.FormulaTextCodec
@@ -1778,9 +1779,12 @@ private fun QuestionEditor(
             // (تعداد سطر / نوع سطر / فاصلهٔ سطر به سانتی‌متر) نشان داده می‌شود.
             // V360.3 — «بخش پاسخ»: متن پاسخ و تصویر پاسخ بانک مرجع فقط اینجا هستند.
             if (question.answerExplanation.isNotBlank() || question.answerImages.isNotEmpty()) {
-                Text("پاسخ / پاسخنامه", style = MaterialTheme.typography.titleSmall)
+                Text("پاسخ / پاسخنامه — توضیح پاسخ / راهنمای معلم", style = MaterialTheme.typography.titleSmall)
                 if (question.answerExplanation.isNotBlank()) {
-                    Text(question.answerExplanation, style = MaterialTheme.typography.bodySmall)
+                    NativeMathText(
+                        source = question.answerExplanation,
+                        fontSize = MaterialTheme.typography.bodySmall.fontSize
+                    )
                 }
                 question.answerImages.take(8).forEach { url ->
                     AsyncImage(

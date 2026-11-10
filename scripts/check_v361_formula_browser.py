@@ -19,21 +19,26 @@ import mock_supabase_server as mss  # noqa: E402
 import web_ui_e2e as e2e  # noqa: E402
 
 BASE = "https://azmoon-media.s3.ir-thr-at1.arvanstorage.ir/reference-bank"
+Q_IMG = BASE + "/images/formula-q.webp"
+O_IMG = BASE + "/images/formula-option.webp"
+A_IMG = BASE + "/images/formula-answer.webp"
+
 FORMULA_ROW = {
     "id": 1283285, "grade": 1, "track": "", "subject": "ریاضی", "chapter": "فصل فرمول",
     "type_fa": "تستی", "type": "multiple", "difficulty": 2, "difficulty_fa": "متوسط",
     "score": 1, "text": "حاصل \\(\\displaystyle \\text{۸}-\\text{۳}\\) کدام است؟",
-    "has_image": False, "image_count": 0, "image_urls": []
+    "has_image": True, "image_count": 3, "image_urls": [Q_IMG, O_IMG, A_IMG]
 }
 FORMULA_Q = {
     "id": 1283285, "grade": 1, "track": "", "subject": "ریاضی", "chapter": "فصل فرمول",
     "type_fa": "تستی", "type": "multiple", "difficulty": 2, "difficulty_fa": "متوسط",
     "text": "حاصل \\(\\displaystyle \\text{۸}-\\text{۳}\\) کدام است؟",
-    "q_html": "<div><span class='rz-formula'>\\(\\displaystyle \\text{۸}-\\text{۳}\\)</span></div>",
-    "answer_html": "<div><span class='az-formula'>\\(\\text{۵}\\)</span></div>",
+    "q_html": "<div><img src=\"" + Q_IMG + "\"><span class='rz-formula'>\\(\\displaystyle \\text{۸}-\\text{۳}\\)</span></div>",
+    "answer_html": "<div><img src=\"" + A_IMG + "\"><span class='az-formula'>\\(\\text{۵}\\)</span></div>",
     "options": ["\\(\\text{۵}\\)", "\\(\\text{۶}\\)", "\\(\\text{۷}\\)", "\\(\\text{۸}\\)"],
-    "correct_index": 0, "answer_text": "\\(\\text{۵}\\)", "image_urls": [],
-    "option_images": [None, None, None, None]
+    "correct_index": 0, "answer_text": "\\(\\text{۵}\\)",
+    "image_urls": [Q_IMG, O_IMG, A_IMG],
+    "option_images": [O_IMG, None, None, None]
 }
 
 fails = []
@@ -123,6 +128,22 @@ def main():
                    pv.locator(".mathx, .math-inline").count() >= 5,
                    pv.locator(".mathx, .math-inline").count())
 
+                print("\n=== تصویر کوچک و بزرگنمایی عمومی ===")
+                thumb = pv.locator("img[alt='تصویر گزینه']").first
+                thumb.wait_for(timeout=8000)
+                thumb_style = thumb.evaluate("e => ({maxWidth: e.style.maxWidth, maxHeight: e.style.maxHeight, cursor: e.style.cursor})")
+                ok("تصویر گزینه کوچک و کلیکخور است",
+                   thumb_style["maxWidth"] != "" and thumb_style["maxHeight"] != "" and thumb_style["cursor"] == "zoom-in",
+                   thumb_style)
+                thumb.click()
+                light = page.locator(".arena-image-preview-bg").last
+                light.wait_for(timeout=5000)
+                close = light.locator("button[aria-label='بستن تصویر']")
+                ok("بزرگنمایی ضربدر بستن دارد", close.count() == 1)
+                ok("تصویر بزرگ در لایتباکس هست", light.locator("img").count() == 1)
+                close.click()
+                ok("ضربدر لایتباکس را میبندد", page.locator(".arena-image-preview-bg").count() == 0)
+
                 print("\n=== draft و افزودن به آزمون ===")
                 draft = page.evaluate("""() => {
                     var q = window.RefBank.draft(%s, true);
@@ -131,6 +152,13 @@ def main():
                 ok("متن آزمون توکن شد", "$" in draft["text"] and "\\(" not in draft["text"], draft["text"])
                 ok("گزینهها توکن شدند", all(("$" in o and "\\(" not in o) for o in draft["options"]), draft["options"])
                 ok("پاسخ توکن شد", "$" in draft["explanation"] and "\\(" not in draft["explanation"], draft["explanation"])
+                # The builder answer field is verified structurally in the Kotlin regression test;
+                # opening a fresh online builder prompts the mock exam-settings workflow.
+                builder_src = (ROOT.parent / "site/src/builder.js").read_text(encoding="utf-8")
+                ok("توضیح پاسخ از ویرایشگر فرمول توکنی استفاده میکند",
+                   "tokenTextarea(ansTa, {small: true})" in builder_src)
+                ok("برچسب پاسخ، راهنمای معلم را روشن میکند",
+                   "توضیح پاسخ / راهنمای معلم" in builder_src)
 
                 ok("هیچ خطای جاوااسکریپتی رخ نداد", not errors, errors[:3])
                 br.close()

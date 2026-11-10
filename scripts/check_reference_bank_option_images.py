@@ -99,6 +99,13 @@ def main() -> int:
     ok("سایت حافظهٔ درونبرنامهای را پاک میکند", "cache.catalog = {}" in ref)
     ok("سایت شارد کهنه را نشان میدهد", "p.option_images === undefined" in ref)
     ok("دیگر force-cache باقی نمانده", "cache: 'force-cache'" not in ref)
+    ok("دکمهٔ بررسی شارد در رابط حذف شده", "بررسی شارد" not in ref)
+    builder = (ROOT / "site/src/builder.js").read_text(encoding="utf-8")
+    ok("توضیح پاسخ با ویرایشگر نماددار است", "tokenTextarea(ansTa, {small: true})" in builder)
+    shell = (ROOT / "site/src/app.js").read_text(encoding="utf-8")
+    ok("بزرگنمایی یکپارچهٔ تصاویر هست", "function openImagePreview(src, alt)" in shell)
+    ok("تصویر کوچک با cursor zoom دارد", "arena-image-preview-thumb" in shell)
+    ok("ضربدر بستن تصویر دارد", "بستن تصویر" in shell)
 
     print("\n=== شارد ===")
     if args.shard:

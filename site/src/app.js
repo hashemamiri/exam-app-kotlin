@@ -184,6 +184,74 @@
     addChild(children);
     return e;
   }
+
+  /* V361.1 — پیشنمایش یکپارچهٔ تصویر: همهٔ تصویرهای پنلها کوچک میمانند؛
+     کلیک = تمامصفحه با زوم لمسی/چرخ ماوس؛ بستن فقط با ضربدر یا Escape.
+     ابزارهای ویرایش عکس، لوگو و لینکهای آیکنی عمداً از این رفتار مستثنا هستند. */
+  function openImagePreview(src, alt) {
+    if (!src) return;
+    var bg = el('div', {class: 'modal-bg arena-image-preview-bg'});
+    bg.style.cssText = 'position:fixed;inset:0;z-index:2147483000;background:rgba(0,0,0,.88);display:flex;align-items:center;justify-content:center;padding:16px;';
+    function dismiss() {
+      if (bg.parentNode) bg.parentNode.removeChild(bg);
+      document.removeEventListener('keydown', onKey);
+    }
+    var frame = el('div', {class: 'arena-image-preview-frame'});
+    frame.style.cssText = 'position:relative;display:flex;align-items:center;justify-content:center;width:100%;height:100%;overflow:hidden;touch-action:none;';
+    var img = el('img', {src: src, alt: alt || 'پیشنمایش تصویر', draggable: 'false'});
+    img.style.cssText = 'max-width:96vw;max-height:92vh;width:auto;height:auto;object-fit:contain;border-radius:10px;background:#fff;transform-origin:center center;cursor:grab;user-select:none;-webkit-user-drag:none;';
+    var close = el('button', {class: 'btn arena-image-preview-close', text: '✕', 'aria-label': 'بستن تصویر', onclick: dismiss});
+    close.style.cssText = 'position:absolute;top:8px;right:8px;z-index:2;width:44px;height:44px;border:0;border-radius:50%;background:rgba(255,255,255,.95);color:#1b2430;font-size:24px;line-height:1;cursor:pointer;';
+    frame.appendChild(img); frame.appendChild(close); bg.appendChild(frame);
+    bg.addEventListener('click', function (ev) { if (ev.target === bg) dismiss(); });
+    var scale = 1, x = 0, y = 0, drag = null;
+    function paint() { img.style.transform = 'translate(' + x + 'px,' + y + 'px) scale(' + scale + ')'; img.style.cursor = scale > 1 ? 'grab' : 'zoom-in'; }
+    frame.addEventListener('wheel', function (ev) {
+      if (ev.target === close) return;
+      ev.preventDefault(); scale = Math.max(1, Math.min(6, scale * (ev.deltaY < 0 ? 1.16 : 1 / 1.16)));
+      if (scale === 1) { x = 0; y = 0; } paint();
+    }, {passive:false});
+    frame.addEventListener('pointerdown', function (ev) {
+      if (ev.target === close || scale <= 1) return;
+      drag = {x:ev.clientX,y:ev.clientY,ox:x,oy:y}; frame.setPointerCapture(ev.pointerId); img.style.cursor='grabbing';
+    });
+    frame.addEventListener('pointermove', function (ev) { if (!drag) return; x=drag.ox+(ev.clientX-drag.x); y=drag.oy+(ev.clientY-drag.y); paint(); });
+    frame.addEventListener('pointerup', function () { drag=null; paint(); });
+    frame.addEventListener('dblclick', function (ev) { if (ev.target===close) return; scale=scale>1?1:2.5; if(scale===1){x=0;y=0;} paint(); });
+    document.body.appendChild(bg); close.focus();
+    var onKey=function(ev){if(ev.key==='Escape') dismiss();};
+    document.addEventListener('keydown',onKey);
+  }
+  var PREVIEW_IMG_EXCLUDE = '.b-editor,.b-img,.b-opt,.b-figure,.figure-editor,.social-link,.brand,.logo,.avatar,.arena-image-preview-bg,[data-no-preview]';
+  function decoratePreviewImages(root) {
+    (root || document).querySelectorAll('img').forEach(function (img) {
+      if (img.closest(PREVIEW_IMG_EXCLUDE)) return;
+      img.classList.add('arena-image-preview-thumb');
+      img.style.maxWidth = 'min(180px, 48vw)';
+      img.style.maxHeight = '140px';
+      img.style.width = img.style.width || 'auto';
+      img.style.height = img.style.height || 'auto';
+      img.style.objectFit = 'contain';
+      img.style.cursor = 'zoom-in';
+      img.title = img.title || 'برای بزرگنمایی کلیک کنید';
+    });
+  }
+  document.addEventListener('click', function (ev) {
+    var img = ev.target && ev.target.closest ? ev.target.closest('img') : null;
+    if (!img || img.closest(PREVIEW_IMG_EXCLUDE) || img.closest('a,button')) return;
+    ev.preventDefault(); ev.stopPropagation();
+    openImagePreview(img.currentSrc || img.src, img.alt || img.title);
+  }, true);
+  function installPreviewImageObserver() {
+    if (!document.documentElement || document.documentElement.__arenaPreviewImageObserver) return;
+    document.documentElement.__arenaPreviewImageObserver = true;
+    decoratePreviewImages(document);
+    new MutationObserver(function (records) {
+      records.forEach(function (r) { r.addedNodes.forEach(function (n) { if (n.nodeType===1) { if(n.tagName==='IMG') decoratePreviewImages(n.parentNode||document); else decoratePreviewImages(n); } }); });
+    }).observe(document.documentElement, {childList:true,subtree:true});
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded',installPreviewImageObserver,{once:true}); else installPreviewImageObserver();
+
   function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
   function fa(n) { return String(n == null ? '' : n).replace(/[0-9]/g, function (d) { return '۰۱۲۳۴۵۶۷۸۹'[d]; }); }
   function en(s) { return String(s == null ? '' : s).replace(/[۰-۹]/g, function (d) { return String('۰۱۲۳۴۵۶۷۸۹'.indexOf(d)); }).replace(/[٠-٩]/g, function (d) { return String('٠١٢٣٤٥٦٧٨٩'.indexOf(d)); }); }
@@ -3215,7 +3283,7 @@
   });
 
   window.ExamSite = {mediaCacheSize: mediaCacheSize, dataUrlBlob: dataUrlBlob, clearMediaCache: clearMediaCache, kbdHelp: kbdHelp, emojiSvg: function (k) { return emojiSvg(k, false) || ''; }, headerFingerprint: headerFingerprint, printHeaderFp: printHeaderFp, ensurePrintPaid: ensurePrintPaid, jalaliPicker: jalaliPicker, jalaliDisplay: jalaliDisplay, openFormulaEditor: openFormulaEditor, openHeaderSettings: openHeaderSettings, headerSettingsForm: headerSettingsForm, readPrintHeader: readPrintHeader, faReason: faReason, uploadMedia: uploadMedia, openPrintPreview: openPrintPreview, buildPrintPayload: buildPrintPayload, api: api, demoPrint: demoPrint, openLandingCatalog: openLandingCatalogModal,
-    enamadBadge: enamadBadge, openSocial: openSocialModal, el: el, esc: esc, fa: fa, en: en, gradeLabel: gradeLabel, toast: toast, confirmDlg: confirmDlg, infoDlg: infoDlg, costDoneDlg: costDoneDlg, promptDlg: promptDlg, mediaBlobUrl: mediaBlobUrl, isOwnStorageUrl: isOwnStorageUrl, deleteMedia: deleteMedia, mediaUrlsIn: mediaUrlsIn, isOwnedMediaUrl: isOwnedMediaUrl, rpc: rpc, rpcObj: rpcObj, select: select, http: http, uuid: uuid, fmtScore: fmtScore, fmtDate: fmtDate, money: money, errMsg: errMsg,
+    enamadBadge: enamadBadge, openSocial: openSocialModal, openImagePreview: openImagePreview, decoratePreviewImages: decoratePreviewImages, el: el, esc: esc, fa: fa, en: en, gradeLabel: gradeLabel, toast: toast, confirmDlg: confirmDlg, infoDlg: infoDlg, costDoneDlg: costDoneDlg, promptDlg: promptDlg, mediaBlobUrl: mediaBlobUrl, isOwnStorageUrl: isOwnStorageUrl, deleteMedia: deleteMedia, mediaUrlsIn: mediaUrlsIn, isOwnedMediaUrl: isOwnedMediaUrl, rpc: rpc, rpcObj: rpcObj, select: select, http: http, uuid: uuid, fmtScore: fmtScore, fmtDate: fmtDate, money: money, errMsg: errMsg,
     localState: localState, setLocalState: setLocalState, loading: loading, showErr: showErr, emptyBox: emptyBox, qType: qType, engineHtml: engineHtml, loadEngines: loadEngines, loadPanels: loadPanels, prefetchPanels: prefetchPanels, scheduleLandingPrefetch: scheduleLandingPrefetch,
     user: function () { return user; }, session: function () { return session; }, config: {url: SUPABASE_URL, anon: ANON},
     go: function (panel, arg) { view.panel = panel; view.arg = arg; render(); }, navBack: navBack, view: view, examActions: examActions,

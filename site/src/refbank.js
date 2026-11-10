@@ -262,23 +262,7 @@
 
     function filterPanel() {
       card.appendChild(el('p', {class: 'muted', style: 'font-size:12px', text: 'همهٔ فیلترها کشویی و پیشفرض «همه»اند؛ میتوانید فقط پایه را بگزینید و فیلتر را ببندید.'}));
-      /* V360.9 — نسخهٔ شارد و دکمهٔ بررسی تازگی، قابل دیدن برای کاربر. */
-      card.appendChild(el('div', {class: 'row', style: 'gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px'}, [
-        el('span', {class: 'muted', style: 'font-size:12px', text: 'نسخهٔ شارد: ' + SHARD_VERSION + ' (بدون کش)'}),
-        el('button', {class: 'btn light sm', text: '🔄 بررسی شارد', onclick: function () {
-          var g = Number(st.grade) || 1;
-          questions(g).then(function (all) {
-            var vals = Object.keys(all || {}).map(function (k) { return all[k]; });
-            if (!vals.length) return toast('شاردی برای این پایه یافت نشد.', 'err');
-            var withField = vals.filter(function (p) { return p && p.option_images !== undefined; }).length;
-            if (!withField) return toast('شارد قدیمی است؛ فیلد تصویر گزینهها وجود ندارد.', 'err');
-            var withImg = vals.filter(function (p) {
-              return p && Array.isArray(p.option_images) && p.option_images.some(Boolean);
-            }).length;
-            toast('شارد تازه: ' + fa(withImg) + ' سؤال تصویر گزینه دارند.', 'ok');
-          }).catch(function (e) { toast('خواندن شارد ناموفق: ' + String(e.message || e), 'err'); });
-        }})
-      ]));
+      /* V360.9 — نسخه در URL داخلی است؛ دکمهٔ تشخیص شارد در UI نشان داده نمیشود. */
       if (st.note) card.appendChild(el('p', {class: 'muted', style: 'font-size:12px', text: st.note}));
       if (st.loading) card.appendChild(el('div', {class: 'muted', text: 'در حال خواندن فهرست پایهها…'}));
       if (st.missing) card.appendChild(el('div', {class: 'alert warn', text: 'فهرست این پایه هنوز روی فضای ابری بارگذاری نشده است.'}));

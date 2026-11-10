@@ -1120,17 +1120,19 @@
       /* V360.3 — «بخش پاسخ»: متن و تصویر پاسخ بانک مرجع فقط اینجا نمایش داده میشوند. */
       if ((q.answerExplanation && q.answerExplanation.length) || (q.answerImages || []).length) {
         var ansKids = [];
-        var ansTa = el('textarea', {rows: 2, style: 'width:100%', placeholder: 'پاسخ / راهنما'});
+        var ansTa = el('textarea', {rows: 2, style: 'width:100%', placeholder: 'توضیح پاسخ / راهنمای معلم'});
         ansTa.value = q.answerExplanation || '';
+        var ansTokenEditor = tokenTextarea(ansTa, {small: true});
         ansTa.addEventListener('input', function () { q.answerExplanation = ansTa.value; mark(); });
-        ansKids.push(ansTa);
+        ansKids.push(ansTokenEditor.wrap);
+        ansKids.push(ansTokenEditor.live);
         (q.answerImages || []).slice(0, 8).forEach(function (u, k) {
           ansKids.push(el('div', {class: 'row', style: 'gap:6px;align-items:center;margin-top:6px;flex-wrap:wrap'}, [
             el('img', {src: u, alt: 'تصویر پاسخ', loading: 'lazy', style: 'max-width:100%;max-height:200px;border-radius:8px'}),
             el('button', {class: 'btn light sm', text: '✕ حذف تصویر پاسخ', onclick: function () { q.answerImages.splice(k, 1); mark(); drawEditor(); }})
           ]));
         });
-        editor.appendChild(sec('پاسخ / پاسخنامه', ansKids));
+        editor.appendChild(sec('پاسخ / پاسخنامه — توضیح پاسخ / راهنمای معلم', ansKids));
       }
       /* V334.3 — تفکیک کامل آزمون چاپی و آنلاین: «قالب متن سؤال» و «فضای پاسخ در برگهٔ چاپی» منحصراً مخصوص بخش چاپی هستند */
       if (state.mode === 'print') {
