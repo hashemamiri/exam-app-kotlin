@@ -32,6 +32,91 @@
   var ALL_HIGH = []; Object.keys(HIGH).forEach(function (k) { HIGH[k].forEach(function (x) { if (ALL_HIGH.indexOf(x) < 0) ALL_HIGH.push(x); }); }); ALL_HIGH.sort();
   var SHARD_VERSION = 'v3609';
   var cache = {catalog: {}, questions: {}, catalogAll: null};
+  var FORMULA_PAIRS = [['\\(', '\\)'], ['\\[', '\\]'], ['$$', '$$']];
+
+  /* V361 — فرمول MathJax \(...\)، \[...\] و $$...$$ → توکن $...$ ویرایشگر فرمول. */
+  function mathJaxToTokens(raw) {
+    if (raw === null || raw === undefined) return '';
+    raw = String(raw);
+    if (!raw) return raw;
+    var out = [], i = 0;
+    while (i < raw.length) {
+      var hit = null;
+      for (var j = 0; j < FORMULA_PAIRS.length; j++) {
+        if (raw.substr(i, FORMULA_PAIRS[j][0].length) === FORMULA_PAIRS[j][0]) { hit = FORMULA_PAIRS[j]; break; }
+      }
+      if (hit) {
+        var end = raw.indexOf(hit[1], i + hit[0].length);
+        if (end >= 0) {
+          var body = raw.slice(i + hit[0].length, end).replace(/\s+/g, ' ').trim();
+          if (body) out.push('$' + body + '$');
+          i = end + hit[1].length;
+          continue;
+        }
+      }
+      out.push(raw.charAt(i));
+      i++;
+    }
+    var value = out.join('');
+    if (value.indexOf('$$') < 0) return value;
+    var out2 = [], inside = false;
+    for (var k = 0; k < value.length; k++) {
+      var ch = value.charAt(k);
+      out2.push(ch);
+      if (ch === '$') {
+        if (inside) { inside = false; if (value.charAt(k + 1) === '$') out2.push(' '); }
+        else inside = true;
+      }
+    }
+    return out2.join('');
+  }
+  function tokenizeQuestion(q) {
+    if (!q || typeof q !== 'object') return q;
+    var c = {};
+    Object.keys(q).forEach(function (k) { c[k] = q[k]; });
+    ['text', 'q_html', 'answer_html', 'answer_text'].forEach(function (k) {
+      if (typeof c[k] === 'string') c[k] = mathJaxToTokens(c[k]);
+    });
+    if (Array.isArray(c.options)) c.options = c.options.map(function (o) {
+      return typeof o === 'string' ? mathJaxToTokens(o) : o;
+    });
+    return c;
+  }
+  function tokenizeRows(rows) {
+    return Array.isArray(rows) ? rows.map(function (r) {
+      if (!r || typeof r !== 'object') return r;
+      var c = {};
+      Object.keys(r).forEach(function (k) { c[k] = r[k]; });
+      if (typeof c.text === 'string') c.text = mathJaxToTokens(c.text);
+      return c;
+    }) : rows;
+  }
+  /* V361 — رندر توکن به نماد با همان موتور ویرایشگر فرمول سایت. */
+  function richInto(node, raw) {
+    var tokens = mathJaxToTokens(String(raw || ''));
+    if (window.SiteStudent && window.SiteStudent.richHtml) {
+      window.SiteStudent.richHtml(tokens).then(function (h) {
+        node.innerHTML = h;
+        if (window.SiteStudent.fitMath) window.SiteStudent.fitMath(node);
+      }).catch(function () { node.textContent = tokens; });
+    } else {
+      node.textContent = tokens;
+    }
+    return node;
+  }
+
+  /* V361 — هر span فرمول MathJax در HTML شارد به نماد SVG ویرایشگر تبدیل شود. */
+  function renderFormulaSpans(root) {
+    if (!root || !window.SiteStudent || !window.SiteStudent.richHtml) return;
+    var spans = root.querySelectorAll('.rz-formula, .cz-formula, .az-formula');
+    Array.prototype.forEach.call(spans, function (sp) {
+      var tokens = mathJaxToTokens(sp.textContent || '');
+      window.SiteStudent.richHtml(tokens).then(function (h) {
+        sp.innerHTML = h;
+        if (window.SiteStudent.fitMath) window.SiteStudent.fitMath(sp);
+      }).catch(function () { sp.textContent = tokens; });
+    });
+  }
 
   function url(path) { return BASE + '/' + path + '?v=' + SHARD_VERSION; }
   function getJSON(path) {
@@ -43,12 +128,16 @@
   }
   function catalog(grade) {
     var k = String(grade);
-    if (!cache.catalog[k]) cache.catalog[k] = getJSON('catalog/g' + k + '.json');
+    if (!cache.catalog[k]) cache.catalog[k] = getJSON('catalog/g' + k + '.json').then(tokenizeRows);
     return cache.catalog[k];
   }
   function questions(grade) {
     var k = String(grade);
-    if (!cache.questions[k]) cache.questions[k] = getJSON('questions/g' + k + '.json');
+    if (!cache.questions[k]) cache.questions[k] = getJSON('questions/g' + k + '.json').then(function (all) {
+      var out = {};
+      Object.keys(all || {}).forEach(function (id) { out[id] = tokenizeQuestion(all[id]); });
+      return out;
+    });
     return cache.questions[k];
   }
   function catalogAll() {
@@ -101,12 +190,16 @@
   }
   function draft(p, includeAnswer) {
     var inc = includeAnswer !== false, sp = splitImages(p);
+    /* V361 — حتی اگر شارد خام مستقیم رسید، فرمولها به توکن ویرایشگر بروند. */
+    var textTokens = mathJaxToTokens(p.text || '');
+    var answerTokens = mathJaxToTokens(plain(p.answer_html || '') || p.answer_text || '');
+    var optionTokens = (p.options || []).map(function (o) { return mathJaxToTokens(String(o || '')); });
     var q = {
-      type: p.type || 'essay', text: p.text || '', grade: p.grade || 0,
+      type: p.type || 'essay', text: textTokens, grade: p.grade || 0,
       subject: p.subject || '', topic: p.topic || '', difficulty: p.difficulty || 0,
-      score: 1, options: p.options || [], correctIndex: p.correct_index == null ? null : p.correct_index,
+      score: 1, options: optionTokens, correctIndex: p.correct_index == null ? null : p.correct_index,
       expectedText: '', images: sp.question.slice(0, 8), optionImages: [],
-      answerExplanation: inc ? (plain(p.answer_html) || p.answer_text || '') : '',
+      answerExplanation: inc ? answerTokens : '',
       answerImages: inc ? sp.answer.slice(0, 8) : []
     };
     if (q.type === 'multiple' && (!q.options || q.options.length < 2)) q.type = 'essay';
@@ -114,7 +207,7 @@
     q.optionImages = q.type === 'multiple'
       ? q.options.map(function (_, i) { return sp.options[i] || null; })
       : [];
-    if (q.type === 'fill') q.expectedText = p.answer_text || '';
+    if (q.type === 'fill') q.expectedText = answerTokens;
     if (q.type === 'truefalse') q.expectedText = /غلط|نادرست/.test(p.answer_text || '') ? 'false' : 'true';
     return q;
   }
@@ -282,12 +375,14 @@
           var n = (p.option_images || []).filter(Boolean).length;
           if (n) pc.appendChild(el('div', {class: 'muted', style: 'font-size:12px', text: 'تصویر گزینهها: ' + fa(n)}));
         }
-        var qv = el('div', {style: 'margin:10px 0;line-height:1.9'}); qv.innerHTML = p.q_html || '';
+        var qv = el('div', {style: 'margin:10px 0;line-height:1.9'});
+        qv.innerHTML = mathJaxToTokens(p.q_html || '');
         pc.appendChild(qv);
+        renderFormulaSpans(qv);
         if ((p.options || []).length) {
           var obox = el('div', {style: 'margin:8px 0'});
           (p.options || []).forEach(function (o, i) {
-            obox.appendChild(el('div', {text: fa(i + 1) + ') ' + String(o || '')}));
+            obox.appendChild(richInto(el('div'), fa(i + 1) + ') ' + String(o || '')));
             var ou = (p.option_images || [])[i];
             if (ou) obox.appendChild(el('img', {src: ou, alt: 'تصویر گزینه', loading: 'lazy',
               style: 'max-width:100%;max-height:180px;border-radius:8px;margin:4px 0'}));
@@ -296,8 +391,10 @@
         }
         if (st.includeAnswer && (p.answer_html || p.answer_text)) {
           var det = el('details', {}, [el('summary', {text: 'پاسخ / راهنما'})]);
-          var av = el('div', {style: 'margin-top:8px;line-height:1.9'}); av.innerHTML = p.answer_html || esc(p.answer_text || '');
+          var av = el('div', {style: 'margin-top:8px;line-height:1.9'});
+          av.innerHTML = mathJaxToTokens(p.answer_html || esc(p.answer_text || ''));
           det.appendChild(av); pc.appendChild(det);
+          renderFormulaSpans(av);
           splitImages(p).answer.forEach(function (u) {
             det.appendChild(el('img', {src: u, alt: 'تصویر پاسخ', loading: 'lazy', style: 'max-width:100%;max-height:220px;border-radius:8px;margin-top:6px'}));
           });
@@ -344,7 +441,7 @@
             el('span', {class: 'grow'}),
             r.has_image ? el('span', {class: 'chip', text: '🖼 تصویر'}) : null
           ].filter(Boolean)),
-          el('div', {style: 'margin:6px 0', text: String(r.text || '').slice(0, 220)}),
+          richInto(el('div', {style: 'margin:6px 0'}), String(r.text || '').slice(0, 220)),
           imgs.length ? el('div', {}, imgs) : null,
           el('div', {class: 'row', style: 'gap:6px;margin-top:6px;flex-wrap:wrap'}, [
             el('button', {class: 'btn light sm', text: '👁 پیشنمایش', onclick: function () { preview(r); }}),
@@ -382,5 +479,6 @@
     load();
   }
 
-  root.RefBank = {open: open, base: BASE, catalog: catalog, questions: questions, draft: draft};
+  root.RefBank = {open: open, base: BASE, catalog: catalog, questions: questions, draft: draft,
+    mathJaxToTokens: mathJaxToTokens};
 })(window);

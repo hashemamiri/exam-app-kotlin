@@ -4,6 +4,7 @@ import ir.exam.app.core.network.RelayHttp
 import ir.exam.app.domain.bank.ReferenceBankContract
 import ir.exam.app.domain.bank.ReferenceBankQuestion
 import ir.exam.app.domain.bank.ReferenceBankRow
+import ir.exam.app.domain.bank.withFormulaTokens
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
@@ -33,12 +34,14 @@ class ReferenceBankRepository(
 
     suspend fun catalog(grade: Int): List<ReferenceBankRow> = withContext(Dispatchers.IO) {
         val raw = fetch(ReferenceBankContract.catalogPath(grade))
-        json.decodeFromString<List<ReferenceBankRow>>(raw)
+        json.decodeFromString<List<ReferenceBankRow>>(raw).map { it.withFormulaTokens() }
     }
 
+    /** V361 — فرمولهای MathJax شارد کهنه هنگام خواندن به توکن ویرایشگر فرمول تبدیل میشوند. */
     suspend fun questions(grade: Int): Map<String, ReferenceBankQuestion> = withContext(Dispatchers.IO) {
         val raw = fetch(ReferenceBankContract.questionsPath(grade))
         json.decodeFromString<Map<String, ReferenceBankQuestion>>(raw)
+            .mapValues { (_, question) -> question.withFormulaTokens() }
     }
 
     fun imageUrl(file: String): String = ReferenceBankContract.imageUrl(base, file)

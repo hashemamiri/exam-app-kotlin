@@ -1,5 +1,6 @@
 package ir.exam.app.ui.bank
 
+import ir.exam.app.domain.bank.ReferenceBankFormula
 import ir.exam.app.domain.bank.ReferenceBankQuestion
 import ir.exam.app.ui.builder.BankQuestionOption
 import ir.exam.app.ui.builder.MediaDraft
@@ -42,16 +43,20 @@ internal fun ReferenceBankQuestion.toBankQuestionOption(
         }
         else -> ""
     }
+    // V361 — حتی اگر شارد مستقیماً به مپر رسید، فرمولها توکن شوند تا در آزمون نماد ببینند.
+    val textTokens = ReferenceBankFormula.mathJaxToTokens(text)
+    val optionTokens = options.map { ReferenceBankFormula.mathJaxToTokens(it) }
+    val answerTokens = ReferenceBankFormula.mathJaxToTokens(answerExplanation)
     val draft = QuestionDraft(
         type = safeType,
-        text = text,
+        text = textTokens,
         score = 1.0,
-        options = options,
+        options = optionTokens,
         correctIndex = correctIndex,
         expectedText = expected,
         images = qImages.map { MediaDraft(uri = it) },
         optionImages = optionImagesForDraft,
-        answerExplanation = if (includeAnswer) answerExplanation else "",
+        answerExplanation = if (includeAnswer) answerTokens else "",
         answerImages = if (includeAnswer) aImages else emptyList(),
         grade = grade,
         subject = subject,

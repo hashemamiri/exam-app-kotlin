@@ -113,6 +113,68 @@ def image_urls_in_order(html, fig_file, base):
     return out
 
 
+def mathjax_to_tokens(raw):
+    r"""V361 — فرمول MathJax \(...\)، \[...\] و $$...$$ → توکن $...$ ویرایشگر فرمول."""
+    if not raw:
+        return raw
+    raw = str(raw)
+    out = []
+    i = 0
+    pairs = [("\\(", "\\)"), ("\\[", "\\]"), ("$$", "$$")]
+    while i < len(raw):
+        hit = None
+        for open_seq, close_seq in pairs:
+            if raw.startswith(open_seq, i):
+                hit = (open_seq, close_seq)
+                break
+        if hit:
+            open_seq, close_seq = hit
+            end = raw.find(close_seq, i + len(open_seq))
+            if end >= 0:
+                body = " ".join(raw[i + len(open_seq):end].split())
+                if body:
+                    out.append("$" + body + "$")
+                i = end + len(close_seq)
+                continue
+        out.append(raw[i])
+        i += 1
+    return separate_adjacent("".join(out))
+
+
+def separate_adjacent(value):
+    """جلوگیری از چسبیدن دو فرمول: $a$$b$ → $a$ $b$."""
+    if "$$" not in value:
+        return value
+    out = []
+    inside = False
+    for i, ch in enumerate(value):
+        out.append(ch)
+        if ch == "$":
+            if inside:
+                inside = False
+                if i + 1 < len(value) and value[i + 1] == "$":
+                    out.append(" ")
+            else:
+                inside = True
+    return "".join(out)
+
+
+def formula_token_count(raw):
+    tokens = mathjax_to_tokens(raw)
+    n, i = 0, 0
+    while i < len(tokens):
+        if tokens[i] != "$":
+            i += 1
+            continue
+        end = tokens.find("$", i + 1)
+        if end < 0:
+            break
+        if end > i + 1:
+            n += 1
+        i = end + 1
+    return n
+
+
 def keyword_flag(text, subject):
     s = norm(text)
     hit = {k: sum(s.count(w) for w in ws) for k, ws in KEYWORD_HINT.items()}
@@ -179,7 +241,8 @@ def main():
     catalog, payloads, report, corrections = [], {}, [], []
     counts = {"total": len(data), "dropped": 0, "type_mapped": 0,
               "subject_fixed": 0, "ambiguous": 0, "keyword_flagged": 0,
-              "option_images": 0, "option_image_rows": 0}
+              "option_images": 0, "option_image_rows": 0,
+              "formula_rows": 0, "formula_tokens": 0}
 
     for d in data:
         qid = int(d["id"])
@@ -237,14 +300,17 @@ def main():
             flags.append("نشانه واژگانی: " + hint)
 
         # ۵) تصویرها، گزینهها و پاسخ
-        q_html = rewrite_html(d.get("q", ""))
-        a_html = rewrite_html(d.get("a", ""))
+        # V361 — فرمولهای MathJax همانجا به توکن ویرایشگر فرمول تبدیل میشوند.
+        q_html = mathjax_to_tokens(rewrite_html(d.get("q", "")))
+        a_html = mathjax_to_tokens(rewrite_html(d.get("a", "")))
+        text_tokens = mathjax_to_tokens(d.get("s", ""))
+        answer_tokens = mathjax_to_tokens(plain(d.get("a", "")))
         choices = d.get("ch", []) or []
         options_text, option_images, correct_index = [], [], None
         for i, c in enumerate(choices):
             if not isinstance(c, list) or len(c) < 2:
                 continue
-            options_text.append(plain(c[1]))
+            options_text.append(mathjax_to_tokens(plain(c[1])))
             # V360.8 — تصویر همین گزینه، به ترتیب HTML؛ هیچ تصویری به متن سؤال نمیرود.
             imgs = image_urls_in_order(c[1], fig_file, base)
             option_images.append(imgs[0] if imgs else None)
@@ -263,7 +329,7 @@ def main():
             "area": d.get("cd", ""),
             "type_fa": new_type_fa, "type": type_code,
             "difficulty": difficulty, "difficulty_fa": difficulty_fa,
-            "score": 1, "text": d.get("s", ""),
+            "score": 1, "text": text_tokens,
             "has_image": bool(image_urls), "image_count": len(image_urls),
             "image_urls": image_urls,
         }
@@ -273,13 +339,18 @@ def main():
             "subject": subject, "chapter": chapter, "topic": d.get("ob", ""),
             "type_fa": new_type_fa, "type": type_code,
             "difficulty": difficulty, "difficulty_fa": difficulty_fa,
-            "text": d.get("s", ""),
+            "text": text_tokens,
             "q_html": q_html, "answer_html": a_html,
             "options": options_text, "correct_index": correct_index,
             "option_images": option_images,
-            "answer_text": plain(d.get("a", "")),
+            "answer_text": answer_tokens,
             "image_urls": image_urls,
         }
+
+        n_formula = sum(formula_token_count(v) for v in
+                        (text_tokens, q_html, a_html, answer_tokens, " ".join(options_text)))
+        counts["formula_tokens"] += n_formula
+        counts["formula_rows"] += 1 if n_formula else 0
 
         report.append([qid, action, old_subject, subject, old_chapter, chapter,
                        old_type, new_type_fa + " / " + type_code,
@@ -322,7 +393,7 @@ def main():
     (questions_dir / "g1.json").write_text(json.dumps(payloads, ensure_ascii=False), encoding="utf-8")
 
     manifest = {
-        "version": "V360", "grade": 1, "base": base,
+        "version": "V361", "grade": 1, "base": base,
         "counts": counts,
         "catalog_rows": len(catalog),
         "question_payloads": len(payloads),

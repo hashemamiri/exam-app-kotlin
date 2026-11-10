@@ -159,7 +159,7 @@ class V360_ReferenceBankTest {
         val version = src("text/APP_VERSION.txt").trim()
         assertTrue("شمارهٔ نسخه نباید ثابت شود", version.split(".").size == 3 && version.isNotBlank())
         val first = src("text/CHANGELOG_FA.txt").lines().first()
-        assertTrue(first.startsWith("V360"))
+        assertTrue(first.startsWith("V36"))
         assertTrue(first.contains("اپ $version"))
     }
 }

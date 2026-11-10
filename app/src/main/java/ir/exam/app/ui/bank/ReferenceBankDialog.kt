@@ -45,6 +45,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import coil.compose.AsyncImage
 import ir.exam.app.domain.bank.ReferenceBankContract
+import ir.exam.app.ui.math.NativeMathText
 import ir.exam.app.domain.bank.ReferenceBankQuestion
 import ir.exam.app.ui.builder.BankQuestionOption
 
@@ -308,7 +309,11 @@ private fun ReferenceBankResults(
                                 modifier = Modifier.weight(1f)
                             )
                         }
-                        Text(row.text.take(180), style = MaterialTheme.typography.bodyMedium, maxLines = 3)
+                        NativeMathText(
+                            source = row.text.take(180),
+                            fontSize = MaterialTheme.typography.bodyMedium.fontSize,
+                            maxLines = 3
+                        )
                         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                             OutlinedButton(onClick = { viewModel.previewReference(row) }) { Text("پیشنمایش") }
                             OutlinedButton(onClick = { viewModel.addReference(row, onAdd, onDismiss) }) { Text("افزودن") }
@@ -363,7 +368,10 @@ private fun ReferenceBankPreview(
                             color = MaterialTheme.colorScheme.primary)
                     }
                 }
-                Text(plain(question.qHtml).ifBlank { question.text }, style = MaterialTheme.typography.bodyMedium)
+                NativeMathText(
+                    source = plain(question.qHtml).ifBlank { question.text },
+                    fontSize = MaterialTheme.typography.bodyMedium.fontSize
+                )
                 question.questionImageUrls.take(8).forEach { url ->
                     AsyncImage(
                         model = url,
@@ -375,7 +383,10 @@ private fun ReferenceBankPreview(
                 if (question.options.isNotEmpty()) {
                     Text("گزینهها", style = MaterialTheme.typography.labelMedium)
                     question.options.forEachIndexed { i, o ->
-                        Text("${i + 1}) $o", style = MaterialTheme.typography.bodySmall)
+                        NativeMathText(
+                            source = "${i + 1}) $o",
+                            fontSize = MaterialTheme.typography.bodySmall.fontSize
+                        )
                         // V360.8 — تصویر گزینه کنار همان گزینه، نه زیر متن سؤال.
                         question.optionImageList.getOrNull(i)?.let { url ->
                             AsyncImage(
@@ -391,7 +402,7 @@ private fun ReferenceBankPreview(
                     val answer = plain(question.answerHtml).ifBlank { question.answerText }
                     if (answer.isNotBlank()) {
                         Text("پاسخ / راهنما", style = MaterialTheme.typography.labelMedium)
-                        Text(answer, style = MaterialTheme.typography.bodySmall)
+                        NativeMathText(source = answer, fontSize = MaterialTheme.typography.bodySmall.fontSize)
                     }
                     question.answerImageUrls.take(8).forEach { url ->
                         AsyncImage(

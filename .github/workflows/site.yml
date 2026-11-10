@@ -7,7 +7,7 @@ name: site
 on:
   push:
     branches: [main, staging]
-    paths: ['site/**', 'scripts/web_ui_e2e.py', 'scripts/check_layout_health.py', 'scripts/mock_supabase_server.py', 'scripts/check_v360_3_browser.py', '.github/workflows/site.yml']
+    paths: ['site/**', 'scripts/web_ui_e2e.py', 'scripts/check_layout_health.py', 'scripts/mock_supabase_server.py', 'scripts/check_v360_3_browser.py', 'scripts/check_v361_formula_browser.py', 'scripts/check_reference_bank_formula.py', '.github/workflows/site.yml']
   workflow_dispatch:
 concurrency:
   group: site-deploy-${{ github.ref_name }}
@@ -139,6 +139,10 @@ jobs:
         run: python3 scripts/check_v360_3_browser.py
       - name: Guard option images in reference bank (V360.8)
         run: python3 scripts/check_reference_bank_option_images.py --selftest
+      - name: Guard MathJax formula tokens (V361)
+        run: python3 scripts/check_reference_bank_formula.py --selftest
+      - name: Guard MathJax formula symbols in browser (V361)
+        run: python3 scripts/check_v361_formula_browser.py
       - name: Guard Actions storage budget (V359.1)
         run: python3 scripts/check_actions_storage.py
       - name: Run automated browser visual & E2E gate on site_out

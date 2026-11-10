@@ -1,0 +1,12 @@
+[
+  {"raw": "\\(\\displaystyle \\text{۸}-\\text{۳}=\\text{۵}\\)", "tokens": "$\\displaystyle \\text{۸}-\\text{۳}=\\text{۵}$"},
+  {"raw": "کدام گزینه \\(x^2\\) درست است؟", "tokens": "کدام گزینه $x^2$ درست است؟"},
+  {"raw": "$$a+b$$", "tokens": "$a+b$"},
+  {"raw": "\\[\\frac{1}{2}\\]", "tokens": "$\\frac{1}{2}$"},
+  {"raw": "$already$", "tokens": "$already$"},
+  {"raw": "\\(a\\)\\(b\\)", "tokens": "$a$ $b$"},
+  {"raw": "\\(\\displaystyle \\text{۵}+\n\\text{۷}\\)", "tokens": "$\\displaystyle \\text{۵}+ \\text{۷}$"},
+  {"raw": "متن ساده بدون فرمول", "tokens": "متن ساده بدون فرمول"},
+  {"raw": "", "tokens": ""},
+  {"raw": "\\(\\displaystyle\\text{۱۰}-\\text{۲}\\)", "tokens": "$\\displaystyle\\text{۱۰}-\\text{۲}$"}
+]

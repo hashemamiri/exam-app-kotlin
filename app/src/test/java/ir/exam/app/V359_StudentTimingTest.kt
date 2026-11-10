@@ -316,7 +316,7 @@ class V359_StudentTimingTest {
         assertTrue("شمارهٔ نسخه نباید ثابت شود", version.split(".").size == 3 && version.isNotBlank())
         val changelog = src("text/CHANGELOG_FA.txt")
         val first = changelog.lines().first()
-        assertTrue("تیتر باید V360 باشد", first.startsWith("V360"))
+        assertTrue("تیتر باید V36x باشد", first.startsWith("V36"))
         assertTrue("دامنه باید اپ باشد", first.contains("اپ $version"))
     }
 }

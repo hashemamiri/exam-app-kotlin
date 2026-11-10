@@ -87,7 +87,8 @@ jobs:
                    check_message_numbers check_test_version_pins \
                    check_site_chunk_ref check_v357_sql_sync \
                    check_actions_storage check_reference_bank_bundle \
-                   check_reference_bank_option_images check_compose_scope; do
+                   check_reference_bank_option_images check_reference_bank_formula \
+                   check_compose_scope; do
             echo "::group::$g"
             python3 "scripts/$g.py"
             echo "::endgroup::"
