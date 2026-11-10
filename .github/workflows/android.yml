@@ -86,12 +86,14 @@ jobs:
                    check_site_pins check_site_sync check_changelog \
                    check_message_numbers check_test_version_pins \
                    check_site_chunk_ref check_v357_sql_sync \
-                   check_actions_storage check_reference_bank_bundle; do
+                   check_actions_storage check_reference_bank_bundle \
+                   check_compose_scope; do
             echo "::group::$g"
             python3 "scripts/$g.py"
             echo "::endgroup::"
           done
           # V352.2 — خودِ نگهبانِ لیست تغییرات هم آزمون دارد (۹ حالت ساختگی).
+          # V360.5 — نگهبان دامنهٔ وضعیتها: scripts/check_compose_scope.py
           python3 scripts/check_changelog.py --selftest
       - name: آماده‌سازی Java
         uses: actions/setup-java@v5

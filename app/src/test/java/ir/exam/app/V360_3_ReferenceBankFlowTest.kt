@@ -4,14 +4,15 @@ import ir.exam.app.domain.bank.ReferenceBankContract
 import ir.exam.app.domain.bank.ReferenceBankMedia
 import java.io.File
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
- * V360.3 — پینهای تصمیمهای تازهٔ کاربر:
+ * V360.5 — پینهای تصمیمهای تازهٔ کاربر:
  *  ۱) دکمهها و چیپها در عرض کم فشرده نمیشوند.
- *  ۲) بانک مرجع از آزمون جدید، دکمهٔ + و بانک سؤال باز میشود؛ افزودن گروهی.
- *  ۳) فیلتر مرحلهای: پایه ← رشته (فقط ۱۰ تا ۱۲) ← درس ← فصل ← نوع ← دشواری.
+ *  ۲) «بانک مرجع» از دکمهٔ + حذف شد؛ فقط از آزمون جدید و بانک سؤال باز میشود.
+ *  ۳) پنجرهٔ فیلتر همه کشویی و پیشفرض «همه»؛ درس تا پیش از پایه فقط «همه».
  *  ۴) پاسخ و تصویر پاسخ فقط با انتخاب کاربر و فقط در بخش پاسخ.
  *  ۵) هیچ سؤال یا تصویری به APK/باندل سایت اضافه نمیشود.
  */
@@ -40,7 +41,6 @@ class V360_3_ReferenceBankFlowTest {
         assertEquals(listOf(a), split.second)
         assertEquals(1, ReferenceBankMedia.imageUrlsFromHtml(aHtml).size)
         assertTrue(ReferenceBankMedia.plainText("<b>پاسخ</b>").contains("پاسخ"))
-        // هیچ شارد تازهای منتشر نشد: تصویر پاسخ از همان answer_html خوانده میشود.
         val models = src("app/src/main/java/ir/exam/app/domain/bank/ReferenceBankModels.kt")
         assertTrue("fun splitImages" in models)
         assertTrue("answerHtml" in models)
@@ -59,27 +59,48 @@ class V360_3_ReferenceBankFlowTest {
         assertTrue(ReferenceBankContract.subjectsFor(10, "انسانی").contains("تاریخ"))
         val models = src("app/src/main/java/ir/exam/app/domain/bank/ReferenceBankModels.kt")
         assertTrue("TRACK_MIN_GRADE = 10" in models)
-        val wizard = src("app/src/main/java/ir/exam/app/ui/bank/ReferenceBankDialog.kt")
-        assertTrue("referenceTracksVisible" in wizard)
-        assertTrue("STEP_TRACK" in wizard)
+        val dialog = src("app/src/main/java/ir/exam/app/ui/bank/ReferenceBankDialog.kt")
+        assertTrue("referenceTracksVisible" in dialog)
+        assertTrue("همهٔ پایهها" in dialog)
+        assertTrue("همهٔ درسها" in dialog)
+        val vm = src("app/src/main/java/ir/exam/app/ui/bank/QuestionBankViewModel.kt")
+        assertTrue("if (referenceGrade == 0) return emptyList()" in vm)
+        assertTrue("if (referenceSubject.isBlank()) return emptyList()" in vm)
         val site = src("site/src/refbank.js")
-        assertTrue("function tracksFor(g) { return g >= 10 ? TRACKS : []; }" in site)
-        assertTrue("st.stage === 0) st.stage = st.grade >= 10 ? 1 : 2;" in site)
+        assertTrue("function tracksFor(g) { return Number(g) >= 10 ? TRACKS : []; }" in site)
+        assertTrue("if (!st.grade) return [];" in site)
+        assertTrue("if (!st.subject) return [];" in site)
     }
 
     @Test
-    fun wizardStepsBulkAddAndFilterIconAreWired() {
+    fun allFiltersAreDropdownsAndDefaultToAll() {
+        val dialog = src("app/src/main/java/ir/exam/app/ui/bank/ReferenceBankDialog.kt")
+        assertTrue("RefDropdown(" in dialog)
+        assertTrue("DropdownMenu(expanded = expanded" in dialog)
+        assertTrue("بستن فیلتر و نمایش سؤالها" in dialog)
+        assertTrue("openReferenceFilter" in dialog)
+        val vm = src("app/src/main/java/ir/exam/app/ui/bank/QuestionBankViewModel.kt")
+        assertTrue("val referenceGrade: Int = 0" in vm)
+        assertTrue("fun applyReferenceFilter()" in vm)
+        assertTrue("referenceGrade == 0" in vm)
+        val site = src("site/src/refbank.js")
+        assertTrue("function selectBox(" in site)
+        assertTrue("var gs = [0];" in site)
+        assertTrue("grade: 0" in site)
+        assertTrue("filterOpen: true" in site)
+        assertTrue("بستن فیلتر و نمایش سؤالها" in site)
+    }
+
+    @Test
+    fun bulkAddAndFilterIconAreWired() {
         val screen = src("app/src/main/java/ir/exam/app/ui/bank/QuestionBankScreen.kt")
         assertTrue("FlowRow(horizontalArrangement" in screen)
         assertTrue("maxLines = 1" in screen)
         assertTrue("فیلتر بانک مرجع" in screen)
         val dialog = src("app/src/main/java/ir/exam/app/ui/bank/ReferenceBankDialog.kt")
         assertTrue("ReferenceBankHost" in dialog)
-        assertTrue("openReferenceFilter" in dialog)
         assertTrue("addReferenceMany" in dialog)
-        assertTrue("تأیید فیلتر و نمایش سؤالها" in dialog)
         val vm = src("app/src/main/java/ir/exam/app/ui/bank/QuestionBankViewModel.kt")
-        assertTrue("fun applyReferenceFilter()" in vm)
         assertTrue("fun addReferenceMany(" in vm)
         assertTrue("referenceIncludeAnswer" in vm)
         val site = src("site/src/refbank.js")
@@ -91,13 +112,13 @@ class V360_3_ReferenceBankFlowTest {
     }
 
     @Test
-    fun referenceBankIsReachableFromNewExamPlusAndQuestionBank() {
+    fun referenceBankIsNotInQuickAddButReachableFromNewExamAndBankScreen() {
         val app = src("app/src/main/java/ir/exam/app/ui/app/ExamApp.kt")
-        assertTrue("ReferenceBankHost" in app)
-        assertTrue("onOpenReferenceBank" in app)
+        assertFalse("ReferenceBankHost" in app)
+        assertFalse("referenceBankOpen" in app)
         val overlay = src("app/src/main/java/ir/exam/app/ui/app/Design69QuickAddOverlay.kt")
-        assertTrue("referenceBankVisible" in overlay)
-        assertTrue("🏛 بانک مرجع" in overlay)
+        assertTrue("const val ACTION_COUNT = 4" in overlay)
+        assertFalse("بانک مرجع" in overlay)
         val builder = src("app/src/main/java/ir/exam/app/ui/builder/ExamBuilderScreen.kt")
         assertTrue("ReferenceBankHost" in builder)
         assertTrue("🏛 بانک مرجع (فیلتر و افزودن گروهی)" in builder)
@@ -107,9 +128,11 @@ class V360_3_ReferenceBankFlowTest {
         assertTrue("RefBank.open({append: true})" in siteBuilder)
         assertTrue("addRefDrafts: function" in siteBuilder)
         val mobile = src("site/src/mobile.js")
-        assertTrue("'بانک مرجع'" in mobile)
+        assertFalse("'بانک مرجع'" in mobile)
+        assertTrue("function quickAddItems(opts)" in mobile)
         val desktop = src("site/src/app.js")
-        assertTrue("'بانک مرجع': ['refbank'" in desktop)
+        assertFalse("'بانک مرجع': ['refbank'" in desktop)
+        assertTrue("quickAddItems({withPrint: true})" in desktop)
     }
 
     @Test
@@ -132,6 +155,17 @@ class V360_3_ReferenceBankFlowTest {
     }
 
     @Test
+    fun noReferenceQuestionDataIsBundled() {
+        val guard = src("scripts/check_reference_bank_bundle.py")
+        assertTrue("FORBIDDEN_NAMES" in guard)
+        assertTrue("--selftest" in guard)
+        val idx = src("site/index.html")
+        assertTrue("__REF_BANK_BASE__" in idx)
+        val fixture = src("app/src/test/resources/v360_reference_bank_fixture.json")
+        assertTrue("\"fields_removed\"" in fixture)
+    }
+
+    @Test
     fun artifactQuotaNeverBlocksSiteDeployment() {
         val wf = src(".github/workflows/site.yml")
         assertTrue("continue-on-error: true" in wf)
@@ -142,13 +176,13 @@ class V360_3_ReferenceBankFlowTest {
     }
 
     @Test
-    fun noReferenceQuestionDataIsBundled() {
-        val guard = src("scripts/check_reference_bank_bundle.py")
-        assertTrue("FORBIDDEN_NAMES" in guard)
-        assertTrue("--selftest" in guard)
-        val idx = src("site/index.html")
-        assertTrue("__REF_BANK_BASE__" in idx)
-        val fixture = src("app/src/test/resources/v360_reference_bank_fixture.json")
-        assertTrue("\"fields_removed\"" in fixture)
+    fun composeScopeGuardProtectsTheShell() {
+        val app = src("app/src/main/java/ir/exam/app/ui/app/ExamApp.kt")
+        assertTrue("private fun AuthenticatedShell(" in app)
+        val guard = src("scripts/check_compose_scope.py")
+        assertTrue("AuthenticatedShell" in guard)
+        assertTrue("referenceBankOpen" in guard)
+        val ci = src(".github/workflows/android.yml")
+        assertTrue("check_compose_scope.py" in ci)
     }
 }

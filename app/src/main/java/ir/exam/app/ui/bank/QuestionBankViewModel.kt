@@ -38,7 +38,8 @@ data class QuestionBankUiState(
     val schoolItems: List<ir.exam.app.ui.builder.SchoolBankItem> = emptyList(),
     // V360 — بانک مرجع، فقطخواندنی از روی فضای ابری
     val referenceOpen: Boolean = false,
-    val referenceGrade: Int = 1,
+    /** V360.5 — صفر یعنی «همهٔ پایهها»؛ پیشفرض همهٔ کشوها روی «همه» است. */
+    val referenceGrade: Int = 0,
     val referenceTrack: String = "",
     val referenceSubject: String = "",
     val referenceChapter: String = "",
@@ -51,20 +52,19 @@ data class QuestionBankUiState(
     val referenceLoading: Boolean = false,
     val referenceError: String? = null,
     val referencePreview: ReferenceBankQuestion? = null,
-    // V360.3 — پنجرهٔ فیلتر مرحلهای و افزودن گروهی
-    val referenceGradeChosen: Boolean = false,
-    val referenceTrackChosen: Boolean = false,
-    val referenceSubjectChosen: Boolean = false,
-    val referenceStage: Int = ReferenceBankContract.STEP_GRADE,
+    // V360.5 — پنجرهٔ کشویی و افزودن گروهی
     val referenceResultsOpen: Boolean = false,
     val referenceIncludeAnswer: Boolean = true,
     val referencePicked: Set<Long> = emptySet(),
-    val referenceCatalogMissing: Boolean = false
+    val referenceCatalogMissing: Boolean = false,
+    val referenceLoadedNote: String? = null
 ) {
+
     /** V360 — پالایش محلی روی همان شارد کوچک؛ هیچ سؤال حجیمی یکجا گرفته نمیشود. */
     val referenceFiltered: List<ReferenceBankRow>
         get() = referenceRows.filter { r ->
-            (referenceTrack.isBlank() || r.track == referenceTrack) &&
+            (referenceGrade == 0 || r.grade == referenceGrade) &&
+                (referenceTrack.isBlank() || r.track == referenceTrack) &&
                 (referenceSubject.isBlank() || r.subject == referenceSubject) &&
                 (referenceChapter.isBlank() || r.chapter == referenceChapter) &&
                 (referenceType.isBlank() || r.typeFa == referenceType) &&
@@ -78,54 +78,43 @@ data class QuestionBankUiState(
     val referencePageRows: List<ReferenceBankRow>
         get() = referenceFiltered.drop(referencePage * referencePageSize).take(referencePageSize)
 
-    val referenceSubjects: List<String>
-        get() = referenceRows.map { it.subject }.filter { it.isNotBlank() }.distinct().sorted()
-
-    val referenceChapters: List<String>
-        get() = referenceRows.filter { referenceSubject.isBlank() || it.subject == referenceSubject }
-            .map { it.chapter }.filter { it.isNotBlank() }.distinct().sorted()
-
-    val referenceTypes: List<String>
-        get() = referenceRows.map { it.typeFa }.filter { it.isNotBlank() }.distinct().sorted()
-
-    /** V360.3 — پایههای ۱ تا ۹ فیلد رشته ندارند. */
+    /** V360.5 — رشته فقط از پایهٔ ۱۰ به بعد دیده میشود. */
     val referenceTracksVisible: Boolean
         get() = referenceGrade >= ReferenceBankContract.TRACK_MIN_GRADE
 
     val referenceTrackOptions: List<String>
         get() = ReferenceBankContract.tracksFor(referenceGrade)
 
-    /** فهرست درسها از شارد همان پایه/رشته، وگرنه از فهرست کوچک درون برنامه. */
+    /** تا وقتی پایهای انتخاب نشده، فقط گزینهٔ «همه» برای درس هست. */
     val referenceSubjectOptions: List<String>
         get() {
+            if (referenceGrade == 0) return emptyList()
             val fromRows = referenceRows
                 .filter { referenceTrack.isBlank() || it.track == referenceTrack }
                 .map { it.subject }.filter { it.isNotBlank() }.distinct().sorted()
             return fromRows.ifEmpty { ReferenceBankContract.subjectsFor(referenceGrade, referenceTrack) }
         }
 
-    /** فصلها فقط پس از انتخاب درس، و فقط همان درس. */
+    /** فصلها فقط پس از انتخاب درس پر میشوند. */
     val referenceChapterOptions: List<String>
-        get() = referenceRows
-            .filter { referenceTrack.isBlank() || it.track == referenceTrack }
-            .filter { referenceSubject.isBlank() || it.subject == referenceSubject }
-            .map { it.chapter }.filter { it.isNotBlank() }.distinct().sorted()
+        get() {
+            if (referenceSubject.isBlank()) return emptyList()
+            return referenceRows
+                .filter { referenceTrack.isBlank() || it.track == referenceTrack }
+                .filter { it.subject == referenceSubject }
+                .map { it.chapter }.filter { it.isNotBlank() }.distinct().sorted()
+        }
 
+    /** نوع سؤال و دشواری به پایه وابسته نیستند؛ همیشه همهٔ گزینهها را دارند. */
     val referenceTypeOptions: List<String>
         get() {
-            val fromRows = referenceRows.map { it.typeFa }.filter { it.isNotBlank() }.distinct().sorted()
-            return fromRows.ifEmpty { listOf("تستی", "تشریحی", "جایخالی", "صحیح/غلط") }
+            val base = listOf("تستی", "تشریحی", "جایخالی", "صحیح/غلط", "دستهبندی", "مرتبسازی", "کوتاهپاسخ")
+            val fromRows = referenceRows.map { it.typeFa }.filter { it.isNotBlank() }
+            return (base + fromRows).distinct().sorted()
         }
 
     val referencePickedCount: Int
         get() = referencePicked.size
-
-    fun referenceStepReady(): Boolean = when (referenceStage) {
-        ReferenceBankContract.STEP_GRADE -> referenceGradeChosen
-        ReferenceBankContract.STEP_TRACK -> referenceTrackChosen || !referenceTracksVisible
-        ReferenceBankContract.STEP_SUBJECT -> referenceSubjectChosen
-        else -> true
-    }
 
     /** V358 — همان منطق سایت؛ انتخاب یک فصل، زیرمجموعه‌هایش را هم می‌گیرد. */
     val visibleQuestions: List<BankQuestionOption>
@@ -275,34 +264,25 @@ class QuestionBankViewModel(
             it.copy(
                 referenceOpen = open,
                 referenceError = null,
-                referenceStage = if (open) ReferenceBankContract.STEP_GRADE else it.referenceStage,
-                referenceResultsOpen = if (open) false else it.referenceResultsOpen,
-                referenceGradeChosen = if (open) false else it.referenceGradeChosen,
-                referenceTrackChosen = if (open) false else it.referenceTrackChosen,
-                referenceSubjectChosen = if (open) false else it.referenceSubjectChosen
+                referenceResultsOpen = if (open) false else it.referenceResultsOpen
             )
         }
         if (open && _state.value.referenceRows.isEmpty()) loadReferenceCatalog()
     }
 
     fun setReferenceGrade(grade: Int) {
-        val g = grade.coerceIn(ReferenceBankContract.MIN_GRADE, ReferenceBankContract.MAX_GRADE)
+        val g = grade.coerceIn(0, ReferenceBankContract.MAX_GRADE)
         _state.update {
             it.copy(
                 referenceGrade = g,
-                referenceGradeChosen = true,
                 referenceTrack = "",
-                referenceTrackChosen = false,
                 referenceSubject = "",
-                referenceSubjectChosen = false,
                 referenceChapter = "",
-                referenceType = "",
-                referenceDifficulty = null,
                 referencePage = 0,
                 referenceRows = emptyList(),
                 referencePicked = emptySet(),
-                referenceResultsOpen = false,
                 referenceCatalogMissing = false,
+                referenceLoadedNote = null,
                 referenceError = null
             )
         }
@@ -310,10 +290,10 @@ class QuestionBankViewModel(
     }
 
     fun setReferenceTrack(value: String) =
-        _state.update { it.copy(referenceTrack = value, referenceTrackChosen = true, referenceSubject = "", referenceSubjectChosen = false, referenceChapter = "", referencePage = 0) }
+        _state.update { it.copy(referenceTrack = value, referenceSubject = "", referenceChapter = "", referencePage = 0) }
 
     fun setReferenceSubject(value: String) =
-        _state.update { it.copy(referenceSubject = value, referenceSubjectChosen = true, referenceChapter = "", referencePage = 0) }
+        _state.update { it.copy(referenceSubject = value, referenceChapter = "", referencePage = 0) }
 
     fun setReferenceChapter(value: String) = _state.update { it.copy(referenceChapter = value, referencePage = 0) }
     fun setReferenceType(value: String) = _state.update { it.copy(referenceType = value, referencePage = 0) }
@@ -325,37 +305,10 @@ class QuestionBankViewModel(
 
     fun setReferenceIncludeAnswer(value: Boolean) = _state.update { it.copy(referenceIncludeAnswer = value) }
 
-    /** V360.3 — گام بعدی پالایشگر؛ رشته برای پایههای ۱ تا ۹ پریده میشود. */
-    fun nextReferenceStage() {
-        _state.update { st ->
-            val next = when (st.referenceStage) {
-                ReferenceBankContract.STEP_GRADE ->
-                    if (st.referenceTracksVisible) ReferenceBankContract.STEP_TRACK
-                    else ReferenceBankContract.STEP_SUBJECT
-                else -> (st.referenceStage + 1).coerceAtMost(ReferenceBankContract.STEP_DIFFICULTY)
-            }
-            st.copy(referenceStage = next)
-        }
-    }
+    /** V360.5 — آیکن فیلتر، همان پنجرهٔ کشویی را برمیگرداند. */
+    fun openReferenceFilter() = _state.update { it.copy(referenceResultsOpen = false) }
 
-    fun prevReferenceStage() {
-        _state.update { st ->
-            val prev = when (st.referenceStage) {
-                ReferenceBankContract.STEP_SUBJECT ->
-                    if (st.referenceTracksVisible) ReferenceBankContract.STEP_TRACK
-                    else ReferenceBankContract.STEP_GRADE
-                else -> (st.referenceStage - 1).coerceAtLeast(ReferenceBankContract.STEP_GRADE)
-            }
-            st.copy(referenceStage = prev)
-        }
-    }
-
-    fun openReferenceFilter() = _state.update {
-        it.copy(referenceResultsOpen = false, referenceStage = ReferenceBankContract.STEP_GRADE,
-            referenceGradeChosen = false, referenceTrackChosen = false, referenceSubjectChosen = false)
-    }
-
-    /** تأیید فیلتر → فهرست سؤالها با امکان انتخاب گروهی. */
+    /** V360.5 — بستن فیلتر و نمایش سؤالها؛ نیازی به پر کردن هیچ کشویی نیست. */
     fun applyReferenceFilter() = _state.update {
         it.copy(referenceResultsOpen = true, referencePage = 0, referenceError = null)
     }
@@ -373,26 +326,53 @@ class QuestionBankViewModel(
 
     fun clearReferencePicks() = _state.update { it.copy(referencePicked = emptySet()) }
 
+    /** V360.5 — پایهٔ «همه» یعنی فقط شاردهایی که واقعاً بارگذاری شدهاند. */
     fun loadReferenceCatalog() = viewModelScope.launch {
         _state.update { it.copy(referenceLoading = true, referenceError = null) }
-        runCatching { referenceRepository.catalog(_state.value.referenceGrade) }
-            .onSuccess { rows ->
-                _state.update {
-                    it.copy(referenceLoading = false, referenceRows = rows, referencePage = 0,
-                        referenceCatalogMissing = rows.isEmpty())
+        val grade = _state.value.referenceGrade
+        if (grade == 0) {
+            val merged = mutableListOf<ReferenceBankRow>()
+            val loaded = mutableListOf<Int>()
+            for (g in ReferenceBankContract.MIN_GRADE..ReferenceBankContract.MAX_GRADE) {
+                runCatching { referenceRepository.catalog(g) }.onSuccess { rows ->
+                    if (rows.isNotEmpty()) { merged.addAll(rows); loaded.add(g) }
                 }
             }
-            .onFailure { e ->
-                _state.update {
-                    it.copy(referenceLoading = false, referenceRows = emptyList(),
-                        referenceCatalogMissing = true,
-                        referenceError = "فهرست این پایه هنوز بارگذاری نشده است؛ میتوانید فیلتر را ببینید. " + safeBankError(e))
-                }
+            _state.update {
+                it.copy(
+                    referenceLoading = false,
+                    referenceRows = merged,
+                    referencePage = 0,
+                    referenceCatalogMissing = merged.isEmpty(),
+                    referenceLoadedNote = if (loaded.isEmpty()) "هیچ پایهای بارگذاری نشده است."
+                        else "پایههای بارگذاریشده: " + loaded.joinToString("، ")
+                )
             }
+        } else {
+            runCatching { referenceRepository.catalog(grade) }
+                .onSuccess { rows ->
+                    _state.update {
+                        it.copy(referenceLoading = false, referenceRows = rows, referencePage = 0,
+                            referenceCatalogMissing = rows.isEmpty(),
+                            referenceLoadedNote = if (rows.isEmpty()) "فهرست این پایه هنوز بارگذاری نشده است." else null)
+                    }
+                }
+                .onFailure { e ->
+                    _state.update {
+                        it.copy(referenceLoading = false, referenceRows = emptyList(),
+                            referenceCatalogMissing = true,
+                            referenceLoadedNote = "فهرست این پایه هنوز بارگذاری نشده است.",
+                            referenceError = safeBankError(e))
+                    }
+                }
+        }
     }
 
+    private fun rowGrade(row: ReferenceBankRow): Int =
+        row.grade.coerceIn(ReferenceBankContract.MIN_GRADE, ReferenceBankContract.MAX_GRADE)
+
     fun previewReference(row: ReferenceBankRow) = viewModelScope.launch {
-        runCatching { referenceRepository.questions(_state.value.referenceGrade)[row.id.toString()] }
+        runCatching { referenceRepository.questions(rowGrade(row))[row.id.toString()] }
             .onSuccess { q -> _state.update { it.copy(referencePreview = q, referenceError = if (q == null) "محتوای این سؤال یافت نشد." else null) } }
             .onFailure { e -> _state.update { it.copy(referenceError = safeBankError(e)) } }
     }
@@ -401,7 +381,7 @@ class QuestionBankViewModel(
 
     /** افزودن یک سؤال؛ پاسخ فقط با انتخاب کاربر و فقط در بخش پاسخ. */
     fun addReference(row: ReferenceBankRow, onAdd: (List<BankQuestionOption>) -> Unit, onDone: () -> Unit = {}) = viewModelScope.launch {
-        runCatching { referenceRepository.questions(_state.value.referenceGrade)[row.id.toString()] }
+        runCatching { referenceRepository.questions(rowGrade(row))[row.id.toString()] }
             .onSuccess { q ->
                 if (q == null) _state.update { it.copy(referenceError = "محتوای این سؤال یافت نشد.") }
                 else { onAdd(listOf(q.toBankQuestionOption(_state.value.referenceIncludeAnswer))); onDone() }
@@ -409,27 +389,26 @@ class QuestionBankViewModel(
             .onFailure { e -> _state.update { it.copy(referenceError = safeBankError(e)) } }
     }
 
-    /** V360.3 — افزودن گروهی: شارد همان پایه یکبار خوانده و فقط سؤالهای انتخابشده کپی میشوند. */
+    /** V360.5 — افزودن گروهی؛ اگر پایه «همه» باشد، شارد هر پایه جداگانه خوانده میشود. */
     fun addReferenceMany(onAdd: (List<BankQuestionOption>) -> Unit, onDone: () -> Unit = {}) = viewModelScope.launch {
-        val picked = _state.value.referenceFiltered
-            .filter { it.id in _state.value.referencePicked }
+        val picked = _state.value.referenceFiltered.filter { it.id in _state.value.referencePicked }
         if (picked.isEmpty()) {
             _state.update { it.copy(referenceError = "نخست سؤالها را انتخاب کنید.") }
             return@launch
         }
         _state.update { it.copy(referenceLoading = true, referenceError = null) }
-        runCatching { referenceRepository.questions(_state.value.referenceGrade) }
-            .onSuccess { all ->
-                val include = _state.value.referenceIncludeAnswer
-                val items = picked.mapNotNull { row ->
-                    all[row.id.toString()]?.toBankQuestionOption(include)
-                }
-                _state.update { it.copy(referenceLoading = false, referenceError = if (items.isEmpty()) "محتوای سؤالها در دسترس نیست." else null) }
-                if (items.isNotEmpty()) { onAdd(items); onDone() }
+        val include = _state.value.referenceIncludeAnswer
+        val items = mutableListOf<BankQuestionOption>()
+        picked.groupBy { rowGrade(it) }.forEach { (grade, rows) ->
+            runCatching { referenceRepository.questions(grade) }.onSuccess { all ->
+                rows.forEach { row -> all[row.id.toString()]?.let { items += it.toBankQuestionOption(include) } }
             }
-            .onFailure { e ->
-                _state.update { it.copy(referenceLoading = false, referenceError = safeBankError(e)) }
-            }
+        }
+        _state.update {
+            it.copy(referenceLoading = false,
+                referenceError = if (items.isEmpty()) "محتوای سؤالها در دسترس نیست." else null)
+        }
+        if (items.isNotEmpty()) { onAdd(items); onDone() }
     }
 
     private fun action(success: String, block: suspend () -> Unit) = viewModelScope.launch {

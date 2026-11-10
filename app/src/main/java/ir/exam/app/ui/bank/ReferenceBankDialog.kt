@@ -2,9 +2,8 @@ package ir.exam.app.ui.bank
 
 import android.text.Html
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -21,7 +20,8 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.FilterChip
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -33,7 +33,9 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
@@ -47,16 +49,14 @@ import ir.exam.app.domain.bank.ReferenceBankQuestion
 import ir.exam.app.ui.builder.BankQuestionOption
 
 /**
- * V360.1 — پیشنمایش کاملاً بومی.
+ * V360.1 — پیشنمایش کاملاً بومی (بهجای WebView).
  *
- * نسخهٔ نخست V360 از WebView برای نمایش HTML سؤال استفاده میکرد؛
- * پین قدیمی Neumorphic69IntegrationTest بهدرستی جلوی ورود WebView به
- * runtime بومی را گرفت و CI شکست. بهجای شل کردن آن پین، اینجا متن با
- * Html.fromHtml ساده و تصویرها با AsyncImage نمایش داده میشوند.
- *
- * V360.3 — پنجرهٔ فیلتر مرحلهای (پایه ← رشته ← درس ← فصل ← نوع ← دشواری)
- * با تأیید نهایی، فهرست سؤالها و افزودن گروهی. رشته فقط برای پایههای ۱۰ تا ۱۲
- * میآید. پاسخ و تصویر پاسخ فقط با تیک کاربر و فقط در بخش پاسخ کپی میشوند.
+ * V360.5 — تصمیم کاربر: پنجرهٔ فیلتر **همه کشویی** و همه روی «همه»؛
+ * نیازی به پیمودن گامها نیست. تا پیش از انتخاب پایه، درس فقط «همه»
+ * دارد و فصل هم تا انتخاب درس فقط «همه»؛ ولی نوع سؤال و دشواری
+ * همیشه همهٔ گزینهها را دارند. رشته فقط برای پایهٔ ۱۰ تا ۱۲ میآید.
+ * با «بستن فیلتر و نمایش سؤالها» فهرست دیده میشود؛ آیکن فیلتر
+ * همان پنجره را برمیگرداند.
  */
 private fun plain(html: String): String {
     if (html.isBlank()) return ""
@@ -69,7 +69,7 @@ private fun plain(html: String): String {
         .trim()
 }
 
-/** V360.3 — میزبان مستقل پنجره، برای باز کردن بانک مرجع از دکمهٔ + و سازندهٔ آزمون. */
+/** V360.3 — میزبان مستقل پنجره، برای باز کردن بانک مرجع از سازندهٔ آزمون. */
 @Composable
 fun ReferenceBankHost(
     onAdd: (List<BankQuestionOption>) -> Unit,
@@ -137,117 +137,95 @@ internal fun ReferenceBankDialog(
                 } else if (state.referenceResultsOpen) {
                     ReferenceBankResults(state = state, viewModel = viewModel, onAdd = onAdd, onDismiss = onDismiss)
                 } else {
-                    ReferenceBankWizard(state = state, viewModel = viewModel)
+                    ReferenceBankFilter(state = state, viewModel = viewModel, onDismiss = onDismiss)
                 }
             }
         }
     }
 }
 
-@OptIn(ExperimentalLayoutApi::class)
+/** V360.5 — یک کشوی ساده و بومی، بدون وابستگی آزمایشی. */
 @Composable
-private fun ReferenceBankWizard(state: QuestionBankUiState, viewModel: QuestionBankViewModel) {
+private fun RefDropdown(
+    label: String,
+    value: String,
+    options: List<Pair<String, String>>,
+    onSelect: (String) -> Unit
+) {
+    var expanded by remember { mutableStateOf(false) }
+    Column(Modifier.fillMaxWidth()) {
+        Text(label, style = MaterialTheme.typography.labelMedium)
+        Box {
+            OutlinedButton(onClick = { expanded = true }, modifier = Modifier.fillMaxWidth()) {
+                Text(options.firstOrNull { it.first == value }?.second ?: "همه", maxLines = 1)
+            }
+            DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+                options.forEach { (v, text) ->
+                    DropdownMenuItem(
+                        text = { Text(text, maxLines = 1) },
+                        onClick = { onSelect(v); expanded = false }
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ReferenceBankFilter(
+    state: QuestionBankUiState,
+    viewModel: QuestionBankViewModel,
+    onDismiss: () -> Unit
+) {
     Column(
         Modifier.fillMaxSize().verticalScroll(rememberScrollState()),
         verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
         Text(
-            "فیلتر مرحلهای: پایه ← رشته (فقط پایهٔ ۱۰ تا ۱۲) ← درس ← فصل ← نوع سؤال ← دشواری",
+            "همهٔ فیلترها کشویی و پیشفرض «همه»اند؛ میتوانید فقط پایه را بگزینید و فیلتر را ببندید.",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
+        state.referenceLoadedNote?.let {
+            Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
         if (state.referenceCatalogMissing) {
             Text(
-                "فهرست این پایه هنوز روی فضای ابری بارگذاری نشده است؛ فیلترها قابل دیدناند ولی سؤالی نمایش داده نمیشود.",
+                "فهرست این پایه هنوز روی فضای ابری بارگذاری نشده است.",
                 color = MaterialTheme.colorScheme.error,
                 style = MaterialTheme.typography.bodySmall
             )
         }
 
-        if (state.referenceStage >= ReferenceBankContract.STEP_GRADE) {
-            Text("۱) پایه را تعیین کنید", style = MaterialTheme.typography.labelLarge)
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                (ReferenceBankContract.MIN_GRADE..ReferenceBankContract.MAX_GRADE).forEach { g ->
-                    FilterChip(
-                        selected = state.referenceGradeChosen && state.referenceGrade == g,
-                        onClick = { viewModel.setReferenceGrade(g) },
-                        label = { Text(g.toString(), maxLines = 1) }
-                    )
-                }
-            }
+        val gradeOptions = listOf("0" to "همهٔ پایهها") +
+            (ReferenceBankContract.MIN_GRADE..ReferenceBankContract.MAX_GRADE).map { it.toString() to "پایهٔ $it" }
+        RefDropdown("پایه", state.referenceGrade.toString(), gradeOptions) { value ->
+            viewModel.setReferenceGrade(value.toIntOrNull() ?: 0)
         }
 
-        if (state.referenceStage >= ReferenceBankContract.STEP_TRACK && state.referenceTracksVisible) {
-            Text("۲) رشته را انتخاب کنید", style = MaterialTheme.typography.labelLarge)
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                state.referenceTrackOptions.forEach { t ->
-                    FilterChip(
-                        selected = state.referenceTrackChosen && state.referenceTrack == t,
-                        onClick = { viewModel.setReferenceTrack(t) },
-                        label = { Text(t.ifBlank { "همهٔ رشتهها" }, maxLines = 1) }
-                    )
-                }
-            }
+        if (state.referenceTracksVisible) {
+            val trackOptions = listOf("" to "همهٔ رشتهها") +
+                state.referenceTrackOptions.filter { it.isNotBlank() }.map { it to it }
+            RefDropdown("رشته", state.referenceTrack, trackOptions, viewModel::setReferenceTrack)
         }
 
-        if (state.referenceStage >= ReferenceBankContract.STEP_SUBJECT) {
-            Text("۳) درس", style = MaterialTheme.typography.labelLarge)
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                (listOf("") + state.referenceSubjectOptions).forEach { s ->
-                    FilterChip(
-                        selected = state.referenceSubjectChosen && state.referenceSubject == s,
-                        onClick = { viewModel.setReferenceSubject(s) },
-                        label = { Text(s.ifBlank { "همهٔ درسها" }, maxLines = 1) }
-                    )
-                }
-            }
-        }
+        val subjectOptions = listOf("" to "همهٔ درسها") +
+            state.referenceSubjectOptions.map { it to it }
+        RefDropdown("درس", state.referenceSubject, subjectOptions, viewModel::setReferenceSubject)
 
-        if (state.referenceStage >= ReferenceBankContract.STEP_CHAPTER) {
-            Text("۴) فصل", style = MaterialTheme.typography.labelLarge)
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                (listOf("") + state.referenceChapterOptions).forEach { c ->
-                    FilterChip(
-                        selected = state.referenceChapter == c,
-                        onClick = { viewModel.setReferenceChapter(c) },
-                        label = { Text(c.ifBlank { "همهٔ فصلها" }, maxLines = 1) }
-                    )
-                }
-            }
-        }
+        val chapterOptions = listOf("" to "همهٔ فصلها") +
+            state.referenceChapterOptions.map { it to it }
+        RefDropdown("فصل", state.referenceChapter, chapterOptions, viewModel::setReferenceChapter)
 
-        if (state.referenceStage >= ReferenceBankContract.STEP_TYPE) {
-            Text("۵) نوع سؤال", style = MaterialTheme.typography.labelLarge)
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                (listOf("") + state.referenceTypeOptions).forEach { t ->
-                    FilterChip(
-                        selected = state.referenceType == t,
-                        onClick = { viewModel.setReferenceType(t) },
-                        label = { Text(t.ifBlank { "همهٔ انواع" }, maxLines = 1) }
-                    )
-                }
-            }
-        }
+        val typeOptions = listOf("" to "همهٔ انواع") +
+            state.referenceTypeOptions.map { it to it }
+        RefDropdown("نوع سؤال", state.referenceType, typeOptions, viewModel::setReferenceType)
 
-        if (state.referenceStage >= ReferenceBankContract.STEP_DIFFICULTY) {
-            Text("۶) دشواری", style = MaterialTheme.typography.labelLarge)
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                (listOf<Int?>(null) + (0..4).toList()).forEach { d ->
-                    FilterChip(
-                        selected = state.referenceDifficulty == d,
-                        onClick = { viewModel.setReferenceDifficulty(d) },
-                        label = { Text(d?.let { ReferenceBankContract.DIFFICULTY_LABELS[it] } ?: "همهٔ سطحها", maxLines = 1) }
-                    )
-                }
-            }
+        val difficultyOptions = listOf("" to "همهٔ سطحها") +
+            ReferenceBankContract.DIFFICULTY_LABELS.mapIndexed { index, label -> index.toString() to label }
+        RefDropdown("دشواری", state.referenceDifficulty?.toString() ?: "", difficultyOptions) { value ->
+            viewModel.setReferenceDifficulty(value.toIntOrNull())
         }
-
-        OutlinedTextField(
-            value = state.referenceQuery,
-            onValueChange = viewModel::setReferenceQuery,
-            label = { Text("جستوجو در متن سؤال (اختیاری)") },
-            modifier = Modifier.fillMaxWidth()
-        )
 
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             Checkbox(
@@ -258,15 +236,11 @@ private fun ReferenceBankWizard(state: QuestionBankUiState, viewModel: QuestionB
         }
 
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            if (state.referenceStage > ReferenceBankContract.STEP_GRADE) {
-                TextButton(onClick = viewModel::prevReferenceStage) { Text("گام قبل") }
-            }
+            TextButton(onClick = onDismiss) { Text("بستن پنجره") }
             Spacer(Modifier.weight(1f))
-            val last = state.referenceStage == ReferenceBankContract.STEP_DIFFICULTY
-            Button(
-                onClick = { if (last) viewModel.applyReferenceFilter() else viewModel.nextReferenceStage() },
-                enabled = state.referenceStepReady()
-            ) { Text(if (last) "تأیید فیلتر و نمایش سؤالها" else "بعدی") }
+            Button(onClick = viewModel::applyReferenceFilter) {
+                Text("بستن فیلتر و نمایش سؤالها")
+            }
         }
     }
 }
@@ -279,6 +253,19 @@ private fun ReferenceBankResults(
     onDismiss: () -> Unit
 ) {
     Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        if (state.referenceGrade == 0) {
+            Text(
+                state.referenceLoadedNote ?: "نمایش سؤالهای پایههای بارگذاریشده",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+        OutlinedTextField(
+            value = state.referenceQuery,
+            onValueChange = viewModel::setReferenceQuery,
+            label = { Text("جستوجو در متن سؤال (اختیاری)") },
+            modifier = Modifier.fillMaxWidth()
+        )
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             Text("${state.referenceFiltered.size} سؤال · صفحه ${state.referencePage + 1}/${state.referencePages}")
             Spacer(Modifier.weight(1f))
@@ -302,7 +289,7 @@ private fun ReferenceBankResults(
         if (state.referencePageRows.isEmpty()) {
             Text(
                 if (state.referenceCatalogMissing) "فهرست این پایه هنوز بارگذاری نشده است."
-                else "سؤالی با این فیلترها پیدا نشد؛ دکمهٔ فیلتر را بزنید.",
+                else "سؤالی با این فیلترها پیدا نشد؛ آیکن فیلتر را بزنید.",
                 style = MaterialTheme.typography.bodySmall
             )
         } else {
@@ -315,7 +302,7 @@ private fun ReferenceBankResults(
                                 onCheckedChange = { viewModel.toggleReferencePick(row.id) }
                             )
                             Text(
-                                listOf(row.subject, row.chapter, row.typeFa, row.difficultyFa)
+                                listOf("پایه ${row.grade}", row.subject, row.chapter, row.typeFa, row.difficultyFa)
                                     .filter { it.isNotBlank() }.joinToString(" · "),
                                 style = MaterialTheme.typography.labelSmall,
                                 modifier = Modifier.weight(1f)
@@ -324,9 +311,7 @@ private fun ReferenceBankResults(
                         Text(row.text.take(180), style = MaterialTheme.typography.bodyMedium, maxLines = 3)
                         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                             OutlinedButton(onClick = { viewModel.previewReference(row) }) { Text("پیشنمایش") }
-                            OutlinedButton(onClick = {
-                                viewModel.addReference(row, onAdd, onDismiss)
-                            }) { Text("افزودن") }
+                            OutlinedButton(onClick = { viewModel.addReference(row, onAdd, onDismiss) }) { Text("افزودن") }
                         }
                     }
                 }

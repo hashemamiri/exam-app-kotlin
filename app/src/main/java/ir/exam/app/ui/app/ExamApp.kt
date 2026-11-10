@@ -86,7 +86,6 @@ import ir.exam.app.domain.model.UserRole
 import ir.exam.app.ui.auth.AuthViewModel
 import ir.exam.app.ui.auth.SignInScreen
 import ir.exam.app.ui.bank.QuestionBankScreen
-import ir.exam.app.ui.bank.ReferenceBankHost
 import ir.exam.app.ui.billing.WalletScreen
 import ir.exam.app.ui.builder.ExamBuilderScreen
 import ir.exam.app.ui.builder.ExamBuilderViewModel
@@ -183,8 +182,6 @@ private fun AuthenticatedExamApp(
     // V58.0.2 — آزمون فعال دانش‌آموز: هدر و منوی همبرگری پنهان می‌شوند.
     var studentExamActive by rememberSaveable(user.id) { mutableStateOf(false) }
     var quickAddOpen by rememberSaveable(user.id) { mutableStateOf(false) }
-    // V360.3 — پنجرهٔ بانک مرجع از دکمهٔ + (آیکن فیلتر و افزودن گروهی)
-    var referenceBankOpen by rememberSaveable(user.id) { mutableStateOf(false) }
     var walletRefreshKey by rememberSaveable(user.id) { mutableIntStateOf(0) }
     var dashboardRefreshKey by rememberSaveable(user.id) { mutableIntStateOf(0) }
     var managerNewTeacherKey by rememberSaveable(user.id) { mutableIntStateOf(0) }
@@ -227,7 +224,6 @@ private fun AuthenticatedExamApp(
     fun closeTransientNavigation() {
         menuOpen = false
         quickAddOpen = false
-        referenceBankOpen = false
     }
 
     fun openHome() {
@@ -1405,25 +1401,9 @@ private fun AuthenticatedShell(
                         primaryTitle = if (user.role == UserRole.MANAGER) "دعوت معلم" else "آزمون جدید",
                         // V61.9 — آیکن حرفه‌ای «دعوت معلم» (معلم + پاکت دعوت).
                         primaryIcon = if (user.role == UserRole.MANAGER) Design69Icons.TeacherInvite else Design69Icons.ExamAdd,
-                        // V360.3 — «بانک مرجع» از همان دکمهٔ + در دسترس است
-                        onOpenReferenceBank = { quickAddOpen = false; referenceBankOpen = true },
-                        referenceBankVisible = user.role == UserRole.TEACHER
                     )
                 }
 
-                // V360.3 — پنجرهٔ مستقل بانک مرجع؛ سؤالهای انتخابشده یک آزمون تازه میسازند.
-                if (referenceBankOpen && user.role == UserRole.TEACHER) {
-                    ReferenceBankHost(
-                        onAdd = { items ->
-                            referenceBankOpen = false
-                            editingExamId = null
-                            importedExam = items.toExamImportDraft()
-                            builderCameFromPrint = false
-                            page = MainPage.BUILDER
-                        },
-                        onDismiss = { referenceBankOpen = false }
-                    )
-                }
             }
         }
     }

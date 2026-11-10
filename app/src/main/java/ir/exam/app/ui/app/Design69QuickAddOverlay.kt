@@ -26,7 +26,6 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -72,9 +71,6 @@ fun Design69QuickAddOverlay(
     onCreateClass: () -> Unit,
     // V61.5 — «مدرسه جدید»: مدیر مدرسه می‌سازد؛ معلم با کد دعوت عضو می‌شود.
     onCreateSchool: () -> Unit = {},
-    // V360.3 — بانک مرجع هم از همان دکمهٔ + باز میشود (چهار کارت گوشه دستنخوردهاند).
-    onOpenReferenceBank: () -> Unit = {},
-    referenceBankVisible: Boolean = false,
     primaryTitle: String = "آزمون جدید",
     primaryIcon: ImageVector = Design69Icons.ExamAdd
 ) {
@@ -116,12 +112,6 @@ fun Design69QuickAddOverlay(
             ir.exam.app.ui.auth.IceAppBackdrop(Modifier.fillMaxSize(), waves = false)
         }
 
-        if (referenceBankVisible) {
-            OutlinedButton(
-                onClick = { close(onOpenReferenceBank) },
-                modifier = Modifier.align(Alignment.TopCenter).padding(top = 10.dp)
-            ) { Text("🏛 بانک مرجع (فیلتر و افزودن گروهی)") }
-        }
 
         NeumorphicPanel(
             modifier = Modifier

@@ -1,12 +1,15 @@
 #!/usr/bin/env python3
-"""V360.3 — بانک مرجع در مرورگر واقعی: فیلتر مرحلهای، افزودن گروهی، پاسخ جدا.
+"""V360.5 — بانک مرجع در مرورگر واقعی: کشوها، پیشفرض «همه»، افزودن گروهی، پاسخ جدا.
 
 شاردهای آروان در این تست با route محلی شبیهسازی میشوند؛ هیچ تماس شبکهای
 بیرونی لازم نیست. سنجشها:
-  • رشته فقط برای پایهٔ ۱۰ به بعد میآید و پایهٔ ۱ مستقیم به درس میرود.
-  • تأیید فیلتر → فهرست سؤالها → انتخاب گروهی → آزمون تازه با همان سؤالها.
+  • منوی + سایت پنج مورد قدیمی را دارد و «بانک مرجع» در آن نیست.
+  • پنجرهٔ فیلتر همه کشویی و پیشفرض «همه» است؛ درس تا پیش از پایه فقط «همه»،
+    ولی نوع سؤال و دشواری بدون پایه هم همهٔ گزینهها را دارند.
+  • رشته فقط برای پایهٔ ۱۰ به بعد میآید.
+  • بستن فیلتر → فهرست سؤالها → انتخاب گروهی → آزمون تازه.
   • تصویر پاسخ هرگز وارد images سؤال نمیشود و پاسخ فقط در کلید پاسخ است.
-  • دکمهٔ + و سازندهٔ آزمون، هر دو بانک مرجع را باز میکنند.
+  • سازندهٔ آزمون همچنان بانک مرجع را باز میکند.
 """
 import json
 import pathlib
@@ -67,7 +70,7 @@ def main():
     rows = catalog()
     qs = {"1": question(1, "ریاضی", "فصل یک"), "2": question(2, "فارسی", "فصل دو")}
 
-    with tempfile.TemporaryDirectory(prefix="v360_3_site_") as tmp:
+    with tempfile.TemporaryDirectory(prefix="v360_5_site_") as tmp:
         site = pathlib.Path(tmp)
         e2e.build_chunked_site_out(site, anon)
         web, url = e2e.start_readonly_site_server(site, mock_url, anon)
@@ -99,54 +102,62 @@ def main():
                 page.locator("button[aria-label='افزودن']").wait_for()
                 page.wait_for_function("() => !!window.RefBank", timeout=15000)
 
-                print("\n=== دکمهٔ + : بانک مرجع در دسترس ===")
+                print("\n=== منوی + : پنج مورد قدیمی، بدون بانک مرجع ===")
                 page.locator("button[aria-label='افزودن']").first.click()
-                page.get_by_text("بانک مرجع", exact=True).first.wait_for(timeout=8000)
-                ok("کارت «بانک مرجع» در منوی + دیده میشود", True)
-                page.keyboard.press("Escape")
+                page.locator(".m-radial-item").first.wait_for(timeout=8000)
+                labels = page.locator(".m-radial-item .l").all_text_contents()
+                ok("پنج کارت قدیمی دیده میشود", len(labels) == 5, labels)
+                ok("آزمون چاپی جدید هست", any("آزمون چاپی جدید" in x for x in labels), labels)
+                ok("بانک مرجع در + نیست", not any("بانک مرجع" in x for x in labels), labels)
                 page.evaluate("() => { var b = document.querySelector('.m-radial-bg'); if (b) b.remove(); }")
 
-                print("\n=== فیلتر مرحلهای: پایه ۱ رشته ندارد ===")
+                print("\n=== پنجرهٔ فیلتر: همه کشویی و پیشفرض «همه» ===")
                 page.evaluate("() => window.ExamSite.go('bank')")
                 page.get_by_text("سؤال جدید در بانک", exact=False).first.wait_for(timeout=15000)
                 page.locator("button", has_text="بانک مرجع").first.click()
                 md = page.locator(".modal.wide").last
-                md.get_by_text("پایه را تعیین کنید", exact=False).first.wait_for(timeout=8000)
-                ok("پنجرهٔ فیلتر باز شد", True)
-                md.get_by_text("پایهٔ ۱", exact=True).first.click()
-                md.get_by_text("بعدی", exact=True).first.click()
-                body = md.inner_text()
-                ok("پایهٔ ۱ فیلد رشته ندارد", "رشته را انتخاب کنید" not in body, body[:200])
-                ok("پایهٔ ۱ مستقیم لیست دروس را آورد", "۳) درس" in body, body[:200])
+                md.get_by_text("بستن فیلتر و نمایش سؤالها", exact=True).first.wait_for(timeout=8000)
+                selects = md.locator("select")
+                ok("همهٔ فیلترها کشوییاند", selects.count() >= 5, selects.count())
+                def sel(title):
+                    return md.locator("select[title='" + title + "']").first
 
-                print("\n=== فیلتر مرحلهای: پایه ۱۰ رشته دارد ===")
-                page.evaluate("() => { var b = [...document.querySelectorAll('.modal-bg')].pop(); if (b) b.remove(); window.RefBank.open(); }")
-                md10 = page.locator(".modal.wide").last
-                md10.get_by_text("پایه را تعیین کنید", exact=False).first.wait_for(timeout=8000)
-                md10.get_by_text("پایهٔ ۱۰", exact=True).first.click()
-                md10.get_by_text("بعدی", exact=True).first.click()
-                body10 = md10.inner_text()
-                ok("پایهٔ ۱۰ فیلد رشته دارد", "رشته را انتخاب کنید" in body10, body10[:200])
-                ok("فهرست دروس پایهٔ ۱۰ خالی نماند", "انسانی" in body10 or "همهٔ رشتهها" in body10, body10[:200])
-                page.evaluate("() => { var b = [...document.querySelectorAll('.modal-bg')].pop(); if (b) b.remove(); }")
+                ok("پایه پیشفرض «همه» است", sel("پایه").input_value() == "0", sel("پایه").input_value())
+                ok("درس پیشفرض «همه» است", sel("درس").input_value() == "", sel("درس").input_value())
+                ok("نوع سؤال پیشفرض «همه» است", sel("نوع سؤال").input_value() == "")
+                ok("دشواری پیشفرض «همه» است", sel("دشواری").input_value() == "")
+                ok("تا پیش از پایه، درس فقط «همه» دارد", sel("درس").locator("option").count() == 1,
+                   sel("درس").locator("option").count())
+                ok("نوع سؤال بدون پایه همهٔ گزینهها را دارد", sel("نوع سؤال").locator("option").count() > 2,
+                   sel("نوع سؤال").locator("option").count())
+                ok("دشواری بدون پایه همهٔ گزینهها را دارد", sel("دشواری").locator("option").count() == 6,
+                   sel("دشواری").locator("option").count())
+                ok("پایهٔ ۱ رشته ندارد", md.locator("select[title='رشته']").count() == 0)
 
-                print("\n=== تأیید فیلتر و افزودن گروهی ===")
-                page.evaluate("() => window.RefBank.open()")
-                md2 = page.locator(".modal.wide").last
-                md2.get_by_text("پایه را تعیین کنید", exact=False).first.wait_for(timeout=8000)
-                md2.get_by_text("پایهٔ ۱", exact=True).first.click()
-                md2.get_by_text("بعدی", exact=True).first.click()
-                md2.locator(".chip", has_text="ریاضی").first.click()
-                for _ in range(4):
-                    btn = md2.get_by_text("بعدی", exact=True).first
-                    if btn.count():
-                        btn.click()
-                        md2 = page.locator(".modal.wide").last
-                md2.get_by_text("تأیید فیلتر و نمایش سؤالها", exact=True).first.click()
-                md2.get_by_text("پرسش ریاضی یک", exact=False).first.wait_for(timeout=8000)
-                ok("فهرست سؤالها پس از تأیید فیلتر آمد", True)
-                md2.get_by_text("انتخاب/برداشتن صفحه", exact=True).first.click()
-                md2.get_by_text("افزودن گروهی", exact=False).first.click()
+                print("\n=== انتخاب پایه و وابستگیها ===")
+                sel("پایه").select_option("1")
+                page.wait_for_function("""() => { var s = document.querySelector('.modal.wide select[title=\"درس\"]'); return s && s.options.length > 1; }""", timeout=10000)
+                md = page.locator(".modal.wide").last
+                sel2 = lambda t: md.locator("select[title='" + t + "']").first
+                ok("با پایهٔ ۱ لیست درسها پر شد", sel2("درس").locator("option").count() > 1,
+                   sel2("درس").locator("option").count())
+                ok("پایهٔ ۱ همچنان رشته ندارد", md.locator("select[title='رشته']").count() == 0)
+                sel2("پایه").select_option("10")
+                page.wait_for_function("""() => !!document.querySelector('.modal.wide select[title=\"رشته\"]')""", timeout=10000)
+                md = page.locator(".modal.wide").last
+                ok("پایهٔ ۱۰ رشته دارد", md.locator("select[title='رشته']").count() == 1)
+                sel2("پایه").select_option("1")
+                page.wait_for_function("""() => !document.querySelector('.modal.wide select[title=\"رشته\"]')""", timeout=10000)
+                md = page.locator(".modal.wide").last
+
+                print("\n=== بستن فیلتر و افزودن گروهی ===")
+                md.get_by_text("بستن فیلتر و نمایش سؤالها", exact=True).first.click()
+                md.get_by_text("پرسش ریاضی یک", exact=False).first.wait_for(timeout=8000)
+                ok("فهرست سؤالها پس از بستن فیلتر آمد", True)
+                md.locator("button[title='بازگشت به فیلتر کشویی']").first.wait_for(timeout=5000)
+                ok("آیکن فیلتر برای برگشت هست", True)
+                md.get_by_text("انتخاب/برداشتن صفحه", exact=True).first.click()
+                md.get_by_text("افزودن گروهی", exact=False).first.click()
                 page.get_by_text("آزمون از بانک مرجع", exact=False).first.wait_for(timeout=12000, state="attached")
                 ok("سؤالها گروهی به آزمون تازه افزوده شدند", True)
 

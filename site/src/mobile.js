@@ -229,8 +229,6 @@
       /* V225 — عمل پنجم فقط دسکتاپ: آزمون چاپی جدید (همان دکمهٔ «آزمون چاپی جدید» بخش چاپ) */
     ];
     if (opts.withPrint && !mgr) items.push(['آزمون چاپی جدید', 'ساخت برگهٔ چاپی', 'print', function () { S.go('builder', {mode: 'print', fresh: true}); }]);
-    /* V360.3 — بانک مرجع هم از دکمهٔ + در دسترس است (فیلتر مرحلهای + افزودن گروهی). */
-    if (!mgr) items.push(['بانک مرجع', 'فیلتر و افزودن گروهی سؤال', 'filter', function () { ui.addOpen = false; paint(); if (window.RefBank) window.RefBank.open(); else toast('بانک مرجع بارگذاری نشده است.', 'err'); }]);
     return items;
   }
   function quickAdd() {
@@ -238,7 +236,7 @@
     var items = quickAddItems();
     /* V153 — چیدمان ضربدری اپ: پنل فرورفته، ۴ کارت ۸۸dp در چهار گوشه، خط‌چین از مرکز، دکمهٔ ✕ گرادیانی وسط */
     var close = function () { ui.addOpen = false; paint(); };
-    var pos = [[1, -1], [-1, -1], [1, 1], [-1, 1], [0, -1.7]]; /* V360.3 — جای پنجم: بالا وسط */
+    var pos = [[1, -1], [-1, -1], [1, 1], [-1, 1]]; /* x: راست/چپ (RTL: مثبت = راست)، y: بالا/پایین */
     var xs = [];
     var stage = el('div', {class: 'm-qa-stage'}, [
       el('div', {class: 'm-qa-panel neo pressed'}),
