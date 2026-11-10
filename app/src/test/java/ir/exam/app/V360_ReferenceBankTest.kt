@@ -145,9 +145,19 @@ class V360_ReferenceBankTest {
     }
 
     @Test
+    fun nativePreviewKeepsOldWebViewPinIntact() {
+        val dialog = src("app/src/main/java/ir/exam/app/ui/bank/ReferenceBankDialog.kt")
+        assertTrue("پیشنمایش باید تصویر بومی داشته باشد", dialog.contains("AsyncImage"))
+        assertTrue("متن HTML باید بومی ساده شود", dialog.contains("Html.fromHtml"))
+        val pin = src("app/src/test/java/ir/exam/app/ui/app/Neumorphic69IntegrationTest.kt")
+        assertTrue("پین قدیمی نباید حذف شود", pin.contains("WebView must not enter native runtime"))
+        assertTrue("استثناهای قدیمی باید برقرار بمانند", pin.contains("QuestionTextFieldWebView.kt"))
+    }
+
+    @Test
     fun versionAndChangelogAgreeWithV360() {
         val version = src("text/APP_VERSION.txt").trim()
-        assertEquals("1.03.82", version)
+        assertEquals("1.03.83", version)
         val first = src("text/CHANGELOG_FA.txt").lines().first()
         assertTrue(first.startsWith("V360"))
         assertTrue(first.contains("اپ $version"))

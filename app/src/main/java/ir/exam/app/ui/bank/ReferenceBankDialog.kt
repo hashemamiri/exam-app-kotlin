@@ -1,6 +1,6 @@
 package ir.exam.app.ui.bank
 
-import android.webkit.WebView
+import android.text.Html
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -23,11 +23,31 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.viewinterop.AndroidView
+import coil.compose.AsyncImage
 import ir.exam.app.domain.bank.ReferenceBankContract
 import ir.exam.app.domain.bank.ReferenceBankQuestion
 import ir.exam.app.ui.builder.BankQuestionOption
+
+/**
+ * V360.1 — پیشنمایش کاملاً بومی.
+ *
+ * نسخهٔ نخست V360 از WebView برای نمایش HTML سؤال استفاده میکرد؛
+ * پین قدیمی Neumorphic69IntegrationTest بهدرستی جلوی ورود WebView به
+ * runtime بومی را گرفت و CI شکست. بهجای شل کردن آن پین، اینجا متن با
+ * Html.fromHtml ساده و تصویرها با AsyncImage نمایش داده میشوند.
+ */
+private fun plain(html: String): String {
+    if (html.isBlank()) return ""
+    val raw = Html.fromHtml(html, Html.FROM_HTML_MODE_LEGACY).toString()
+        .replace('\u200c', ' ')
+        .replace('\u00a0', ' ')
+    return raw.split(' ', '\n', '\t', '\r')
+        .filter { it.isNotBlank() }
+        .joinToString(" ")
+        .trim()
+}
 
 @Composable
 internal fun ReferenceBankDialog(
@@ -185,28 +205,43 @@ private fun ReferenceBankPreview(
     onAdd: () -> Unit,
     onBack: () -> Unit
 ) {
-    val html = """<!doctype html><html lang="fa" dir="rtl"><head><meta charset="utf-8">
-        <style>body{font-family:Tahoma,sans-serif;padding:12px;line-height:2}img{max-width:100%}</style>
-        </head><body>${question.qHtml}${if (question.answerHtml.isBlank()) "" else "<details><summary>پاسخ / راهنما</summary>${question.answerHtml}</details>"}</body></html>"""
     AlertDialog(
         onDismissRequest = onBack,
         confirmButton = { Button(onClick = onAdd) { Text("➕ افزودن به آزمون") } },
         dismissButton = { TextButton(onClick = onBack) { Text("بازگشت") } },
         title = { Text("پیشنمایش سؤال") },
         text = {
-            Column(Modifier.fillMaxWidth().heightIn(max = 460.dp)) {
+            Column(
+                Modifier
+                    .fillMaxWidth()
+                    .heightIn(max = 460.dp)
+                    .verticalScroll(rememberScrollState())
+            ) {
                 Text(
                     listOf(question.subject, question.chapter, question.typeFa, question.difficultyFa)
                         .filter { it.isNotBlank() }.joinToString(" · "),
                     style = MaterialTheme.typography.labelSmall
                 )
-                AndroidView(factory = { ctx ->
-                    WebView(ctx).apply {
-                        settings.javaScriptEnabled = false
-                        settings.loadWithOverviewMode = true
-                        loadDataWithBaseURL(null, html, "text/html", "utf-8", null)
+                Text(plain(question.qHtml).ifBlank { question.text }, style = MaterialTheme.typography.bodyMedium)
+                question.imageUrls.take(8).forEach { url ->
+                    AsyncImage(
+                        model = url,
+                        contentDescription = null,
+                        modifier = Modifier.fillMaxWidth().heightIn(max = 220.dp).padding(vertical = 6.dp),
+                        contentScale = ContentScale.Fit
+                    )
+                }
+                if (question.options.isNotEmpty()) {
+                    Text("گزینهها", style = MaterialTheme.typography.labelMedium)
+                    question.options.forEachIndexed { i, o ->
+                        Text("${i + 1}) $o", style = MaterialTheme.typography.bodySmall)
                     }
-                }, modifier = Modifier.fillMaxWidth().heightIn(min = 220.dp))
+                }
+                val answer = plain(question.answerHtml).ifBlank { question.answerText }
+                if (answer.isNotBlank()) {
+                    Text("پاسخ / راهنما", style = MaterialTheme.typography.labelMedium)
+                    Text(answer, style = MaterialTheme.typography.bodySmall)
+                }
             }
         }
     )
