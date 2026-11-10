@@ -56,6 +56,8 @@ def main() -> int:
     print("\n=== فشرده‌سازی ===")
     site = (wf / "site.yml").read_text(encoding="utf-8")
     ok("گزارش سایت فشرده می‌شود", "compression-level:" in site)
+    ok("پر شدن سهمیه جلوی انتشار را نمیگیرد", "continue-on-error: true" in site)
+    ok("گزارش بیش از یک روز نگه داشته نمیشود", "retention-days: 1" in site)
 
     print()
     if fails:

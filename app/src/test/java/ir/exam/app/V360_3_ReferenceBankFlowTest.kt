@@ -132,6 +132,16 @@ class V360_3_ReferenceBankFlowTest {
     }
 
     @Test
+    fun artifactQuotaNeverBlocksSiteDeployment() {
+        val wf = src(".github/workflows/site.yml")
+        assertTrue("continue-on-error: true" in wf)
+        assertTrue("retention-days: 1" in wf)
+        val guard = src("scripts/check_actions_storage.py")
+        assertTrue("continue-on-error: true" in guard)
+        assertTrue("retention-days: 1" in guard)
+    }
+
+    @Test
     fun noReferenceQuestionDataIsBundled() {
         val guard = src("scripts/check_reference_bank_bundle.py")
         assertTrue("FORBIDDEN_NAMES" in guard)

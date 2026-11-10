@@ -836,3 +836,73 @@ python3 /mnt/c/Users/Hashem/Downloads/apply_v360_3.py
 پایهٔ ۱ (بدون رشته) → درس → فصل → نوع → دشواری → تأیید → تیک چند
 سؤال → «افزودن گروهی». همچنین از «آزمون جدید» و دکمهٔ `+` همان پنجره
 باز شود. تنها پس از تأیید دوبارهٔ کاربر `promote.py` اجرا میشود.
+
+## ۲۸) V360.4 — سهمیهٔ آرتیفکت دیگر جلوی انتشار سایت را نمیگیرد
+
+کاربر خروجی CI سایت آزمایشی را فرستاد؛ تنها خطای آن:
+
+```text
+Error: Failed to CreateArtifact: Artifact storage quota has been hit.
+```
+
+این خطا مربوط به کد، فیلتر یا بانک مرجع نیست. گام «Upload browser
+visual screenshots & HTML gallery» درست **پیش از** گامهای انتشار
+Cloudflare Pages است و `continue-on-error` نداشت؛ پس شکست آن کل job
+را متوقف کرد و deploy اصلاً اجرا نشد.
+
+اندازهگیری زنده پیش از اصلاح:
+
+| نشانی | نتیجه |
+|---|---|
+| `https://staging.onlineexam-1q1.pages.dev/` | هنوز `panels.47885902b8c5.js` (V360.2) |
+| همان سایت، `panels.8916453d6d86.js` | پاسخ HTML صفحهٔ اصلی است، یعنی بستهٔ تازه منتشر نشده |
+| `https://onlineexam-1q1.pages.dev/` | هنوز `panels.d3e41eb93bb6.js`، پس `main` دستنخورده |
+
+کد V360.3 روی شاخهٔ `staging` هست (همین اجرای CI از روی آن راه
+افتاده)، فقط استقرار انجام نشده است.
+
+### اصلاح
+
+- به گام آپلود آرتیفکت `continue-on-error: true` اضافه شد؛ اگر سهمیه
+  پر باشد، گزارش بارگذاری نمیشود ولی انتشار سایت ادامه پیدا میکند.
+- `retention-days` از ۳ به ۱ کاهش یافت تا انباشت گزارشها دوباره سهمیه
+  را پر نکند. `compression-level: 9` برقرار است.
+- نگهبان `scripts/check_actions_storage.py` دو پین مثبت تازه گرفت و
+  `V360_3_ReferenceBankFlowTest` هم همان قاعده را پین کرد. پین قدیمی
+  «بدون ماندگاری ۹۰ روزه» و پین `WebView` دستنخورده ماندند.
+- چون `android.yml` مسیر `.github/workflows/site.yml` را مستثنا
+  میکند، نسخهٔ اپ همان `1.03.85` ماند و CI اپ بیهوده اجرا نمیشود.
+
+### ابزار پاکسازی (اختیاری ولی توصیهشده)
+
+فایل `gh_storage_cleanup.sh` دوباره ساخته شد. پیشفرض فقط گزارش
+میدهد؛ هیچ توکن یا رمزی در آن نیست و نباید در چت فرستاده شود.
+
+```bash
+cd /mnt/c/Users/Hashem/Downloads
+bash gh_storage_cleanup.sh
+bash gh_storage_cleanup.sh --apply
+bash gh_storage_cleanup.sh --apply --caches
+```
+
+`--apply` آرتیفکتهای کهنه را پاک میکند و تازهترین گزارش را نگه
+میدارد؛ `--keep 3` شمار نگهداشتهشدهها را عوض میکند. `--caches`
+کشهای Actions را هم پاک میکند (ساخت بعدی کمی کندتر میشود). اگر `gh`
+وارد حساب نباشد، یک بار `gh auth login` در همان WSL کافی است.
+روی یک `gh` شبیهسازیشده، حالت گزارش و حالت `--apply --caches`
+هر دو درست کار کردند.
+
+### دستور WSL
+
+نصاب `apply_v360_4.py` فقط workflow و نگهبان را عوض میکند و به
+`staging` میرود؛ همان اجرا، V360.3 را هم بالاخره منتشر میکند:
+
+```bash
+cd /mnt/c/Users/Hashem/Downloads/exam-app-kotlin
+python3 /mnt/c/Users/Hashem/Downloads/apply_v360_4*
+```
+
+پس از Actions انتظار: سایت آزمایشی `panels.8916453d6d86.js` و همان
+`__REF_BANK_BASE__` آروان. سپس همان چهار مورد بخش ۲۷ در مرورگر
+بررسی شود. ارتقا به `main` همچنان فقط پس از تأیید صریح کاربر با
+`python3 scripts/promote*` انجام میشود.

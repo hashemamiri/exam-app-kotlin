@@ -152,14 +152,16 @@ jobs:
           fi
       - name: Upload browser visual screenshots & HTML gallery
         if: always()
+        # V360.4 — پر شدن سهمیهٔ آرتیفکت نباید جلوی انتشار سایت را بگیرد.
+        # این گام فقط گزارش است؛ شکست آن نباید deploy بعدی را لغو کند.
+        continue-on-error: true
         uses: actions/upload-artifact@v4
         with:
           name: web-ui-visual-report-${{ github.ref_name }}
           path: web-ui-report/
-          # V359.1 — سهمیهٔ رایگان ۵۱۲MB است و هر گزارش ~۹MB؛ با ۱۴ روز
-          # ماندگاری پس از ~۲۸ اجرا فضا پر می‌شد. گزارش فقط برای بررسی
-          # همان اجرا لازم است.
-          retention-days: 3
+          # V359.1 — سهمیهٔ رایگان ۵۱۲MB است و هر گزارش ~۴MB؛ با ۱۴ روز
+          # ماندگاری پس از ~۲۸ اجرا فضا پر میشد. V360.4: فقط یک روز میماند.
+          retention-days: 1
           compression-level: 9
       # V313.5 — انتشار هم‌زمان روی شاخهٔ gh-pages (GitHub Pages) برای عبور از مسدودی آی‌پی رایگان کلودفلر در همراه اول
       - name: Deploy to GitHub Pages (gh-pages)
