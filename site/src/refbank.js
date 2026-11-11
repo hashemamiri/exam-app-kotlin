@@ -231,7 +231,7 @@
     rows.forEach(function (r) { var v = String(r[key] || '').trim(); if (v && !seen[v]) { seen[v] = 1; out.push(v); } });
     return out.sort(function (a, b) { return a.localeCompare(b, 'fa'); });
   }
-  function gradeLabel(g) { return Number(g) === 0 ? 'همهٔ پایه ها' : 'پایهٔ ' + fa(g); }
+  function gradeLabel(g) { return Number(g) === 0 ? 'همهٔ پایه‌ها' : 'پایهٔ ' + fa(g); }
   function tracksFor(g) { return Number(g) >= 10 ? TRACKS : []; }
   function subjectsFor(g, track) {
     g = Number(g);
@@ -338,42 +338,43 @@
 
     function head() {
       var h = el('div', {class: 'refbank-header'});
-      var first = el('div', {class: 'refbank-title-row'});
-      first.appendChild(el('h2', {class: 'grow', text: 'بانک سؤال مرجع'}));
+      /* V367 — خواستهٔ کاربر: در فهرست، شمارش، انتخاب صفحه، قبلی/بعدی،
+         افزودن پاسخ، افزودن گروهی، جست‌وجو، فیلتر و بستن همه در همان یک
+         ردیف هدر و ثابت باشند (قبلاً دو ردیف بود). */
+      var first = el('div', {class: st.filterOpen ? 'refbank-title-row' : 'refbank-title-row refbank-one-row',
+        role: st.filterOpen ? null : 'toolbar', 'aria-label': st.filterOpen ? null : 'ابزارهای بانک سؤال'});
+      first.appendChild(el('h2', {class: 'grow refbank-h2', text: 'بانک سؤال مرجع'}));
+      var slice = [], pages = 1;
       if (!st.filterOpen) {
+        var f = filtered();
+        pages = Math.max(1, Math.ceil(f.length / st.size));
+        if (st.page >= pages) st.page = pages - 1;
+        slice = f.slice(st.page * st.size, (st.page + 1) * st.size);
+        first.appendChild(el('span', {class: 'chip brand refbank-count', text: fa(f.length) + ' سؤال · صفحهٔ ' + fa(st.page + 1) + ' از ' + fa(pages) + ' · ' + fa(pickedRows().length) + ' انتخاب‌شده'}));
+        first.appendChild(el('button', {class: 'btn light sm', type: 'button', title: 'انتخاب/برداشتن صفحه', 'aria-label': 'انتخاب/برداشتن صفحه', text: '☑', onclick: function () {
+          var ids = slice.map(function (r) { return r.id; }), all = ids.length > 0 && ids.every(function (id) { return st.picked[id]; });
+          ids.forEach(function (id) { if (all) delete st.picked[id]; else st.picked[id] = 1; }); draw();
+        }}));
+        first.appendChild(el('button', {class: 'btn light sm', type: 'button', title: 'قبلی', 'aria-label': 'قبلی', text: '‹', disabled: st.page === 0 ? 'disabled' : null, onclick: function () { st.page = Math.max(0, st.page - 1); draw(); }}));
+        first.appendChild(el('button', {class: 'btn light sm', type: 'button', title: 'بعدی', 'aria-label': 'بعدی', text: '›', disabled: st.page >= pages - 1 ? 'disabled' : null, onclick: function () { st.page = Math.min(pages - 1, st.page + 1); draw(); }}));
+        first.appendChild(el('button', {class: 'chip ref-answer-chip' + (st.includeAnswer ? ' on' : ''), type: 'button', title: 'افزودن پاسخ', 'aria-label': 'افزودن پاسخ', text: (st.includeAnswer ? '✓ ' : '+ ') + 'افزودن پاسخ', onclick: function () { st.includeAnswer = !st.includeAnswer; draw(); }}));
+        first.appendChild(el('button', {class: 'btn ref-bulk-add sm', type: 'button', text: '＋ افزودن گروهی (' + fa(pickedRows().length) + ') به آزمون', onclick: function () { addRows(pickedRows()); }}));
         first.appendChild(el('button', {class: 'ref-icon-btn', type: 'button', title: 'جست‌وجو', 'aria-label': 'جست‌وجو', text: '⌕', onclick: function () { st.searchOpen = !st.searchOpen; draw(); if (st.searchOpen) { var x = card.querySelector('.refbank-search-input'); if (x) x.focus(); } }}));
         first.appendChild(el('button', {class: 'ref-icon-btn', type: 'button', title: 'فیلتر', 'aria-label': 'فیلتر', text: '☷', onclick: function () { st.filterOpen = true; draw(); }}));
       }
       first.appendChild(el('button', {class: 'x refbank-close', type: 'button', title: 'بستن بانک سؤال مرجع', 'aria-label': 'بستن بانک سؤال مرجع', text: '✕', onclick: closeBank}));
       h.appendChild(first);
-      if (!st.filterOpen) {
-        var toolbar = el('div', {class: 'refbank-toolbar', role: 'toolbar', 'aria-label': 'ابزارهای بانک سؤال'});
-        var f = filtered(), pages = Math.max(1, Math.ceil(f.length / st.size));
-        if (st.page >= pages) st.page = pages - 1;
-        var slice = f.slice(st.page * st.size, (st.page + 1) * st.size);
-        toolbar.appendChild(el('span', {class: 'chip brand refbank-count', text: fa(f.length) + ' سؤال · صفحهٔ ' + fa(st.page + 1) + ' از ' + fa(pages) + ' · ' + fa(pickedRows().length) + ' انتخاب شده'}));
-        toolbar.appendChild(el('button', {class: 'btn light sm', type: 'button', title: 'انتخاب/برداشتن صفحه', 'aria-label': 'انتخاب/برداشتن صفحه', text: '☑', onclick: function () {
-          var ids = slice.map(function (r) { return r.id; }), all = ids.length > 0 && ids.every(function (id) { return st.picked[id]; });
-          ids.forEach(function (id) { if (all) delete st.picked[id]; else st.picked[id] = 1; }); draw();
-        }}));
-        toolbar.appendChild(el('button', {class: 'btn light sm', type: 'button', title: 'قبلی', 'aria-label': 'قبلی', text: '‹', disabled: st.page === 0 ? 'disabled' : null, onclick: function () { st.page = Math.max(0, st.page - 1); draw(); }}));
-        toolbar.appendChild(el('button', {class: 'btn light sm', type: 'button', title: 'بعدی', 'aria-label': 'بعدی', text: '›', disabled: st.page >= pages - 1 ? 'disabled' : null, onclick: function () { st.page = Math.min(pages - 1, st.page + 1); draw(); }}));
-        var ans = el('button', {class: 'chip ref-answer-chip' + (st.includeAnswer ? ' on' : ''), type: 'button', title: 'افزودن پاسخ', 'aria-label': 'افزودن پاسخ', text: (st.includeAnswer ? '✓ ' : '+ ') + 'افزودن پاسخ', onclick: function () { st.includeAnswer = !st.includeAnswer; draw(); }});
-        toolbar.appendChild(ans);
-        toolbar.appendChild(el('button', {class: 'btn ref-bulk-add sm', type: 'button', text: '＋ افزودن گروهی (' + fa(pickedRows().length) + ') به آزمون', onclick: function () { addRows(pickedRows()); }}));
-        h.appendChild(toolbar);
-        if (st.searchOpen) {
-          var sr = el('div', {class: 'refbank-search-row'});
-          var qi = el('input', {class: 'refbank-search-input', type: 'search', placeholder: 'جست‌وجو در متن سؤال…', value: st.query, 'aria-label': 'جست‌وجو در متن سؤال'});
-          qi.addEventListener('input', function () {
-            var pos = qi.selectionStart; st.query = qi.value; st.page = 0; draw();
-            var fresh = card.querySelector('.refbank-search-input');
-            if (fresh) { fresh.focus(); try { fresh.setSelectionRange(pos, pos); } catch (_) {} }
-          });
-          sr.appendChild(qi);
-          sr.appendChild(el('button', {class: 'ref-icon-btn', type: 'button', title: 'پاک‌کردن جست‌وجو', 'aria-label': 'پاک‌کردن جست‌وجو', text: '✕', onclick: function () { st.query = ''; draw(); var x = card.querySelector('.refbank-search-input'); if (x) x.focus(); }}));
-          h.appendChild(sr);
-        }
+      if (!st.filterOpen && st.searchOpen) {
+        var sr = el('div', {class: 'refbank-search-row'});
+        var qi = el('input', {class: 'refbank-search-input', type: 'search', placeholder: 'جست‌وجو در متن سؤال…', value: st.query, 'aria-label': 'جست‌وجو در متن سؤال'});
+        qi.addEventListener('input', function () {
+          var pos = qi.selectionStart; st.query = qi.value; st.page = 0; draw();
+          var fresh = card.querySelector('.refbank-search-input');
+          if (fresh) { fresh.focus(); try { fresh.setSelectionRange(pos, pos); } catch (_) {} }
+        });
+        sr.appendChild(qi);
+        sr.appendChild(el('button', {class: 'ref-icon-btn', type: 'button', title: 'پاک‌کردن جست‌وجو', 'aria-label': 'پاک‌کردن جست‌وجو', text: '✕', onclick: function () { st.query = ''; draw(); var x = card.querySelector('.refbank-search-input'); if (x) x.focus(); }}));
+        h.appendChild(sr);
       }
       card.appendChild(h);
     }
@@ -423,20 +424,20 @@
         st.grade = Number(v) || 0; st.track = ''; st.subject = ''; st.chapter = '';
         st.page = 0; st.picked = {}; st.includeAnswerById = {}; st.error = null; load();
       }));
-      if (Number(st.grade) >= 10) body.appendChild(selectBox('رشته', TRACKS, st.track, function (t) { return t || 'همهٔ رشته ها'; }, function (v) {
+      if (Number(st.grade) >= 10) body.appendChild(selectBox('رشته', TRACKS, st.track, function (t) { return t || 'همهٔ رشته‌ها'; }, function (v) {
         st.track = v; st.subject = ''; st.chapter = ''; st.page = 0; draw();
       }));
-      body.appendChild(selectBox('درس', [''].concat(subjectOptions()), st.subject, function (x) { return x || 'همهٔ درس ها'; }, function (v) {
+      body.appendChild(selectBox('درس', [''].concat(subjectOptions()), st.subject, function (x) { return x || 'همهٔ درس‌ها'; }, function (v) {
         st.subject = v; st.chapter = ''; st.page = 0; draw();
       }));
-      body.appendChild(selectBox('فصل', [''].concat(chapterOptions()), st.chapter, function (x) { return x || 'همهٔ فصل ها'; }, function (v) {
+      body.appendChild(selectBox('فصل', [''].concat(chapterOptions()), st.chapter, function (x) { return x || 'همهٔ فصل‌ها'; }, function (v) {
         st.chapter = v; st.page = 0; draw();
       }));
-      body.appendChild(selectBox('نوع سؤال', [''].concat(typeOptions()), st.type, function (x) { return x || 'همهٔ نوع ها'; }, function (v) {
+      body.appendChild(selectBox('نوع سؤال', [''].concat(typeOptions()), st.type, function (x) { return x || 'همهٔ نوع‌ها'; }, function (v) {
         st.type = v; st.page = 0; draw();
       }));
       var ds = ['']; DIFF.forEach(function (_, i) { ds.push(String(i)); });
-      body.appendChild(selectBox('دشواری', ds, st.difficulty, function (d) { return d === '' ? 'همهٔ سطح ها' : DIFF[Number(d)]; }, function (v) {
+      body.appendChild(selectBox('دشواری', ds, st.difficulty, function (d) { return d === '' ? 'همهٔ سطح‌ها' : DIFF[Number(d)]; }, function (v) {
         st.difficulty = v; st.page = 0; draw();
       }));
       popup.appendChild(body); scrim.appendChild(popup); card.appendChild(scrim);
@@ -486,7 +487,7 @@
       });
       Promise.all(tasks).then(function (groupsOut) {
         var out = []; groupsOut.forEach(function (list) { out = out.concat(list); });
-        if (!out.length) { toast('محتوای سؤال ها در دسترس نیست.', 'err'); return; }
+        if (!out.length) { toast('محتوای سؤال‌ها در دسترس نیست.', 'err'); return; }
         if (append && root.SiteBuilder && root.SiteBuilder.addRefDrafts && root.SiteBuilder.addRefDrafts(out)) {
           bg.remove(); toast(fa(out.length) + ' سؤال به همین آزمون افزوده شد.', 'ok'); return;
         }
@@ -518,9 +519,16 @@
         ]));
       }).catch(function (e) { toast('پیش‌نمایش ناموفق بود: ' + String(e.message || e), 'err'); });
     }
+    /* V367 — «سطح» (درک و فهم، دانش و …) در شاردها با فیلد area می‌آید و
+       فعلاً خالی است؛ وقتی داده برسد خودکار در همین ردیف دیده می‌شود.
+       کلیدهای دیگر هم پذیرفته می‌شوند تا شارد آینده بی‌دردسر نمایش داده شود. */
+    function levelOf(r) {
+      return String((r && (r.area || r.area_fa || r.cognitive || r.level)) || '').trim();
+    }
     function metaText(r) {
       var bits = ['پایه ' + fa(r.grade || st.grade || 1), r.subject, r.chapter, r.type_fa, r.difficulty_fa];
-      if (r.area) bits.push(r.area);
+      var lv = levelOf(r);
+      if (lv) bits.push(lv);
       return bits.filter(Boolean).join(' · ');
     }
     function appendOptions(parent, p) {

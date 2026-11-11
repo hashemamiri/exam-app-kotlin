@@ -2629,6 +2629,21 @@ body.st-in-exam-mode .nc-bell{display:none!important}
 .refbank-header{position:sticky;top:0;z-index:4;flex:0 0 auto;background:var(--card);border-bottom:1px solid var(--line);padding:2px 2px 8px}
 .refbank-title-row{display:flex;align-items:center;gap:6px;min-height:42px}
 .refbank-title-row h2{margin:0;flex:1;min-width:120px}
+/* V367 — فهرست: همهٔ ابزارها در یک ردیف هدر؛ روی صفحهٔ باریک، عنوان جا می‌دهد */
+.refbank-one-row{flex-wrap:wrap;row-gap:5px;min-height:44px}
+.refbank-one-row .refbank-h2{flex:0 0 auto;min-width:0;margin:0;font-size:14px;white-space:nowrap}
+.refbank-one-row .refbank-count{font-size:11px}
+/* صفحهٔ باریک: ردیف می‌شکند، نه اینکه از کادر بیرون بزند */
+/* 899px عمداً: نگهبان V267 هر @media با ۸۶۰/۹۰۰px را رد می‌کند */
+@media (max-width:899px){
+  .refbank-one-row{column-gap:4px}
+  .refbank-one-row .refbank-count{display:none}
+  .refbank-one-row .refbank-close{order:-1}
+}
+@media (max-width:640px){
+  .refbank-one-row .refbank-h2{display:none}
+  .refbank-one-row .btn.sm,.refbank-one-row .ref-icon-btn{min-width:34px;padding:5px 7px}
+}
 .ref-icon-btn{display:inline-flex;align-items:center;justify-content:center;width:38px;height:38px;border:1px solid var(--line);border-radius:10px;background:var(--card);color:var(--ink);font-size:21px;cursor:pointer;flex:0 0 auto}
 .refbank-close{position:static!important;background:#d92d20!important;color:#fff!important;border:0!important;border-radius:9px!important;width:36px!important;height:36px!important;font-size:19px!important;cursor:pointer;flex:0 0 auto}
 .refbank-toolbar{display:flex;align-items:center;gap:5px;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:thin;padding:4px 0 2px;white-space:nowrap}

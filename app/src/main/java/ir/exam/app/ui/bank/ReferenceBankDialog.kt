@@ -31,7 +31,6 @@ import androidx.compose.material.icons.outlined.Visibility
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
@@ -153,7 +152,7 @@ internal fun ReferenceBankDialog(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(2.dp)
                     ) {
-                        Text("${state.referenceFiltered.size} سؤال · ${state.referencePage + 1}/${state.referencePages} · ${state.referencePickedCount} انتخاب شده",
+                        Text("${state.referenceFiltered.size} سؤال · ${state.referencePage + 1}/${state.referencePages} · ${state.referencePickedCount} انتخاب‌شده",
                             style = MaterialTheme.typography.labelSmall, modifier = Modifier.widthIn(min = 118.dp))
                         IconButton(onClick = viewModel::toggleReferencePagePicks) {
                             Icon(Icons.Outlined.CheckCircle, contentDescription = "انتخاب/برداشتن صفحه")
@@ -164,12 +163,15 @@ internal fun ReferenceBankDialog(
                         IconButton(onClick = viewModel::nextReferencePage, enabled = state.referencePage < state.referencePages - 1) {
                             Icon(Icons.AutoMirrored.Outlined.ArrowForward, contentDescription = "بعدی")
                         }
-                        FilterChip(
-                            selected = state.referenceIncludeAnswer,
-                            onClick = { viewModel.setReferenceIncludeAnswer(!state.referenceIncludeAnswer) },
-                            label = { Text("افزودن پاسخ", maxLines = 1) },
-                            leadingIcon = { Icon(Icons.Outlined.Add, contentDescription = null, modifier = Modifier.size(16.dp)) }
-                        )
+                        // V367 — آیکن تنها: دکمهٔ پاسخ در هدر فهرست
+                        IconButton(onClick = { viewModel.setReferenceIncludeAnswer(!state.referenceIncludeAnswer) }) {
+                            Icon(
+                                if (state.referenceIncludeAnswer) Icons.Outlined.Check else Icons.Outlined.Add,
+                                contentDescription = "افزودن پاسخ",
+                                tint = if (state.referenceIncludeAnswer) MaterialTheme.colorScheme.primary
+                                       else MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
                         IconButton(
                             onClick = { viewModel.addReferenceMany(onAdd, onDismiss) },
                             enabled = state.referencePickedCount > 0
@@ -192,12 +194,15 @@ internal fun ReferenceBankDialog(
                     }
                 } else {
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End, verticalAlignment = Alignment.CenterVertically) {
-                        FilterChip(
-                            selected = state.referenceIncludeAnswer,
-                            onClick = { viewModel.setReferenceIncludeAnswer(!state.referenceIncludeAnswer) },
-                            label = { Text("افزودن پاسخ") },
-                            leadingIcon = { Icon(Icons.Outlined.Add, contentDescription = null, modifier = Modifier.size(16.dp)) }
-                        )
+                        // V367 — آیکن تنها: دکمهٔ پاسخ در هدر فیلتر
+                        IconButton(onClick = { viewModel.setReferenceIncludeAnswer(!state.referenceIncludeAnswer) }) {
+                            Icon(
+                                if (state.referenceIncludeAnswer) Icons.Outlined.Check else Icons.Outlined.Add,
+                                contentDescription = "افزودن پاسخ",
+                                tint = if (state.referenceIncludeAnswer) MaterialTheme.colorScheme.primary
+                                       else MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
                         Spacer(Modifier.width(8.dp))
                         Button(
                             onClick = viewModel::applyReferenceFilter,
@@ -260,23 +265,23 @@ private fun ReferenceBankFilter(
         Modifier.fillMaxSize().verticalScroll(rememberScrollState()),
         verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
-        val gradeOptions = listOf("0" to "همهٔ پایه ها") +
+        val gradeOptions = listOf("0" to "همهٔ پایه‌ها") +
             (ReferenceBankContract.MIN_GRADE..ReferenceBankContract.MAX_GRADE).map { it.toString() to "پایهٔ $it" }
         RefDropdown("پایه", state.referenceGrade.toString(), gradeOptions) { value ->
             viewModel.setReferenceGrade(value.toIntOrNull() ?: 0)
         }
         if (state.referenceTracksVisible) {
-            val trackOptions = listOf("" to "همهٔ رشته ها") +
+            val trackOptions = listOf("" to "همهٔ رشته‌ها") +
                 state.referenceTrackOptions.filter { it.isNotBlank() }.map { it to it }
             RefDropdown("رشته", state.referenceTrack, trackOptions, viewModel::setReferenceTrack)
         }
-        val subjectOptions = listOf("" to "همهٔ درس ها") + state.referenceSubjectOptions.map { it to it }
+        val subjectOptions = listOf("" to "همهٔ درس‌ها") + state.referenceSubjectOptions.map { it to it }
         RefDropdown("درس", state.referenceSubject, subjectOptions, viewModel::setReferenceSubject)
-        val chapterOptions = listOf("" to "همهٔ فصل ها") + state.referenceChapterOptions.map { it to it }
+        val chapterOptions = listOf("" to "همهٔ فصل‌ها") + state.referenceChapterOptions.map { it to it }
         RefDropdown("فصل", state.referenceChapter, chapterOptions, viewModel::setReferenceChapter)
-        val typeOptions = listOf("" to "همهٔ نوع ها") + state.referenceTypeOptions.map { it to it }
+        val typeOptions = listOf("" to "همهٔ نوع‌ها") + state.referenceTypeOptions.map { it to it }
         RefDropdown("نوع سؤال", state.referenceType, typeOptions, viewModel::setReferenceType)
-        val difficultyOptions = listOf("" to "همهٔ سطح ها") +
+        val difficultyOptions = listOf("" to "همهٔ سطح‌ها") +
             ReferenceBankContract.DIFFICULTY_LABELS.mapIndexed { index, label -> index.toString() to label }
         RefDropdown("دشواری", state.referenceDifficulty?.toString() ?: "", difficultyOptions) { value ->
             viewModel.setReferenceDifficulty(value.toIntOrNull())
@@ -363,18 +368,15 @@ private fun ReferenceBankResults(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
-                            FilterChip(
-                                selected = includeAnswer,
-                                onClick = { viewModel.toggleReferenceAnswer(row.id) },
-                                label = { Text("افزودن پاسخ", maxLines = 1) },
-                                leadingIcon = {
-                                    Icon(
-                                        if (includeAnswer) Icons.Outlined.Check else Icons.Outlined.Add,
-                                        contentDescription = null,
-                                        modifier = Modifier.size(16.dp)
-                                    )
-                                }
-                            )
+                            // V367 — تراشهٔ پاسخ روی کارت، آیکن تنها
+                            IconButton(onClick = { viewModel.toggleReferenceAnswer(row.id) }) {
+                                Icon(
+                                    if (includeAnswer) Icons.Outlined.Check else Icons.Outlined.Add,
+                                    contentDescription = "افزودن پاسخ",
+                                    tint = if (includeAnswer) MaterialTheme.colorScheme.primary
+                                           else MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
                             IconButton(onClick = { viewModel.previewReference(row) }) {
                                 Icon(Icons.Outlined.Visibility, contentDescription = "پیش‌نمایش")
                             }
