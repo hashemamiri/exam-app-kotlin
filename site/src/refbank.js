@@ -614,6 +614,6 @@
     load();
   }
 
-  root.RefBank = {open: open, base: BASE, catalog: catalog, questions: questions, draft: draft,
+  root.RefBank = {build: 'V367.1', open: open, base: BASE, catalog: catalog, questions: questions, draft: draft,
     mathJaxToTokens: mathJaxToTokens};
 })(window);
