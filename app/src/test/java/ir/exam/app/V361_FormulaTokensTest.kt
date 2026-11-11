@@ -96,7 +96,13 @@ class V361_FormulaTokensTest {
         assertTrue("function mathJaxToTokens(raw)" in ref)
         assertTrue("function tokenizeQuestion(q)" in ref)
         assertTrue("function renderFormulaSpans(root)" in ref)
-        assertTrue("renderFormulaSpans(qv)" in ref)
+        /* V366 — بدنهٔ کارت و پیش‌نمایش به‌جای درج خام HTML، فرمول‌های $...$ را
+           در جای خودشان رندر می‌کنند؛ قبلاً فقط span ماتی‌جکس پوشش داده می‌شد و
+           متن شارد با $...$ خام نمایش داده می‌شد. */
+        assertTrue("function renderMathInDom(root)" in ref)
+        assertTrue("fillHtml(qv, " in ref)
+        assertTrue("mathCssOn();" in ref)
+        assertTrue("math-rich" in ref)
         assertTrue("mathJaxToTokens: mathJaxToTokens" in ref)
         assertTrue("tokenTextarea(ansTa, {small: true})" in src("site/src/builder.js"))
         assertFalse("بررسی شارد" in ref)

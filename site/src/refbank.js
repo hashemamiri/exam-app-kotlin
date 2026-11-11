@@ -94,6 +94,10 @@
   /* V361 — رندر توکن به نماد با همان موتور ویرایشگر فرمول سایت. */
   function richInto(node, raw) {
     var tokens = mathJaxToTokens(String(raw || ''));
+    /* V366 — CSS موتور فرمول فقط داخل .math-rich اعمال می‌شود؛ بدون آن
+       نمادها ساخته می‌شدند ولی بی‌اندازه/نامرئی بودند (گزینه‌های بانک خالی). */
+    if (node && node.classList) node.classList.add('math-rich');
+    mathCssOn();
     if (window.SiteStudent && window.SiteStudent.richHtml) {
       window.SiteStudent.richHtml(tokens).then(function (h) {
         node.innerHTML = h;
@@ -102,6 +106,74 @@
     } else {
       node.textContent = tokens;
     }
+    return node;
+  }
+
+  function mathCssOn() {
+    if (window.SiteStudent && window.SiteStudent.mathCss) window.SiteStudent.mathCss();
+  }
+
+  /* V366 — HTML شارد فرمول را به‌صورت $...$ دارد (نه span ماتی‌جکس)؛ این تابع
+     متن‌های $...$ داخل HTML را در جای خودشان به نماد SVG تبدیل می‌کند و
+     ساختار HTML (تصویر، div، span) دست‌نخورده می‌ماند. */
+  function renderMathInDom(root) {
+    if (!root || !window.SiteStudent || !window.SiteStudent.richHtml) return;
+    if (root.querySelectorAll) {
+      var spans = root.querySelectorAll('.rz-formula, .cz-formula, .az-formula');
+      Array.prototype.forEach.call(spans, function (sp) {
+        if (sp.getAttribute('data-math') === '1') return;
+        sp.setAttribute('data-math', '1');
+        var tokens = mathJaxToTokens(sp.textContent || '');
+        window.SiteStudent.richHtml(tokens).then(function (h) { sp.innerHTML = h; }).catch(function () {});
+      });
+    }
+    var walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null);
+    var nodes = [], node;
+    while ((node = walker.nextNode())) {
+      var value = node.nodeValue || '';
+      if (value.indexOf('$') >= 0) nodes.push(node);
+    }
+    nodes.forEach(function (target) {
+      var parent = target.parentNode;
+      if (!parent || /^(SCRIPT|STYLE|TEXTAREA)$/.test(parent.nodeName)) return;
+      var parts = String(target.nodeValue || '').split(/(\$\$[\s\S]*?\$\$|\$[^$]*\$)/g), frag = document.createDocumentFragment(), jobs = [];
+      parts.forEach(function (piece) {
+        if (!piece) return;
+        var inner = mathPiece(piece);
+        if (inner === null) { frag.appendChild(document.createTextNode(piece)); return; }
+        var holder = document.createElement('span');
+        holder.className = 'ref-math';
+        holder.setAttribute('dir', 'ltr');
+        holder.textContent = inner;
+        frag.appendChild(holder);
+        jobs.push([holder, piece]);
+      });
+      parent.replaceChild(frag, target);
+      jobs.forEach(function (job) {
+        window.SiteStudent.richHtml(job[1]).then(function (html) {
+          job[0].innerHTML = html;
+          if (window.SiteStudent.fitMath) window.SiteStudent.fitMath(job[0]);
+        }).catch(function () {});
+      });
+    });
+  }
+
+  /* V366 — جداکردن فرمول درون‌خطی ($…$) و نمایشی ($$…$$) از متن ساده. */
+  function mathPiece(piece) {
+    if (typeof piece !== 'string') return null;
+    var n = piece.length;
+    if (n > 4 && piece.slice(0, 2) === '$$' && piece.slice(n - 2) === '$$') return piece.slice(2, n - 2);
+    if (n > 2 && piece.charAt(0) === '$' && piece.charAt(n - 1) === '$' &&
+        piece.indexOf('$', 1) === n - 1) return piece.slice(1, n - 1);
+    return null;
+  }
+
+  /* V366 — نوشتن HTML شارد با رندر فرمول‌های $...$ در جای خودشان. */
+  function fillHtml(node, html) {
+    mathCssOn();  /* V366 — پیش از درج نمادها، CSS موتور فرمول آماده شود */
+    if (node && node.classList) node.classList.add('math-rich');
+    node.innerHTML = mathJaxToTokens(String(html || ''));
+    renderMathInDom(node);
     return node;
   }
 
@@ -246,8 +318,9 @@
     var append = !!opts.append;
     cache.catalog = {}; cache.questions = {}; cache.catalogAll = null;
     var bg = el('div', {class: 'modal-bg'});
-    var card = el('div', {class: 'modal wide refbank-modal', style: 'max-width:1180px;width:98vw;height:94vh;max-height:94vh;overflow:hidden;display:flex;flex-direction:column;position:relative'});
+    var card = el('div', {class: 'modal wide refbank-modal math-rich', style: 'max-width:1180px;width:98vw;height:94vh;max-height:94vh;overflow:hidden;display:flex;flex-direction:column;position:relative'});
     bg.appendChild(card); document.body.appendChild(bg);
+    mathCssOn();  /* V366 — CSS موتور فرمول برای نمادهای SVG */
     bg.addEventListener('click', function (e) { if (e.target === bg) bg.remove(); });
     var st = {
       grade: 0, track: '', subject: '', chapter: '', type: '', difficulty: '', query: '',
@@ -426,14 +499,15 @@
         var p = all[String(r.id)];
         if (!p) { toast('محتوای این سؤال یافت نشد.', 'err'); return; }
         var pbg = el('div', {class: 'modal-bg'});
-        var pc = el('div', {class: 'modal wide refbank-preview'});
+        var pc = el('div', {class: 'modal wide refbank-preview math-rich'});
+        mathCssOn();
         pbg.appendChild(pc); document.body.appendChild(pbg);
         pbg.addEventListener('click', function (e) { if (e.target === pbg) pbg.remove(); });
         pc.appendChild(el('div', {class: 'row'}, [el('h3', {class: 'grow', text: 'پیش‌نمایش سؤال'}), el('button', {class: 'x refbank-close', text: '✕', title: 'بستن', onclick: function () { pbg.remove(); }})]));
         pc.appendChild(el('div', {class: 'muted', style: 'font-size:12px', text: metaText(r)}));
         if (p.option_images === undefined) pc.appendChild(el('div', {class: 'alert warn', text: 'این شارد قدیمی است و اطلاعات تصویر گزینه‌ها را ندارد. پنجره را ببندید و دوباره باز کنید.'}));
         var qv = el('div', {class: 'ref-question-body'});
-        if (p.q_html) { qv.innerHTML = mathJaxToTokens(p.q_html); renderFormulaSpans(qv); }
+        if (p.q_html) { fillHtml(qv, p.q_html); }
         else richInto(qv, p.text || r.text || '');
         pc.appendChild(qv);
         appendOptions(pc, p);
@@ -463,7 +537,7 @@
       var ans = el('details', {class: 'ref-answer-details'});
       ans.appendChild(el('summary', {text: 'پاسخ'}));
       var av = el('div', {class: 'ref-question-body'});
-      if (p.answer_html) { av.innerHTML = mathJaxToTokens(p.answer_html); renderFormulaSpans(av); }
+      if (p.answer_html) { fillHtml(av, p.answer_html); }
       else richInto(av, p.answer_text);
       ans.appendChild(av);
       splitImages(p).answer.forEach(function (u) { ans.appendChild(el('img', {src: u, alt: 'تصویر پاسخ', loading: 'lazy'})); });
@@ -487,7 +561,7 @@
         item.appendChild(info);
         if (detail) {
           var qv = el('div', {class: 'ref-question-body'});
-          if (detail.q_html) { qv.innerHTML = mathJaxToTokens(detail.q_html); renderFormulaSpans(qv); }
+          if (detail.q_html) { fillHtml(qv, detail.q_html); }
           else richInto(qv, detail.text || r.text || '');
           item.appendChild(qv);
           appendOptions(item, detail);
