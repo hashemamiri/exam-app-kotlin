@@ -109,11 +109,64 @@ object NativeMathParser {
         "overleftarrow", "overrightarrow", "overleftrightarrow",
         "overset", "underset", "xrightarrow", "binom", "pmod",
         "left", "right", "begin", "end", "quad", "qquad",
-        "vadd", "vsub", "vmul", "vops", "ldiv", "bdiv", "sdiv"
+        "vadd", "vsub", "vmul", "vops", "ldiv", "bdiv", "sdiv", "middle"
+    )
+
+    /**
+     * V368 — دستورهای سبک‌دهنده و «بی‌اثر» LaTeX/MathJax.
+     *
+     * شاردهای بانک مرجع تقریباً همهٔ فرمول‌ها را با `\displaystyle` آغاز می‌کنند و
+     * ویرایشگر وب (`formula.html`) این دستورها را بی‌صدا رد می‌کند. پارسر بومی
+     * شاخه‌ای برایشان نداشت و به‌جای آن `□` می‌گذاشت؛ نتیجه یک مربع کنار فرمولِ
+     * سؤالی بود که از بانک مرجع به آزمون افزوده می‌شد.
+     */
+    private val silentCommands = setOf(
+        "displaystyle", "textstyle", "scriptstyle", "scriptscriptstyle",
+        "displaylimits", "limits", "nolimits", "relax", "allowbreak",
+        "nonumber", "notag", "hline", "mathstrut", "strut",
+        "bf", "rm", "it", "sf", "tt", "cal", "frak", "Bbb", "mit"
+    )
+
+    /** V368 — آرگومان می‌گیرند ولی خودشان دیده نمی‌شوند (`\phantom`، `\color`، `\tag`). */
+    private val argumentCommands = setOf(
+        "phantom", "hphantom", "vphantom", "color", "textcolor", "tag"
+    )
+
+    /** V368 — فاصله‌های دستوری (`\hspace{1cm}`) به‌جای □ یک فاصلهٔ نازک می‌دهند. */
+    private val spaceCommands = setOf(
+        "hspace", "hskip", "kern", "mkern", "mskip", "vspace", "hfill", "vfill"
+    )
+
+    /** V368 — پوشش‌هایی که فقط محتوایشان دیده می‌شود (`\cancel{x}`، `\boxed{x}`). */
+    private val wrapperCommands = setOf(
+        "mathop", "mathbin", "mathrel", "mathord", "mathopen", "mathclose",
+        "mathpunct", "mathinner", "cancel", "bcancel", "xcancel", "sout",
+        "boxed", "fbox", "smash",
+        "mathfrak", "mathit", "mathscr", "mathsf", "mathtt"
+    )
+
+    /** V368 — آکولاد/براکتِ نام‌دار (`\lbrace`، `\rbrack`). */
+    private val bracketCommands = mapOf(
+        "lbrace" to "{", "rbrace" to "}", "lbrack" to "[", "rbrack" to "]"
+    )
+
+    /** V368 — ستارهٔ اختیاری این فرمان‌ها نباید به‌صورت «*» دیده شود. */
+    private val starCommands = setOf(
+        "operatorname", "hspace", "hskip", "kern", "vspace", "vfill", "hfill",
+        "smash", "tag", "cancel"
+    )
+
+    /** V368 — محیط‌هایی که سطر/ستون دارند. */
+    private val matrixEnvironments = setOf(
+        "matrix", "bmatrix", "pmatrix", "vmatrix", "Bmatrix", "Vmatrix",
+        "smallmatrix", "cases", "dcases", "rcases", "aligned", "align",
+        "align*", "aligned*", "gathered", "gather", "gather*", "split",
+        "eqnarray", "eqnarray*", "array", "array*"
     )
 
     val supportedCommands: Set<String> =
-        (commandSymbols.keys + namedFunctions + structuralCommands).toSet()
+        (commandSymbols.keys + namedFunctions + structuralCommands + silentCommands +
+            argumentCommands + spaceCommands + wrapperCommands + bracketCommands.keys).toSet()
 
     fun parse(tex: String): MathNode {
         require(tex.length <= 8000) { "فرمول بیش از حد بلند است." }
@@ -203,7 +256,8 @@ object NativeMathParser {
             "bigm", "Bigm", "limits", "nolimits", "displaystyle", "textstyle", "scriptstyle", "scriptscriptstyle", "sum", "prod", "int", "lim",
             "binom", "stackrel", "overset", "underset", "underbrace", "overbrace", "cases", "pmatrix", "bmatrix", "vmatrix", "matrix", "not", "cdot",
             "vadd", "vsub", "vmul", "vops", "ldiv", "bdiv", "sdiv"
-        )
+        ) + silentCommands + argumentCommands + spaceCommands + wrapperCommands + bracketCommands.keys +
+            setOf("textcolor", "notag", "middle", "substack", "genfrac")
     }
 
     private class Parser(
@@ -316,8 +370,9 @@ object NativeMathParser {
         }
 
         private fun command(slashStart: Int): MathNode {
+            // V368 — بک‌اسلش تنها در پایان متن، خطای کاربر است نه □.
             if (index >= source.length) {
-                return sourceSymbol("□", slashStart, index)
+                return sourceSymbol("", slashStart, index, editable = false)
             }
             val escaped = source[index]
             if (!escaped.isLetter()) {
@@ -338,6 +393,8 @@ object NativeMathParser {
             // V288.1 — نام فرمان فقط حروف ASCII است؛ «\\congℤ» یعنی ≅ و بعد ℤ (قبلاً ℤ جزو نام می‌شد و □ می‌داد)
             while (index < source.length && source[index] in 'a'..'z' || index < source.length && source[index] in 'A'..'Z') index++
             var name = source.substring(nameStart, index)
+            // V368 — ستارهٔ اختیاری («\operatorname*»، «\hspace*») نماد «*» نباشد.
+            if (name in starCommands && index < source.length && source[index] == '*') index++
             if (name !in knownCommandNames) {
                 // V288.1 — فرمان چسبیده به حرف بعدی («\\Vertf» = \\Vert f ، «\\lambdaw» = λw): بلندترین پیشوند شناخته‌شده را بردار
                 for (cut in name.length - 1 downTo 1) {
@@ -482,7 +539,7 @@ object NativeMathParser {
                     val body = groupOrAtom()
                     sourceSymbol(calligraphic(flat(body)), slashStart, index)
                 }
-                "hat", "widehat" -> MathNode.Accent(groupOrAtom(), "hat")
+                "hat", "widehat", "widetilde" -> MathNode.Accent(groupOrAtom(), "hat")
                 "bar", "overline" -> MathNode.Accent(groupOrAtom(), "bar")
                 "underline" -> MathNode.Accent(groupOrAtom(), "underline")
                 "vec", "overrightarrow", "overleftarrow", "overleftrightarrow" -> MathNode.Accent(groupOrAtom(), "vec")
@@ -491,7 +548,7 @@ object NativeMathParser {
                 "tilde" -> MathNode.Accent(groupOrAtom(), "tilde")
                 "overbrace" -> MathNode.Accent(groupOrAtom(), "overbrace")
                 "underbrace" -> MathNode.Accent(groupOrAtom(), "underbrace")
-                "overset" -> {
+                "overset", "stackrel" -> {
                     val over = groupOrAtom()
                     val base = groupOrAtom()
                     MathNode.Script(base, over, null)
@@ -521,11 +578,73 @@ object NativeMathParser {
                     readDelimiter()
                     MathNode.Symbol("", editable = false)
                 }
-                "begin" -> parseEnvironment(slashStart)
+                "begin" -> parseEnvironment()
                 "end" -> {
                     groupOrAtom()
                     MathNode.Symbol("", editable = false)
                 }
+                // V368 — «\substack{a\\b}» ستون کوچک است، نه □.
+                "substack" -> {
+                    skipWhitespace()
+                    if (index < source.length && source[index] == '{') {
+                        val start = index + 1
+                        var depth = 1
+                        index++
+                        while (index < source.length && depth > 0) {
+                            when (source[index]) {
+                                '{' -> depth++
+                                '}' -> depth--
+                            }
+                            index++
+                        }
+                        val end = (index - 1).coerceAtLeast(start)
+                        val body = source.substring(start, end)
+                        MathNode.Matrix(
+                            splitSlices(body, "\\\\").map { slice ->
+                                listOf(
+                                    Parser(
+                                        body.substring(slice.first, slice.last + 1),
+                                        global(start + slice.first)
+                                    ).parseSequence()
+                                )
+                            },
+                            ' '
+                        )
+                    } else {
+                        groupOrAtom()
+                    }
+                }
+                // V368 — «\genfrac» = کسر با چهار آرگومان تنظیمات.
+                "genfrac" -> {
+                    repeat(4) { groupOrAtom() }
+                    MathNode.Fraction(groupOrAtom(), groupOrAtom())
+                }
+                // V368 — «\not» علامت بعدی را منفی می‌کند (∈ → ∉).
+                "not" -> {
+                    val glyph = flat(groupOrAtom())
+                    val negated = when (glyph) {
+                        "∈" -> "∉"; "∋" -> "∌"; "=" -> "≠"; "<" -> "≮"; ">" -> "≯"
+                        "≤" -> "≰"; "≥" -> "≱"; "⊂" -> "⊄"; "⊃" -> "⊅"; "⊆" -> "⊈"
+                        "⊇" -> "⊉"; "≡" -> "≢"; "∼" -> "≁"; "≈" -> "≉"; "∣" -> "∤"
+                        "∥" -> "∦"; "→" -> "↛"; "←" -> "↚"; "⇔" -> "⇎"; "⇒" -> "⇏"
+                        else -> glyph
+                    }
+                    sourceSymbol(negated, slashStart, index, editable = false)
+                }
+                // V368 — «\middle|» جداکنندهٔ وسط است، نه □.
+                "middle" -> sourceSymbol(readDelimiter(), slashStart, index, editable = false)
+                // V368 — دستورهای سبک/بی‌اثر: نه □ می‌دهند نه محتوا را می‌خورند.
+                in silentCommands -> sourceSymbol("", slashStart, index, editable = false)
+                in argumentCommands -> {
+                    groupOrAtom()
+                    sourceSymbol("", slashStart, index, editable = false)
+                }
+                in spaceCommands -> {
+                    groupOrAtom()
+                    sourceSymbol("\u2009", slashStart, index, editable = false)
+                }
+                in wrapperCommands -> groupOrAtom()
+                in bracketCommands -> sourceSymbol(bracketCommands.getValue(name), slashStart, index)
                 in namedFunctions -> sourceSymbol(name, slashStart, index)
                 else -> sourceSymbol(commandSymbols[name] ?: "□", slashStart, index)
             }
@@ -605,23 +724,42 @@ object NativeMathParser {
             return result
         }
 
-        private fun parseEnvironment(commandStart: Int): MathNode {
+        private fun parseEnvironment(): MathNode {
             val environment = flat(groupOrAtom())
             val end = "\\end{$environment}"
             val endAt = source.indexOf(end, index)
-            if (endAt < 0) return sourceSymbol("□", commandStart, index)
+            // V368 — «\begin» بی‌جفت: به‌جای □، همان متن باقی‌مانده خوانده می‌شود.
+            if (endAt < 0) {
+                val rest = source.substring(index)
+                val node = Parser(rest, global(index)).parseSequence()
+                index = source.length
+                return node
+            }
             val bodyStart = index
             val body = source.substring(bodyStart, endAt)
             index = endAt + end.length
-            if (environment in setOf("matrix", "bmatrix", "pmatrix", "vmatrix", "Bmatrix", "Vmatrix", "cases", "aligned", "align")) {
-                val rows = splitSlices(body, "\\\\").map { rowSlice ->
-                    val rowText = body.substring(rowSlice.first, rowSlice.last + 1)
+            if (environment in matrixEnvironments) {
+                // V368 — «\begin{array}{ll}»: ستون‌بندی تنظیم است، نه محتوا.
+                var cells = body
+                var cellsStart = bodyStart
+                if (environment.startsWith("array") || environment.startsWith("smallmatrix")) {
+                    val trimmed = body.trimStart()
+                    if (trimmed.startsWith("{")) {
+                        val close = trimmed.indexOf('}')
+                        if (close > 0) {
+                            cells = trimmed.substring(close + 1)
+                            cellsStart = bodyStart + (body.length - trimmed.length) + close + 1
+                        }
+                    }
+                }
+                val rows = splitSlices(cells, "\\\\").map { rowSlice ->
+                    val rowText = cells.substring(rowSlice.first, rowSlice.last + 1)
                     splitSlices(rowText, "&").map { cellSlice ->
                         val raw = rowText.substring(cellSlice.first, cellSlice.last + 1)
                         val leading = raw.indexOfFirst { !it.isWhitespace() }.let { if (it < 0) 0 else it }
                         val trailing = raw.indexOfLast { !it.isWhitespace() }.let { if (it < leading) leading - 1 else it }
                         val trimmed = if (trailing >= leading) raw.substring(leading, trailing + 1) else ""
-                        val globalStart = global(bodyStart + rowSlice.first + cellSlice.first + leading)
+                        val globalStart = global(cellsStart + rowSlice.first + cellSlice.first + leading)
                         Parser(trimmed, globalStart).parseSequence()
                     }
                 }
@@ -634,7 +772,8 @@ object NativeMathParser {
                 }
                 return MathNode.Matrix(rows, delimiter)
             }
-            return sourceSymbol("□", commandStart, index)
+            // V368 — محیط ناشناخته (`align*`، `gathered`، …) به‌جای □ خوانده می‌شود.
+            return Parser(body, global(bodyStart)).parseSequence()
         }
 
         private fun sourceSymbol(

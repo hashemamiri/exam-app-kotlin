@@ -56,6 +56,12 @@ def main() -> int:
     ok("پیشنمایش اپ نماد SVG نشان میدهد",
        "NativeMathText" in
        (ROOT / "app/src/main/java/ir/exam/app/ui/bank/ReferenceBankDialog.kt").read_text(encoding="utf-8"))
+    # V368 — سبک‌های MathJax نباید در پارسر بومی به □ تبدیل شوند.
+    ast = (ROOT / "app/src/main/java/ir/exam/app/core/math/NativeMathAst.kt").read_text(encoding="utf-8")
+    ok("V368 — بومی سبک‌های MathJax را بی‌صدا رد می‌کند",
+       "in silentCommands ->" in ast and "private val silentCommands = setOf(" in ast)
+    ok("V368 — محیط ریاضی ناشناخته به‌جای □ خوانده می‌شود",
+       "matrixEnvironments" in ast and '"align*"' in ast)
     ref = (ROOT / "site/src/refbank.js").read_text(encoding="utf-8")
     ok("سایت مبدل دارد", "function mathJaxToTokens(raw)" in ref)
     ok("سایت شارد را هنگام خواندن توکن میکند", "function tokenizeQuestion(q)" in ref)
