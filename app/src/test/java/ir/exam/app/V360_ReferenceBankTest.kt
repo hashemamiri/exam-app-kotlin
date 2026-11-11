@@ -112,7 +112,7 @@ class V360_ReferenceBankTest {
         val ref = src("site/src/refbank.js")
         assertTrue(ref.contains("__REF_BANK_BASE__"))
         assertTrue(ref.contains("loading: 'lazy'"))
-        assertTrue(ref.contains("S.go('builder', { refAdd: out })"))
+        assertTrue(ref.contains("S.go('builder', {refAdd: out})"))
         assertFalse("هیچ فهرست حجیمی داخل باندل سایت نشود", idx.contains("\"catalog_rows\": 2418"))
         val school = src("site/src/school.js")
         assertTrue(school.contains("بانک مرجع"))

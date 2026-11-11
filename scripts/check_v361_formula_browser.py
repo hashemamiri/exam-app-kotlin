@@ -104,18 +104,18 @@ def main():
                 page.get_by_text("سؤال جدید در بانک", exact=False).first.wait_for(timeout=15000)
                 page.locator("button", has_text="بانک مرجع").first.click()
                 md = page.locator(".modal.wide").last
-                md.get_by_text("بستن فیلتر و نمایش سؤالها", exact=True).first.wait_for(timeout=8000)
+                md.get_by_text("تأیید", exact=True).first.wait_for(timeout=8000)
                 md.locator("select[title='پایه']").first.select_option("1")
                 page.wait_for_timeout(500)
-                md.get_by_text("بستن فیلتر و نمایش سؤالها", exact=True).first.click()
+                md.get_by_text("تأیید", exact=True).first.click()
                 md.get_by_text("حاصل", exact=False).first.wait_for(timeout=8000)
                 body_text = md.inner_text()
                 ok("فهرست دیگر فرمول خام نشان نمیدهد", "\\(" not in body_text, body_text[:200])
 
                 print("\n=== پیشنمایش: فرمول به نماد ===")
-                md.get_by_text("پیشنمایش", exact=True).first.click()
+                md.get_by_text("پیش‌نمایش", exact=True).first.click()
                 pv = page.locator(".modal.wide").last
-                pv.get_by_text("پیشنمایش سؤال", exact=True).first.wait_for(timeout=8000)
+                pv.get_by_text("پیش‌نمایش سؤال", exact=True).first.wait_for(timeout=8000)
                 page.wait_for_timeout(900)
                 pv_html = pv.inner_html()
                 ok("پیشنمایش فرمول خام MathJax نشان نمیدهد", "\\(" not in pv_html, pv_html[:300])

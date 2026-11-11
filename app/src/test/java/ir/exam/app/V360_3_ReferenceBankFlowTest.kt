@@ -61,8 +61,8 @@ class V360_3_ReferenceBankFlowTest {
         assertTrue("TRACK_MIN_GRADE = 10" in models)
         val dialog = src("app/src/main/java/ir/exam/app/ui/bank/ReferenceBankDialog.kt")
         assertTrue("referenceTracksVisible" in dialog)
-        assertTrue("همهٔ پایهها" in dialog)
-        assertTrue("همهٔ درسها" in dialog)
+        assertTrue("همهٔ پایه ها" in dialog)
+        assertTrue("همهٔ درس ها" in dialog)
         val vm = src("app/src/main/java/ir/exam/app/ui/bank/QuestionBankViewModel.kt")
         assertTrue("if (referenceGrade == 0) return emptyList()" in vm)
         assertTrue("if (referenceSubject.isBlank()) return emptyList()" in vm)
@@ -77,7 +77,7 @@ class V360_3_ReferenceBankFlowTest {
         val dialog = src("app/src/main/java/ir/exam/app/ui/bank/ReferenceBankDialog.kt")
         assertTrue("RefDropdown(" in dialog)
         assertTrue("DropdownMenu(expanded = expanded" in dialog)
-        assertTrue("بستن فیلتر و نمایش سؤالها" in dialog)
+        assertTrue("تأیید" in dialog)
         assertTrue("openReferenceFilter" in dialog)
         val vm = src("app/src/main/java/ir/exam/app/ui/bank/QuestionBankViewModel.kt")
         assertTrue("val referenceGrade: Int = 0" in vm)
@@ -88,7 +88,7 @@ class V360_3_ReferenceBankFlowTest {
         assertTrue("var gs = [0];" in site)
         assertTrue("grade: 0" in site)
         assertTrue("filterOpen: true" in site)
-        assertTrue("بستن فیلتر و نمایش سؤالها" in site)
+        assertTrue("تأیید" in site)
     }
 
     @Test
@@ -103,10 +103,16 @@ class V360_3_ReferenceBankFlowTest {
         val vm = src("app/src/main/java/ir/exam/app/ui/bank/QuestionBankViewModel.kt")
         assertTrue("fun addReferenceMany(" in vm)
         assertTrue("referenceIncludeAnswer" in vm)
+        assertTrue("loadReferenceQuestionDetails()" in vm)
+        assertTrue("referenceDetails[r.id]" in vm)
+        assertTrue("referenceAnswerOverrides" in vm)
+        val mapper = src("app/src/main/java/ir/exam/app/ui/bank/ReferenceBankMapper.kt")
+        assertTrue("mathJaxToTokens(displayText)" in mapper)
+        assertTrue("optionImageList.getOrNull" in mapper)
         val site = src("site/src/refbank.js")
-        assertTrue("S.go('builder', { refAdd: out })" in site)
+        assertTrue("S.go('builder', {refAdd: out})" in site)
         assertTrue("addRefDrafts" in site)
-        assertTrue("🔍 فیلتر" in site)
+        assertTrue("'aria-label': 'فیلتر'" in site)
         assertTrue("افزودن گروهی" in site)
         assertTrue("loading: 'lazy'" in site)
     }
@@ -151,7 +157,7 @@ class V360_3_ReferenceBankFlowTest {
         assertTrue("پاسخ / پاسخنامه" in siteBuilder)
         val ref = src("site/src/refbank.js")
         assertTrue("answerImages: inc ? sp.answer.slice(0, 8) : []" in ref)
-        assertTrue("inc.checked = st.includeAnswer" in ref)
+        assertTrue("function setAnswer(row) { st.includeAnswerById[row.id] = !answerOn(row); draw(); }" in ref)
     }
 
     @Test

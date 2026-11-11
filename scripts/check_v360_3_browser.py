@@ -53,7 +53,7 @@ def question(i, subject, chapter):
     return {
         "id": i, "grade": 1, "track": "", "subject": subject, "chapter": chapter,
         "type_fa": "تستی", "type": "multiple", "difficulty": 1, "difficulty_fa": "ساده",
-        "text": "پرسش " + str(i), "q_html": "<div>صورت سؤال <img src=\"" + Q_IMG + "\"></div>",
+        "text": "", "q_html": "<div>صورت سؤال <img src=\"" + Q_IMG + "\"></div>",
         "answer_html": "<div>پاسخ درست <img src=\"" + A_IMG + "\"></div>",
         "options": ["الف", "ب", "ج", "د"], "correct_index": 1,
         "option_images": [O1_IMG, O2_IMG, None, None],
@@ -106,7 +106,7 @@ def main():
                     return origFetch.apply(this, arguments);
                   };
                 """)
-                page.goto(url + "/", wait_until="domcontentloaded")
+                page.goto(url + "/", wait_until="commit")
                 page.locator("input[type='text']").first.fill("uitest_teacher")
                 page.locator("input[type='password']").first.fill("TestPass1234!")
                 page.locator("input[type='password']").first.press("Enter")
@@ -127,9 +127,12 @@ def main():
                 page.get_by_text("سؤال جدید در بانک", exact=False).first.wait_for(timeout=15000)
                 page.locator("button", has_text="بانک مرجع").first.click()
                 md = page.locator(".modal.wide").last
-                md.get_by_text("بستن فیلتر و نمایش سؤالها", exact=True).first.wait_for(timeout=8000)
+                md.get_by_text("تأیید", exact=True).first.wait_for(timeout=8000)
                 selects = md.locator("select")
                 ok("همهٔ فیلترها کشوییاند", selects.count() >= 5, selects.count())
+                ok("فیلتر در پنجرهٔ کوچک توکار باز شد", md.locator(".ref-filter-popup").count() == 1)
+                ok("جمله‌های راهنما حذف شدند", md.get_by_text("سؤالها و تصویرها در فضای ابریاند", exact=False).count() == 0 and md.get_by_text("همهٔ فیلترها کشویی", exact=False).count() == 0)
+                ok("دکمهٔ تأیید سبز است", "rgb(25, 135, 84)" in md.get_by_text("تأیید", exact=True).evaluate("e => getComputedStyle(e.closest('button')).backgroundColor"))
 
                 print("\n=== شارد تازه: بدون کش و با کلید نسخه ===")
                 calls = page.evaluate("() => window.__refFetch || []")
@@ -175,12 +178,13 @@ def main():
                 md = page.locator(".modal.wide").last
 
                 print("\n=== بستن فیلتر و افزودن گروهی ===")
-                md.get_by_text("بستن فیلتر و نمایش سؤالها", exact=True).first.click()
-                md.get_by_text("پرسش ریاضی یک", exact=False).first.wait_for(timeout=8000)
-                ok("فهرست سؤالها پس از بستن فیلتر آمد", True)
-                md.locator("button[title='بازگشت به فیلتر کشویی']").first.wait_for(timeout=5000)
-                ok("آیکن فیلتر برای برگشت هست", True)
-                md.get_by_text("انتخاب/برداشتن صفحه", exact=True).first.click()
+                md.get_by_text("تأیید", exact=True).first.click()
+                md.get_by_text("صورت سؤال", exact=False).first.wait_for(timeout=15000)
+                md.get_by_text("الف", exact=False).first.wait_for(timeout=8000)
+                ok("متن سؤال و گزینه‌ها خودکار در کارت بارگیری شدند", True)
+                ok("تراشهٔ افزودن پاسخ روی کارت هست", md.locator(".ref-question-card .ref-answer-chip").count() > 0)
+                ok("آیکن فیلتر برای برگشت هست", md.locator("button[aria-label='فیلتر']").count() == 1)
+                md.locator("button[aria-label='انتخاب/برداشتن صفحه']").first.click()
                 md.get_by_text("افزودن گروهی", exact=False).first.click()
                 page.get_by_text("آزمون از بانک مرجع", exact=False).first.wait_for(timeout=12000, state="attached")
                 ok("سؤالها گروهی به آزمون تازه افزوده شدند", True)
@@ -250,7 +254,7 @@ def main():
                   window.fetch = function (u, opt) { return origFetch2.apply(this, arguments); };
                 """)
                 page2.route("**/reference-bank/**", stale_storage)
-                page2.goto(url + "/", wait_until="domcontentloaded")
+                page2.goto(url + "/", wait_until="commit")
                 page2.locator("input[type='text']").first.fill("uitest_teacher")
                 page2.locator("input[type='password']").first.fill("TestPass1234!")
                 page2.locator("input[type='password']").first.press("Enter")
@@ -260,11 +264,11 @@ def main():
                 page2.get_by_text("سؤال جدید در بانک", exact=False).first.wait_for(timeout=15000)
                 page2.locator("button", has_text="بانک مرجع").first.click()
                 md2 = page2.locator(".modal.wide").last
-                md2.get_by_text("بستن فیلتر و نمایش سؤالها", exact=True).first.wait_for(timeout=8000)
+                md2.get_by_text("تأیید", exact=True).first.wait_for(timeout=8000)
                 md2.locator("select[title='پایه']").first.select_option("1")
                 page2.wait_for_timeout(500)
-                md2.get_by_text("بستن فیلتر و نمایش سؤالها", exact=True).first.click()
-                md2.get_by_text("پیشنمایش", exact=True).first.click()
+                md2.get_by_text("تأیید", exact=True).first.click()
+                md2.get_by_text("پیش‌نمایش", exact=True).first.click()
                 warn = page2.locator(".modal.wide").last.get_by_text("شارد قدیمی است", exact=False)
                 try:
                     warn.first.wait_for(timeout=8000, state="attached")

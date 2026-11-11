@@ -149,6 +149,10 @@ object ReferenceBankMedia {
             .replace("&zwnj;", " ")
             .replace("&nbsp;", " ")
             .replace("&amp;", "&")
+            .replace("&lt;", "<")
+            .replace("&gt;", ">")
+            .replace("&quot;", "\"")
+            .replace("&#39;", "'")
             .replace('\u200c', ' ')
             .replace('\u00a0', ' ')
             .split(' ', '\n', '\t', '\r')
@@ -224,6 +228,10 @@ data class ReferenceBankQuestion(
     /** فقط تصویرهای پاسخ. */
     val answerImageUrls: List<String>
         get() = ReferenceBankMedia.imageUrlsFromHtml(answerHtml).filter { it in imageUrls }
+
+    /** متنِ نمایشی؛ بعضی پایه‌ها متن را فقط در q_html دارند. */
+    val displayText: String
+        get() = ReferenceBankMedia.plainText(qHtml).ifBlank { text }
 
     val answerExplanation: String
         get() = ReferenceBankMedia.plainText(answerHtml).ifBlank { answerText }

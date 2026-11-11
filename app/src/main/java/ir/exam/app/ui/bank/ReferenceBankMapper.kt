@@ -44,7 +44,7 @@ internal fun ReferenceBankQuestion.toBankQuestionOption(
         else -> ""
     }
     // V361 — حتی اگر شارد مستقیماً به مپر رسید، فرمولها توکن شوند تا در آزمون نماد ببینند.
-    val textTokens = ReferenceBankFormula.mathJaxToTokens(text)
+    val textTokens = ReferenceBankFormula.mathJaxToTokens(displayText)
     val optionTokens = options.map { ReferenceBankFormula.mathJaxToTokens(it) }
     val answerTokens = ReferenceBankFormula.mathJaxToTokens(answerExplanation)
     val draft = QuestionDraft(

@@ -18,6 +18,13 @@ TARGET = "staging"  # V298.3 — «staging» = فقط نسخهٔ آزمایشی�
 COMMIT_MSG = "..."
 FILES = []
 REMOVE = []
+PIN_TESTS = [
+    "app/src/test/java/ir/exam/app/V360_ReferenceBankTest.kt",
+    "app/src/test/java/ir/exam/app/V360_3_ReferenceBankFlowTest.kt",
+    "app/src/test/java/ir/exam/app/V360_8_OptionImagesTest.kt",
+    "app/src/test/java/ir/exam/app/V361_FormulaTokensTest.kt",
+    "app/src/test/java/ir/exam/app/V362_ReferenceBankAutoDetailsTest.kt",
+]
 PAYLOAD = """"""
 
 WF_PATH = ".github/workflows/site.yml"
@@ -174,6 +181,9 @@ def main():
             if name.startswith("panels.") and name.endswith(".js") and name not in keep:
                 os.remove(os.path.join("site", name))
                 print("  ✗ حذف بستهٔ کهنهٔ سایت " + name)
+    # V362 — پین‌های همهٔ تست‌ها و تست‌های تازه باید پیش از stage/commit سبز باشند.
+    run([sys.executable, "scripts/check_test_pins.py"])
+    run([sys.executable, "scripts/check_test_pins.py", "--strict", *PIN_TESTS])
     run([sys.executable, "scripts/verify_native_final.py"])
     run([sys.executable, "scripts/check_site_sync.py"], check=False)  # V335.39 — نگهبان سایت/دامنه (خطا نمی‌دهد)
     run(["git", "add", "-A"])
