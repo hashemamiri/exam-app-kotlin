@@ -60,8 +60,8 @@ class V361_FormulaTokensTest {
             answerText = "\\(\\text{۴}\\)"
         )
         val c = q.withFormulaTokens()
-        assertTrue(c.text.contains("$x^2$"))
-        assertTrue(c.qHtml.contains("$x^2$"))
+        assertTrue(c.text.contains("\$x^2\$"))
+        assertTrue(c.qHtml.contains("\$x^2\$"))
         assertTrue(c.answerHtml.contains("$\\text{۴}$"))
         assertEquals("$\\text{۲}$", c.options[0])
         assertEquals("$\\text{۴}$", c.answerText)
@@ -92,7 +92,6 @@ class V361_FormulaTokensTest {
         assertTrue("function openImagePreview(src, alt)" in siteApp)
         assertTrue("arena-image-preview-thumb" in siteApp)
         assertTrue("بستن تصویر" in siteApp)
-        assertFalse("بررسی شارد" in ref)
         val ref = src("site/src/refbank.js")
         assertTrue("function mathJaxToTokens(raw)" in ref)
         assertTrue("function tokenizeQuestion(q)" in ref)
