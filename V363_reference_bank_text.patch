@@ -25,7 +25,7 @@ index 6115837a..8cad4794 100644
          run: python3 scripts/check_reference_bank_option_images.py --selftest
        - name: Guard MathJax formula tokens (V361)
 diff --git a/app/src/main/java/ir/exam/app/domain/bank/ReferenceBankModels.kt b/app/src/main/java/ir/exam/app/domain/bank/ReferenceBankModels.kt
-index 70c381ba..3ad424d5 100644
+index 70c381ba..ba348ec2 100644
 --- a/app/src/main/java/ir/exam/app/domain/bank/ReferenceBankModels.kt
 +++ b/app/src/main/java/ir/exam/app/domain/bank/ReferenceBankModels.kt
 @@ -23,7 +23,7 @@ object ReferenceBankContract {
@@ -37,7 +37,7 @@ index 70c381ba..3ad424d5 100644
  
      /** نشانی شارد تازه، بدون کش کهنه. */
      fun shardUrl(path: String): String = path + "?v=" + SHARD_VERSION
-@@ -134,6 +134,57 @@ object ReferenceBankMedia {
+@@ -134,6 +134,77 @@ object ReferenceBankMedia {
          return out.distinct()
      }
  
@@ -56,8 +56,28 @@ index 70c381ba..3ad424d5 100644
 +    fun displayText(text: String, qHtml: String, limit: Int = 0): String {
 +        val direct = text.trim()
 +        val value = if (direct.isNotEmpty()) direct else htmlToText(qHtml)
-+        if (limit <= 0 || value.length <= limit) return value
-+        return value.take(limit).trimEnd() + "…"
++        if (limit <= 0 || value.length <= limit) return balanceMath(value)
++        val cut = value.take(limit)
++        val safe = if (cut.count { it == '$' } % 2 == 1)
++            cut.substring(0, cut.lastIndexOf('$').coerceAtLeast(0)) else cut
++        return balanceMath(safe.trimEnd() + "…")
++    }
++
++    /**
++     * V363 — فرمولِ بازمانده را نصفه رها نکن.
++     *
++     * ۱۷ سؤال از ۱۶٬۳۹۱ سؤال پایهٔ هشتم، در خودِ منبع با «…» وسط فرمول بریده
++     * شده‌اند؛ تعداد «$» در آن‌ها فرد است. اگر همان‌طور نمایش داده شود، نمادِ
++     * نیمه‌کاره یا متن خام بک‌اسلش دیده می‌شود. قاعدهٔ ساده: از آخرین «$»
++     * به بعد حذف و «…» بگذار.
++     */
++    fun balanceMath(value: String): String {
++        val trimmed = value.trimEnd()
++        if (trimmed.count { it == '$' } % 2 == 0) return trimmed
++        val last = trimmed.lastIndexOf('$')
++        if (last <= 0) return trimmed
++        val cut = trimmed.substring(0, last).trimEnd()
++        return if (cut.isEmpty()) trimmed else cut + "…"
 +    }
 +
 +    /**
@@ -96,10 +116,18 @@ index 70c381ba..3ad424d5 100644
      fun plainText(html: String): String {
          val sb = StringBuilder()
 diff --git a/app/src/main/java/ir/exam/app/ui/bank/ReferenceBankDialog.kt b/app/src/main/java/ir/exam/app/ui/bank/ReferenceBankDialog.kt
-index 9228ad7f..367fd0e1 100644
+index 9228ad7f..ab971980 100644
 --- a/app/src/main/java/ir/exam/app/ui/bank/ReferenceBankDialog.kt
 +++ b/app/src/main/java/ir/exam/app/ui/bank/ReferenceBankDialog.kt
-@@ -309,11 +309,22 @@ private fun ReferenceBankResults(
+@@ -47,6 +47,7 @@ import coil.compose.AsyncImage
+ import ir.exam.app.domain.bank.ReferenceBankContract
+ import ir.exam.app.ui.math.NativeMathText
+ import ir.exam.app.domain.bank.ReferenceBankQuestion
++import ir.exam.app.domain.bank.ReferenceBankMedia
+ import ir.exam.app.ui.builder.BankQuestionOption
+ 
+ /**
+@@ -309,11 +310,23 @@ private fun ReferenceBankResults(
                                  modifier = Modifier.weight(1f)
                              )
                          }
@@ -113,7 +141,8 @@ index 9228ad7f..367fd0e1 100644
 +                        val rowText = row.text.trim()
 +                        if (rowText.isNotEmpty()) {
 +                            NativeMathText(
-+                                source = rowText.take(180),
++                                // V363 — برش امن: فرمول نصفه نمی‌ماند.
++                                source = ReferenceBankMedia.displayText(rowText, "", 180),
 +                                fontSize = MaterialTheme.typography.bodyMedium.fontSize,
 +                                maxLines = 3
 +                            )
@@ -188,10 +217,10 @@ index 8f24452f..c913553a 100644
          assertTrue("p.option_images === undefined" in ref)
 diff --git a/app/src/test/java/ir/exam/app/V363_ReferenceBankTextTest.kt b/app/src/test/java/ir/exam/app/V363_ReferenceBankTextTest.kt
 new file mode 100644
-index 00000000..dba05aef
+index 00000000..c53268ac
 --- /dev/null
 +++ b/app/src/test/java/ir/exam/app/V363_ReferenceBankTextTest.kt
-@@ -0,0 +1,114 @@
+@@ -0,0 +1,131 @@
 +package ir.exam.app
 +
 +import ir.exam.app.domain.bank.ReferenceBankMedia
@@ -268,6 +297,19 @@ index 00000000..dba05aef
 +    }
 +
 +    @Test
++    fun unbalancedFormulaIsNeverLeftOpen() {
++        // ۱۷ سؤال پایهٔ هشتم در خودِ منبع وسط فرمول با «…» بریده شده‌اند.
++        val broken = "اگر $\\displaystyle x=\\text{۲}$ و $\\displaystyle y"
++        val shown = ReferenceBankMedia.balanceMath(broken)
++        assertEquals("تعداد «$» باید جفت باشد", 0, shown.count { it == '$' } % 2)
++        assertTrue(shown.endsWith("…"))
++
++        val long = "الف ".repeat(80) + "$\\displaystyle x$ و $\\displaystyle y"
++        val cut = ReferenceBankMedia.displayText(long, "", 60)
++        assertEquals("برش نباید فرمول را باز بگذارد", 0, cut.count { it == '$' } % 2)
++    }
++
++    @Test
 +    fun blankOptionsBecomeEssayUnlessTheyHaveImages() {
 +        val blank = question("", "<div>سؤال</div>", options = listOf("", "", "", ""))
 +        assertEquals(QuestionType.ESSAY, blank.toBankQuestionOption().question.type)
@@ -300,6 +342,10 @@ index 00000000..dba05aef
 +        val text = tool.readText(Charsets.UTF_8)
 +        assertTrue("\"--check\"" in text)
 +        assertTrue("\"--with-questions\"" in text)
++        assertTrue("\"--local-dir\"" in text)
++        assertTrue("\"--only-catalog\"" in text)
++        assertTrue("def balance_math(value)" in text)
++        assertTrue("def safe_snippet(value, limit)" in text)
 +
 +        val android = src(".github/workflows/android.yml")
 +        assertTrue("check_reference_bank_text" in android)
@@ -329,10 +375,10 @@ index 282b1071..0688f777 100644
      ok("سایت شارد کهنه را نشان میدهد", "p.option_images === undefined" in ref)
 diff --git a/scripts/check_reference_bank_text.py b/scripts/check_reference_bank_text.py
 new file mode 100644
-index 00000000..6a86575f
+index 00000000..7a398eb4
 --- /dev/null
 +++ b/scripts/check_reference_bank_text.py
-@@ -0,0 +1,100 @@
+@@ -0,0 +1,112 @@
 +#!/usr/bin/env python3
 +# -*- coding: utf-8 -*-
 +"""V363 — نگهبان «متن بانک مرجع در همهٔ پایه‌ها دیده شود».
@@ -390,6 +436,10 @@ index 00000000..6a86575f
 +    ok("مپر دیگر فقط text را نمی‌خواند",
 +       "val textTokens = ReferenceBankFormula.mathJaxToTokens(text)" not in mapper)
 +    ok("گزینه‌های کاملاً خالی تستی حساب نمی‌شوند", "optionsBlank && !hasOptionImages" in mapper)
++    ok("فرمول باز در اپ بسته می‌شود", "fun balanceMath(value: String): String" in models)
++    ok("برش فهرست اپ از برش امن می‌گذرد",
++       'ReferenceBankMedia.displayText(rowText, "", 180)' in dialog)
++    ok("سایت هم برش امن دارد", "function safeSnippet(value, limit)" in site)
 +    ok("فهرست اپ برای سطر بی‌متن راهنما می‌دهد", "در فهرست این پایه نیست" in dialog)
 +
 +    print("\n=== ۲) سایت: همان پل در ساخت سؤال آزمون ===")
@@ -406,9 +456,17 @@ index 00000000..6a86575f
 +    ok("ابزار ترمیم موجود است", TOOL.is_file())
 +    ok("حالت گزارش دارد", '"--check"' in tool)
 +    ok("شارد سؤال اختیاری است", '"--with-questions"' in tool)
++    ok("حالت پوشهٔ محلی دارد (برای شاردی که روی سرور نیست)", '"--local-dir"' in tool)
++    ok("حالت سبک «فقط فهرست» دارد", '"--only-catalog"' in tool)
++    ok("فرمول نیمه‌بریده را می‌بندد", "def balance_math(value)" in tool)
++    ok("برش امن دارد", "def safe_snippet(value, limit)" in tool)
 +    ok("متن را از q_html می‌سازد", "q_html" in tool)
-+    ok("نیم‌فاصله را در پایتون هم حفظ می‌کند", '"&zwnj;", "\\u200c"' in tool)
-+    ok("ابزار بارگذاری موجود است", (ROOT / "scripts/upload_reference_bank.py").is_file())
++    ok("نیم‌فاصله را در پایتون هم حفظ می‌کند",
++       '"&zwnj;": "\\u200c"' in tool or '"&zwnj;", "\\u200c"' in tool)
++    uploader = read(ROOT / "scripts/upload_reference_bank.py")
++    ok("ابزار بارگذاری موجود است", bool(uploader))
++    ok("بارگذار پیشوند پوشه را هم می‌پذیرد (--only catalog)",
++       'startswith(wanted + "/")' in uploader)
 +
 +    print("\n=== ۴) اتصال به گردش‌کار ===")
 +    android = read(ANDROID)
@@ -448,13 +506,13 @@ index 16a7500f..124a06a8 100644
                  ok("درخواستها بدون کشاند",
 diff --git a/scripts/repair_reference_bank_text.py b/scripts/repair_reference_bank_text.py
 new file mode 100644
-index 00000000..f7ce9233
+index 00000000..3dd0c76c
 --- /dev/null
 +++ b/scripts/repair_reference_bank_text.py
-@@ -0,0 +1,229 @@
+@@ -0,0 +1,370 @@
 +#!/usr/bin/env python3
 +# -*- coding: utf-8 -*-
-+"""V363 — ترمیم «متن» شاردهای بانک مرجع (پایه‌هایی که فهرستشان بی‌متن است).
++"""V363 — ترمیم «متن» شاردهای بانک مرجع.
 +
 +چرا این فایل هست:
 +    شاردهای منتشرشدهٔ پایه‌های ۶، ۷ و ۸ فیلد ``text`` را خالی گذاشته‌اند و
@@ -464,31 +522,28 @@ index 00000000..f7ce9233
 +      • سؤالی که به آزمون افزوده می‌شد: بی‌متن (همان ``text``)؛
 +      • پیش‌نمایش: سالم، چون ``q_html`` را می‌خواند.
 +
-+    این ابزار همان متن را از ``q_html`` می‌سازد (بدون شکستن نیم‌فاصله) و در
-+    دو جا می‌نویسد:
++    این ابزار همان متن را از ``q_html`` می‌سازد (بدون شکستن نیم‌فاصله و
++    بدون باز گذاشتن فرمولِ نیمه‌بریده) و در دو جا می‌نویسد:
 +
 +      ۱) ``catalog/gN.json``  — تا فهرست بانک در همهٔ نسخه‌های نصب‌شده
 +         (که همین catalog را می‌خوانند) بی‌به‌روزرسانی اپ متن پیدا کند.
-+      ۲) ``questions/gN.json`` — فقط با ``--with-questions``؛ برای دستگاه‌هایی
-+         که نسخهٔ قدیمی اپ را دارند. حجمش زیاد است (۲۰ تا ۲۵ مگابایت هر پایه).
++      ۲) ``questions/gN.json`` — برای دستگاه‌هایی که نسخهٔ قدیمی اپ را دارند
++         (پایهٔ ۸ شارد سؤالش هم روی سرور نبود؛ آن را باید بفرستید).
 +
-+    هیچ کلید یا رمزی لازم نیست: دانلود از نشانی عمومی است. بارگذاری با همان
-+    ابزار موجود ``scripts/upload_reference_bank.py`` و کلیدهای S3 خودتان.
++دو حالت اجرا:
 +
-+استفاده:
-+    # ۱) اول فقط گزارش وضعیت (هیچ فایلی نوشته نمی‌شود)
-+    python3 scripts/repair_reference_bank_text.py --check
++  الف) از روی شبکه (برای ۶ و ۷ که شارد سؤالشان روی سرور هست):
++      python3 scripts/repair_reference_bank_text.py --check
++      python3 scripts/repair_reference_bank_text.py --grades 6,7 --out ~/refbank-repair
 +
-+    # ۲) ساخت فایل‌های ترمیم‌شده برای فهرست (سریع، سبک)
-+    python3 scripts/repair_reference_bank_text.py --grades 6,7,8 --out ~/refbank-repair
++  ب) از روی پوشهٔ publish خودتان (برای ۸ و هر پایه‌ای که شارد سؤالش روی
++     سرور نیست؛ هیچ اتصال شبکه‌ای لازم نیست):
++      python3 scripts/repair_reference_bank_text.py --local-dir ~/publish \
++          --out ~/refbank-repair --only-catalog
 +
-+    # ۳) بارگذاری فقط همان فایل‌های فهرست
-+    python3 scripts/upload_reference_bank.py --dir ~/refbank-repair \\
-+        --env-file ~/.exam_s3 --apply
-+
-+    # اگر خواستید متنِ شارد سؤال هم پر شود (برای اپ‌های قدیمی، حجیم):
-+    python3 scripts/repair_reference_bank_text.py --grades 6,7,8 \\
-+        --out ~/refbank-repair --with-questions
++  سپس بارگذاری با همان ابزار موجود:
++      python3 scripts/upload_reference_bank.py --dir ~/refbank-repair \
++          --env-file ~/.exam_s3 --apply
 +"""
 +
 +import argparse
@@ -502,16 +557,70 @@ index 00000000..f7ce9233
 +BASE = "https://azmoon-media.s3.ir-thr-at1.arvanstorage.ir/reference-bank"
 +DEFAULT_GRADES = "6,7,8"
 +DEFAULT_LIMIT = 180
-+UA = "exam-app-reference-bank-repair/1.0"
++UA = "exam-app-reference-bank-repair/1.1"
++
++ENTITY = {
++    "&zwnj;": "\u200c",
++    "&nbsp;": " ",
++    "&amp;": "&",
++    "&lt;": "<",
++    "&gt;": ">",
++    "&quot;": '"',
++    "&#39;": "'",
++}
 +
 +
-+def fetch_json(url, timeout=120):
++# --------------------------------------------------------------------------
++# هستهٔ مشترک — آینهٔ ReferenceBankMedia در اپ
++# --------------------------------------------------------------------------
++
++def html_to_text(html):
++    """HTML → متن ساده؛ نیم‌فاصله می‌ماند (آینهٔ htmlToText کاتلین)."""
++    raw = str(html or "")
++    if not raw.strip():
++        return ""
++    text = re.sub(r"<[^>]*>", " ", raw)
++    for key, value in ENTITY.items():
++        text = text.replace(key, value)
++    text = text.replace("\u00a0", " ")
++    return re.sub(r"\s+", " ", text).strip()
++
++
++def balance_math(value):
++    """V363 — اگر تعداد «$» فرد بود (فرمولِ نیمه‌بریده در منبع)، آخرین فرمول حذف شود."""
++    value = str(value or "").rstrip()
++    if value.count("$") % 2 == 0:
++        return value
++    cut = value[: value.rfind("$")].rstrip()
++    return (cut + "…") if cut else value
++
++
++def safe_snippet(value, limit):
++    """برش امن: نه وسط «$»، نه نصفه‌کلمه، نه فرمولِ باز."""
++    value = str(value or "").strip()
++    if limit <= 0 or len(value) <= limit:
++        return balance_math(value)
++    cut = value[:limit]
++    if cut.count("$") % 2 == 1:
++        cut = cut[: cut.rfind("$")]
++    if " " in cut:
++        head = cut.rsplit(" ", 1)[0]
++        if len(head) > limit // 2:
++            cut = head
++    return balance_math(cut.rstrip() + "…")
++
++
++# --------------------------------------------------------------------------
++# حالت الف: خواندن از شبکه
++# --------------------------------------------------------------------------
++
++def fetch_json(url, timeout=180):
 +    request = urllib.request.Request(url, headers={"User-Agent": UA})
 +    with urllib.request.urlopen(request, timeout=timeout) as response:
 +        return json.loads(response.read().decode("utf-8"))
 +
 +
-+def fetch_or_none(url, timeout=120):
++def fetch_or_none(url, timeout=180):
 +    try:
 +        return fetch_json(url, timeout=timeout)
 +    except urllib.error.HTTPError as exc:
@@ -521,29 +630,6 @@ index 00000000..f7ce9233
 +    except urllib.error.URLError as exc:
 +        print(f"    ! شبکه: {exc}")
 +        return None
-+
-+
-+def html_to_text(html):
-+    """آینهٔ ReferenceBankMedia.htmlToText در اپ (نیم‌فاصله حفظ می‌شود)."""
-+    raw = str(html or "")
-+    if not raw.strip():
-+        return ""
-+    text = re.sub(r"<[^>]*>", " ", raw)
-+    text = (text.replace("&zwnj;", "\u200c")
-+                .replace("&nbsp;", " ")
-+                .replace("&amp;", "&")
-+                .replace("&lt;", "<")
-+                .replace("&gt;", ">")
-+                .replace("&quot;", '"')
-+                .replace("\u00a0", " "))
-+    return re.sub(r"\s+", " ", text).strip()
-+
-+
-+def snippet(value, limit):
-+    value = str(value or "").strip()
-+    if limit <= 0 or len(value) <= limit:
-+        return value
-+    return value[:limit].rstrip() + "…"
 +
 +
 +def repair_grade(grade, out_dir, limit, with_questions, check_only, timeout):
@@ -560,7 +646,7 @@ index 00000000..f7ce9233
 +    if questions is None:
 +        print("  ✗ questions/g%d.json روی سرور نیست (شارد سؤال ناقص است)." % grade)
 +        print("     فهرستش هست ولی پیش‌نمایش/افزودن به آزمون برای این پایه کار نمی‌کند؛")
-+        print("     باید از پوشهٔ publish خودتان دوباره بارگذاری شود.")
++        print("     با --local-dir روی پوشهٔ publish خودتان ترمیم و بارگذاری کنید.")
 +    else:
 +        print(f"  شارد سؤال: {len(questions)} سؤال — فهرست: {len(catalog)} سطر")
 +
@@ -577,9 +663,8 @@ index 00000000..f7ce9233
 +        if not source:
 +            no_source += 1
 +            continue
-+        row["text"] = snippet(source, limit)
++        row["text"] = safe_snippet(source, limit)
 +        filled += 1
-+        # تصویرهای فهرست را هم از شارد سؤال هم‌گام کن (فقط اگر فهرست خالی است).
 +        if payload and not row.get("image_urls"):
 +            urls = payload.get("image_urls") or []
 +            if urls:
@@ -589,12 +674,12 @@ index 00000000..f7ce9233
 +
 +    if with_questions and questions:
 +        q_filled = 0
-+        for key, payload in questions.items():
++        for payload in questions.values():
 +            if str(payload.get("text") or "").strip():
 +                continue
 +            source = html_to_text(payload.get("q_html") or "")
 +            if source:
-+                payload["text"] = snippet(source, limit)
++                payload["text"] = safe_snippet(source, limit)
 +                q_filled += 1
 +        print(f"  شارد سؤال: {q_filled} متن خالی پر شد")
 +
@@ -607,7 +692,7 @@ index 00000000..f7ce9233
 +        return {"grade": grade, "blank_before": blank_before, "filled": filled,
 +                "questions_missing": questions is None}
 +
-+    if not filled and not with_questions:
++    if not filled and not (with_questions and questions):
 +        print("  چیزی برای نوشتن نیست (این پایه سالم است).")
 +        return {"grade": grade, "blank_before": blank_before, "filled": 0,
 +                "questions_missing": questions is None}
@@ -626,19 +711,119 @@ index 00000000..f7ce9233
 +            "questions_missing": questions is None}
 +
 +
++# --------------------------------------------------------------------------
++# حالت ب: خواندن از پوشهٔ publish محلی (برای پایه‌ای که شارد سؤالش روی سرور نیست)
++# --------------------------------------------------------------------------
++
++def load_json_file(path):
++    try:
++        return json.loads(path.read_text(encoding="utf-8"))
++    except (OSError, json.JSONDecodeError) as exc:
++        print(f"  ! خواندن {path.name} نشد: {exc}")
++        return None
++
++
++def grades_in(folder):
++    found = []
++    catalog_dir = folder / "catalog"
++    if catalog_dir.is_dir():
++        for path in sorted(catalog_dir.glob("g*.json")):
++            match = re.fullmatch(r"g(\d+)\.json", path.name)
++            if match:
++                found.append(int(match.group(1)))
++    return sorted(set(found))
++
++
++def repair_local(grade, folder, out, limit, only_catalog, apply_changes):
++    print(f"\n=== پایهٔ {grade} (از پوشهٔ محلی) ===")
++    catalog_path = folder / "catalog" / f"g{grade}.json"
++    questions_path = folder / "questions" / f"g{grade}.json"
++
++    catalog = load_json_file(catalog_path)
++    if not isinstance(catalog, list):
++        print(f"  ✗ {catalog_path} فهرست معتبر (لیست) نیست؛ رد شد.")
++        return None
++    questions = load_json_file(questions_path) if questions_path.is_file() else None
++    if questions_path.is_file() and not isinstance(questions, dict):
++        print("  ⚠ شارد سؤال دیکشنری نیست؛ فقط از فهرست استفاده می‌شود.")
++        questions = None
++    print(f"  فهرست: {len(catalog)} سطر" + (
++        f" — شارد سؤال: {len(questions)} مورد" if questions else " — شارد سؤال موجود نیست"))
++
++    blank_before = sum(1 for row in catalog if not str(row.get("text") or "").strip())
++    filled = 0
++    no_source = 0
++    images_added = 0
++    for row in catalog:
++        if str(row.get("text") or "").strip():
++            continue
++        payload = (questions or {}).get(str(row.get("id")))
++        source = html_to_text(payload.get("q_html") or payload.get("text") or "") if payload else ""
++        if not source:
++            no_source += 1
++            continue
++        row["text"] = safe_snippet(source, limit)
++        filled += 1
++        if payload and not row.get("image_urls"):
++            urls = payload.get("image_urls") or []
++            if urls:
++                row["image_urls"] = list(urls)
++                row["image_count"] = len(urls)
++                row["has_image"] = True
++                images_added += 1
++
++    q_filled = 0
++    if questions and not only_catalog:
++        for payload in questions.values():
++            if str(payload.get("text") or "").strip():
++                continue
++            source = html_to_text(payload.get("q_html") or "")
++            if source:
++                payload["text"] = safe_snippet(source, limit)
++                q_filled += 1
++
++    print(f"  فهرست: {blank_before} سطر بی‌متن → {filled} پر شد"
++          + (f"؛ {no_source} سطر منبعی نداشت" if no_source else "")
++          + (f"؛ {images_added} تصویر فهرست کامل شد" if images_added else ""))
++    if questions and not only_catalog:
++        print(f"  شارد سؤال: {q_filled} متن خالی پر شد")
++
++    if not apply_changes:
++        return {"grade": grade, "blank_before": blank_before, "filled": filled,
++                "q_filled": q_filled, "questions_missing": questions is None}
++
++    out.mkdir(parents=True, exist_ok=True)
++    if filled:
++        target = out / "catalog" / f"g{grade}.json"
++        target.parent.mkdir(parents=True, exist_ok=True)
++        target.write_text(json.dumps(catalog, ensure_ascii=False), encoding="utf-8")
++        print(f"  نوشته شد: {target}  ({target.stat().st_size / 1048576:.1f} MB)")
++    else:
++        print("  فهرست تغییری لازم نداشت.")
++    if questions and not only_catalog and q_filled:
++        target = out / "questions" / f"g{grade}.json"
++        target.parent.mkdir(parents=True, exist_ok=True)
++        target.write_text(json.dumps(questions, ensure_ascii=False), encoding="utf-8")
++        print(f"  نوشته شد: {target}  ({target.stat().st_size / 1048576:.1f} MB)")
++    return {"grade": grade, "blank_before": blank_before, "filled": filled,
++            "q_filled": q_filled, "questions_missing": questions is None}
++
++
 +def main():
 +    parser = argparse.ArgumentParser()
 +    parser.add_argument("--grades", default=DEFAULT_GRADES,
 +                        help="پایه‌ها با کاما؛ پیش‌فرض 6,7,8")
-+    parser.add_argument("--out", default="refbank-repair",
-+                        help="پوشهٔ خروجی برای بارگذاری")
++    parser.add_argument("--out", default="refbank-repair", help="پوشهٔ خروجی برای بارگذاری")
 +    parser.add_argument("--limit", type=int, default=DEFAULT_LIMIT,
 +                        help="حداکثر نویسهٔ متن فهرست؛ پیش‌فرض ۱۸۰")
 +    parser.add_argument("--with-questions", action="store_true",
 +                        help="متن شارد سؤال هم پر شود (حجیم؛ برای اپ‌های قدیمی)")
-+    parser.add_argument("--check", action="store_true",
-+                        help="فقط گزارش؛ هیچ فایلی نوشته نمی‌شود")
++    parser.add_argument("--check", action="store_true", help="فقط گزارش؛ هیچ فایلی نوشته نمی‌شود")
 +    parser.add_argument("--timeout", type=int, default=180)
++    parser.add_argument("--local-dir", default="",
++                        help="پوشهٔ publish محلی (catalog/ و questions/) — بدون شبکه")
++    parser.add_argument("--only-catalog", action="store_true",
++                        help="در حالت محلی، شارد سؤال کپی نشود (سبک‌تر)")
 +    args = parser.parse_args()
 +
 +    try:
@@ -647,25 +832,38 @@ index 00000000..f7ce9233
 +        print("قالب --grades درست نیست؛ نمونه: --grades 6,7,8")
 +        return 2
 +
-+    print("بانک مرجع — ترمیم متن" + (" (فقط گزارش)" if args.check else ""))
-+    results = []
-+    for grade in grades:
-+        results.append(repair_grade(grade, args.out, args.limit,
-+                                   args.with_questions, args.check, args.timeout))
++    local = pathlib.Path(args.local_dir).expanduser() if args.local_dir else None
++    if local is not None:
++        if not local.is_dir():
++            print(f"پوشهٔ {local} پیدا نشد.")
++            return 2
++        if args.grades == DEFAULT_GRADES:
++            found = grades_in(local)
++            if found:
++                grades = found
++        print("بانک مرجع — ترمیم متن (از پوشهٔ محلی)" + (" — فقط گزارش" if args.check else ""))
++        print(f"منبع: {local}")
++        results = [repair_local(g, local, pathlib.Path(args.out).expanduser(), args.limit,
++                                args.only_catalog, apply_changes=not args.check)
++                   for g in grades]
++    else:
++        print("بانک مرجع — ترمیم متن (از شبکه)" + (" — فقط گزارش" if args.check else ""))
++        results = [repair_grade(g, args.out, args.limit, args.with_questions,
++                                args.check, args.timeout) for g in grades]
 +
 +    print("\n=== خلاصه ===")
 +    for item in results:
 +        if not item:
 +            continue
-+        state = "شارد سؤال ندارد" if item["questions_missing"] else "سالم"
++        state = "شارد سؤال ندارد" if item.get("questions_missing") else "سالم"
++        extra = f"، شارد سؤال {item['q_filled']}" if item.get("q_filled") else ""
 +        print(f"  پایهٔ {item['grade']}: {item['blank_before']} بی‌متن → "
-+              f"{item['filled']} پر شد ({state})")
++              f"{item['filled']} پر شد{extra} ({state})")
 +
-+    missing = [str(i["grade"]) for i in results if i and i["questions_missing"]]
++    missing = [str(i["grade"]) for i in results if i and i.get("questions_missing")]
 +    if missing:
 +        print("\n⚠ شارد سؤال این پایه‌ها روی سرور نیست: " + "، ".join(missing))
-+        print("  پیش‌نمایش و افزودن به آزمون برای این‌ها کار نمی‌کند؛")
-+        print("  از پوشهٔ publish خودتان با upload_reference_bank.py دوباره بفرستید.")
++        print("  با --local-dir روی پوشهٔ publish خودتان ترمیم و بارگذاری کنید.")
 +
 +    if args.check:
 +        print("\nحالت گزارش بود؛ چیزی نوشته نشد.")
@@ -674,15 +872,45 @@ index 00000000..f7ce9233
 +    print("\n=== بارگذاری (WSL) ===")
 +    print("  python3 scripts/upload_reference_bank.py --dir %s \\" % args.out)
 +    print("      --env-file ~/.exam_s3 --apply")
-+    print("\nپس از بارگذاری، سایت با بازکردن دوبارهٔ پنجره بانک، نسخهٔ تازه را")
-+    print("می‌خواند (کلید نسخه در V363 بالا رفته است).")
++    print("\nبرای حجم کمتر، فقط فهرست‌ها:")
++    print("  python3 scripts/upload_reference_bank.py --dir %s --only catalog \\" % args.out)
++    print("      --env-file ~/.exam_s3 --apply")
 +    return 0
 +
 +
 +if __name__ == "__main__":
 +    sys.exit(main())
+diff --git a/scripts/upload_reference_bank.py b/scripts/upload_reference_bank.py
+index d8265d0d..623e4028 100644
+--- a/scripts/upload_reference_bank.py
++++ b/scripts/upload_reference_bank.py
+@@ -149,12 +149,18 @@ def main():
+         return 1
+     files = sorted(p for p in root.rglob("*") if p.is_file() and p.name != "upload_manifest.json")
+     if args.only:
+-        wanted = args.only.lstrip("/")
+-        files = [p for p in files if p.relative_to(root).as_posix() == wanted]
+-        if not files:
+-            print("REFERENCE_BANK_UPLOAD: FAIL — فایل پیدا نشد:", wanted)
+-            return 1
+-        print("فقط یک فایل:", wanted)
++        wanted = args.only.lstrip("/").rstrip("/")
++        exact = [p for p in files if p.relative_to(root).as_posix() == wanted]
++        if exact:
++            files = exact
++            print("فقط یک فایل:", wanted)
++        else:
++            # V363 — پیشوند پوشه هم پذیرفته می‌شود: --only catalog
++            files = [p for p in files if p.relative_to(root).as_posix().startswith(wanted + "/")]
++            if not files:
++                print("REFERENCE_BANK_UPLOAD: FAIL — نه فایلی با این نام و نه پوشه‌ای با این پیشوند:", wanted)
++                return 1
++            print("فقط پوشهٔ", wanted + "/", "—", len(files), "فایل")
+     if not files:
+         print("REFERENCE_BANK_UPLOAD: FAIL — پوشه خالی است")
+         return 1
 diff --git a/site/index.html b/site/index.html
-index 597231b4..81f7a484 100644
+index 597231b4..446fb2d8 100644
 --- a/site/index.html
 +++ b/site/index.html
 @@ -79,7 +79,7 @@ window.SITE_CONFIG = { SUPABASE_URL: "https://eazwuyrymsvdkwckdpco.supabase.co",
@@ -690,17 +918,17 @@ index 597231b4..81f7a484 100644
  <script>window.__REF_BANK_BASE__ = "https://azmoon-media.s3.ir-thr-at1.arvanstorage.ir/reference-bank";</script>
  <script>window.__ENGINES_URL = "/engines.8161b6e832ac.js";
 -window.__PANELS_URL = "/panels.4bb10839a0a2.js";</script>
-+window.__PANELS_URL = "/panels.df2e38a7422a.js";</script>
++window.__PANELS_URL = "/panels.9501569c12c3.js";</script>
  <script>(function(){'use strict';var CFG=window.SITE_CONFIG||{};var SUPABASE_URL=String(CFG.SUPABASE_URL||'').replace(/\/+$/,'');var ANON=String(CFG.SUPABASE_ANON_KEY||'').trim();var KEY_READY=ANON&&ANON!=='…'&&ANON.indexOf('اینجا')<0&&ANON.length>20;var STUDENT_DOMAIN='student.exam.local';var USERNAME_RE=/^[a-z0-9_]{4,20}$/;var EMAIL_RE=/^[^\s@]+@[^\s@]+\.[^\s@]+$/;var LS_SESSION='examsite.session.v1';var LS_PAGESETUP='examsite.pagesetup.v1';var LS_LOCALSTATE='examsite.local.v1';var PRINT_COST_PER_Q=1000;function $(id){return document.getElementById(id);}
  var mediaCache={},lastMediaError='';function isOwnStorageUrl(u){return typeof u==='string'&&SUPABASE_URL&&u.indexOf(SUPABASE_URL+'/storage/v1/object/')===0;}
  function mediaBlobUrl(u){if(!isOwnStorageUrl(u))return Promise.resolve(u);if(mediaCache[u])return mediaCache[u];var authed=u.replace('/storage/v1/object/public/','/storage/v1/object/authenticated/');mediaCache[u]=fetch(authed,{headers:{'apikey':ANON,'Authorization':'Bearer '+(session?session.access_token:ANON)}}).then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);return r.blob();}).then(function(b){return URL.createObjectURL(b);}).catch(function(e){delete mediaCache[u];console.error('media',u,e);lastMediaError='Storage '+(e&&e.message||'');return u;});return mediaCache[u];}
-diff --git a/site/panels.8760f565193d.js b/site/panels.df2e38a7422a.js
+diff --git a/site/panels.8760f565193d.js b/site/panels.9501569c12c3.js
 similarity index 99%
 rename from site/panels.8760f565193d.js
-rename to site/panels.df2e38a7422a.js
-index 2186681c..a1ed3ced 100644
+rename to site/panels.9501569c12c3.js
+index 2186681c..29f08d6a 100644
 --- a/site/panels.8760f565193d.js
-+++ b/site/panels.df2e38a7422a.js
++++ b/site/panels.9501569c12c3.js
 @@ -50,7 +50,7 @@ return a;}
  function pick(items,categories,rules,seed){var used={},picked=[],perRule=[];(rules||[]).forEach(function(r,idx){var pool=filterItems(items,categories,{categoryId:r.categoryId,difficulty:r.difficulty<0?null:r.difficulty}).filter(function(it){return!used[String(it.id)];});var order=shuffled(pool,(Number(seed)|0)+idx*7919);var take=order.slice(0,Math.min(r.count,order.length));take.forEach(function(it){used[String(it.id)]=true;picked.push(it);});perRule.push({category:r.category||'همه',difficulty:r.difficulty,wanted:r.count,got:take.length,shortage:Math.max(0,r.count-take.length)});});return{picked:picked,perRule:perRule,total:picked.length};}
  function summary(result){var short=(result.perRule||[]).filter(function(r){return r.shortage>0;});if(!short.length)return'همهٔ '+result.total+' سؤال انتخاب شد.';return result.total+' سؤال انتخاب شد؛ '+
@@ -710,10 +938,11 @@ index 2186681c..a1ed3ced 100644
  if(hit){var end=raw.indexOf(hit[1],i+hit[0].length);if(end>=0){var body=raw.slice(i+hit[0].length,end).replace(/\s+/g,' ').trim();if(body)out.push('$'+body+'$');i=end+hit[1].length;continue;}}
  out.push(raw.charAt(i));i++;}
  var value=out.join('');if(value.indexOf('$$')<0)return value;var out2=[],inside=false;for(var k=0;k<value.length;k++){var ch=value.charAt(k);out2.push(ch);if(ch==='$'){if(inside){inside=false;if(value.charAt(k+1)==='$')out2.push(' ');}
-@@ -73,14 +73,15 @@ function tracksFor(g){return Number(g)>=10?TRACKS:[];}
+@@ -73,14 +73,16 @@ function tracksFor(g){return Number(g)>=10?TRACKS:[];}
  function subjectsFor(g,track){g=Number(g);if(g>=1&&g<=6)return PRIMARY;if(g>=7&&g<=9)return MIDDLE;if(g>=10&&g<=12)return track?(HIGH[track]||ALL_HIGH):ALL_HIGH;return[];}
  function imgUrls(html){var out=[],m,re=/<img[^>]+src=["']([^"']+)["']/gi;while((m=re.exec(html||''))!==null)if(out.indexOf(m[1])<0)out.push(m[1]);return out;}
  function splitImages(p){var all=p.image_urls||[];var q=imgUrls(p.q_html||'').filter(function(u){return all.indexOf(u)>=0;});var ans=imgUrls(p.answer_html||'').filter(function(u){return all.indexOf(u)>=0;});var opts=(p.option_images||[]).map(function(u){return u||null;});return{question:q,answer:ans,options:opts};}
++function safeSnippet(value,limit){var v=String(value||'').trim();var odd=function(s){return(s.split('$').length-1)%2===1;};var balance=function(s){s=s.replace(/\s+$/,'');if(!odd(s))return s;var i=s.lastIndexOf('$');return i>0?s.slice(0,i).replace(/\s+$/,'')+'…':s;};if(limit<=0||v.length<=limit)return balance(v);var cut=v.slice(0,limit);if(odd(cut))cut=cut.slice(0,cut.lastIndexOf('$'));if(cut.indexOf(' ')>limit/2)cut=cut.slice(0,cut.lastIndexOf(' '));return balance(cut.replace(/\s+$/,'')+'…');}
 +function plainQuestion(html){return String(html||'').replace(/<[^>]*>/g,' ').replace(/&zwnj;/g,'\u200c').replace(/&nbsp;/g,' ').replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&quot;/g,'"').replace(/\u00a0/g,' ').replace(/\s+/g,' ').trim();}
  function plain(html){return String(html||'').replace(/<[^>]*>/g,' ').replace(/&zwnj;/g,' ').replace(/&nbsp;/g,' ').replace(/&amp;/g,'&').replace(/[\u200c\u00a0]/g,' ').replace(/\s+/g,' ').trim();}
 -function draft(p,includeAnswer){var inc=includeAnswer!==false,sp=splitImages(p);var textTokens=mathJaxToTokens(p.text||'');var answerTokens=mathJaxToTokens(plain(p.answer_html||'')||p.answer_text||'');var optionTokens=(p.options||[]).map(function(o){return mathJaxToTokens(String(o||''));});var q={type:p.type||'essay',text:textTokens,grade:p.grade||0,subject:p.subject||'',topic:p.topic||'',difficulty:p.difficulty||0,score:1,options:optionTokens,correctIndex:p.correct_index==null?null:p.correct_index,expectedText:'',images:sp.question.slice(0,8),optionImages:[],answerExplanation:inc?answerTokens:'',answerImages:inc?sp.answer.slice(0,8):[]};if(q.type==='multiple'&&(!q.options||q.options.length<2))q.type='essay';q.optionImages=q.type==='multiple'?q.options.map(function(_,i){return sp.options[i]||null;}):[];if(q.type==='fill')q.expectedText=answerTokens;if(q.type==='truefalse')q.expectedText=/غلط|نادرست/.test(p.answer_text||'')?'false':'true';return q;}
@@ -728,6 +957,51 @@ index 2186681c..a1ed3ced 100644
  card.appendChild(selectBox('درس',[''].concat(subjectOptions()),st.subject,function(x){return x||'همهٔ درسها';},function(v){st.subject=v;st.chapter='';st.page=0;draw();}));card.appendChild(selectBox('فصل',[''].concat(chapterOptions()),st.chapter,function(x){return x||'همهٔ فصلها';},function(v){st.chapter=v;st.page=0;draw();}));card.appendChild(selectBox('نوع سؤال',[''].concat(typeOptions()),st.type,function(x){return x||'همهٔ انواع';},function(v){st.type=v;st.page=0;draw();}));var ds=[''];DIFF.forEach(function(_,i){ds.push(String(i));});card.appendChild(selectBox('دشواری',ds,st.difficulty,function(d){return d===''?'همهٔ سطحها':DIFF[Number(d)];},function(v){st.difficulty=v;st.page=0;draw();}));var inc=el('input',{type:'checkbox'});inc.checked=st.includeAnswer;inc.addEventListener('change',function(){st.includeAnswer=inc.checked;});card.appendChild(el('label',{class:'row',style:'gap:6px;align-items:center;margin-top:8px'},[inc,el('span',{text:'افزودن پاسخ و تصویر پاسخ — فقط در بخش پاسخ'})]));var foot=el('div',{class:'row',style:'gap:8px;margin-top:14px;align-items:center;flex-wrap:wrap'});foot.appendChild(el('button',{class:'btn light sm',text:'بستن پنجره',onclick:function(){bg.remove();}}));foot.appendChild(el('span',{class:'grow'}));foot.appendChild(el('button',{class:'btn sm',text:'بستن فیلتر و نمایش سؤالها',onclick:function(){st.filterOpen=false;st.page=0;draw();}}));card.appendChild(foot);}
  function filtered(){var s=String(st.query||'').toLowerCase();return st.rows.filter(function(r){if(st.track&&String(r.track||'')!==st.track)return false;if(st.subject&&r.subject!==st.subject)return false;if(st.chapter&&r.chapter!==st.chapter)return false;if(st.type&&r.type_fa!==st.type)return false;if(st.difficulty!==''&&Number(r.difficulty)!==Number(st.difficulty))return false;if(s&&String(r.text||'').toLowerCase().indexOf(s)<0)return false;return true;});}
  function pickedRows(){return filtered().filter(function(r){return st.picked[r.id];});}
+@@ -94,7 +96,7 @@ var pbg=el('div',{class:'modal-bg'});var pc=el('div',{class:'modal wide',style:'
+ var qv=el('div',{style:'margin:10px 0;line-height:1.9'});qv.innerHTML=mathJaxToTokens(p.q_html||'');pc.appendChild(qv);renderFormulaSpans(qv);if((p.options||[]).length){var obox=el('div',{style:'margin:8px 0'});(p.options||[]).forEach(function(o,i){obox.appendChild(richInto(el('div'),fa(i+1)+') '+String(o||'')));var ou=(p.option_images||[])[i];if(ou)obox.appendChild(el('img',{src:ou,alt:'تصویر گزینه',loading:'lazy',style:'max-width:100%;max-height:180px;border-radius:8px;margin:4px 0'}));});pc.appendChild(obox);}
+ if(st.includeAnswer&&(p.answer_html||p.answer_text)){var det=el('details',{},[el('summary',{text:'پاسخ / راهنما'})]);var av=el('div',{style:'margin-top:8px;line-height:1.9'});av.innerHTML=mathJaxToTokens(p.answer_html||esc(p.answer_text||''));det.appendChild(av);pc.appendChild(det);renderFormulaSpans(av);splitImages(p).answer.forEach(function(u){det.appendChild(el('img',{src:u,alt:'تصویر پاسخ',loading:'lazy',style:'max-width:100%;max-height:220px;border-radius:8px;margin-top:6px'}));});}
+ pc.appendChild(el('div',{class:'row',style:'margin-top:12px'},[el('button',{class:'btn',text:'➕ افزودن به آزمون',onclick:function(){pbg.remove();addRows([r]);}}),el('button',{class:'btn light',text:'بستن',onclick:function(){pbg.remove();}})]));}).catch(function(e){toast('پیشنمایش ناموفق بود: '+String(e.message||e),'err');});}
+-function results(){if(!st.grade)card.appendChild(el('p',{class:'muted',style:'font-size:12px',text:st.note||'نمایش سؤالهای پایههای بارگذاریشده'}));var q=el('input',{type:'search',placeholder:'جستوجو در متن سؤال…',style:'min-width:220px;flex:1'});q.value=st.query;q.addEventListener('input',function(){st.query=q.value.trim();st.page=0;draw();});card.appendChild(q);var f=filtered(),pages=Math.max(1,Math.ceil(f.length/st.size));if(st.page>=pages)st.page=pages-1;var slice=f.slice(st.page*st.size,(st.page+1)*st.size);var bar=el('div',{class:'row',style:'gap:8px;align-items:center;flex-wrap:wrap;margin-top:8px'});bar.appendChild(el('span',{class:'muted',text:fa(f.length)+' سؤال · صفحهٔ '+fa(st.page+1)+' از '+fa(pages)+' · '+fa(pickedRows().length)+' انتخابشده'}));bar.appendChild(el('button',{class:'btn light sm',text:'انتخاب/برداشتن صفحه',onclick:function(){var ids=slice.map(function(r){return r.id;}),all=ids.every(function(id){return st.picked[id];});ids.forEach(function(id){if(all)delete st.picked[id];else st.picked[id]=1;});draw();}}));bar.appendChild(el('button',{class:'btn light sm',text:'پاک کردن انتخاب',onclick:function(){st.picked={};draw();}}));var inc=el('input',{type:'checkbox'});inc.checked=st.includeAnswer;inc.addEventListener('change',function(){st.includeAnswer=inc.checked;});bar.appendChild(el('label',{class:'row',style:'gap:6px;align-items:center'},[inc,el('span',{text:'پاسخ و تصویر پاسخ فقط در بخش پاسخ'})]));card.appendChild(bar);var body=el('div');if(!slice.length)body.appendChild(S.emptyBox('🏛',st.missing?'فهرست این پایه هنوز بارگذاری نشده است.':'سؤالی با این فیلترها پیدا نشد؛ آیکن فیلتر را بزنید.'));slice.forEach(function(r){var cb=el('input',{type:'checkbox',title:'انتخاب'});cb.checked=!!st.picked[r.id];cb.addEventListener('change',function(){if(cb.checked)st.picked[r.id]=1;else delete st.picked[r.id];draw();});var imgs=(r.image_urls||[]).slice(0,1).map(function(u){return el('img',{src:u,alt:'',loading:'lazy',style:'max-width:100%;max-height:120px;border-radius:8px'});});body.appendChild(el('div',{class:'card',style:'margin:8px 0;padding:10px'},[el('div',{class:'row',style:'gap:8px;align-items:center'},[cb,el('span',{class:'muted',style:'font-size:12px',text:['پایه '+fa(r.grade||st.grade||1),r.subject,r.chapter,r.type_fa,r.difficulty_fa].filter(Boolean).join(' · ')}),el('span',{class:'grow'}),r.has_image?el('span',{class:'chip',text:'🖼 تصویر'}):null].filter(Boolean)),richInto(el('div',{style:'margin:6px 0'}),String(r.text||'').slice(0,220)),imgs.length?el('div',{},imgs):null,el('div',{class:'row',style:'gap:6px;margin-top:6px;flex-wrap:wrap'},[el('button',{class:'btn light sm',text:'👁 پیشنمایش',onclick:function(){preview(r);}}),el('button',{class:'btn sm',text:'➕ افزودن به آزمون',onclick:function(){addRows([r]);}})])]));});card.appendChild(body);var prev=el('button',{class:'btn light sm',text:'قبلی',disabled:st.page===0?'disabled':null});var next=el('button',{class:'btn light sm',text:'بعدی',disabled:st.page>=pages-1?'disabled':null});prev.addEventListener('click',function(){st.page--;draw();});next.addEventListener('click',function(){st.page++;draw();});var foot=el('div',{class:'row',style:'gap:8px;margin-top:10px;align-items:center;flex-wrap:wrap'});foot.appendChild(prev);foot.appendChild(next);foot.appendChild(el('span',{class:'grow'}));foot.appendChild(el('button',{class:'btn',text:'افزودن گروهی ('+fa(pickedRows().length)+') به آزمون',onclick:function(){addRows(pickedRows());}}));card.appendChild(foot);}
++function results(){if(!st.grade)card.appendChild(el('p',{class:'muted',style:'font-size:12px',text:st.note||'نمایش سؤالهای پایههای بارگذاریشده'}));var q=el('input',{type:'search',placeholder:'جستوجو در متن سؤال…',style:'min-width:220px;flex:1'});q.value=st.query;q.addEventListener('input',function(){st.query=q.value.trim();st.page=0;draw();});card.appendChild(q);var f=filtered(),pages=Math.max(1,Math.ceil(f.length/st.size));if(st.page>=pages)st.page=pages-1;var slice=f.slice(st.page*st.size,(st.page+1)*st.size);var bar=el('div',{class:'row',style:'gap:8px;align-items:center;flex-wrap:wrap;margin-top:8px'});bar.appendChild(el('span',{class:'muted',text:fa(f.length)+' سؤال · صفحهٔ '+fa(st.page+1)+' از '+fa(pages)+' · '+fa(pickedRows().length)+' انتخابشده'}));bar.appendChild(el('button',{class:'btn light sm',text:'انتخاب/برداشتن صفحه',onclick:function(){var ids=slice.map(function(r){return r.id;}),all=ids.every(function(id){return st.picked[id];});ids.forEach(function(id){if(all)delete st.picked[id];else st.picked[id]=1;});draw();}}));bar.appendChild(el('button',{class:'btn light sm',text:'پاک کردن انتخاب',onclick:function(){st.picked={};draw();}}));var inc=el('input',{type:'checkbox'});inc.checked=st.includeAnswer;inc.addEventListener('change',function(){st.includeAnswer=inc.checked;});bar.appendChild(el('label',{class:'row',style:'gap:6px;align-items:center'},[inc,el('span',{text:'پاسخ و تصویر پاسخ فقط در بخش پاسخ'})]));card.appendChild(bar);var body=el('div');if(!slice.length)body.appendChild(S.emptyBox('🏛',st.missing?'فهرست این پایه هنوز بارگذاری نشده است.':'سؤالی با این فیلترها پیدا نشد؛ آیکن فیلتر را بزنید.'));slice.forEach(function(r){var cb=el('input',{type:'checkbox',title:'انتخاب'});cb.checked=!!st.picked[r.id];cb.addEventListener('change',function(){if(cb.checked)st.picked[r.id]=1;else delete st.picked[r.id];draw();});var imgs=(r.image_urls||[]).slice(0,1).map(function(u){return el('img',{src:u,alt:'',loading:'lazy',style:'max-width:100%;max-height:120px;border-radius:8px'});});body.appendChild(el('div',{class:'card',style:'margin:8px 0;padding:10px'},[el('div',{class:'row',style:'gap:8px;align-items:center'},[cb,el('span',{class:'muted',style:'font-size:12px',text:['پایه '+fa(r.grade||st.grade||1),r.subject,r.chapter,r.type_fa,r.difficulty_fa].filter(Boolean).join(' · ')}),el('span',{class:'grow'}),r.has_image?el('span',{class:'chip',text:'🖼 تصویر'}):null].filter(Boolean)),(function(){var raw=String(r.text||'').trim();var node=el('div',{style:'margin:6px 0'});if(raw)return richInto(node,safeSnippet(raw,220));node.appendChild(el('span',{class:'muted',style:'font-size:12px',text:'متن این سؤال در فهرست این پایه نیست؛ «پیش‌نمایش» متن کامل را نشان می‌دهد.'}));return node;})(),imgs.length?el('div',{},imgs):null,el('div',{class:'row',style:'gap:6px;margin-top:6px;flex-wrap:wrap'},[el('button',{class:'btn light sm',text:'👁 پیشنمایش',onclick:function(){preview(r);}}),el('button',{class:'btn sm',text:'➕ افزودن به آزمون',onclick:function(){addRows([r]);}})])]));});card.appendChild(body);var prev=el('button',{class:'btn light sm',text:'قبلی',disabled:st.page===0?'disabled':null});var next=el('button',{class:'btn light sm',text:'بعدی',disabled:st.page>=pages-1?'disabled':null});prev.addEventListener('click',function(){st.page--;draw();});next.addEventListener('click',function(){st.page++;draw();});var foot=el('div',{class:'row',style:'gap:8px;margin-top:10px;align-items:center;flex-wrap:wrap'});foot.appendChild(prev);foot.appendChild(next);foot.appendChild(el('span',{class:'grow'}));foot.appendChild(el('button',{class:'btn',text:'افزودن گروهی ('+fa(pickedRows().length)+') به آزمون',onclick:function(){addRows(pickedRows());}}));card.appendChild(foot);}
+ function draw(){card.innerHTML='';head();if(st.filterOpen)filterPanel();else results();}
+ function load(){st.loading=true;st.error=null;draw();var task=st.grade===0?catalogAll():catalog(st.grade).then(function(rows){return{rows:Array.isArray(rows)?rows:[],loaded:(rows&&rows.length)?[st.grade]:[]};}).catch(function(e){return{rows:[],loaded:[],error:String(e.message||e)};});task.then(function(res){st.rows=res.rows||[];st.loaded=res.loaded||[];st.picked={};st.loading=false;st.missing=!st.rows.length;st.error=res.error||null;st.note=st.grade===0?(st.loaded.length?'پایههای بارگذاریشده: '+st.loaded.map(fa).join('، '):'هیچ پایهای بارگذاری نشده است.'):(st.rows.length?null:'فهرست این پایه هنوز بارگذاری نشده است.');draw();});}
+ load();}
+@@ -371,7 +373,7 @@ function drawEditor(){editor.innerHTML='';var q=state.questions[state.selected];
+ var i=state.selected;var scoreInp=el('input',{type:'number',step:'0.25',min:'0',value:String(q.score),'aria-label':'بارم'});scoreInp.addEventListener('input',function(){q.score=parseFloat(en(scoreInp.value))||0;mark();drawListSoft();var rs=rail.querySelector('.b-rail-score-v');if(rs)rs.textContent=fa(S.fmtScore(totalScore()));});var bankTypeSel=null;if(state.bankEdit){bankTypeSel=el('select',{'aria-label':'نوع سؤال',style:'border:1px solid var(--line);border-radius:10px;padding:6px 10px;font-size:13px'});TYPES.forEach(function(t){var op=el('option',{value:t[0],text:t[2]+' '+t[1]});if(t[0]===q.type)op.selected=true;bankTypeSel.appendChild(op);});bankTypeSel.addEventListener('change',function(){var fresh=newQuestion(bankTypeSel.value);fresh.text=q.text;fresh.score=q.score;fresh.images=q.images||[];fresh.audio=q.audio||'';fresh.audioBytes=q.audioBytes||0;state.questions[i]=fresh;mark();drawListSoft();drawEditor();});}
+ editor.appendChild(el('div',{class:'row b-qhead',style:'margin-bottom:10px;flex-wrap:wrap'},[el('h3',{class:'grow',text:state.bankEdit?((state.bankEdit.id?'ویرایش سؤال بانک — ':'سؤال جدید بانک — ')+TYPE_LABEL[q.type]):('سؤال '+fa(i+1)+' — '+TYPE_LABEL[q.type])}),bankTypeSel,el('div',{class:'field b-qscore',title:'بارم این سؤال'},[el('label',{text:'بارم'}),scoreInp]),state.bankEdit?null:el('button',{class:'icon-btn',title:'بالا',html:QI.up,onclick:function(){if(i>0){swap(i,i-1);}}}),state.bankEdit?null:el('button',{class:'icon-btn',title:'پایین',html:QI.down,onclick:function(){if(i<state.questions.length-1)swap(i,i+1);}}),state.bankEdit?null:el('button',{class:'icon-btn',title:'کپی',html:QI.copy,onclick:function(){var cp=JSON.parse(JSON.stringify(q));cp.id=uuid();state.questions.splice(i+1,0,cp);state.selected=i+1;mark();drawList();drawEditor();}}),state.bankEdit?null:el('button',{class:'icon-btn',title:'افزودن به بانک سؤال',html:QI.bank,onclick:function(){addToBank(q);}}),state.bankEdit?null:el('button',{class:'icon-btn danger',title:'حذف',html:QI.trash,onclick:async function(){if(!(await S.confirmDlg('حذف سؤال','سؤال '+fa(i+1)+' حذف شود؟','حذف',true)))return;state.questions.splice(i,1);state.selected=Math.max(0,Math.min(i,state.questions.length-1));mark();drawList();drawEditor();}})]));var ta=el('textarea',{rows:4,style:'width:100%;border:1px solid var(--line);border-radius:10px;padding:10px;font-size:15px',placeholder:'متن سؤال را بنویسید؛'});ta.value=q.text;ta.addEventListener('input',function(){q.text=ta.value;mark();drawListSoft();});var tools=el('div',{class:'b-tools'},[el('button',{class:'tool-btn is-fx',title:'فرمول','aria-label':'فرمول',html:toolSvg('fx'),onclick:function(){var s=ta.selectionStart,e=ta.selectionEnd;S.openFormulaEditor(ta.value,s,e).then(function(t){if(t!=null&&t!==ta.value){ta.value=t;ta.dispatchEvent(new Event('input'));}});}}),el('button',{class:'tool-btn is-fig',title:'شکل هندسی','aria-label':'شکل هندسی',html:toolSvg('fig'),onclick:function(){insertFigure('geo',ta,q);}}),el('button',{class:'tool-btn is-gra',title:'نمودار','aria-label':'نمودار',html:toolSvg('graph'),onclick:function(){insertFigure('graph',ta,q);}}),el('button',{class:'tool-btn is-axis',title:'محور','aria-label':'محور',html:toolSvg('axis'),onclick:function(){insertFigure('axis',ta,q);}}),el('button',{class:'tool-btn is-math',title:'ابزار ریاضی (دبستان تا دانشگاه)','aria-label':'ابزار ریاضی (دبستان تا دانشگاه)',html:toolSvg('math'),onclick:function(e){mathMenu(e.currentTarget,ta,q);}}),el('button',{class:'tool-btn is-tab',title:'جدول','aria-label':'جدول',html:toolSvg('table'),onclick:function(){insertFigure('table',ta,q);}}),el('button',{class:'tool-btn is-pt',title:'جدول تناوبی','aria-label':'جدول تناوبی',html:toolSvg('periodic'),onclick:function(){insertFigure('periodic',ta,q);}}),el('button',{class:'tool-btn is-ana',title:'اطلس تصویری: آناتومی، فیزیک، شیمی، تصویر خودم با فلش‌گذاری','aria-label':'اطلس تصویری',html:toolSvg('gallery'),onclick:function(e){atlasMenu(e.currentTarget,ta,q);}}),el('button',{class:'tool-btn is-img',title:'استودیوی ویرایش و تصویر','aria-label':'استودیوی ویرایش و تصویر',html:toolSvg('img'),onclick:function(){var addImg=function(u){return{uri:u,xMm:20,yMm:30,widthMm:55};};window.SiteStudio.open({existing:q.images,onInsert:function(u){q.images.push(addImg(u));mark();drawEditor();toast('تصویر افزوده شد.','ok');},onReplace:function(k,u){if(q.images[k])q.images[k].uri=u;mark();drawEditor();toast('تصویر جایگزین شد.','ok');},onDelete:function(k){q.images.splice(k,1);mark();drawEditor();},onSplitToSame:function(urls){urls.forEach(function(u){q.images.push(addImg(u));});mark();drawEditor();toast(fa(urls.length)+' تصویر افزوده شد.','ok');},onSplitToQuestions:function(urls){urls.forEach(function(u,j){if(j===0){q.images.push(addImg(u));return;}var nq=newQuestion(q.type);nq.images.push(addImg(u));state.questions.splice(i+j,0,nq);});mark();drawList();drawEditor();toast(fa(urls.length)+' سؤال ساخته شد.','ok');}});}}),el('button',{class:'tool-btn is-board',title:'تختهٔ سفید: کشیدن شکل برای سؤال','aria-label':'تختهٔ سفید',html:toolSvg('board'),onclick:function(){if(!window.SiteStudent||!window.SiteStudent.openWhiteboard)return toast('تخته در دسترس نیست.','err');window.SiteStudent.openWhiteboard(q,function(pages,photos){pages.forEach(function(u){q.images.push({uri:u,xMm:20,yMm:30,widthMm:55});});var extra=(photos||[]).filter(function(u){return!!u&&q.images.length<10;});extra=extra.slice(0,Math.max(0,10-q.images.length));extra.forEach(function(u){q.images.push({uri:u,xMm:20,yMm:30,widthMm:55});});mark();drawEditor();toast(fa(pages.length)+' تصویر تخته'+(extra.length?' و '+fa(extra.length)+' عکس گالری':'')+' به سؤال افزوده شد.','ok');},{title:'تختهٔ سفید — سؤال '+fa(i+1),doneLabel:'افزودن تصویر تخته به سؤال',prev:[],billSources:true});}}),el('button',{class:'tool-btn is-code',title:'کد برنامه‌نویسی (انتخاب زبان)','aria-label':'کد برنامه‌نویسی',html:toolSvg('code'),onclick:function(){insertCode(ta,{title:'کد در متن سؤال',doneLabel:'افزودن کد به سؤال',toast:'بلوک کد به سؤال افزوده شد.'});}}),el('button',{class:'tool-btn is-mic',title:'گفتار به متن','aria-label':'گفتار به متن',html:toolSvg('mic'),onclick:function(){dictate(ta,q);}}),state.mode!=='print'&&window.SiteExtras?el('button',{class:'tool-btn'+(q.audio?' on':''),title:q.audio?'صوت سؤال (دارد)':'صوت سؤال','aria-label':'صوت سؤال',html:toolSvg('audio'),onclick:function(){window.SiteExtras.audioDlg(q,state.examId||(state.examId=uuid()),false,function(){mark();drawEditor();});}}):null]);var tt=tokenTextarea(ta);editor.appendChild(el('div',{class:'field'},[el('label',{text:'متن سؤال'}),tt.wrap,tools,tt.live]));editor.appendChild(el('div',{class:'b-types'},TYPES.map(function(t){return el('button',{class:'chip'+(q.type===t[0]?' on':''),text:t[1],onclick:function(){if(q.type===t[0])return;changeType(q,t[0]);mark();drawList();drawEditor();}});})));if(q.images.length){var ig=el('div',{class:'b-imgs'});q.images.forEach(function(m,k){ig.appendChild(el('div',{class:'b-img'},[el('img',{src:m.uri}),el('button',{class:'x',text:'✕',onclick:function(){q.images.splice(k,1);mark();drawEditor();}})]));});editor.appendChild(ig);}
+ editor.appendChild(typeSection(q));function sec(title,children,cls){return el('div',{class:'b-sec'+(cls?' '+cls:'')},[title?el('h4',{class:'b-sec-t',text:title,style:'margin-top:14px'}):null].concat(children));}
+-if((q.answerExplanation&&q.answerExplanation.length)||(q.answerImages||[]).length){var ansKids=[];var ansTa=el('textarea',{rows:2,style:'width:100%',placeholder:'پاسخ / راهنما'});ansTa.value=q.answerExplanation||'';ansTa.addEventListener('input',function(){q.answerExplanation=ansTa.value;mark();});ansKids.push(ansTa);(q.answerImages||[]).slice(0,8).forEach(function(u,k){ansKids.push(el('div',{class:'row',style:'gap:6px;align-items:center;margin-top:6px;flex-wrap:wrap'},[el('img',{src:u,alt:'تصویر پاسخ',loading:'lazy',style:'max-width:100%;max-height:200px;border-radius:8px'}),el('button',{class:'btn light sm',text:'✕ حذف تصویر پاسخ',onclick:function(){q.answerImages.splice(k,1);mark();drawEditor();}})]));});editor.appendChild(sec('پاسخ / پاسخنامه',ansKids));}
++if((q.answerExplanation&&q.answerExplanation.length)||(q.answerImages||[]).length){var ansKids=[];var ansTa=el('textarea',{rows:2,style:'width:100%',placeholder:'توضیح پاسخ / راهنمای معلم'});ansTa.value=q.answerExplanation||'';var ansTokenEditor=tokenTextarea(ansTa,{small:true});ansTa.addEventListener('input',function(){q.answerExplanation=ansTa.value;mark();});ansKids.push(ansTokenEditor.wrap);ansKids.push(ansTokenEditor.live);(q.answerImages||[]).slice(0,8).forEach(function(u,k){ansKids.push(el('div',{class:'row',style:'gap:6px;align-items:center;margin-top:6px;flex-wrap:wrap'},[el('img',{src:u,alt:'تصویر پاسخ',loading:'lazy',style:'max-width:100%;max-height:200px;border-radius:8px'}),el('button',{class:'btn light sm',text:'✕ حذف تصویر پاسخ',onclick:function(){q.answerImages.splice(k,1);mark();drawEditor();}})]));});editor.appendChild(sec('پاسخ / پاسخنامه — توضیح پاسخ / راهنمای معلم',ansKids));}
+ if(state.mode==='print'){var fmt=el('div',{class:'grid3'},[sel('تراز متن',q.textAlign,[['right','راست'],['center','وسط'],['left','چپ'],['justify','دوطرفه']],function(v){q.textAlign=v;mark();}),sel('فونت',q.fontFamily,[['default','پیش‌فرض'],['Vazirmatn','وزیرمتن'],['Shabnam','شبنم'],['Sahel','ساحل'],['BNazanin','ب نازنین'],['Tahoma','تاهوما']],function(v){q.fontFamily=v;mark();}),inp('اندازهٔ فونت',String(q.fontSizeSp),function(v){q.fontSizeSp=Math.max(8,Math.min(40,parseFloat(en(v))||16));mark();},'number')]);editor.appendChild(sec(document.body.classList.contains('dk')?'قالب متن سؤال':'',[fmt,el('div',{class:'row b-sec-chips',style:'margin:-6px 0 12px'},[chk('ضخیم',q.bold,function(v){q.bold=v;mark();}),chk('مورب',q.italic,function(v){q.italic=v;mark();})])],'b-sec-fmt'));if(q.type==='essay'||q.type==='fill'||q.type==='numeric'){editor.appendChild(sec('فضای پاسخ در برگهٔ چاپی',[el('div',{class:'grid3'},[inp('تعداد خط',String(q.answerLines),function(v){q.answerLines=Math.max(0,Math.min(12,parseInt(en(v),10)||0));mark();},'number'),sel('نوع خط',q.answerLineStyle,[['lined','خط‌دار'],['blank','ساده'],['grid','شطرنجی']],function(v){q.answerLineStyle=v;mark();}),inp('فاصلهٔ خط (cm)',String(q.answerLineSpacingCm),function(v){q.answerLineSpacingCm=Math.max(0.5,Math.min(2,parseFloat(en(v))||1));mark();},'number')])]));}
+ if(q.type==='multiple'){editor.appendChild(sec('چیدمان گزینه‌ها در برگهٔ چاپی',[el('div',{class:'grid3'},[sel('چیدمان',q.optionsLayout||'',[['','پیش‌فرض آزمون'],['1row','همه در یک ردیف'],['2rows','دو ردیف'],['4rows','هر گزینه یک ردیف']],function(v){q.optionsLayout=v;mark();})])]));}}
+ if(state.mode==='online'&&(q.type==='essay'||q.type==='numeric'||q.type==='fill')){editor.appendChild(sec('پاسخ تصویری / تختهٔ دانش‌آموز',[el('div',{class:'grid3'},[sel('ارسال تصویر پاسخ',q.answerImageMode,[['no','غیرفعال'],['optional','اختیاری'],['required','اجباری']],function(v){q.answerImageMode=v;mark();drawEditor();}),q.answerImageMode!=='no'?inp('حداکثر تصویر',String(q.maxAnswerImages||1),function(v){q.maxAnswerImages=Math.max(1,Math.min(10,parseInt(en(v),10)||1));mark();},'number'):el('div'),el('div',{class:'field b-sec-chkfield'},[el('label',{text:document.body.classList.contains('dk')?'رسم نمودار/تخته':' '}),chk('اجازهٔ رسم نمودار/تخته',q.allowAnswerGraph,function(v){q.allowAnswerGraph=v;mark();})])])]));}
+diff --git a/site/panels.5050ec577aef.js b/site/panels.df2e38a7422a.js
+similarity index 99%
+rename from site/panels.5050ec577aef.js
+rename to site/panels.df2e38a7422a.js
+index ea6933c9..a1ed3ced 100644
+--- a/site/panels.5050ec577aef.js
++++ b/site/panels.df2e38a7422a.js
+@@ -50,7 +50,7 @@ return a;}
+ function pick(items,categories,rules,seed){var used={},picked=[],perRule=[];(rules||[]).forEach(function(r,idx){var pool=filterItems(items,categories,{categoryId:r.categoryId,difficulty:r.difficulty<0?null:r.difficulty}).filter(function(it){return!used[String(it.id)];});var order=shuffled(pool,(Number(seed)|0)+idx*7919);var take=order.slice(0,Math.min(r.count,order.length));take.forEach(function(it){used[String(it.id)]=true;picked.push(it);});perRule.push({category:r.category||'همه',difficulty:r.difficulty,wanted:r.count,got:take.length,shortage:Math.max(0,r.count-take.length)});});return{picked:picked,perRule:perRule,total:picked.length};}
+ function summary(result){var short=(result.perRule||[]).filter(function(r){return r.shortage>0;});if(!short.length)return'همهٔ '+result.total+' سؤال انتخاب شد.';return result.total+' سؤال انتخاب شد؛ '+
+ short.map(function(r){return r.category+' ('+r.shortage+' کمبود)';}).join('، ');}
+-var API={MAX_DEPTH:MAX_DEPTH,MAX_RULES:MAX_RULES,MAX_PICK:MAX_PICK,MAX_COUNT:MAX_COUNT,DIFFICULTY_LABELS:DIFFICULTY_LABELS,latinDigits:latinDigits,subtreeIds:subtreeIds,categoryPath:categoryPath,depthOf:depthOf,itemDifficulty:itemDifficulty,itemTopic:itemTopic,filterItems:filterItems,difficultyFromWord:difficultyFromWord,findCategory:findCategory,parseBlueprint:parseBlueprint,formatBlueprint:formatBlueprint,rng:rng,shuffled:shuffled,pick:pick,summary:summary};if(typeof module!=='undefined'&&module.exports)module.exports=API;root.BankPicker=API;})(typeof window!=='undefined'?window:globalThis);(function(root){'use strict';var S=root.ExamSite;if(!S)return;var el=S.el,fa=S.fa,esc=S.esc,toast=S.toast;var BASE=String(root.__REF_BANK_BASE__||'https://azmoon-media.s3.ir-thr-at1.arvanstorage.ir/reference-bank').replace(/\/+$/,'');var BP=root.BankPicker;var DIFF=(BP&&BP.DIFFICULTY_LABELS)||['تعییننشده','ساده','متوسط','دشوار','خیلی دشوار'];var TRACKS=['','عمومی','ریاضی فیزیک','علوم تجربی','انسانی','هنرستان'];var TYPES=['تستی','تشریحی','جایخالی','صحیح/غلط','دستهبندی','مرتبسازی','کوتاهپاسخ'];var PRIMARY=['فارسی','ریاضی','علوم تجربی','قرآن و تعلیمات اسلامی','مطالعات اجتماعی','هنر','تربیت بدنی'];var MIDDLE=['فارسی','ریاضی','علوم تجربی','عربی','انگلیسی','مطالعات اجتماعی','قرآن و تعلیمات اسلامی','کامپیوتر','هنر','تربیت بدنی'];var HIGH={'عمومی':['فارسی','ریاضی','فیزیک','شیمی','زیستشناسی','عربی','انگلیسی','دین و زندگی','تاریخ','جغرافیا','علوم اجتماعی','فلسفه و منطق'],'ریاضی فیزیک':['ریاضی','فیزیک','شیمی','فارسی','عربی','انگلیسی','دین و زندگی'],'علوم تجربی':['زیستشناسی','فیزیک','شیمی','ریاضی','فارسی','عربی','انگلیسی','دین و زندگی'],'انسانی':['فارسی','عربی','تاریخ','جغرافیا','علوم اجتماعی','فلسفه و منطق','اقتصاد','ریاضی','انگلیسی','دین و زندگی'],'هنرستان':['فنی و حرفهای','کاردانش','ریاضی','فارسی','دین و زندگی']};var ALL_HIGH=[];Object.keys(HIGH).forEach(function(k){HIGH[k].forEach(function(x){if(ALL_HIGH.indexOf(x)<0)ALL_HIGH.push(x);});});ALL_HIGH.sort();var SHARD_VERSION='v3609';var cache={catalog:{},questions:{},catalogAll:null};var FORMULA_PAIRS=[['\\(','\\)'],['\\[','\\]'],['$$','$$']];function mathJaxToTokens(raw){if(raw===null||raw===undefined)return'';raw=String(raw);if(!raw)return raw;var out=[],i=0;while(i<raw.length){var hit=null;for(var j=0;j<FORMULA_PAIRS.length;j++){if(raw.substr(i,FORMULA_PAIRS[j][0].length)===FORMULA_PAIRS[j][0]){hit=FORMULA_PAIRS[j];break;}}
++var API={MAX_DEPTH:MAX_DEPTH,MAX_RULES:MAX_RULES,MAX_PICK:MAX_PICK,MAX_COUNT:MAX_COUNT,DIFFICULTY_LABELS:DIFFICULTY_LABELS,latinDigits:latinDigits,subtreeIds:subtreeIds,categoryPath:categoryPath,depthOf:depthOf,itemDifficulty:itemDifficulty,itemTopic:itemTopic,filterItems:filterItems,difficultyFromWord:difficultyFromWord,findCategory:findCategory,parseBlueprint:parseBlueprint,formatBlueprint:formatBlueprint,rng:rng,shuffled:shuffled,pick:pick,summary:summary};if(typeof module!=='undefined'&&module.exports)module.exports=API;root.BankPicker=API;})(typeof window!=='undefined'?window:globalThis);(function(root){'use strict';var S=root.ExamSite;if(!S)return;var el=S.el,fa=S.fa,esc=S.esc,toast=S.toast;var BASE=String(root.__REF_BANK_BASE__||'https://azmoon-media.s3.ir-thr-at1.arvanstorage.ir/reference-bank').replace(/\/+$/,'');var BP=root.BankPicker;var DIFF=(BP&&BP.DIFFICULTY_LABELS)||['تعییننشده','ساده','متوسط','دشوار','خیلی دشوار'];var TRACKS=['','عمومی','ریاضی فیزیک','علوم تجربی','انسانی','هنرستان'];var TYPES=['تستی','تشریحی','جایخالی','صحیح/غلط','دستهبندی','مرتبسازی','کوتاهپاسخ'];var PRIMARY=['فارسی','ریاضی','علوم تجربی','قرآن و تعلیمات اسلامی','مطالعات اجتماعی','هنر','تربیت بدنی'];var MIDDLE=['فارسی','ریاضی','علوم تجربی','عربی','انگلیسی','مطالعات اجتماعی','قرآن و تعلیمات اسلامی','کامپیوتر','هنر','تربیت بدنی'];var HIGH={'عمومی':['فارسی','ریاضی','فیزیک','شیمی','زیستشناسی','عربی','انگلیسی','دین و زندگی','تاریخ','جغرافیا','علوم اجتماعی','فلسفه و منطق'],'ریاضی فیزیک':['ریاضی','فیزیک','شیمی','فارسی','عربی','انگلیسی','دین و زندگی'],'علوم تجربی':['زیستشناسی','فیزیک','شیمی','ریاضی','فارسی','عربی','انگلیسی','دین و زندگی'],'انسانی':['فارسی','عربی','تاریخ','جغرافیا','علوم اجتماعی','فلسفه و منطق','اقتصاد','ریاضی','انگلیسی','دین و زندگی'],'هنرستان':['فنی و حرفهای','کاردانش','ریاضی','فارسی','دین و زندگی']};var ALL_HIGH=[];Object.keys(HIGH).forEach(function(k){HIGH[k].forEach(function(x){if(ALL_HIGH.indexOf(x)<0)ALL_HIGH.push(x);});});ALL_HIGH.sort();var SHARD_VERSION='v3630';var cache={catalog:{},questions:{},catalogAll:null};var FORMULA_PAIRS=[['\\(','\\)'],['\\[','\\]'],['$$','$$']];function mathJaxToTokens(raw){if(raw===null||raw===undefined)return'';raw=String(raw);if(!raw)return raw;var out=[],i=0;while(i<raw.length){var hit=null;for(var j=0;j<FORMULA_PAIRS.length;j++){if(raw.substr(i,FORMULA_PAIRS[j][0].length)===FORMULA_PAIRS[j][0]){hit=FORMULA_PAIRS[j];break;}}
+ if(hit){var end=raw.indexOf(hit[1],i+hit[0].length);if(end>=0){var body=raw.slice(i+hit[0].length,end).replace(/\s+/g,' ').trim();if(body)out.push('$'+body+'$');i=end+hit[1].length;continue;}}
+ out.push(raw.charAt(i));i++;}
+ var value=out.join('');if(value.indexOf('$$')<0)return value;var out2=[],inside=false;for(var k=0;k<value.length;k++){var ch=value.charAt(k);out2.push(ch);if(ch==='$'){if(inside){inside=false;if(value.charAt(k+1)==='$')out2.push(' ');}
+@@ -73,8 +73,9 @@ function tracksFor(g){return Number(g)>=10?TRACKS:[];}
+ function subjectsFor(g,track){g=Number(g);if(g>=1&&g<=6)return PRIMARY;if(g>=7&&g<=9)return MIDDLE;if(g>=10&&g<=12)return track?(HIGH[track]||ALL_HIGH):ALL_HIGH;return[];}
+ function imgUrls(html){var out=[],m,re=/<img[^>]+src=["']([^"']+)["']/gi;while((m=re.exec(html||''))!==null)if(out.indexOf(m[1])<0)out.push(m[1]);return out;}
+ function splitImages(p){var all=p.image_urls||[];var q=imgUrls(p.q_html||'').filter(function(u){return all.indexOf(u)>=0;});var ans=imgUrls(p.answer_html||'').filter(function(u){return all.indexOf(u)>=0;});var opts=(p.option_images||[]).map(function(u){return u||null;});return{question:q,answer:ans,options:opts};}
++function plainQuestion(html){return String(html||'').replace(/<[^>]*>/g,' ').replace(/&zwnj;/g,'\u200c').replace(/&nbsp;/g,' ').replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&quot;/g,'"').replace(/\u00a0/g,' ').replace(/\s+/g,' ').trim();}
+ function plain(html){return String(html||'').replace(/<[^>]*>/g,' ').replace(/&zwnj;/g,' ').replace(/&nbsp;/g,' ').replace(/&amp;/g,'&').replace(/[\u200c\u00a0]/g,' ').replace(/\s+/g,' ').trim();}
+-function draft(p,includeAnswer){var inc=includeAnswer!==false,sp=splitImages(p);var textTokens=mathJaxToTokens(p.text||'');var answerTokens=mathJaxToTokens(plain(p.answer_html||'')||p.answer_text||'');var optionTokens=(p.options||[]).map(function(o){return mathJaxToTokens(String(o||''));});var q={type:p.type||'essay',text:textTokens,grade:p.grade||0,subject:p.subject||'',topic:p.topic||'',difficulty:p.difficulty||0,score:1,options:optionTokens,correctIndex:p.correct_index==null?null:p.correct_index,expectedText:'',images:sp.question.slice(0,8),optionImages:[],answerExplanation:inc?answerTokens:'',answerImages:inc?sp.answer.slice(0,8):[]};if(q.type==='multiple'&&(!q.options||q.options.length<2))q.type='essay';q.optionImages=q.type==='multiple'?q.options.map(function(_,i){return sp.options[i]||null;}):[];if(q.type==='fill')q.expectedText=answerTokens;if(q.type==='truefalse')q.expectedText=/غلط|نادرست/.test(p.answer_text||'')?'false':'true';return q;}
++function draft(p,includeAnswer){var inc=includeAnswer!==false,sp=splitImages(p);var textTokens=mathJaxToTokens(p.text||plainQuestion(p.q_html));var answerTokens=mathJaxToTokens(plain(p.answer_html||'')||p.answer_text||'');var optionTokens=(p.options||[]).map(function(o){return mathJaxToTokens(String(o||''));});var q={type:p.type||'essay',text:textTokens,grade:p.grade||0,subject:p.subject||'',topic:p.topic||'',difficulty:p.difficulty||0,score:1,options:optionTokens,correctIndex:p.correct_index==null?null:p.correct_index,expectedText:'',images:sp.question.slice(0,8),optionImages:[],answerExplanation:inc?answerTokens:'',answerImages:inc?sp.answer.slice(0,8):[]};if(q.type==='multiple'&&(!q.options||q.options.length<2))q.type='essay';q.optionImages=q.type==='multiple'?q.options.map(function(_,i){return sp.options[i]||null;}):[];if(q.type==='fill')q.expectedText=answerTokens;if(q.type==='truefalse')q.expectedText=/غلط|نادرست/.test(p.answer_text||'')?'false':'true';return q;}
+ function open(opts){opts=opts||{};var append=!!opts.append;cache.catalog={};cache.questions={};cache.catalogAll=null;var bg=el('div',{class:'modal-bg'});var card=el('div',{class:'modal wide',style:'max-width:960px;width:96vw;max-height:90vh;overflow:auto'});bg.appendChild(card);document.body.appendChild(bg);bg.addEventListener('click',function(e){if(e.target===bg)bg.remove();});var st={grade:0,track:'',subject:'',chapter:'',type:'',difficulty:'',query:'',page:0,size:25,rows:[],loaded:[],picked:{},includeAnswer:true,filterOpen:true,missing:false,loading:false,note:null,error:null};function head(){var row=[el('h2',{class:'grow',text:'بانک سؤال مرجع'})];if(!st.filterOpen)row.push(el('button',{class:'btn light sm',text:'🔍 فیلتر',title:'بازگشت به فیلتر کشویی',onclick:function(){st.filterOpen=true;draw();}}));row.push(el('button',{class:'x',text:'✕',onclick:function(){bg.remove();}}));card.appendChild(el('div',{class:'row',style:'gap:8px;align-items:center;flex-wrap:wrap'},row));card.appendChild(el('p',{class:'muted',text:'سؤالها و تصویرها در فضای ابریاند؛ فقط نتیجهٔ پالایششده دانلود میشود.'}));}
+ function selectBox(title,values,current,label,onPick){var s=el('select',{title:title,style:'border:1px solid var(--line);border-radius:10px;padding:8px;min-width:180px'});values.forEach(function(v){s.appendChild(el('option',{value:String(v),text:label(v)}));});s.value=String(current);s.addEventListener('change',function(){onPick(s.value);});return el('label',{class:'field',style:'display:flex;flex-direction:column;gap:4px;margin-bottom:8px'},[el('span',{text:title}),s]);}
+ function subjectOptions(){if(!st.grade)return[];var base=st.rows.filter(function(r){return!st.track||String(r.track||'')===st.track;});var out=uniq(base,'subject');return out.length?out:subjectsFor(st.grade,st.track);}
 @@ -94,7 +95,7 @@ var pbg=el('div',{class:'modal-bg'});var pc=el('div',{class:'modal wide',style:'
  var qv=el('div',{style:'margin:10px 0;line-height:1.9'});qv.innerHTML=mathJaxToTokens(p.q_html||'');pc.appendChild(qv);renderFormulaSpans(qv);if((p.options||[]).length){var obox=el('div',{style:'margin:8px 0'});(p.options||[]).forEach(function(o,i){obox.appendChild(richInto(el('div'),fa(i+1)+') '+String(o||'')));var ou=(p.option_images||[])[i];if(ou)obox.appendChild(el('img',{src:ou,alt:'تصویر گزینه',loading:'lazy',style:'max-width:100%;max-height:180px;border-radius:8px;margin:4px 0'}));});pc.appendChild(obox);}
  if(st.includeAnswer&&(p.answer_html||p.answer_text)){var det=el('details',{},[el('summary',{text:'پاسخ / راهنما'})]);var av=el('div',{style:'margin-top:8px;line-height:1.9'});av.innerHTML=mathJaxToTokens(p.answer_html||esc(p.answer_text||''));det.appendChild(av);pc.appendChild(det);renderFormulaSpans(av);splitImages(p).answer.forEach(function(u){det.appendChild(el('img',{src:u,alt:'تصویر پاسخ',loading:'lazy',style:'max-width:100%;max-height:220px;border-radius:8px;margin-top:6px'}));});}
@@ -741,17 +1015,17 @@ index 2186681c..a1ed3ced 100644
  var i=state.selected;var scoreInp=el('input',{type:'number',step:'0.25',min:'0',value:String(q.score),'aria-label':'بارم'});scoreInp.addEventListener('input',function(){q.score=parseFloat(en(scoreInp.value))||0;mark();drawListSoft();var rs=rail.querySelector('.b-rail-score-v');if(rs)rs.textContent=fa(S.fmtScore(totalScore()));});var bankTypeSel=null;if(state.bankEdit){bankTypeSel=el('select',{'aria-label':'نوع سؤال',style:'border:1px solid var(--line);border-radius:10px;padding:6px 10px;font-size:13px'});TYPES.forEach(function(t){var op=el('option',{value:t[0],text:t[2]+' '+t[1]});if(t[0]===q.type)op.selected=true;bankTypeSel.appendChild(op);});bankTypeSel.addEventListener('change',function(){var fresh=newQuestion(bankTypeSel.value);fresh.text=q.text;fresh.score=q.score;fresh.images=q.images||[];fresh.audio=q.audio||'';fresh.audioBytes=q.audioBytes||0;state.questions[i]=fresh;mark();drawListSoft();drawEditor();});}
  editor.appendChild(el('div',{class:'row b-qhead',style:'margin-bottom:10px;flex-wrap:wrap'},[el('h3',{class:'grow',text:state.bankEdit?((state.bankEdit.id?'ویرایش سؤال بانک — ':'سؤال جدید بانک — ')+TYPE_LABEL[q.type]):('سؤال '+fa(i+1)+' — '+TYPE_LABEL[q.type])}),bankTypeSel,el('div',{class:'field b-qscore',title:'بارم این سؤال'},[el('label',{text:'بارم'}),scoreInp]),state.bankEdit?null:el('button',{class:'icon-btn',title:'بالا',html:QI.up,onclick:function(){if(i>0){swap(i,i-1);}}}),state.bankEdit?null:el('button',{class:'icon-btn',title:'پایین',html:QI.down,onclick:function(){if(i<state.questions.length-1)swap(i,i+1);}}),state.bankEdit?null:el('button',{class:'icon-btn',title:'کپی',html:QI.copy,onclick:function(){var cp=JSON.parse(JSON.stringify(q));cp.id=uuid();state.questions.splice(i+1,0,cp);state.selected=i+1;mark();drawList();drawEditor();}}),state.bankEdit?null:el('button',{class:'icon-btn',title:'افزودن به بانک سؤال',html:QI.bank,onclick:function(){addToBank(q);}}),state.bankEdit?null:el('button',{class:'icon-btn danger',title:'حذف',html:QI.trash,onclick:async function(){if(!(await S.confirmDlg('حذف سؤال','سؤال '+fa(i+1)+' حذف شود؟','حذف',true)))return;state.questions.splice(i,1);state.selected=Math.max(0,Math.min(i,state.questions.length-1));mark();drawList();drawEditor();}})]));var ta=el('textarea',{rows:4,style:'width:100%;border:1px solid var(--line);border-radius:10px;padding:10px;font-size:15px',placeholder:'متن سؤال را بنویسید؛'});ta.value=q.text;ta.addEventListener('input',function(){q.text=ta.value;mark();drawListSoft();});var tools=el('div',{class:'b-tools'},[el('button',{class:'tool-btn is-fx',title:'فرمول','aria-label':'فرمول',html:toolSvg('fx'),onclick:function(){var s=ta.selectionStart,e=ta.selectionEnd;S.openFormulaEditor(ta.value,s,e).then(function(t){if(t!=null&&t!==ta.value){ta.value=t;ta.dispatchEvent(new Event('input'));}});}}),el('button',{class:'tool-btn is-fig',title:'شکل هندسی','aria-label':'شکل هندسی',html:toolSvg('fig'),onclick:function(){insertFigure('geo',ta,q);}}),el('button',{class:'tool-btn is-gra',title:'نمودار','aria-label':'نمودار',html:toolSvg('graph'),onclick:function(){insertFigure('graph',ta,q);}}),el('button',{class:'tool-btn is-axis',title:'محور','aria-label':'محور',html:toolSvg('axis'),onclick:function(){insertFigure('axis',ta,q);}}),el('button',{class:'tool-btn is-math',title:'ابزار ریاضی (دبستان تا دانشگاه)','aria-label':'ابزار ریاضی (دبستان تا دانشگاه)',html:toolSvg('math'),onclick:function(e){mathMenu(e.currentTarget,ta,q);}}),el('button',{class:'tool-btn is-tab',title:'جدول','aria-label':'جدول',html:toolSvg('table'),onclick:function(){insertFigure('table',ta,q);}}),el('button',{class:'tool-btn is-pt',title:'جدول تناوبی','aria-label':'جدول تناوبی',html:toolSvg('periodic'),onclick:function(){insertFigure('periodic',ta,q);}}),el('button',{class:'tool-btn is-ana',title:'اطلس تصویری: آناتومی، فیزیک، شیمی، تصویر خودم با فلش‌گذاری','aria-label':'اطلس تصویری',html:toolSvg('gallery'),onclick:function(e){atlasMenu(e.currentTarget,ta,q);}}),el('button',{class:'tool-btn is-img',title:'استودیوی ویرایش و تصویر','aria-label':'استودیوی ویرایش و تصویر',html:toolSvg('img'),onclick:function(){var addImg=function(u){return{uri:u,xMm:20,yMm:30,widthMm:55};};window.SiteStudio.open({existing:q.images,onInsert:function(u){q.images.push(addImg(u));mark();drawEditor();toast('تصویر افزوده شد.','ok');},onReplace:function(k,u){if(q.images[k])q.images[k].uri=u;mark();drawEditor();toast('تصویر جایگزین شد.','ok');},onDelete:function(k){q.images.splice(k,1);mark();drawEditor();},onSplitToSame:function(urls){urls.forEach(function(u){q.images.push(addImg(u));});mark();drawEditor();toast(fa(urls.length)+' تصویر افزوده شد.','ok');},onSplitToQuestions:function(urls){urls.forEach(function(u,j){if(j===0){q.images.push(addImg(u));return;}var nq=newQuestion(q.type);nq.images.push(addImg(u));state.questions.splice(i+j,0,nq);});mark();drawList();drawEditor();toast(fa(urls.length)+' سؤال ساخته شد.','ok');}});}}),el('button',{class:'tool-btn is-board',title:'تختهٔ سفید: کشیدن شکل برای سؤال','aria-label':'تختهٔ سفید',html:toolSvg('board'),onclick:function(){if(!window.SiteStudent||!window.SiteStudent.openWhiteboard)return toast('تخته در دسترس نیست.','err');window.SiteStudent.openWhiteboard(q,function(pages,photos){pages.forEach(function(u){q.images.push({uri:u,xMm:20,yMm:30,widthMm:55});});var extra=(photos||[]).filter(function(u){return!!u&&q.images.length<10;});extra=extra.slice(0,Math.max(0,10-q.images.length));extra.forEach(function(u){q.images.push({uri:u,xMm:20,yMm:30,widthMm:55});});mark();drawEditor();toast(fa(pages.length)+' تصویر تخته'+(extra.length?' و '+fa(extra.length)+' عکس گالری':'')+' به سؤال افزوده شد.','ok');},{title:'تختهٔ سفید — سؤال '+fa(i+1),doneLabel:'افزودن تصویر تخته به سؤال',prev:[],billSources:true});}}),el('button',{class:'tool-btn is-code',title:'کد برنامه‌نویسی (انتخاب زبان)','aria-label':'کد برنامه‌نویسی',html:toolSvg('code'),onclick:function(){insertCode(ta,{title:'کد در متن سؤال',doneLabel:'افزودن کد به سؤال',toast:'بلوک کد به سؤال افزوده شد.'});}}),el('button',{class:'tool-btn is-mic',title:'گفتار به متن','aria-label':'گفتار به متن',html:toolSvg('mic'),onclick:function(){dictate(ta,q);}}),state.mode!=='print'&&window.SiteExtras?el('button',{class:'tool-btn'+(q.audio?' on':''),title:q.audio?'صوت سؤال (دارد)':'صوت سؤال','aria-label':'صوت سؤال',html:toolSvg('audio'),onclick:function(){window.SiteExtras.audioDlg(q,state.examId||(state.examId=uuid()),false,function(){mark();drawEditor();});}}):null]);var tt=tokenTextarea(ta);editor.appendChild(el('div',{class:'field'},[el('label',{text:'متن سؤال'}),tt.wrap,tools,tt.live]));editor.appendChild(el('div',{class:'b-types'},TYPES.map(function(t){return el('button',{class:'chip'+(q.type===t[0]?' on':''),text:t[1],onclick:function(){if(q.type===t[0])return;changeType(q,t[0]);mark();drawList();drawEditor();}});})));if(q.images.length){var ig=el('div',{class:'b-imgs'});q.images.forEach(function(m,k){ig.appendChild(el('div',{class:'b-img'},[el('img',{src:m.uri}),el('button',{class:'x',text:'✕',onclick:function(){q.images.splice(k,1);mark();drawEditor();}})]));});editor.appendChild(ig);}
  editor.appendChild(typeSection(q));function sec(title,children,cls){return el('div',{class:'b-sec'+(cls?' '+cls:'')},[title?el('h4',{class:'b-sec-t',text:title,style:'margin-top:14px'}):null].concat(children));}
--if((q.answerExplanation&&q.answerExplanation.length)||(q.answerImages||[]).length){var ansKids=[];var ansTa=el('textarea',{rows:2,style:'width:100%',placeholder:'پاسخ / راهنما'});ansTa.value=q.answerExplanation||'';ansTa.addEventListener('input',function(){q.answerExplanation=ansTa.value;mark();});ansKids.push(ansTa);(q.answerImages||[]).slice(0,8).forEach(function(u,k){ansKids.push(el('div',{class:'row',style:'gap:6px;align-items:center;margin-top:6px;flex-wrap:wrap'},[el('img',{src:u,alt:'تصویر پاسخ',loading:'lazy',style:'max-width:100%;max-height:200px;border-radius:8px'}),el('button',{class:'btn light sm',text:'✕ حذف تصویر پاسخ',onclick:function(){q.answerImages.splice(k,1);mark();drawEditor();}})]));});editor.appendChild(sec('پاسخ / پاسخنامه',ansKids));}
+-if((q.answerExplanation&&q.answerExplanation.length)||(q.answerImages||[]).length){var ansKids=[];var ansTa=el('textarea',{rows:2,style:'width:100%',placeholder:'توضیح پاسخ / راهنمای معلم'});ansTa.value=q.answerExplanation||'';var ansTokenEditor=tokenTextarea(ansTa,{small:true});ansTa.addEventListener('input',function(){q.answerExplanation=ansTa.value;mark();});ansKids.push(ansTokenEditor.wrap);ansKids.push(ansTokenEditor.live);(q.answerImages||[]).slice(0,8).forEach(function(u,k){ansKids.push(el('div',{class:'row',style:'gap:6px;align-items:center;margin-top:6px;flex-wrap:wrap'},[el('img',{src:u,alt:'تصویر پاسخ',loading:'lazy',style:'max-width:100%;max-height:200px;border-radius:8px'}),el('button',{class:'btn light sm',text:'✕ حذف تصویر پاسخ',onclick:function(){q.answerImages.splice(k,1);mark();drawEditor();}})]));});editor.appendChild(sec('توضیح پاسخ / راهنمای معلم (در پاسخنامه)',ansKids));}
 +if((q.answerExplanation&&q.answerExplanation.length)||(q.answerImages||[]).length){var ansKids=[];var ansTa=el('textarea',{rows:2,style:'width:100%',placeholder:'توضیح پاسخ / راهنمای معلم'});ansTa.value=q.answerExplanation||'';var ansTokenEditor=tokenTextarea(ansTa,{small:true});ansTa.addEventListener('input',function(){q.answerExplanation=ansTa.value;mark();});ansKids.push(ansTokenEditor.wrap);ansKids.push(ansTokenEditor.live);(q.answerImages||[]).slice(0,8).forEach(function(u,k){ansKids.push(el('div',{class:'row',style:'gap:6px;align-items:center;margin-top:6px;flex-wrap:wrap'},[el('img',{src:u,alt:'تصویر پاسخ',loading:'lazy',style:'max-width:100%;max-height:200px;border-radius:8px'}),el('button',{class:'btn light sm',text:'✕ حذف تصویر پاسخ',onclick:function(){q.answerImages.splice(k,1);mark();drawEditor();}})]));});editor.appendChild(sec('پاسخ / پاسخنامه — توضیح پاسخ / راهنمای معلم',ansKids));}
  if(state.mode==='print'){var fmt=el('div',{class:'grid3'},[sel('تراز متن',q.textAlign,[['right','راست'],['center','وسط'],['left','چپ'],['justify','دوطرفه']],function(v){q.textAlign=v;mark();}),sel('فونت',q.fontFamily,[['default','پیش‌فرض'],['Vazirmatn','وزیرمتن'],['Shabnam','شبنم'],['Sahel','ساحل'],['BNazanin','ب نازنین'],['Tahoma','تاهوما']],function(v){q.fontFamily=v;mark();}),inp('اندازهٔ فونت',String(q.fontSizeSp),function(v){q.fontSizeSp=Math.max(8,Math.min(40,parseFloat(en(v))||16));mark();},'number')]);editor.appendChild(sec(document.body.classList.contains('dk')?'قالب متن سؤال':'',[fmt,el('div',{class:'row b-sec-chips',style:'margin:-6px 0 12px'},[chk('ضخیم',q.bold,function(v){q.bold=v;mark();}),chk('مورب',q.italic,function(v){q.italic=v;mark();})])],'b-sec-fmt'));if(q.type==='essay'||q.type==='fill'||q.type==='numeric'){editor.appendChild(sec('فضای پاسخ در برگهٔ چاپی',[el('div',{class:'grid3'},[inp('تعداد خط',String(q.answerLines),function(v){q.answerLines=Math.max(0,Math.min(12,parseInt(en(v),10)||0));mark();},'number'),sel('نوع خط',q.answerLineStyle,[['lined','خط‌دار'],['blank','ساده'],['grid','شطرنجی']],function(v){q.answerLineStyle=v;mark();}),inp('فاصلهٔ خط (cm)',String(q.answerLineSpacingCm),function(v){q.answerLineSpacingCm=Math.max(0.5,Math.min(2,parseFloat(en(v))||1));mark();},'number')])]));}
  if(q.type==='multiple'){editor.appendChild(sec('چیدمان گزینه‌ها در برگهٔ چاپی',[el('div',{class:'grid3'},[sel('چیدمان',q.optionsLayout||'',[['','پیش‌فرض آزمون'],['1row','همه در یک ردیف'],['2rows','دو ردیف'],['4rows','هر گزینه یک ردیف']],function(v){q.optionsLayout=v;mark();})])]));}}
  if(state.mode==='online'&&(q.type==='essay'||q.type==='numeric'||q.type==='fill')){editor.appendChild(sec('پاسخ تصویری / تختهٔ دانش‌آموز',[el('div',{class:'grid3'},[sel('ارسال تصویر پاسخ',q.answerImageMode,[['no','غیرفعال'],['optional','اختیاری'],['required','اجباری']],function(v){q.answerImageMode=v;mark();drawEditor();}),q.answerImageMode!=='no'?inp('حداکثر تصویر',String(q.maxAnswerImages||1),function(v){q.maxAnswerImages=Math.max(1,Math.min(10,parseInt(en(v),10)||1));mark();},'number'):el('div'),el('div',{class:'field b-sec-chkfield'},[el('label',{text:document.body.classList.contains('dk')?'رسم نمودار/تخته':' '}),chk('اجازهٔ رسم نمودار/تخته',q.allowAnswerGraph,function(v){q.allowAnswerGraph=v;mark();})])])]));}
-diff --git a/site/panels.5050ec577aef.js b/site/panels.e024537076f1.js
+diff --git a/site/panels.4bb10839a0a2.js b/site/panels.e024537076f1.js
 similarity index 99%
-rename from site/panels.5050ec577aef.js
+rename from site/panels.4bb10839a0a2.js
 rename to site/panels.e024537076f1.js
-index ea6933c9..a79318b6 100644
---- a/site/panels.5050ec577aef.js
+index 11341dab..a79318b6 100644
+--- a/site/panels.4bb10839a0a2.js
 +++ b/site/panels.e024537076f1.js
 @@ -50,7 +50,7 @@ return a;}
  function pick(items,categories,rules,seed){var used={},picked=[],perRule=[];(rules||[]).forEach(function(r,idx){var pool=filterItems(items,categories,{categoryId:r.categoryId,difficulty:r.difficulty<0?null:r.difficulty}).filter(function(it){return!used[String(it.id)];});var order=shuffled(pool,(Number(seed)|0)+idx*7919);var take=order.slice(0,Math.min(r.count,order.length));take.forEach(function(it){used[String(it.id)]=true;picked.push(it);});perRule.push({category:r.category||'همه',difficulty:r.difficulty,wanted:r.count,got:take.length,shortage:Math.max(0,r.count-take.length)});});return{picked:picked,perRule:perRule,total:picked.length};}
@@ -780,27 +1054,19 @@ index ea6933c9..a79318b6 100644
  function draw(){card.innerHTML='';head();if(st.filterOpen)filterPanel();else results();}
  function load(){st.loading=true;st.error=null;draw();var task=st.grade===0?catalogAll():catalog(st.grade).then(function(rows){return{rows:Array.isArray(rows)?rows:[],loaded:(rows&&rows.length)?[st.grade]:[]};}).catch(function(e){return{rows:[],loaded:[],error:String(e.message||e)};});task.then(function(res){st.rows=res.rows||[];st.loaded=res.loaded||[];st.picked={};st.loading=false;st.missing=!st.rows.length;st.error=res.error||null;st.note=st.grade===0?(st.loaded.length?'پایههای بارگذاریشده: '+st.loaded.map(fa).join('، '):'هیچ پایهای بارگذاری نشده است.'):(st.rows.length?null:'فهرست این پایه هنوز بارگذاری نشده است.');draw();});}
  load();}
-@@ -371,7 +371,7 @@ function drawEditor(){editor.innerHTML='';var q=state.questions[state.selected];
- var i=state.selected;var scoreInp=el('input',{type:'number',step:'0.25',min:'0',value:String(q.score),'aria-label':'بارم'});scoreInp.addEventListener('input',function(){q.score=parseFloat(en(scoreInp.value))||0;mark();drawListSoft();var rs=rail.querySelector('.b-rail-score-v');if(rs)rs.textContent=fa(S.fmtScore(totalScore()));});var bankTypeSel=null;if(state.bankEdit){bankTypeSel=el('select',{'aria-label':'نوع سؤال',style:'border:1px solid var(--line);border-radius:10px;padding:6px 10px;font-size:13px'});TYPES.forEach(function(t){var op=el('option',{value:t[0],text:t[2]+' '+t[1]});if(t[0]===q.type)op.selected=true;bankTypeSel.appendChild(op);});bankTypeSel.addEventListener('change',function(){var fresh=newQuestion(bankTypeSel.value);fresh.text=q.text;fresh.score=q.score;fresh.images=q.images||[];fresh.audio=q.audio||'';fresh.audioBytes=q.audioBytes||0;state.questions[i]=fresh;mark();drawListSoft();drawEditor();});}
- editor.appendChild(el('div',{class:'row b-qhead',style:'margin-bottom:10px;flex-wrap:wrap'},[el('h3',{class:'grow',text:state.bankEdit?((state.bankEdit.id?'ویرایش سؤال بانک — ':'سؤال جدید بانک — ')+TYPE_LABEL[q.type]):('سؤال '+fa(i+1)+' — '+TYPE_LABEL[q.type])}),bankTypeSel,el('div',{class:'field b-qscore',title:'بارم این سؤال'},[el('label',{text:'بارم'}),scoreInp]),state.bankEdit?null:el('button',{class:'icon-btn',title:'بالا',html:QI.up,onclick:function(){if(i>0){swap(i,i-1);}}}),state.bankEdit?null:el('button',{class:'icon-btn',title:'پایین',html:QI.down,onclick:function(){if(i<state.questions.length-1)swap(i,i+1);}}),state.bankEdit?null:el('button',{class:'icon-btn',title:'کپی',html:QI.copy,onclick:function(){var cp=JSON.parse(JSON.stringify(q));cp.id=uuid();state.questions.splice(i+1,0,cp);state.selected=i+1;mark();drawList();drawEditor();}}),state.bankEdit?null:el('button',{class:'icon-btn',title:'افزودن به بانک سؤال',html:QI.bank,onclick:function(){addToBank(q);}}),state.bankEdit?null:el('button',{class:'icon-btn danger',title:'حذف',html:QI.trash,onclick:async function(){if(!(await S.confirmDlg('حذف سؤال','سؤال '+fa(i+1)+' حذف شود؟','حذف',true)))return;state.questions.splice(i,1);state.selected=Math.max(0,Math.min(i,state.questions.length-1));mark();drawList();drawEditor();}})]));var ta=el('textarea',{rows:4,style:'width:100%;border:1px solid var(--line);border-radius:10px;padding:10px;font-size:15px',placeholder:'متن سؤال را بنویسید؛'});ta.value=q.text;ta.addEventListener('input',function(){q.text=ta.value;mark();drawListSoft();});var tools=el('div',{class:'b-tools'},[el('button',{class:'tool-btn is-fx',title:'فرمول','aria-label':'فرمول',html:toolSvg('fx'),onclick:function(){var s=ta.selectionStart,e=ta.selectionEnd;S.openFormulaEditor(ta.value,s,e).then(function(t){if(t!=null&&t!==ta.value){ta.value=t;ta.dispatchEvent(new Event('input'));}});}}),el('button',{class:'tool-btn is-fig',title:'شکل هندسی','aria-label':'شکل هندسی',html:toolSvg('fig'),onclick:function(){insertFigure('geo',ta,q);}}),el('button',{class:'tool-btn is-gra',title:'نمودار','aria-label':'نمودار',html:toolSvg('graph'),onclick:function(){insertFigure('graph',ta,q);}}),el('button',{class:'tool-btn is-axis',title:'محور','aria-label':'محور',html:toolSvg('axis'),onclick:function(){insertFigure('axis',ta,q);}}),el('button',{class:'tool-btn is-math',title:'ابزار ریاضی (دبستان تا دانشگاه)','aria-label':'ابزار ریاضی (دبستان تا دانشگاه)',html:toolSvg('math'),onclick:function(e){mathMenu(e.currentTarget,ta,q);}}),el('button',{class:'tool-btn is-tab',title:'جدول','aria-label':'جدول',html:toolSvg('table'),onclick:function(){insertFigure('table',ta,q);}}),el('button',{class:'tool-btn is-pt',title:'جدول تناوبی','aria-label':'جدول تناوبی',html:toolSvg('periodic'),onclick:function(){insertFigure('periodic',ta,q);}}),el('button',{class:'tool-btn is-ana',title:'اطلس تصویری: آناتومی، فیزیک، شیمی، تصویر خودم با فلش‌گذاری','aria-label':'اطلس تصویری',html:toolSvg('gallery'),onclick:function(e){atlasMenu(e.currentTarget,ta,q);}}),el('button',{class:'tool-btn is-img',title:'استودیوی ویرایش و تصویر','aria-label':'استودیوی ویرایش و تصویر',html:toolSvg('img'),onclick:function(){var addImg=function(u){return{uri:u,xMm:20,yMm:30,widthMm:55};};window.SiteStudio.open({existing:q.images,onInsert:function(u){q.images.push(addImg(u));mark();drawEditor();toast('تصویر افزوده شد.','ok');},onReplace:function(k,u){if(q.images[k])q.images[k].uri=u;mark();drawEditor();toast('تصویر جایگزین شد.','ok');},onDelete:function(k){q.images.splice(k,1);mark();drawEditor();},onSplitToSame:function(urls){urls.forEach(function(u){q.images.push(addImg(u));});mark();drawEditor();toast(fa(urls.length)+' تصویر افزوده شد.','ok');},onSplitToQuestions:function(urls){urls.forEach(function(u,j){if(j===0){q.images.push(addImg(u));return;}var nq=newQuestion(q.type);nq.images.push(addImg(u));state.questions.splice(i+j,0,nq);});mark();drawList();drawEditor();toast(fa(urls.length)+' سؤال ساخته شد.','ok');}});}}),el('button',{class:'tool-btn is-board',title:'تختهٔ سفید: کشیدن شکل برای سؤال','aria-label':'تختهٔ سفید',html:toolSvg('board'),onclick:function(){if(!window.SiteStudent||!window.SiteStudent.openWhiteboard)return toast('تخته در دسترس نیست.','err');window.SiteStudent.openWhiteboard(q,function(pages,photos){pages.forEach(function(u){q.images.push({uri:u,xMm:20,yMm:30,widthMm:55});});var extra=(photos||[]).filter(function(u){return!!u&&q.images.length<10;});extra=extra.slice(0,Math.max(0,10-q.images.length));extra.forEach(function(u){q.images.push({uri:u,xMm:20,yMm:30,widthMm:55});});mark();drawEditor();toast(fa(pages.length)+' تصویر تخته'+(extra.length?' و '+fa(extra.length)+' عکس گالری':'')+' به سؤال افزوده شد.','ok');},{title:'تختهٔ سفید — سؤال '+fa(i+1),doneLabel:'افزودن تصویر تخته به سؤال',prev:[],billSources:true});}}),el('button',{class:'tool-btn is-code',title:'کد برنامه‌نویسی (انتخاب زبان)','aria-label':'کد برنامه‌نویسی',html:toolSvg('code'),onclick:function(){insertCode(ta,{title:'کد در متن سؤال',doneLabel:'افزودن کد به سؤال',toast:'بلوک کد به سؤال افزوده شد.'});}}),el('button',{class:'tool-btn is-mic',title:'گفتار به متن','aria-label':'گفتار به متن',html:toolSvg('mic'),onclick:function(){dictate(ta,q);}}),state.mode!=='print'&&window.SiteExtras?el('button',{class:'tool-btn'+(q.audio?' on':''),title:q.audio?'صوت سؤال (دارد)':'صوت سؤال','aria-label':'صوت سؤال',html:toolSvg('audio'),onclick:function(){window.SiteExtras.audioDlg(q,state.examId||(state.examId=uuid()),false,function(){mark();drawEditor();});}}):null]);var tt=tokenTextarea(ta);editor.appendChild(el('div',{class:'field'},[el('label',{text:'متن سؤال'}),tt.wrap,tools,tt.live]));editor.appendChild(el('div',{class:'b-types'},TYPES.map(function(t){return el('button',{class:'chip'+(q.type===t[0]?' on':''),text:t[1],onclick:function(){if(q.type===t[0])return;changeType(q,t[0]);mark();drawList();drawEditor();}});})));if(q.images.length){var ig=el('div',{class:'b-imgs'});q.images.forEach(function(m,k){ig.appendChild(el('div',{class:'b-img'},[el('img',{src:m.uri}),el('button',{class:'x',text:'✕',onclick:function(){q.images.splice(k,1);mark();drawEditor();}})]));});editor.appendChild(ig);}
- editor.appendChild(typeSection(q));function sec(title,children,cls){return el('div',{class:'b-sec'+(cls?' '+cls:'')},[title?el('h4',{class:'b-sec-t',text:title,style:'margin-top:14px'}):null].concat(children));}
--if((q.answerExplanation&&q.answerExplanation.length)||(q.answerImages||[]).length){var ansKids=[];var ansTa=el('textarea',{rows:2,style:'width:100%',placeholder:'توضیح پاسخ / راهنمای معلم'});ansTa.value=q.answerExplanation||'';var ansTokenEditor=tokenTextarea(ansTa,{small:true});ansTa.addEventListener('input',function(){q.answerExplanation=ansTa.value;mark();});ansKids.push(ansTokenEditor.wrap);ansKids.push(ansTokenEditor.live);(q.answerImages||[]).slice(0,8).forEach(function(u,k){ansKids.push(el('div',{class:'row',style:'gap:6px;align-items:center;margin-top:6px;flex-wrap:wrap'},[el('img',{src:u,alt:'تصویر پاسخ',loading:'lazy',style:'max-width:100%;max-height:200px;border-radius:8px'}),el('button',{class:'btn light sm',text:'✕ حذف تصویر پاسخ',onclick:function(){q.answerImages.splice(k,1);mark();drawEditor();}})]));});editor.appendChild(sec('توضیح پاسخ / راهنمای معلم (در پاسخنامه)',ansKids));}
-+if((q.answerExplanation&&q.answerExplanation.length)||(q.answerImages||[]).length){var ansKids=[];var ansTa=el('textarea',{rows:2,style:'width:100%',placeholder:'توضیح پاسخ / راهنمای معلم'});ansTa.value=q.answerExplanation||'';var ansTokenEditor=tokenTextarea(ansTa,{small:true});ansTa.addEventListener('input',function(){q.answerExplanation=ansTa.value;mark();});ansKids.push(ansTokenEditor.wrap);ansKids.push(ansTokenEditor.live);(q.answerImages||[]).slice(0,8).forEach(function(u,k){ansKids.push(el('div',{class:'row',style:'gap:6px;align-items:center;margin-top:6px;flex-wrap:wrap'},[el('img',{src:u,alt:'تصویر پاسخ',loading:'lazy',style:'max-width:100%;max-height:200px;border-radius:8px'}),el('button',{class:'btn light sm',text:'✕ حذف تصویر پاسخ',onclick:function(){q.answerImages.splice(k,1);mark();drawEditor();}})]));});editor.appendChild(sec('پاسخ / پاسخنامه — توضیح پاسخ / راهنمای معلم',ansKids));}
- if(state.mode==='print'){var fmt=el('div',{class:'grid3'},[sel('تراز متن',q.textAlign,[['right','راست'],['center','وسط'],['left','چپ'],['justify','دوطرفه']],function(v){q.textAlign=v;mark();}),sel('فونت',q.fontFamily,[['default','پیش‌فرض'],['Vazirmatn','وزیرمتن'],['Shabnam','شبنم'],['Sahel','ساحل'],['BNazanin','ب نازنین'],['Tahoma','تاهوما']],function(v){q.fontFamily=v;mark();}),inp('اندازهٔ فونت',String(q.fontSizeSp),function(v){q.fontSizeSp=Math.max(8,Math.min(40,parseFloat(en(v))||16));mark();},'number')]);editor.appendChild(sec(document.body.classList.contains('dk')?'قالب متن سؤال':'',[fmt,el('div',{class:'row b-sec-chips',style:'margin:-6px 0 12px'},[chk('ضخیم',q.bold,function(v){q.bold=v;mark();}),chk('مورب',q.italic,function(v){q.italic=v;mark();})])],'b-sec-fmt'));if(q.type==='essay'||q.type==='fill'||q.type==='numeric'){editor.appendChild(sec('فضای پاسخ در برگهٔ چاپی',[el('div',{class:'grid3'},[inp('تعداد خط',String(q.answerLines),function(v){q.answerLines=Math.max(0,Math.min(12,parseInt(en(v),10)||0));mark();},'number'),sel('نوع خط',q.answerLineStyle,[['lined','خط‌دار'],['blank','ساده'],['grid','شطرنجی']],function(v){q.answerLineStyle=v;mark();}),inp('فاصلهٔ خط (cm)',String(q.answerLineSpacingCm),function(v){q.answerLineSpacingCm=Math.max(0.5,Math.min(2,parseFloat(en(v))||1));mark();},'number')])]));}
- if(q.type==='multiple'){editor.appendChild(sec('چیدمان گزینه‌ها در برگهٔ چاپی',[el('div',{class:'grid3'},[sel('چیدمان',q.optionsLayout||'',[['','پیش‌فرض آزمون'],['1row','همه در یک ردیف'],['2rows','دو ردیف'],['4rows','هر گزینه یک ردیف']],function(v){q.optionsLayout=v;mark();})])]));}}
- if(state.mode==='online'&&(q.type==='essay'||q.type==='numeric'||q.type==='fill')){editor.appendChild(sec('پاسخ تصویری / تختهٔ دانش‌آموز',[el('div',{class:'grid3'},[sel('ارسال تصویر پاسخ',q.answerImageMode,[['no','غیرفعال'],['optional','اختیاری'],['required','اجباری']],function(v){q.answerImageMode=v;mark();drawEditor();}),q.answerImageMode!=='no'?inp('حداکثر تصویر',String(q.maxAnswerImages||1),function(v){q.maxAnswerImages=Math.max(1,Math.min(10,parseInt(en(v),10)||1));mark();},'number'):el('div'),el('div',{class:'field b-sec-chkfield'},[el('label',{text:document.body.classList.contains('dk')?'رسم نمودار/تخته':' '}),chk('اجازهٔ رسم نمودار/تخته',q.allowAnswerGraph,function(v){q.allowAnswerGraph=v;mark();})])])]));}
 diff --git a/site/panels_keep.txt b/site/panels_keep.txt
-index 4ea6e974..6d32221d 100644
+index 4ea6e974..08dc584f 100644
 --- a/site/panels_keep.txt
 +++ b/site/panels_keep.txt
 @@ -1,3 +1,3 @@
-+panels.df2e38a7422a.js
-+panels.e024537076f1.js
- panels.4bb10839a0a2.js
+-panels.4bb10839a0a2.js
 -panels.5050ec577aef.js
 -panels.8760f565193d.js
++panels.9501569c12c3.js
++panels.df2e38a7422a.js
++panels.e024537076f1.js
 diff --git a/site/src/refbank.js b/site/src/refbank.js
-index 0f16f940..56215132 100644
+index 0f16f940..d17ca8b4 100644
 --- a/site/src/refbank.js
 +++ b/site/src/refbank.js
 @@ -30,7 +30,8 @@
@@ -813,11 +1079,27 @@ index 0f16f940..56215132 100644
    var cache = {catalog: {}, questions: {}, catalogAll: null};
    var FORMULA_PAIRS = [['\\(', '\\)'], ['\\[', '\\]'], ['$$', '$$']];
  
-@@ -184,6 +185,13 @@
+@@ -184,6 +185,29 @@
      var opts = (p.option_images || []).map(function (u) { return u || null; });
      return {question: q, answer: ans, options: opts};
    }
 +  /* V363 — متن سؤال: برخلاف plain، نیم‌فاصله را نمی‌شکند. */
++  /* V363 — برش امن برای فهرست: «$» جفت‌نشده یا کلمهٔ نصفه نماند. */
++  function safeSnippet(value, limit) {
++    var v = String(value || '').trim();
++    var odd = function (s) { return (s.split('$').length - 1) % 2 === 1; };
++    var balance = function (s) {
++      s = s.replace(/\s+$/, '');
++      if (!odd(s)) return s;
++      var i = s.lastIndexOf('$');
++      return i > 0 ? s.slice(0, i).replace(/\s+$/, '') + '…' : s;
++    };
++    if (limit <= 0 || v.length <= limit) return balance(v);
++    var cut = v.slice(0, limit);
++    if (odd(cut)) cut = cut.slice(0, cut.lastIndexOf('$'));
++    if (cut.indexOf(' ') > limit / 2) cut = cut.slice(0, cut.lastIndexOf(' '));
++    return balance(cut.replace(/\s+$/, '') + '…');
++  }
 +  function plainQuestion(html) {
 +    return String(html || '').replace(/<[^>]*>/g, ' ').replace(/&zwnj;/g, '\u200c')
 +      .replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/&lt;/g, '<')
@@ -827,7 +1109,7 @@ index 0f16f940..56215132 100644
    function plain(html) {
      return String(html || '').replace(/<[^>]*>/g, ' ').replace(/&zwnj;/g, ' ').replace(/&nbsp;/g, ' ')
        .replace(/&amp;/g, '&').replace(/[\u200c\u00a0]/g, ' ').replace(/\s+/g, ' ').trim();
-@@ -191,7 +199,8 @@
+@@ -191,7 +215,8 @@
    function draft(p, includeAnswer) {
      var inc = includeAnswer !== false, sp = splitImages(p);
      /* V361 — حتی اگر شارد خام مستقیم رسید، فرمولها به توکن ویرایشگر بروند. */
@@ -837,7 +1119,7 @@ index 0f16f940..56215132 100644
      var answerTokens = mathJaxToTokens(plain(p.answer_html || '') || p.answer_text || '');
      var optionTokens = (p.options || []).map(function (o) { return mathJaxToTokens(String(o || '')); });
      var q = {
-@@ -425,7 +434,15 @@
+@@ -425,7 +450,15 @@
              el('span', {class: 'grow'}),
              r.has_image ? el('span', {class: 'chip', text: '🖼 تصویر'}) : null
            ].filter(Boolean)),
@@ -846,7 +1128,7 @@ index 0f16f940..56215132 100644
 +            var raw = String(r.text || '').trim();
 +            var node = el('div', {style: 'margin:6px 0'});
 +            /* V363 — اگر شارد متن فهرست را خالی گذاشته باشد، سطر سفید نگذار. */
-+            if (raw) return richInto(node, raw.slice(0, 220));
++            if (raw) return richInto(node, safeSnippet(raw, 220));
 +            node.appendChild(el('span', {class: 'muted', style: 'font-size:12px',
 +              text: 'متن این سؤال در فهرست این پایه نیست؛ «پیش‌نمایش» متن کامل را نشان می‌دهد.'}));
 +            return node;
