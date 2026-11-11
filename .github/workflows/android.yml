@@ -2,6 +2,13 @@ name: آزمون آنلاین
 # V160.5 — قاعدهٔ کاربر: وقتی نسخه فقط سایت را تغییر می‌دهد، CI اپ بسته (سه خط push کامنت) باشد؛
 # وقتی کد اپ تغییر می‌کند (مثل V160.x: RemoteMediaBytes، x-amz-acl) باز شود تا APK جدید ساخته شود.
 # اجرای دستی همیشه: GitHub → Actions → این workflow → Run workflow.
+# V362.1 — بودجهٔ دقیقهٔ Actions پس از خصوصی‌شدن ریپو (سهمیهٔ پلن رایگان ۲٬۰۰۰ دقیقه
+# در ماه؛ در ریپوی عمومی نامحدود بود). اندازه‌گیری ۳۰ روز: ~۲۷۷ push کد-اپ ×
+# ~۱۵ دقیقه ≈ ۴٬۱۵۰ دقیقه + ~۱۹۶ push سایت × ~۱۳ دقیقه ≈ ۲٬۵۵۰ دقیقه ≈ ۶٬۷۰۰ دقیقه.
+# اکنون بیلد انتشار فقط در دو حالت اجرا می‌شود: (۱) push روی شاخهٔ staging
+# (نسخهٔ آزمایشی beta) و (۲) اجرای دستی Run workflow (شاخهٔ main = انتشار اصلی).
+# قفل در سطح job است، نه فهرست branches؛ پس پین‌های V298 دست‌نخورده می‌مانند.
+# نگهبان: scripts/check_ci_budget.py — مستند: هندآف بخش ۳۴۱.
 on:
   push:
     # V298 — شاخهٔ staging = نسخهٔ آزمایشی: APK با بستهٔ «ir.exam.app.beta» کنار اپ اصلی، بدون ثبت در app_version
@@ -40,6 +47,11 @@ concurrency:
 jobs:
   test-build-release:
     runs-on: ubuntu-latest
+    # V362.1 — قفل بودجه: push روی main دیگر APK نمی‌سازد (job با ۰ دقیقه Skip
+    # می‌شود). انتشار اصلی: Actions → «آزمون آنلاین» → Run workflow.
+    if: github.event_name == 'workflow_dispatch' || github.ref_name == 'staging'
+    # V362.1 — سقف زمان: اجرای گیرکرده نباید بی‌نهایت از سهمیهٔ دقیقه مصرف کند.
+    timeout-minutes: 45
     steps:
       - name: دریافت سورس
         uses: actions/checkout@v5
@@ -88,7 +100,7 @@ jobs:
                    check_site_chunk_ref check_v357_sql_sync \
                    check_actions_storage check_reference_bank_bundle \
                    check_reference_bank_option_images check_reference_bank_formula \
-                   check_compose_scope; do
+                   check_compose_scope check_ci_budget; do
             echo "::group::$g"
             python3 "scripts/$g.py"
             echo "::endgroup::"

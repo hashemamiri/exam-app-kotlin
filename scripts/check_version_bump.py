@@ -12,8 +12,13 @@
 
 این اسکریپت همان خطا را **پیش از** push می‌گیرد:
   • تغییرات (کامیت‌شده/نشده/untracked) را نسبت به `origin/main` می‌گیرد؛
-  • اگر فایلی بیرون از `site/` و `docs/` تغییر کرده باشد، بالا رفتن
-    `text/APP_VERSION.txt` الزامی است؛
+  • اگر فایلی بیرون از `site/`، `docs/`، `relay/` و مسیرهای **ابزاری**
+    (`.github/` و `scripts/`) تغییر کرده باشد، بالا رفتن `text/APP_VERSION.txt`
+    الزامی است؛
+  • V362.1 — مسیرهای ابزاری مستثنا شدند: بیلد نسخهٔ اصلی دیگر با push خودکار
+    اجرا نمی‌شود (فقط staging یا Run workflow)، پس تغییر گردش‌کار/نگهبان
+    نمی‌تواند خطای «این نسخه قبلاً منتشر شده» بسازد و لازم نیست برای هر پچ
+    ابزاری، شمارهٔ نسخه و بلوک لیست تغییرات کاربر-محور بالا برود؛
   • قالب نسخه و هم‌خوانی‌اش با خط اول CHANGELOG را هم می‌سنجد.
 
 اجرا:  python3 scripts/check_version_bump.py           (خروجی غیرصفر = نسخه بالا نرفته)
@@ -30,6 +35,9 @@ import sys
 APP_VERSION = "text/APP_VERSION.txt"
 CHANGELOG = "text/CHANGELOG_FA.txt"
 SITE_ONLY_PREFIXES = ("site/", "docs/", "relay/")
+# V362.1 — ابزار CI/نگهبان‌ها هم مثل سایت/مستندات: انتشار نسخهٔ اصلی دستی است،
+# پس تغییر این مسیرها هرگز خطای «نسخهٔ تکراری» در CI نمی‌سازد. پین: هندآف ۳۴۱.
+TOOLING_PREFIXES = (".github/", "scripts/")
 VERSION_RE = re.compile(r"^\d{1,2}\.\d{2}\.\d{2}$")
 
 
@@ -74,7 +82,7 @@ def main():
     if not paths:
         print("ℹ️  نسبت به origin/main تغییری وجود ندارد.")
         return 0 if ok else 1
-    app_paths = sorted(p for p in paths if not p.startswith(SITE_ONLY_PREFIXES))
+    app_paths = sorted(p for p in paths if not p.startswith(SITE_ONLY_PREFIXES + TOOLING_PREFIXES))
     # «بالا رفتن» یعنی مقدار فعلی از مقدار منتشرشده در origin/main بزرگ‌تر باشد
     # (نه فقط «فایل تغییر کرده»؛ وگرنه برگرداندن نسخه هم اشتباهاً «بالا رفته» حساب می‌شد)
     base = git("show", "origin/main:" + APP_VERSION)
@@ -103,7 +111,7 @@ def main():
     elif not app_paths and version_bumped:
         print(f"✅ تغییر فقط سایت/مستندات است و نسخه هم بالا رفته ({version}).")
     else:
-        print("✅ تغییر فقط سایت/مستندات است؛ بدون بالا بردن نسخه هم CI اندروید مشکلی ندارد.")
+        print("✅ تغییر فقط سایت/مستندات/ابزار است؛ بدون بالا بردن نسخه هم CI اندروید مشکلی ندارد.")
     return 0 if ok else 1
 
 

@@ -302,6 +302,22 @@ require("native_auto_grade_with_penalty_v335_37" in negative_sql, "shared negati
 require("total_grade=greatest(v_total,0)" in negative_sql, "final total zero floor missing")
 require(negative_sql == read(ROOT / "sql/manual/SQL_NEGATIVE_GRADING_V335_37.sql"), "manual SQL and migration differ")
 
+# V362.1 — سیاست بودجهٔ دقیقهٔ Actions پس از خصوصی‌شدن ریپو (هندآف بخش ۳۴۱).
+android_wf = read(ROOT / ".github/workflows/android.yml")
+site_wf = read(ROOT / ".github/workflows/site.yml")
+require(
+    "if: github.event_name == 'workflow_dispatch' || github.ref_name == 'staging'" in android_wf,
+    "android release job must stay locked to manual dispatch or staging (Actions minute budget)",
+)
+require("timeout-minutes: 45" in android_wf, "android job timeout guard missing")
+require("check_ci_budget" in android_wf, "ci budget guard not wired into android workflow")
+require("timeout-minutes: 30" in site_wf, "site job timeout guard missing")
+require(
+    "vars.E2E_GATE == 'on' || github.event_name == 'workflow_dispatch'" in site_wf,
+    "browser E2E gate must stay opt-in (Actions minute budget)",
+)
+require("scripts/check_ci_budget.py" in site_wf, "ci budget guard not wired into site workflow")
+
 if errors:
     print("Print renderer verification: FAILED")
     for error in errors:

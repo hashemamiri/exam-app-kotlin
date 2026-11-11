@@ -15,6 +15,8 @@ concurrency:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    # V362.1 — سقف زمان: اجرای گیرکرده نباید بی‌نهایت از سهمیهٔ دقیقه مصرف کند.
+    timeout-minutes: 30
     permissions:
       contents: write
     steps:
@@ -120,8 +122,16 @@ jobs:
           PY
           # هدرها: بدون کش برای index و SW تا به‌روزرسانی فوری دیده شود؛ Alt-Svc: clear برای جلوگیری از گیر کردن QUIC/HTTP3 در اپراتورهای ایران؛ آیکون‌ها کش طولانی
           printf '/*\n  Cache-Control: no-cache\n  Alt-Svc: clear\n  X-Content-Type-Options: nosniff\n  X-Frame-Options: SAMEORIGIN\n  Referrer-Policy: strict-origin-when-cross-origin\n  Strict-Transport-Security: max-age=31536000; includeSubDomains\n/pwa/sw.js\n  Cache-Control: no-cache\n  Service-Worker-Allowed: /\n/pwa/manifest.webmanifest\n  Content-Type: application/manifest+json; charset=utf-8\n/pwa/*.png\n  Cache-Control: public, max-age=604800\n/pwa/v3/*\n  Cache-Control: public, max-age=604800\n/engines.*.js\n  Cache-Control: public, max-age=31536000, immutable\n/panels.*.js\n  Cache-Control: public, max-age=31536000, immutable\n/s*.css\n  Cache-Control: public, max-age=31536000, immutable\n/c*.js\n  Cache-Control: public, max-age=31536000, immutable\n/p*.js\n  Cache-Control: public, max-age=31536000, immutable\n/fonts/*\n  Cache-Control: public, max-age=31536000, immutable\n' > site_out/_headers
+      # V362.1 — بودجهٔ دقیقهٔ Actions (ریپوی خصوصی، سهمیهٔ ۲٬۰۰۰ دقیقه در ماه):
+      # نصب Playwright با --with-deps (~۳ دقیقه) + آزمون سرتاسری مرورگری (~۶ تا
+      # ۱۰ دقیقه) بیشترِ هزینهٔ هر انتشار سایت بود. اکنون دروازهٔ مرورگری پیش‌فرض
+      # خاموش است و فقط با Variables → E2E_GATE=on یا اجرای دستی روشن می‌شود.
+      # نگهبان‌های پایتونیِ خالص همیشه اجرا می‌شوند؛ انتشار سایت هیچ‌وقت بلاک نمی‌شود.
+      - name: Guard CI minute budget policy (V362.1)
+        run: python3 scripts/check_ci_budget.py
       # V333.0 — دروازهٔ خودکار آزمون بصری و تعاملی سرتاسری وب روی مرورگر واقعی Chromium (پیش از انتشار)
       - name: Install Playwright & Chromium for visual UI gate
+        if: vars.E2E_GATE == 'on' || github.event_name == 'workflow_dispatch'
         run: |
           python3 -m pip install --upgrade pip playwright
           python3 -m playwright install --with-deps chromium
@@ -129,6 +139,7 @@ jobs:
       # خودِ سنجه در پنج حالت ساخته‌شده آزموده می‌شود تا صفحهٔ سالمِ زیر
       # موتور چاپ «خالی» گزارش نشود و صفحهٔ واقعاً خالی هم رد شود.
       - name: Guard the layout-health assertion (V352.1)
+        if: vars.E2E_GATE == 'on' || github.event_name == 'workflow_dispatch'
         run: python3 scripts/check_layout_health.py
       # V359.1 — نگهبان سهمیهٔ فضای Actions (۵۱۲ مگابایت رایگان)
       - name: Guard workflow script references (V359.2)
@@ -136,20 +147,23 @@ jobs:
       - name: Guard reference bank bundle size (V360)
         run: python3 scripts/check_reference_bank_bundle.py
       - name: Guard staged reference bank flow (V360.3)
+        if: vars.E2E_GATE == 'on' || github.event_name == 'workflow_dispatch'
         run: python3 scripts/check_v360_3_browser.py
       - name: Guard option images in reference bank (V360.8)
         run: python3 scripts/check_reference_bank_option_images.py --selftest
       - name: Guard MathJax formula tokens (V361)
         run: python3 scripts/check_reference_bank_formula.py --selftest
       - name: Guard MathJax formula symbols in browser (V361)
+        if: vars.E2E_GATE == 'on' || github.event_name == 'workflow_dispatch'
         run: python3 scripts/check_v361_formula_browser.py
       - name: Guard Actions storage budget (V359.1)
         run: python3 scripts/check_actions_storage.py
       - name: Run automated browser visual & E2E gate on site_out
+        if: vars.E2E_GATE == 'on' || github.event_name == 'workflow_dispatch'
         run: |
           python3 scripts/web_ui_e2e.py --site-dir site_out --out-dir web-ui-report
       - name: Publish Persian visual report to GitHub Step Summary
-        if: always()
+        if: always() && (vars.E2E_GATE == 'on' || github.event_name == 'workflow_dispatch')
         run: |
           if [ -f web-ui-report/summary.md ]; then
             cat web-ui-report/summary.md >> "$GITHUB_STEP_SUMMARY"
@@ -157,7 +171,7 @@ jobs:
             echo "## ❌ گزارش آزمون بصری وب تولید نشد (خطا پیش از اتمام سناریوها)" >> "$GITHUB_STEP_SUMMARY"
           fi
       - name: Upload browser visual screenshots & HTML gallery
-        if: always()
+        if: always() && (vars.E2E_GATE == 'on' || github.event_name == 'workflow_dispatch')
         # V360.4 — پر شدن سهمیهٔ آرتیفکت نباید جلوی انتشار سایت را بگیرد.
         # این گام فقط گزارش است؛ شکست آن نباید deploy بعدی را لغو کند.
         continue-on-error: true
