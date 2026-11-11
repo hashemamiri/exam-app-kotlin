@@ -149,12 +149,18 @@ def main():
         return 1
     files = sorted(p for p in root.rglob("*") if p.is_file() and p.name != "upload_manifest.json")
     if args.only:
-        wanted = args.only.lstrip("/")
-        files = [p for p in files if p.relative_to(root).as_posix() == wanted]
-        if not files:
-            print("REFERENCE_BANK_UPLOAD: FAIL — فایل پیدا نشد:", wanted)
-            return 1
-        print("فقط یک فایل:", wanted)
+        wanted = args.only.lstrip("/").rstrip("/")
+        exact = [p for p in files if p.relative_to(root).as_posix() == wanted]
+        if exact:
+            files = exact
+            print("فقط یک فایل:", wanted)
+        else:
+            # V363 — پیشوند پوشه هم پذیرفته می‌شود: --only catalog
+            files = [p for p in files if p.relative_to(root).as_posix().startswith(wanted + "/")]
+            if not files:
+                print("REFERENCE_BANK_UPLOAD: FAIL — نه فایلی با این نام و نه پوشه‌ای با این پیشوند:", wanted)
+                return 1
+            print("فقط پوشهٔ", wanted + "/", "—", len(files), "فایل")
     if not files:
         print("REFERENCE_BANK_UPLOAD: FAIL — پوشه خالی است")
         return 1

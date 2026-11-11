@@ -23,7 +23,7 @@ object ReferenceBankContract {
     const val PAGE_SIZE = 25
 
     /** V360.9 — کلید نسخهٔ شارد؛ کش لبه و مرورگر را دور میزند. */
-    const val SHARD_VERSION = "v3609"
+    const val SHARD_VERSION = "v3630"
 
     /** نشانی شارد تازه، بدون کش کهنه. */
     fun shardUrl(path: String): String = path + "?v=" + SHARD_VERSION
@@ -134,6 +134,72 @@ object ReferenceBankMedia {
         return out.distinct()
     }
 
+    /**
+     * V363 — متنِ نمایشی سؤال.
+     *
+     * ‏شاردهای پایه‌های ۶، ۷ و ۸ فیلد `text` را خالی ساخته‌اند و متن کامل
+     * فقط داخل `q_html` است. فهرست بانک و سؤالی که به آزمون افزوده می‌شود
+     * همین متن را می‌خوانند؛ پس بدون این پل، سطر و سؤال بی‌متن می‌شد، در حالی
+     * که پیش‌نمایش (که `q_html` را می‌خواند) سالم بود.
+     *
+     * @param text متن آماده (اگر پر باشد همین مقدم است)
+     * @param qHtml متن کامل HTML؛ فقط وقتی `text` خالی است خوانده می‌شود
+     * @param limit صفر یعنی بدون برش؛ وگرنه «…» با رعایت مرز فرمول
+     */
+    fun displayText(text: String, qHtml: String, limit: Int = 0): String {
+        val direct = text.trim()
+        val value = if (direct.isNotEmpty()) direct else htmlToText(qHtml)
+        if (limit <= 0 || value.length <= limit) return balanceMath(value)
+        val cut = value.take(limit)
+        val safe = if (cut.count { it == '$' } % 2 == 1)
+            cut.substring(0, cut.lastIndexOf('$').coerceAtLeast(0)) else cut
+        val head = if (safe.contains(' ')) safe.substringBeforeLast(' ') else safe
+        val trimmed = (if (head.trim().length > limit / 2) head else safe).trimEnd()
+        return balanceMath(trimmed + "…")
+    }
+
+    /** HTML → متنِ ساده؛ برخلاف [plainText] نیم‌فاصله را نمی‌شکند. */
+    fun htmlToText(html: String): String {
+        val sb = StringBuilder()
+        var inTag = false
+        for (c in html) {
+            when {
+                c == '<' -> { inTag = true; sb.append(' ') }
+                c == '>' -> inTag = false
+                !inTag -> sb.append(c)
+            }
+        }
+        return sb.toString()
+            .replace("&zwnj;", "\u200c")
+            .replace("&nbsp;", " ")
+            .replace("&amp;", "&")
+            .replace("&lt;", "<")
+            .replace("&gt;", ">")
+            .replace("&quot;", "\"")
+            .replace("&#39;", "'")
+            .replace('\u00a0', ' ')
+            .split(' ', '\n', '\t', '\r')
+            .filter { it.isNotBlank() }
+            .joinToString(" ")
+            .trim()
+    }
+
+    /**
+     * V363 — فرمولِ بازمانده را نصفه رها نکن.
+     *
+     * ‏۱۷ سؤال از ۱۶٬۳۹۱ سؤال پایهٔ هشتم در خودِ منبع وسط فرمول با «…» بریده
+     * شده‌اند؛ در آن‌ها تعداد «$» فرد است و اگر همان‌طور نمایش داده شود نمادِ
+     * نیمه‌کاره دیده می‌شود.
+     */
+    fun balanceMath(value: String): String {
+        val trimmed = value.trimEnd()
+        if (trimmed.count { it == '$' } % 2 == 0) return trimmed
+        val last = trimmed.lastIndexOf('$')
+        if (last <= 0) return trimmed
+        val cut = trimmed.substring(0, last).trimEnd()
+        return if (cut.isEmpty()) trimmed else cut + "…"
+    }
+
     /** متن ساده برای «پاسخ / راهنما»؛ بدون هیچ وابستگی اندرویدی. */
     fun plainText(html: String): String {
         val sb = StringBuilder()
@@ -229,9 +295,9 @@ data class ReferenceBankQuestion(
     val answerImageUrls: List<String>
         get() = ReferenceBankMedia.imageUrlsFromHtml(answerHtml).filter { it in imageUrls }
 
-    /** متنِ نمایشی؛ بعضی پایه‌ها متن را فقط در q_html دارند. */
+    /** متنِ نمایشی؛ اگر `text` خالی باشد از `q_html` ساخته می‌شود (V363). */
     val displayText: String
-        get() = ReferenceBankMedia.plainText(qHtml).ifBlank { text }
+        get() = ReferenceBankMedia.displayText(text, qHtml)
 
     val answerExplanation: String
         get() = ReferenceBankMedia.plainText(answerHtml).ifBlank { answerText }

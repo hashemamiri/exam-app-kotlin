@@ -26,7 +26,11 @@ internal fun ReferenceBankQuestion.toBankQuestionOption(
         "matching" -> QuestionType.MATCHING
         else -> QuestionType.ESSAY
     }
-    val safeType = if (kind == QuestionType.MULTIPLE_CHOICE && options.size < 2) QuestionType.ESSAY else kind
+    // V363 — شارد پایه‌های ۶ تا ۸ گزینه‌ها را هم خالی گذاشته؛ تستیِ بی‌متن نساز.
+    val hasOptionImages = optionImageList.any { !it.isNullOrBlank() }
+    val optionsBlank = options.isNotEmpty() && options.all { it.isBlank() }
+    val safeType = if (kind == QuestionType.MULTIPLE_CHOICE &&
+        (options.size < 2 || (optionsBlank && !hasOptionImages))) QuestionType.ESSAY else kind
     // V360.8 — تصویر گزینهها فقط به همان گزینه وصل میشود، نه به متن سؤال.
     val qImages = questionImageUrls.take(8)
     val aImages = answerImageUrls.take(8)

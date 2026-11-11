@@ -24,8 +24,8 @@ import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.Add
-import androidx.compose.material.icons.outlined.ArrowBack
-import androidx.compose.material.icons.outlined.ArrowForward
+import androidx.compose.material.icons.automirrored.outlined.ArrowBack
+import androidx.compose.material.icons.automirrored.outlined.ArrowForward
 import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material.icons.outlined.Visibility
 import androidx.compose.material3.AlertDialog
@@ -63,6 +63,7 @@ import coil.compose.AsyncImage
 import ir.exam.app.domain.bank.ReferenceBankContract
 import ir.exam.app.ui.math.NativeMathText
 import ir.exam.app.domain.bank.ReferenceBankQuestion
+import ir.exam.app.domain.bank.ReferenceBankMedia
 import ir.exam.app.ui.builder.BankQuestionOption
 
 /**
@@ -158,10 +159,10 @@ internal fun ReferenceBankDialog(
                             Icon(Icons.Outlined.CheckCircle, contentDescription = "انتخاب/برداشتن صفحه")
                         }
                         IconButton(onClick = viewModel::prevReferencePage, enabled = state.referencePage > 0) {
-                            Icon(Icons.Outlined.ArrowBack, contentDescription = "قبلی")
+                            Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "قبلی")
                         }
                         IconButton(onClick = viewModel::nextReferencePage, enabled = state.referencePage < state.referencePages - 1) {
-                            Icon(Icons.Outlined.ArrowForward, contentDescription = "بعدی")
+                            Icon(Icons.AutoMirrored.Outlined.ArrowForward, contentDescription = "بعدی")
                         }
                         FilterChip(
                             selected = state.referenceIncludeAnswer,
@@ -344,8 +345,18 @@ private fun ReferenceBankResults(
                             }
                         } else if (state.referenceDetailsLoading) {
                             CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp)
+                        } else if (row.text.isNotBlank()) {
+                            NativeMathText(
+                                // V363 — برش امن: نه وسط فرمول، نه نصفه‌کلمه.
+                                source = ReferenceBankMedia.displayText(row.text, "", 180),
+                                fontSize = MaterialTheme.typography.bodyMedium.fontSize
+                            )
                         } else {
-                            NativeMathText(source = row.text, fontSize = MaterialTheme.typography.bodyMedium.fontSize)
+                            // V363 — سطر بی‌متن: راهنما، نه کارت سفید.
+                            Text(
+                                "متن این سؤال در فهرست این پایه نیست؛ دکمهٔ «پیش‌نمایش» متن کامل را نشان می‌دهد.",
+                                style = MaterialTheme.typography.labelSmall
+                            )
                         }
                         Row(
                             Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),

@@ -30,7 +30,7 @@
     'هنرستان': ['فنی و حرفهای', 'کاردانش', 'ریاضی', 'فارسی', 'دین و زندگی']
   };
   var ALL_HIGH = []; Object.keys(HIGH).forEach(function (k) { HIGH[k].forEach(function (x) { if (ALL_HIGH.indexOf(x) < 0) ALL_HIGH.push(x); }); }); ALL_HIGH.sort();
-  var SHARD_VERSION = 'v3609';
+  var SHARD_VERSION = 'v3630';
   var cache = {catalog: {}, questions: {}, catalogAll: null};
   var FORMULA_PAIRS = [['\\(', '\\)'], ['\\[', '\\]'], ['$$', '$$']];
 
@@ -184,6 +184,29 @@
     var opts = (p.option_images || []).map(function (u) { return u || null; });
     return {question: q, answer: ans, options: opts};
   }
+  /* V363 — برش امن: نه وسط «$»، نه نصفه‌کلمه، نه فرمولِ باز. */
+  function safeSnippet(value, limit) {
+    var v = String(value || '').trim();
+    var odd = function (s) { return (s.split('$').length - 1) % 2 === 1; };
+    var balance = function (s) {
+      s = s.replace(/\s+$/, '');
+      if (!odd(s)) return s;
+      var i = s.lastIndexOf('$');
+      return i > 0 ? s.slice(0, i).replace(/\s+$/, '') + '…' : s;
+    };
+    if (limit <= 0 || v.length <= limit) return balance(v);
+    var cut = v.slice(0, limit);
+    if (odd(cut)) cut = cut.slice(0, cut.lastIndexOf('$'));
+    if (cut.indexOf(' ') > limit / 2) cut = cut.slice(0, cut.lastIndexOf(' '));
+    return balance(cut.replace(/\s+$/, '') + '…');
+  }
+  /* V363 — متن سؤال از HTML؛ برخلاف plain نیم‌فاصله را نمی‌شکند. */
+  function plainQuestion(html) {
+    return String(html || '').replace(/<[^>]*>/g, ' ').replace(/&zwnj;/g, '\u200c')
+      .replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'")
+      .replace(/\u00a0/g, ' ').replace(/\s+/g, ' ').trim();
+  }
   function plain(html) {
     return String(html || '').replace(/<[^>]*>/g, ' ').replace(/&zwnj;/g, ' ').replace(/&nbsp;/g, ' ')
       .replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'")
@@ -192,7 +215,8 @@
   function draft(p, includeAnswer) {
     var inc = includeAnswer !== false, sp = splitImages(p);
     /* V361 — حتی اگر شارد خام مستقیم رسید، فرمولها به توکن ویرایشگر بروند. */
-    var textTokens = mathJaxToTokens(plain(p.q_html || '') || p.text || '');
+    /* V363 — اول text (متن آمادهٔ سازنده)، بعد q_html؛ قبلاً برعکس بود و نیم‌فاصله می‌شکست. */
+    var textTokens = mathJaxToTokens(p.text || plainQuestion(p.q_html || ''));
     var answerTokens = mathJaxToTokens(plain(p.answer_html || '') || p.answer_text || '');
     var optionTokens = (p.options || []).map(function (o) { return mathJaxToTokens(String(o || '')); });
     var q = {
@@ -203,7 +227,11 @@
       answerExplanation: inc ? answerTokens : '',
       answerImages: inc ? sp.answer.slice(0, 8) : []
     };
-    if (q.type === 'multiple' && (!q.options || q.options.length < 2)) q.type = 'essay';
+    /* V363 — گزینه‌های کاملاً خالی و بی‌تصویر «تشریحی» می‌شوند، نه تستیِ بی‌متن. */
+    var optsBlank = (p.options || []).length > 0 &&
+      (p.options || []).every(function (o) { return !String(o || '').trim(); });
+    var hasOptImg = (sp.options || []).some(function (u) { return !!u; });
+    if (q.type === 'multiple' && ((!q.options || q.options.length < 2) || (optsBlank && !hasOptImg))) q.type = 'essay';
     /* V360.8 — تصویر هر گزینه دقیقاً همتراز با همان گزینه. */
     q.optionImages = q.type === 'multiple'
       ? q.options.map(function (_, i) { return sp.options[i] || null; })
@@ -467,7 +495,11 @@
         } else if (st.detailPending[rowGrade(r)]) {
           item.appendChild(el('div', {class: 'ref-loading', role: 'status', 'aria-label': 'در حال بارگیری سؤال'}, [el('span', {class: 'ref-spinner'})]));
         } else {
-          item.appendChild(richInto(el('div', {class: 'ref-question-body'}), r.text || ''));
+          /* V363 — سطر بی‌متن: راهنما، نه کارت سفید. */
+          var rowText = String(r.text || '').trim();
+          if (rowText) item.appendChild(richInto(el('div', {class: 'ref-question-body'}), safeSnippet(rowText, 220)));
+          else item.appendChild(el('div', {class: 'ref-question-body', style: 'opacity:.7;font-size:12px',
+            text: 'متن این سؤال در فهرست این پایه نیست؛ «پیش‌نمایش» متن کامل را نشان می‌دهد.'}));
         }
         var actions = el('div', {class: 'ref-card-actions'});
         actions.appendChild(el('button', {class: 'chip ref-answer-chip' + (answerOn(r) ? ' on' : ''), type: 'button', text: (answerOn(r) ? '✓ ' : '+ ') + 'افزودن پاسخ', title: 'افزودن پاسخ', onclick: function () { setAnswer(r); }}));

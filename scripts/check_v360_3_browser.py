@@ -139,7 +139,7 @@ def main():
                 shard = [c for c in calls if "/reference-bank/" in c[0]]
                 ok("شاردی خوانده شد", len(shard) > 0, shard[:3])
                 ok("همهٔ درخواستها نسخهداراند",
-                   bool(shard) and all("?v=v3609" in c[0] for c in shard), shard[:3])
+                   bool(shard) and all("?v=v3630" in c[0] for c in shard), shard[:3])
                 ok("هیچ درخواستی force-cache ندارد",
                    all(c[1] != "force-cache" for c in shard), shard[:3])
                 ok("درخواستها بدون کشاند",

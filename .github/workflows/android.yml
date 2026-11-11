@@ -100,6 +100,7 @@ jobs:
                    check_site_chunk_ref check_v357_sql_sync \
                    check_actions_storage check_reference_bank_bundle \
                    check_reference_bank_option_images check_reference_bank_formula \
+                   check_reference_bank_text \
                    check_compose_scope check_ci_budget; do
             echo "::group::$g"
             python3 "scripts/$g.py"

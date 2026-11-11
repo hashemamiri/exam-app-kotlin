@@ -37,12 +37,18 @@ class V362_ReferenceBankAutoDetailsTest {
         assertEquals(emptyList<String>(), draft.answerImages)
     }
 
+    /** V363 — در Gradle، user.dir پوشهٔ app/ است؛ مسیر را مثل بقیهٔ تست‌ها پیدا کن. */
+    private fun sourceFile(rel: String): java.io.File {
+        val candidates = listOf(java.io.File("src/main/java/$rel"), java.io.File("app/src/main/java/$rel"))
+        return candidates.firstOrNull { it.isFile }
+            ?: error("مسیر پیدا نشد: $rel از ${java.io.File(".").absolutePath}")
+    }
+
     @Test
     fun fullShardAutoLoadsAndCardsRenderMetadataAndPerQuestionAnswerChip() {
-        val root = System.getProperty("user.dir")
-        val vm = java.io.File(root, "app/src/main/java/ir/exam/app/ui/bank/QuestionBankViewModel.kt").readText()
-        val dialog = java.io.File(root, "app/src/main/java/ir/exam/app/ui/bank/ReferenceBankDialog.kt").readText()
-        val mapper = java.io.File(root, "app/src/main/java/ir/exam/app/ui/bank/ReferenceBankMapper.kt").readText()
+        val vm = sourceFile("ir/exam/app/ui/bank/QuestionBankViewModel.kt").readText()
+        val dialog = sourceFile("ir/exam/app/ui/bank/ReferenceBankDialog.kt").readText()
+        val mapper = sourceFile("ir/exam/app/ui/bank/ReferenceBankMapper.kt").readText()
         assertTrue(vm.contains("loadReferenceQuestionDetails()"))
         assertTrue(vm.contains("referenceRepository.questions(grade)"))
         assertTrue(dialog.contains("detail.displayText"))

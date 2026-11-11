@@ -151,6 +151,8 @@ jobs:
         run: python3 scripts/check_v360_3_browser.py
       - name: Guard option images in reference bank (V360.8)
         run: python3 scripts/check_reference_bank_option_images.py --selftest
+      - name: Guard reference bank text fallback (V363)
+        run: python3 scripts/check_reference_bank_text.py
       - name: Guard MathJax formula tokens (V361)
         run: python3 scripts/check_reference_bank_formula.py --selftest
       - name: Guard MathJax formula symbols in browser (V361)
