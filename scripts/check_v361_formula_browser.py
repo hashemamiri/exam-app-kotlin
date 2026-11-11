@@ -41,6 +41,24 @@ FORMULA_Q = {
     "option_images": [O_IMG, None, None, None]
 }
 
+# V366 — همان شکل واقعی شاردهای ۶ تا ۸: HTML با div/span و فرمول $...$
+HTML_ROW = {
+    "id": 9003661, "grade": 1, "track": "", "subject": "ریاضی", "chapter": "فصل فرمول",
+    "type_fa": "تستی", "type": "multiple", "difficulty": 1, "difficulty_fa": "ساده",
+    "score": 1, "text": "", "has_image": False, "image_count": 0, "image_urls": []
+}
+HTML_Q = {
+    "id": 9003661, "grade": 1, "track": "", "subject": "ریاضی", "chapter": "فصل فرمول",
+    "type_fa": "تستی", "type": "multiple", "difficulty": 1, "difficulty_fa": "ساده",
+    "text": "",
+    "q_html": "<div><div><span>حاصل</span> <span dir='ltr'> $\\displaystyle \\text{۲}+\\text{۳}$ </span> <span>کدام است؟</span></div></div>",
+    "answer_html": "<div><span>پاسخ</span> $\\displaystyle \\text{۵}$</div>",
+    "options": ["$\\displaystyle \\text{۴}$", "$\\displaystyle \\text{۵}$",
+                "$\\displaystyle \\text{۶}$", "$\\displaystyle \\text{۷}$"],
+    "correct_index": 1, "option_images": [None, None, None, None], "answer_text": "",
+    "image_urls": []
+}
+
 fails = []
 
 
@@ -62,12 +80,20 @@ def main():
     state.bank_categories = []
     state.bank_items = []
 
+    png_1x1 = bytes.fromhex(
+        "89504e470d0a1a0a0000000d4948445200000001000000010806000000"
+        "1f15c4890000000d4944415478da63f8cf0000040100a0b826ea0000000049454e44ae426082")
+
     def storage(route):
         u = route.request.url
+        if u.endswith((".webp", ".png", ".jpg", ".jpeg")):
+            # V366 — تصویر ساختگی معتبر؛ پیش‌تر همین مسیر JSON برمی‌گرداند و تصویر لود نمی‌شد
+            return route.fulfill(status=200, content_type="image/png",
+                                 headers={"Access-Control-Allow-Origin": "*"}, body=png_1x1)
         if "catalog/g1.json" in u:
-            body = json.dumps([FORMULA_ROW], ensure_ascii=False)
+            body = json.dumps([FORMULA_ROW, HTML_ROW], ensure_ascii=False)
         elif "questions/g1.json" in u:
-            body = json.dumps({"1283285": FORMULA_Q}, ensure_ascii=False)
+            body = json.dumps({"1283285": FORMULA_Q, "9003661": HTML_Q}, ensure_ascii=False)
         elif "catalog/" in u:
             body = "[]"
         else:
@@ -104,33 +130,57 @@ def main():
                 page.get_by_text("سؤال جدید در بانک", exact=False).first.wait_for(timeout=15000)
                 page.locator("button", has_text="بانک مرجع").first.click()
                 md = page.locator(".modal.wide").last
-                md.get_by_text("تأیید", exact=True).first.wait_for(timeout=8000)
-                md.locator("select[title='پایه']").first.select_option("1")
-                page.wait_for_timeout(500)
-                md.get_by_text("تأیید", exact=True).first.click()
-                md.get_by_text("حاصل", exact=False).first.wait_for(timeout=8000)
+                # V366 — فیلتر از V363 پنجرهٔ توکار است، نه نوار همیشگی بالای فهرست
+                md.locator(".ref-filter-popup").wait_for(timeout=8000)
+                md.locator(".ref-filter-popup select[title='پایه']").first.select_option("1")
+                page.wait_for_timeout(400)
+                md.locator(".ref-filter-popup .ref-confirm").first.click()
+                md.locator(".ref-question-card").first.wait_for(timeout=15000)
+                page.wait_for_function(
+                    "() => document.querySelectorAll('.ref-question-card .mathx, .ref-question-card svg').length > 0",
+                    timeout=20000)
+                page.wait_for_timeout(600)
                 body_text = md.inner_text()
-                ok("فهرست دیگر فرمول خام نشان نمیدهد", "\\(" not in body_text, body_text[:200])
+                ok("فهرست دیگر فرمول خام نشان نمی‌دهد", "$" not in body_text and "\\(" not in body_text, body_text[:200])
+                ok("صورت سؤال کارت به نماد تبدیل شد",
+                   md.locator(".ref-question-body .mathx, .ref-question-body svg").count() > 0,
+                   md.locator(".ref-question-body").first.inner_html()[:300])
+                ok("گزینه‌های ریاضی کارت خالی نیستند",
+                   md.locator(".ref-option .mathx, .ref-option svg").count() >= 4,
+                   md.locator(".ref-option").first.inner_html()[:300])
+                # V366 — بدون CSS موتور فرمول (.math-rich + #stMathCss) نمادها نامرئی می‌شدند
+                ok("CSS موتور فرمول در صفحه تزریق شده است",
+                   page.evaluate("() => !!document.getElementById('stMathCss')"))
+                ok("پنجرهٔ بانک کلاس math-rich دارد",
+                   md.evaluate("e => e.classList.contains('math-rich')"))
+                ok("گزینه‌ها هم داخل math-rich رندر شده‌اند",
+                   md.locator(".ref-option-text.math-rich").count() >= 4,
+                   md.locator(".ref-option-text").first.get_attribute("class"))
 
-                print("\n=== پیشنمایش: فرمول به نماد ===")
+                print("\n=== پیش‌نمایش: فرمول به نماد ===")
                 md.get_by_text("پیش‌نمایش", exact=True).first.click()
                 pv = page.locator(".modal.wide").last
                 pv.get_by_text("پیش‌نمایش سؤال", exact=True).first.wait_for(timeout=8000)
-                page.wait_for_timeout(900)
+                page.wait_for_timeout(1500)
                 pv_html = pv.inner_html()
-                ok("پیشنمایش فرمول خام MathJax نشان نمیدهد", "\\(" not in pv_html, pv_html[:300])
-                ok("توکن خام $ دیگر دیده نمیشود", "$" not in pv_html, pv_html[:300])
+                pv_text = pv.inner_text()
+                ok("پیش‌نمایش فرمول خام MathJax نشان نمی‌دهد", "\\(" not in pv_html, pv_html[:300])
+                ok("توکن خام $ در متن دیده نمی‌شود", "$" not in pv_text, pv_text[:300])
                 ok("صورت سؤال به نماد تبدیل شد",
-                   pv.locator(".rz-formula .mathx, .rz-formula .math-inline, .rz-formula svg").count() > 0, pv_html[:300])
+                   pv.locator(".ref-question-body .mathx, .ref-question-body svg").count() > 0, pv_html[:300])
                 ok("پاسخ به نماد تبدیل شد",
-                   pv.locator(".az-formula .mathx, .az-formula .math-inline, .az-formula svg").count() > 0, pv_html[-400:])
-                ok("همهٔ گزینهها و پاسخ نماد شدند",
+                   pv.locator(".ref-answer-details .mathx, .ref-answer-details svg").count() > 0, pv_html[-400:])
+                ok("همهٔ گزینه‌ها و پاسخ نماد شدند",
                    pv.locator(".mathx, .math-inline").count() >= 5,
                    pv.locator(".mathx, .math-inline").count())
 
                 print("\n=== تصویر کوچک و بزرگنمایی عمومی ===")
-                thumb = pv.locator("img[alt='تصویر گزینه']").first
-                thumb.wait_for(timeout=8000)
+                # V366 — alt با شمارهٔ فارسی است («تصویر گزینه ۱»)؛ تطبیق پیشوندی
+                thumb = pv.locator("img[alt^='تصویر گزینه']").first
+                # V366 — تصویر با loading=lazy پایین پنجره است؛ تا اسکرول نشود «visible» نمی‌شود
+                thumb.wait_for(state="attached", timeout=8000)
+                thumb.scroll_into_view_if_needed()
+                page.wait_for_timeout(400)
                 thumb_style = thumb.evaluate("e => ({maxWidth: e.style.maxWidth, maxHeight: e.style.maxHeight, cursor: e.style.cursor})")
                 ok("تصویر گزینه کوچک و کلیکخور است",
                    thumb_style["maxWidth"] != "" and thumb_style["maxHeight"] != "" and thumb_style["cursor"] == "zoom-in",
