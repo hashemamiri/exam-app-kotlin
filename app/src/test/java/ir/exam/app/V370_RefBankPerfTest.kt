@@ -16,7 +16,7 @@ import org.junit.Test
 class V370_RefBankPerfTest {
 
     private fun root(): File {
-        var dir = File(System.getProperty("user.dir")).absoluteFile
+        var dir = File(System.getProperty("user.dir") ?: ".").absoluteFile
         while (!File(dir, "settings.gradle.kts").isFile) {
             dir = dir.parentFile ?: error("ریشهٔ مخزن پیدا نشد")
         }
