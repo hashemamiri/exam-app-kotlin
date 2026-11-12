@@ -2674,6 +2674,10 @@ body.st-in-exam-mode .nc-bell{display:none!important}
 .refbank-filter-field{display:flex;flex-direction:column;gap:4px;margin:0 0 9px}
 .refbank-filter-field select{width:100%;font:inherit;color:var(--ink);background:var(--card)}
 .ref-loading{display:flex;justify-content:center;align-items:center;min-height:44px}
+/* V370 — اسکلتون سطر: سه نوار که تا رسیدن متن، ساختار فهرست را نگه می‌دارند */
+.ref-skel{display:flex;flex-direction:column;gap:8px;padding:6px 0}
+.ref-skel-line{display:block;height:12px;border-radius:6px;background:linear-gradient(90deg,rgba(108,99,245,.10),rgba(108,99,245,.24),rgba(108,99,245,.10));background-size:200% 100%;animation:refbank-skel 1.15s ease-in-out infinite}
+@keyframes refbank-skel{0%{background-position:100% 0}100%{background-position:-100% 0}}
 .ref-spinner{width:25px;height:25px;border:3px solid rgba(108,99,245,.2);border-top-color:var(--brand);border-radius:50%;animation:refbank-spin .75s linear infinite}
 @keyframes refbank-spin{to{transform:rotate(360deg)}}
 .refbank-preview{max-width:820px;width:94vw;max-height:88vh;overflow:auto}

@@ -50,7 +50,7 @@ class V362_ReferenceBankAutoDetailsTest {
         val dialog = sourceFile("ir/exam/app/ui/bank/ReferenceBankDialog.kt").readText()
         val mapper = sourceFile("ir/exam/app/ui/bank/ReferenceBankMapper.kt").readText()
         assertTrue(vm.contains("loadReferenceQuestionDetails()"))
-        assertTrue(vm.contains("referenceRepository.questions(grade)"))
+        assertTrue(vm.contains("referenceRepository.questions(grade,"))
         assertTrue(dialog.contains("detail.displayText"))
         assertTrue(dialog.contains("detail.options.forEachIndexed"))
         assertTrue(dialog.contains("row.area"))

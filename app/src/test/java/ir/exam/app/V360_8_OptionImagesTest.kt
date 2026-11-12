@@ -74,7 +74,10 @@ class V360_8_OptionImagesTest {
         assertTrue("ReferenceBankContract.shardUrl(path)" in repo)
         val ref = src("site/src/refbank.js")
         assertTrue("SHARD_VERSION = 'v3630'" in ref)
-        assertTrue("cache: 'no-store'" in ref)
+        // V370 — به‌جای دور زدن کش، اعتبارسنجی (no-cache) + کش محلی مرورگر.
+        assertTrue("cache: 'no-cache'" in ref)
+        assertTrue("indexedDB" in ref)
+        assertFalse("no-store" in ref)
         assertTrue("cache.catalog = {}" in ref)
         assertTrue("p.option_images === undefined" in ref)
         assertFalse("cache: 'force-cache'" in ref)

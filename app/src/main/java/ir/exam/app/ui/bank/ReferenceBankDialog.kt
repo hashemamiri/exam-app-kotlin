@@ -8,10 +8,12 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
@@ -371,7 +373,8 @@ private fun ReferenceBankResults(
                                 }
                             }
                         } else if (state.referenceDetailsLoading) {
-                            CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp)
+                            // V370 — سه نوار اسکلتون به‌جای اسپینر تک‌خانه.
+                            ReferenceBankSkeleton()
                         } else if (row.text.isNotBlank()) {
                             NativeMathText(
                                 // V363 — برش امن: نه وسط فرمول، نه نصفه‌کلمه.
@@ -500,4 +503,22 @@ private fun ReferenceBankPreview(
             }
         }
     )
+}
+
+/**
+ * V370 — اسکلتون سطر: سه نوار که ساختار فهرست را تا رسیدن متن نگه می‌دارند
+ * (جای دایرهٔ چرخان؛ چشم زودتر فهرست را «آماده» می‌بیند).
+ */
+@Composable
+private fun ReferenceBankSkeleton() {
+    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        listOf(0.92f, 0.74f, 0.47f).forEach { fraction ->
+            Box(
+                Modifier
+                    .fillMaxWidth(fraction)
+                    .height(12.dp)
+                    .background(MaterialTheme.colorScheme.surfaceVariant, MaterialTheme.shapes.small)
+            )
+        }
+    }
 }

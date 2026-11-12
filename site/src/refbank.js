@@ -32,6 +32,13 @@
   var ALL_HIGH = []; Object.keys(HIGH).forEach(function (k) { HIGH[k].forEach(function (x) { if (ALL_HIGH.indexOf(x) < 0) ALL_HIGH.push(x); }); }); ALL_HIGH.sort();
   var SHARD_VERSION = 'v3630';
   var cache = {catalog: {}, questions: {}, catalogAll: null};
+  /* V370 — کارایی: شارد صفحه‌ای + کش محلی (IndexedDB) + تازه‌آوری پس‌زمینه. */
+  var PAGED_VERSION = 'v3701';
+  var IDB_NAME = 'exam-refbank-v1';
+  var IDB_STORE = 'shards';
+  var IDB_TTL = 7 * 24 * 60 * 60 * 1000;
+  var pagedIdx = {};
+  var idbPromise = null;
   var FORMULA_PAIRS = [['\\(', '\\)'], ['\\[', '\\]'], ['$$', '$$']];
 
   /* V361 — فرمول MathJax \(...\)، \[...\] و $$...$$ → توکن $...$ ویرایشگر فرمول. */
@@ -174,6 +181,15 @@
     if (node && node.classList) node.classList.add('math-rich');
     node.innerHTML = mathJaxToTokens(String(html || ''));
     renderMathInDom(node);
+    return lazyImgs(node);
+  }
+  /* V370 — هر تصویری که از شارد آمده، هنگام نزدیک‌شدن به دید خوانده شود. */
+  function lazyImgs(node) {
+    if (!node || !node.querySelectorAll) return node;
+    Array.prototype.forEach.call(node.querySelectorAll('img'), function (im) {
+      if (!im.getAttribute('loading')) im.setAttribute('loading', 'lazy');
+      im.setAttribute('decoding', 'async');
+    });
     return node;
   }
 
@@ -191,11 +207,71 @@
   }
 
   function url(path) { return BASE + '/' + path + '?v=' + SHARD_VERSION; }
-  function getJSON(path) {
-    /* V360.9 — بدون کش: شارد تازه بعد از آپلود حتماً خوانده شود. */
-    return fetch(url(path), {cache: 'no-store'}).then(function (r) {
+  /* V370 — کش محلی مرورگر. اگر حالت ناشناس یا مرورگر قدیمی باشد، بی‌صدا
+     کنار گذاشته می‌شود و برنامه مثل پیش کار می‌کند. */
+  function idbOpen() {
+    if (idbPromise) return idbPromise;
+    idbPromise = new Promise(function (resolve) {
+      var done = false;
+      function finish(v) { if (!done) { done = true; resolve(v); } }
+      try {
+        if (!root.indexedDB) return finish(null);
+        var req = root.indexedDB.open(IDB_NAME, 1);
+        req.onupgradeneeded = function () { try { req.result.createObjectStore(IDB_STORE); } catch (e) {} };
+        req.onsuccess = function () { finish(req.result); };
+        req.onerror = function () { finish(null); };
+        req.onblocked = function () { finish(null); };
+        setTimeout(function () { finish(null); }, 1500);
+      } catch (e) { finish(null); }
+    });
+    return idbPromise;
+  }
+  function idbGet(key) {
+    return idbOpen().then(function (db) {
+      return new Promise(function (resolve) {
+        if (!db) return resolve(null);
+        try {
+          var r = db.transaction(IDB_STORE, 'readonly').objectStore(IDB_STORE).get(key);
+          r.onsuccess = function () { resolve(r.result || null); };
+          r.onerror = function () { resolve(null); };
+        } catch (e) { resolve(null); }
+      });
+    }).catch(function () { return null; });
+  }
+  function idbPut(key, value) {
+    return idbOpen().then(function (db) {
+      if (db) {
+        try { db.transaction(IDB_STORE, 'readwrite').objectStore(IDB_STORE).put(value, key); } catch (e) {}
+      }
+      return null;
+    }).catch(function () { return null; });
+  }
+  /* V370 — «no-cache» یعنی با ETag پرس‌وجو کن: اگر تغییر نکرده، ۳۰۴ و صفر بایت. */
+  function netText(path) {
+    return fetch(url(path), {cache: 'no-cache'}).then(function (r) {
       if (!r.ok) throw new Error('HTTP ' + r.status);
-      return r.json();
+      return r.text();
+    });
+  }
+  function getJSON(path) {
+    var key = path + '?v=' + SHARD_VERSION;
+    return idbGet(key).then(function (hit) {
+      if (hit && hit.body && (Date.now() - Number(hit.t || 0)) < IDB_TTL) {
+        var parsed = null;
+        try { parsed = JSON.parse(hit.body); } catch (e) { parsed = null; }
+        if (parsed) {
+          setTimeout(function () {
+            netText(path).then(function (body) {
+              if (body !== hit.body) idbPut(key, {body: body, t: Date.now()});
+            }).catch(function () {});
+          }, 0);
+          return parsed;
+        }
+      }
+      return netText(path).then(function (body) {
+        idbPut(key, {body: body, t: Date.now()});
+        return JSON.parse(body);
+      });
     });
   }
   function catalog(grade) {
@@ -211,6 +287,52 @@
       return out;
     });
     return cache.questions[k];
+  }
+  /* V370 — شارد صفحه‌ای: questions/gN.idx.json می‌گوید هر شناسه در کدام صفحه
+     است وهر صفحه questions/gN.pK.json فقط ~۵۰ سؤال دارد. اگر idx نبود، صفحه‌ای
+     خراب بود، یا نسخه‌اش نخورد، شارد کامل خوانده می‌شود؛ پس بارگذاری نیمه‌کاره
+     هیچ‌وقت چیزی را نمی‌شکند. */
+  function questionIdx(grade) {
+    var k = String(grade);
+    if (!pagedIdx[k]) {
+      pagedIdx[k] = getJSON('questions/g' + k + '.idx.json').then(function (d) {
+        return (d && d.v === PAGED_VERSION && d.ids) ? d : null;
+      }).catch(function () { return null; });
+    }
+    return pagedIdx[k];
+  }
+  function planParts(ids, idx) {
+    var pages = {}, missing = [], map = (idx && idx.ids) || {};
+    (ids || []).forEach(function (id) {
+      var s = String(id), p = map[s];
+      if (p === undefined || p === null) { missing.push(s); return; }
+      (pages[p] = pages[p] || []).push(s);
+    });
+    return {pages: pages, missing: missing};
+  }
+  function questionsFor(grade, ids) {
+    var k = String(grade);
+    return questionIdx(grade).then(function (idx) {
+      if (!idx) return questions(k);
+      var plan = planParts(ids, idx), parts = Object.keys(plan.pages);
+      if (!parts.length) return {};
+      return Promise.all(parts.map(function (p) {
+        return getJSON('questions/g' + k + '.p' + p + '.json').then(function (part) {
+          var out = {};
+          plan.pages[p].forEach(function (id) {
+            if (part && part[id]) out[id] = tokenizeQuestion(part[id]);
+          });
+          return out;
+        }).catch(function () { return null; });
+      })).then(function (chunks) {
+        if (chunks.some(function (c) { return c === null; })) return questions(k);
+        var out = {};
+        chunks.forEach(function (c) {
+          Object.keys(c).forEach(function (id) { out[id] = c[id]; });
+        });
+        return out;
+      });
+    }).catch(function () { return questions(k); });
   }
   function catalogAll() {
     if (!cache.catalogAll) {
@@ -489,13 +611,34 @@
       grades.forEach(function (g) {
         if (st.detailLoaded[g] || st.detailPending[g]) return;
         st.detailPending[g] = true; draw();
-        questions(g).then(function (all) {
+        var pageIds = pageRows.filter(function (r) { return rowGrade(r) === g; })
+          .map(function (r) { return r.id; });
+        questionsFor(g, pageIds).then(function (all) {
           st.detailLoaded[g] = true;
           st.rows.forEach(function (r) { if (rowGrade(r) === g && all[String(r.id)]) st.details[r.id] = all[String(r.id)]; });
         }).catch(function (e) {
           st.detailLoaded[g] = true;
           st.error = st.error || ('بارگیری محتوای پایه ' + fa(g) + ' ناموفق بود.');
         }).then(function () { st.detailPending[g] = false; draw(); });
+      });
+      prefetchNext();
+    }
+    /* V370 — صفحهٔ بعد در زمان بی‌کاری خوانده می‌شود تا دکمهٔ «بعدی» فوری جواب دهد. */
+    function idleRun(fn) {
+      if (root.requestIdleCallback) root.requestIdleCallback(fn, {timeout: 2500});
+      else setTimeout(fn, 1200);
+    }
+    function prefetchNext() {
+      if (st.grade) return;
+      var f = filtered(), start = (st.page + 1) * st.size;
+      if (start >= f.length) return;
+      var byGrade = {};
+      f.slice(start, start + st.size).forEach(function (r) {
+        var g = rowGrade(r);
+        (byGrade[g] = byGrade[g] || []).push(r.id);
+      });
+      idleRun(function () {
+        Object.keys(byGrade).forEach(function (g) { questionsFor(Number(g), byGrade[g]); });
       });
     }
 
@@ -504,7 +647,7 @@
       var groups = {};
       rows.forEach(function (r) { var g = rowGrade(r); (groups[g] = groups[g] || []).push(r); });
       var tasks = Object.keys(groups).map(function (g) {
-        return questions(Number(g)).then(function (all) {
+        return questionsFor(Number(g), groups[g].map(function (r) { return r.id; })).then(function (all) {
           return groups[g].map(function (r) { return all[String(r.id)] ? draft(all[String(r.id)], answerOn(r)) : null; }).filter(Boolean);
         }).catch(function () { return []; });
       });
@@ -519,7 +662,7 @@
     }
 
     function preview(r) {
-      questions(rowGrade(r)).then(function (all) {
+      questionsFor(rowGrade(r), [r.id]).then(function (all) {
         var p = all[String(r.id)];
         if (!p) { toast('محتوای این سؤال یافت نشد.', 'err'); return; }
         var pbg = el('div', {class: 'modal-bg'});
@@ -598,7 +741,12 @@
           appendOptions(item, detail);
           if (answerOn(r)) appendAnswer(item, detail);
         } else if (st.detailPending[rowGrade(r)]) {
-          item.appendChild(el('div', {class: 'ref-loading', role: 'status', 'aria-label': 'در حال بارگیری سؤال'}, [el('span', {class: 'ref-spinner'})]));
+          /* V370 — جای اسپینر یک‌خانه، اسکلتون سه‌خطی: فهرست «کامل» به نظر می‌رسد. */
+          item.appendChild(el('div', {class: 'ref-skel', role: 'status', 'aria-label': 'در حال بارگیری سؤال'}, [
+            el('span', {class: 'ref-skel-line', style: 'width:92%'}),
+            el('span', {class: 'ref-skel-line', style: 'width:74%'}),
+            el('span', {class: 'ref-skel-line', style: 'width:47%'})
+          ]));
         } else {
           /* V363 — سطر بی‌متن: راهنما، نه کارت سفید. */
           var rowText = String(r.text || '').trim();
@@ -638,5 +786,5 @@
   }
 
   root.RefBank = {build: 'V367.1', open: open, base: BASE, catalog: catalog, questions: questions, draft: draft,
-    mathJaxToTokens: mathJaxToTokens};
+    mathJaxToTokens: mathJaxToTokens, questionsFor: questionsFor, _planParts: planParts};
 })(window);

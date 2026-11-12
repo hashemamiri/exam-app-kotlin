@@ -143,7 +143,7 @@ def main():
                 ok("هیچ درخواستی force-cache ندارد",
                    all(c[1] != "force-cache" for c in shard), shard[:3])
                 ok("درخواستها بدون کشاند",
-                   bool(shard) and all(c[1] == "no-store" for c in shard), shard[:3])
+                   bool(shard) and all(c[1] == "no-cache" for c in shard), shard[:3])
                 ok("دکمهٔ بررسی شارد از پنجره حذف شده",
                    md.get_by_text("بررسی شارد", exact=False).count() == 0)
                 def sel(title):

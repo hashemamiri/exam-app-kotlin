@@ -28,6 +28,18 @@ object ReferenceBankContract {
     /** نشانی شارد تازه، بدون کش کهنه. */
     fun shardUrl(path: String): String = path + "?v=" + SHARD_VERSION
 
+    /** V370 — نسخهٔ قالب شارد صفحه‌ای؛ idx با نسخهٔ دیگر یعنی شارد کامل خوانده شود. */
+    const val PAGED_VERSION = "v3701"
+
+    /** V370 — هر صفحه ~۵۰ سؤال؛ همان اندازه‌ای که سازندهٔ شارد می‌سازد. */
+    const val PAGE_CHUNK = 50
+
+    /** فهرست کوچک: شناسهٔ سؤال → شمارهٔ صفحه. */
+    fun questionIndexPath(grade: Int): String = "questions/g" + grade + ".idx.json"
+
+    /** یک صفحه از شارد سؤال. */
+    fun questionPagePath(grade: Int, page: Int): String = "questions/g" + grade + ".p" + page + ".json"
+
     /** V360.3 — پایههای ۱ تا ۹ رشته ندارند؛ فیلد رشته فقط از پایهٔ ۱۰ میآید. */
     const val TRACK_MIN_GRADE = 10
 

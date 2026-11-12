@@ -172,11 +172,15 @@ class QuestionBankViewModel(
     context: Context,
     private val repository: SupabaseExamBuilderRepository =
         SupabaseExamBuilderRepository(context.applicationContext),
-    private val referenceRepository: ReferenceBankRepository = ReferenceBankRepository()
+    // V370 — کش دیسکی شاردها در cacheDir؛ بدون آن هر باز کردن بانک همه‌چیز را از نو می‌گرفت.
+    private val referenceRepository: ReferenceBankRepository =
+        ReferenceBankRepository(cacheDir = context.applicationContext.cacheDir)
 ) : ViewModel() {
     private val _state = MutableStateFlow(QuestionBankUiState())
     private val referenceQuestionCache = mutableMapOf<Int, Map<String, ReferenceBankQuestion>>()
     private val referenceQuestionLoading = mutableSetOf<Int>()
+    /** V370 — پایه‌هایی که پیش‌خوانی‌شان در جریان است، تا دوباره شروع نشود. */
+    private val prefetchingGrades = mutableSetOf<Int>()
     val state = _state.asStateFlow()
 
     init { load() }
@@ -352,14 +356,25 @@ class QuestionBankViewModel(
         val initial = _state.value
         // V369 — فقط پایه‌های همین صفحه؛ قبلاً با «همهٔ پایه‌ها» هر ۱۲ شارد خوانده می‌شد.
         val pageRows = initial.referencePageRows
-        val grades = if (initial.referenceGrade == 0) pageRows.map { it.grade }.distinct().sorted()
+        val rowsByGrade = pageRows.groupBy { it.grade }
+        val grades = if (initial.referenceGrade == 0) rowsByGrade.keys.sorted()
             else listOf(initial.referenceGrade)
-        val missing = grades.filter { it !in referenceQuestionCache && referenceQuestionLoading.add(it) }
+        // V370 — شارد صفحه‌ای: «کمبود» یعنی هنوز همهٔ شناسه‌های این صفحه در حافظه نیستند.
+        val missing = grades.filter { grade ->
+            val have = referenceQuestionCache[grade]
+            val need = if (initial.referenceGrade == 0) rowsByGrade[grade].orEmpty() else pageRows
+            val absent = need.any { have?.containsKey(it.id.toString()) != true }
+            absent && referenceQuestionLoading.add(grade)
+        }
         if (missing.isNotEmpty()) _state.update { it.copy(referenceDetailsLoading = true, referenceDetailsError = null) }
         val failures = mutableListOf<String>()
         for (grade in missing) {
-            runCatching { referenceRepository.questions(grade) }
-                .onSuccess { referenceQuestionCache[grade] = it }
+            val needIds = (if (initial.referenceGrade == 0) rowsByGrade[grade].orEmpty() else pageRows)
+                .map { it.id }
+            runCatching { referenceRepository.questions(grade, needIds) }
+                .onSuccess { fetched ->
+                    referenceQuestionCache[grade] = referenceQuestionCache[grade].orEmpty() + fetched
+                }
                 .onFailure { failures += safeBankError(it) }
             referenceQuestionLoading.remove(grade)
         }
@@ -377,6 +392,33 @@ class QuestionBankViewModel(
                 referenceDetailsLoading = referenceQuestionLoading.isNotEmpty(),
                 referenceDetailsError = failures.firstOrNull()
             )
+        }
+        prefetchNextReferencePage()
+    }
+
+    /**
+     * V370 — صفحهٔ بعد در پس‌زمینه خوانده می‌شود تا دکمهٔ «بعدی» فوری جواب دهد.
+     * فقط حافظهٔ نشست پر می‌شود؛ هیچ حالتی از رابط تغییر نمی‌کند.
+     */
+    private fun prefetchNextReferencePage() {
+        val snapshot = _state.value
+        if (snapshot.referenceGrade != 0) return
+        val rows = snapshot.referenceFiltered
+            .drop((snapshot.referencePage + 1) * snapshot.referencePageSize)
+            .take(snapshot.referencePageSize)
+        if (rows.isEmpty()) return
+        rows.groupBy { it.grade }.forEach { (grade, group) ->
+            val have = referenceQuestionCache[grade].orEmpty()
+            val need = group.map { it.id }
+            if (need.all { have.containsKey(it.toString()) }) return@forEach
+            if (!prefetchingGrades.add(grade)) return@forEach
+            viewModelScope.launch {
+                runCatching { referenceRepository.questions(grade, need) }
+                    .onSuccess { fetched ->
+                        referenceQuestionCache[grade] = referenceQuestionCache[grade].orEmpty() + fetched
+                    }
+                prefetchingGrades.remove(grade)
+            }
         }
     }
 
@@ -439,8 +481,11 @@ class QuestionBankViewModel(
         row.grade.coerceIn(ReferenceBankContract.MIN_GRADE, ReferenceBankContract.MAX_GRADE)
 
     private suspend fun referenceQuestion(grade: Int, id: Long): ReferenceBankQuestion? {
-        val questions = referenceQuestionCache[grade] ?: referenceRepository.questions(grade).also { referenceQuestionCache[grade] = it }
-        return questions[id.toString()]
+        // V370 — اگر شارد صفحه‌ای باشد، فقط تکهٔ همین سؤال خوانده می‌شود، نه کل پایه.
+        referenceQuestionCache[grade]?.get(id.toString())?.let { return it }
+        val fetched = referenceRepository.questions(grade, listOf(id))
+        referenceQuestionCache[grade] = referenceQuestionCache[grade].orEmpty() + fetched
+        return fetched[id.toString()]
     }
 
     fun previewReference(row: ReferenceBankRow) = viewModelScope.launch {
@@ -471,10 +516,16 @@ class QuestionBankViewModel(
         _state.update { it.copy(referenceLoading = true, referenceError = null) }
         val items = mutableListOf<BankQuestionOption>()
         picked.groupBy { rowGrade(it) }.forEach { (grade, rows) ->
-            runCatching { referenceQuestionCache[grade] ?: referenceRepository.questions(grade).also { referenceQuestionCache[grade] = it } }
-                .onSuccess { all ->
-                    rows.forEach { row -> all[row.id.toString()]?.let { items += it.toBankQuestionOption(referenceAnswerIncluded(row.id)) } }
-                }
+            // V370 — برای «افزودن گروهی» هم فقط تکه‌های همان شناسه‌های انتخاب‌شده می‌آید.
+            val cached = referenceQuestionCache[grade]
+            val need = rows.map { it.id }.filter { cached?.containsKey(it.toString()) != true }
+            runCatching {
+                if (need.isEmpty()) emptyMap() else referenceRepository.questions(grade, need)
+            }.onSuccess { fetched ->
+                val all = cached.orEmpty() + fetched
+                referenceQuestionCache[grade] = all
+                rows.forEach { row -> all[row.id.toString()]?.let { items += it.toBankQuestionOption(referenceAnswerIncluded(row.id)) } }
+            }
         }
         _state.update {
             it.copy(referenceLoading = false,

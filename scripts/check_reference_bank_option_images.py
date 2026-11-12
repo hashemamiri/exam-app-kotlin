@@ -95,7 +95,7 @@ def main() -> int:
     ok("اپ شارد کهنه را تشخیص میدهد", "val shardIsStale: Boolean" in models)
     ok("اپ null بودن فیلد را نگه میدارد", "List<String?>? = null" in models)
     ok("سایت کلید نسخه دارد", "SHARD_VERSION = 'v3630'" in ref)
-    ok("سایت کش مرورگر را دور میزند", "cache: 'no-store'" in ref)
+    ok("سایت با اعتبارسنجی می‌خواند و کش محلی دارد", "cache: 'no-cache'" in ref and "indexedDB" in ref)
     ok("سایت حافظهٔ درونبرنامهای را پاک میکند", "cache.catalog = {}" in ref)
     ok("سایت شارد کهنه را نشان میدهد", "p.option_images === undefined" in ref)
     ok("دیگر force-cache باقی نمانده", "cache: 'force-cache'" not in ref)
