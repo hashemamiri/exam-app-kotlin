@@ -10,7 +10,7 @@
   ۱) اپ: ReferenceBankMedia.displayText + استفاده‌اش در مپر؛
   ۲) سایت: draft از `p.text || plain(p.q_html)` می‌خواند؛
   ۳) ابزار ترمیم شارد (scripts/repair_reference_bank_text.py) سر جایش است
-     و کلید نسخهٔ شارد بالا رفته (v3630) تا catalog کهنه از کش نیاید.
+     و کلید نسخهٔ شارد بالا رفته (v3710) تا catalog کهنه از کش نیاید.
 
 اجرا:  python3 scripts/check_reference_bank_text.py
 """
@@ -68,8 +68,8 @@ def main() -> int:
     ok("سایت متن را از q_html می‌گیرد", "p.text || plainQuestion(p.q_html || '')" in site)
     ok("سایت نیم‌فاصله را نمی‌شکند", "function plainQuestion(html)" in site)
     ok("فهرست سایت برای سطر بی‌متن راهنما می‌دهد", "در فهرست این پایه نیست" in site)
-    ok("سایت کلید نسخهٔ تازه دارد", "SHARD_VERSION = 'v3630'" in site)
-    ok("اپ کلید نسخهٔ تازه دارد", 'SHARD_VERSION = "v3630"' in models)
+    ok("سایت کلید نسخهٔ تازه دارد", "SHARD_VERSION = 'v3710'" in site)
+    ok("اپ کلید نسخهٔ تازه دارد", 'SHARD_VERSION = "v3710"' in models)
     ok("نشانی‌ها نسخه‌دار می‌مانند", "ReferenceBankContract.shardUrl(path)" in
        read(ROOT / "app/src/main/java/ir/exam/app/data/repository/ReferenceBankRepository.kt"))
 

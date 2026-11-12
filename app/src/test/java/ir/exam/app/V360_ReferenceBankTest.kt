@@ -147,7 +147,7 @@ class V360_ReferenceBankTest {
     @Test
     fun nativePreviewKeepsOldWebViewPinIntact() {
         val dialog = src("app/src/main/java/ir/exam/app/ui/bank/ReferenceBankDialog.kt")
-        assertTrue("پیشنمایش باید تصویر بومی داشته باشد", dialog.contains("AsyncImage"))
+        assertTrue("پیشنمایش باید تصویر بومی داشته باشد", dialog.contains("RefBankImage"))
         assertTrue("متن HTML باید بومی ساده شود", dialog.contains("Html.fromHtml"))
         val pin = src("app/src/test/java/ir/exam/app/ui/app/Neumorphic69IntegrationTest.kt")
         assertTrue("پین قدیمی نباید حذف شود", pin.contains("WebView must not enter native runtime"))

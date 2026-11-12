@@ -87,14 +87,14 @@ def main() -> int:
     ok("بارگذار تکفایل دارد", '"--only"' in uploader)
 
     print("\n=== V360.9 — شارد تازه حتماً خوانده شود ===")
-    ok("اپ کلید نسخه دارد", 'SHARD_VERSION = "v3630"' in models)
+    ok("اپ کلید نسخه دارد", 'SHARD_VERSION = "v3710"' in models)
     ok("اپ نشانی نسخهدار میسازد", "fun shardUrl(path: String)" in models)
     ok("مخزن اپ از نشانی نسخهدار میخواند",
        "ReferenceBankContract.shardUrl(path)" in
        (ROOT / "app/src/main/java/ir/exam/app/data/repository/ReferenceBankRepository.kt").read_text(encoding="utf-8"))
     ok("اپ شارد کهنه را تشخیص میدهد", "val shardIsStale: Boolean" in models)
     ok("اپ null بودن فیلد را نگه میدارد", "List<String?>? = null" in models)
-    ok("سایت کلید نسخه دارد", "SHARD_VERSION = 'v3630'" in ref)
+    ok("سایت کلید نسخه دارد", "SHARD_VERSION = 'v3710'" in ref)
     ok("سایت با اعتبارسنجی می‌خواند و کش محلی دارد", "cache: 'no-cache'" in ref and "indexedDB" in ref)
     ok("سایت حافظهٔ درونبرنامهای را پاک میکند", "cache.catalog = {}" in ref)
     ok("سایت شارد کهنه را نشان میدهد", "p.option_images === undefined" in ref)

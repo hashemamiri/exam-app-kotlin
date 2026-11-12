@@ -60,7 +60,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
-import coil.compose.AsyncImage
 import ir.exam.app.domain.bank.ReferenceBankContract
 import ir.exam.app.ui.math.NativeMathText
 import ir.exam.app.domain.bank.ReferenceBankQuestion
@@ -353,8 +352,8 @@ private fun ReferenceBankResults(
                         if (detail != null) {
                             NativeMathText(source = detail.displayText, fontSize = MaterialTheme.typography.bodyMedium.fontSize)
                             detail.questionImageUrls.take(8).forEach { url ->
-                                AsyncImage(
-                                    model = url, contentDescription = "تصویر سؤال",
+                                RefBankImage(
+                                    url = url, contentDescription = "تصویر سؤال",
                                     modifier = Modifier.fillMaxWidth().heightIn(max = 180.dp),
                                     contentScale = ContentScale.Fit
                                 )
@@ -364,8 +363,8 @@ private fun ReferenceBankResults(
                                     NativeMathText(source = "${index + 1}) ${option.ifBlank { "گزینه ${index + 1}" }}",
                                         fontSize = MaterialTheme.typography.bodySmall.fontSize, modifier = Modifier.weight(1f))
                                     detail.optionImageList.getOrNull(index)?.takeIf { !it.isNullOrBlank() }?.let { url ->
-                                        AsyncImage(
-                                            model = url, contentDescription = "تصویر گزینه ${index + 1}",
+                                        RefBankImage(
+                                            url = url, contentDescription = "تصویر گزینه ${index + 1}",
                                             modifier = Modifier.widthIn(max = 180.dp).heightIn(max = 110.dp),
                                             contentScale = ContentScale.Fit
                                         )
@@ -460,8 +459,8 @@ private fun ReferenceBankPreview(
                     fontSize = MaterialTheme.typography.bodyMedium.fontSize
                 )
                 question.questionImageUrls.take(8).forEach { url ->
-                    AsyncImage(
-                        model = url,
+                    RefBankImage(
+                        url = url,
                         contentDescription = null,
                         modifier = Modifier.fillMaxWidth().heightIn(max = 220.dp).padding(vertical = 6.dp),
                         contentScale = ContentScale.Fit
@@ -476,8 +475,8 @@ private fun ReferenceBankPreview(
                         )
                         // V360.8 — تصویر گزینه کنار همان گزینه، نه زیر متن سؤال.
                         question.optionImageList.getOrNull(i)?.let { url ->
-                            AsyncImage(
-                                model = url,
+                            RefBankImage(
+                                url = url,
                                 contentDescription = "تصویر گزینه ${i + 1}",
                                 modifier = Modifier.fillMaxWidth().heightIn(max = 180.dp).padding(vertical = 4.dp),
                                 contentScale = ContentScale.Fit
@@ -492,8 +491,8 @@ private fun ReferenceBankPreview(
                         NativeMathText(source = answer, fontSize = MaterialTheme.typography.bodySmall.fontSize)
                     }
                     question.answerImageUrls.take(8).forEach { url ->
-                        AsyncImage(
-                            model = url,
+                        RefBankImage(
+                            url = url,
                             contentDescription = "تصویر پاسخ",
                             modifier = Modifier.fillMaxWidth().heightIn(max = 220.dp).padding(vertical = 6.dp),
                             contentScale = ContentScale.Fit

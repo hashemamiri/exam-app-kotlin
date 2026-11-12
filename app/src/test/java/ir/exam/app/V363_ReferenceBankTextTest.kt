@@ -164,12 +164,12 @@ class V363_ReferenceBankTextTest {
         assertTrue("پل متن در مدل", "fun displayText(text: String, qHtml: String, limit: Int = 0)" in models)
         assertTrue("متن بدون شکستن نیم‌فاصله", "fun htmlToText(html: String): String" in models)
         assertTrue("بستن فرمول باز", "fun balanceMath(value: String): String" in models)
-        assertTrue("کلید شارد تازه", "SHARD_VERSION = \"v3630\"" in models)
+        assertTrue("کلید شارد تازه", "SHARD_VERSION = \"v3710\"" in models)
         assertTrue("سطر بی‌متن راهنما می‌گیرد", "در فهرست این پایه نیست" in dialog)
 
         assertTrue("سایت همان پل را دارد", "plainQuestion" in site)
         assertTrue("سایت برش امن دارد", "function safeSnippet(value, limit)" in site)
-        assertTrue("کلید شارد سایت", "SHARD_VERSION = 'v3630'" in site)
+        assertTrue("کلید شارد سایت", "SHARD_VERSION = 'v3710'" in site)
 
         val tool = File(root(), "scripts/repair_reference_bank_text.py")
         assertTrue("ابزار ترمیم شارد باید موجود باشد", tool.isFile)

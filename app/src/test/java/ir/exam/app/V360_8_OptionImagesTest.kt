@@ -67,13 +67,13 @@ class V360_8_OptionImagesTest {
     @Test
     fun staleShardIsDetectedAndCacheIsBusted() {
         val models = src("app/src/main/java/ir/exam/app/domain/bank/ReferenceBankModels.kt")
-        assertTrue("SHARD_VERSION = \"v3630\"" in models)
+        assertTrue("SHARD_VERSION = \"v3710\"" in models)
         assertTrue("fun shardUrl(path: String)" in models)
         assertTrue("optionImages: List<String?>? = null" in models)
         val repo = src("app/src/main/java/ir/exam/app/data/repository/ReferenceBankRepository.kt")
         assertTrue("ReferenceBankContract.shardUrl(path)" in repo)
         val ref = src("site/src/refbank.js")
-        assertTrue("SHARD_VERSION = 'v3630'" in ref)
+        assertTrue("SHARD_VERSION = 'v3710'" in ref)
         // V370 — به‌جای دور زدن کش، اعتبارسنجی (no-cache) + کش محلی مرورگر.
         assertTrue("cache: 'no-cache'" in ref)
         assertTrue("indexedDB" in ref)

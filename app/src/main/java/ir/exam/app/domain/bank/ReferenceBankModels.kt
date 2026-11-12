@@ -23,13 +23,21 @@ object ReferenceBankContract {
     const val PAGE_SIZE = 25
 
     /** V360.9 — کلید نسخهٔ شارد؛ کش لبه و مرورگر را دور میزند. */
-    const val SHARD_VERSION = "v3630"
+    const val SHARD_VERSION = "v3710"
 
     /** نشانی شارد تازه، بدون کش کهنه. */
     fun shardUrl(path: String): String = path + "?v=" + SHARD_VERSION
 
     /** V370 — نسخهٔ قالب شارد صفحه‌ای؛ idx با نسخهٔ دیگر یعنی شارد کامل خوانده شود. */
     const val PAGED_VERSION = "v3701"
+
+    /** V372 — تصویر «تکه‌ای»: در هر دو بُعد ریز، یا مساحت ناچیز (نمونه: «؟» ۱۶×۳۲). */
+    const val MIN_IMAGE_SIDE = 40
+    const val MIN_IMAGE_AREA = 1200
+
+    fun isTinyImage(width: Int, height: Int): Boolean =
+        width > 0 && height > 0 &&
+            ((width < MIN_IMAGE_SIDE && height < MIN_IMAGE_SIDE) || width * height < MIN_IMAGE_AREA)
 
     /** V370 — هر صفحه ~۵۰ سؤال؛ همان اندازه‌ای که سازندهٔ شارد می‌سازد. */
     const val PAGE_CHUNK = 50

@@ -30,13 +30,40 @@
     'هنرستان': ['فنی و حرفهای', 'کاردانش', 'ریاضی', 'فارسی', 'دین و زندگی']
   };
   var ALL_HIGH = []; Object.keys(HIGH).forEach(function (k) { HIGH[k].forEach(function (x) { if (ALL_HIGH.indexOf(x) < 0) ALL_HIGH.push(x); }); }); ALL_HIGH.sort();
-  var SHARD_VERSION = 'v3630';
+  var SHARD_VERSION = 'v3710';
   var cache = {catalog: {}, questions: {}, catalogAll: null};
   /* V370 — کارایی: شارد صفحه‌ای + کش محلی (IndexedDB) + تازه‌آوری پس‌زمینه. */
   var PAGED_VERSION = 'v3701';
   var IDB_NAME = 'exam-refbank-v1';
   var IDB_STORE = 'shards';
   var IDB_TTL = 7 * 24 * 60 * 60 * 1000;
+  /* V372 — تکه‌های تصویریِ بریده‌شده (نمونه: «؟» ۱۶×۳۲) نمایش داده نشوند.
+     قاعده عیناً همان است که ابزار داده و اپ به کار می‌برند. */
+  var TINY_SIDE = 40;
+  var TINY_AREA = 1200;
+  function tinyGuard(im) {
+    if (!im || im.__tinyGuard) return im;
+    im.__tinyGuard = 1;
+    var hide = function () {
+      var w = im.naturalWidth || 0, h = im.naturalHeight || 0;
+      if (w > 0 && h > 0 && ((w < TINY_SIDE && h < TINY_SIDE) || w * h < TINY_AREA)) {
+        im.style.display = 'none';
+        im.setAttribute('data-tiny', '1');
+      }
+    };
+    if (im.complete) hide(); else im.addEventListener('load', hide);
+    im.addEventListener('error', function () { im.style.display = 'none'; });
+    return im;
+  }
+  /* تصویر گزینه و پاسخ مستقیم ساخته می‌شوند و از lazyImgs نمی‌گذرند؛
+     پس هر تصویر بارشدهٔ بانک هم یک‌بار بررسی می‌شود (فقط مسیر بانک، نه آواتار). */
+  if (typeof document !== 'undefined' && document.addEventListener) {
+    document.addEventListener('load', function (ev) {
+      var t = ev.target;
+      if (t && t.tagName === 'IMG' &&
+          String(t.currentSrc || t.src || '').indexOf('reference-bank/images/') >= 0) tinyGuard(t);
+    }, true);
+  }
   var pagedIdx = {};
   var idbPromise = null;
   var FORMULA_PAIRS = [['\\(', '\\)'], ['\\[', '\\]'], ['$$', '$$']];
@@ -189,6 +216,7 @@
     Array.prototype.forEach.call(node.querySelectorAll('img'), function (im) {
       if (!im.getAttribute('loading')) im.setAttribute('loading', 'lazy');
       im.setAttribute('decoding', 'async');
+      tinyGuard(im);  /* V372 */
     });
     return node;
   }
