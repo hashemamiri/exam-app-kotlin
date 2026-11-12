@@ -401,10 +401,30 @@
     var all = p.image_urls || [];
     /* V360.8 — صورت سؤال فقط تصویر های q_html را میگیرد؛ تصویر گزینه ها
        جداگانه از option_images خوانده می شود و هرگز وارد متن سؤال نمی شود. */
-    var q = imgUrls(p.q_html || '').filter(function (u) { return all.indexOf(u) >= 0; });
-    var ans = imgUrls(p.answer_html || '').filter(function (u) { return all.indexOf(u) >= 0; });
+    /* V374 — تعدادی از سؤال‌ها تصویرشان فقط در image_urls است و در متن <img>
+       ندارد (گزارش V373: ۹۵۳ سؤال). قبلاً هیچ‌جا دیده نمی‌شدند؛ حالا پیوست‌ها
+       هم به صورت سؤال می‌آیند — بی‌تکرار، و باز هم بدون تصویر گزینه/پاسخ. */
+    var q = imgUrls(p.q_html || '');
+    var ans = imgUrls(p.answer_html || '');
     var opts = (p.option_images || []).map(function (u) { return u || null; });
+    var optionOnly = opts.filter(Boolean);
+    all.forEach(function (u) {
+      if (u && ans.indexOf(u) < 0 && optionOnly.indexOf(u) < 0 && q.indexOf(u) < 0) q.push(u);
+    });
+    q = q.filter(function (u) { return ans.indexOf(u) < 0 && optionOnly.indexOf(u) < 0; });
     return {question: q, answer: ans, options: opts};
+  }
+  /* V374 — تصویرهایی که در متن <img> نیستند و باید کنار متن نشان داده شوند. */
+  function attachmentImages(p) {
+    var inHtml = imgUrls(p.q_html || '');
+    return splitImages(p).question.filter(function (u) { return inHtml.indexOf(u) < 0; });
+  }
+  function appendAttachmentImages(host, p, alt) {
+    attachmentImages(p).forEach(function (u) {
+      host.appendChild(el('img', {src: u, alt: alt || 'تصویر سؤال', class: 'ref-q-img', loading: 'lazy',
+        style: 'display:block;max-width:100%;height:auto;border-radius:10px;margin:8px 0'}));
+    });
+    return host;
   }
   /* V363 — برش امن: نه وسط «$»، نه نصفه‌کلمه، نه فرمولِ باز. */
   function safeSnippet(value, limit) {
@@ -704,7 +724,7 @@
         var qv = el('div', {class: 'ref-question-body'});
         if (p.q_html) { fillHtml(qv, p.q_html); }
         else richInto(qv, p.text || r.text || '');
-        pc.appendChild(qv);
+        pc.appendChild(appendAttachmentImages(qv, p));
         appendOptions(pc, p);
         if (answerOn(r) && (p.answer_html || p.answer_text)) appendAnswer(pc, p);
         pc.appendChild(el('div', {class: 'row refbank-preview-actions'}, [
@@ -765,7 +785,7 @@
           var qv = el('div', {class: 'ref-question-body'});
           if (detail.q_html) { fillHtml(qv, detail.q_html); }
           else richInto(qv, detail.text || r.text || '');
-          item.appendChild(qv);
+          item.appendChild(appendAttachmentImages(qv, detail));
           appendOptions(item, detail);
           if (answerOn(r)) appendAnswer(item, detail);
         } else if (st.detailPending[rowGrade(r)]) {

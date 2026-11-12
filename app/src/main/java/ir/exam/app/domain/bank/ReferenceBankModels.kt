@@ -309,7 +309,17 @@ data class ReferenceBankQuestion(
 
     /** فقط تصویرهای صورت سؤال؛ تصویر گزینهها و پاسخ هرگز اینجا نمیآیند. */
     val questionImageUrls: List<String>
-        get() = ReferenceBankMedia.imageUrlsFromHtml(qHtml).filter { it in imageUrls }
+        get() {
+            // V374 — تعدادی از سؤال‌ها تصویرشان فقط در image_urls است و در متن
+            // <img> ندارد (گزارش V373: ۹۵۳ سؤال). با برشِ «فقط q_html» این
+            // تصویرها در بانک و در آزمون ساخته‌شده هیچ‌جا دیده نمی‌شدند. حالا
+            // پیوست‌ها هم می‌آیند: بی‌تکرار، بی تصویر گزینه، بی تصویر پاسخ.
+            val inQuestion = ReferenceBankMedia.imageUrlsFromHtml(qHtml)
+            val inAnswer = ReferenceBankMedia.imageUrlsFromHtml(answerHtml)
+            val optionOnly = optionImageList.filterNotNull().filter { it.isNotBlank() }
+            return (inQuestion + imageUrls).distinct()
+                .filterNot { it in inAnswer || it in optionOnly }
+        }
 
     /** فقط تصویرهای پاسخ. */
     val answerImageUrls: List<String>

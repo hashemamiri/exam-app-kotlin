@@ -87,7 +87,15 @@ object ExamHtmlImageInliner {
                             if (used >= MAX_IMAGES || budget <= 0) break
                             val dataUrl = loaded[url]
                             if (dataUrl == null) {
-                                Log.w(TAG, "بارگذاریِ تصویرِ سؤال برای چاپ ناموفق بود و از برگه حذف می‌شود: $url")
+                                // V374 — شکستِ دانلود دیگر تصویر را حذف نمی‌کند: توکن با
+                                // نشانیِ اصلی درج می‌شود تا WebView خودش بارگذاری کند.
+                                if (url.startsWith("http", ignoreCase = true)) {
+                                    Log.w(TAG, "درون‌سازیِ تصویر ناموفق بود؛ با نشانی اصلی درج می‌شود: $url")
+                                    used++
+                                    tokens.append(imageToken(url))
+                                } else {
+                                    Log.w(TAG, "بارگذاریِ تصویرِ سؤال برای چاپ ناموفق بود و از برگه حذف می‌شود: $url")
+                                }
                                 continue
                             }
                             budget -= dataUrl.length

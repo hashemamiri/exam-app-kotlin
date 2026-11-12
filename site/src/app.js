@@ -1196,15 +1196,17 @@
       RE.lastIndex = 0; while ((m = RE.exec(q.text))) { try { var o = JSON.parse(m[1]); if (o.k === 'img' && /^https?:/i.test(o.src)) list.push([m[0], o]); } catch (e) {} }
       list.forEach(function (it) {
         if (used >= 24) { q.text = q.text.replace(it[0], ''); return; }
+        /* V374 — سقف بیست‌وچهار تصویر حذف می‌شود، ولی شکست شبکه/CORS نه:
+           توکن با نشانی اصلی می‌ماند تا تصویر در پیش‌نمایش و چاپ دیده شود. */
         used++;
         jobs.push(mediaBlobUrl(it[1].src).then(function (u) { return new Promise(function (res) { var im = new Image(); if (/^https?:/i.test(u)) { im.crossOrigin = 'anonymous'; u = u + (u.indexOf('?') >= 0 ? '&' : '?') + 'cors=' + Date.now(); } im.onload = function () { res(im); }; im.onerror = function () { res(null); }; im.src = u; }); }).then(function (im) {
-          if (!im) { q.text = q.text.replace(it[0], ''); return; }
+          if (!im) { return; }
           var k = Math.min(1, 1280 / Math.max(im.naturalWidth, im.naturalHeight)), c = document.createElement('canvas'); c.width = Math.max(1, Math.round(im.naturalWidth * k)); c.height = Math.max(1, Math.round(im.naturalHeight * k));
           var x = c.getContext('2d'); x.fillStyle = '#fff'; x.fillRect(0, 0, c.width, c.height); x.drawImage(im, 0, 0, c.width, c.height);
           var data; try { data = c.toDataURL('image/jpeg', 0.85); } catch (e) { data = null; }
-          if (!data) { q.text = q.text.replace(it[0], ''); return; }
+          if (!data) { return; }
           it[1].src = data; q.text = q.text.replace(it[0], ' %%FIG:' + JSON.stringify(it[1]) + '%%');
-        }).catch(function () { q.text = q.text.replace(it[0], ''); }));
+        }).catch(function () {}));
       });
     });
     Promise.all(jobs).then(function () { st.done = true; }, function () { st.done = true; });
