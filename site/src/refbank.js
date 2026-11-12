@@ -324,7 +324,7 @@
     bg.addEventListener('click', function (e) { if (e.target === bg) bg.remove(); });
     var st = {
       grade: 0, track: '', subject: '', chapter: '', type: '', difficulty: '', query: '',
-      page: 0, size: 25, rows: [], loaded: [], picked: {}, includeAnswer: true,
+      page: 0, size: 25, image: '', rows: [], loaded: [], picked: {}, includeAnswer: true,
       includeAnswerById: {}, details: {}, detailLoaded: {}, detailPending: {},
       filterOpen: true, searchOpen: false, missing: false, loading: false, note: null, error: null
     };
@@ -351,12 +351,14 @@
         if (st.page >= pages) st.page = pages - 1;
         slice = f.slice(st.page * st.size, (st.page + 1) * st.size);
         first.appendChild(el('span', {class: 'chip brand refbank-count', text: fa(f.length) + ' سؤال · صفحهٔ ' + fa(st.page + 1) + ' از ' + fa(pages) + ' · ' + fa(pickedRows().length) + ' انتخاب‌شده'}));
-        first.appendChild(el('button', {class: 'btn light sm', type: 'button', title: 'انتخاب/برداشتن صفحه', 'aria-label': 'انتخاب/برداشتن صفحه', text: '☑', onclick: function () {
-          var ids = slice.map(function (r) { return r.id; }), all = ids.length > 0 && ids.every(function (id) { return st.picked[id]; });
-          ids.forEach(function (id) { if (all) delete st.picked[id]; else st.picked[id] = 1; }); draw();
+        /* V369 — خواستهٔ کاربر: دکمهٔ تیک، متنی شود. */
+        var pageIds = slice.map(function (r) { return r.id; });
+        var pageAll = pageIds.length > 0 && pageIds.every(function (id) { return st.picked[id]; });
+        first.appendChild(el('button', {class: 'btn light sm', type: 'button', title: 'انتخاب/برداشتن صفحه', 'aria-label': 'انتخاب/برداشتن صفحه', text: pageAll ? 'لغو انتخاب' : 'انتخاب همه', onclick: function () {
+          pageIds.forEach(function (id) { if (pageAll) delete st.picked[id]; else st.picked[id] = 1; }); draw();
         }}));
-        first.appendChild(el('button', {class: 'btn light sm', type: 'button', title: 'قبلی', 'aria-label': 'قبلی', text: '‹', disabled: st.page === 0 ? 'disabled' : null, onclick: function () { st.page = Math.max(0, st.page - 1); draw(); }}));
-        first.appendChild(el('button', {class: 'btn light sm', type: 'button', title: 'بعدی', 'aria-label': 'بعدی', text: '›', disabled: st.page >= pages - 1 ? 'disabled' : null, onclick: function () { st.page = Math.min(pages - 1, st.page + 1); draw(); }}));
+        first.appendChild(el('button', {class: 'btn light sm', type: 'button', title: 'قبلی', 'aria-label': 'قبلی', text: '‹', disabled: st.page === 0 ? 'disabled' : null, onclick: function () { st.page = Math.max(0, st.page - 1); draw(); loadDetails(); }}));
+        first.appendChild(el('button', {class: 'btn light sm', type: 'button', title: 'بعدی', 'aria-label': 'بعدی', text: '›', disabled: st.page >= pages - 1 ? 'disabled' : null, onclick: function () { st.page = Math.min(pages - 1, st.page + 1); draw(); loadDetails(); }}));
         first.appendChild(el('button', {class: 'chip ref-answer-chip' + (st.includeAnswer ? ' on' : ''), type: 'button', title: 'افزودن پاسخ', 'aria-label': 'افزودن پاسخ', text: (st.includeAnswer ? '✓ ' : '+ ') + 'افزودن پاسخ', onclick: function () { st.includeAnswer = !st.includeAnswer; draw(); }}));
         first.appendChild(el('button', {class: 'btn ref-bulk-add sm', type: 'button', text: '＋ افزودن گروهی (' + fa(pickedRows().length) + ') به آزمون', onclick: function () { addRows(pickedRows()); }}));
         first.appendChild(el('button', {class: 'ref-icon-btn', type: 'button', title: 'جست‌وجو', 'aria-label': 'جست‌وجو', text: '⌕', onclick: function () { st.searchOpen = !st.searchOpen; draw(); if (st.searchOpen) { var x = card.querySelector('.refbank-search-input'); if (x) x.focus(); } }}));
@@ -440,7 +442,22 @@
       body.appendChild(selectBox('دشواری', ds, st.difficulty, function (d) { return d === '' ? 'همهٔ سطح‌ها' : DIFF[Number(d)]; }, function (v) {
         st.difficulty = v; st.page = 0; draw();
       }));
+      /* V369 — خواستهٔ کاربر: تصویردار/بدون تصویر */
+      body.appendChild(selectBox('تصویر', ['', '1', '0'], st.image, function (v) {
+        return v === '1' ? 'با تصویر' : v === '0' ? 'بدون تصویر' : 'همه';
+      }, function (v) { st.image = v; st.page = 0; draw(); }));
+      /* V369 — خواستهٔ کاربر: تعداد نمایش در صفحه */
+      body.appendChild(selectBox('تعداد در صفحه', [25, 50, 75, 100], st.size, function (v) {
+        return fa(v) + ' سؤال';
+      }, function (v) { st.size = Number(v) || 25; st.page = 0; draw(); }));
       popup.appendChild(body); scrim.appendChild(popup); card.appendChild(scrim);
+    }
+
+    /* V369 — سؤال تصویردار از فیلدهای شارد فهرست شناخته می‌شود. */
+    function hasImageRow(r) {
+      if (!r) return false;
+      if (r.has_image || Number(r.image_count) > 0) return true;
+      return Array.isArray(r.image_urls) && r.image_urls.length > 0;
     }
 
     function filtered() {
@@ -451,6 +468,9 @@
         if (st.chapter && r.chapter !== st.chapter) return false;
         if (st.type && r.type_fa !== st.type) return false;
         if (st.difficulty !== '' && Number(r.difficulty) !== Number(st.difficulty)) return false;
+        /* V369 — «با تصویر / بدون تصویر» */
+        if (st.image === '1' && !hasImageRow(r)) return false;
+        if (st.image === '0' && hasImageRow(r)) return false;
         if (s) {
           var p = st.details[r.id], detailText = p ? plain(p.q_html || '') + ' ' + (p.options || []).join(' ') : '';
           if ((String(r.text || '') + ' ' + detailText).toLowerCase().indexOf(s) < 0) return false;
@@ -462,7 +482,10 @@
     function rowGrade(r) { return Math.max(1, Math.min(12, Number(r.grade) || Number(st.grade) || 1)); }
 
     function loadDetails() {
-      var grades = st.grade ? [st.grade] : uniq(st.rows, 'grade').map(Number);
+      /* V369 — فقط پایه‌های همین صفحه خوانده می‌شوند؛ قبلاً با «همهٔ پایه‌ها» هر ۱۲
+         شارد (هر کدام چند مگابایت) پشت «تأیید» دانلود می‌شد. */
+      var pageRows = st.grade ? st.rows : filtered().slice(st.page * st.size, (st.page + 1) * st.size);
+      var grades = st.grade ? [st.grade] : uniq(pageRows, 'grade').map(Number);
       grades.forEach(function (g) {
         if (st.detailLoaded[g] || st.detailPending[g]) return;
         st.detailPending[g] = true; draw();

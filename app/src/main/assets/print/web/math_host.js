@@ -67,6 +67,9 @@ function mEsc(e) {
 
     times: '×', div: '÷', cdot: '·', pm: '±', mp: '∓', ast: '∗',
     ne: '≠', neq: '≠', le: '≤', leq: '≤', ge: '≥', geq: '≥',
+    /* V369 — «\lt» و «\gt» در شاردها هستند؛ قبلاً به «munk» و متن خام می‌افتادند. */
+    lt: '<', gt: '>', leqslant: '⩽', geqslant: '⩾',
+    nless: '≮', ngtr: '≯', lessgtr: '≶', gtrless: '≷',
     ll: '≪', gg: '≫', approx: '≈', equiv: '≡', sim: '∼', cong: '≅',
     propto: '∝', perp: '⊥', parallel: '∥', angle: '∠', degree: '°',
     in: '∈', notin: '∉', ni: '∋', subset: '⊂', supset: '⊃',

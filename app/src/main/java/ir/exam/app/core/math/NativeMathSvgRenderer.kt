@@ -559,6 +559,26 @@ object NativeMathSvgRenderer {
             val line = "<line x1=\"0\" y1=\"${number(lineY)}\" x2=\"${number(base.width)}\" y2=\"${number(lineY)}\" stroke-width=\"${number(stroke)}\"/>"
             return Layout(base.width, lineY + stroke, base.baseline, base.body + line, base.boxes, base.radicalBars)
         }
+        // V369 — «\overset»/«\stackrel»: نماد یا متنِ بالا، وسط‌چین روی پایه.
+        if (node.mark.startsWith("over:")) {
+            val glyph = node.mark.removePrefix("over:")
+            val glyphSize = size * .78f
+            val glyphWidth = estimateTextWidth(glyph, glyphSize)
+            val width = max(base.width, glyphWidth)
+            val head = size * .86f
+            val body = "<text x=\"" + number(width / 2f) + "\" y=\"" + number(head * .80f) +
+                "\" text-anchor=\"middle\" font-family=\"serif\" font-size=\"" +
+                number(glyphSize) + "\" stroke=\"none\">" + escapeXml(glyph) + "</text>"
+            val baseX = (width - base.width) / 2f
+            return Layout(
+                width,
+                head + base.height,
+                head + base.baseline,
+                body + translate(base.body, baseX, head),
+                base.boxes.map { it.moved(baseX, head) },
+                base.radicalBars.map { it.moved(baseX, head) }
+            )
+        }
         val accentHeight = size * .28f
         val y = accentHeight + size * .08f
         val width = max(base.width, size * .38f)
@@ -826,7 +846,10 @@ object NativeMathSvgRenderer {
                 codePoint == 't'.code || codePoint == 'f'.code || codePoint == 'r'.code -> size * .38f
                 codePoint == 'm'.code || codePoint == 'w'.code -> size * .80f
                 codePoint in 'a'.code..'z'.code -> size * .54f
-                codePoint in 0x0600..0x06FF || codePoint in 0x0750..0x077F || codePoint in 0xFB50..0xFDFF || codePoint in 0xFE70..0xFEFF -> size * .67f
+                // V369 — نیم‌فاصله پهنا ندارد و حرف فارسی ~۰٫۵em است؛ وگرنه
+                // «فا صله» و شکاف بین حروفِ یک واژه دیده می‌شد.
+                codePoint == 0x200C || codePoint == 0x200D -> 0f
+                codePoint in 0x0600..0x06FF || codePoint in 0x0750..0x077F || codePoint in 0xFB50..0xFDFF || codePoint in 0xFE70..0xFEFF -> size * .50f
                 codePoint == 0x2212 || codePoint == '+'.code || codePoint == '='.code || codePoint == 0xB1 -> size * .78f
                 codePoint in 0x2200..0x22FF || codePoint in 0x2190..0x21FF -> size * .75f
                 codePoint > 0xFFFF -> size * .90f

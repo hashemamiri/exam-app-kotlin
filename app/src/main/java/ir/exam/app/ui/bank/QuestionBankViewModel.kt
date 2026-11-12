@@ -46,6 +46,8 @@ data class QuestionBankUiState(
     val referenceChapter: String = "",
     val referenceType: String = "",
     val referenceDifficulty: Int? = null,
+    /** V369 — «همه» (خالی)، «1» = با تصویر، «0» = بدون تصویر. */
+    val referenceImageFilter: String = "",
     val referenceQuery: String = "",
     val referencePage: Int = 0,
     val referencePageSize: Int = ReferenceBankContract.PAGE_SIZE,
@@ -74,6 +76,10 @@ data class QuestionBankUiState(
                 (referenceChapter.isBlank() || r.chapter == referenceChapter) &&
                 (referenceType.isBlank() || r.typeFa == referenceType) &&
                 (referenceDifficulty == null || r.difficulty == referenceDifficulty) &&
+                // V369 — «با تصویر / بدون تصویر»
+                (referenceImageFilter.isBlank() ||
+                    if (referenceImageFilter == "1") (r.hasImage || r.imageCount > 0)
+                    else !(r.hasImage || r.imageCount > 0)) &&
                 (referenceQuery.isBlank() || r.text.contains(referenceQuery, ignoreCase = true) ||
                     referenceDetails[r.id]?.let { q ->
                         (q.displayText + " " + q.options.joinToString(" ")).contains(referenceQuery, ignoreCase = true)
@@ -311,10 +317,17 @@ class QuestionBankViewModel(
     fun setReferenceChapter(value: String) = _state.update { it.copy(referenceChapter = value, referencePage = 0) }
     fun setReferenceType(value: String) = _state.update { it.copy(referenceType = value, referencePage = 0) }
     fun setReferenceDifficulty(value: Int?) = _state.update { it.copy(referenceDifficulty = value, referencePage = 0) }
+    fun setReferenceImageFilter(value: String) = _state.update { it.copy(referenceImageFilter = value, referencePage = 0) }
     fun setReferenceQuery(value: String) = _state.update { it.copy(referenceQuery = value.take(200), referencePage = 0) }
     fun setReferencePageSize(value: Int) = _state.update { it.copy(referencePageSize = value.coerceIn(10, 100), referencePage = 0) }
-    fun nextReferencePage() = _state.update { it.copy(referencePage = (it.referencePage + 1).coerceAtMost(it.referencePages - 1)) }
-    fun prevReferencePage() = _state.update { it.copy(referencePage = (it.referencePage - 1).coerceAtLeast(0)) }
+    fun nextReferencePage() {
+        _state.update { it.copy(referencePage = (it.referencePage + 1).coerceAtMost(it.referencePages - 1)) }
+        loadReferenceQuestionDetails()
+    }
+    fun prevReferencePage() {
+        _state.update { it.copy(referencePage = (it.referencePage - 1).coerceAtLeast(0)) }
+        loadReferenceQuestionDetails()
+    }
 
     fun setReferenceIncludeAnswer(value: Boolean) = _state.update { it.copy(referenceIncludeAnswer = value) }
 
@@ -337,7 +350,9 @@ class QuestionBankViewModel(
 
     fun loadReferenceQuestionDetails() = viewModelScope.launch {
         val initial = _state.value
-        val grades = if (initial.referenceGrade == 0) initial.referenceRows.map { it.grade }.distinct().sorted()
+        // V369 — فقط پایه‌های همین صفحه؛ قبلاً با «همهٔ پایه‌ها» هر ۱۲ شارد خوانده می‌شد.
+        val pageRows = initial.referencePageRows
+        val grades = if (initial.referenceGrade == 0) pageRows.map { it.grade }.distinct().sorted()
             else listOf(initial.referenceGrade)
         val missing = grades.filter { it !in referenceQuestionCache && referenceQuestionLoading.add(it) }
         if (missing.isNotEmpty()) _state.update { it.copy(referenceDetailsLoading = true, referenceDetailsError = null) }
@@ -352,7 +367,7 @@ class QuestionBankViewModel(
         val details = mutableMapOf<Long, ReferenceBankQuestion>()
         grades.forEach { grade ->
             val shard = referenceQuestionCache[grade].orEmpty()
-            now.referenceRows.asSequence().filter { it.grade == grade }.forEach { row ->
+            pageRows.asSequence().filter { it.grade == grade }.forEach { row ->
                 shard[row.id.toString()]?.let { details[row.id] = it }
             }
         }

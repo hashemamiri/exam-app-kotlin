@@ -89,7 +89,11 @@ object NativeMathParser {
         "nwarrow" to "↖", "swarrow" to "↙", "leadsto" to "⇝", "rightsquigarrow" to "⇝", "circledast" to "⊛",
         "checkmark" to "✓", "natural" to "♮", "sharp" to "♯", "flat" to "♭", "Game" to "⅁", "Finv" to "Ⅎ",
         "mho" to "℧", "eth" to "ð", "complement" to "∁", "intercal" to "⊺", "veebar" to "⊻", "barwedge" to "⊼",
-        "Omicron" to "Ο", "omicron" to "ο"
+        "Omicron" to "Ο", "omicron" to "ο",
+        // V369 — «\lt» و «\gt» در شاردها با فرمان نوشته شده‌اند؛ قبلاً □ می‌شدند.
+        "lt" to "<", "gt" to ">",
+        "leqslant" to "⩽", "geqslant" to "⩾",
+        "nless" to "≮", "ngtr" to "≯", "lessgtr" to "≶", "gtrless" to "≷"
     )
 
     private val namedFunctions = setOf(
@@ -548,10 +552,12 @@ object NativeMathParser {
                 "tilde" -> MathNode.Accent(groupOrAtom(), "tilde")
                 "overbrace" -> MathNode.Accent(groupOrAtom(), "overbrace")
                 "underbrace" -> MathNode.Accent(groupOrAtom(), "underbrace")
+                // V369 — «\overset{\triangle}{B}» مثل ویرایشگر سایت: نماد وسطِ پایه
+                // می‌نشیند، نه کنارِ آن (قبلاً Script می‌شد و حرف‌ها پایین‌تر می‌افتادند).
                 "overset", "stackrel" -> {
                     val over = groupOrAtom()
                     val base = groupOrAtom()
-                    MathNode.Script(base, over, null)
+                    MathNode.Accent(base, "over:" + flat(over))
                 }
                 "underset" -> {
                     val under = groupOrAtom()

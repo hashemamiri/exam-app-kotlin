@@ -154,8 +154,14 @@ internal fun ReferenceBankDialog(
                     ) {
                         Text("${state.referenceFiltered.size} سؤال · ${state.referencePage + 1}/${state.referencePages} · ${state.referencePickedCount} انتخاب‌شده",
                             style = MaterialTheme.typography.labelSmall, modifier = Modifier.widthIn(min = 118.dp))
-                        IconButton(onClick = viewModel::toggleReferencePagePicks) {
-                            Icon(Icons.Outlined.CheckCircle, contentDescription = "انتخاب/برداشتن صفحه")
+                        /* V369 — خواستهٔ کاربر: دکمهٔ تیک متنی شود. */
+                        val pageAllPicked = state.referencePageRows.isNotEmpty() &&
+                            state.referencePageRows.all { it.id in state.referencePicked }
+                        TextButton(onClick = viewModel::toggleReferencePagePicks) {
+                            Text(
+                                if (pageAllPicked) "لغو انتخاب" else "انتخاب همه",
+                                style = MaterialTheme.typography.labelMedium
+                            )
                         }
                         IconButton(onClick = viewModel::prevReferencePage, enabled = state.referencePage > 0) {
                             Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "قبلی")
@@ -164,13 +170,8 @@ internal fun ReferenceBankDialog(
                             Icon(Icons.AutoMirrored.Outlined.ArrowForward, contentDescription = "بعدی")
                         }
                         // V367 — آیکن تنها: دکمهٔ پاسخ در هدر فهرست
-                        IconButton(onClick = { viewModel.setReferenceIncludeAnswer(!state.referenceIncludeAnswer) }) {
-                            Icon(
-                                if (state.referenceIncludeAnswer) Icons.Outlined.Check else Icons.Outlined.Add,
-                                contentDescription = "افزودن پاسخ",
-                                tint = if (state.referenceIncludeAnswer) MaterialTheme.colorScheme.primary
-                                       else MaterialTheme.colorScheme.onSurfaceVariant
-                            )
+                        RefAnswerChip(state.referenceIncludeAnswer) {
+                            viewModel.setReferenceIncludeAnswer(!state.referenceIncludeAnswer)
                         }
                         IconButton(
                             onClick = { viewModel.addReferenceMany(onAdd, onDismiss) },
@@ -195,13 +196,8 @@ internal fun ReferenceBankDialog(
                 } else {
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End, verticalAlignment = Alignment.CenterVertically) {
                         // V367 — آیکن تنها: دکمهٔ پاسخ در هدر فیلتر
-                        IconButton(onClick = { viewModel.setReferenceIncludeAnswer(!state.referenceIncludeAnswer) }) {
-                            Icon(
-                                if (state.referenceIncludeAnswer) Icons.Outlined.Check else Icons.Outlined.Add,
-                                contentDescription = "افزودن پاسخ",
-                                tint = if (state.referenceIncludeAnswer) MaterialTheme.colorScheme.primary
-                                       else MaterialTheme.colorScheme.onSurfaceVariant
-                            )
+                        RefAnswerChip(state.referenceIncludeAnswer) {
+                            viewModel.setReferenceIncludeAnswer(!state.referenceIncludeAnswer)
                         }
                         Spacer(Modifier.width(8.dp))
                         Button(
@@ -255,6 +251,22 @@ private fun RefDropdown(
     }
 }
 
+/** V369 — دکمهٔ «افزودن پاسخ» مثل سایت متنی است، نه آیکن تنها. */
+@Composable
+private fun RefAnswerChip(on: Boolean, onToggle: () -> Unit) {
+    val tint = if (on) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+    TextButton(onClick = onToggle) {
+        Icon(
+            if (on) Icons.Outlined.Check else Icons.Outlined.Add,
+            contentDescription = null,
+            modifier = Modifier.size(16.dp),
+            tint = tint
+        )
+        Spacer(Modifier.width(4.dp))
+        Text("افزودن پاسخ", style = MaterialTheme.typography.labelMedium, color = tint)
+    }
+}
+
 @Composable
 private fun ReferenceBankFilter(
     state: QuestionBankUiState,
@@ -286,6 +298,16 @@ private fun ReferenceBankFilter(
         RefDropdown("دشواری", state.referenceDifficulty?.toString() ?: "", difficultyOptions) { value ->
             viewModel.setReferenceDifficulty(value.toIntOrNull())
         }
+        // V369 — خواستهٔ کاربر: تصویردار/بدون تصویر
+        RefDropdown(
+            "تصویر", state.referenceImageFilter,
+            listOf("" to "همه", "1" to "با تصویر", "0" to "بدون تصویر")
+        ) { value -> viewModel.setReferenceImageFilter(value) }
+        // V369 — خواستهٔ کاربر: تعداد نمایش در صفحه
+        RefDropdown(
+            "تعداد در صفحه", state.referencePageSize.toString(),
+            listOf("25" to "۲۵ سؤال", "50" to "۵۰ سؤال", "75" to "۷۵ سؤال", "100" to "۱۰۰ سؤال")
+        ) { value -> viewModel.setReferencePageSize(value.toIntOrNull() ?: 25) }
     }
 }
 
