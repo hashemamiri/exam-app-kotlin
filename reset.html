@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>بازنشانی نسخهٔ سایت | آزمون آنلاین</title>
+<meta name="theme-color" content="#5B3FA3">
+<!-- V335.45 — نسخهٔ بازسازی‌شدهٔ صفحهٔ ops/reset (نسخهٔ اصلی روی سرور بود و در گیت نبود).
+     کار: پاک‌کردن کش سرویس‌ورکر، localStorage و sessionStorage همین دامنه، سپس بارگذاری تازه.
+     هیچ منبع بیرونی ندارد و با Caddy با no-store سرو می‌شود. -->
+<style>
+  :root { --acc:#5B3FA3; --acc2:#27C4A8; --bg:#F3F6FA; --card:#FFFFFF; --ink:#1D2433; --muted:#5C6880; --line:#E2E8F2; --ok:#12805C; --warn:#B45309; --err:#B42318; }
+  * { box-sizing:border-box; }
+  body { margin:0; min-height:100vh; display:flex; align-items:center; justify-content:center; padding:24px;
+         font-family:'Vazirmatn',Tahoma,system-ui,-apple-system,'Segoe UI',sans-serif;
+         background:linear-gradient(160deg,#EEF2F9 0%,#F7FAFF 55%,#EFF7F5 100%); color:var(--ink); }
+  .card { width:100%; max-width:560px; background:var(--card); border:1px solid var(--line); border-radius:22px;
+          padding:28px 26px; box-shadow:0 18px 45px rgba(29,36,51,.10); }
+  .logo { width:52px; height:52px; border-radius:15px; display:grid; place-items:center; font-weight:800; font-size:20px;
+          color:#fff; background:linear-gradient(135deg,var(--acc),#7A5BD0); margin-bottom:16px; }
+  h1 { font-size:20px; margin:0 0 8px; }
+  p { margin:0 0 16px; color:var(--muted); font-size:14px; line-height:1.9; }
+  .meta { display:grid; grid-template-columns:auto 1fr; gap:8px 12px; font-size:13px; margin:0 0 18px;
+          background:#F7F9FD; border:1px solid var(--line); border-radius:14px; padding:12px 14px; }
+  .meta b { color:var(--muted); font-weight:600; }
+  ol { margin:0 0 18px; padding-inline-start:20px; font-size:13.5px; line-height:2; color:var(--ink); }
+  li.done::marker { color:var(--ok); }
+  li.fail::marker { color:var(--err); }
+  button { width:100%; border:0; border-radius:14px; padding:14px 18px; font:inherit; font-weight:700; font-size:15px;
+           color:#fff; background:linear-gradient(135deg,var(--acc),#7A5BD0); cursor:pointer; }
+  button:disabled { opacity:.6; cursor:progress; }
+  a.alt { display:block; text-align:center; margin-top:12px; font-size:13px; color:var(--acc); text-decoration:none; }
+  .note { margin-top:16px; font-size:12.5px; line-height:1.9; color:var(--muted); border-top:1px dashed var(--line); padding-top:12px; }
+  code { background:#F2F5FA; border:1px solid var(--line); border-radius:6px; padding:1px 5px; font-size:12px; direction:ltr; display:inline-block; }
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="logo">آ</div>
+  <h1>بازنشانی نسخهٔ سایت</h1>
+  <p>اگر سایت برایتان نسخهٔ قدیمی نشان می‌دهد، این صفحه فایل‌های موقت همین دامنه را پاک می‌کند و سایت را از نو بارگذاری می‌کند. اطلاعات حساب شما پاک نمی‌شود.</p>
+
+  <div class="meta">
+    <b>دامنه</b><span id="host">—</span>
+    <b>سرویس‌ورکر</b><span id="sw">در حال بررسی…</span>
+    <b>حافظهٔ محلی</b><span id="ls">در حال بررسی…</span>
+  </div>
+
+  <ol id="steps">
+    <li data-k="sw">لغو ثبت سرویس‌ورکر و پاک‌کردن کش‌ها</li>
+    <li data-k="ls">پاک‌کردن حافظهٔ محلی و نشست مرورگر</li>
+    <li data-k="go">بارگذاری تازهٔ سایت</li>
+  </ol>
+
+  <button id="run">پاک کردن کش و بارگذاری تازه</button>
+  <a class="alt" href="/">بازگشت به سایت بدون پاک‌کردن</a>
+
+  <div class="note">
+    این صفحه با <code>Cache-Control: no-store</code> سرو می‌شود. اگر باز هم نسخهٔ قدیمی دیدید،
+    در کروم از مسیر <code>Settings → Site settings → Clear data</code> استفاده کنید.
+  </div>
+</div>
+
+<script>
+(function () {
+  var $ = function (id) { return document.getElementById(id); };
+  $('host').textContent = location.host;
+
+  function mark(key, cls) {
+    var li = document.querySelector('li[data-k="' + key + '"]');
+    if (li) { li.classList.remove('done', 'fail'); if (cls) li.classList.add(cls); }
+  }
+  function bytes(n) { return (n / 1024).toFixed(0) + ' KB'; }
+
+  // وضعیت اولیه
+  var hasSW = !!(navigator.serviceWorker && navigator.serviceWorker.controller);
+  $('sw').textContent = hasSW ? 'فعال' : 'غیرفعال';
+  var lsSize = 0;
+  try { for (var k in localStorage) lsSize += (k.length + String(localStorage.getItem(k) || '').length) * 2; } catch (e) {}
+  $('ls').textContent = lsSize ? bytes(lsSize) : 'خالی';
+
+  async function clearSW() {
+    mark('sw');
+    if (navigator.serviceWorker && navigator.serviceWorker.getRegistrations) {
+      var regs = await navigator.serviceWorker.getRegistrations();
+      for (var i = 0; i < regs.length; i++) { await regs[i].unregister(); }
+    }
+    if (window.caches && caches.keys) {
+      var keys = await caches.keys();
+      for (var j = 0; j < keys.length; j++) { await caches.delete(keys[j]); }
+    }
+    mark('sw', 'done');
+  }
+
+  function clearStorage() {
+    mark('ls');
+    try { localStorage.clear(); } catch (e) {}
+    try { sessionStorage.clear(); } catch (e) {}
+    mark('ls', 'done');
+  }
+
+  $('run').addEventListener('click', async function () {
+    var btn = this;
+    btn.disabled = true;
+    btn.textContent = 'در حال پاک‌کردن…';
+    try {
+      await clearSW();
+      clearStorage();
+      mark('go', 'done');
+      setTimeout(function () { location.replace('/?fresh=' + Date.now()); }, 400);
+    } catch (e) {
+      mark('sw', 'fail');
+      btn.disabled = false;
+      btn.textContent = 'تلاش دوباره';
+      console.warn('[reset]', e);
+    }
+  });
+})();
+</script>
+</body>
+</html>
