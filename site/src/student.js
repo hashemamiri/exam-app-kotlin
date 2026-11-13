@@ -1170,7 +1170,7 @@
         q.options.forEach(function (o, di) {
           var oi = q.optionOriginalIndices[di] != null ? q.optionOriginalIndices[di] : di;
           var r = el('input', {type: 'radio', name: 'st_' + q.id}); r.checked = a === oi; r.addEventListener('change', function () { set(oi); });
-          var lab = el('label', {class: 'st-opt' + (a === oi ? ' on' : '')}, [r, el('span', {class: 'st-optlabel', text: 'ابجد'.split('')[di] ? ['الف', 'ب', 'ج', 'د', 'ه', 'و', 'ز', 'ح'][di] + ')' : fa(di + 1) + ')'}), el('span', {class: 'grow', html: esc(o)}), q.optionImages[di] ? el('img', {src: q.optionImages[di], class: 'thumb', onclick: function (e) { e.preventDefault(); lightbox(q.optionImages[di]); }}) : null]);
+          var lab = el('label', {class: 'st-opt' + (a === oi ? ' on' : '')}, [r, el('span', {class: 'st-optlabel', text: 'ابجد'.split('')[di] ? ['الف', 'ب', 'ج', 'د', 'ه', 'و', 'ز', 'ح'][di] + ')' : fa(di + 1) + ')'}), el('span', {class: 'grow', html: esc(o)}), q.optionImages[di] ? el('img', {src: q.optionImages[di], class: 'thumb' + (String(o || '').trim() ? '' : ' thumb-big'), style: (String(o || '').trim() ? '' : 'width:auto;max-width:min(320px,100%);max-height:220px;display:block;margin:6px auto'), onclick: function (e) { e.preventDefault(); lightbox(q.optionImages[di]); }}) : null]);
           lab.addEventListener('click', function () { setTimeout(function () { Array.prototype.forEach.call(box.querySelectorAll('.st-opt'), function (x) { x.classList.toggle('on', x.querySelector('input').checked); }); }, 0); });
           richHtml(o).then(function (h) { var g = lab.querySelector('.grow'); g.innerHTML = h; fitMath(g); });
           box.appendChild(lab);

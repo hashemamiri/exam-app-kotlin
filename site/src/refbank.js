@@ -801,6 +801,16 @@
           if (rowText) item.appendChild(richInto(el('div', {class: 'ref-question-body'}), safeSnippet(rowText, 220)));
           else item.appendChild(el('div', {class: 'ref-question-body', style: 'opacity:.7;font-size:12px',
             text: 'متن این سؤال در فهرست این پایه نیست؛ «پیش‌نمایش» متن کامل را نشان می‌دهد.'}));
+          /* V375 — اگر متن کامل هنوز نرسیده، دست‌کم تصویرهای همین سطر از فهرست نشان داده شود.
+             پایه‌هایی که شارد صفحه‌ای ندارند فقط فهرست دارند و پیش‌تر کارتشان بی‌تصویر می‌ماند. */
+          if (Array.isArray(r.image_urls) && r.image_urls.length) {
+            var strip = el('div', {class: 'ref-rows-imgs'});
+            r.image_urls.slice(0, 6).forEach(function (u) {
+              if (u) strip.appendChild(el('img', {src: u, alt: 'تصویر سؤال', loading: 'lazy', class: 'ref-q-img',
+                style: 'max-width:100%;height:auto;border-radius:10px;margin:6px 0'}));
+            });
+            if (strip.firstChild) item.appendChild(strip);
+          }
         }
         var actions = el('div', {class: 'ref-card-actions'});
         actions.appendChild(el('button', {class: 'chip ref-answer-chip' + (answerOn(r) ? ' on' : ''), type: 'button', text: (answerOn(r) ? '✓ ' : '+ ') + 'افزودن پاسخ', title: 'افزودن پاسخ', onclick: function () { setAnswer(r); }}));

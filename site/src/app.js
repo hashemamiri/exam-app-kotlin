@@ -1559,6 +1559,11 @@
       /* V160 — مثل ExamHtmlImageInliner: تصویرهای سؤال به‌صورت توکن %%FIG:{k:img}%% به انتهای متن؛ نشانی‌های راه‌دور در openPrintPreview درون‌خطی می‌شوند */
       var qImgs = (Array.isArray(q.images) ? q.images : []).filter(Boolean).map(String); if (q.image && qImgs.indexOf(q.image) < 0) qImgs.unshift(q.image);
       var imgTokens = qImgs.map(function (u) { return ' %%FIG:' + JSON.stringify({k: 'img', src: u, w: 420}) + '%%'; }).join('');
+      /* V375 — تصویر گزینه‌ها هم به برگه می‌آید. پیش‌تر فقط تصویر صورت سؤال می‌آمد و
+         سؤال «کدام تصویر …؟» با گزینه‌های خالی چاپ می‌شد (تصویر در ویرایشگر بود، در چاپ نه). */
+      var optImgs = (Array.isArray(q.optionImages) ? q.optionImages : []).filter(Boolean).map(String)
+        .filter(function (u) { return qImgs.indexOf(u) < 0; });
+      imgTokens += optImgs.map(function (u) { return ' %%FIG:' + JSON.stringify({k: 'img', src: u, w: 240}) + '%%'; }).join('');
       var o = {id: index + 1, text: (q.text || '') + imgTokens, score: fmtScore(score), textAlign: q.align || 'right', fontFamily: q.font || 'default', fontSizeSp: Number(q.fontSize) || 16, bold: q.bold === true, italic: q.italic === true};
       if (Array.isArray(q.spans) && q.spans.length) o.textSpans = q.spans.map(function (s) { return {start: s.s, end: s.e, bold: !!s.b, italic: !!s.i, underline: !!s.u, color: s.c, size: s.z, font: s.f}; });
       if (Array.isArray(q.alignSpans) && q.alignSpans.length) o.alignSpans = q.alignSpans.map(function (s) { return {start: s.s, end: s.e, align: s.a}; });
