@@ -17,11 +17,19 @@ import org.junit.Test
  */
 class V376_TrackFilterTest {
 
-    private val root: File = File(System.getProperty("user.dir")).let {
-        if (File(it, "site/src/refbank.js").isFile) it else it.parentFile.parentFile
+    /**
+     * در Gradle، user.dir پوشهٔ app/ است؛ تا ریشهٔ مخزن (settings.gradle.kts)
+     * بالا می‌رویم — همان الگوی V370_RefBankPerfTest و بقیهٔ تست‌ها.
+     */
+    private fun root(): File {
+        var dir = File(System.getProperty("user.dir") ?: ".").absoluteFile
+        while (!File(dir, "settings.gradle.kts").isFile) {
+            dir = dir.parentFile ?: error("ریشهٔ مخزن پیدا نشد")
+        }
+        return dir
     }
 
-    private fun src(path: String): String = File(root, path).readText()
+    private fun src(path: String): String = File(root(), path).readText()
 
     private val models = "app/src/main/java/ir/exam/app/domain/bank/ReferenceBankModels.kt"
     private val viewModel = "app/src/main/java/ir/exam/app/ui/bank/QuestionBankViewModel.kt"
