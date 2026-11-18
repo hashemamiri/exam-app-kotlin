@@ -77,9 +77,10 @@ data class QuestionBankUiState(
                 (referenceType.isBlank() || r.typeFa == referenceType) &&
                 (referenceDifficulty == null || r.difficulty == referenceDifficulty) &&
                 // V369 — «با تصویر / بدون تصویر»
+                // V377 — «با تصویر» یعنی تصویر صورت سؤال؛ تصویر گزینه شمرده نمی‌شود.
                 (referenceImageFilter.isBlank() ||
-                    if (referenceImageFilter == "1") (r.hasImage || r.imageCount > 0)
-                    else !(r.hasImage || r.imageCount > 0)) &&
+                    if (referenceImageFilter == "1") r.hasQuestionImage()
+                    else !r.hasQuestionImage()) &&
                 (referenceQuery.isBlank() || r.text.contains(referenceQuery, ignoreCase = true) ||
                     referenceDetails[r.id]?.let { q ->
                         (q.displayText + " " + q.options.joinToString(" ")).contains(referenceQuery, ignoreCase = true)

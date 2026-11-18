@@ -83,28 +83,43 @@ class ReferenceBankRepository(
      * را دارد می‌ماند. اگر تکه‌ای نبود، همان فایل کامل خوانده می‌شود.
      */
     suspend fun catalog(grade: Int, track: String = ""): List<ReferenceBankRow> = withContext(Dispatchers.IO) {
-        if (track.isNotBlank()) {
-            shardedCatalog(grade, track)?.let { return@withContext it }
-        }
+        // V377 — تکه‌ای همیشه اول امتحان می‌شود. پیش‌تر برای «همهٔ رشته‌ها» مستقیم
+        // سراغ فایل کامل (۴۲MB پایهٔ دهم) می‌رفت و در اپ نیمه‌کاره می‌ماند.
+        shardedCatalog(grade, track)?.let { return@withContext it }
         val raw = fetch(ReferenceBankContract.catalogPath(grade))
         json.decodeFromString<List<ReferenceBankRow>>(raw).map { it.withFormulaTokens() }
     }
 
+    /** V377 — تکه‌ها یا آرایه‌اند یا {"grade","track","subject","rows"}. */
+    @Serializable
+    private data class CatalogShard(
+        val grade: Int = 0, val track: String = "", val subject: String = "",
+        val rows: List<ReferenceBankRow> = emptyList()
+    )
+
+    private fun decodeShard(raw: String): CatalogShard? {
+        runCatching { json.decodeFromString<CatalogShard>(raw) }.getOrNull()
+            ?.let { if (it.rows.isNotEmpty()) return it }
+        val list = runCatching { json.decodeFromString<List<ReferenceBankRow>>(raw) }.getOrNull()
+        return if (list.isNullOrEmpty()) null else CatalogShard(rows = list)
+    }
+
     private suspend fun shardedCatalog(grade: Int, track: String): List<ReferenceBankRow>? {
         val want = ReferenceBankContract.trackKey(track)
-        var best: List<ReferenceBankRow>? = null
-        var bestScore = -1
+        var best: CatalogShard? = null
         for (part in 1..CATALOG_MAX_PARTS) {
             val raw = fetchOrNull(ReferenceBankContract.catalogShardPath(grade, part)) ?: continue
-            val rows = runCatching {
-                json.decodeFromString<List<ReferenceBankRow>>(raw)
-            }.getOrNull()?.map { it.withFormulaTokens() } ?: continue
-            if (rows.isEmpty()) continue
-            val score = rows.count { ReferenceBankContract.trackKey(it.track) == want }
-            if (score > bestScore) { bestScore = score; best = rows }
-            if (score > 0) return rows
+            val shard = decodeShard(raw) ?: continue
+            val score = if (want.isBlank()) 0
+                        else shard.rows.count { ReferenceBankContract.trackKey(it.track) == want }
+            // V377 — هم‌رشته بودن سرآیند تکه هم امتیاز می‌گیرد (سطرهای قدیمی بی‌رشته‌اند).
+            val byHeader = want.isNotBlank() && ReferenceBankContract.trackKey(shard.track) == want
+            if (want.isNotBlank() && (score > 0 || byHeader)) {
+                return shard.rows.map { it.withFormulaTokens() }
+            }
+            if (best == null || shard.rows.size > best!!.rows.size) best = shard
         }
-        return best
+        return best?.rows?.map { it.withFormulaTokens() }
     }
 
     /** V370 — فهرست شناسه → صفحه، یک‌بار در هر نشست؛ نبودنش یعنی شارد صفحه‌ای نیست. */
@@ -164,7 +179,7 @@ class ReferenceBankRepository(
         const val CACHE_BYTES = 96L * 1024 * 1024
         const val CACHE_MAX_AGE_S = 300
 
-        /** V376 — سقف تکه‌های فهرست که برای یافتن رشتهٔ خواسته‌شده بررسی می‌شوند. */
-        const val CATALOG_MAX_PARTS = 8
+        /** V377 — پایهٔ دهم ۲۲ تکه دارد؛ سقف پیشین (۸) درس‌های آخر را جا می‌گذاشت. */
+        const val CATALOG_MAX_PARTS = 32
     }
 }

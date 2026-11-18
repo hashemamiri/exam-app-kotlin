@@ -321,44 +321,130 @@
   /* V376 — فهرست پایهٔ دهم ۴۲ مگابایت است و مرورگر آن را کامل نمی‌گیرد؛ پس فهرست
      تکه‌تکه (catalog/gN-s1..sM.json) خوانده می‌شود و تکهٔ هم‌رشته اول می‌آید.
      اگر هیچ تکه‌ای نبود، همان فایل کامل خوانده می‌شود؛ چیزی از دست نمی‌رود. */
-  var CATALOG_MAX_PARTS = 8;
-  function readCatalogShard(path, want) {
-    return getJSON(path).then(function (data) {
-      var rows = tokenizeRows(data);
-      if (!Array.isArray(rows) || !rows.length) return {rows: [], score: -1, hit: false};
-      var score = want ? rows.filter(function (r) { return trackKey(r.track) === want; }).length : rows.length;
-      return {rows: rows, score: score, hit: score > 0};
-    }).catch(function () { return {rows: [], score: -1, hit: false}; });
+  /* V377 — پایهٔ دهم ۲۲ تکه دارد؛ سقف ۸ خیلی از درس‌ها را جا می‌گذاشت. */
+  var CATALOG_MAX_PARTS = 32;
+  var BIG_SHARD_ROWS = 900;
+  function shardUrls(k) {
+    var urls = [];
+    for (var i = 1; i <= CATALOG_MAX_PARTS; i++) urls.push('catalog/g' + k + '-s' + i + '.json');
+    return urls;
   }
-  function bestOf(list) {
-    var best = list[0];
-    list.forEach(function (x) { if (x && (!best || x.score > best.score)) best = x; });
-    return best;
+  /* V377 — پیش از این، رشتهٔ خواسته‌شده روی «فیلد track داخل سطر» سنجیده می‌شد
+     که در تکه‌های خالی هیچ‌وقت پیدا نمی‌شد؛ حالا خودِ سرآیند تکه هم سنجیده می‌شود. */
+  function shardMatches(data, want) {
+    if (!want) return false;
+    if (data && typeof data === 'object' && !Array.isArray(data) && data.track) {
+      if (trackKey(data.track) === want) return true;
+    }
+    return false;
+  }
+  function readShardHead(path, want) {
+    return getJSON(path).then(function (data) {
+      return {data: data, rows: catalogRows(data),
+              meta: shardMatches(data, want), hit: !!(data && !Array.isArray(data) && data.track)};
+    }).catch(function () { return {data: null, rows: [], meta: false, hit: false}; });
   }
   function catalogSharded(grade, track) {
     var k = String(grade), want = track ? trackKey(track) : '';
-    var urls = [];
-    for (var i = 1; i <= CATALOG_MAX_PARTS; i++) urls.push('catalog/g' + k + '-s' + i + '.json');
+    var urls = shardUrls(k), found = [], best = null;
     return new Promise(function (resolve) {
-      Promise.all(urls.slice(0, 2).map(function (u) { return readCatalogShard(u, want); })).then(function (first) {
-        var best = bestOf(first);
-        if (best && best.hit) return resolve(best.rows);
-        var rest = urls.slice(2), queue = first.slice();
+      if (want) {
+        /* رشتهٔ برگزیده: تکه‌های هم‌رشته (با سرآیند یا با سطرهای هم‌رشته) جمع می‌شوند. */
         (function step(i) {
-          if (i >= rest.length) {
-            var b = bestOf(queue);
-            return resolve(b && b.rows.length ? b.rows : null);
+          if (i >= urls.length) {
+            return resolve(found.length ? [].concat.apply([], found) : (best && best.rows.length ? best.rows : null));
           }
-          readCatalogShard(rest[i], want).then(function (res) {
-            queue.push(res);
+          readShardHead(urls[i], want).then(function (res) {
+            var rows = res.rows || [];
+            var score = rows.filter(function (r) { return trackKey(r.track) === want; }).length;
+            if (res.meta || score > 0) {
+              found.push(rows);
+              if (score > (best ? best.score : -1)) best = {rows: rows, score: score};
+              return step(i + 1);
+            }
+            if (!best || rows.length > best.rows.length) best = {rows: rows, score: score};
             step(i + 1);
           }).catch(function () { step(i + 1); });
         })(0);
-      }).catch(function () { resolve(null); });
+      } else {
+        biggestShard(k).then(function (rows) { resolve(rows); });
+      }
     }).then(function (rows) {
       if (rows && rows.length) return rows;
-      return getJSON('catalog/g' + k + '.json').then(tokenizeRows);
+      return getJSON('catalog/g' + k + '.json').then(catalogRows);
     });
+  }
+  /* V377 — ریشهٔ فهرست: تک‌تکه‌ها {"grade","track","subject","rows"} هستند و
+     فایل کامل یک آرایه؛ هر دو یکسان خوانده می‌شوند. */
+  function catalogRows(data) {
+    if (Array.isArray(data)) return tokenizeRows(data);
+    if (data && Array.isArray(data.rows)) return tokenizeRows(data.rows);
+    return [];
+  }
+  function readCatalogShard(path) {
+    return getJSON(path).then(function (data) {
+      var rows = catalogRows(data);
+      return {rows: rows, hit: rows.length > 0};
+    }).catch(function () { return {rows: [], hit: false}; });
+  }
+  /* V377 — بزرگ‌ترین تکهٔ پایه، برای وقتی رشته‌ای انتخاب نشده است.
+     پیش‌تر «بیشترین امتیاز» با رشتهٔ خالی همه را صفر می‌کرد و اولین تکه
+     (که می‌توانست تکهٔ ریاضی باشد) برمی‌گشت. */
+  function biggestShard(k) {
+    var urls = [];
+    for (var i = 1; i <= CATALOG_MAX_PARTS; i++) urls.push('catalog/g' + k + '-s' + i + '.json');
+    var best = null;
+    (function step(i) {
+      if (i >= urls.length) return;
+      readCatalogShard(urls[i]).then(function (res) {
+        if (res.rows.length > (best ? best.rows.length : 0)) best = res;
+        if (best && best.rows.length >= BIG_SHARD_ROWS) return;
+        step(i + 1);
+      }).catch(function () { step(i + 1); });
+    })(0);
+    return new Promise(function (resolve) {
+      var tick = 0;
+      (function wait() {
+        if ((best && best.rows.length >= BIG_SHARD_ROWS) || tick++ > 80) return resolve(best);
+        setTimeout(wait, 120);
+      })();
+    }).then(function (b) { return b && b.rows.length ? b.rows : null; });
+  }
+  /* V377 — ریشهٔ فهرست: تک‌تکه‌ها {"grade","track","subject","rows"} هستند و
+     فایل کامل یک آرایه؛ هر دو یکسان خوانده می‌شوند. */
+  function catalogRows(data) {
+    if (Array.isArray(data)) return tokenizeRows(data);
+    if (data && Array.isArray(data.rows)) return tokenizeRows(data.rows);
+    return [];
+  }
+  function readCatalogShard(path) {
+    return getJSON(path).then(function (data) {
+      var rows = catalogRows(data);
+      return {rows: rows, hit: rows.length > 0};
+    }).catch(function () { return {rows: [], hit: false}; });
+  }
+  /* V377 — بزرگ‌ترین تکهٔ پایه، برای وقتی رشته‌ای انتخاب نشده است.
+     پیش‌تر «بیشترین امتیاز» با رشتهٔ خالی همه را صفر می‌کرد و اولین تکه
+     (که می‌توانست تکهٔ ریاضی باشد) برمی‌گشت. */
+  function biggestShard(k) {
+    var urls = [];
+    for (var i = 1; i <= CATALOG_MAX_PARTS; i++) urls.push('catalog/g' + k + '-s' + i + '.json');
+    var best = null;
+    (function step(i) {
+      if (i >= urls.length) return;
+      readCatalogShard(urls[i]).then(function (res) {
+        if (res.rows.length > (best ? best.rows.length : 0)) best = res;
+        if (best && best.rows.length >= BIG_SHARD_ROWS) return;
+        step(i + 1);
+      }).catch(function () { step(i + 1); });
+    })(0);
+    return new Promise(function (resolve) {
+      var tick = 0;
+      (function wait() {
+        if ((best && best.rows.length >= BIG_SHARD_ROWS) || tick++ > 80) return resolve(best);
+        setTimeout(wait, 120);
+      })();
+    }).then(function (b) { return b && b.rows.length ? b.rows : null; });
   }
   function catalog(grade, track) {
     var k = String(grade), ck = k + '|' + (track || '');
@@ -558,7 +644,7 @@
     bg.addEventListener('click', function (e) { if (e.target === bg) bg.remove(); });
     var st = {
       grade: 0, track: '', subject: '', chapter: '', type: '', difficulty: '', query: '',
-      page: 0, size: 25, image: '', rows: [], loaded: [], picked: {}, includeAnswer: true,
+      page: 0, size: 25, image: '', rows: [], loaded: [], picked: {}, includeAnswer: true, detailFailed: {},
       includeAnswerById: {}, details: {}, detailLoaded: {}, detailPending: {},
       filterOpen: true, searchOpen: false, missing: false, loading: false, note: null, error: null
     };
@@ -684,8 +770,12 @@
         st.difficulty = v; st.page = 0; draw();
       }));
       /* V369 — خواستهٔ کاربر: تصویردار/بدون تصویر */
-      body.appendChild(selectBox('تصویر', ['', '1', '0'], st.image, function (v) {
-        return v === '1' ? 'با تصویر' : v === '0' ? 'بدون تصویر' : 'همه';
+      /* V377 — گزینهٔ «با تصویر» فقط سؤال‌هایی را می‌آورد که تصویر صورت سؤال دارند؛
+         «تصویر گزینه» شمرده نمی‌شود (پیش‌تر سؤال‌هایی که فقط تصویر گزینه داشتند
+         در فیلتر «با تصویر» می‌آمدند). */
+      body.appendChild(selectBox('تصویر', ['', '1', 'option', '0'], st.image, function (v) {
+        return v === '1' ? 'با تصویر سؤال' : v === 'option' ? 'با تصویر گزینه'
+          : v === '0' ? 'بدون تصویر' : 'همه';
       }, function (v) { st.image = v; st.page = 0; draw(); }));
       /* V369 — خواستهٔ کاربر: تعداد نمایش در صفحه */
       body.appendChild(selectBox('تعداد در صفحه', [25, 50, 75, 100], st.size, function (v) {
@@ -694,11 +784,25 @@
       popup.appendChild(body); scrim.appendChild(popup); card.appendChild(scrim);
     }
 
-    /* V369 — سؤال تصویردار از فیلدهای شارد فهرست شناخته می‌شود. */
+    /* V377 — «تصویر سؤال» از «تصویر گزینه» جدا شد.
+       در فهرست پایهٔ دهم has_image همیشه false است و image_count صفر، ولی
+       image_urls پر است؛ و در csv قدیمی image_urls شامل تصویر گزینه هم بود.
+       پس: تعداد تصویرهای صورت سؤال از متن q_html (اگر رسیده باشد) شمرده می‌شود،
+       وگرنه image_urls منهای option_images. */
+    function rowImageCount(r) {
+      if (!r) return 0;
+      var opts = (r.option_images || []).filter(Boolean);
+      var urls = (r.image_urls || []).filter(Boolean);
+      if (r.q_html) {
+        var inText = imgUrls(r.q_html).filter(function (u) { return opts.indexOf(u) < 0; });
+        if (inText.length) return inText.length;
+      }
+      var rest = urls.filter(function (u) { return opts.indexOf(u) < 0; });
+      if (rest.length) return rest.length;
+      return Number(r.image_count) > 0 ? Number(r.image_count) : 0;
+    }
     function hasImageRow(r) {
-      if (!r) return false;
-      if (r.has_image || Number(r.image_count) > 0) return true;
-      return Array.isArray(r.image_urls) && r.image_urls.length > 0;
+      return rowImageCount(r) > 0;
     }
 
     function filtered() {
@@ -709,9 +813,12 @@
         if (st.chapter && r.chapter !== st.chapter) return false;
         if (st.type && r.type_fa !== st.type) return false;
         if (st.difficulty !== '' && Number(r.difficulty) !== Number(st.difficulty)) return false;
-        /* V369 — «با تصویر / بدون تصویر» */
-        if (st.image === '1' && !hasImageRow(r)) return false;
-        if (st.image === '0' && hasImageRow(r)) return false;
+        /* V377 — «با تصویر سؤال / با تصویر گزینه / بدون تصویر» */
+        var imgN = rowImageCount(r);
+        var optN = (r.option_images || []).filter(Boolean).length;
+        if (st.image === '1' && imgN <= 0) return false;
+        if (st.image === 'option' && optN <= 0) return false;
+        if (st.image === '0' && (imgN > 0 || optN > 0)) return false;
         if (s) {
           var p = st.details[r.id], detailText = p ? plain(p.q_html || '') + ' ' + (p.options || []).join(' ') : '';
           if ((String(r.text || '') + ' ' + detailText).toLowerCase().indexOf(s) < 0) return false;
@@ -736,8 +843,12 @@
           st.detailLoaded[g] = true;
           st.rows.forEach(function (r) { if (rowGrade(r) === g && all[String(r.id)]) st.details[r.id] = all[String(r.id)]; });
         }).catch(function (e) {
-          st.detailLoaded[g] = true;
-          st.error = st.error || ('بارگیری محتوای پایه ' + fa(g) + ' ناموفق بود.');
+          /* V377 — خطای یک‌باره («Network request failed») نباید این پایه را برای
+             همیشه «خوانده‌شده» علامت بزند و کارت‌ها را بی‌متن بگذارد. */
+          st.detailLoaded[g] = false;
+          st.detailFailed = st.detailFailed || {};
+          st.detailFailed[g] = true;
+          st.error = 'بارگیری متن سؤال‌های پایه ' + fa(g) + ' ناموفق بود؛ «تلاش دوباره» را بزنید.';
         }).then(function () { st.detailPending[g] = false; draw(); });
       });
       prefetchNext();
@@ -871,7 +982,9 @@
           var rowText = String(r.text || '').trim();
           if (rowText) item.appendChild(richInto(el('div', {class: 'ref-question-body'}), safeSnippet(rowText, 220)));
           else item.appendChild(el('div', {class: 'ref-question-body', style: 'opacity:.7;font-size:12px',
-            text: 'متن این سؤال در فهرست این پایه نیست؛ «پیش‌نمایش» متن کامل را نشان می‌دهد.'}));
+            text: (st.detailFailed && st.detailFailed[rowGrade(r)]
+              ? 'متن این سؤال در دسترس نیست؛ «پیش‌نمایش» را بزنید تا دوباره تلاش شود.'
+              : 'متن این سؤال در فهرست این پایه نیست؛ «پیش‌نمایش» متن کامل را نشان می‌دهد.')}));
           /* V375 — اگر متن کامل هنوز نرسیده، دست‌کم تصویرهای همین سطر از فهرست نشان داده شود.
              پایه‌هایی که شارد صفحه‌ای ندارند فقط فهرست دارند و پیش‌تر کارتشان بی‌تصویر می‌ماند. */
           if (Array.isArray(r.image_urls) && r.image_urls.length) {

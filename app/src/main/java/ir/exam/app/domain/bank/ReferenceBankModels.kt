@@ -90,6 +90,16 @@ object ReferenceBankContract {
     fun sameTrack(rowTrack: String, wanted: String): Boolean =
         wanted.isBlank() || trackKey(rowTrack) == trackKey(wanted)
 
+    /**
+     * V377 — شمار تصویرهای «صورت سؤال» در یک سطر فهرست.
+     *
+     * دو واقعیت داده: در فهرست پایهٔ دهم `has_image` همیشه false و `image_count`
+     * صفر است ولی `image_urls` پر است؛ و در ردیف‌های قدیمی `image_urls` نشانی
+     * تصویر گزینه را هم دارد. پس مبنای فیلتر «با تصویر»، خودِ نشانی‌ها هستند.
+     */
+    fun questionImageCount(row: ReferenceBankRow): Int =
+        row.imageUrls.count { it.isNotBlank() }.let { if (it > 0) it else row.imageCount.coerceAtLeast(0) }
+
     private val PRIMARY_SUBJECTS = listOf(
         "فارسی", "ریاضی", "علوم تجربی", "قرآن و تعلیمات اسلامی",
         "مطالعات اجتماعی", "هنر", "تربیت بدنی"
@@ -296,7 +306,18 @@ data class ReferenceBankRow(
     @SerialName("has_image") val hasImage: Boolean = false,
     @SerialName("image_count") val imageCount: Int = 0,
     @SerialName("image_urls") val imageUrls: List<String> = emptyList()
-)
+) {
+    /**
+     * V377 — تصویرهای «صورت سؤال».
+     *
+     * در فهرست پایهٔ دهم ستون has_image همیشه false و image_count صفر است، ولی
+     * image_urls پر است؛ و در ردیف‌های قدیمی image_urls تصویر گزینه را هم دارد.
+     * پس فیلتر «با تصویر» نباید به has_image تکیه کند.
+     */
+    fun questionImageCount(): Int = ReferenceBankContract.questionImageCount(this)
+
+    fun hasQuestionImage(): Boolean = questionImageCount() > 0
+}
 
 @Serializable
 data class ReferenceBankQuestion(

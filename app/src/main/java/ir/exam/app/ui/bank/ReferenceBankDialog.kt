@@ -300,9 +300,11 @@ private fun ReferenceBankFilter(
             viewModel.setReferenceDifficulty(value.toIntOrNull())
         }
         // V369 — خواستهٔ کاربر: تصویردار/بدون تصویر
+        // V377 — «با تصویر» فقط تصویر صورت سؤال؛ تصویر گزینه گزینهٔ جدا دارد.
         RefDropdown(
             "تصویر", state.referenceImageFilter,
-            listOf("" to "همه", "1" to "با تصویر", "0" to "بدون تصویر")
+            listOf("" to "همه", "1" to "با تصویر سؤال", "option" to "با تصویر گزینه",
+                   "0" to "بدون تصویر")
         ) { value -> viewModel.setReferenceImageFilter(value) }
         // V369 — خواستهٔ کاربر: تعداد نمایش در صفحه
         RefDropdown(
@@ -386,6 +388,16 @@ private fun ReferenceBankResults(
                                 "متن این سؤال در فهرست این پایه نیست؛ دکمهٔ «پیش‌نمایش» متن کامل را نشان می‌دهد.",
                                 style = MaterialTheme.typography.labelSmall
                             )
+                        }
+                        // V377 — اگر متن کامل نرسیده، دست‌کم تصویر صورت سؤال از فهرست دیده شود.
+                        if (detail == null && row.imageUrls.isNotEmpty()) {
+                            row.imageUrls.take(3).forEach { url ->
+                                RefBankImage(
+                                    url = url, contentDescription = "تصویر سؤال",
+                                    modifier = Modifier.fillMaxWidth().heightIn(max = 160.dp),
+                                    contentScale = ContentScale.Fit
+                                )
+                            }
                         }
                         Row(
                             Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),

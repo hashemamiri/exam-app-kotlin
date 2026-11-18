@@ -77,7 +77,7 @@ class V376_TrackFilterTest {
         val repoText = src(repository)
         assertTrue("اپ: خواندن تکه‌ای", "shardedCatalog" in repoText)
         assertTrue("اپ: مسیر تکه", "catalogShardPath" in src(models))
-        assertTrue("اپ: سقف تکه‌ها", "CATALOG_MAX_PARTS = 8" in repoText)
+        assertTrue("اپ: سقف تکه‌ها", "CATALOG_MAX_PARTS = 32" in repoText)
         assertTrue("اپ: تغییر رشته فهرست را از نو می‌خواند",
             "تکهٔ رشتهٔ تازه باید خوانده شود" in src(viewModel))
     }
