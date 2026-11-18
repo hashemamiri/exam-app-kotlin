@@ -77,9 +77,34 @@ class ReferenceBankRepository(
         }.getOrNull()
     }
 
-    suspend fun catalog(grade: Int): List<ReferenceBankRow> = withContext(Dispatchers.IO) {
+    /**
+     * V376 — فهرست پایهٔ دهم ۴۲ مگابایت است و در اپ نیمه‌کاره می‌ماند؛ پس اول
+     * تکه‌های کوچک (catalog/gN-s1..sM.json) خوانده می‌شوند و تکه‌ای که [track]
+     * را دارد می‌ماند. اگر تکه‌ای نبود، همان فایل کامل خوانده می‌شود.
+     */
+    suspend fun catalog(grade: Int, track: String = ""): List<ReferenceBankRow> = withContext(Dispatchers.IO) {
+        if (track.isNotBlank()) {
+            shardedCatalog(grade, track)?.let { return@withContext it }
+        }
         val raw = fetch(ReferenceBankContract.catalogPath(grade))
         json.decodeFromString<List<ReferenceBankRow>>(raw).map { it.withFormulaTokens() }
+    }
+
+    private suspend fun shardedCatalog(grade: Int, track: String): List<ReferenceBankRow>? {
+        val want = ReferenceBankContract.trackKey(track)
+        var best: List<ReferenceBankRow>? = null
+        var bestScore = -1
+        for (part in 1..CATALOG_MAX_PARTS) {
+            val raw = fetchOrNull(ReferenceBankContract.catalogShardPath(grade, part)) ?: continue
+            val rows = runCatching {
+                json.decodeFromString<List<ReferenceBankRow>>(raw)
+            }.getOrNull()?.map { it.withFormulaTokens() } ?: continue
+            if (rows.isEmpty()) continue
+            val score = rows.count { ReferenceBankContract.trackKey(it.track) == want }
+            if (score > bestScore) { bestScore = score; best = rows }
+            if (score > 0) return rows
+        }
+        return best
     }
 
     /** V370 — فهرست شناسه → صفحه، یک‌بار در هر نشست؛ نبودنش یعنی شارد صفحه‌ای نیست. */
@@ -138,5 +163,8 @@ class ReferenceBankRepository(
         const val CACHE_DIR = "refbank_http"
         const val CACHE_BYTES = 96L * 1024 * 1024
         const val CACHE_MAX_AGE_S = 300
+
+        /** V376 — سقف تکه‌های فهرست که برای یافتن رشتهٔ خواسته‌شده بررسی می‌شوند. */
+        const val CATALOG_MAX_PARTS = 8
     }
 }

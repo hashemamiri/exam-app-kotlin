@@ -71,7 +71,7 @@ data class QuestionBankUiState(
     val referenceFiltered: List<ReferenceBankRow>
         get() = referenceRows.filter { r ->
             (referenceGrade == 0 || r.grade == referenceGrade) &&
-                (referenceTrack.isBlank() || r.track == referenceTrack) &&
+                ReferenceBankContract.sameTrack(r.track, referenceTrack) &&
                 (referenceSubject.isBlank() || r.subject == referenceSubject) &&
                 (referenceChapter.isBlank() || r.chapter == referenceChapter) &&
                 (referenceType.isBlank() || r.typeFa == referenceType) &&
@@ -104,7 +104,7 @@ data class QuestionBankUiState(
         get() {
             if (referenceGrade == 0) return emptyList()
             val fromRows = referenceRows
-                .filter { referenceTrack.isBlank() || it.track == referenceTrack }
+                .filter { ReferenceBankContract.sameTrack(it.track, referenceTrack) }
                 .map { it.subject }.filter { it.isNotBlank() }.distinct().sorted()
             return fromRows.ifEmpty { ReferenceBankContract.subjectsFor(referenceGrade, referenceTrack) }
         }
@@ -114,7 +114,7 @@ data class QuestionBankUiState(
         get() {
             if (referenceSubject.isBlank()) return emptyList()
             return referenceRows
-                .filter { referenceTrack.isBlank() || it.track == referenceTrack }
+                .filter { ReferenceBankContract.sameTrack(it.track, referenceTrack) }
                 .filter { it.subject == referenceSubject }
                 .map { it.chapter }.filter { it.isNotBlank() }.distinct().sorted()
         }
@@ -312,8 +312,16 @@ class QuestionBankViewModel(
         loadReferenceCatalog()
     }
 
-    fun setReferenceTrack(value: String) =
-        _state.update { it.copy(referenceTrack = value, referenceSubject = "", referenceChapter = "", referencePage = 0) }
+    fun setReferenceTrack(value: String) {
+        _state.update {
+            it.copy(referenceTrack = value, referenceSubject = "", referenceChapter = "", referencePage = 0)
+        }
+        // V376 — فهرست تکه‌تکه است؛ تکهٔ رشتهٔ تازه باید خوانده شود، وگرنه صفحه خالی می‌ماند.
+        val st = _state.value
+        if (st.referenceGrade == 0) return
+        val hit = st.referenceRows.count { ReferenceBankContract.sameTrack(it.track, value) }
+        if (hit == 0) loadReferenceCatalog()
+    }
 
     fun setReferenceSubject(value: String) =
         _state.update { it.copy(referenceSubject = value, referenceChapter = "", referencePage = 0) }
@@ -458,7 +466,7 @@ class QuestionBankViewModel(
                 )
             }
         } else {
-            runCatching { referenceRepository.catalog(grade) }
+            runCatching { referenceRepository.catalog(grade, _state.value.referenceTrack) }
                 .onSuccess { rows ->
                     _state.update {
                         it.copy(referenceLoading = false, referenceRows = rows, referencePage = 0,

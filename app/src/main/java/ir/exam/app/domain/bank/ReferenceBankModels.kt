@@ -72,7 +72,23 @@ object ReferenceBankContract {
     )
     val DROPPED_TYPES = setOf("درسنامه")
 
-    val TRACKS = listOf("", "عمومی", "ریاضی فیزیک", "علوم تجربی", "انسانی", "هنرستان")
+    // V376 — «علوم و معارف اسلامی» در دادهٔ پایهٔ دهم هست ولی در این فهرست نبود.
+    val TRACKS = listOf("", "عمومی", "ریاضی فیزیک", "علوم تجربی", "انسانی", "علوم و معارف اسلامی", "هنرستان", "معارف")
+
+    /** V376 — نام‌های هم‌خوان: داده با نام کامل می‌آید، کاربر ممکن است کوتاه بگوید. */
+    private val TRACK_ALIASES = mapOf(
+        "معارف" to "علوم و معارف اسلامی",
+        "علوم و معارف" to "علوم و معارف اسلامی",
+        "ادبیات و علوم انسانی" to "انسانی"
+    )
+
+    fun trackKey(track: String): String {
+        val clean = track.replace("\u200c", "").trim()
+        return TRACK_ALIASES[clean] ?: clean
+    }
+
+    fun sameTrack(rowTrack: String, wanted: String): Boolean =
+        wanted.isBlank() || trackKey(rowTrack) == trackKey(wanted)
 
     private val PRIMARY_SUBJECTS = listOf(
         "فارسی", "ریاضی", "علوم تجربی", "قرآن و تعلیمات اسلامی",
@@ -104,8 +120,11 @@ object ReferenceBankContract {
     private val ALL_HIGH_SUBJECTS = TRACK_SUBJECTS.values.flatten().distinct().sorted()
 
     /** پایههای ۱ تا ۹ فیلد رشته ندارند؛ فهرست درسها ثابت و بسیار کوچک است. */
-    fun tracksFor(grade: Int): List<String> =
-        if (grade >= TRACK_MIN_GRADE) TRACKS else emptyList()
+    // V376 — پایهٔ دهم هیچ سؤال «عمومی» ندارد؛ پیشنهاد آن کاربر را به صفر سطر می‌برد.
+    fun tracksFor(grade: Int): List<String> {
+        if (grade < TRACK_MIN_GRADE) return emptyList()
+        return TRACKS.filter { !(grade == 10 && it == "عمومی") }
+    }
 
     /** فهرست درسهای همان پایه/رشته؛ وقتی شاردی بارگذاری نشده هم فیلتر خالی نمیماند. */
     fun subjectsFor(grade: Int, track: String = ""): List<String> = when {
@@ -117,6 +136,10 @@ object ReferenceBankContract {
     }
 
     fun catalogPath(grade: Int): String = "catalog/g$grade.json"
+
+    /** V376 — فهرست تکه‌ای (catalog/gN-s1..sM.json) برای پایه‌هایی که فایل کامل بزرگ است. */
+    fun catalogShardPath(grade: Int, part: Int): String = "catalog/g$grade-s$part.json"
+
     fun questionsPath(grade: Int): String = "questions/g$grade.json"
     fun imageUrl(base: String, file: String): String = base.trimEnd('/') + "/images/" + file
 }

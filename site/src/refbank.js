@@ -18,7 +18,23 @@
   var BASE = String(root.__REF_BANK_BASE__ || 'https://azmoon-media.s3.ir-thr-at1.arvanstorage.ir/reference-bank').replace(/\/+$/, '');
   var BP = root.BankPicker;
   var DIFF = (BP && BP.DIFFICULTY_LABELS) || ['تعییننشده', 'ساده', 'متوسط', 'دشوار', 'خیلی دشوار'];
-  var TRACKS = ['', 'عمومی', 'ریاضی فیزیک', 'علوم تجربی', 'انسانی', 'هنرستان'];
+  /* V376 — «علوم و معارف اسلامی» در دادهٔ پایهٔ دهم هست ولی در این فهرست نبود؛
+     کاربر رشته را انتخاب می‌کرد و صفر سطر می‌دید. تطبیق هم با نام کامل و هم
+     با نام کوتاه («معارف») انجام می‌شود. */
+  var TRACKS = ['', 'عمومی', 'ریاضی فیزیک', 'علوم تجربی', 'انسانی', 'علوم و معارف اسلامی', 'هنرستان', 'معارف'];
+  var TRACK_ALIASES = {
+    'معارف': 'علوم و معارف اسلامی',
+    'علوم و معارف': 'علوم و معارف اسلامی',
+    'ادبیات و علوم انسانی': 'انسانی'
+  };
+  function trackKey(v) {
+    v = String(v == null ? '' : v).replace(/‌/g, '').trim();
+    return TRACK_ALIASES[v] || v;
+  }
+  function sameTrack(rowTrack, wanted) {
+    if (!wanted) return true;
+    return trackKey(rowTrack) === trackKey(wanted);
+  }
   var TYPES = ['تستی', 'تشریحی', 'جای خالی', 'صحیح/غلط', 'دسته‌بندی', 'مرتب‌سازی', 'کوتاه‌پاسخ'];
   var PRIMARY = ['فارسی', 'ریاضی', 'علوم تجربی', 'قرآن و تعلیمات اسلامی', 'مطالعات اجتماعی', 'هنر', 'تربیت بدنی'];
   var MIDDLE = ['فارسی', 'ریاضی', 'علوم تجربی', 'عربی', 'انگلیسی', 'مطالعات اجتماعی', 'قرآن و تعلیمات اسلامی', 'کامپیوتر', 'هنر', 'تربیت بدنی'];
@@ -302,10 +318,52 @@
       });
     });
   }
-  function catalog(grade) {
-    var k = String(grade);
-    if (!cache.catalog[k]) cache.catalog[k] = getJSON('catalog/g' + k + '.json').then(tokenizeRows);
-    return cache.catalog[k];
+  /* V376 — فهرست پایهٔ دهم ۴۲ مگابایت است و مرورگر آن را کامل نمی‌گیرد؛ پس فهرست
+     تکه‌تکه (catalog/gN-s1..sM.json) خوانده می‌شود و تکهٔ هم‌رشته اول می‌آید.
+     اگر هیچ تکه‌ای نبود، همان فایل کامل خوانده می‌شود؛ چیزی از دست نمی‌رود. */
+  var CATALOG_MAX_PARTS = 8;
+  function readCatalogShard(path, want) {
+    return getJSON(path).then(function (data) {
+      var rows = tokenizeRows(data);
+      if (!Array.isArray(rows) || !rows.length) return {rows: [], score: -1, hit: false};
+      var score = want ? rows.filter(function (r) { return trackKey(r.track) === want; }).length : rows.length;
+      return {rows: rows, score: score, hit: score > 0};
+    }).catch(function () { return {rows: [], score: -1, hit: false}; });
+  }
+  function bestOf(list) {
+    var best = list[0];
+    list.forEach(function (x) { if (x && (!best || x.score > best.score)) best = x; });
+    return best;
+  }
+  function catalogSharded(grade, track) {
+    var k = String(grade), want = track ? trackKey(track) : '';
+    var urls = [];
+    for (var i = 1; i <= CATALOG_MAX_PARTS; i++) urls.push('catalog/g' + k + '-s' + i + '.json');
+    return new Promise(function (resolve) {
+      Promise.all(urls.slice(0, 2).map(function (u) { return readCatalogShard(u, want); })).then(function (first) {
+        var best = bestOf(first);
+        if (best && best.hit) return resolve(best.rows);
+        var rest = urls.slice(2), queue = first.slice();
+        (function step(i) {
+          if (i >= rest.length) {
+            var b = bestOf(queue);
+            return resolve(b && b.rows.length ? b.rows : null);
+          }
+          readCatalogShard(rest[i], want).then(function (res) {
+            queue.push(res);
+            step(i + 1);
+          }).catch(function () { step(i + 1); });
+        })(0);
+      }).catch(function () { resolve(null); });
+    }).then(function (rows) {
+      if (rows && rows.length) return rows;
+      return getJSON('catalog/g' + k + '.json').then(tokenizeRows);
+    });
+  }
+  function catalog(grade, track) {
+    var k = String(grade), ck = k + '|' + (track || '');
+    if (!cache.catalog[ck]) cache.catalog[ck] = catalogSharded(k, track || '');
+    return cache.catalog[ck];
   }
   function questions(grade) {
     var k = String(grade);
@@ -382,7 +440,13 @@
     return out.sort(function (a, b) { return a.localeCompare(b, 'fa'); });
   }
   function gradeLabel(g) { return Number(g) === 0 ? 'همهٔ پایه‌ها' : 'پایهٔ ' + fa(g); }
-  function tracksFor(g) { return Number(g) >= 10 ? TRACKS : []; }
+  /* V376 — در پایهٔ دهم هیچ سؤالی با رشتهٔ «عمومی» نیست؛ پیشنهاد آن کاربر را به
+     صفر سطر می‌برد. بقیهٔ رشته‌ها (از جمله معارف اسلامی) می‌مانند. */
+  function tracksFor(g) {
+    var n = Number(g) || 0;
+    if (n < 10) return [];
+    return TRACKS.filter(function (t) { return !(n === 10 && t === 'عمومی'); });
+  }
   function subjectsFor(g, track) {
     g = Number(g);
     if (g >= 1 && g <= 6) return PRIMARY;
@@ -560,14 +624,14 @@
     }
     function subjectOptions() {
       if (!st.grade) return [];
-      var base = st.rows.filter(function (r) { return !st.track || String(r.track || '') === st.track; });
+      var base = st.rows.filter(function (r) { return sameTrack(r.track, st.track); });
       var out = uniq(base, 'subject');
       return out.length ? out : subjectsFor(st.grade, st.track);
     }
     function chapterOptions() {
       if (!st.subject) return [];
       return uniq(st.rows.filter(function (r) {
-        return (!st.track || String(r.track || '') === st.track) && r.subject === st.subject;
+        return sameTrack(r.track, st.track) && r.subject === st.subject;
       }), 'chapter');
     }
     function typeOptions() {
@@ -596,9 +660,16 @@
         st.grade = Number(v) || 0; st.track = ''; st.subject = ''; st.chapter = '';
         st.page = 0; st.picked = {}; st.includeAnswerById = {}; st.error = null; load();
       }));
-      if (Number(st.grade) >= 10) body.appendChild(selectBox('رشته', TRACKS, st.track, function (t) { return t || 'همهٔ رشته‌ها'; }, function (v) {
-        st.track = v; st.subject = ''; st.chapter = ''; st.page = 0; draw();
+      if (Number(st.grade) >= 10) body.appendChild(selectBox('رشته', tracksFor(st.grade), st.track, function (t) { return t || 'همهٔ رشته‌ها'; }, function (v) {
+        var had = st.rows.length;
+        st.track = v; st.subject = ''; st.chapter = ''; st.page = 0; st.picked = {};
+        draw();
+        /* V376 — اگر سطرها از تکهٔ رشتهٔ دیگری آمده‌اند، فهرست از نو خوانده می‌شود. */
+        var hit = 0;
+        st.rows.forEach(function (r) { if (sameTrack(r.track, v)) hit++; });
+        if (!had || (!hit && v)) load();
       }));
+
       body.appendChild(selectBox('درس', [''].concat(subjectOptions()), st.subject, function (x) { return x || 'همهٔ درس‌ها'; }, function (v) {
         st.subject = v; st.chapter = ''; st.page = 0; draw();
       }));
@@ -633,7 +704,7 @@
     function filtered() {
       var s = String(st.query || '').toLowerCase();
       return st.rows.filter(function (r) {
-        if (st.track && String(r.track || '') !== st.track) return false;
+        if (!sameTrack(r.track, st.track)) return false;
         if (st.subject && r.subject !== st.subject) return false;
         if (st.chapter && r.chapter !== st.chapter) return false;
         if (st.type && r.type_fa !== st.type) return false;
@@ -830,7 +901,7 @@
     }
     function load() {
       st.loading = true; st.error = null; draw();
-      var task = st.grade === 0 ? catalogAll() : catalog(st.grade).then(function (rows) {
+      var task = st.grade === 0 ? catalogAll() : catalog(st.grade, st.track).then(function (rows) {
         return {rows: Array.isArray(rows) ? rows : [], loaded: (rows && rows.length) ? [st.grade] : []};
       }).catch(function (e) { return {rows: [], loaded: [], error: String(e.message || e)}; });
       task.then(function (res) {

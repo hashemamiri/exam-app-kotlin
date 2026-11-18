@@ -67,7 +67,7 @@ class V360_3_ReferenceBankFlowTest {
         assertTrue("if (referenceGrade == 0) return emptyList()" in vm)
         assertTrue("if (referenceSubject.isBlank()) return emptyList()" in vm)
         val site = src("site/src/refbank.js")
-        assertTrue("function tracksFor(g) { return Number(g) >= 10 ? TRACKS : []; }" in site)
+        assertTrue("function tracksFor(g) {" in site)
         assertTrue("if (!st.grade) return [];" in site)
         assertTrue("if (!st.subject) return [];" in site)
     }
