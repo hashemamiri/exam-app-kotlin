@@ -738,10 +738,9 @@
       var g = Number(st.grade);
       var base = st.rows.filter(function (r) { return sameTrack(r.track, st.track); });
       if (g >= 1 && g <= 9) {
-        var rec = recognizedSubjects(g), seen = {}, out = [];
-        curriculumSubjects(g).concat(uniq(base, 'subject').filter(function (s) { return rec[s]; }))
-          .forEach(function (s) { if (s && !seen[s]) { seen[s] = 1; out.push(s); } });
-        return out;
+        var rec = recognizedSubjects(g);
+        var out = uniq(base, 'subject').filter(function (s) { return rec[s]; });
+        return out.length ? out : curriculumSubjects(g);
       }
       var out = uniq(base, 'subject');
       return out.length ? out : subjectsFor(st.grade, st.track);

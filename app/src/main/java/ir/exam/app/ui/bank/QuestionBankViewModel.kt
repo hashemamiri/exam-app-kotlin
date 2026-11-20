@@ -109,11 +109,14 @@ data class QuestionBankUiState(
         get() {
             if (referenceGrade == 0) return emptyList()
             if (referenceGrade in 1..9) {
+                // V378 — فقط درس‌های رسمی که در دادهٔ همین پایه واقعاً سؤال دارند؛
+                // نام‌های هم‌خانوادهٔ رسمی موجود در داده هم اضافه می‌شوند. اگر داده‌ای
+                // نباشد (پایهٔ خالی یا بارگذاری‌نشده) فهرست رسمی کامل نشان داده می‌شود.
                 val recognized = ReferenceBankContract.recognizedSubjects(referenceGrade)
                 val fromRows = referenceRows
                     .filter { ReferenceBankContract.sameTrack(it.track, referenceTrack) }
                     .map { it.subject }.filter { it.isNotBlank() && it in recognized }.distinct().sorted()
-                return (ReferenceBankContract.curriculumSubjects(referenceGrade) + fromRows).distinct()
+                return fromRows.ifEmpty { ReferenceBankContract.curriculumSubjects(referenceGrade) }
             }
             val fromRows = referenceRows
                 .filter { ReferenceBankContract.sameTrack(it.track, referenceTrack) }
