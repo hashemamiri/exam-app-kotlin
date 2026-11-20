@@ -20,6 +20,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.ensureActive
 
 data class QuestionBankUiState(
     val loading: Boolean = true,
@@ -110,13 +112,12 @@ data class QuestionBankUiState(
             if (referenceGrade == 0) return emptyList()
             if (referenceGrade in 1..9) {
                 // V378 — فقط درس‌های رسمی که در دادهٔ همین پایه واقعاً سؤال دارند؛
-                // نام‌های هم‌خانوادهٔ رسمی موجود در داده هم اضافه می‌شوند. اگر داده‌ای
-                // نباشد (پایهٔ خالی یا بارگذاری‌نشده) فهرست رسمی کامل نشان داده می‌شود.
+                // نام‌های هم‌خانوادهٔ رسمی موجود در داده هم اضافه می‌شوند؛ در نبود داده فهرست خالی است.
                 val recognized = ReferenceBankContract.recognizedSubjects(referenceGrade)
                 val fromRows = referenceRows
-                    .filter { ReferenceBankContract.sameTrack(it.track, referenceTrack) }
+                    .filter { it.grade == referenceGrade && ReferenceBankContract.sameTrack(it.track, referenceTrack) }
                     .map { it.subject }.filter { it.isNotBlank() && it in recognized }.distinct().sorted()
-                return fromRows.ifEmpty { ReferenceBankContract.curriculumSubjects(referenceGrade) }
+                return fromRows
             }
             val fromRows = referenceRows
                 .filter { ReferenceBankContract.sameTrack(it.track, referenceTrack) }
@@ -331,11 +332,6 @@ class QuestionBankViewModel(
         _state.update {
             it.copy(referenceTrack = value, referenceSubject = "", referenceChapter = "", referencePage = 0)
         }
-        // V376 — فهرست تکه‌تکه است؛ تکهٔ رشتهٔ تازه باید خوانده شود، وگرنه صفحه خالی می‌ماند.
-        val st = _state.value
-        if (st.referenceGrade == 0) return
-        val hit = st.referenceRows.count { ReferenceBankContract.sameTrack(it.track, value) }
-        if (hit == 0) loadReferenceCatalog()
     }
 
     fun setReferenceSubject(value: String) =
@@ -459,44 +455,56 @@ class QuestionBankViewModel(
     fun clearReferencePicks() = _state.update { it.copy(referencePicked = emptySet()) }
 
     /** V360.5 — پایهٔ «همه» یعنی فقط شاردهایی که واقعاً بارگذاری شدهاند. */
-    fun loadReferenceCatalog() = viewModelScope.launch {
-        _state.update { it.copy(referenceLoading = true, referenceError = null) }
-        val grade = _state.value.referenceGrade
-        if (grade == 0) {
-            val merged = mutableListOf<ReferenceBankRow>()
-            val loaded = mutableListOf<Int>()
-            for (g in ReferenceBankContract.MIN_GRADE..ReferenceBankContract.MAX_GRADE) {
-                runCatching { referenceRepository.catalog(g) }.onSuccess { rows ->
-                    if (rows.isNotEmpty()) { merged.addAll(rows); loaded.add(g) }
-                }
-            }
-            _state.update {
-                it.copy(
-                    referenceLoading = false,
-                    referenceRows = merged,
-                    referencePage = 0,
-                    referenceCatalogMissing = merged.isEmpty(),
-                    referenceLoadedNote = if (loaded.isEmpty()) "هیچ پایهای بارگذاری نشده است."
-                        else null
-                )
-            }
-        } else {
-            runCatching { referenceRepository.catalog(grade, _state.value.referenceTrack) }
-                .onSuccess { rows ->
-                    _state.update {
-                        it.copy(referenceLoading = false, referenceRows = rows, referencePage = 0,
-                            referenceCatalogMissing = rows.isEmpty(),
-                            referenceLoadedNote = if (rows.isEmpty()) "فهرست این پایه هنوز بارگذاری نشده است." else null)
+    private var referenceCatalogGeneration = 0
+    private var referenceCatalogJob: Job? = null
+
+    fun loadReferenceCatalog() {
+        val generation = ++referenceCatalogGeneration
+        referenceCatalogJob?.cancel()
+        referenceCatalogJob = viewModelScope.launch {
+            _state.update { it.copy(referenceLoading = true, referenceError = null) }
+            val grade = _state.value.referenceGrade
+            if (grade == 0) {
+                val merged = mutableListOf<ReferenceBankRow>()
+                val loaded = mutableListOf<Int>()
+                for (g in ReferenceBankContract.MIN_GRADE..ReferenceBankContract.MAX_GRADE) {
+                    coroutineContext.ensureActive()
+                    runCatching { referenceRepository.catalog(g) }.onSuccess { rows ->
+                        if (rows.isNotEmpty()) { merged.addAll(rows); loaded.add(g) }
                     }
                 }
-                .onFailure { e ->
-                    _state.update {
-                        it.copy(referenceLoading = false, referenceRows = emptyList(),
-                            referenceCatalogMissing = true,
-                            referenceLoadedNote = "فهرست این پایه هنوز بارگذاری نشده است.",
-                            referenceError = safeBankError(e))
-                    }
+                coroutineContext.ensureActive()
+                if (generation != referenceCatalogGeneration) return@launch
+                _state.update {
+                    it.copy(
+                        referenceLoading = false,
+                        referenceRows = merged,
+                        referencePage = 0,
+                        referenceCatalogMissing = merged.isEmpty(),
+                        referenceLoadedNote = if (loaded.isEmpty()) "هیچ پایهای بارگذاری نشده است."
+                            else null
+                    )
                 }
+            } else {
+                runCatching { referenceRepository.catalog(grade, _state.value.referenceTrack) }
+                    .onSuccess { rows ->
+                        if (generation != referenceCatalogGeneration) return@onSuccess
+                        _state.update {
+                            it.copy(referenceLoading = false, referenceRows = rows, referencePage = 0,
+                                referenceCatalogMissing = rows.isEmpty(),
+                                referenceLoadedNote = if (rows.isEmpty()) "فهرست این پایه هنوز بارگذاری نشده است." else null)
+                        }
+                    }
+                    .onFailure { e ->
+                        if (generation != referenceCatalogGeneration) return@onFailure
+                        _state.update {
+                            it.copy(referenceLoading = false, referenceRows = emptyList(),
+                                referenceCatalogMissing = true,
+                                referenceLoadedNote = "فهرست این پایه هنوز بارگذاری نشده است.",
+                                referenceError = safeBankError(e))
+                        }
+                    }
+            }
         }
     }
 

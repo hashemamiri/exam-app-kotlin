@@ -70,7 +70,7 @@ class V376_TrackFilterTest {
     @Test
     fun `grade ten catalog is read in shards`() {
         val js = src(site)
-        assertTrue("تکه‌های فهرست (سایت)", "catalog/g' + k + '-s' + i + '.json'" in js)
+        assertTrue("تکه‌های فهرست (سایت)", "catalog/g' + grade + '-s' + i + '.json'" in js)
         assertTrue("رهیافت فهرست تکه‌ای", "function catalogSharded(grade, track)" in js)
         assertTrue("فراخوانی با رشته", "catalog(st.grade, st.track)" in js)
         assertTrue("پاییزگاه شارد کامل", "catalog/g' + k + '.json'" in js)
@@ -78,8 +78,8 @@ class V376_TrackFilterTest {
         assertTrue("اپ: خواندن تکه‌ای", "shardedCatalog" in repoText)
         assertTrue("اپ: مسیر تکه", "catalogShardPath" in src(models))
         assertTrue("اپ: سقف تکه‌ها", "CATALOG_MAX_PARTS = 32" in repoText)
-        assertTrue("اپ: تغییر رشته فهرست را از نو می‌خواند",
-            "تکهٔ رشتهٔ تازه باید خوانده شود" in src(viewModel))
+        assertTrue("اپ: فیلتر رشته روی سطرهای کامل اعمال می‌شود",
+            "ReferenceBankContract.sameTrack" in src(viewModel))
     }
 
     @Test

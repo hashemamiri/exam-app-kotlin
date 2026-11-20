@@ -318,137 +318,40 @@
       });
     });
   }
-  /* V376 — فهرست پایهٔ دهم ۴۲ مگابایت است و مرورگر آن را کامل نمی‌گیرد؛ پس فهرست
-     تکه‌تکه (catalog/gN-s1..sM.json) خوانده می‌شود و تکهٔ هم‌رشته اول می‌آید.
-     اگر هیچ تکه‌ای نبود، همان فایل کامل خوانده می‌شود؛ چیزی از دست نمی‌رود. */
-  /* V377 — پایهٔ دهم ۲۲ تکه دارد؛ سقف ۸ خیلی از درس‌ها را جا می‌گذاشت. */
+  /* V379 — دادهٔ پایه کامل است یا خطا؛ هرگز یک تکه را به‌جای کل پایه جا نمی‌زنیم. */
   var CATALOG_MAX_PARTS = 32;
-  var BIG_SHARD_ROWS = 900;
-  function shardUrls(k) {
-    var urls = [];
-    for (var i = 1; i <= CATALOG_MAX_PARTS; i++) urls.push('catalog/g' + k + '-s' + i + '.json');
-    return urls;
-  }
-  /* V377 — پیش از این، رشتهٔ خواسته‌شده روی «فیلد track داخل سطر» سنجیده می‌شد
-     که در تکه‌های خالی هیچ‌وقت پیدا نمی‌شد؛ حالا خودِ سرآیند تکه هم سنجیده می‌شود. */
-  function shardMatches(data, want) {
-    if (!want) return false;
-    if (data && typeof data === 'object' && !Array.isArray(data) && data.track) {
-      if (trackKey(data.track) === want) return true;
+  function catalogRows(data) {
+    if (Array.isArray(data)) return tokenizeRows(data);
+    if (data && Array.isArray(data.rows)) {
+      return tokenizeRows(data.rows).map(function (r) {
+        if (!r.track && data.track) r.track = data.track;
+        return r;
+      });
     }
-    return false;
-  }
-  function readShardHead(path, want) {
-    return getJSON(path).then(function (data) {
-      return {data: data, rows: catalogRows(data),
-              meta: shardMatches(data, want), hit: !!(data && !Array.isArray(data) && data.track)};
-    }).catch(function () { return {data: null, rows: [], meta: false, hit: false}; });
+    throw new Error('ساختار فهرست بانک نامعتبر است');
   }
   function catalogSharded(grade, track) {
-    var k = String(grade), want = track ? trackKey(track) : '';
-    var urls = shardUrls(k), found = [], best = null;
-    return new Promise(function (resolve) {
-      if (want) {
-        /* رشتهٔ برگزیده: تکه‌های هم‌رشته (با سرآیند یا با سطرهای هم‌رشته) جمع می‌شوند. */
-        (function step(i) {
-          if (i >= urls.length) {
-            return resolve(found.length ? [].concat.apply([], found) : (best && best.rows.length ? best.rows : null));
-          }
-          readShardHead(urls[i], want).then(function (res) {
-            var rows = res.rows || [];
-            var score = rows.filter(function (r) { return trackKey(r.track) === want; }).length;
-            if (res.meta || score > 0) {
-              found.push(rows);
-              if (score > (best ? best.score : -1)) best = {rows: rows, score: score};
-              return step(i + 1);
-            }
-            if (!best || rows.length > best.rows.length) best = {rows: rows, score: score};
-            step(i + 1);
-          }).catch(function () { step(i + 1); });
-        })(0);
-      } else {
-        biggestShard(k).then(function (rows) { resolve(rows); });
-      }
-    }).then(function (rows) {
-      if (rows && rows.length) return rows;
-      return getJSON('catalog/g' + k + '.json').then(catalogRows);
+    var paths = [];
+    for (var i = 1; i <= CATALOG_MAX_PARTS; i++) paths.push('catalog/g' + grade + '-s' + i + '.json');
+    return Promise.all(paths.map(function (path) {
+      return getJSON(path).then(catalogRows).catch(function (e) {
+        if (String(e.message || e) === 'HTTP 404') return null;
+        throw e;
+      });
+    })).then(function (parts) {
+      var present = parts.filter(function (p) { return p !== null; });
+      if (!present.length) return getJSON('catalog/g' + grade + '.json').then(catalogRows);
+      return [].concat.apply([], present);
     });
   }
-  /* V377 — ریشهٔ فهرست: تک‌تکه‌ها {"grade","track","subject","rows"} هستند و
-     فایل کامل یک آرایه؛ هر دو یکسان خوانده می‌شوند. */
-  function catalogRows(data) {
-    if (Array.isArray(data)) return tokenizeRows(data);
-    if (data && Array.isArray(data.rows)) return tokenizeRows(data.rows);
-    return [];
-  }
-  function readCatalogShard(path) {
-    return getJSON(path).then(function (data) {
-      var rows = catalogRows(data);
-      return {rows: rows, hit: rows.length > 0};
-    }).catch(function () { return {rows: [], hit: false}; });
-  }
-  /* V377 — بزرگ‌ترین تکهٔ پایه، برای وقتی رشته‌ای انتخاب نشده است.
-     پیش‌تر «بیشترین امتیاز» با رشتهٔ خالی همه را صفر می‌کرد و اولین تکه
-     (که می‌توانست تکهٔ ریاضی باشد) برمی‌گشت. */
-  function biggestShard(k) {
-    var urls = [];
-    for (var i = 1; i <= CATALOG_MAX_PARTS; i++) urls.push('catalog/g' + k + '-s' + i + '.json');
-    var best = null;
-    (function step(i) {
-      if (i >= urls.length) return;
-      readCatalogShard(urls[i]).then(function (res) {
-        if (res.rows.length > (best ? best.rows.length : 0)) best = res;
-        if (best && best.rows.length >= BIG_SHARD_ROWS) return;
-        step(i + 1);
-      }).catch(function () { step(i + 1); });
-    })(0);
-    return new Promise(function (resolve) {
-      var tick = 0;
-      (function wait() {
-        if ((best && best.rows.length >= BIG_SHARD_ROWS) || tick++ > 80) return resolve(best);
-        setTimeout(wait, 120);
-      })();
-    }).then(function (b) { return b && b.rows.length ? b.rows : null; });
-  }
-  /* V377 — ریشهٔ فهرست: تک‌تکه‌ها {"grade","track","subject","rows"} هستند و
-     فایل کامل یک آرایه؛ هر دو یکسان خوانده می‌شوند. */
-  function catalogRows(data) {
-    if (Array.isArray(data)) return tokenizeRows(data);
-    if (data && Array.isArray(data.rows)) return tokenizeRows(data.rows);
-    return [];
-  }
-  function readCatalogShard(path) {
-    return getJSON(path).then(function (data) {
-      var rows = catalogRows(data);
-      return {rows: rows, hit: rows.length > 0};
-    }).catch(function () { return {rows: [], hit: false}; });
-  }
-  /* V377 — بزرگ‌ترین تکهٔ پایه، برای وقتی رشته‌ای انتخاب نشده است.
-     پیش‌تر «بیشترین امتیاز» با رشتهٔ خالی همه را صفر می‌کرد و اولین تکه
-     (که می‌توانست تکهٔ ریاضی باشد) برمی‌گشت. */
-  function biggestShard(k) {
-    var urls = [];
-    for (var i = 1; i <= CATALOG_MAX_PARTS; i++) urls.push('catalog/g' + k + '-s' + i + '.json');
-    var best = null;
-    (function step(i) {
-      if (i >= urls.length) return;
-      readCatalogShard(urls[i]).then(function (res) {
-        if (res.rows.length > (best ? best.rows.length : 0)) best = res;
-        if (best && best.rows.length >= BIG_SHARD_ROWS) return;
-        step(i + 1);
-      }).catch(function () { step(i + 1); });
-    })(0);
-    return new Promise(function (resolve) {
-      var tick = 0;
-      (function wait() {
-        if ((best && best.rows.length >= BIG_SHARD_ROWS) || tick++ > 80) return resolve(best);
-        setTimeout(wait, 120);
-      })();
-    }).then(function (b) { return b && b.rows.length ? b.rows : null; });
-  }
   function catalog(grade, track) {
-    var k = String(grade), ck = k + '|' + (track || '');
-    if (!cache.catalog[ck]) cache.catalog[ck] = catalogSharded(k, track || '');
+    var k = String(grade), ck = k + '|all';
+    if (!cache.catalog[ck]) {
+      var promise = Number(grade) < 10
+        ? getJSON('catalog/g' + k + '.json').then(catalogRows)
+        : catalogSharded(k, '');
+      cache.catalog[ck] = promise.catch(function (e) { delete cache.catalog[ck]; throw e; });
+    }
     return cache.catalog[ck];
   }
   function questions(grade) {
@@ -736,11 +639,11 @@
     function subjectOptions() {
       if (!st.grade) return [];
       var g = Number(st.grade);
-      var base = st.rows.filter(function (r) { return sameTrack(r.track, st.track); });
+      var base = st.rows.filter(function (r) { return Number(r.grade) === g && sameTrack(r.track, st.track); });
       if (g >= 1 && g <= 9) {
         var rec = recognizedSubjects(g);
         var out = uniq(base, 'subject').filter(function (s) { return rec[s]; });
-        return out.length ? out : curriculumSubjects(g);
+        return out;
       }
       var out = uniq(base, 'subject');
       return out.length ? out : subjectsFor(st.grade, st.track);
@@ -775,16 +678,11 @@
       var gs = [0]; for (var g = 1; g <= 12; g++) gs.push(g);
       body.appendChild(selectBox('پایه', gs, st.grade, gradeLabel, function (v) {
         st.grade = Number(v) || 0; st.track = ''; st.subject = ''; st.chapter = '';
-        st.page = 0; st.picked = {}; st.includeAnswerById = {}; st.error = null; load();
+        st.page = 0; st.picked = {}; st.includeAnswerById = {}; st.error = null; st.rows = []; load();
       }));
       if (Number(st.grade) >= 10) body.appendChild(selectBox('رشته', tracksFor(st.grade), st.track, function (t) { return t || 'همهٔ رشته‌ها'; }, function (v) {
-        var had = st.rows.length;
         st.track = v; st.subject = ''; st.chapter = ''; st.page = 0; st.picked = {};
         draw();
-        /* V376 — اگر سطرها از تکهٔ رشتهٔ دیگری آمده‌اند، فهرست از نو خوانده می‌شود. */
-        var hit = 0;
-        st.rows.forEach(function (r) { if (sameTrack(r.track, v)) hit++; });
-        if (!had || (!hit && v)) load();
       }));
 
       body.appendChild(selectBox('درس', [''].concat(subjectOptions()), st.subject, function (x) { return x || 'همهٔ درس‌ها'; }, function (v) {
@@ -1043,12 +941,15 @@
       card.appendChild(body);
       if (st.filterOpen) filterPanel();
     }
+    var loadGeneration = 0;
     function load() {
+      var generation = ++loadGeneration;
       st.loading = true; st.error = null; draw();
       var task = st.grade === 0 ? catalogAll() : catalog(st.grade, st.track).then(function (rows) {
         return {rows: Array.isArray(rows) ? rows : [], loaded: (rows && rows.length) ? [st.grade] : []};
       }).catch(function (e) { return {rows: [], loaded: [], error: String(e.message || e)}; });
       task.then(function (res) {
+        if (generation !== loadGeneration) return;
         st.rows = res.rows || []; st.loaded = res.loaded || [];
         st.picked = {}; st.loading = false; st.missing = !st.rows.length; st.error = res.error || null;
         st.note = null; draw();

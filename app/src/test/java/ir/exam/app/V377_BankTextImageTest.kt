@@ -80,7 +80,7 @@ class V377_BankTextImageTest {
         val repo = src(repository)
         assertTrue("CATALOG_MAX_PARTS = 32" in repo)
         assertTrue("decodeShard" in repo)
-        assertTrue("byHeader" in repo)
+        assertTrue("shard.track" in repo)
     }
 
     @Test
@@ -89,7 +89,7 @@ class V377_BankTextImageTest {
         val body = repo.substringAfter("suspend fun catalog(grade: Int, track: String = \"\")")
         val shardCall = body.indexOf("shardedCatalog(grade, track)")
         val fullFile = body.indexOf("catalogPath(grade)")
-        assertTrue("فراخوانی تکه باید پیش از فایل کامل باشد", shardCall in 0 until fullFile)
+        assertTrue("پایهٔ دهم به بالا تکه‌ای خوانده می‌شود", shardCall in 0 until fullFile)
     }
 
     // ۳) سایت ----------------------------------------------------------------

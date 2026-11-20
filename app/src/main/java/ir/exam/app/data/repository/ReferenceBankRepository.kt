@@ -8,6 +8,9 @@ import ir.exam.app.domain.bank.withFormulaTokens
 import java.io.File
 import java.util.Collections
 import java.util.concurrent.ConcurrentHashMap
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
@@ -77,49 +80,47 @@ class ReferenceBankRepository(
         }.getOrNull()
     }
 
-    /**
-     * V376 — فهرست پایهٔ دهم ۴۲ مگابایت است و در اپ نیمه‌کاره می‌ماند؛ پس اول
-     * تکه‌های کوچک (catalog/gN-s1..sM.json) خوانده می‌شوند و تکه‌ای که [track]
-     * را دارد می‌ماند. اگر تکه‌ای نبود، همان فایل کامل خوانده می‌شود.
-     */
+    /** پایه‌های ۱ تا ۹ از فهرست کامل و پایه‌های بالاتر از همهٔ تکه‌ها خوانده می‌شوند. */
     suspend fun catalog(grade: Int, track: String = ""): List<ReferenceBankRow> = withContext(Dispatchers.IO) {
-        // V377 — تکه‌ای همیشه اول امتحان می‌شود. پیش‌تر برای «همهٔ رشته‌ها» مستقیم
-        // سراغ فایل کامل (۴۲MB پایهٔ دهم) می‌رفت و در اپ نیمه‌کاره می‌ماند.
-        shardedCatalog(grade, track)?.let { return@withContext it }
+        if (grade >= 10) shardedCatalog(grade, track)?.let { return@withContext it }
         val raw = fetch(ReferenceBankContract.catalogPath(grade))
         json.decodeFromString<List<ReferenceBankRow>>(raw).map { it.withFormulaTokens() }
     }
 
-    /** V377 — تکه‌ها یا آرایه‌اند یا {"grade","track","subject","rows"}. */
     @Serializable
     private data class CatalogShard(
         val grade: Int = 0, val track: String = "", val subject: String = "",
         val rows: List<ReferenceBankRow> = emptyList()
     )
 
-    private fun decodeShard(raw: String): CatalogShard? {
-        runCatching { json.decodeFromString<CatalogShard>(raw) }.getOrNull()
-            ?.let { if (it.rows.isNotEmpty()) return it }
-        val list = runCatching { json.decodeFromString<List<ReferenceBankRow>>(raw) }.getOrNull()
-        return if (list.isNullOrEmpty()) null else CatalogShard(rows = list)
+    private fun decodeShard(raw: String): CatalogShard {
+        runCatching { json.decodeFromString<CatalogShard>(raw) }.getOrNull()?.let { return it }
+        return CatalogShard(rows = json.decodeFromString<List<ReferenceBankRow>>(raw))
     }
 
-    private suspend fun shardedCatalog(grade: Int, track: String): List<ReferenceBankRow>? {
-        val want = ReferenceBankContract.trackKey(track)
-        var best: CatalogShard? = null
-        for (part in 1..CATALOG_MAX_PARTS) {
-            val raw = fetchOrNull(ReferenceBankContract.catalogShardPath(grade, part)) ?: continue
-            val shard = decodeShard(raw) ?: continue
-            val score = if (want.isBlank()) 0
-                        else shard.rows.count { ReferenceBankContract.trackKey(it.track) == want }
-            // V377 — هم‌رشته بودن سرآیند تکه هم امتیاز می‌گیرد (سطرهای قدیمی بی‌رشته‌اند).
-            val byHeader = want.isNotBlank() && ReferenceBankContract.trackKey(shard.track) == want
-            if (want.isNotBlank() && (score > 0 || byHeader)) {
-                return shard.rows.map { it.withFormulaTokens() }
-            }
-            if (best == null || shard.rows.size > best!!.rows.size) best = shard
+    /** نبود تکه (۴۰۴) طبیعی است؛ خطاهای دیگر نباید به دادهٔ ناقص تبدیل شوند. */
+    private suspend fun catalogPartOrNull(path: String): String? = withContext(Dispatchers.IO) {
+        val url = base.trimEnd('/') + "/" + ReferenceBankContract.shardUrl(path)
+        client.newCall(Request.Builder().url(url).get().build()).execute().use { response ->
+            if (response.code == 404) return@withContext null
+            if (!response.isSuccessful) error("دریافت فهرست بانک ناموفق بود (HTTP ${response.code})")
+            response.body?.string() ?: error("پاسخ فهرست بانک خالی است")
         }
-        return best?.rows?.map { it.withFormulaTokens() }
+    }
+
+    private suspend fun shardedCatalog(grade: Int, track: String): List<ReferenceBankRow>? = coroutineScope {
+        // چهار تکه هم‌زمان، تا ۳۲ دانلود و تجزیهٔ هم‌زمان حافظهٔ گوشی را اشغال نکند.
+        val shards = mutableListOf<CatalogShard>()
+        for (batch in (1..CATALOG_MAX_PARTS).toList().chunked(4)) {
+            shards += batch.map { part -> async {
+                catalogPartOrNull(ReferenceBankContract.catalogShardPath(grade, part))?.let { decodeShard(it) }
+            } }.awaitAll().filterNotNull()
+        }
+        if (shards.isEmpty()) return@coroutineScope null
+        shards.flatMap { shard -> shard.rows.map { row ->
+            val withTrack = if (row.track.isBlank() && shard.track.isNotBlank()) row.copy(track = shard.track) else row
+            withTrack.withFormulaTokens()
+        } }
     }
 
     /** V370 — فهرست شناسه → صفحه، یک‌بار در هر نشست؛ نبودنش یعنی شارد صفحه‌ای نیست. */
