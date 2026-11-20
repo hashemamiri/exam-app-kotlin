@@ -101,9 +101,20 @@ data class QuestionBankUiState(
         get() = ReferenceBankContract.tracksFor(referenceGrade)
 
     /** تا وقتی پایهای انتخاب نشده، فقط گزینهٔ «همه» برای درس هست. */
+    /** V378 — پایهٔ ۱ تا ۹: فهرست درس فقط از درس‌های رسمی همان پایه و نام‌های
+     *  هم‌خانوادهٔ موجود در داده؛ دادهٔ خارج از برنامه (نمونهٔ ثبت‌شده: «زبان
+     *  انگلیسی» در پایهٔ اول) نشان داده نمی‌شود ولی با «همهٔ درس‌ها» دیده می‌شود.
+     *  پایهٔ ۱۰ به بالا از دادهٔ همان پایه/رشته خوانده می‌شود (رشته‌ها نامنظم‌اند). */
     val referenceSubjectOptions: List<String>
         get() {
             if (referenceGrade == 0) return emptyList()
+            if (referenceGrade in 1..9) {
+                val recognized = ReferenceBankContract.recognizedSubjects(referenceGrade)
+                val fromRows = referenceRows
+                    .filter { ReferenceBankContract.sameTrack(it.track, referenceTrack) }
+                    .map { it.subject }.filter { it.isNotBlank() && it in recognized }.distinct().sorted()
+                return (ReferenceBankContract.curriculumSubjects(referenceGrade) + fromRows).distinct()
+            }
             val fromRows = referenceRows
                 .filter { ReferenceBankContract.sameTrack(it.track, referenceTrack) }
                 .map { it.subject }.filter { it.isNotBlank() }.distinct().sorted()

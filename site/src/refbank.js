@@ -540,6 +540,27 @@
     if (g >= 10 && g <= 12) return track ? (HIGH[track] || ALL_HIGH) : ALL_HIGH;
     return [];
   }
+  /* V378 — درس‌های رسمی هر پایهٔ ۱ تا ۹ + نام‌های هم‌خانواده‌ای که در داده آمده‌اند؛
+     فهرست درس فیلتر فقط از این خانواده می‌آید (نمونهٔ ثبت‌شده: «زبان انگلیسی» در
+     پایهٔ اول در فهرست نمی‌آید ولی با «همهٔ درس‌ها» دیده می‌شود). */
+  var CURR = {
+    1: ['آموزش قرآن', 'فارسی', 'نگارش فارسی', 'ریاضی', 'علوم تجربی', 'هنر', 'تربیت بدنی'],
+    2: ['آموزش قرآن', 'هدیه‌های آسمان', 'فارسی', 'نگارش فارسی', 'ریاضی', 'علوم تجربی', 'هنر', 'تربیت بدنی'],
+    3: ['آموزش قرآن', 'هدیه‌های آسمان', 'فارسی', 'نگارش فارسی', 'ریاضی', 'علوم تجربی', 'مطالعات اجتماعی', 'هنر', 'تربیت بدنی'],
+    6: ['آموزش قرآن', 'هدیه‌های آسمان', 'فارسی', 'نگارش فارسی', 'ریاضی', 'علوم تجربی', 'مطالعات اجتماعی', 'تفکر و پژوهش', 'کار و فناوری', 'هنر', 'تربیت بدنی']
+  };
+  CURR[4] = CURR[3]; CURR[5] = CURR[3];
+  var CURR_9 = MIDDLE.concat(['نگارش فارسی', 'کار و فناوری']);
+  CURR[7] = CURR_9; CURR[8] = CURR_9; CURR[9] = CURR_9;
+  var SUBJ_VAR = ['قرآن', 'قرآن و تعلیمات اسلامی', 'هدیه آسمان', 'پیام‌های آسمان', 'علوم'];
+  function curriculumSubjects(g) { return (CURR[g] || []).slice(); }
+  function recognizedSubjects(g) {
+    if (g < 1 || g > 9) return null;
+    var rec = {};
+    curriculumSubjects(g).concat(SUBJ_VAR).concat(g >= 7 ? ['زبان انگلیسی'] : [])
+      .forEach(function (s) { rec[s] = 1; });
+    return rec;
+  }
 
   /* تصویر پاسخ از answer_html شناخته می شود؛ نیازی به شارد تازه ای نیست. */
   function imgUrls(html) {
@@ -708,9 +729,20 @@
       s.addEventListener('change', function () { onPick(s.value); });
       return el('label', {class: 'field refbank-filter-field'}, [el('span', {text: title}), s]);
     }
+    /* V378 — پایهٔ ۱ تا ۹: فهرست درس فقط از درس‌های رسمی همان پایه و نام‌های
+       هم‌خانوادهٔ موجود در داده؛ دادهٔ خارج از برنامه (نمونهٔ ثبت‌شده: «زبان
+       انگلیسی» در پایهٔ اول) نشان داده نمی‌شود ولی با «همهٔ درس‌ها» دیده می‌شود.
+       خودِ کمکی‌ها در سطح ماژول (کنار subjectsFor) هستند و هر بار ساخته نمی‌شوند. */
     function subjectOptions() {
       if (!st.grade) return [];
+      var g = Number(st.grade);
       var base = st.rows.filter(function (r) { return sameTrack(r.track, st.track); });
+      if (g >= 1 && g <= 9) {
+        var rec = recognizedSubjects(g), seen = {}, out = [];
+        curriculumSubjects(g).concat(uniq(base, 'subject').filter(function (s) { return rec[s]; }))
+          .forEach(function (s) { if (s && !seen[s]) { seen[s] = 1; out.push(s); } });
+        return out;
+      }
       var out = uniq(base, 'subject');
       return out.length ? out : subjectsFor(st.grade, st.track);
     }
