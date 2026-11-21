@@ -1,0 +1,5 @@
+User-agent: *
+Allow: /
+Disallow: /pwa/sw.js
+
+Sitemap: https://onlineexam.ir/sitemap.xml

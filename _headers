@@ -1,0 +1,28 @@
+/*
+  Cache-Control: no-cache
+  Alt-Svc: clear
+  X-Content-Type-Options: nosniff
+  X-Frame-Options: SAMEORIGIN
+  Referrer-Policy: strict-origin-when-cross-origin
+  Strict-Transport-Security: max-age=31536000; includeSubDomains
+/pwa/sw.js
+  Cache-Control: no-cache
+  Service-Worker-Allowed: /
+/pwa/manifest.webmanifest
+  Content-Type: application/manifest+json; charset=utf-8
+/pwa/*.png
+  Cache-Control: public, max-age=604800
+/pwa/v3/*
+  Cache-Control: public, max-age=604800
+/engines.*.js
+  Cache-Control: public, max-age=31536000, immutable
+/panels.*.js
+  Cache-Control: public, max-age=31536000, immutable
+/s*.css
+  Cache-Control: public, max-age=31536000, immutable
+/c*.js
+  Cache-Control: public, max-age=31536000, immutable
+/p*.js
+  Cache-Control: public, max-age=31536000, immutable
+/fonts/*
+  Cache-Control: public, max-age=31536000, immutable
