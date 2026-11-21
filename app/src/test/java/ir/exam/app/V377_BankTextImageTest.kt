@@ -124,7 +124,8 @@ class V377_BankTextImageTest {
     fun `previous behaviour is untouched`() {
         val js = src(site)
         assertTrue("function catalog(grade, track)" in js)
-        assertTrue("catalog/g' + k + '-s' + i + '.json'" in js)
+        assertTrue("catalogSharded(k, '')" in js)
+        assertTrue("catalog/g' + grade + '-s' + i + '.json'" in js)
         assertTrue("function sameTrack(rowTrack, wanted)" in js)
         val m = src(models)
         assertTrue("علوم و معارف اسلامی" in m)
