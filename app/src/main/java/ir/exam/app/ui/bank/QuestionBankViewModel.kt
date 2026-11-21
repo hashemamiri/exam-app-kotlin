@@ -74,8 +74,8 @@ data class QuestionBankUiState(
         get() = referenceRows.filter { r ->
             (referenceGrade == 0 || r.grade == referenceGrade) &&
                 ReferenceBankContract.sameTrack(r.track, referenceTrack) &&
-                (referenceSubject.isBlank() || r.subject == referenceSubject) &&
-                (referenceChapter.isBlank() || r.chapter == referenceChapter) &&
+                (referenceSubject.isBlank() || r.subject.trim() == referenceSubject) &&
+                (referenceChapter.isBlank() || r.chapter.trim() == referenceChapter) &&
                 (referenceType.isBlank() || r.typeFa == referenceType) &&
                 (referenceDifficulty == null || r.difficulty == referenceDifficulty) &&
                 // V369 — «با تصویر / بدون تصویر»
@@ -100,29 +100,18 @@ data class QuestionBankUiState(
         get() = referenceGrade >= ReferenceBankContract.TRACK_MIN_GRADE
 
     val referenceTrackOptions: List<String>
-        get() = ReferenceBankContract.tracksFor(referenceGrade)
+        get() = if (!referenceTracksVisible) emptyList() else referenceRows
+            .asSequence().filter { it.grade == referenceGrade }
+            .map { ReferenceBankContract.trackKey(it.track) }.filter { it.isNotBlank() }
+            .distinct().sorted().toList()
 
-    /** تا وقتی پایهای انتخاب نشده، فقط گزینهٔ «همه» برای درس هست. */
-    /** V378 — پایهٔ ۱ تا ۹: فهرست درس فقط از درس‌های رسمی همان پایه و نام‌های
-     *  هم‌خانوادهٔ موجود در داده؛ دادهٔ خارج از برنامه (نمونهٔ ثبت‌شده: «زبان
-     *  انگلیسی» در پایهٔ اول) نشان داده نمی‌شود ولی با «همهٔ درس‌ها» دیده می‌شود.
-     *  پایهٔ ۱۰ به بالا از دادهٔ همان پایه/رشته خوانده می‌شود (رشته‌ها نامنظم‌اند). */
+    /** فقط نام درس‌های موجود در دادهٔ همان پایه و رشته. */
     val referenceSubjectOptions: List<String>
         get() {
             if (referenceGrade == 0) return emptyList()
-            if (referenceGrade in 1..9) {
-                // V378 — فقط درس‌های رسمی که در دادهٔ همین پایه واقعاً سؤال دارند؛
-                // نام‌های هم‌خانوادهٔ رسمی موجود در داده هم اضافه می‌شوند؛ در نبود داده فهرست خالی است.
-                val recognized = ReferenceBankContract.recognizedSubjects(referenceGrade)
-                val fromRows = referenceRows
-                    .filter { it.grade == referenceGrade && ReferenceBankContract.sameTrack(it.track, referenceTrack) }
-                    .map { it.subject }.filter { it.isNotBlank() && it in recognized }.distinct().sorted()
-                return fromRows
-            }
-            val fromRows = referenceRows
-                .filter { ReferenceBankContract.sameTrack(it.track, referenceTrack) }
-                .map { it.subject }.filter { it.isNotBlank() }.distinct().sorted()
-            return fromRows.ifEmpty { ReferenceBankContract.subjectsFor(referenceGrade, referenceTrack) }
+            return referenceRows
+                .filter { it.grade == referenceGrade && ReferenceBankContract.sameTrack(it.track, referenceTrack) }
+                .map { it.subject.trim() }.filter { it.isNotBlank() }.distinct().sorted()
         }
 
     /** فصلها فقط پس از انتخاب درس پر میشوند. */
@@ -131,8 +120,8 @@ data class QuestionBankUiState(
             if (referenceSubject.isBlank()) return emptyList()
             return referenceRows
                 .filter { ReferenceBankContract.sameTrack(it.track, referenceTrack) }
-                .filter { it.subject == referenceSubject }
-                .map { it.chapter }.filter { it.isNotBlank() }.distinct().sorted()
+                .filter { it.subject.trim() == referenceSubject }
+                .map { it.chapter.trim() }.filter { it.isNotBlank() }.distinct().sorted()
         }
 
     /** نوع سؤال و دشواری به پایه وابسته نیستند؛ همیشه همهٔ گزینه ها را دارند. */

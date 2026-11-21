@@ -61,7 +61,7 @@ class V376_TrackFilterTest {
         assertTrue("فهرست سایت", "'علوم و معارف اسلامی'" in js)
         assertTrue("هم‌خوانی نام", "function trackKey(v)" in js)
         assertTrue("پالایش با هم‌خوانی", "function sameTrack(rowTrack, wanted)" in js)
-        assertTrue("کشوی رشته از فهرست پایه", "tracksFor(st.grade), st.track" in js)
+        assertTrue("کشوی رشته از فهرست پایه", "[''].concat(trackOptions()), st.track" in js)
         assertFalse("تطبیق سخت‌گیرانهٔ قدیمی نماند",
             "if (st.track && String(r.track || '') !== st.track) return false;" in js)
         assertTrue("پایهٔ ۱۰ بدون عمومی (سایت)", "n === 10 && t === 'عمومی'" in js)

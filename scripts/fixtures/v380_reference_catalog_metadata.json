@@ -1,0 +1,506 @@
+[
+  {
+    "grade": 1,
+    "track": "",
+    "subject": "ریاضی",
+    "count": 669
+  },
+  {
+    "grade": 1,
+    "track": "",
+    "subject": "علوم تجربی",
+    "count": 1032
+  },
+  {
+    "grade": 1,
+    "track": "",
+    "subject": "فارسی",
+    "count": 717
+  },
+  {
+    "grade": 2,
+    "track": "",
+    "subject": "ریاضی",
+    "count": 2322
+  },
+  {
+    "grade": 2,
+    "track": "",
+    "subject": "علوم",
+    "count": 1768
+  },
+  {
+    "grade": 2,
+    "track": "",
+    "subject": "فارسی",
+    "count": 953
+  },
+  {
+    "grade": 2,
+    "track": "",
+    "subject": "قرآن",
+    "count": 116
+  },
+  {
+    "grade": 2,
+    "track": "",
+    "subject": "هدیه های آسمان دوم",
+    "count": 119
+  },
+  {
+    "grade": 3,
+    "track": "",
+    "subject": "ریاضی",
+    "count": 2381
+  },
+  {
+    "grade": 3,
+    "track": "",
+    "subject": "علوم تجربی",
+    "count": 1934
+  },
+  {
+    "grade": 3,
+    "track": "",
+    "subject": "فارسی",
+    "count": 1250
+  },
+  {
+    "grade": 3,
+    "track": "",
+    "subject": "قرآن",
+    "count": 2
+  },
+  {
+    "grade": 3,
+    "track": "",
+    "subject": "مطالعات اجتماعی سوم",
+    "count": 795
+  },
+  {
+    "grade": 3,
+    "track": "",
+    "subject": "هدیه های آسمان سوم",
+    "count": 569
+  },
+  {
+    "grade": 4,
+    "track": "",
+    "subject": "ریاضی",
+    "count": 2289
+  },
+  {
+    "grade": 4,
+    "track": "",
+    "subject": "علوم تجربی",
+    "count": 1201
+  },
+  {
+    "grade": 4,
+    "track": "",
+    "subject": "فارسی",
+    "count": 1450
+  },
+  {
+    "grade": 4,
+    "track": "",
+    "subject": "قرآن",
+    "count": 80
+  },
+  {
+    "grade": 4,
+    "track": "",
+    "subject": "مطالعات اجتماعی چهارم",
+    "count": 1096
+  },
+  {
+    "grade": 4,
+    "track": "",
+    "subject": "هدیه های آسمان چهارم",
+    "count": 377
+  },
+  {
+    "grade": 5,
+    "track": "",
+    "subject": "ریاضی",
+    "count": 2282
+  },
+  {
+    "grade": 5,
+    "track": "",
+    "subject": "علوم تجربی",
+    "count": 1256
+  },
+  {
+    "grade": 5,
+    "track": "",
+    "subject": "فارسی",
+    "count": 1462
+  },
+  {
+    "grade": 5,
+    "track": "",
+    "subject": "قرآن",
+    "count": 122
+  },
+  {
+    "grade": 5,
+    "track": "",
+    "subject": "مطالعات اجتماعی پنجم",
+    "count": 1456
+  },
+  {
+    "grade": 5,
+    "track": "",
+    "subject": "هدیه های آسمان پنجم",
+    "count": 501
+  },
+  {
+    "grade": 6,
+    "track": "",
+    "subject": "تفکر و پژوهش ششم",
+    "count": 142
+  },
+  {
+    "grade": 6,
+    "track": "",
+    "subject": "ریاضی",
+    "count": 5935
+  },
+  {
+    "grade": 6,
+    "track": "",
+    "subject": "علوم تجربی",
+    "count": 2770
+  },
+  {
+    "grade": 6,
+    "track": "",
+    "subject": "فارسی",
+    "count": 1850
+  },
+  {
+    "grade": 6,
+    "track": "",
+    "subject": "قرآن",
+    "count": 521
+  },
+  {
+    "grade": 6,
+    "track": "",
+    "subject": "مطالعات اجتماعی ششم",
+    "count": 1567
+  },
+  {
+    "grade": 6,
+    "track": "",
+    "subject": "هدیه های آسمان ششم",
+    "count": 942
+  },
+  {
+    "grade": 7,
+    "track": "",
+    "subject": "از من تا خدا",
+    "count": 250
+  },
+  {
+    "grade": 7,
+    "track": "",
+    "subject": "انگلیسی",
+    "count": 1891
+  },
+  {
+    "grade": 7,
+    "track": "",
+    "subject": "ریاضی",
+    "count": 3378
+  },
+  {
+    "grade": 7,
+    "track": "",
+    "subject": "عربی",
+    "count": 940
+  },
+  {
+    "grade": 7,
+    "track": "",
+    "subject": "علوم تجربی",
+    "count": 2997
+  },
+  {
+    "grade": 7,
+    "track": "",
+    "subject": "فارسی",
+    "count": 1845
+  },
+  {
+    "grade": 7,
+    "track": "",
+    "subject": "قرآن",
+    "count": 415
+  },
+  {
+    "grade": 7,
+    "track": "",
+    "subject": "مطالعات اجتماعی هفتم",
+    "count": 2328
+  },
+  {
+    "grade": 7,
+    "track": "",
+    "subject": "پیام های آسمان",
+    "count": 1604
+  },
+  {
+    "grade": 7,
+    "track": "",
+    "subject": "کار و فناوری هفتم",
+    "count": 611
+  },
+  {
+    "grade": 8,
+    "track": "",
+    "subject": "از من تا خدا",
+    "count": 195
+  },
+  {
+    "grade": 8,
+    "track": "",
+    "subject": "انگلیسی",
+    "count": 1475
+  },
+  {
+    "grade": 8,
+    "track": "",
+    "subject": "ریاضی",
+    "count": 3932
+  },
+  {
+    "grade": 8,
+    "track": "",
+    "subject": "عربی",
+    "count": 1149
+  },
+  {
+    "grade": 8,
+    "track": "",
+    "subject": "علوم تجربی",
+    "count": 3176
+  },
+  {
+    "grade": 8,
+    "track": "",
+    "subject": "فارسی",
+    "count": 2114
+  },
+  {
+    "grade": 8,
+    "track": "",
+    "subject": "قرآن",
+    "count": 396
+  },
+  {
+    "grade": 8,
+    "track": "",
+    "subject": "مطالعات اجتماعی هشتم",
+    "count": 1637
+  },
+  {
+    "grade": 8,
+    "track": "",
+    "subject": "پیام های آسمان",
+    "count": 1751
+  },
+  {
+    "grade": 8,
+    "track": "",
+    "subject": "کار و فناوری هشتم",
+    "count": 566
+  },
+  {
+    "grade": 9,
+    "track": "",
+    "subject": "انگلیسی",
+    "count": 2454
+  },
+  {
+    "grade": 9,
+    "track": "",
+    "subject": "ریاضی",
+    "count": 6303
+  },
+  {
+    "grade": 9,
+    "track": "",
+    "subject": "عربی",
+    "count": 2503
+  },
+  {
+    "grade": 9,
+    "track": "",
+    "subject": "علوم تجربی",
+    "count": 5163
+  },
+  {
+    "grade": 9,
+    "track": "",
+    "subject": "فارسی",
+    "count": 3372
+  },
+  {
+    "grade": 9,
+    "track": "",
+    "subject": "قرآن",
+    "count": 1071
+  },
+  {
+    "grade": 9,
+    "track": "",
+    "subject": "مطالعات اجتماعی نهم",
+    "count": 2793
+  },
+  {
+    "grade": 9,
+    "track": "",
+    "subject": "پیام های آسمان",
+    "count": 2418
+  },
+  {
+    "grade": 9,
+    "track": "",
+    "subject": "کار و فناوری نهم",
+    "count": 645
+  },
+  {
+    "grade": 10,
+    "track": "ریاضی فیزیک",
+    "subject": "ریاضی (1)",
+    "count": 13235
+  },
+  {
+    "grade": 10,
+    "track": "علوم تجربی",
+    "subject": "زیست شناسی (١)",
+    "count": 7293
+  },
+  {
+    "grade": 10,
+    "track": "علوم تجربی",
+    "subject": "شیمی (1)",
+    "count": 8485
+  },
+  {
+    "grade": 10,
+    "track": "علوم تجربی",
+    "subject": "فیزیک (1)",
+    "count": 9025
+  },
+  {
+    "grade": 10,
+    "track": "علوم و معارف اسلامی",
+    "subject": "احکام (١) دختران",
+    "count": 282
+  },
+  {
+    "grade": 10,
+    "track": "علوم و معارف اسلامی",
+    "subject": "احکام (١) پسران",
+    "count": 273
+  },
+  {
+    "grade": 10,
+    "track": "علوم و معارف اسلامی",
+    "subject": "انگلیسی (1)",
+    "count": 3817
+  },
+  {
+    "grade": 10,
+    "track": "علوم و معارف اسلامی",
+    "subject": "تاریخ (1) ایران و جهان باستان",
+    "count": 4417
+  },
+  {
+    "grade": 10,
+    "track": "علوم و معارف اسلامی",
+    "subject": "جامعه شناسی (1)",
+    "count": 4150
+  },
+  {
+    "grade": 10,
+    "track": "علوم و معارف اسلامی",
+    "subject": "دین و زندگی (١)",
+    "count": 7159
+  },
+  {
+    "grade": 10,
+    "track": "علوم و معارف اسلامی",
+    "subject": "دین و زندگی (١) - چاپ 1404",
+    "count": 4274
+  },
+  {
+    "grade": 10,
+    "track": "علوم و معارف اسلامی",
+    "subject": "ریاضی و آمار (1)",
+    "count": 5328
+  },
+  {
+    "grade": 10,
+    "track": "علوم و معارف اسلامی",
+    "subject": "عربی (١)",
+    "count": 8466
+  },
+  {
+    "grade": 10,
+    "track": "علوم و معارف اسلامی",
+    "subject": "علوم و فنون ادبی (1)",
+    "count": 4688
+  },
+  {
+    "grade": 10,
+    "track": "علوم و معارف اسلامی",
+    "subject": "فارسی (1)",
+    "count": 2331
+  },
+  {
+    "grade": 10,
+    "track": "علوم و معارف اسلامی",
+    "subject": "منطق دهم",
+    "count": 5349
+  },
+  {
+    "grade": 10,
+    "track": "علوم و معارف اسلامی",
+    "subject": "نگارش (١)",
+    "count": 74
+  },
+  {
+    "grade": 10,
+    "track": "عمومی",
+    "subject": "انگلیسی (1)",
+    "count": 3340
+  },
+  {
+    "grade": 10,
+    "track": "عمومی",
+    "subject": "دین و زندگی (١) پایه دهم غیرانسانی چاپ١٤٠٥",
+    "count": 5635
+  },
+  {
+    "grade": 10,
+    "track": "عمومی",
+    "subject": "عربی زبان قرآن (1)",
+    "count": 4089
+  },
+  {
+    "grade": 10,
+    "track": "عمومی",
+    "subject": "فارسی (1)",
+    "count": 2520
+  },
+  {
+    "grade": 10,
+    "track": "عمومی",
+    "subject": "نگارش (١)",
+    "count": 8
+  }
+]

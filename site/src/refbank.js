@@ -632,26 +632,28 @@
       s.addEventListener('change', function () { onPick(s.value); });
       return el('label', {class: 'field refbank-filter-field'}, [el('span', {text: title}), s]);
     }
-    /* V378 — پایهٔ ۱ تا ۹: فهرست درس فقط از درس‌های رسمی همان پایه و نام‌های
-       هم‌خانوادهٔ موجود در داده؛ دادهٔ خارج از برنامه (نمونهٔ ثبت‌شده: «زبان
-       انگلیسی» در پایهٔ اول) نشان داده نمی‌شود ولی با «همهٔ درس‌ها» دیده می‌شود.
-       خودِ کمکی‌ها در سطح ماژول (کنار subjectsFor) هستند و هر بار ساخته نمی‌شوند. */
+    /* V380 — درس و رشته فقط از فهرست واقعی همان پایه؛ هیچ نامی حدس زده نمی‌شود. */
     function subjectOptions() {
       if (!st.grade) return [];
       var g = Number(st.grade);
-      var base = st.rows.filter(function (r) { return Number(r.grade) === g && sameTrack(r.track, st.track); });
-      if (g >= 1 && g <= 9) {
-        var rec = recognizedSubjects(g);
-        var out = uniq(base, 'subject').filter(function (s) { return rec[s]; });
-        return out;
-      }
-      var out = uniq(base, 'subject');
-      return out.length ? out : subjectsFor(st.grade, st.track);
+      return uniq(st.rows.filter(function (r) {
+        return Number(r.grade) === g && sameTrack(r.track, st.track);
+      }), 'subject');
+    }
+    function trackOptions() {
+      var g = Number(st.grade), seen = {};
+      var out = [];
+      st.rows.forEach(function (r) {
+        if (Number(r.grade) !== g) return;
+        var t = trackKey(r.track);
+        if (t && !seen[t]) { seen[t] = true; out.push(t); }
+      });
+      return out.sort(function (a, b) { return a.localeCompare(b, 'fa'); });
     }
     function chapterOptions() {
       if (!st.subject) return [];
       return uniq(st.rows.filter(function (r) {
-        return sameTrack(r.track, st.track) && r.subject === st.subject;
+        return sameTrack(r.track, st.track) && String(r.subject || '').trim() === st.subject;
       }), 'chapter');
     }
     function typeOptions() {
@@ -680,7 +682,7 @@
         st.grade = Number(v) || 0; st.track = ''; st.subject = ''; st.chapter = '';
         st.page = 0; st.picked = {}; st.includeAnswerById = {}; st.error = null; st.rows = []; load();
       }));
-      if (Number(st.grade) >= 10) body.appendChild(selectBox('رشته', tracksFor(st.grade), st.track, function (t) { return t || 'همهٔ رشته‌ها'; }, function (v) {
+      if (Number(st.grade) >= 10) body.appendChild(selectBox('رشته', [''].concat(trackOptions()), st.track, function (t) { return t || 'همهٔ رشته‌ها'; }, function (v) {
         st.track = v; st.subject = ''; st.chapter = ''; st.page = 0; st.picked = {};
         draw();
       }));
@@ -738,8 +740,8 @@
       var s = String(st.query || '').toLowerCase();
       return st.rows.filter(function (r) {
         if (!sameTrack(r.track, st.track)) return false;
-        if (st.subject && r.subject !== st.subject) return false;
-        if (st.chapter && r.chapter !== st.chapter) return false;
+        if (st.subject && String(r.subject || '').trim() !== st.subject) return false;
+        if (st.chapter && String(r.chapter || '').trim() !== st.chapter) return false;
         if (st.type && r.type_fa !== st.type) return false;
         if (st.difficulty !== '' && Number(r.difficulty) !== Number(st.difficulty)) return false;
         /* V377 — «با تصویر سؤال / با تصویر گزینه / بدون تصویر» */
